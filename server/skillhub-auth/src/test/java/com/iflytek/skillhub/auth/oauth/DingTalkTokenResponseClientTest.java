@@ -198,4 +198,26 @@ class DingTalkTokenResponseClientTest {
                 new OAuth2AuthorizationExchange(authRequest, authResponse)
         );
     }
+
+    @Test
+    void getTokenResponse_rejectsOversizedResponseBody() {
+        // Uses the production template so the size-cap interceptor is in play; the tests above
+        // inject a bare RestTemplate and therefore cannot reach it.
+        RestTemplate productionTemplate = DingTalkTokenResponseClient.buildRestTemplate();
+        MockRestServiceServer server = MockRestServiceServer.createServer(productionTemplate);
+        // 64 KB cap; pad a structurally valid token payload past it so the size check fires.
+        String padding = "x".repeat(70 * 1024);
+        server.expect(requestTo("https://api.dingtalk.com/v1.0/oauth2/userAccessToken"))
+                .andRespond(withSuccess(
+                        "{\"accessToken\":\"" + padding + "\",\"expireIn\":7200}",
+                        MediaType.APPLICATION_JSON
+                ));
+        DingTalkTokenResponseClient boundedClient = new DingTalkTokenResponseClient(productionTemplate);
+
+        assertThatThrownBy(() -> boundedClient.getTokenResponse(authorizationCodeGrantRequest()))
+                .isInstanceOf(OAuth2AuthenticationException.class)
+                .satisfies(ex -> assertThat(((OAuth2AuthenticationException) ex).getError().getErrorCode())
+                        .isEqualTo("token_exchange_io_error"));
+        server.verify();
+    }
 }

@@ -138,6 +138,13 @@ public class DingTalkOAuth2UserService implements ProviderOAuth2UserService {
             attributes.put("avatar_url", avatar);
         }
         if (!attributes.containsKey(DingTalkOAuth2Constants.SUBJECT_CLAIM_NAME)) {
+            // A reachable failure: DingTalk omits unionId for some app configurations, and the
+            // operator needs to see why every login is being rejected. The claim name is a
+            // constant, so this records nothing about the user.
+            log.warn(
+                    "DingTalk user info response omitted {}; login rejected",
+                    DingTalkOAuth2Constants.SUBJECT_CLAIM_NAME
+            );
             throw new OAuth2AuthenticationException(
                     new OAuth2Error(
                             "dingtalk_userinfo_error",

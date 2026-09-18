@@ -2,9 +2,14 @@ package com.iflytek.skillhub.auth.oauth;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -51,11 +56,57 @@ public class DingTalkTokenResponseClient implements ProviderTokenResponseClient 
         return DingTalkOAuth2Constants.REGISTRATION_ID;
     }
 
-    private static RestTemplate buildRestTemplate() {
+    /** A DingTalk token payload is a few hundred bytes; this only stops an unbounded body. */
+    private static final int MAX_RESPONSE_BYTES = 64 * 1024;
+
+    /** Package-visible so a test can exercise the production template, size cap included. */
+    static RestTemplate buildRestTemplate() {
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(5));
         factory.setReadTimeout(Duration.ofSeconds(10));
-        return new RestTemplate(factory);
+        RestTemplate template = new RestTemplate(factory);
+        // The timeouts bound how long the exchange may take; this bounds how much it may return, so
+        // a misconfigured or hostile token endpoint cannot stream an unbounded body into the parser.
+        // The userinfo client applies the same cap.
+        template.getInterceptors().add((request, body, execution) -> {
+            ClientHttpResponse response = execution.execute(request, body);
+            byte[] bytes = response.getBody().readNBytes(MAX_RESPONSE_BYTES + 1);
+            if (bytes.length > MAX_RESPONSE_BYTES) {
+                throw new IOException("DingTalk token response exceeds " + MAX_RESPONSE_BYTES + " bytes");
+            }
+            return new BoundedClientHttpResponse(response, bytes);
+        });
+        return template;
+    }
+
+    /** Replays the already-read, size-checked body so the converters can still parse it. */
+    private record BoundedClientHttpResponse(ClientHttpResponse delegate, byte[] body)
+            implements ClientHttpResponse {
+
+        @Override
+        public HttpStatusCode getStatusCode() throws IOException {
+            return delegate.getStatusCode();
+        }
+
+        @Override
+        public String getStatusText() throws IOException {
+            return delegate.getStatusText();
+        }
+
+        @Override
+        public void close() {
+            delegate.close();
+        }
+
+        @Override
+        public InputStream getBody() {
+            return new ByteArrayInputStream(body);
+        }
+
+        @Override
+        public HttpHeaders getHeaders() {
+            return delegate.getHeaders();
+        }
     }
 
     @Override
