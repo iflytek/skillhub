@@ -84,4 +84,91 @@ class OAuth2AuthorizationRequestResolverTest {
         assertThat(session).isNotNull();
         assertThat(session.getAttribute(OAuthLoginRedirectSupport.SESSION_RETURN_TO_ATTRIBUTE)).isNull();
     }
+
+    @Test
+    void resolve_addsDingTalkScopeWithoutTurningTheRequestIntoOidc() {
+        SkillHubOAuth2AuthorizationRequestResolver dingTalkResolver = resolverFor(
+                dingTalkRegistration(),
+                new DingTalkAuthorizationRequestCustomizer()
+        );
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("GET", "/oauth2/authorization/dingtalk");
+
+        var authorizationRequest = dingTalkResolver.resolve(request, "dingtalk");
+
+        assertThat(authorizationRequest).isNotNull();
+        // DingTalk's authorize endpoint requires scope=openid...
+        assertThat(authorizationRequest.getScopes()).contains("openid");
+        assertThat(authorizationRequest.getAuthorizationRequestUri()).contains("scope=openid");
+        // ...but rejects the nonce Spring attaches when a registration declares openid in config.
+        // Declaring no scope there and adding it here is what keeps the nonce away.
+        assertThat(authorizationRequest.getAdditionalParameters()).doesNotContainKey("nonce");
+        assertThat(authorizationRequest.getAttributes()).doesNotContainKey("nonce");
+        assertThat(authorizationRequest.getAuthorizationRequestUri()).doesNotContain("nonce=");
+    }
+
+    @Test
+    void resolve_leavesOtherProvidersUntouchedWhenADingTalkCustomizerIsRegistered() {
+        SkillHubOAuth2AuthorizationRequestResolver mixedResolver = resolverFor(
+                githubRegistration(),
+                new DingTalkAuthorizationRequestCustomizer()
+        );
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("GET", "/oauth2/authorization/github");
+
+        var authorizationRequest = mixedResolver.resolve(request, "github");
+
+        assertThat(authorizationRequest).isNotNull();
+        assertThat(authorizationRequest.getScopes()).containsExactly("read:user");
+    }
+
+    private static SkillHubOAuth2AuthorizationRequestResolver resolverFor(
+            ClientRegistration registration,
+            ProviderAuthorizationRequestCustomizer customizer
+    ) {
+        OAuthLoginFlowService flowService = new OAuthLoginFlowService(
+                java.util.List.of(),
+                mock(AccessPolicy.class),
+                mock(IdentityBindingService.class)
+        );
+        return new SkillHubOAuth2AuthorizationRequestResolver(
+                new InMemoryClientRegistrationRepository(registration),
+                flowService,
+                java.util.List.of(customizer)
+        );
+    }
+
+    private static ClientRegistration githubRegistration() {
+        return ClientRegistration.withRegistrationId("github")
+                .clientId("client")
+                .clientSecret("secret")
+                .authorizationUri("https://example.test/oauth/authorize")
+                .tokenUri("https://example.test/oauth/token")
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .userInfoUri("https://example.test/user")
+                .userNameAttributeName("id")
+                .authorizationGrantType(
+                        org.springframework.security.oauth2.core.AuthorizationGrantType.AUTHORIZATION_CODE)
+                .scope("read:user")
+                .clientName("GitHub")
+                .build();
+    }
+
+    private static ClientRegistration dingTalkRegistration() {
+        // Mirrors application.yml: no scope declared, so Spring keeps this a plain OAuth2 client.
+        return ClientRegistration.withRegistrationId("dingtalk")
+                .clientId("dingoauth_test")
+                .clientSecret("secret")
+                .authorizationUri("https://login.dingtalk.com/oauth2/auth")
+                .tokenUri("https://api.dingtalk.com/v1.0/oauth2/userAccessToken")
+                .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
+                .userInfoUri("https://api.dingtalk.com/v1.0/contact/users/me")
+                .userNameAttributeName("unionId")
+                .authorizationGrantType(
+                        org.springframework.security.oauth2.core.AuthorizationGrantType.AUTHORIZATION_CODE)
+                .clientAuthenticationMethod(
+                        org.springframework.security.oauth2.core.ClientAuthenticationMethod.NONE)
+                .clientName("钉钉")
+                .build();
+    }
 }
