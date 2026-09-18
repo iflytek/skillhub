@@ -283,7 +283,16 @@ services:
   - `SKILLHUB_WEB_API_BASE_URL=/skillhub`
   - `SKILLHUB_PUBLIC_BASE_URL=https://example.com/skillhub`
   网关可以在转发到 Web 容器前将该前缀重写掉，但公网 URL 仍必须保留前缀，确保 OAuth、CLI 和 registry 链接正确。
-- 如果要开放真实登录，再补充 `OAUTH2_GITHUB_CLIENT_ID` / `OAUTH2_GITHUB_CLIENT_SECRET`
+- 如果要开放真实登录，再补充对应 Provider 的 client id/secret：
+  - GitHub：`OAUTH2_GITHUB_CLIENT_ID` / `OAUTH2_GITHUB_CLIENT_SECRET`
+  - GitLab：`OAUTH2_GITLAB_CLIENT_ID` / `OAUTH2_GITLAB_CLIENT_SECRET`（自建实例再设 `OAUTH2_GITLAB_BASE_URI`）
+  - 飞书：`OAUTH2_FEISHU_CLIENT_ID` / `OAUTH2_FEISHU_CLIENT_SECRET`
+    （国际版 Lark 再设 `OAUTH2_FEISHU_AUTHORIZE_URI` / `OAUTH2_FEISHU_BASE_URI`）
+
+  留空即不展示该入口，无需改配置文件。注意：飞书邮箱由企业管理员导入、未经用户
+  确认，因此 `emailVerified` 恒为 false；若在 `application.yml` 中把
+  `skillhub.access-policy.mode` 设为 `EMAIL_DOMAIN`，该策略会拒绝所有未验证邮箱，
+  飞书登录将一律失败。启用飞书时请保留默认的 `OPEN` 或改用其他准入模式。
 - 如果要启用密码重置验证码邮件，参见：`docs/19-smtp-password-reset-email-setup.md`
 
 ## 8 OIDC 登录配置
