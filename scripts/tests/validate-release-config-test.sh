@@ -253,6 +253,29 @@ write_env "$invalid_redis_sentinel_check_env" "release-download-secret-32-bytes-
 printf '%s\n' "SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST=yes" >>"$invalid_redis_sentinel_check_env"
 expect_fail "$invalid_redis_sentinel_check_env" "SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST must be true or false"
 
+# An OAuth client id without its secret (or vice versa) leaves the provider half-configured:
+# the login button renders but the exchange fails. Checked for every supported provider.
+for provider in GITHUB GITLAB FEISHU; do
+  missing_oauth_secret_env="$tmp/missing-oauth-secret.env"
+  write_env "$missing_oauth_secret_env" "release-download-secret-32-bytes-minimum"
+  printf 'OAUTH2_%s_CLIENT_ID=real-client-id\n' "$provider" >>"$missing_oauth_secret_env"
+  expect_fail "$missing_oauth_secret_env" "OAUTH2_${provider}_CLIENT_SECRET is required"
+
+  missing_oauth_id_env="$tmp/missing-oauth-id.env"
+  write_env "$missing_oauth_id_env" "release-download-secret-32-bytes-minimum"
+  printf 'OAUTH2_%s_CLIENT_SECRET=real-client-secret\n' "$provider" >>"$missing_oauth_id_env"
+  expect_fail "$missing_oauth_id_env" "OAUTH2_${provider}_CLIENT_ID is required"
+done
+
+# A fully configured provider pair must pass.
+valid_oauth_env="$tmp/valid-oauth.env"
+write_env "$valid_oauth_env" "release-download-secret-32-bytes-minimum"
+cat >>"$valid_oauth_env" <<'EOF'
+OAUTH2_FEISHU_CLIENT_ID=cli_release_example
+OAUTH2_FEISHU_CLIENT_SECRET=release-feishu-secret
+EOF
+"$SCRIPT" "$valid_oauth_env" >/dev/null
+
 draft_env="$tmp/draft.env"
 while IFS= read -r line || [[ -n "$line" ]]; do
   case "$line" in

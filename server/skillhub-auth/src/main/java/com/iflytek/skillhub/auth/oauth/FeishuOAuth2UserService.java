@@ -9,6 +9,8 @@ import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,6 +31,8 @@ import org.springframework.web.client.RestClient;
  */
 @Component
 public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
+
+    private static final Logger log = LoggerFactory.getLogger(FeishuOAuth2UserService.class);
 
     static final String PROVIDER = "feishu";
 
@@ -98,8 +102,11 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + userRequest.getAccessToken().getTokenValue())
                 .exchange((request, clientResponse) -> readBounded(clientResponse.getBody()));
         } catch (Exception e) {
+            // Exception class only: the message can quote the request URI, which holds the token.
+            // Nothing downstream logs this failure, so without this line it would be silent.
+            log.warn("Feishu user info request failed with {}", e.getClass().getSimpleName());
             // The cause carries the detail for operators; the OAuth2Error description stays generic
-            // because an upstream message can quote the request URI, which holds the access token.
+            // for the same reason the log line is.
             throw new OAuth2AuthenticationException(
                 new OAuth2Error("feishu_userinfo_error", "Failed to load Feishu user info", null),
                 e
@@ -107,6 +114,11 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
         }
 
         if (response == null || response.code() != 0 || response.data() == null) {
+            // Feishu's own error code is safe to record; its msg text is not.
+            log.warn(
+                "Feishu user info returned error code {}",
+                response == null ? "none" : response.code()
+            );
             throw new OAuth2AuthenticationException(
                 new OAuth2Error(
                     "feishu_userinfo_error",

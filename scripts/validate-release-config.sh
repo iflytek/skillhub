@@ -380,14 +380,16 @@ if [ "${REDIS_BIND_ADDRESS:-127.0.0.1}" != "127.0.0.1" ]; then
   warn "REDIS_BIND_ADDRESS is not 127.0.0.1; confirm Redis exposure is intended"
 fi
 
-oauth_id="${OAUTH2_GITHUB_CLIENT_ID:-}"
-oauth_secret="${OAUTH2_GITHUB_CLIENT_SECRET:-}"
-if [ -n "$oauth_id" ] && [ -z "$oauth_secret" ]; then
-  error "OAUTH2_GITHUB_CLIENT_SECRET is required when OAUTH2_GITHUB_CLIENT_ID is set"
-fi
-if [ -n "$oauth_secret" ] && [ -z "$oauth_id" ]; then
-  error "OAUTH2_GITHUB_CLIENT_ID is required when OAUTH2_GITHUB_CLIENT_SECRET is set"
-fi
+for provider in GITHUB GITLAB FEISHU; do
+  eval "oauth_id=\"\${OAUTH2_${provider}_CLIENT_ID:-}\""
+  eval "oauth_secret=\"\${OAUTH2_${provider}_CLIENT_SECRET:-}\""
+  if [ -n "$oauth_id" ] && [ -z "$oauth_secret" ]; then
+    error "OAUTH2_${provider}_CLIENT_SECRET is required when OAUTH2_${provider}_CLIENT_ID is set"
+  fi
+  if [ -n "$oauth_secret" ] && [ -z "$oauth_id" ]; then
+    error "OAUTH2_${provider}_CLIENT_ID is required when OAUTH2_${provider}_CLIENT_SECRET is set"
+  fi
+done
 
 if [ "$errors" -gt 0 ]; then
   echo "Release config validation failed: $errors error(s), $warnings warning(s)." >&2
