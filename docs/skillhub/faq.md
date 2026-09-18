@@ -199,7 +199,7 @@ A: 登录入口是配置驱动的：`/api/v1/auth/methods` 只返回配置了真
 
 - 留空对应的环境变量即可（例如不设置 `OAUTH2_FEISHU_CLIENT_ID`），无需改动配置文件。
 - 或修改 `application.yml`，注释/删除 `spring.security.oauth2.client.registration`
-  下对应的注册块（`github`、`gitlab`、`feishu`）以及对应的 `provider` 段，
+  下对应的注册块（`github`、`gitlab`、`feishu`、`dingtalk`）以及对应的 `provider` 段，
   Spring Boot 启动时便不会创建该注册。
 
 ## Q: SkillHub 的安全扫描（Skill Scanner）是讯飞自研的吗？使用什么协议？

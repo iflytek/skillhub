@@ -95,6 +95,8 @@ secrets:
   oauth2GithubClientSecret: ""
   oauth2FeishuClientId: ""
   oauth2FeishuClientSecret: ""
+  oauth2DingtalkClientId: ""
+  oauth2DingtalkClientSecret: ""
   scannerLlmApiKey: ""
   scannerLlmBaseUrl: ""
   scannerLlmModel: ""

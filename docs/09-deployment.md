@@ -288,11 +288,13 @@ services:
   - GitLab：`OAUTH2_GITLAB_CLIENT_ID` / `OAUTH2_GITLAB_CLIENT_SECRET`（自建实例再设 `OAUTH2_GITLAB_BASE_URI`）
   - 飞书：`OAUTH2_FEISHU_CLIENT_ID` / `OAUTH2_FEISHU_CLIENT_SECRET`
     （国际版 Lark 再设 `OAUTH2_FEISHU_AUTHORIZE_URI` / `OAUTH2_FEISHU_BASE_URI`）
+  - 钉钉：`OAUTH2_DINGTALK_CLIENT_ID` / `OAUTH2_DINGTALK_CLIENT_SECRET`
+    （分别填应用的 AppKey 与 AppSecret）
 
-  留空即不展示该入口，无需改配置文件。注意：飞书邮箱由企业管理员导入、未经用户
-  确认，因此 `emailVerified` 恒为 false；若在 `application.yml` 中把
+  留空即不展示该入口，无需改配置文件。注意：飞书和钉钉的邮箱都由企业管理员导入、
+  未经用户确认，因此 `emailVerified` 恒为 false；若在 `application.yml` 中把
   `skillhub.access-policy.mode` 设为 `EMAIL_DOMAIN`，该策略会拒绝所有未验证邮箱，
-  飞书登录将一律失败。启用飞书时请保留默认的 `OPEN` 或改用其他准入模式。
+  这两个入口的登录将一律失败。启用它们时请保留默认的 `OPEN` 或改用其他准入模式。
 - 如果要启用密码重置验证码邮件，参见：`docs/19-smtp-password-reset-email-setup.md`
 
 ## 8 OIDC 登录配置
