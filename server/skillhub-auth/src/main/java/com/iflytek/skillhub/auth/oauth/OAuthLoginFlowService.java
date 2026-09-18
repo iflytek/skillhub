@@ -36,6 +36,7 @@ import org.springframework.stereotype.Service;
 public class OAuthLoginFlowService {
 
     private final Map<String, OAuthClaimsExtractor> extractors;
+    private final Map<String, ProviderOAuth2UserService> userServiceOverrides;
     private final AccessPolicy accessPolicy;
     private final IdentityBindingService identityBindingService;
     private final LegacyPlatformIdentityCore identityCore;
@@ -44,12 +45,14 @@ public class OAuthLoginFlowService {
 
     @Autowired
     public OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
+                                 List<ProviderOAuth2UserService> userServiceList,
                                  AccessPolicy accessPolicy,
                                  IdentityBindingService identityBindingService,
                                  LegacyPlatformIdentityCore identityCore,
                                  RemoteIdentityIoExecutor remoteIdentityIo) {
         this(
                 extractorList,
+                userServiceList,
                 accessPolicy,
                 identityBindingService,
                 identityCore,
@@ -59,6 +62,7 @@ public class OAuthLoginFlowService {
     }
 
     OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
+                          List<ProviderOAuth2UserService> userServiceList,
                           AccessPolicy accessPolicy,
                           IdentityBindingService identityBindingService,
                           LegacyPlatformIdentityCore identityCore,
@@ -66,6 +70,8 @@ public class OAuthLoginFlowService {
                           RemoteIdentityIoExecutor remoteIdentityIo) {
         this.extractors = extractorList.stream()
                 .collect(Collectors.toMap(OAuthClaimsExtractor::getProvider, Function.identity()));
+        this.userServiceOverrides = userServiceList.stream()
+                .collect(Collectors.toMap(ProviderOAuth2UserService::getProvider, Function.identity()));
         this.accessPolicy = accessPolicy;
         this.identityBindingService = identityBindingService;
         this.identityCore = identityCore;
@@ -76,9 +82,27 @@ public class OAuthLoginFlowService {
     OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
                           AccessPolicy accessPolicy,
                           IdentityBindingService identityBindingService,
+                          LegacyPlatformIdentityCore identityCore,
+                          OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate,
+                          RemoteIdentityIoExecutor remoteIdentityIo) {
+        this(
+                extractorList,
+                List.of(),
+                accessPolicy,
+                identityBindingService,
+                identityCore,
+                delegate,
+                remoteIdentityIo
+        );
+    }
+
+    OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
+                          AccessPolicy accessPolicy,
+                          IdentityBindingService identityBindingService,
                           LegacyPlatformIdentityCore identityCore) {
         this(
                 extractorList,
+                List.of(),
                 accessPolicy,
                 identityBindingService,
                 identityCore,
@@ -95,8 +119,9 @@ public class OAuthLoginFlowService {
 
     public AuthenticatedLoginContext loadLoginContext(OAuth2UserRequest request) {
         LoadedProviderIdentity loadedIdentity = remoteIdentityIo.execute(() -> {
-            OAuth2User upstreamUser = delegate.loadUser(request);
             String registrationId = request.getClientRegistration().getRegistrationId();
+            ProviderOAuth2UserService override = userServiceOverrides.get(registrationId);
+            OAuth2User upstreamUser = (override != null ? override : delegate).loadUser(request);
             OAuthClaimsExtractor extractor = extractors.get(registrationId);
             if (extractor == null) {
                 throw new OAuth2AuthenticationException(
