@@ -74,6 +74,7 @@ class OAuthLoginFlowServiceTest {
         };
         OAuthLoginFlowService service = new OAuthLoginFlowService(
                 List.of(extractor),
+                List.of(),
                 accessPolicy,
                 identityBindingService,
                 identityCore,

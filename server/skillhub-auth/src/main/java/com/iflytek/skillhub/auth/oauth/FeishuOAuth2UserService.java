@@ -2,12 +2,14 @@ package com.iflytek.skillhub.auth.oauth;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestFactory;
@@ -35,6 +37,11 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
     private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
 
+    /** A Feishu user_info payload is well under 1 KB; this only needs to stop an unbounded body. */
+    private static final int MAX_RESPONSE_BYTES = 64 * 1024;
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     /**
      * Uses an external-service client that is intentionally not customized with application
      * tracing. Trace context must not be propagated to the external Feishu service.
@@ -61,6 +68,19 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
         return factory;
     }
 
+    /**
+     * Reads at most {@link #MAX_RESPONSE_BYTES} before parsing, so a misconfigured or hostile
+     * {@code OAUTH2_FEISHU_BASE_URI} cannot stream an unbounded body into the parser. Reading one
+     * byte past the cap is what distinguishes an oversized payload from one that exactly fills it.
+     */
+    private static FeishuUserResponse readBounded(InputStream body) throws IOException {
+        byte[] bytes = body.readNBytes(MAX_RESPONSE_BYTES + 1);
+        if (bytes.length > MAX_RESPONSE_BYTES) {
+            throw new IOException("Feishu user info response exceeds " + MAX_RESPONSE_BYTES + " bytes");
+        }
+        return OBJECT_MAPPER.readValue(bytes, FeishuUserResponse.class);
+    }
+
     @Override
     public String getProvider() {
         return PROVIDER;
@@ -76,8 +96,7 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
             response = restClient.get()
                 .uri(userInfoUri)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + userRequest.getAccessToken().getTokenValue())
-                .retrieve()
-                .body(new ParameterizedTypeReference<FeishuUserResponse>() {});
+                .exchange((request, clientResponse) -> readBounded(clientResponse.getBody()));
         } catch (Exception e) {
             // The cause carries the detail for operators; the OAuth2Error description stays generic
             // because an upstream message can quote the request URI, which holds the access token.
@@ -117,7 +136,6 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
         putIfPresent(attributes, "avatar_url", data.avatarUrl());
         putIfPresent(attributes, "email", data.email());
         putIfPresent(attributes, "enterprise_email", data.enterpriseEmail());
-        putIfPresent(attributes, "mobile", data.mobile());
         if (!attributes.containsKey(userNameAttributeName)) {
             throw new OAuth2AuthenticationException(
                 new OAuth2Error("feishu_userinfo_error", "Feishu user info missing " + userNameAttributeName, null)
@@ -143,7 +161,6 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
         @JsonProperty("en_name") String enName,
         @JsonProperty("avatar_url") String avatarUrl,
         @JsonProperty("email") String email,
-        @JsonProperty("enterprise_email") String enterpriseEmail,
-        @JsonProperty("mobile") String mobile
+        @JsonProperty("enterprise_email") String enterpriseEmail
     ) {}
 }

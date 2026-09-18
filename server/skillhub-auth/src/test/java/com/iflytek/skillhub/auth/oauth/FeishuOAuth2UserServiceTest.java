@@ -82,6 +82,26 @@ class FeishuOAuth2UserServiceTest {
     }
 
     @Test
+    void loadUser_rejectsOversizedResponseBody() {
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        // 64 KB cap; pad a structurally valid envelope past it so the size check fires, not the parser.
+        String padding = "x".repeat(70 * 1024);
+        server.expect(requestTo("https://open.feishu.cn/open-apis/authen/v1/user_info"))
+                .andRespond(withSuccess(
+                        "{\"code\":0,\"msg\":\"" + padding + "\",\"data\":{\"open_id\":\"ou_123\"}}",
+                        MediaType.APPLICATION_JSON
+                ));
+        FeishuOAuth2UserService service = new FeishuOAuth2UserService(restClientBuilder);
+
+        assertThatThrownBy(() -> service.loadUser(userRequest()))
+                .isInstanceOf(OAuth2AuthenticationException.class)
+                .satisfies(ex -> assertThat(((OAuth2AuthenticationException) ex).getError().getErrorCode())
+                        .isEqualTo("feishu_userinfo_error"));
+        server.verify();
+    }
+
+    @Test
     void loadUser_errorDescriptionDoesNotEchoUpstreamTextOrToken() {
         RestClient.Builder restClientBuilder = RestClient.builder();
         MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();

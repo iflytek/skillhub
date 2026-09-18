@@ -82,23 +82,6 @@ public class OAuthLoginFlowService {
     OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
                           AccessPolicy accessPolicy,
                           IdentityBindingService identityBindingService,
-                          LegacyPlatformIdentityCore identityCore,
-                          OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate,
-                          RemoteIdentityIoExecutor remoteIdentityIo) {
-        this(
-                extractorList,
-                List.of(),
-                accessPolicy,
-                identityBindingService,
-                identityCore,
-                delegate,
-                remoteIdentityIo
-        );
-    }
-
-    OAuthLoginFlowService(List<OAuthClaimsExtractor> extractorList,
-                          AccessPolicy accessPolicy,
-                          IdentityBindingService identityBindingService,
                           LegacyPlatformIdentityCore identityCore) {
         this(
                 extractorList,
