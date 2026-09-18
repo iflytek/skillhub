@@ -276,11 +276,19 @@ spring:
             client-secret: ${OAUTH2_GITLAB_CLIENT_SECRET}
             authorization-grant-type: authorization_code
           feishu:
+            provider: feishu
             client-id: ${OAUTH2_FEISHU_CLIENT_ID}
             client-secret: ${OAUTH2_FEISHU_CLIENT_SECRET}
             # 飞书的 scope 配在开放平台应用上，不在这里传
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
+        provider:
+          feishu:
+            # Full endpoints are configurable for Lark, private deployments, and gateways.
+            authorization-uri: ${OAUTH2_FEISHU_AUTHORIZATION_URI:${OAUTH2_FEISHU_AUTHORIZE_URI:https://accounts.feishu.cn}/open-apis/authen/v1/authorize}
+            # OAUTH2_FEISHU_PROTOCOL_VERSION supports v2 and v3; default is v3.
+            token-uri: ${OAUTH2_FEISHU_TOKEN_URI:https://accounts.feishu.cn/oauth/v3/token}
+            user-info-uri: ${OAUTH2_FEISHU_USER_INFO_URI:${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v1/user_info}
 ```
 
 Spring Security OAuth2 Client 原生支持多 Provider 并存，新增 Provider 只需：
@@ -302,6 +310,29 @@ Provider 侧还需遵守：subject 必须稳定（不要用可能在两次登录
 fallback，否则同一个人会被拆成两个平台账号）、只有在 Provider 真正证明了邮箱
 所有权时才置 `emailVerified=true`、远程调用要有超时与响应大小上限、
 claims 提取过程不记录 subject/email/token。
+
+#### 飞书 token 协议版本
+
+飞书 token client 支持显式选择 `v2` 或 `v3`，默认值为 `v3`：
+
+```bash
+OAUTH2_FEISHU_PROTOCOL_VERSION=v3
+OAUTH2_FEISHU_AUTHORIZATION_URI=https://accounts.feishu.cn/open-apis/authen/v1/authorize
+OAUTH2_FEISHU_TOKEN_URI=https://accounts.feishu.cn/oauth/v3/token
+OAUTH2_FEISHU_USER_INFO_URI=https://open.feishu.cn/open-apis/authen/v1/user_info
+
+# 历史 v2 应用可显式切换：
+# OAUTH2_FEISHU_PROTOCOL_VERSION=v2
+# OAUTH2_FEISHU_TOKEN_URI=https://open.feishu.cn/open-apis/authen/v2/oauth/token
+```
+
+两个版本都使用 JSON authorization-code exchange，当前实现会根据协议版本
+选择对应的标准 token endpoint；如需代理、区域或私有化 endpoint，可通过
+`OAUTH2_FEISHU_TOKEN_URI` 覆盖。授权和 userinfo endpoint 也分别通过
+`OAUTH2_FEISHU_AUTHORIZATION_URI`、`OAUTH2_FEISHU_USER_INFO_URI` 配置。协议版本不合法
+时应用启动失败。不会在 v3 失败后自动使用 v2，因为 authorization code 只能使用一次，
+自动重试可能造成重复请求并掩盖配置错误。旧的 `OAUTH2_FEISHU_AUTHORIZE_URI` 和
+`OAUTH2_FEISHU_BASE_URI` 仍作为 base-URI 兼容回退，但新部署应使用完整 endpoint 变量。
 
 ## 4. 核心接口设计
 

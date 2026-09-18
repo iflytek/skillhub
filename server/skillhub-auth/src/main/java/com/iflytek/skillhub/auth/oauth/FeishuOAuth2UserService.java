@@ -74,7 +74,7 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
 
     /**
      * Reads at most {@link #MAX_RESPONSE_BYTES} before parsing, so a misconfigured or hostile
-     * {@code OAUTH2_FEISHU_BASE_URI} cannot stream an unbounded body into the parser. Reading one
+     * A misconfigured Feishu user-info endpoint cannot stream an unbounded body into the parser. Reading one
      * byte past the cap is what distinguishes an oversized payload from one that exactly fills it.
      */
     private static FeishuUserResponse readBounded(InputStream body) throws IOException {

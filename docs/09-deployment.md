@@ -286,8 +286,18 @@ services:
 - 如果要开放真实登录，再补充对应 Provider 的 client id/secret：
   - GitHub：`OAUTH2_GITHUB_CLIENT_ID` / `OAUTH2_GITHUB_CLIENT_SECRET`
   - GitLab：`OAUTH2_GITLAB_CLIENT_ID` / `OAUTH2_GITLAB_CLIENT_SECRET`（自建实例再设 `OAUTH2_GITLAB_BASE_URI`）
-  - 飞书：`OAUTH2_FEISHU_CLIENT_ID` / `OAUTH2_FEISHU_CLIENT_SECRET`
-    （国际版 Lark 再设 `OAUTH2_FEISHU_AUTHORIZE_URI` / `OAUTH2_FEISHU_BASE_URI`）
+  - 飞书：`OAUTH2_FEISHU_CLIENT_ID` / `OAUTH2_FEISHU_CLIENT_SECRET`。
+    Endpoint 默认配置为：
+    - `OAUTH2_FEISHU_AUTHORIZATION_URI=https://accounts.feishu.cn/open-apis/authen/v1/authorize`
+    - `OAUTH2_FEISHU_PROTOCOL_VERSION=v3`
+    - `OAUTH2_FEISHU_TOKEN_URI=https://accounts.feishu.cn/oauth/v3/token`
+    - `OAUTH2_FEISHU_USER_INFO_URI=https://open.feishu.cn/open-apis/authen/v1/user_info`
+
+    Lark 国际版、私有化部署或企业网关可分别覆盖这三个完整 endpoint；历史的
+    `OAUTH2_FEISHU_AUTHORIZE_URI` / `OAUTH2_FEISHU_BASE_URI` 仍可作为 base-URI
+    兼容回退。`OAUTH2_FEISHU_TOKEN_URI` 必须指向支持 JSON authorization-code
+    exchange 的 endpoint。`OAUTH2_FEISHU_PROTOCOL_VERSION` 只允许 `v2` 或 `v3`，
+    默认 `v3`，不会自动 fallback。
 
   留空即不展示该入口，无需改配置文件。注意：飞书邮箱由企业管理员导入、未经用户
   确认，因此 `emailVerified` 恒为 false；若在 `application.yml` 中把

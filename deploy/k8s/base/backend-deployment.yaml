@@ -240,6 +240,14 @@ spec:
                   name: skillhub-secret
                   key: oauth2-feishu-client-secret
                   optional: true
+            - name: OAUTH2_FEISHU_AUTHORIZATION_URI
+              value: "https://accounts.feishu.cn/open-apis/authen/v1/authorize"
+            - name: OAUTH2_FEISHU_PROTOCOL_VERSION
+              value: "v3"
+            - name: OAUTH2_FEISHU_TOKEN_URI
+              value: "https://accounts.feishu.cn/oauth/v3/token"
+            - name: OAUTH2_FEISHU_USER_INFO_URI
+              value: "https://open.feishu.cn/open-apis/authen/v1/user_info"
 
           volumeMounts:
             - name: skillhub-storage

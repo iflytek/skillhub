@@ -34,6 +34,24 @@
         }
       }
     },
+    "oauth2": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["feishu"],
+      "properties": {
+        "feishu": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["protocolVersion", "tokenUri"],
+          "properties": {
+            "authorizationUri": { "type": "string", "format": "uri" },
+            "protocolVersion": { "type": "string", "enum": ["v2", "v3"] },
+            "tokenUri": { "type": "string", "format": "uri" },
+            "userInfoUri": { "type": "string", "format": "uri" }
+          }
+        }
+      }
+    },
     "builtinSkills": {
       "type": "object",
       "additionalProperties": false,
@@ -156,6 +174,8 @@
         "downloadAnonCookieSecret": { "type": "string" },
         "oauth2GithubClientId": { "type": "string" },
         "oauth2GithubClientSecret": { "type": "string" },
+        "oauth2FeishuClientId": { "type": "string" },
+        "oauth2FeishuClientSecret": { "type": "string" },
         "scannerLlmApiKey": { "type": "string" },
         "scannerLlmBaseUrl": { "type": "string" },
         "scannerLlmModel": { "type": "string" }

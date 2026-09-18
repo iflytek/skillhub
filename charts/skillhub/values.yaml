@@ -22,6 +22,13 @@ auth:
     enabled: true
     provider: local
 
+oauth2:
+  feishu:
+    authorizationUri: https://accounts.feishu.cn/open-apis/authen/v1/authorize
+    protocolVersion: v3
+    tokenUri: https://accounts.feishu.cn/oauth/v3/token
+    userInfoUri: https://open.feishu.cn/open-apis/authen/v1/user_info
+
 builtinSkills:
   enabled: true
 

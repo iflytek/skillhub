@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.config;
 
 import com.iflytek.skillhub.auth.oauth.CustomOAuth2UserService;
 import com.iflytek.skillhub.auth.oauth.CustomOidcUserService;
+import com.iflytek.skillhub.auth.oauth.FeishuOAuth2AccessTokenResponseClient;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginFailureHandler;
 import com.iflytek.skillhub.auth.oauth.OAuth2LoginSuccessHandler;
 import com.iflytek.skillhub.auth.oauth.SkillHubOAuth2AuthorizationRequestResolver;
@@ -61,6 +62,7 @@ public class SecurityConfig {
 
     private final CustomOAuth2UserService customOAuth2UserService;
     private final CustomOidcUserService customOidcUserService;
+    private final FeishuOAuth2AccessTokenResponseClient feishuOAuth2AccessTokenResponseClient;
     private final SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver;
     private final OAuth2LoginSuccessHandler successHandler;
     private final OAuth2LoginFailureHandler failureHandler;
@@ -75,6 +77,7 @@ public class SecurityConfig {
 
     public SecurityConfig(CustomOAuth2UserService customOAuth2UserService,
                           CustomOidcUserService customOidcUserService,
+                          FeishuOAuth2AccessTokenResponseClient feishuOAuth2AccessTokenResponseClient,
                           SkillHubOAuth2AuthorizationRequestResolver authorizationRequestResolver,
                           OAuth2LoginSuccessHandler successHandler,
                           OAuth2LoginFailureHandler failureHandler,
@@ -88,6 +91,7 @@ public class SecurityConfig {
                           @Value("${server.servlet.session.cookie.name:SESSION}") String sessionCookieName) {
         this.customOAuth2UserService = customOAuth2UserService;
         this.customOidcUserService = customOidcUserService;
+        this.feishuOAuth2AccessTokenResponseClient = feishuOAuth2AccessTokenResponseClient;
         this.authorizationRequestResolver = authorizationRequestResolver;
         this.successHandler = successHandler;
         this.failureHandler = failureHandler;
@@ -132,6 +136,8 @@ public class SecurityConfig {
             })
             .oauth2Login(oauth2 -> oauth2
                 .authorizationEndpoint(endpoint -> endpoint.authorizationRequestResolver(authorizationRequestResolver))
+                .tokenEndpoint(tokenEndpoint -> tokenEndpoint
+                    .accessTokenResponseClient(feishuOAuth2AccessTokenResponseClient))
                 .userInfoEndpoint(userInfo -> userInfo
                     .userService(customOAuth2UserService)
                     .oidcUserService(customOidcUserService))

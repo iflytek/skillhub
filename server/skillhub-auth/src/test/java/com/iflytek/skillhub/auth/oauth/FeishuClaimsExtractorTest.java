@@ -127,7 +127,7 @@ class FeishuClaimsExtractorTest {
                 .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
                 .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
                 .authorizationUri("https://accounts.feishu.cn/open-apis/authen/v1/authorize")
-                .tokenUri("https://open.feishu.cn/open-apis/authen/v2/oauth/token")
+                .tokenUri("https://accounts.feishu.cn/oauth/v3/token")
                 .userInfoUri("https://open.feishu.cn/open-apis/authen/v1/user_info")
                 .userNameAttributeName("open_id")
                 .clientName("飞书")

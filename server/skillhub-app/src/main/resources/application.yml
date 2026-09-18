@@ -71,6 +71,7 @@ spring:
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-name: ${OAUTH2_GITLAB_DISPLAY_NAME:GitLab}
           feishu:
+            provider: feishu
             client-id: ${OAUTH2_FEISHU_CLIENT_ID:placeholder}
             client-secret: ${OAUTH2_FEISHU_CLIENT_SECRET:placeholder}
             # Feishu scopes are configured on the open platform app itself
@@ -89,9 +90,12 @@ spring:
             user-info-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/api/v4/user
             user-name-attribute: username
           feishu:
-            authorization-uri: ${OAUTH2_FEISHU_AUTHORIZE_URI:https://accounts.feishu.cn}/open-apis/authen/v1/authorize
-            token-uri: ${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v2/oauth/token
-            user-info-uri: ${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v1/user_info
+            # Full endpoints are configurable for Lark, private deployments, and gateways.
+            # The legacy base-URI variables remain as compatibility fallbacks.
+            authorization-uri: ${OAUTH2_FEISHU_AUTHORIZATION_URI:${OAUTH2_FEISHU_AUTHORIZE_URI:https://accounts.feishu.cn}/open-apis/authen/v1/authorize}
+            # Supported values: v2 and v3. V3 is the default; selection is explicit and never falls back.
+            token-uri: ${OAUTH2_FEISHU_TOKEN_URI:https://accounts.feishu.cn/oauth/v3/token}
+            user-info-uri: ${OAUTH2_FEISHU_USER_INFO_URI:${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v1/user_info}
             user-name-attribute: open_id
   servlet:
     multipart:

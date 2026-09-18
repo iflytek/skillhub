@@ -368,6 +368,14 @@ spec:
                   name: {{ include "skillhub.secretName" . }}
                   key: oauth2-feishu-client-secret
                   optional: true
+            - name: OAUTH2_FEISHU_AUTHORIZATION_URI
+              value: {{ .Values.oauth2.feishu.authorizationUri | default "https://accounts.feishu.cn/open-apis/authen/v1/authorize" | quote }}
+            - name: OAUTH2_FEISHU_PROTOCOL_VERSION
+              value: {{ .Values.oauth2.feishu.protocolVersion | default "v3" | quote }}
+            - name: OAUTH2_FEISHU_TOKEN_URI
+              value: {{ .Values.oauth2.feishu.tokenUri | default "https://accounts.feishu.cn/oauth/v3/token" | quote }}
+            - name: OAUTH2_FEISHU_USER_INFO_URI
+              value: {{ .Values.oauth2.feishu.userInfoUri | default "https://open.feishu.cn/open-apis/authen/v1/user_info" | quote }}
 
             {{- if .Values.server.javaOpts }}
             - name: JAVA_OPTS
