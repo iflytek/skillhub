@@ -26,6 +26,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/me"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/session/bootstrap"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/direct/login"),
+            RouteAuthorizationPolicy.permitAll(null, "/oauth2/authorization/**"),
+            RouteAuthorizationPolicy.permitAll(null, "/login/oauth2/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/local/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/device/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/check"),
