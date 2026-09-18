@@ -87,8 +87,11 @@ spring:
             # nonce, which DingTalk rejects. DingTalkAuthorizationRequestCustomizer adds the
             # scope back to the outgoing URI without turning this into an OIDC flow.
             authorization-grant-type: authorization_code
-            # DingTalk sends credentials in a JSON body, handled by DingTalkTokenResponseClient.
-            client-authentication-method: none
+            # DingTalk is a confidential client that happens to carry its secret in a JSON body,
+            # which DingTalkTokenResponseClient builds. client-secret-post is the honest
+            # description; "none" would additionally make Spring apply PKCE, and the DingTalk token
+            # request sends no code_verifier to match the challenge.
+            client-authentication-method: client_secret_post
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-name: ${OAUTH2_DINGTALK_DISPLAY_NAME:钉钉}
         provider:

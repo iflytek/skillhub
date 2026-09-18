@@ -121,7 +121,7 @@ class DingTalkOAuth2UserServiceTest {
                 .clientId("dingoauth_test")
                 .clientSecret("client-secret")
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .clientAuthenticationMethod(ClientAuthenticationMethod.NONE)
+                .clientAuthenticationMethod(ClientAuthenticationMethod.CLIENT_SECRET_POST)
                 .redirectUri("{baseUrl}/login/oauth2/code/{registrationId}")
                 .authorizationUri("https://login.dingtalk.com/oauth2/auth")
                 .tokenUri("https://api.dingtalk.com/v1.0/oauth2/userAccessToken")

@@ -86,7 +86,7 @@ class OAuth2AuthorizationRequestResolverTest {
     }
 
     @Test
-    void resolve_addsDingTalkScopeWithoutTurningTheRequestIntoOidc() {
+    void resolve_sendsDingTalkScopeOnTheUriButKeepsTheRequestNonOidc() {
         SkillHubOAuth2AuthorizationRequestResolver dingTalkResolver = resolverFor(
                 dingTalkRegistration(),
                 new DingTalkAuthorizationRequestCustomizer()
@@ -97,14 +97,24 @@ class OAuth2AuthorizationRequestResolverTest {
         var authorizationRequest = dingTalkResolver.resolve(request, "dingtalk");
 
         assertThat(authorizationRequest).isNotNull();
-        // DingTalk's authorize endpoint requires scope=openid...
-        assertThat(authorizationRequest.getScopes()).contains("openid");
+        // DingTalk's authorize endpoint requires scope=openid on the wire.
         assertThat(authorizationRequest.getAuthorizationRequestUri()).contains("scope=openid");
-        // ...but rejects the nonce Spring attaches when a registration declares openid in config.
-        // Declaring no scope there and adding it here is what keeps the nonce away.
+
+        // But getScopes() must stay empty. OAuth2LoginAuthenticationProvider.authenticate returns
+        // null when the authorization request's scopes contain "openid", which hands the callback to
+        // OidcAuthorizationCodeAuthenticationProvider; that then fails with invalid_id_token because
+        // DingTalk returns no id_token, and neither the token client nor the user service is reached.
+        assertThat(authorizationRequest.getScopes()).doesNotContain("openid");
+
+        // And no nonce: a registration declaring openid in configuration would get one attached,
+        // which DingTalk also rejects.
         assertThat(authorizationRequest.getAdditionalParameters()).doesNotContainKey("nonce");
         assertThat(authorizationRequest.getAttributes()).doesNotContainKey("nonce");
         assertThat(authorizationRequest.getAuthorizationRequestUri()).doesNotContain("nonce=");
+
+        // client-secret-post rather than none, so Spring does not apply PKCE. The DingTalk token
+        // request sends no code_verifier, so a challenge on the authorize URI could not be answered.
+        assertThat(authorizationRequest.getAuthorizationRequestUri()).doesNotContain("code_challenge");
     }
 
     @Test
@@ -167,7 +177,7 @@ class OAuth2AuthorizationRequestResolverTest {
                 .authorizationGrantType(
                         org.springframework.security.oauth2.core.AuthorizationGrantType.AUTHORIZATION_CODE)
                 .clientAuthenticationMethod(
-                        org.springframework.security.oauth2.core.ClientAuthenticationMethod.NONE)
+                        org.springframework.security.oauth2.core.ClientAuthenticationMethod.CLIENT_SECRET_POST)
                 .clientName("钉钉")
                 .build();
     }

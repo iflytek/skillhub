@@ -16,8 +16,6 @@ public final class DingTalkOAuth2Constants {
      */
     static final String SUBJECT_CLAIM_NAME = "unionId";
 
-    public static final String SUBJECT_ATTRIBUTE = "dingtalkSubject";
-
     private DingTalkOAuth2Constants() {
     }
 }
