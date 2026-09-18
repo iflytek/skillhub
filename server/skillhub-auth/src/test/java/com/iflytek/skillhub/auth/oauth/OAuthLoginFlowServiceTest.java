@@ -18,6 +18,7 @@ class OAuthLoginFlowServiceTest {
     void rememberReturnTo_stores_sanitized_return_target() {
         OAuthLoginFlowService service = new OAuthLoginFlowService(
                 List.of(),
+                List.of(),
                 mock(AccessPolicy.class),
                 mock(IdentityBindingService.class)
         );
@@ -35,6 +36,7 @@ class OAuthLoginFlowServiceTest {
     @Test
     void resolveFailureRedirect_maps_access_denied_to_user_facing_page() {
         OAuthLoginFlowService service = new OAuthLoginFlowService(
+                List.of(),
                 List.of(),
                 mock(AccessPolicy.class),
                 mock(IdentityBindingService.class)
@@ -75,6 +77,7 @@ class OAuthLoginFlowServiceTest {
     @Test
     void consumeReturnTo_clearsUnsafeSessionValue() {
         OAuthLoginFlowService service = new OAuthLoginFlowService(
+                List.of(),
                 List.of(),
                 mock(AccessPolicy.class),
                 mock(IdentityBindingService.class)
