@@ -82,6 +82,16 @@
       }
     },
     {
+      "slug": "ledger-tasks-yylo",
+      "version": "1.0.0",
+      "license": "MIT",
+      "upstream": {
+        "repository": "https://github.com/yylo-dev/yylo-skills",
+        "commit": "2c4fcece8525f68823883858b4a393319981f9fc",
+        "path": "skills/ledger-tasks-yylo"
+      }
+    },
+    {
       "slug": "linkedin-post-formatter",
       "version": "1.0.0",
       "license": "MIT",
@@ -99,6 +109,16 @@
         "repository": "https://github.com/cosmicstack-labs/mercury-agent-skills",
         "commit": "4c57cf2eaeb3fb9c0e418615c7a36fe977c88b79",
         "path": "categories/creative-personal-development/meeting-note-summarizer"
+      }
+    },
+    {
+      "slug": "orca-replay",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "upstream": {
+        "repository": "https://github.com/Continuum-AI-Corp/OrcaReplay",
+        "commit": "0d78203d6fc03465b84f844c3e0bfd019ae10dc5",
+        "path": "skills/orca-replay"
       }
     },
     {
