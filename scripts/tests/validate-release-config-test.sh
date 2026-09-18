@@ -255,7 +255,7 @@ expect_fail "$invalid_redis_sentinel_check_env" "SKILLHUB_REDIS_SENTINEL_CHECK_S
 
 # An OAuth client id without its secret (or vice versa) leaves the provider half-configured:
 # the login button renders but the exchange fails. Checked for every supported provider.
-for provider in GITHUB GITLAB FEISHU; do
+for provider in GITHUB GITLAB FEISHU DINGTALK; do
   missing_oauth_secret_env="$tmp/missing-oauth-secret.env"
   write_env "$missing_oauth_secret_env" "release-download-secret-32-bytes-minimum"
   printf 'OAUTH2_%s_CLIENT_ID=real-client-id\n' "$provider" >>"$missing_oauth_secret_env"

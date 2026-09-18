@@ -380,7 +380,7 @@ if [ "${REDIS_BIND_ADDRESS:-127.0.0.1}" != "127.0.0.1" ]; then
   warn "REDIS_BIND_ADDRESS is not 127.0.0.1; confirm Redis exposure is intended"
 fi
 
-for provider in GITHUB GITLAB FEISHU; do
+for provider in GITHUB GITLAB FEISHU DINGTALK; do
   eval "oauth_id=\"\${OAUTH2_${provider}_CLIENT_ID:-}\""
   eval "oauth_secret=\"\${OAUTH2_${provider}_CLIENT_SECRET:-}\""
   if [ -n "$oauth_id" ] && [ -z "$oauth_secret" ]; then

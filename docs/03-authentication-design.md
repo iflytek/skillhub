@@ -281,6 +281,14 @@ spring:
             # 飞书的 scope 配在开放平台应用上，不在这里传
             client-authentication-method: client_secret_post
             authorization-grant-type: authorization_code
+          dingtalk:
+            client-id: ${OAUTH2_DINGTALK_CLIENT_ID}
+            client-secret: ${OAUTH2_DINGTALK_CLIENT_SECRET}
+            # 故意不声明 scope：钉钉的授权端点要 scope=openid，但在这里声明会让
+            # Spring 把该注册当成 OIDC 客户端并附加 nonce，而钉钉不接受 nonce。
+            # scope 由 DingTalkAuthorizationRequestCustomizer 在请求阶段补上。
+            client-authentication-method: none
+            authorization-grant-type: authorization_code
 ```
 
 Spring Security OAuth2 Client 原生支持多 Provider 并存，新增 Provider 只需：
@@ -292,11 +300,23 @@ Spring Security OAuth2 Client 原生支持多 Provider 并存，新增 Provider 
 第 2 步是按 Provider 注册一个 Bean，而不是在某个类里按 `registrationId` 分支。
 账号匹配、建号、资料权威和账号守卫都在 `OAuthClaims` 之后共享，Provider 自己不做这些决策。
 
-如果该 Provider 的 userinfo 响应不是标准的扁平结构（例如飞书用
-`{code, msg, data}` 信封，且以 HTTP 200 返回错误），再额外实现一个
-`ProviderOAuth2UserService`：它声明自己负责哪个 `registrationId`，
-接管 userinfo 的加载步骤，其余流程不变。该覆盖运行在
+如果该 Provider 的协议有偏离标准之处，按偏离的环节实现对应的策略接口，
+每个接口都声明自己负责哪个 `registrationId`，由框架分发，不需要在共享类里写分支：
+
+| 偏离环节 | 策略接口 | 现有实现 |
+|---|---|---|
+| 授权请求参数 | `ProviderAuthorizationRequestCustomizer` | 钉钉补 `openid` scope |
+| token 交换 | `ProviderTokenResponseClient` | 钉钉用 JSON body 而非表单 |
+| userinfo 加载 | `ProviderOAuth2UserService` | 飞书拆信封；钉钉用自定义 token header |
+
+以 userinfo 为例：飞书用 `{code, msg, data}` 信封且以 HTTP 200 返回错误，
+钉钉则把 token 放在 `x-acs-dingtalk-access-token` 而不是 `Authorization: Bearer`。
+两者都只接管加载步骤，其余流程不变。该覆盖运行在
 `RemoteIdentityIoExecutor` 边界内，因此 Provider 的 HTTP 调用不会持有数据库事务。
+
+Provider 的实现**不得**自己做账号决策 —— 不建号、不绑定、不建 session。
+这些一律交给统一身份核心，否则每个 Provider 都会长出一套账号逻辑，
+正是统一身份认证要消除的问题。
 
 Provider 侧还需遵守：subject 必须稳定（不要用可能在两次登录间变化的字段做
 fallback，否则同一个人会被拆成两个平台账号）、只有在 Provider 真正证明了邮箱

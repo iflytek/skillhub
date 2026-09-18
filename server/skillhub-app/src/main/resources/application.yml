@@ -79,6 +79,21 @@ spring:
             client-authentication-method: client_secret_post
             redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
             client-name: ${OAUTH2_FEISHU_DISPLAY_NAME:飞书}
+          dingtalk:
+            client-id: ${OAUTH2_DINGTALK_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_DINGTALK_CLIENT_SECRET:placeholder}
+            # No scope is declared on purpose. DingTalk's authorize endpoint wants scope=openid,
+            # but declaring it here makes Spring treat the registration as OIDC and attach a
+            # nonce, which DingTalk rejects. DingTalkAuthorizationRequestCustomizer adds the
+            # scope back to the outgoing URI without turning this into an OIDC flow.
+            authorization-grant-type: authorization_code
+            # DingTalk is a confidential client that happens to carry its secret in a JSON body,
+            # which DingTalkTokenResponseClient builds. client-secret-post is the honest
+            # description; "none" would additionally make Spring apply PKCE, and the DingTalk token
+            # request sends no code_verifier to match the challenge.
+            client-authentication-method: client_secret_post
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: ${OAUTH2_DINGTALK_DISPLAY_NAME:钉钉}
         provider:
           github:
             api-base-url: ${OAUTH2_GITHUB_API_BASE_URL:https://api.github.com}
@@ -93,6 +108,11 @@ spring:
             token-uri: ${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v2/oauth/token
             user-info-uri: ${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v1/user_info
             user-name-attribute: open_id
+          dingtalk:
+            authorization-uri: ${OAUTH2_DINGTALK_AUTHORIZE_URI:https://login.dingtalk.com}/oauth2/auth
+            token-uri: ${OAUTH2_DINGTALK_BASE_URI:https://api.dingtalk.com}/v1.0/oauth2/userAccessToken
+            user-info-uri: ${OAUTH2_DINGTALK_BASE_URI:https://api.dingtalk.com}/v1.0/contact/users/me
+            user-name-attribute: unionId
   servlet:
     multipart:
       max-file-size: 100MB

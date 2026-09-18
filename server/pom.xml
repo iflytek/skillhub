@@ -22,6 +22,15 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <!--
+            Spring Boot 3.2.3 manages Byte Buddy 1.14.12, which knows class file versions up to
+            Java 22. The build targets Java 21, but a contributor running a newer JDK executes the
+            tests on that JVM, and Mockito then fails with "Mockito cannot mock this class" for
+            every mock whose type hierarchy it must instrument. That is a toolchain gap, not a code
+            fault. Overriding the managed version keeps mocking usable on newer JDKs while leaving
+            the compile target at 21.
+        -->
+        <byte-buddy.version>1.17.5</byte-buddy.version>
     </properties>
 
     <modules>

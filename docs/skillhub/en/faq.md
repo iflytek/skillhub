@@ -197,7 +197,7 @@ A: Login entries are config-driven: `/api/v1/auth/methods` only returns registra
 So there are two ways to hide one:
 
 - Leave the matching environment variable unset (for example, omit `OAUTH2_FEISHU_CLIENT_ID`). No config file change needed.
-- Or edit `application.yml` and comment out or delete the relevant registration block (`github`, `gitlab`, `feishu`) under `spring.security.oauth2.client.registration`, along with its `provider` section. Spring Boot then won't create that registration at startup.
+- Or edit `application.yml` and comment out or delete the relevant registration block (`github`, `gitlab`, `feishu`, `dingtalk`) under `spring.security.oauth2.client.registration`, along with its `provider` section. Spring Boot then won't create that registration at startup.
 
 ## Q: Is SkillHub's security scanning (Skill Scanner) developed in-house by iFLYTEK? What license does it use?
 
