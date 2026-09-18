@@ -6,8 +6,12 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
@@ -98,6 +102,42 @@ class FeishuOAuth2UserServiceTest {
                 .isInstanceOf(OAuth2AuthenticationException.class)
                 .satisfies(ex -> assertThat(((OAuth2AuthenticationException) ex).getError().getErrorCode())
                         .isEqualTo("feishu_userinfo_error"));
+        server.verify();
+    }
+
+    @Test
+    void loadUser_logsErrorCodeButNeverUpstreamTextOrToken() {
+        RestClient.Builder restClientBuilder = RestClient.builder();
+        MockRestServiceServer server = MockRestServiceServer.bindTo(restClientBuilder).build();
+        server.expect(requestTo("https://open.feishu.cn/open-apis/authen/v1/user_info"))
+                .andRespond(withSuccess(
+                        """
+                        {"code": 99991663, "msg": "token token-123 rejected for cli_test123"}
+                        """,
+                        MediaType.APPLICATION_JSON
+                ));
+        FeishuOAuth2UserService service = new FeishuOAuth2UserService(restClientBuilder);
+
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        Logger logger = (Logger) LoggerFactory.getLogger(FeishuOAuth2UserService.class);
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            assertThatThrownBy(() -> service.loadUser(userRequest()))
+                    .isInstanceOf(OAuth2AuthenticationException.class);
+        } finally {
+            logger.detachAppender(appender);
+            appender.stop();
+        }
+
+        String logged = appender.list.stream()
+                .map(ILoggingEvent::getFormattedMessage)
+                .collect(java.util.stream.Collectors.joining("\n"));
+        // A failure must leave an operator-facing record...
+        assertThat(logged).contains("99991663");
+        // ...but the upstream msg can quote the access token, so it must never be logged.
+        assertThat(logged).doesNotContain("token-123");
+        assertThat(logged).doesNotContain("rejected");
         server.verify();
     }
 

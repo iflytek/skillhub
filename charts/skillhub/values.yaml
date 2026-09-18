@@ -93,6 +93,8 @@ secrets:
   downloadAnonCookieSecret: ""
   oauth2GithubClientId: ""
   oauth2GithubClientSecret: ""
+  oauth2FeishuClientId: ""
+  oauth2FeishuClientSecret: ""
   scannerLlmApiKey: ""
   scannerLlmBaseUrl: ""
   scannerLlmModel: ""
