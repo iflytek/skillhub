@@ -174,7 +174,7 @@ cd skillhub
 make dev-all
 
 # 或者分别启动
-make dev-backend    # 仅后端
+make dev-server     # 仅后端
 make dev-web        # 仅前端
 ```
 
