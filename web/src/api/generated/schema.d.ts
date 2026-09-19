@@ -426,6 +426,80 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/authoring/drafts/{draftId}/runtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the draft's runtime binding */
+        get: operations["getDraftRuntimeBinding"];
+        /** Configure the agent runtime, tools, and MCP servers */
+        put: operations["saveDraftRuntimeBinding"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/drafts/{draftId}/runtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the draft's runtime binding */
+        get: operations["getDraftRuntimeBinding_1"];
+        /** Configure the agent runtime, tools, and MCP servers */
+        put: operations["saveDraftRuntimeBinding_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/drafts/{draftId}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a draft's files with metadata */
+        get: operations["listDraftFiles"];
+        /** Create or update one draft file */
+        put: operations["saveDraftFile"];
+        post?: never;
+        /** Delete one draft file */
+        delete: operations["deleteDraftFile"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/drafts/{draftId}/files": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a draft's files with metadata */
+        get: operations["listDraftFiles_1"];
+        /** Create or update one draft file */
+        put: operations["saveDraftFile_1"];
+        post?: never;
+        /** Delete one draft file */
+        delete: operations["deleteDraftFile_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tokens/{id}/expiration": {
         parameters: {
             query?: never;
@@ -1894,6 +1968,214 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["markNotificationRead_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/runs/{runId}/findings/{findingId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss a finding as not applicable */
+        post: operations["dismissFindingFix"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/runs/{runId}/findings/{findingId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss a finding as not applicable */
+        post: operations["dismissFindingFix_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/runs/{runId}/findings/{findingId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply a finding's fix suggestion to the draft */
+        post: operations["applyFindingFix"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/runs/{runId}/findings/{findingId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply a finding's fix suggestion to the draft */
+        post: operations["applyFindingFix_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/runs/{runId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request cooperative cancellation of a run */
+        post: operations["cancelValidationRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/runs/{runId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Request cooperative cancellation of a run */
+        post: operations["cancelValidationRun_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/drafts/{draftId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a validated draft into the publish pipeline */
+        post: operations["submitValidatedDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/drafts/{draftId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a validated draft into the publish pipeline */
+        post: operations["submitValidatedDraft_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/drafts/{draftId}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the draft's validation runs */
+        get: operations["listValidationRuns"];
+        put?: never;
+        /** Start a validation run for the draft's current revision */
+        post: operations["startValidationRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/drafts/{draftId}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the draft's validation runs */
+        get: operations["listValidationRuns_1"];
+        put?: never;
+        /** Start a validation run for the draft's current revision */
+        post: operations["startValidationRun_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the current user's drafts */
+        get: operations["listAuthoringDrafts"];
+        put?: never;
+        /** Create a draft seeded with a SKILL.md scaffold */
+        post: operations["createAuthoringDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the current user's drafts */
+        get: operations["listAuthoringDrafts_1"];
+        put?: never;
+        /** Create a draft seeded with a SKILL.md scaffold */
+        post: operations["createAuthoringDraft_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4240,6 +4522,212 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/authoring/runs/{runId}/findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a run's findings with fix suggestions */
+        get: operations["listValidationFindings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/runs/{runId}/findings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a run's findings with fix suggestions */
+        get: operations["listValidationFindings_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/runs/{runId}/events/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream run events over SSE; resumes from Last-Event-ID */
+        get: operations["streamValidationEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/runs/{runId}/events/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stream run events over SSE; resumes from Last-Event-ID */
+        get: operations["streamValidationEvents_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/runs/{runId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List run events after a sequence cursor (polling) */
+        get: operations["listValidationEvents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/runs/{runId}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List run events after a sequence cursor (polling) */
+        get: operations["listValidationEvents_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/runs/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one validation run */
+        get: operations["getValidationRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/runs/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one validation run */
+        get: operations["getValidationRun_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/drafts/{draftId}/files/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one draft file's content */
+        get: operations["readDraftFile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/drafts/{draftId}/files/content": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read one draft file's content */
+        get: operations["readDraftFile_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/drafts/{draftId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one draft owned by the current user */
+        get: operations["getAuthoringDraft"];
+        put?: never;
+        post?: never;
+        /** Delete a draft and its files */
+        delete: operations["deleteAuthoringDraft"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/drafts/{draftId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one draft owned by the current user */
+        get: operations["getAuthoringDraft_1"];
+        put?: never;
+        post?: never;
+        /** Delete a draft and its files */
+        delete: operations["deleteAuthoringDraft_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/whoami": {
         parameters: {
             query?: never;
@@ -5131,6 +5619,98 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        RuntimeBindingRequest: {
+            agentType: string;
+            config?: {
+                [key: string]: Record<string, never>;
+            };
+            toolAllowlist?: string[];
+            mcpServers?: {
+                [key: string]: Record<string, never>;
+            }[];
+        };
+        ApiResponseRuntimeBindingResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["RuntimeBindingResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        RuntimeBindingResponse: {
+            agentType?: string;
+            config?: {
+                [key: string]: Record<string, never>;
+            };
+            toolAllowlist?: string[];
+            mcpServers?: {
+                [key: string]: Record<string, never>;
+            }[];
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        SaveDraftFileRequest: {
+            path: string;
+            content: string;
+            encoding?: string;
+            contentType?: string;
+            /** Format: int32 */
+            expectedRevision?: number;
+            base64?: boolean;
+        };
+        ApiResponseSaveDraftFileResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SaveDraftFileResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        DraftFileResponse: {
+            /** Format: int64 */
+            id?: number;
+            path?: string;
+            sha256?: string;
+            /** Format: int64 */
+            size?: number;
+            contentType?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        DraftResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            namespaceId?: number;
+            name?: string;
+            requirement?: string;
+            /** Format: int32 */
+            revision?: number;
+            contentDigest?: string;
+            validated?: boolean;
+            /** Format: int32 */
+            validatedRevision?: number;
+            /** Format: int64 */
+            validatedRunId?: number;
+            /** Format: int64 */
+            submittedSkillId?: number;
+            /** Format: int64 */
+            submittedVersionId?: number;
+            /** Format: date-time */
+            submittedAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        SaveDraftFileResponse: {
+            draft?: components["schemas"]["DraftResponse"];
+            file?: components["schemas"]["DraftFileResponse"];
+            created?: boolean;
+            revisionAdvanced?: boolean;
+        };
         TokenExpirationUpdateRequest: {
             expiresAt?: string;
         };
@@ -5579,6 +6159,113 @@ export interface components {
             status?: string;
             createdAt?: string;
             readAt?: string;
+        };
+        ApiResponseValidationFindingResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ValidationFindingResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        FilePatch: {
+            filePath?: string;
+            oldSha256?: string;
+            oldValue?: string;
+            newValue?: string;
+        };
+        FixSuggestion: {
+            patches?: components["schemas"]["FilePatch"][];
+            description?: string;
+        };
+        ValidationFindingResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            runId?: number;
+            layer?: string;
+            ruleCode?: string;
+            severity?: string;
+            filePath?: string;
+            location?: string;
+            message?: string;
+            suggestion?: components["schemas"]["FixSuggestion"];
+            status?: string;
+            /** Format: int32 */
+            appliedRevision?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ApiResponseValidationRunResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ValidationRunResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ValidationRunResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            draftId?: number;
+            /** Format: int32 */
+            draftRevision?: number;
+            status?: string;
+            cancelRequested?: boolean;
+            active?: boolean;
+            terminal?: boolean;
+            /** Format: int32 */
+            errorCount?: number;
+            /** Format: int32 */
+            warningCount?: number;
+            triggeredBy?: string;
+            /** Format: date-time */
+            startedAt?: string;
+            /** Format: date-time */
+            finishedAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            summary?: {
+                [key: string]: Record<string, never>;
+            };
+        };
+        SubmitDraftRequest: {
+            visibility?: string;
+            platformRoles?: string[];
+        };
+        ApiResponseSubmitDraftResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SubmitDraftResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SubmitDraftResponse: {
+            /** Format: int64 */
+            skillId?: number;
+            /** Format: int64 */
+            versionId?: number;
+            slug?: string;
+            version?: string;
+        };
+        CreateDraftRequest: {
+            namespaceSlug: string;
+            name: string;
+            requirement?: string;
+        };
+        ApiResponseDraftResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["DraftResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
         TokenCreateRequest: {
             name: string;
@@ -6931,6 +7618,87 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        ApiResponseListValidationFindingResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ValidationFindingResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SseEmitter: {
+            /** Format: int64 */
+            timeout?: number;
+        };
+        ApiResponseListValidationEventResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ValidationEventResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ValidationEventResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            runId?: number;
+            /** Format: int32 */
+            seq?: number;
+            type?: string;
+            phase?: string;
+            payload?: {
+                [key: string]: Record<string, never>;
+            };
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ApiResponseListValidationRunResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ValidationRunResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ApiResponseDraftFileContentResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["DraftFileContentResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        DraftFileContentResponse: {
+            path?: string;
+            sha256?: string;
+            /** Format: int64 */
+            size?: number;
+            contentType?: string;
+            content?: string;
+        };
+        ApiResponseListDraftFileResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["DraftFileResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ApiResponseListDraftResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["DraftResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
         ClawHubWhoamiResponse: {
             user?: components["schemas"]["User"];
@@ -8765,6 +9533,248 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                };
+            };
+        };
+    };
+    getDraftRuntimeBinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRuntimeBindingResponse"];
+                };
+            };
+        };
+    };
+    saveDraftRuntimeBinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuntimeBindingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRuntimeBindingResponse"];
+                };
+            };
+        };
+    };
+    getDraftRuntimeBinding_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRuntimeBindingResponse"];
+                };
+            };
+        };
+    };
+    saveDraftRuntimeBinding_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuntimeBindingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRuntimeBindingResponse"];
+                };
+            };
+        };
+    };
+    listDraftFiles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListDraftFileResponse"];
+                };
+            };
+        };
+    };
+    saveDraftFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveDraftFileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSaveDraftFileResponse"];
+                };
+            };
+        };
+    };
+    deleteDraftFile: {
+        parameters: {
+            query: {
+                path: string;
+                expectedRevision?: number;
+            };
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    listDraftFiles_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListDraftFileResponse"];
+                };
+            };
+        };
+    };
+    saveDraftFile_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveDraftFileRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSaveDraftFileResponse"];
+                };
+            };
+        };
+    };
+    deleteDraftFile_1: {
+        parameters: {
+            query: {
+                path: string;
+                expectedRevision?: number;
+            };
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
                 };
             };
         };
@@ -11236,6 +12246,370 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseGovernanceNotificationResponse"];
+                };
+            };
+        };
+    };
+    dismissFindingFix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+                findingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationFindingResponse"];
+                };
+            };
+        };
+    };
+    dismissFindingFix_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+                findingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationFindingResponse"];
+                };
+            };
+        };
+    };
+    applyFindingFix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+                findingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationFindingResponse"];
+                };
+            };
+        };
+    };
+    applyFindingFix_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+                findingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationFindingResponse"];
+                };
+            };
+        };
+    };
+    cancelValidationRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationRunResponse"];
+                };
+            };
+        };
+    };
+    cancelValidationRun_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationRunResponse"];
+                };
+            };
+        };
+    };
+    submitValidatedDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SubmitDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSubmitDraftResponse"];
+                };
+            };
+        };
+    };
+    submitValidatedDraft_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SubmitDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSubmitDraftResponse"];
+                };
+            };
+        };
+    };
+    listValidationRuns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListValidationRunResponse"];
+                };
+            };
+        };
+    };
+    startValidationRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationRunResponse"];
+                };
+            };
+        };
+    };
+    listValidationRuns_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListValidationRunResponse"];
+                };
+            };
+        };
+    };
+    startValidationRun_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationRunResponse"];
+                };
+            };
+        };
+    };
+    listAuthoringDrafts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListDraftResponse"];
+                };
+            };
+        };
+    };
+    createAuthoringDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDraftResponse"];
+                };
+            };
+        };
+    };
+    listAuthoringDrafts_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListDraftResponse"];
+                };
+            };
+        };
+    };
+    createAuthoringDraft_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDraftResponse"];
                 };
             };
         };
@@ -14924,6 +16298,330 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePageResponseGovernanceActivityItemResponse"];
+                };
+            };
+        };
+    };
+    listValidationFindings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListValidationFindingResponse"];
+                };
+            };
+        };
+    };
+    listValidationFindings_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListValidationFindingResponse"];
+                };
+            };
+        };
+    };
+    streamValidationEvents: {
+        parameters: {
+            query?: {
+                afterSeq?: number;
+            };
+            header?: {
+                "Last-Event-ID"?: string;
+            };
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["SseEmitter"];
+                };
+            };
+        };
+    };
+    streamValidationEvents_1: {
+        parameters: {
+            query?: {
+                afterSeq?: number;
+            };
+            header?: {
+                "Last-Event-ID"?: string;
+            };
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/event-stream": components["schemas"]["SseEmitter"];
+                };
+            };
+        };
+    };
+    listValidationEvents: {
+        parameters: {
+            query?: {
+                afterSeq?: number;
+            };
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListValidationEventResponse"];
+                };
+            };
+        };
+    };
+    listValidationEvents_1: {
+        parameters: {
+            query?: {
+                afterSeq?: number;
+            };
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListValidationEventResponse"];
+                };
+            };
+        };
+    };
+    getValidationRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationRunResponse"];
+                };
+            };
+        };
+    };
+    getValidationRun_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationRunResponse"];
+                };
+            };
+        };
+    };
+    readDraftFile: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDraftFileContentResponse"];
+                };
+            };
+        };
+    };
+    readDraftFile_1: {
+        parameters: {
+            query: {
+                path: string;
+            };
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDraftFileContentResponse"];
+                };
+            };
+        };
+    };
+    getAuthoringDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDraftResponse"];
+                };
+            };
+        };
+    };
+    deleteAuthoringDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    getAuthoringDraft_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDraftResponse"];
+                };
+            };
+        };
+    };
+    deleteAuthoringDraft_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
                 };
             };
         };
