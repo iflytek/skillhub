@@ -7,7 +7,11 @@ public interface HttpClient {
 
     <T> T get(String uri, Class<T> responseType);
 
-    <T> T post(String uri, Object body, Class<T> responseType);
+    default <T> T post(String uri, Object body, Class<T> responseType) {
+        return post(uri, body, new HttpHeaders(), responseType);
+    }
+
+    <T> T post(String uri, Object body, HttpHeaders headers, Class<T> responseType);
 
     <T> T postMultipart(String uri, MultiValueMap<String, Object> parts, Class<T> responseType);
 

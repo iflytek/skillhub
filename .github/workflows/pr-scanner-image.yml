@@ -1,0 +1,37 @@
+name: PR Scanner Image
+
+on:
+  pull_request:
+    paths:
+      - 'scanner/**'
+      - 'scripts/tests/scanner-2-1-contract-test.sh'
+      - '.github/workflows/pr-scanner-image.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  scanner-contract:
+    name: Scanner contract (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build scanner image
+        uses: docker/build-push-action@v6
+        with:
+          context: scanner
+          platforms: linux/${{ matrix.arch }}
+          tags: skillhub-scanner-contract:${{ matrix.arch }}-${{ github.sha }}
+          load: true
+      - name: Run scanner contract
+        env:
+          SCANNER_IMAGE: skillhub-scanner-contract:${{ matrix.arch }}-${{ github.sha }}
+        run: bash scripts/tests/scanner-2-1-contract-test.sh

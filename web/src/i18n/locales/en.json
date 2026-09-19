@@ -1791,7 +1791,7 @@
     "remediation": "Remediation",
     "viewDetails": "View Details",
     "verdict": {
-      "SAFE": "Safe",
+      "SAFE": "No high-risk findings",
       "SUSPICIOUS": "Suspicious",
       "DANGEROUS": "Dangerous",
       "BLOCKED": "High Risk"

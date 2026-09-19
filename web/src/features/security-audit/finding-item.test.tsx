@@ -98,6 +98,20 @@ describe('FindingItem', () => {
     expect(html).toContain('SELECT * FROM users WHERE id = ${input}')
   })
 
+  it('renders a masked snippet without exposing the original canary', () => {
+    const html = renderToStaticMarkup(
+      <FindingItem
+        finding={createFinding({
+          codeSnippet: 'const token = "[REDACTED]"',
+          metadata: { originalSnippet: 'SYNTHETIC-CANARY-868' },
+        })}
+      />,
+    )
+
+    expect(html).toContain('const token = &quot;[REDACTED]&quot;')
+    expect(html).not.toContain('SYNTHETIC-CANARY-868')
+  })
+
   it('omits the code snippet when codeSnippet is null', () => {
     const finding = createFinding({ codeSnippet: null })
     const html = renderToStaticMarkup(<FindingItem finding={finding} />)

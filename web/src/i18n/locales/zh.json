@@ -1790,7 +1790,7 @@
     "remediation": "修复建议",
     "viewDetails": "查看详情",
     "verdict": {
-      "SAFE": "安全",
+      "SAFE": "未发现高风险问题",
       "SUSPICIOUS": "可疑",
       "DANGEROUS": "危险",
       "BLOCKED": "高风险"

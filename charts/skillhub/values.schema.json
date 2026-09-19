@@ -462,10 +462,11 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["enabled", "replicaCount", "image", "service", "resources", "extraEnv", "podAnnotations", "imagePullSecrets", "nodeSelector", "tolerations", "affinity", "probes", "autoscaling", "podDisruptionBudget"],
+          "required": ["enabled", "replicaCount", "maxUploadSizeBytes", "image", "service", "resources", "extraEnv", "podAnnotations", "imagePullSecrets", "nodeSelector", "tolerations", "affinity", "probes", "autoscaling", "podDisruptionBudget"],
           "properties": {
             "enabled": { "type": "boolean" },
             "replicaCount": { "type": "integer", "minimum": 1 },
+            "maxUploadSizeBytes": { "type": "integer", "minimum": 110100480 },
             "image": { "$ref": "#/definitions/image" },
             "service": {
               "type": "object",

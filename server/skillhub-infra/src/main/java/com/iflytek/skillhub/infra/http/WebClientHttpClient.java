@@ -39,10 +39,16 @@ public class WebClientHttpClient implements HttpClient {
 
     @Override
     public <T> T post(String uri, Object body, Class<T> responseType) {
+        return post(uri, body, new HttpHeaders(), responseType);
+    }
+
+    @Override
+    public <T> T post(String uri, Object body, HttpHeaders headers, Class<T> responseType) {
         log.debug("POST {}", uri);
         try {
             return webClient.post()
                     .uri(uri)
+                    .headers(httpHeaders -> httpHeaders.addAll(headers))
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(body)
                     .retrieve()

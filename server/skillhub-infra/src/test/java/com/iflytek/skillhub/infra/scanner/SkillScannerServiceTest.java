@@ -63,6 +63,8 @@ class SkillScannerServiceTest {
         assertThat(body.get("skill_directory")).isEqualTo("/tmp/demo");
         assertThat(body.get("use_behavioral")).isEqualTo(true);
         assertThat(body.get("use_llm")).isEqualTo(false);
+        assertThat(body.get("llm_consensus_runs")).isEqualTo(1);
+        assertThat(body.get("policy")).isEqualTo("balanced");
     }
 
     @Test
@@ -94,6 +96,8 @@ class SkillScannerServiceTest {
         assertThat(httpClient.lastMultipartUri).contains("use_llm=true");
         assertThat(httpClient.lastMultipartUri).contains("llm_provider=openai");
         assertThat(httpClient.lastMultipartParts.getFirst("file")).isNotNull();
+        assertThat(httpClient.lastMultipartParts.getFirst("llm_consensus_runs")).isEqualTo("1");
+        assertThat(httpClient.lastMultipartParts.getFirst("policy")).isEqualTo("balanced");
     }
 
     @Test
@@ -120,7 +124,28 @@ class SkillScannerServiceTest {
         service.scanUpload(Path.of("/tmp/demo.zip"), options);
 
         assertThat(httpClient.lastMultipartUri).doesNotContain("aidefense_api_key");
-        assertThat(httpClient.lastMultipartHeaders.getFirst("X-AIDefense-Api-Key")).isEqualTo("secret-key");
+        assertThat(httpClient.lastMultipartHeaders.getFirst("X-AIDefense-Key")).isEqualTo("secret-key");
+    }
+
+    @Test
+    void scanDirectory_sendsAidefenseApiKeyOnlyViaHeader() {
+        FakeHttpClient httpClient = new FakeHttpClient();
+        httpClient.postResponse = new SkillScannerApiResponse(
+                "scan-4", "test-skill", true, "LOW", 0, null, 0.5, "2026-03-22T07:00:00");
+        SkillScannerService service = new SkillScannerService(
+                httpClient, "http://scanner.test", "/scan-upload", "/health");
+        ScanOptions options = new ScanOptions(false, false, "anthropic", 3, "strict",
+                false, true, "secret-key", false, false);
+
+        service.scanDirectory("/tmp/demo", options);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> body = (Map<String, Object>) httpClient.lastPostBody;
+        assertThat(body).doesNotContainKey("aidefense_api_key");
+        assertThat(httpClient.lastPostHeaders.getFirst("X-AIDefense-Key")).isEqualTo("secret-key");
+        assertThat(httpClient.lastPostUri).doesNotContain("secret-key");
+        assertThat(body.get("llm_consensus_runs")).isEqualTo(3);
+        assertThat(body.get("policy")).isEqualTo("strict");
     }
 
     @Test
@@ -145,6 +170,7 @@ class SkillScannerServiceTest {
         private Object multipartResponse;
         private String lastPostUri;
         private Object lastPostBody;
+        private HttpHeaders lastPostHeaders;
         private String lastMultipartUri;
         private MultiValueMap<String, Object> lastMultipartParts;
         private HttpHeaders lastMultipartHeaders;
@@ -161,6 +187,15 @@ class SkillScannerServiceTest {
         public <T> T post(String uri, Object body, Class<T> responseType) {
             this.lastPostUri = uri;
             this.lastPostBody = body;
+            return (T) postResponse;
+        }
+
+        @Override
+        @SuppressWarnings("unchecked")
+        public <T> T post(String uri, Object body, HttpHeaders headers, Class<T> responseType) {
+            this.lastPostUri = uri;
+            this.lastPostBody = body;
+            this.lastPostHeaders = headers;
             return (T) postResponse;
         }
 

@@ -18,6 +18,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.lang.reflect.Field;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -402,6 +403,29 @@ class SecurityScanServiceTest {
         assertThat(audit.getIsSafe()).isTrue();
         assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
         verify(skillVersionRepository).save(version);
+    }
+
+    @Test
+    void processScanResult_persistsScannerMaskedFindingWithoutOriginalCanary() {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-masked");
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        version.setStatus(SkillVersionStatus.SCANNING);
+
+        given(auditRepository.findByTaskId("task-masked")).willReturn(Optional.of(audit));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        String canary = "ghp_012345678901234567890123456789012345";
+        SecurityFinding maskedFinding = new SecurityFinding(
+                "TOKEN-001", "HIGH", "secrets", "Token detected", "<redacted>",
+                "SKILL.md", 4, "token=<redacted>", "Rotate token", "static", Map.of());
+        service.processScanResult(
+                "task-masked", 42L, ScannerType.SKILL_SCANNER,
+                new SecurityScanResponse("scan-masked", SecurityVerdict.DANGEROUS, 1, "HIGH",
+                        List.of(maskedFinding), 0.2));
+
+        assertThat(audit.getFindings()).contains("<redacted>").doesNotContain(canary);
     }
 
     @Test

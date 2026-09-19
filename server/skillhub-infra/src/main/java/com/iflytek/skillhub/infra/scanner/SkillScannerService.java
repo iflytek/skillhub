@@ -38,25 +38,26 @@ public class SkillScannerService {
 
         Map<String, Object> body = buildScanRequestBody(skillDirectory, options);
         try {
-            return httpClient.post(uri, body, SkillScannerApiResponse.class);
+            return httpClient.post(uri, body, buildScannerHeaders(options), SkillScannerApiResponse.class);
         } catch (HttpClientException e) {
-            log.error("Scanner API error: status={}, body={}", e.getStatusCode(), summarizeResponseBody(e.getResponseBody()));
-            throw e;
+            log.error("Scanner API error: status={}, operation=scanDirectory", e.getStatusCode());
+            throw sanitizedException(e);
         }
     }
 
     public SkillScannerApiResponse scanUpload(Path skillPackagePath, ScanOptions options) {
         String uri = buildUploadUri(options);
-        log.info("Uploading skill package to scanner: {}", sanitizeUri(uri));
+        log.info("Uploading skill package to scanner: {}", uri);
 
         MultiValueMap<String, Object> parts = new LinkedMultiValueMap<>();
         parts.add("file", new FileSystemResource(skillPackagePath));
+        addScannerOptionsParts(parts, options);
         HttpHeaders headers = buildScannerHeaders(options);
         try {
             return httpClient.postMultipart(uri, parts, headers, SkillScannerApiResponse.class);
         } catch (HttpClientException e) {
-            log.error("Scanner API error: status={}, body={}", e.getStatusCode(), summarizeResponseBody(e.getResponseBody()));
-            throw e;
+            log.error("Scanner API error: status={}, operation=scanUpload", e.getStatusCode());
+            throw sanitizedException(e);
         }
     }
 
@@ -70,14 +71,25 @@ public class SkillScannerService {
         body.put("use_behavioral", options.useBehavioral());
         body.put("use_llm", options.useLlm());
         body.put("llm_provider", options.llmProvider());
+        body.put("llm_consensus_runs", options.llmConsensusRuns());
+        body.put("policy", options.policyPreset());
         body.put("enable_meta", options.enableMeta());
         body.put("use_aidefense", options.useAidefense());
-        if (options.useAidefense() && !options.aidefenseApiKey().isEmpty()) {
-            body.put("aidefense_api_key", options.aidefenseApiKey());
-        }
         body.put("use_virustotal", options.useVirusTotal());
         body.put("use_trigger", options.useTrigger());
         return body;
+    }
+
+    private void addScannerOptionsParts(MultiValueMap<String, Object> parts, ScanOptions options) {
+        parts.add("use_behavioral", Boolean.toString(options.useBehavioral()));
+        parts.add("use_llm", Boolean.toString(options.useLlm()));
+        parts.add("llm_provider", options.llmProvider());
+        parts.add("llm_consensus_runs", Integer.toString(options.llmConsensusRuns()));
+        parts.add("policy", options.policyPreset());
+        parts.add("enable_meta", Boolean.toString(options.enableMeta()));
+        parts.add("use_aidefense", Boolean.toString(options.useAidefense()));
+        parts.add("use_virustotal", Boolean.toString(options.useVirusTotal()));
+        parts.add("use_trigger", Boolean.toString(options.useTrigger()));
     }
 
     private String buildUploadUri(ScanOptions options) {
@@ -95,7 +107,7 @@ public class SkillScannerService {
     private HttpHeaders buildScannerHeaders(ScanOptions options) {
         HttpHeaders headers = new HttpHeaders();
         if (options.useAidefense() && !options.aidefenseApiKey().isEmpty()) {
-            headers.add("X-AIDefense-Api-Key", options.aidefenseApiKey());
+            headers.add("X-AIDefense-Key", options.aidefenseApiKey());
         }
         return headers;
     }
@@ -116,15 +128,11 @@ public class SkillScannerService {
         return normalized.endsWith("/") ? normalized.substring(0, normalized.length() - 1) : normalized;
     }
 
-    private String summarizeResponseBody(String body) {
-        if (body == null || body.isBlank()) {
-            return "<empty>";
+    private HttpClientException sanitizedException(HttpClientException exception) {
+        if (exception.getStatusCode() > 0) {
+            return new HttpClientException(exception.getStatusCode(), null);
         }
-        String singleLine = body.replaceAll("\\s+", " ").trim();
-        return singleLine.length() > 200 ? singleLine.substring(0, 200) + "...[truncated]" : singleLine;
-    }
-
-    private String sanitizeUri(String uri) {
-        return uri.replaceAll("([?&]aidefense_api_key=)[^&]+", "$1***");
+        Throwable cause = exception.getCause() == null ? exception : exception.getCause();
+        return new HttpClientException("Scanner API request failed", cause);
     }
 }

@@ -123,6 +123,11 @@ class SkillScannerLoggingTest {
         }
 
         @Override
+        public <T> T post(String uri, Object body, HttpHeaders headers, Class<T> responseType) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
         public <T> T postMultipart(String uri, MultiValueMap<String, Object> parts, Class<T> responseType) {
             throw new UnsupportedOperationException();
         }
@@ -162,6 +167,11 @@ class SkillScannerLoggingTest {
 
         @Override
         public <T> T post(String uri, Object body, Class<T> responseType) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public <T> T post(String uri, Object body, HttpHeaders headers, Class<T> responseType) {
             throw new UnsupportedOperationException();
         }
 

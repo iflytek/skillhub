@@ -5,32 +5,92 @@ import logging
 import os
 import shutil
 import tempfile
+from functools import wraps
+from importlib import import_module
 from pathlib import Path
 from typing import NoReturn
+
+
+_RUNTIME_TEMP_ROOT = Path(
+    os.getenv("SKILLHUB_SCANNER_RUNTIME_TEMP_ROOT", "/tmp/skillhub-scanner-runtime")
+)
+
+
+def _prepare_runtime_temp_root() -> None:
+    """Recreate the scanner-owned temp root before upstream allocates request directories."""
+    if _RUNTIME_TEMP_ROOT.name != "skillhub-scanner-runtime" or _RUNTIME_TEMP_ROOT.is_symlink():
+        raise RuntimeError("Scanner runtime temp root must be a non-symlink skillhub-scanner-runtime directory")
+    if _RUNTIME_TEMP_ROOT.exists():
+        if not _RUNTIME_TEMP_ROOT.is_dir():
+            raise RuntimeError("Scanner runtime temp root must be a directory")
+        shutil.rmtree(_RUNTIME_TEMP_ROOT)
+    _RUNTIME_TEMP_ROOT.mkdir(parents=True, mode=0o700)
+    _RUNTIME_TEMP_ROOT.chmod(0o700)
+    tempfile.tempdir = str(_RUNTIME_TEMP_ROOT)
+
+
+_prepare_runtime_temp_root()
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from skill_scanner.api.api import app
+from skill_scanner.cli import cli as _upstream_cli
 
 
+_upstream_router = import_module("skill_scanner.api.router")
 _MAX_CONCURRENT_SCANS = max(1, int(os.getenv("SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS", "1")))
 _HARD_TIMEOUT_SECONDS = max(1, int(os.getenv("SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS", "930")))
+_upstream_router.MAX_UPLOAD_SIZE_BYTES = max(
+    1, int(os.getenv("SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES", "110100480"))
+)
 _active_scans = 0
 _active_scans_guard = asyncio.Lock()
 _SCAN_PATHS = {"/scan", "/scan-upload"}
 _log = logging.getLogger(__name__)
 
 
-def _cleanup_stale_scan_directories(temp_root: Path | None = None) -> None:
-    """Remove incomplete upstream extraction directories left by a process restart."""
-    root = temp_root or Path(tempfile.gettempdir())
-    for candidate in root.glob("skill_scanner_*"):
-        if not candidate.is_dir():
+def _redact_finding_text(message: str) -> str:
+    """Redact credentials without applying CLI-only truncation or control escaping."""
+    redacted = _upstream_cli._STATUS_PRIVATE_KEY_RE.sub("<redacted>", message)
+    for pattern in (
+        _upstream_cli._STATUS_URL_USERINFO_RE,
+        _upstream_cli._STATUS_URL_TOKEN_USERINFO_RE,
+        _upstream_cli._STATUS_QUERY_SECRET_RE,
+        _upstream_cli._STATUS_BEARER_SECRET_RE,
+        _upstream_cli._STATUS_LABELED_SECRET_RE,
+    ):
+        redacted = pattern.sub(_upstream_cli._replace_status_secret, redacted)
+    redacted = _upstream_cli._STATUS_PROVIDER_SECRET_RE.sub("<redacted>", redacted)
+    return _upstream_cli._STATUS_JWT_RE.sub("<redacted>", redacted)
+
+
+def _redact_supported_tokens(value):
+    if isinstance(value, str):
+        return _redact_finding_text(value)
+    if isinstance(value, list):
+        return [_redact_supported_tokens(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _redact_supported_tokens(item) for key, item in value.items()}
+    return value
+
+
+def _install_scan_response_redaction() -> None:
+    """Redact supported token forms before FastAPI serializes scan findings."""
+    for route in _upstream_router.router.routes:
+        if getattr(route, "path", None) not in _SCAN_PATHS or "POST" not in getattr(route, "methods", set()):
             continue
-        try:
-            shutil.rmtree(candidate)
-        except OSError as error:
-            _log.warning("Could not remove stale scanner directory %s: %s", candidate, error)
+        endpoint = route.endpoint
+
+        @wraps(endpoint)
+        async def redacting_endpoint(*args, __endpoint=endpoint, **kwargs):
+            response = await __endpoint(*args, **kwargs)
+            findings = getattr(response, "findings", None)
+            if isinstance(findings, list):
+                response.findings = _redact_supported_tokens(findings)
+            return response
+
+        route.endpoint = redacting_endpoint
+        route.dependant.call = redacting_endpoint
 
 
 def _restart_after_hard_timeout(request_path: str) -> NoReturn:
@@ -54,7 +114,7 @@ async def _await_scan_until(scan_task: asyncio.Task, deadline: float, request_pa
         _restart_after_hard_timeout(request_path)
 
 
-app.router.add_event_handler("startup", _cleanup_stale_scan_directories)
+_install_scan_response_redaction()
 
 
 @app.middleware("http")

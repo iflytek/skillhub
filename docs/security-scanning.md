@@ -1,8 +1,14 @@
 # Skill Scanner Backend Runtime Guide
 
+> **Document status:** This is a historical backend implementation note, updated with the
+> current Scanner 2.1.0 runtime and rollout constraints. It does not expand the supported
+> analyzer or deployment contract.
+
 ## Overview
 
 SkillHub now supports a backend-only security scanning chain around `skill-scanner`.
+The Scanner image pins `cisco-ai-skill-scanner==2.1.0` and uses a glibc-based Linux runtime.
+Published images support `linux/amd64` and `linux/arm64`.
 The publish flow changes are:
 
 1. publish request enters `SkillPublishService`
@@ -20,14 +26,17 @@ Frontend is intentionally out of scope here. The frontend should fetch audit det
 Two runtime modes are supported:
 
 - `local`
-  Use `POST /scan` and pass a filesystem path. This only works when SkillHub and `skill-scanner` can see the same files.
+  Use `POST /scan` and pass a filesystem path. SkillHub and `skill-scanner` must mount the same
+  directory at the same path. The Scanner must also allow that root; for the standard path, set
+  `SKILL_SCANNER_ALLOWED_ROOTS=/tmp/skillhub-scans`.
 - `upload`
-  Use `POST /scan-upload` and upload the package archive. This is the safer default for split deployments.
+  Use `POST /scan-upload` and upload the package archive. This is the mode used by the official
+  Compose and Kubernetes deployments.
 
 Recommended usage:
 
 - local development with shared filesystem: `local`
-- Kubernetes or any split-service deployment: `upload`
+- official Compose, Kubernetes, or any split-service deployment: `upload`
 
 ## Backend Configuration
 
@@ -70,6 +79,7 @@ Scanner-side optional environment variables:
 - `SKILL_SCANNER_LLM_MODEL`
 - `SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS` (default `1`)
 - `SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS` (default `930`)
+- `SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES` (default `110100480`, or 105 MiB)
 
 If the LLM variables are absent, the scanner should still run with non-LLM analyzers.
 The default timeout ordering is server read timeout (900 seconds), scanner hard timeout
@@ -94,6 +104,21 @@ Relevant manifests:
 - `deploy/k8s/configmap.yaml`
 
 The scanner service is internal-only by default and is consumed by the backend through cluster DNS.
+
+## Rolling Upgrade to Scanner 2.1.0
+
+The Server and Scanner HTTP contracts must be upgraded in this order:
+
+1. deploy the compatibility Server release while the old Scanner is still running
+2. drain and remove every old Server instance, including in-flight scan requests
+3. upgrade the Scanner to 2.1.0
+4. verify `/health` and an upload-mode scan before restoring normal traffic
+
+Do not run an old Server against Scanner 2.1.0. During a mixed-version rollout in either scan mode,
+keep AI Defense disabled (`SKILLHUB_SCANNER_USE_AI_DEFENSE=false`, the default). If AI Defense must
+remain enabled before the old Scanner is retired, configure its credential directly in the old
+Scanner environment using the variable supported by that Scanner version. Never place an AI Defense
+key in URL query parameters or request bodies.
 
 ## Verification
 
@@ -132,6 +157,10 @@ Response fields include:
 - `scanDurationSeconds`
 - `scannedAt`
 - `createdAt`
+
+`isSafe: true` means the scan found no high-risk issue. It does not mean that the scan produced no
+findings: lower-severity findings may still be present and `findingsCount` may be non-zero. The UI
+therefore renders this state as **No high-risk findings**, not as an unconditional safety guarantee.
 
 ## Failure Semantics
 

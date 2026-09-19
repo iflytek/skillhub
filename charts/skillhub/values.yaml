@@ -433,6 +433,7 @@ web:
 scanner:
   enabled: true
   replicaCount: 1
+  maxUploadSizeBytes: 110100480
   image:
     registry: ""
     tag: ""

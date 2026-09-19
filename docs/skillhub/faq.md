@@ -200,7 +200,23 @@ A: SkillHub 内置安全扫描能力。其中扫描接入、任务编排、审�
 
 ## Q: SkillHub 使用的 cisco-ai-skill-scanner 是哪个版本？
 
-A: `scanner/Dockerfile` 中直接执行 `pip install cisco-ai-skill-scanner`，未锁定版本，因此构建镜像时会拉取 PyPI 上的最新版本。如需固定版本，可在二次开发时自行锁定。
+A: `scanner/Dockerfile` 已固定使用 `cisco-ai-skill-scanner==2.1.0`。Scanner 镜像基于 glibc Linux，支持 `linux/amd64` 和 `linux/arm64`。
+
+## Q: Scanner 应该使用 upload mode 还是 local mode？
+
+A: 官方 Compose 和 Kubernetes 部署使用 `upload` mode，通过 `POST /scan-upload` 上传技能包。上传大小上限由 `SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES` 控制，默认是 `110100480` 字节（105 MiB）。
+
+`local` mode 仅适用于 Server 与 Scanner 能在**相同路径**看到同一目录的部署。双方需要共享挂载路径，并在 Scanner 中设置允许的根目录；使用标准路径时配置 `SKILL_SCANNER_ALLOWED_ROOTS=/tmp/skillhub-scans`。
+
+## Q: 安全审计显示“未发现高风险问题”，是否代表没有任何 findings？
+
+A: 不是。Scanner 返回 `is_safe=true`、UI 显示“未发现高风险问题”，仅表示没有发现高风险问题；低等级 findings 仍可能存在，`findingsCount` 也可能大于 0。请继续查看 findings 明细，而不要把该状态理解为无条件安全保证。
+
+## Q: 如何滚动升级到 Scanner 2.1.0？
+
+A: 必须先部署兼容 2.1.0 协议的 Server，在旧 Scanner 仍运行时排空并下线所有旧 Server 实例及其进行中的扫描，然后再升级 Scanner，最后验证 `/health` 和一次 upload mode 扫描。不要让旧 Server 连接 Scanner 2.1.0。
+
+混合版本期间，upload 和 local mode 都应保持 AI Defense 关闭（默认 `SKILLHUB_SCANNER_USE_AI_DEFENSE=false`）。如果升级前必须继续使用 AI Defense，应按旧 Scanner 版本支持的环境变量把凭据直接配置到旧 Scanner 环境中；不要把 AI Defense key 放入 URL query 参数或请求体。
 
 ## Q: 使用 CLI `skillhub publish` 报错 `registry returned 400` 怎么排查？
 

@@ -200,7 +200,23 @@ A: SkillHub has built-in security scanning. The scanner integration, task orches
 
 ## Q: Which version of cisco-ai-skill-scanner does SkillHub use?
 
-A: `scanner/Dockerfile` runs `pip install cisco-ai-skill-scanner` directly without pinning a version, so the latest version on PyPI is pulled when the image is built. To pin a version, do so yourself when customizing the build.
+A: `scanner/Dockerfile` pins `cisco-ai-skill-scanner==2.1.0`. The Scanner image uses glibc Linux and supports `linux/amd64` and `linux/arm64`.
+
+## Q: Should the Scanner use upload mode or local mode?
+
+A: The official Compose and Kubernetes deployments use `upload` mode and send skill packages through `POST /scan-upload`. `SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES` controls the upload limit; its default is `110100480` bytes (105 MiB).
+
+Use `local` mode only when the Server and Scanner can see the same directory at the **same path**. Both services must share the mount, and the Scanner must allow that root; for the standard path, set `SKILL_SCANNER_ALLOWED_ROOTS=/tmp/skillhub-scans`.
+
+## Q: Does “No high-risk findings” mean that a security scan returned no findings?
+
+A: No. A Scanner response with `is_safe=true`, rendered in the UI as “No high-risk findings,” only means that no high-risk issue was found. Lower-severity findings may still exist and `findingsCount` may be greater than zero. Review the finding details instead of treating this state as an unconditional safety guarantee.
+
+## Q: How should I roll out the Scanner 2.1.0 upgrade?
+
+A: First deploy the Server release that is compatible with the 2.1.0 protocol. While the old Scanner is still running, drain and remove every old Server instance and its in-flight scans. Then upgrade the Scanner and verify `/health` plus one upload-mode scan. Do not connect an old Server to Scanner 2.1.0.
+
+During the mixed-version window, keep AI Defense disabled in both upload and local modes (the default is `SKILLHUB_SCANNER_USE_AI_DEFENSE=false`). If AI Defense must remain enabled before the upgrade, configure its credential directly in the old Scanner environment using the variable supported by that Scanner version; never put an AI Defense key in URL query parameters or request bodies.
 
 ## Q: How do I troubleshoot a `registry returned 400` error from `skillhub publish` (CLI)?
 

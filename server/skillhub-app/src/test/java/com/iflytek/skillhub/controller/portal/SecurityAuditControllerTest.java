@@ -40,7 +40,10 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -126,6 +129,29 @@ class SecurityAuditControllerTest {
                 .andExpect(jsonPath("$.data[0].verdict").value("DANGEROUS"))
                 .andExpect(jsonPath("$.data[0].findingsCount").value(1))
                 .andExpect(jsonPath("$.data[0].findings[0].ruleId").value("STATIC-001"));
+    }
+
+    @Test
+    void getSecurityAudit_doesNotExposeUnmaskedCanaryFromStoredFinding() throws Exception {
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER);
+        setField(audit, "id", 8L);
+        audit.setScanId("scan-masked");
+        audit.setVerdict(SecurityVerdict.DANGEROUS);
+        audit.setIsSafe(false);
+        audit.setMaxSeverity("HIGH");
+        audit.setFindings("""
+                [{"ruleId":"TOKEN-001","severity":"HIGH","category":"secrets","title":"Token detected","message":"<redacted>","filePath":"SKILL.md","lineNumber":4,"codeSnippet":"token=<redacted>"}]
+                """.trim());
+        given(skillVersionRepository.findById(42L)).willReturn(java.util.Optional.of(skillVersion(42L, 8L)));
+        given(skillRepository.findById(8L)).willReturn(java.util.Optional.of(skill(8L, "reviewer-1")));
+        given(securityAuditRepository.findLatestActiveByVersionId(42L)).willReturn(List.of(audit));
+
+        mockMvc.perform(get("/api/v1/skills/8/versions/42/security-audit")
+                        .with(auth("reviewer-1"))
+                        .requestAttr("userNsRoles", Map.of(5L, NamespaceRole.ADMIN)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0].findings[0].message").value("<redacted>"))
+                .andExpect(content().string(not(containsString("ghp_012345678901234567890123456789012345"))));
     }
 
     @Test

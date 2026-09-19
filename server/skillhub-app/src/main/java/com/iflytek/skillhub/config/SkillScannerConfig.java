@@ -91,6 +91,8 @@ public class SkillScannerConfig {
                 analyzers.isBehavioral(),
                 analyzers.isLlm(),
                 analyzers.getLlmProvider(),
+                analyzers.getLlmConsensusRuns(),
+                properties.getPolicy().getPreset(),
                 analyzers.isMeta(),
                 analyzers.isAiDefense(),
                 analyzers.getAiDefenseApiKey(),

@@ -4,9 +4,16 @@ on:
   pull_request:
     paths:
       - 'scripts/**'
+      - 'scanner/**'
+      - 'docker-compose.yml'
       - '.env.release.example'
       - '.env.release.draft'
       - 'compose.release.yml'
+      - 'deploy/k8s/base/configmap.yaml'
+      - 'deploy/k8s/base/scanner-deployment.yaml'
+      - 'charts/skillhub/values.yaml'
+      - 'charts/skillhub/values.schema.json'
+      - 'charts/skillhub/templates/scanner-deployment.yaml'
       - 'server/Dockerfile'
       - 'Makefile'
       - 'web/Dockerfile'
@@ -36,6 +43,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '21'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m unittest discover -s scanner/tests -p 'test_*.py'
       - run: bash scripts/tests/publish-cli-test.sh
       - run: bash scripts/tests/runtime-secret-test.sh
       - run: bash scripts/tests/validate-release-config-test.sh
