@@ -74,6 +74,7 @@ class OAuthLoginFlowServiceTest {
         };
         OAuthLoginFlowService service = new OAuthLoginFlowService(
                 List.of(extractor),
+                List.of(),
                 accessPolicy,
                 identityBindingService,
                 identityCore,
@@ -100,6 +101,148 @@ class OAuthLoginFlowServiceTest {
         assertThat(result.principal()).isSameAs(principal);
         assertThat(boundaryCalls).hasValue(1);
         verify(delegate).loadUser(request);
+    }
+
+    @Test
+    void loadLoginContext_prefersProviderUserServiceOverrideInsideRemoteIoBoundary() {
+        OAuthClaims claims = claims("feishu", "ou_1");
+        OAuthClaimsExtractor extractor = new OAuthClaimsExtractor() {
+            @Override
+            public String getProvider() {
+                return "feishu";
+            }
+
+            @Override
+            public OAuthClaims extract(OAuth2UserRequest request, OAuth2User user) {
+                return claims;
+            }
+        };
+        OAuth2User overrideUser = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("OAUTH_USER")),
+                Map.of("open_id", "ou_1"),
+                "open_id"
+        );
+        AtomicInteger boundaryCalls = new AtomicInteger();
+        AtomicInteger overrideCallsInsideBoundary = new AtomicInteger();
+        RemoteIdentityIoExecutor remoteIdentityIo = new RemoteIdentityIoExecutor() {
+            @Override
+            public <T> T execute(java.util.function.Supplier<T> operation) {
+                boundaryCalls.incrementAndGet();
+                return operation.get();
+            }
+        };
+        ProviderOAuth2UserService override = new ProviderOAuth2UserService() {
+            @Override
+            public String getProvider() {
+                return "feishu";
+            }
+
+            @Override
+            public OAuth2User loadUser(OAuth2UserRequest request) {
+                // Records the boundary state at call time: a provider override must run inside the
+                // remote-IO boundary, otherwise its HTTP call would hold the surrounding transaction.
+                if (boundaryCalls.get() == 1) {
+                    overrideCallsInsideBoundary.incrementAndGet();
+                }
+                return overrideUser;
+            }
+        };
+        AccessPolicy accessPolicy = mock(AccessPolicy.class);
+        IdentityBindingService identityBindingService = mock(IdentityBindingService.class);
+        LegacyPlatformIdentityCore identityCore = mock(LegacyPlatformIdentityCore.class);
+        OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate = mock();
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "usr_2", "zhangsan", null, null, "feishu", Set.of("USER")
+        );
+        OAuthLoginFlowService service = new OAuthLoginFlowService(
+                List.of(extractor),
+                List.of(override),
+                accessPolicy,
+                identityBindingService,
+                identityCore,
+                delegate,
+                remoteIdentityIo
+        );
+        OAuth2UserRequest request = oauthUserRequest("feishu");
+        when(accessPolicy.evaluate(claims)).thenReturn(AccessDecision.ALLOW);
+        when(identityCore.evaluate(claims)).thenReturn(LegacyPlatformIdentityDecision.legacy());
+        when(identityBindingService.bindOrCreate(claims, UserStatus.ACTIVE)).thenReturn(principal);
+
+        OAuthLoginFlowService.AuthenticatedLoginContext result = service.loadLoginContext(request);
+
+        assertThat(result.upstreamUser()).isSameAs(overrideUser);
+        assertThat(result.principal()).isSameAs(principal);
+        assertThat(boundaryCalls).hasValue(1);
+        assertThat(overrideCallsInsideBoundary).hasValue(1);
+        // The default user service must not be consulted when an override claims the registration.
+        verify(delegate, never()).loadUser(request);
+    }
+
+    @Test
+    void loadLoginContext_fallsBackToDefaultUserServiceForUnclaimedProviders() {
+        OAuthClaims claims = claims();
+        OAuthClaimsExtractor extractor = new OAuthClaimsExtractor() {
+            @Override
+            public String getProvider() {
+                return "github";
+            }
+
+            @Override
+            public OAuthClaims extract(OAuth2UserRequest request, OAuth2User user) {
+                return claims;
+            }
+        };
+        ProviderOAuth2UserService unrelatedOverride = new ProviderOAuth2UserService() {
+            @Override
+            public String getProvider() {
+                return "feishu";
+            }
+
+            @Override
+            public OAuth2User loadUser(OAuth2UserRequest request) {
+                throw new AssertionError("Feishu override must not handle a GitHub login");
+            }
+        };
+        AccessPolicy accessPolicy = mock(AccessPolicy.class);
+        IdentityBindingService identityBindingService = mock(IdentityBindingService.class);
+        LegacyPlatformIdentityCore identityCore = mock(LegacyPlatformIdentityCore.class);
+        OAuth2UserService<OAuth2UserRequest, OAuth2User> delegate = mock();
+        OAuth2User upstreamUser = new DefaultOAuth2User(
+                List.of(new SimpleGrantedAuthority("OAUTH_USER")),
+                Map.of("id", "gh_1"),
+                "id"
+        );
+        PlatformPrincipal principal = new PlatformPrincipal(
+                "usr_1", "alice", "alice@example.com", null, "github", Set.of("USER")
+        );
+        OAuthLoginFlowService service = new OAuthLoginFlowService(
+                List.of(extractor),
+                List.of(unrelatedOverride),
+                accessPolicy,
+                identityBindingService,
+                identityCore,
+                delegate,
+                directRemoteIo()
+        );
+        OAuth2UserRequest request = oauthUserRequest();
+        when(delegate.loadUser(request)).thenReturn(upstreamUser);
+        when(accessPolicy.evaluate(claims)).thenReturn(AccessDecision.ALLOW);
+        when(identityCore.evaluate(claims)).thenReturn(LegacyPlatformIdentityDecision.legacy());
+        when(identityBindingService.bindOrCreate(claims, UserStatus.ACTIVE)).thenReturn(principal);
+
+        OAuthLoginFlowService.AuthenticatedLoginContext result = service.loadLoginContext(request);
+
+        assertThat(result.upstreamUser()).isSameAs(upstreamUser);
+        verify(delegate).loadUser(request);
+    }
+
+    private static RemoteIdentityIoExecutor directRemoteIo() {
+        return new RemoteIdentityIoExecutor() {
+            @Override
+            public <T> T execute(java.util.function.Supplier<T> operation) {
+                return operation.get();
+            }
+        };
     }
 
     @ParameterizedTest
@@ -320,12 +463,20 @@ class OAuthLoginFlowServiceTest {
         );
     }
 
+    private static OAuthClaims claims(String provider, String subject) {
+        return new OAuthClaims(provider, subject, null, false, subject, Map.of());
+    }
+
     private static OAuth2UserRequest oauthUserRequest() {
-        ClientRegistration registration = ClientRegistration.withRegistrationId("github")
+        return oauthUserRequest("github");
+    }
+
+    private static OAuth2UserRequest oauthUserRequest(String registrationId) {
+        ClientRegistration registration = ClientRegistration.withRegistrationId(registrationId)
                 .clientId("client")
                 .clientSecret("secret")
                 .authorizationGrantType(AuthorizationGrantType.AUTHORIZATION_CODE)
-                .redirectUri("https://skillhub.example/login/oauth2/code/github")
+                .redirectUri("https://skillhub.example/login/oauth2/code/" + registrationId)
                 .authorizationUri("https://github.example/oauth/authorize")
                 .tokenUri("https://github.example/oauth/token")
                 .userInfoUri("https://github.example/user")
