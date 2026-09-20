@@ -1,4 +1,15 @@
-import { memo, useMemo, type MouseEvent } from 'react'
+import {
+  Children,
+  isValidElement,
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactElement,
+  type ReactNode,
+} from 'react'
 import ReactMarkdown from 'react-markdown'
 import rehypeHighlight from 'rehype-highlight'
 import rehypeSanitize from 'rehype-sanitize'
@@ -8,6 +19,107 @@ import { remarkInferCodeLanguage } from './code-language'
 import { stripMarkdownFrontmatter } from './markdown-frontmatter'
 
 export const MARKDOWN_IMAGE_CLASS_NAME = 'h-auto max-w-full'
+
+type MermaidApi = typeof import('mermaid').default
+
+let mermaidPromise: Promise<MermaidApi> | undefined
+let mermaidRenderQueue: Promise<void> = Promise.resolve()
+let mermaidBlockSequence = 0
+
+function loadMermaid(): Promise<MermaidApi> {
+  mermaidPromise ??= import('mermaid').then(({ default: mermaid }) => {
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' })
+    return mermaid
+  })
+
+  return mermaidPromise
+}
+
+function enqueueMermaidRender<T>(task: () => Promise<T>): Promise<T> {
+  const render = mermaidRenderQueue.then(task, task)
+  mermaidRenderQueue = render.then(
+    () => undefined,
+    () => undefined,
+  )
+  return render
+}
+
+function getTextContent(node: ReactNode): string {
+  return Children.toArray(node)
+    .map((child) => {
+      if (typeof child === 'string' || typeof child === 'number') {
+        return String(child)
+      }
+
+      if (isValidElement(child)) {
+        return getTextContent((child as ReactElement<{ children?: ReactNode }>).props.children)
+      }
+
+      return ''
+    })
+    .join('')
+}
+
+function CodeBlock({ children }: { children: ReactNode }) {
+  return (
+    <div className="my-4 rounded-lg border border-border/60 bg-secondary/30">
+      <div className="max-w-full overflow-x-auto rounded-lg bg-background px-4 py-3">
+        <pre className="m-0 min-w-max bg-transparent p-0 text-[13px] leading-6">{children}</pre>
+      </div>
+    </div>
+  )
+}
+
+interface MermaidBlockProps {
+  children: ReactNode
+}
+
+const MermaidBlock = memo(function MermaidBlock({ children }: MermaidBlockProps) {
+  const source = useMemo(() => getTextContent(children), [children])
+  const renderId = useRef(`mermaid-${++mermaidBlockSequence}`).current
+  const diagramRef = useRef<HTMLDivElement>(null)
+  const [svg, setSvg] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    setSvg(null)
+
+    enqueueMermaidRender(async () => {
+      const mermaid = await loadMermaid()
+      return mermaid.render(renderId, source)
+    })
+      .then(({ svg: renderedSvg }) => {
+        if (mounted) {
+          setSvg(renderedSvg)
+        }
+      })
+      .catch(() => {
+        if (mounted) {
+          setSvg(null)
+        }
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [renderId, source])
+
+  useEffect(() => {
+    if (svg && diagramRef.current) {
+      diagramRef.current.innerHTML = svg
+    }
+  }, [svg])
+
+  if (!svg) {
+    return <CodeBlock>{children}</CodeBlock>
+  }
+
+  return (
+    <div className="my-4 overflow-x-auto rounded-lg border border-border/60 bg-secondary/30" data-mermaid-diagram>
+      <div ref={diagramRef} className="min-w-0 bg-background px-4 py-3 [&_svg]:h-auto [&_svg]:max-w-full" />
+    </div>
+  )
+})
 
 interface MarkdownRendererProps {
   content: string
@@ -112,13 +224,18 @@ function MarkdownRendererComponent({ content, className, onLinkClick }: Markdown
               {children}
             </li>
           ),
-          pre: ({ children }) => (
-            <div className="my-4 rounded-lg border border-border/60 bg-secondary/30">
-              <div className="max-w-full overflow-x-auto rounded-lg bg-background px-4 py-3">
-                <pre className="m-0 min-w-max bg-transparent p-0 text-[13px] leading-6">{children}</pre>
-              </div>
-            </div>
-          ),
+          pre: ({ children }) => {
+            const codeChild = Children.toArray(children).find(isValidElement) as
+              | ReactElement<{ className?: string; children?: ReactNode }>
+              | undefined
+            const codeClassName = codeChild?.props.className
+
+            if (codeClassName?.split(/\s+/).includes('language-mermaid')) {
+              return <MermaidBlock>{codeChild}</MermaidBlock>
+            }
+
+            return <CodeBlock>{children}</CodeBlock>
+          },
           code: ({ className: codeClassName, children, ...props }) => {
             const isInline = !codeClassName?.includes('language-')
 

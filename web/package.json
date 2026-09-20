@@ -51,6 +51,7 @@
     "i18next-browser-languagedetector": "^8.2.1",
     "lowlight": "^3.3.0",
     "lucide-react": "^0.344.0",
+    "mermaid": "^11.17.2",
     "openapi-fetch": "^0.13.8",
     "react": "^19.0.0",
     "react-diff-viewer-continued": "^4.2.0",
