@@ -3,6 +3,7 @@ import { aStudioProfile } from './profiles/astudio'
 import { claudeCodeProfile } from './profiles/claude-code'
 import { codexProfile } from './profiles/codex'
 import { cursorProfile } from './profiles/cursor'
+import { dshProfile } from './profiles/dsh'
 import { githubCopilotProfile } from './profiles/github-copilot'
 import { geminiCliProfile } from './profiles/gemini-cli'
 import { openhandsProfile } from './profiles/openhands'
@@ -17,14 +18,14 @@ import { kiloProfile } from './profiles/kilo'
 import { piProfile } from './profiles/pi'
 
 export {
-  aStudioProfile, claudeCodeProfile, codexProfile, cursorProfile, githubCopilotProfile,
+  aStudioProfile, claudeCodeProfile, codexProfile, cursorProfile, dshProfile, githubCopilotProfile,
   geminiCliProfile, openhandsProfile, windsurfProfile, openclawProfile,
   kiroCliProfile, rooProfile, traeProfile, traeCnProfile,
   opencodeProfile, kiloProfile, piProfile
 }
 
 export const allProfiles: AgentProfile[] = [
-  aStudioProfile, claudeCodeProfile, codexProfile, cursorProfile, githubCopilotProfile,
+  aStudioProfile, claudeCodeProfile, codexProfile, cursorProfile, dshProfile, githubCopilotProfile,
   geminiCliProfile, openhandsProfile, windsurfProfile, openclawProfile,
   kiroCliProfile, rooProfile, traeProfile, traeCnProfile,
   opencodeProfile, kiloProfile, piProfile

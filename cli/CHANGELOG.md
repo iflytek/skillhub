@@ -6,6 +6,8 @@ All notable CLI behavior changes are documented in this file.
 
 ### Added
 
+- Add the `dsh` agent profile, displayed as DeepSeek Harness, with automatic detection of
+  project-level and user-level `.dsh/skills` directories.
 - Add OAuth Device Flow to `skillhub login` when no API token is supplied, including best-effort
   browser launch, a `--no-open` headless mode, bounded polling, and non-secret JSON progress output.
 - Add the `pi` agent profile, displayed as Pi, with `--agent pi`, project-level

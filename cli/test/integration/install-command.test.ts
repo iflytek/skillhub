@@ -667,6 +667,68 @@ describe('install command — server errors', () => {
 // ---------------------------------------------------------------------------
 
 describe('install command — multi-agent & auto-detect', () => {
+  test('--agent dsh defaults to the user root and persists the DeepSeek Harness agent id', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_ok',
+      user: { handle: 'u', displayName: 'U' },
+      skills: [{ namespace: 'global', slug: 'pdf-parser', version: '1.0.0', zipBytes: makeSkillZip() }]
+    })
+    await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
+
+    const result = await runCli(
+      [
+        'install', 'pdf-parser',
+        '--agent', 'dsh',
+        '--registry', registry.url,
+        '--token', 'sk_ok',
+        '--json'
+      ],
+      { HOME: env.home, USERPROFILE: env.home },
+      { cwd: env.cwd }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const installDir = join(env.home, '.dsh', 'skills', 'pdf-parser')
+    const parsed = JSON.parse(result.stdout) as { installed: Array<{ agent: string; dir: string }> }
+    expect(parsed.installed).toEqual([{ agent: 'dsh', dir: installDir }])
+    expect(JSON.parse(await readFile(
+      join(installDir, '.skillhub', 'metadata.json'),
+      'utf-8'
+    )).agent).toBe('dsh')
+  })
+
+  test('auto-detects an existing DeepSeek Harness project skills directory end to end', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_ok',
+      user: { handle: 'u', displayName: 'U' },
+      skills: [{ namespace: 'global', slug: 'pdf-parser', version: '1.0.0', zipBytes: makeSkillZip() }]
+    })
+    await runCli(['login', '--registry', registry.url, '--token', 'sk_ok'], { HOME: env.home, USERPROFILE: env.home })
+    await mkdir(join(env.cwd, '.dsh', 'skills'), { recursive: true })
+
+    const result = await runCli(
+      ['install', 'pdf-parser', '--registry', registry.url, '--token', 'sk_ok', '--json'],
+      { HOME: env.home, USERPROFILE: env.home },
+      { cwd: env.cwd }
+    )
+
+    expect(result.exitCode).toBe(0)
+    const parsed = JSON.parse(result.stdout) as { installed: Array<{ agent: string; dir: string }> }
+    expect(parsed.installed).toHaveLength(1)
+    expect(parsed.installed[0]?.agent).toBe('dsh')
+    expect(parsed.installed[0]?.dir).toMatch(/[/\\]\.dsh[/\\]skills[/\\]pdf-parser/)
+    expect(await Bun.file(join(
+      env.cwd,
+      '.dsh',
+      'skills',
+      'pdf-parser',
+      '.skillhub',
+      'metadata.json'
+    )).exists()).toBe(true)
+  })
+
   test('--agent pi defaults to the user root and persists the Pi agent id', async () => {
     const env = await createTempHome()
     registry = await startFakeRegistry({

@@ -133,6 +133,11 @@ skillhub CLI 遵循以下目录优先级，与 OpenSkills/Claude 保持互操作
 
 安装后目录名等于 `skill.slug`（SKILL.md 的 `name` 字段），确保其他兼容客户端可通过目录名发现。
 
+DeepSeek Harness 的 `dsh` profile 使用项目级 `./.dsh/skills/` 和用户级
+`~/.dsh/skills/`；dsh 同时原生扫描上表的 `.agents/skills/` 通用目录。dsh 把最近的
+`.git` 祖先作为项目根目录，因此项目级安装应从仓库根目录执行。若 `DSH_HOME` 指向
+自定义目录，使用 `--dir "$DSH_HOME/skills"` 显式安装。
+
 ## 8.5 与 AGENTS.md 的关系
 
 - skillhub CLI 安装技能后，通过 `sync` 命令在 AGENTS.md 中生成 `<skill>` 描述块

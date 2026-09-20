@@ -569,6 +569,18 @@ protocol is not compatible with SkillHub; use the first-party CLI shown above.
 
 📖 **[Complete Hermes Agent Integration Guide →](./docs/hermes-integration-en.md)**
 
+### [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) discovers standard `SKILL.md` packages from `.dsh/skills` and the shared `.agents/skills` roots. Install directly into its native user directory with the first-party SkillHub CLI:
+
+```bash
+skillhub install my-skill --agent dsh --scope user
+```
+
+Project-scoped installs use `<repository>/.dsh/skills`; run them from the repository root. dsh watches its skill roots, so newly installed skills are discovered without restarting the process.
+
+📖 **[Complete DeepSeek Harness Integration Guide →](./docs/dsh-integration-en.md)**
+
 ### [HarnessClaw Engine](https://github.com/harnessclaw/harnessclaw-engine)
 
 [HarnessClaw Engine](https://github.com/harnessclaw/harnessclaw-engine) is a Go LLM programming assistant engine that exposes its capabilities over WebSocket. It loads skills from `SKILL.md` files with YAML frontmatter and parameter substitution, scanning each configured directory for `skill-name/SKILL.md` (default `~/.harnessclaw/workspace/skills/`, with earlier directories taking priority on name conflicts). Install a SkillHub package straight into that directory with the CLI's `--dir` option, no registry adapter required:

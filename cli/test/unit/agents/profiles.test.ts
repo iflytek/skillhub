@@ -5,8 +5,8 @@ import { describe, expect, test } from 'bun:test'
 import { allProfiles, profileMap } from '../../../src/agents/detector'
 
 describe('agent profiles', () => {
-  test('has 16 tier 1 profiles', () => {
-    expect(allProfiles).toHaveLength(16)
+  test('has 17 tier 1 profiles', () => {
+    expect(allProfiles).toHaveLength(17)
   })
 
   test('all profiles have unique ids', () => {
@@ -15,11 +15,12 @@ describe('agent profiles', () => {
   })
 
   test('profileMap contains all profiles', () => {
-    expect(profileMap.size).toBe(16)
+    expect(profileMap.size).toBe(17)
     expect(profileMap.has('astudio')).toBe(true)
     expect(profileMap.has('claude-code')).toBe(true)
     expect(profileMap.has('codex')).toBe(true)
     expect(profileMap.has('cursor')).toBe(true)
+    expect(profileMap.has('dsh')).toBe(true)
     expect(profileMap.has('kilo')).toBe(true)
     expect(profileMap.has('pi')).toBe(true)
   })
@@ -39,6 +40,45 @@ describe('agent profiles', () => {
   test('cursor profile returns correct roots', () => {
     const profile = profileMap.get('cursor')!
     expect(profile.projectRoots('/repo')).toEqual(['/repo/.cursor/skills'])
+  })
+
+  test('DeepSeek Harness exposes and detects its project and user skills directories', async () => {
+    const base = await mkdtemp(join(tmpdir(), 'skillhub-dsh-profile-'))
+    const cwd = join(base, 'repo')
+    const home = join(base, 'home')
+    const projectRoot = `${cwd}/.dsh/skills`
+    const userRoot = `${home}/.dsh/skills`
+    const profile = profileMap.get('dsh')!
+
+    try {
+      await mkdir(cwd, { recursive: true })
+      await mkdir(home, { recursive: true })
+
+      expect(profile.displayName).toBe('DeepSeek Harness')
+      expect(profile.projectRoots(cwd)).toEqual([projectRoot])
+      expect(profile.userRoots(home)).toEqual([userRoot])
+      expect(await profile.detectInstalled(cwd, home)).toEqual([])
+
+      await mkdir(projectRoot, { recursive: true })
+      await mkdir(userRoot, { recursive: true })
+
+      expect(await profile.detectInstalled(cwd, home)).toEqual([
+        {
+          agent: 'dsh',
+          rootDir: projectRoot,
+          scope: 'project',
+          source: 'detected'
+        },
+        {
+          agent: 'dsh',
+          rootDir: userRoot,
+          scope: 'user',
+          source: 'detected'
+        }
+      ])
+    } finally {
+      await rm(base, { recursive: true, force: true })
+    }
   })
 
   test('Pi exposes and detects its project and user skills directories', async () => {

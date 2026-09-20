@@ -160,6 +160,9 @@ skillhub install pdf-parser --agent astudio
 # Install to Pi's user-level directory (use --scope project for the project directory)
 skillhub install pdf-parser --agent pi
 
+# Install to DeepSeek Harness (use --scope project from the repository root for project skills)
+skillhub install pdf-parser --agent dsh
+
 # Install to multiple Agents
 skillhub install pdf-parser --agent codex --agent claude-code
 
@@ -196,6 +199,7 @@ Most Agents have both project-level and user-level skills directories. Use `--sc
 | `claude-code` | `<project>/.claude/skills/` | `~/.claude/skills/` |
 | `codex` | `<project>/.codex/skills/` | `~/.codex/skills/` |
 | `cursor` | `<project>/.cursor/skills/` | `~/.cursor/skills/` |
+| `dsh` (DeepSeek Harness) | `<project>/.dsh/skills/` | `~/.dsh/skills/` |
 | `github-copilot` | `<project>/.github-copilot/skills/` | `~/.github-copilot/skills/` |
 | `gemini-cli` | `<project>/.gemini/skills/` | `~/.gemini/skills/` |
 | `windsurf` | `<project>/.windsurf/skills/` | `~/.windsurf/skills/` |
@@ -211,6 +215,8 @@ Most Agents have both project-level and user-level skills directories. Use `--sc
 | _fallback_ | `<project>/.agents/skills/` | `~/.agents/skills/` |
 
 For a custom path or an unsupported Agent directory, use `--dir` to specify the installation path. In interactive user scope, the `generic` target is offered alongside detected Agent targets. AStudio appears in that selector when `~/.acode/skills/` exists. When `--scope user|project` finds no matching agent directory, the CLI falls back to the `_fallback_` row above.
+
+DeepSeek Harness resolves project skills from the nearest Git repository root, while SkillHub CLI uses the current directory for project-scoped profiles. Run `--scope project --agent dsh` from the repository root. If `DSH_HOME` overrides the default `~/.dsh`, install with `--dir "$DSH_HOME/skills"`.
 
 ### File Structure After Installation
 

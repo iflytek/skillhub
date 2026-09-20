@@ -454,6 +454,18 @@ ClawHub 兼容范围包含搜索、查看和安装；其发布协议与 SkillHub
 
 📖 **[完整 Hermes Agent 集成指南 →](./docs/hermes-integration.md)**
 
+### [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)
+
+[DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（`dsh`）会从 `.dsh/skills` 和共享的 `.agents/skills` 根目录发现标准 `SKILL.md` 技能包。使用第一方 SkillHub CLI 可直接安装到它的原生用户目录：
+
+```bash
+skillhub install my-skill --agent dsh --scope user
+```
+
+项目级安装会写入 `<仓库>/.dsh/skills`，请在仓库根目录执行。dsh 会监听技能根目录，因此安装后无需重启进程即可发现新技能。
+
+📖 **[完整 DeepSeek Harness 集成指南 →](./docs/dsh-integration.md)**
+
 ### [HarnessClaw Engine](https://github.com/harnessclaw/harnessclaw-engine)
 
 [HarnessClaw Engine](https://github.com/harnessclaw/harnessclaw-engine) 是基于 Go 的 LLM 编程助手引擎，通过 WebSocket 协议对外提供能力。它从 `SKILL.md` 文件加载技能，支持 YAML frontmatter 与参数替换，并按配置顺序扫描各目录下的 `skill-name/SKILL.md`（默认 `~/.harnessclaw/workspace/skills/`，靠前的目录在重名时优先）。通过 SkillHub CLI 的 `--dir` 参数即可把技能包直接安装到该目录，无需新增 registry 适配器：
