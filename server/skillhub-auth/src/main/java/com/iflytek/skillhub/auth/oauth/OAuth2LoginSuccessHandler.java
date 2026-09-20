@@ -6,6 +6,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler;
@@ -21,6 +23,8 @@ import org.springframework.stereotype.Component;
  */
 @Component
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(OAuth2LoginSuccessHandler.class);
 
     private final PlatformSessionService platformSessionService;
     private final OAuthLoginFlowService oauthLoginFlowService;
@@ -43,6 +47,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         }
         String returnTo = oauthLoginFlowService.consumeReturnTo(request.getSession(false));
         if (returnTo != null) {
+            log.info("OAuth login succeeded: redirectPath={}, returnToPresent=true, sessionAttached=true",
+                    returnTo);
             // returnTo is a root-relative path (web client strips the base path). The redirect
             // strategy (DefaultRedirectStrategy) already prepends the request context path, which
             // reflects X-Forwarded-Prefix under forward-headers-strategy=framework — so the browser
@@ -52,6 +58,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             clearAuthenticationAttributes(request);
             return;
         }
+        log.info("OAuth login succeeded: redirectPath={}, returnToPresent=false, sessionAttached=true", "/");
         super.onAuthenticationSuccess(request, response, authentication);
     }
 }

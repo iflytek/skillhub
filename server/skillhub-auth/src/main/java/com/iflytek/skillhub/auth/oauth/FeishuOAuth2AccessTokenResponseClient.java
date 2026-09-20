@@ -8,6 +8,8 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -33,6 +35,7 @@ import org.springframework.web.client.RestClient;
 public class FeishuOAuth2AccessTokenResponseClient
         implements OAuth2AccessTokenResponseClient<OAuth2AuthorizationCodeGrantRequest> {
 
+    private static final Logger log = LoggerFactory.getLogger(FeishuOAuth2AccessTokenResponseClient.class);
     private static final String FEISHU_PROVIDER = "feishu";
     private static final String V2 = "v2";
     private static final String V3 = "v3";
@@ -100,16 +103,23 @@ public class FeishuOAuth2AccessTokenResponseClient
             requestBody.put("code_verifier", verifier);
         }
 
+        String tokenEndpoint = tokenUri(authorizationCodeGrantRequest);
+        log.info("Feishu token exchange started: protocolVersion={}, endpointHost={}, redirectUriPresent={}, pkcePresent={}",
+                protocolVersion,
+                endpointHost(tokenEndpoint),
+                redirectUri != null && !redirectUri.isBlank(),
+                codeVerifier instanceof String verifier && !verifier.isBlank());
         try {
             return restClient.post()
-                    .uri(tokenUri(authorizationCodeGrantRequest))
+                    .uri(tokenEndpoint)
                     .contentType(MediaType.parseMediaType("application/json; charset=utf-8"))
                     .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
                     .body(requestBody)
                     .exchange((request, response) -> {
+                        int status = response.getStatusCode().value();
+                        log.info("Feishu token exchange response: httpStatus={}", status);
                         if (!response.getStatusCode().is2xxSuccessful()) {
-                            throw tokenError("Feishu token endpoint returned HTTP "
-                                    + response.getStatusCode().value());
+                            throw tokenError("Feishu token endpoint returned HTTP " + status);
                         }
                         return parseResponse(readBounded(response.getBody()));
                     });
@@ -154,6 +164,11 @@ public class FeishuOAuth2AccessTokenResponseClient
             if (scope != null) {
                 tokenResponse.scopes(Set.of(scope.trim().split("\\s+")));
             }
+            log.info("Feishu token exchange parsed: businessCode=0, accessTokenPresent={}, refreshTokenPresent={}, expiresInSeconds={}, scopePresent={}",
+                    accessToken != null,
+                    refreshToken != null,
+                    expiresIn,
+                    scope != null);
             return tokenResponse.build();
         } catch (OAuth2AuthorizationException exception) {
             throw exception;
@@ -180,6 +195,14 @@ public class FeishuOAuth2AccessTokenResponseClient
                     "OAUTH2_FEISHU_PROTOCOL_VERSION must be either v2 or v3");
         }
         return normalized;
+    }
+
+    private static String endpointHost(String endpoint) {
+        try {
+            return java.net.URI.create(endpoint).getHost();
+        } catch (IllegalArgumentException exception) {
+            return "invalid";
+        }
     }
 
     private static String text(JsonNode node, String field) {

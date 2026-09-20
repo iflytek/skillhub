@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.auth.oauth;
 
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.oauth2.client.web.DefaultOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AuthorizationRequest;
@@ -13,6 +15,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class SkillHubOAuth2AuthorizationRequestResolver
         implements org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestResolver {
+
+    private static final Logger log = LoggerFactory.getLogger(SkillHubOAuth2AuthorizationRequestResolver.class);
 
     private final DefaultOAuth2AuthorizationRequestResolver delegate;
     private final OAuthLoginFlowService oauthLoginFlowService;
@@ -47,6 +51,10 @@ public class SkillHubOAuth2AuthorizationRequestResolver
             HttpServletRequest request, OAuth2AuthorizationRequest authorizationRequest) {
         if (authorizationRequest != null) {
             oauthLoginFlowService.rememberReturnTo(request);
+            log.info("OAuth authorization started: provider={}, redirectUri={}, returnToPresent={}",
+                    authorizationRequest.getAttribute("registration_id"),
+                    authorizationRequest.getRedirectUri(),
+                    request.getParameter("returnTo") != null);
         }
         return authorizationRequest;
     }

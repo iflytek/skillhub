@@ -95,6 +95,12 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/login/oauth2': {
+        target: 'http://localhost:8080',
+        // Preserve the browser-facing localhost:3000 host so Spring's
+        // post-login redirect does not send the SPA to localhost:8080.
+        changeOrigin: false,
+      },
     },
   },
 })

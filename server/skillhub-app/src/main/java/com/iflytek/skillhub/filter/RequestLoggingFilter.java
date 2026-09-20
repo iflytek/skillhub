@@ -14,6 +14,7 @@ import org.springframework.web.util.ContentCachingRequestWrapper;
 import org.springframework.web.util.ContentCachingResponseWrapper;
 
 import java.io.IOException;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -54,7 +55,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
     private void logRequest(ContentCachingRequestWrapper request, ContentCachingResponseWrapper response, long duration) {
         String requestUri = request.getRequestURI();
         String queryString = request.getQueryString();
-        String fullUrl = queryString != null ? requestUri + "?" + queryString : requestUri;
+        String fullUrl = queryString != null ? requestUri + "?" + sanitizeQueryString(queryString) : requestUri;
 
         String contentType = request.getContentType();
         String userAgent = request.getHeader("User-Agent");
@@ -72,6 +73,26 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         }
 
         log.info(sb.toString());
+    }
+
+    private String sanitizeQueryString(String queryString) {
+        return java.util.Arrays.stream(queryString.split("&", -1))
+                .map(parameter -> {
+                    int separator = parameter.indexOf('=');
+                    if (separator < 0) {
+                        return parameter;
+                    }
+                    String name = parameter.substring(0, separator).toLowerCase(Locale.ROOT);
+                    return isSensitiveQueryParameter(name)
+                            ? parameter.substring(0, separator) + "=[REDACTED]"
+                            : parameter;
+                })
+                .collect(java.util.stream.Collectors.joining("&"));
+    }
+
+    private boolean isSensitiveQueryParameter(String name) {
+        return Set.of("code", "state", "error", "error_description", "error_uri", "access_token",
+                "refresh_token", "id_token", "client_secret").contains(name);
     }
 
     private boolean shouldSkip(String uri) {

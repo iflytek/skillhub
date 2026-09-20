@@ -17,6 +17,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
@@ -34,6 +36,8 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class OAuthLoginFlowService {
+
+    private static final Logger log = LoggerFactory.getLogger(OAuthLoginFlowService.class);
 
     private final Map<String, OAuthClaimsExtractor> extractors;
     private final Map<String, ProviderOAuth2UserService> userServiceOverrides;
@@ -111,19 +115,25 @@ public class OAuthLoginFlowService {
                         new OAuth2Error("unsupported_provider", "Unsupported: " + registrationId, null)
                 );
             }
-            return new LoadedProviderIdentity(
-                    upstreamUser,
-                    extractor.extract(request, upstreamUser)
-            );
+            OAuthClaims claims = extractor.extract(request, upstreamUser);
+            log.info("OAuth provider identity loaded: provider={}, subjectPresent={}, emailPresent={}, displayNamePresent={}",
+                    registrationId,
+                    claims.subject() != null && !claims.subject().isBlank(),
+                    claims.email() != null && !claims.email().isBlank(),
+                    claims.providerLogin() != null && !claims.providerLogin().isBlank());
+            return new LoadedProviderIdentity(upstreamUser, claims);
         });
 
         PlatformPrincipal principal = authenticate(loadedIdentity.claims());
+        log.info("OAuth identity authenticated: provider={}, principalCreated=true, rolesCount={}",
+                loadedIdentity.claims().provider(), principal.platformRoles().size());
         return new AuthenticatedLoginContext(loadedIdentity.upstreamUser(), principal);
     }
 
     public PlatformPrincipal authenticate(OAuthClaims claims) {
         AccessDecision decision = accessPolicy.evaluate(claims);
 
+        log.info("OAuth access policy evaluated: provider={}, decision={}", claims.provider(), decision);
         if (decision == AccessDecision.PENDING_APPROVAL) {
             LegacyPlatformIdentityDecision identityDecision = identityCore.evaluate(claims);
             ensureActiveCoreAllowsPlatformLogin(identityDecision);

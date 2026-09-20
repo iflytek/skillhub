@@ -105,6 +105,28 @@ class RequestLoggingFilterTest {
     }
 
     @Test
+    void doFilterInternal_redactsOAuthCallbackQueryParameters() throws Exception {
+        RequestLoggingFilter filter = new RequestLoggingFilter();
+        attachAppender();
+
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/login/oauth2/code/feishu");
+        request.setQueryString("code=authorization-code&state=csrf-state&scope=contact:user.base:readonly");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, (req, res) -> {});
+
+        String message = loggedMessages().stream()
+                .filter(entry -> entry.contains("GET /login/oauth2/code/feishu"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(message).contains("code=[REDACTED]");
+        assertThat(message).contains("state=[REDACTED]");
+        assertThat(message).contains("scope=contact:user.base:readonly");
+        assertThat(message).doesNotContain("authorization-code");
+        assertThat(message).doesNotContain("csrf-state");
+    }
+
+    @Test
     void doFilterInternal_shouldKeepCachingWrapperForRegularApiResponses() throws Exception {
         RequestLoggingFilter filter = new RequestLoggingFilter();
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/web/notifications/unread-count");

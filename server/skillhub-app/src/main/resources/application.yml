@@ -78,7 +78,7 @@ spring:
             # (contact:user.base:readonly, contact:user.email:readonly).
             authorization-grant-type: authorization_code
             client-authentication-method: client_secret_post
-            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            redirect-uri: "${OAUTH2_FEISHU_REDIRECT_URI:{baseUrl}/login/oauth2/code/{registrationId}}"
             client-name: ${OAUTH2_FEISHU_DISPLAY_NAME:飞书}
         provider:
           github:

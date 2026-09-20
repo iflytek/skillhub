@@ -95,12 +95,19 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
         String userInfoUri = userRequest.getClientRegistration().getProviderDetails()
             .getUserInfoEndpoint().getUri();
 
+        log.info("Feishu userinfo started: endpointHost={}, accessTokenPresent={}",
+            endpointHost(userInfoUri),
+            userRequest.getAccessToken().getTokenValue() != null
+                && !userRequest.getAccessToken().getTokenValue().isBlank());
         FeishuUserResponse response;
         try {
             response = restClient.get()
                 .uri(userInfoUri)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + userRequest.getAccessToken().getTokenValue())
-                .exchange((request, clientResponse) -> readBounded(clientResponse.getBody()));
+                .exchange((request, clientResponse) -> {
+                    log.info("Feishu userinfo response: httpStatus={}", clientResponse.getStatusCode().value());
+                    return readBounded(clientResponse.getBody());
+                });
         } catch (Exception e) {
             // Exception class only: the message can quote the request URI, which holds the token.
             // Nothing downstream logs this failure, so without this line it would be silent.
@@ -128,6 +135,14 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
             );
         }
 
+        log.info("Feishu userinfo parsed: businessCode=0, openIdPresent={}, unionIdPresent={}, emailPresent={}, displayNamePresent={}",
+            response.data().openId() != null && !response.data().openId().isBlank(),
+            response.data().unionId() != null && !response.data().unionId().isBlank(),
+            (response.data().enterpriseEmail() != null && !response.data().enterpriseEmail().isBlank())
+                || (response.data().email() != null && !response.data().email().isBlank()),
+            (response.data().name() != null && !response.data().name().isBlank())
+                || (response.data().enName() != null && !response.data().enName().isBlank()));
+
         String userNameAttributeName = userRequest.getClientRegistration().getProviderDetails()
             .getUserInfoEndpoint().getUserNameAttributeName();
 
@@ -154,6 +169,14 @@ public class FeishuOAuth2UserService implements ProviderOAuth2UserService {
             );
         }
         return attributes;
+    }
+
+    private static String endpointHost(String endpoint) {
+        try {
+            return java.net.URI.create(endpoint).getHost();
+        } catch (IllegalArgumentException exception) {
+            return "invalid";
+        }
     }
 
     private void putIfPresent(Map<String, Object> attributes, String key, String value) {
