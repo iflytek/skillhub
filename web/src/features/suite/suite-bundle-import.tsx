@@ -13,6 +13,7 @@ import {
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { toast } from '@/shared/lib/toast'
+import { newIdempotencyKey } from '@/shared/lib/idempotency-key'
 import { validateSuiteBundleFolder, validateSuiteBundleZip } from './suite-bundle-folder'
 
 type BundleMode = 'CREATE' | 'UPDATE'
@@ -136,19 +137,21 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate, returnToSu
     const controller = new AbortController()
     requestRef.current = controller
     setFileName(file.name)
+    let result: SkillSuiteBundlePreview
     try {
-      const result = await previewMutation.mutateAsync({ file, signal: controller.signal })
-      if (!controller.signal.aborted && selectionVersion === selectionVersionRef.current) {
-        idempotencyKeyRef.current = crypto.randomUUID()
-        setNow(Date.now())
-        setPreview(result)
-      }
+      result = await previewMutation.mutateAsync({ file, signal: controller.signal })
     } catch (error) {
       if (!controller.signal.aborted && selectionVersion === selectionVersionRef.current) {
         toast.error(t('suite.bundle.previewFailed'), error instanceof Error ? error.message : '')
       }
+      return
     } finally {
       if (requestRef.current === controller) requestRef.current = null
+    }
+    if (!controller.signal.aborted && selectionVersion === selectionVersionRef.current) {
+      idempotencyKeyRef.current = newIdempotencyKey()
+      setNow(Date.now())
+      setPreview(result)
     }
   }
 
@@ -200,7 +203,7 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate, returnToSu
 
   const confirm = async () => {
     if (!preview?.previewToken || !preview.warningDigest || !canConfirm) return
-    const idempotencyKey = idempotencyKeyRef.current ?? crypto.randomUUID()
+    const idempotencyKey = idempotencyKeyRef.current ?? newIdempotencyKey()
     idempotencyKeyRef.current = idempotencyKey
     try {
       const result = await confirmMutation.mutateAsync({

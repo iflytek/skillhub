@@ -111,6 +111,31 @@ describe('SuiteBundleImport', () => {
     }))
   })
 
+  it('previews and confirms on browsers without crypto.randomUUID', async () => {
+    vi.stubGlobal('crypto', {
+      getRandomValues: (bytes: Uint8Array) => {
+        bytes.fill(1)
+        return bytes
+      },
+    })
+    mocks.preview.mutateAsync.mockResolvedValue(preview({ members: [] }))
+    mocks.confirm.mutateAsync.mockResolvedValue({ operationId: 'operation-1', status: 'RUNNING' })
+    render(<SuiteBundleImport expectedMode="CREATE" />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'pick-zip' }))
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: 'suite.bundle.confirm' }).hasAttribute('disabled')
+    ).toBe(false))
+    fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.confirm' }))
+
+    await waitFor(() => expect(mocks.confirm.mutateAsync).toHaveBeenCalledWith({
+      previewToken: 'preview-1',
+      warningDigest: 'digest-1',
+      idempotencyKey: '01010101010101010101010101010101',
+    }))
+    expect(mocks.toast.error).not.toHaveBeenCalled()
+  })
+
   it('requires warning acceptance for every affected member', async () => {
     mocks.preview.mutateAsync.mockResolvedValue(preview({
       members: [
