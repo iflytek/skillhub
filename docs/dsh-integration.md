@@ -76,7 +76,7 @@ CLI 会写入子目录下的 `.dsh/skills`，而 dsh 不会把它当作项目根
 
 如果 dsh 未发现已安装技能：
 
-1. 运行 `skillhub list --agent dsh`，确认安装目录和状态。
+1. 运行 `skillhub list`，确认安装目录和状态。
 2. 确认目录结构为 `<技能根>/<skill-slug>/SKILL.md`，没有额外嵌套层级。
 3. 检查 `SKILL.md` 的 `name` 与 `description` frontmatter。
 4. 项目级安装确认位于最近的 `.git` 祖先下，而不是仓库子目录。

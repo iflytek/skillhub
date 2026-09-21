@@ -76,7 +76,7 @@ before project-scoped installation.
 
 If dsh does not discover an installed skill:
 
-1. Run `skillhub list --agent dsh` and verify the recorded directory and status.
+1. Run `skillhub list` and verify the recorded directory and status.
 2. Confirm the layout is `<skill-root>/<skill-slug>/SKILL.md` without another nesting level.
 3. Check the `name` and `description` frontmatter in `SKILL.md`.
 4. For project scope, confirm the directory is under the nearest `.git` ancestor.
