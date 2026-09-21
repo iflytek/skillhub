@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.config;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -24,6 +26,8 @@ public class AuthoringProperties {
     private final LocalScript localScript = new LocalScript();
 
     private final OpenAiCompatible openAiCompatible = new OpenAiCompatible();
+
+    private final Mcp mcp = new Mcp();
 
     public String getWorkspaceRoot() {
         return workspaceRoot;
@@ -63,6 +67,10 @@ public class AuthoringProperties {
 
     public OpenAiCompatible getOpenAiCompatible() {
         return openAiCompatible;
+    }
+
+    public Mcp getMcp() {
+        return mcp;
     }
 
     /** Local script execution runtime. */
@@ -162,6 +170,13 @@ public class AuthoringProperties {
         private int timeoutMs = 120_000;
         /** Max chat-completion rounds per prompt task (each round may execute MCP tool calls). */
         private int maxToolRounds = 4;
+        /**
+         * SSRF guard escape hatch for enterprise deployments whose LLM endpoint
+         * lives on a private network (e.g. an internal vLLM). Loopback and
+         * RFC1918 destinations stay blocked by default; link-local (cloud
+         * metadata) is always blocked.
+         */
+        private boolean allowPrivateEndpoints = false;
 
         public boolean isEnabled() {
             return enabled;
@@ -209,6 +224,114 @@ public class AuthoringProperties {
 
         public void setMaxToolRounds(int maxToolRounds) {
             this.maxToolRounds = maxToolRounds;
+        }
+
+        public boolean isAllowPrivateEndpoints() {
+            return allowPrivateEndpoints;
+        }
+
+        public void setAllowPrivateEndpoints(boolean allowPrivateEndpoints) {
+            this.allowPrivateEndpoints = allowPrivateEndpoints;
+        }
+    }
+
+    /**
+     * Security knobs for user-declared MCP servers. Defaults are the safe
+     * production posture: private endpoints blocked, stdio transport off, no
+     * environment references allowed. Local development relaxes them via
+     * application-local.yml.
+     */
+    public static class Mcp {
+        /**
+         * When false (default), http/sse MCP endpoints pointing at loopback,
+         * RFC1918, ULA, or CGNAT addresses are rejected. Link-local addresses
+         * (cloud metadata) are always rejected.
+         */
+        private boolean allowPrivateEndpoints = false;
+
+        /** When false (default), stdio MCP servers cannot be declared or spawned. */
+        private boolean stdioEnabled = false;
+
+        /** Server environment variables a binding may reference via envRefs. */
+        private List<String> envAllowlist = new ArrayList<>();
+
+        private final Docker docker = new Docker();
+
+        public boolean isAllowPrivateEndpoints() {
+            return allowPrivateEndpoints;
+        }
+
+        public void setAllowPrivateEndpoints(boolean allowPrivateEndpoints) {
+            this.allowPrivateEndpoints = allowPrivateEndpoints;
+        }
+
+        public boolean isStdioEnabled() {
+            return stdioEnabled;
+        }
+
+        public void setStdioEnabled(boolean stdioEnabled) {
+            this.stdioEnabled = stdioEnabled;
+        }
+
+        public List<String> getEnvAllowlist() {
+            return envAllowlist;
+        }
+
+        public void setEnvAllowlist(List<String> envAllowlist) {
+            this.envAllowlist = envAllowlist;
+        }
+
+        public Docker getDocker() {
+            return docker;
+        }
+
+        /** Isolation profile for stdio MCP servers in docker execution mode. */
+        public static class Docker {
+            private String image = "alpine:3.20";
+            private String memory = "256m";
+            private String cpus = "1.0";
+            private int pidsLimit = 128;
+            private String tmpfsSize = "64m";
+
+            public String getImage() {
+                return image;
+            }
+
+            public void setImage(String image) {
+                this.image = image;
+            }
+
+            public String getMemory() {
+                return memory;
+            }
+
+            public void setMemory(String memory) {
+                this.memory = memory;
+            }
+
+            public String getCpus() {
+                return cpus;
+            }
+
+            public void setCpus(String cpus) {
+                this.cpus = cpus;
+            }
+
+            public int getPidsLimit() {
+                return pidsLimit;
+            }
+
+            public void setPidsLimit(int pidsLimit) {
+                this.pidsLimit = pidsLimit;
+            }
+
+            public String getTmpfsSize() {
+                return tmpfsSize;
+            }
+
+            public void setTmpfsSize(String tmpfsSize) {
+                this.tmpfsSize = tmpfsSize;
+            }
         }
     }
 }

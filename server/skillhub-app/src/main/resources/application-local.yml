@@ -53,6 +53,20 @@ skillhub:
     moderation:
       machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true}
       human-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:true}
+  authoring:
+    local-script:
+      # local development runs scripts on the host; production defaults to docker
+      execution-mode: ${SKILLHUB_AUTHORING_LOCAL_SCRIPT_MODE:inline}
+    openai-compatible:
+      # local fake LLM endpoints live on loopback
+      allow-private-endpoints: ${SKILLHUB_AUTHORING_LLM_ALLOW_PRIVATE:true}
+    mcp:
+      # local fake MCP servers live on loopback; link-local stays blocked
+      allow-private-endpoints: ${SKILLHUB_AUTHORING_MCP_ALLOW_PRIVATE:true}
+      # stdio servers may be exercised in local development
+      stdio-enabled: ${SKILLHUB_AUTHORING_MCP_STDIO_ENABLED:true}
+      # empty by default: envRefs are rejected in dev unless explicitly opened
+      env-allowlist: ${SKILLHUB_AUTHORING_MCP_ENV_ALLOWLIST:}
 
 logging:
   level:
