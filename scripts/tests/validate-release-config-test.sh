@@ -68,6 +68,7 @@ tmp="$(new_tmp)"
 
 valid_env="$tmp/valid.env"
 write_env "$valid_env" "release-download-secret-32-bytes-minimum"
+printf '%s\n' "SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING=true" >>"$valid_env"
 "$SCRIPT" "$valid_env" >/dev/null
 
 valid_feishu_env="$tmp/valid-feishu.env"

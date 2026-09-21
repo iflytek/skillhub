@@ -163,13 +163,26 @@ Sentinel 配置优先于 Cluster 和单机 `host`/`port`。在 Kubernetes 等 Se
   - 使用发布镜像，不在用户机器上执行本地构建
   - 负责拉起 PostgreSQL、Redis、server、web
   - PostgreSQL、Redis 默认只绑定到 `127.0.0.1`
-  - Web 和后端都支持运行时环境变量注入，不需要为每个环境重建镜像
+  - Web 和后端都支持运行时环境变量注入，不需要为每个环境重建镜像；S3/OSS 的
+    `SKILLHUB_STORAGE_S3_*` 变量会透传到 server
 - `.env.release.example`
   - 运行时变量模板
   - 包含镜像名、镜像版本、端口、数据库凭证、外部 OSS、站点公网地址和首登管理员参数
 - `scripts/validate-release-config.sh`
   - 在启动前校验 `.env.release`
   - 可提前拦截占位值、URL 格式错误、缺失的 OSS 凭据、危险的明文默认值
+
+阿里云 OSS 等不支持 AWS chunked encoding 的对象存储，需要在 `.env.release` 中设置：
+
+```dotenv
+SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING=true
+```
+
+该变量由 `compose.release.yml` 透传到 server；修改后需要重新创建 server 容器：
+
+```bash
+docker compose --env-file .env.release -f compose.release.yml up -d --force-recreate server
+```
 
 ### 5.5 镜像标签约定
 
