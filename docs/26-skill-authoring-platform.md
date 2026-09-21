@@ -45,7 +45,8 @@ skillhub-storage       草稿文件按内容寻址存入对象存储（与 Skill
 
 ## 领域模型与数据表
 
-迁移 `V60__authoring_platform.sql` 新增六张表：
+迁移 `V66__authoring_platform.sql` 新增六张表（初稿编号 V60，因上游 #874 统一身份
+平台占用了 V60–V65，rebase 后顺延为 V66）：
 
 | 表 | 职责 |
 | --- | --- |
@@ -183,16 +184,21 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
 | `run-timeout-ms` | 900000 | 单次运行硬上限（15 分钟） |
 | `stale-run-minutes` | 30 | 崩溃恢复清扫阈值 |
 | `local-script.enabled` | true | 本地脚本运行时开关 |
-| `local-script.execution-mode` | inline | 脚本执行后端：`inline`（主机子进程）/ `docker`（锁定容器，`SKILLHUB_AUTHORING_LOCAL_SCRIPT_MODE`） |
+| `local-script.execution-mode` | **docker** | 脚本执行后端：`docker`（锁定容器，生产默认）/ `inline`（主机子进程，仅 local/dev/test profile；否则启动即失败，`SKILLHUB_AUTHORING_LOCAL_SCRIPT_MODE`） |
 | `local-script.docker.image` / `memory` / `cpus` / `pids-limit` / `tmpfs-size` | alpine:3.20 / 256m / 1.0 / 128 / 64m | 容器隔离参数（`SKILLHUB_AUTHORING_DOCKER_*`）；镜像需自带 Skill 用到的解释器 |
 | `openai-compatible.enabled` | false | LLM 运行时开关（默认关闭） |
 | `openai-compatible.api-key` | 空 | 服务端密钥，绝不写入草稿绑定 |
 | `openai-compatible.default-endpoint` / `default-model` | 空 | prompt 任务的默认 LLM |
 | `openai-compatible.max-tool-rounds` | 4 | 单个 prompt 任务的最大对话轮数（含 MCP 工具执行） |
+| `openai-compatible.allow-private-endpoints` | false | LLM endpoint 的 SSRF 放行开关：私网 LLM（如内部 vLLM）才设 true（`SKILLHUB_AUTHORING_LLM_ALLOW_PRIVATE`） |
+| `mcp.allow-private-endpoints` | false | http/sse MCP endpoint 的 SSRF 放行开关（`SKILLHUB_AUTHORING_MCP_ALLOW_PRIVATE`）；链路本地/云元数据地址任何情况下都拒绝 |
+| `mcp.stdio-enabled` | false | stdio MCP 传输总开关（`SKILLHUB_AUTHORING_MCP_STDIO_ENABLED`）——服务器侧进程执行，生产默认关闭 |
+| `mcp.env-allowlist` | 空 | 允许 `envRefs` 引用的服务器环境变量名单（逗号分隔，`SKILLHUB_AUTHORING_MCP_ENV_ALLOWLIST`）；默认空 = 全部拒绝 |
+| `mcp.docker.image` / `memory` / `cpus` / `pids-limit` / `tmpfs-size` | alpine:3.20 / 256m / 1.0 / 128 / 64m | docker 模式下 stdio MCP 服务器的容器隔离参数（`SKILLHUB_AUTHORING_MCP_DOCKER_*`） |
 
 ### 部署要点
 
-- **数据库**：Flyway 迁移 V60 自动建表，无手工步骤；JSONB 列要求 PostgreSQL
+- **数据库**：Flyway 迁移 V66 自动建表，无手工步骤；JSONB 列要求 PostgreSQL
   （平台既有要求，无新增）。
 - **启用 prompt 任务**：配置 `SKILLHUB_AUTHORING_LLM_ENABLED=true` 并给出
   endpoint/model/api-key；不启用时含 prompt 任务的草稿会得到 `RUNTIME_DISABLED`
@@ -200,9 +206,12 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
 - **启用容器隔离**：`SKILLHUB_AUTHORING_LOCAL_SCRIPT_MODE=docker` 并确保运行节点
   可访问 Docker daemon。镜像需包含 Skill 用到的解释器（alpine 只带 `sh`；
   python3/node 的 Skill 应换基础镜像）。脚本执行不再依赖主机环境。
-- **MCP 服务器**：stdio 传输的 MCP 命令在服务器进程侧 spawn，`envRefs` 点名的
-  环境变量从服务器环境注入（这是凭据到达 MCP 服务器的唯一通道）；http/sse
-  传输直接访问声明的 endpoint。验证时每台声明的服务器都会被真实探测。
+- **MCP 服务器**：stdio 传输默认整体关闭（`mcp.stdio-enabled`），开启后命令在
+  docker 执行模式下运行于与脚本相同的锁定容器（无网络、资源上限、只读根文件
+  系统，关闭时强制 `docker rm -f` 清理）；inline 模式仅限 local/dev/test
+  profile。`envRefs` 只能引用 `mcp.env-allowlist` 点名的环境变量（默认空 =
+  全部拒绝），这是凭据到达 MCP 服务器的唯一通道。http/sse 传输访问的
+  endpoint 必须通过 SSRF 策略（见下）。验证时每台声明的服务器都会被真实探测。
 - **工作区**：验证运行会在 `workspace-root` 下创建一次性目录并在结束后清理，
   生产环境建议独立磁盘分区并纳入监控；多实例部署时运行在工作区所在节点本地
   执行，无需共享存储。
@@ -210,8 +219,21 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
   `linux/riscv64` 构建路径（见 `docs/RISCV64.md`）。local-script 运行时只依赖
   容器内 POSIX 工具（`sh`、`wc` 等），Temurin 运行时镜像自带；安全扫描器的
   RISC-V 限制与创作平台无关（扫描发生在提交后的发布管线）。
-- **安全基线**：脚本在清空环境的最小工作区执行、解释器白名单、路径不得越界、
-  绑定禁止内嵌凭据、单文件 10MB / 包 100MB / 500 文件上限与发布侧一致。
+- **安全基线**：
+  - **SSRF 防护**：MCP http/sse endpoint 与 OpenAI 兼容 endpoint 在保存时、
+    连接时双重校验——只允许 http(s)，主机必须可解析，且解析到的地址不得为
+    链路本地（含云元数据 169.254.169.254）、组播或未指定地址（无条件拒绝），
+    也不得为环回/RFC1918/ULA/CGNAT（除非对应表面的 `allow-private-endpoints`
+    放行）。HTTP 客户端从不跟随重定向（30x 直接报错），单响应体上限 2MiB，
+    stdio 单行上限 2MiB——阻断"公网 URL 302 跳元数据"与超大响应/超长行的
+    内存耗尽攻击。已知边界：策略在检查时解析域名，HttpClient 连接时再次解析，
+    可缓解但无法完全消除 DNS rebinding 竞态（绑定已校验地址的 socket 会破坏
+    虚拟主机 endpoint，未实现）。
+  - **生产强制容器**：`execution-mode` 默认 `docker`；若在非 local/dev/test
+    profile 下配置了 inline，应用启动即失败（`AuthoringStartupGuard`）。
+  - **其余既有边界**：脚本在清空环境的最小工作区执行、解释器白名单、路径
+    不得越界、绑定禁止内嵌凭据、单文件 10MB / 包 100MB / 500 文件上限与
+    发布侧一致。
 
 ### RISC-V64 验证记录（2026-09-20）
 
@@ -222,7 +244,7 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
   `eclipse-temurin:21-jre-noble` 的 riscv64 官方变体），`docker image inspect`
   确认 `linux/riscv64`。
 - **启动**：QEMU 模拟下 Spring Boot 91.9 秒完成启动，`/actuator/health` 返回
-  200；Flyway 在全新 PostgreSQL 16 上完成全部迁移（含 V60 创作平台表）。
+  200；Flyway 在全新 PostgreSQL 16 上完成全部迁移（含 V66 创作平台表）。
 - **创作平台全流程（REST API）**：创建草稿 → 读取脚手架 SKILL.md → 保存
   `scripts/check.sh` 与 `validation.yaml` → 保存 local-script 绑定 → 启动验证 →
   运行 `SUCCEEDED`（0 错误 0 警告），12 条事件完整落库且脚本 stdout 出现在事件
@@ -235,14 +257,51 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
   RISC-V 硬件上的全栈冒烟（PostgreSQL/Redis/对象存储/scanner）仍按
   `docs/RISCV64.md` 的边界声明执行。
 
+#### 复验脚本与原生硬件清单
+
+上述流程已固化为 `scripts/riscv64-verify.sh`（自动识别宿主架构：riscv64 主机
+原生执行，其余走 QEMU；对独立数据库跑 创建→验证→SUCCEEDED→事件流检查）。
+在真实 RISC-V64 硬件或 CI runner 上完成原生验证时，除直接运行该脚本外，
+按以下清单执行并留档：
+
+1. `uname -m` 输出 `riscv64`（非 QEMU：`/proc/cpuinfo` 无 "emodel"/QEMU 标记，
+   且启动日志无 qemu 前缀）；
+2. PostgreSQL 16、Redis 7 以 riscv64 原生镜像运行（非 binfmt 转译）；
+3. `scripts/riscv64-verify.sh` 全部检查通过，记录 耗时 与 事件数 两个数字；
+4. `execution-mode: docker` 下再跑一次（验证 alpine:3.20 riscv64 变体内的
+   脚本隔离执行）；
+5. 浏览器 E2E（`e2e/authoring-flow.spec.ts`）对准该实例跑通。
+
+截至 2026-09-20，本项目尚无原生 RISC-V 硬件资源，上述第 1–5 项为待完成项，
+已有证据为 QEMU 模拟级（见上）。
+
+### 发布管线端到端证据（2026-09-21）
+
+`scripts/authoring-publish-e2e.sh` 在本地 dev 栈（PostgreSQL/Redis/MinIO +
+skill-scanner :8000，`local` profile）上实跑全链路并留档，16/16 检查通过：
+
+- **创作与验证**（普通用户 `local-user`）：草稿 94 → SKILL.md/`scripts/check.sh`/
+  `validation.yaml` → local-script 绑定 → 验证运行 `SUCCEEDED`；
+- **提交 PUBLIC**：submit 返回 skill 33 / version 33 / slug
+  `publish-evidence-1789957612` / 版本号 `20260921.102653`，版本进入
+  `SCANNING`（非 SUPER_ADMIN 提交不会自动发布）；
+- **安全扫描**：异步完成后版本回到 `PENDING_REVIEW`，`security_audit` 落库
+  `SKILL_SCANNER:SAFE:1`（1 条发现、判定安全）；
+- **人工审核**：平台管理员（`local-admin`，SUPER_ADMIN）通过
+  `POST /api/web/reviews/1/approve` 批准，审核任务 `APPROVED`；
+- **发布终态**：`skill_version.status = PUBLISHED`、`published_at` 已置位、
+  `skill.visibility = PUBLIC`，另一普通用户（`local-plain-user`）可公开检索
+  该 Skill，且草稿回填 `submittedSkillId = 33`。
+
 ## 测试
 
 | 层 | 位置 | 覆盖 |
 | --- | --- | --- |
 | 领域单测 | `skillhub-domain/…/authoring/` | `DraftStructureValidatorTest`（结构规则与修复建议）、`ValidationSpecParserTest`（防御式 YAML 解析、任务/断言语义）、`AssertionEvaluatorTest`（全部断言类型与失败信息）、`SkillScaffoldGeneratorTest` |
 | 运行时单测 | `skillhub-app/…/authoring/adapter/` | `DockerScriptCommandBuilderTest`（隔离参数与挂载构造）、`DockerScriptRuntimeAdapterTest`（真实容器内实证：无网络路由、只读根文件系统、工作区可写、输出捕获；无 Docker 时静默跳过）、`OpenAiCompatibleRuntimeAdapterToolLoopTest`（agent 循环：MCP 工具发现→模型调用→真实执行→轨迹回填，toolFilters/toolAllowlist 过滤、轮数上限） |
-| MCP 单测 | `skillhub-app/…/authoring/mcp/` | `HttpMcpClientTest`（initialize/tools 握手、会话头复用、SSE 帧解析、错误结果、不可达报错，对真实本地 HTTP 服务器）、`StdioMcpClientTest`（stdio 传输对 python3 子进程）、`McpProbeServiceTest`（连不上→`MCP_CONNECT_FAILED`、未知 toolFilter→告警、可跳过畸形声明） |
-| 端到端集成 | `skillhub-app/…/authoring/AuthoringFlowIntegrationTest` | Testcontainers 真实 PostgreSQL 上跑通完整闭环：建草稿 → 改文件 → 绑定运行时 → 三层验证 → 修复发现 → 复验 → 提交（`ddl-auto=validate` 顺带校验 V60 与实体映射一致） |
+| MCP 单测 | `skillhub-app/…/authoring/mcp/` | `HttpMcpClientTest`（initialize/tools 握手、会话头复用、SSE 帧解析、错误结果、不可达报错、**30x 重定向不跟随、2MiB 响应上限**，对真实本地 HTTP 服务器）、`StdioMcpClientTest`（stdio 传输对 python3 子进程；**2MiB 单行上限 + 进程销毁、关闭时清理命令执行**）、`McpProbeServiceTest`（连不上→`MCP_CONNECT_FAILED`、未知 toolFilter→告警、可跳过畸形声明）、`McpClientFactoryTest`（**连接时安全策略：被拒 endpoint/被禁 stdio 不建连不建进程、envRefs 白名单过滤、docker 包装参数**） |
+| 安全策略单测 | `skillhub-app/…/config/` | `ConfiguredAuthoringSecurityPolicyTest`（SSRF 地址分类：云元数据/链路本地无条件拒绝、环回/RFC1918/ULA/CGNAT 按表面开关、公网放行）、`AuthoringStartupGuardTest`（非 local/dev/test profile + inline → 启动失败） |
+| 端到端集成 | `skillhub-app/…/authoring/AuthoringFlowIntegrationTest` | Testcontainers 真实 PostgreSQL 上跑通完整闭环：建草稿 → 改文件 → 绑定运行时 → 三层验证 → 修复发现 → 复验 → 提交（`ddl-auto=validate` 顺带校验 V66 与实体映射一致） |
 | 前端单测 | `web/src/features/authoring/*.test.*` | 事件按 seq 合并去重、SSE 生命周期（回放合并、终态关闭、断线轮询降级）、修复 diff 预览、二进制文件 base64 处理 |
 | 浏览器 E2E | `web/e2e/authoring-flow.spec.ts` | Playwright 真实 API 全 UI 闭环：创建草稿（命名空间/名称对话框）→ 文件编辑（SKILL.md/脚本/validation.yaml）→ 保存运行时绑定 → 启动验证至 Succeeded（事件控制台含脚本输出）→ 提交对话框过闸；坏 frontmatter → 失败发现 → diff 预览 → 两步确认应用修复 → 一键复验通过；二进制资源上传 → 只读面板（大小/类型/sha256）与字节级校验。断言落在持久 UI 状态（按钮态、徽章、响应体）而非易失 toast |
 | 活体冒烟 | `scripts/authoring-smoke-test.sh` | 对运行中的服务器 35 项检查、四个场景：全层验证并提交；坏 frontmatter → 定位 → 应用修复 → 复验；守卫（未验证不可提交、跨用户不可读他人草稿）；MCP 探测（死端点报 `MCP_CONNECT_FAILED`、本地假 MCP 服务器工具被发现并写入事件流、未知 toolFilter 仅告警），幂等可重复执行 |
