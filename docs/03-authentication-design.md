@@ -320,6 +320,7 @@ OAUTH2_FEISHU_PROTOCOL_VERSION=v3
 OAUTH2_FEISHU_AUTHORIZATION_URI=https://accounts.feishu.cn/open-apis/authen/v1/authorize
 OAUTH2_FEISHU_TOKEN_URI=https://accounts.feishu.cn/oauth/v3/token
 OAUTH2_FEISHU_USER_INFO_URI=https://open.feishu.cn/open-apis/authen/v1/user_info
+OAUTH2_FEISHU_REDIRECT_URI=
 
 # 历史 v2 应用可显式切换：
 # OAUTH2_FEISHU_PROTOCOL_VERSION=v2

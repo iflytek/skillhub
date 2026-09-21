@@ -292,6 +292,8 @@ services:
     - `OAUTH2_FEISHU_PROTOCOL_VERSION=v3`
     - `OAUTH2_FEISHU_TOKEN_URI=https://accounts.feishu.cn/oauth/v3/token`
     - `OAUTH2_FEISHU_USER_INFO_URI=https://open.feishu.cn/open-apis/authen/v1/user_info`
+    - `OAUTH2_FEISHU_REDIRECT_URI=`（可选；默认使用 `{baseUrl}/login/oauth2/code/feishu`，
+      经过反向代理或本地动态端口时应显式设置完整回调 URL）
 
     Lark 国际版、私有化部署或企业网关可分别覆盖这三个完整 endpoint；历史的
     `OAUTH2_FEISHU_AUTHORIZE_URI` / `OAUTH2_FEISHU_BASE_URI` 仍可作为 base-URI
@@ -309,7 +311,8 @@ services:
   Secret 中注入：
 
   1. 在飞书自建应用中登记
-     `https://<公网域名>/login/oauth2/code/feishu`，并开启用户信息所需权限。
+     `https://<公网域名>/login/oauth2/code/feishu`，并开启用户信息所需权限；如果使用
+     本地预览，则把 `OAUTH2_FEISHU_REDIRECT_URI` 设置为预览 Web 地址对应的完整回调 URL。
   2. 在受控环境设置 `OAUTH2_FEISHU_CLIENT_ID`、`OAUTH2_FEISHU_CLIENT_SECRET`，确认
      `OAUTH2_FEISHU_PROTOCOL_VERSION` 与 token endpoint 匹配，然后运行：
 

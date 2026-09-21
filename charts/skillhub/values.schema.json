@@ -47,7 +47,8 @@
             "authorizationUri": { "type": "string", "format": "uri" },
             "protocolVersion": { "type": "string", "enum": ["v2", "v3"] },
             "tokenUri": { "type": "string", "format": "uri" },
-            "userInfoUri": { "type": "string", "format": "uri" }
+            "userInfoUri": { "type": "string", "format": "uri" },
+            "redirectUri": { "type": "string" }
           }
         }
       }

@@ -399,7 +399,7 @@ esac
 
 # OAuth endpoints are sent directly to the provider. Validate them here so a
 # typo fails before the release container starts.
-for feishu_endpoint in OAUTH2_FEISHU_AUTHORIZATION_URI OAUTH2_FEISHU_TOKEN_URI OAUTH2_FEISHU_USER_INFO_URI; do
+for feishu_endpoint in OAUTH2_FEISHU_AUTHORIZATION_URI OAUTH2_FEISHU_TOKEN_URI OAUTH2_FEISHU_USER_INFO_URI OAUTH2_FEISHU_REDIRECT_URI; do
   eval "feishu_endpoint_value=\${$feishu_endpoint:-}"
   if [ -n "$feishu_endpoint_value" ]; then
     validate_url "$feishu_endpoint"

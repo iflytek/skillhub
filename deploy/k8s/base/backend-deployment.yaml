@@ -248,6 +248,8 @@ spec:
               value: "https://accounts.feishu.cn/oauth/v3/token"
             - name: OAUTH2_FEISHU_USER_INFO_URI
               value: "https://open.feishu.cn/open-apis/authen/v1/user_info"
+            - name: OAUTH2_FEISHU_REDIRECT_URI
+              value: ""
 
           volumeMounts:
             - name: skillhub-storage
