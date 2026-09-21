@@ -92,7 +92,11 @@ describe('MarkdownRenderer Mermaid blocks', () => {
 
     await waitFor(() => expect(container.querySelector('[data-testid="mermaid-svg"]')).toBeTruthy())
 
-    expect(mermaidInitialize).toHaveBeenCalledWith({ startOnLoad: false, securityLevel: 'strict' })
+    expect(mermaidInitialize).toHaveBeenCalledWith({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      suppressErrorRendering: true,
+    })
     expect(container.querySelector('[data-testid="mermaid-svg"]')?.closest('pre')).toBeNull()
   })
 
@@ -103,7 +107,7 @@ describe('MarkdownRenderer Mermaid blocks', () => {
       <MarkdownRenderer content={'```mermaid\nnot a valid diagram\n```'} />,
     )
 
-    await waitFor(() => expect(mermaidRender).toHaveBeenCalled())
+    await waitFor(() => expect(container.querySelector('[data-mermaid-error]')).toBeTruthy())
 
     expect(container.querySelector('pre code')?.textContent).toContain('not a valid diagram')
   })

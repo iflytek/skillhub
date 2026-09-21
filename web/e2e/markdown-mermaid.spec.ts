@@ -55,9 +55,11 @@ test.describe('Markdown Mermaid rendering (Real API)', () => {
 
       await page.goto(`/space/${encodeURIComponent(namespace.slug)}/${encodeURIComponent(skill.slug)}`)
 
+      await expect(page.locator('[data-mermaid-error]')).toBeVisible()
       const source = page.locator('pre code.language-mermaid')
       await expect(source).toContainText('this is not a Mermaid diagram')
       await expect(page.locator('[data-mermaid-diagram]')).toHaveCount(0)
+      await expect(page.locator('body > div[id^="dmermaid-"]')).toHaveCount(0)
     } finally {
       await builder.cleanup()
     }

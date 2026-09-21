@@ -28,7 +28,11 @@ let mermaidBlockSequence = 0
 
 function loadMermaid(): Promise<MermaidApi> {
   mermaidPromise ??= import('mermaid').then(({ default: mermaid }) => {
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' })
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'strict',
+      suppressErrorRendering: true,
+    })
     return mermaid
   })
 
@@ -60,9 +64,12 @@ function getTextContent(node: ReactNode): string {
     .join('')
 }
 
-function CodeBlock({ children }: { children: ReactNode }) {
+function CodeBlock({ children, mermaidError }: { children: ReactNode; mermaidError?: boolean }) {
   return (
-    <div className="my-4 rounded-lg border border-border/60 bg-secondary/30">
+    <div
+      className="my-4 rounded-lg border border-border/60 bg-secondary/30"
+      data-mermaid-error={mermaidError || undefined}
+    >
       <div className="max-w-full overflow-x-auto rounded-lg bg-background px-4 py-3">
         <pre className="m-0 min-w-max bg-transparent p-0 text-[13px] leading-6">{children}</pre>
       </div>
@@ -79,10 +86,12 @@ const MermaidBlock = memo(function MermaidBlock({ children }: MermaidBlockProps)
   const renderId = useRef(`mermaid-${++mermaidBlockSequence}`).current
   const diagramRef = useRef<HTMLDivElement>(null)
   const [svg, setSvg] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     let mounted = true
     setSvg(null)
+    setFailed(false)
 
     enqueueMermaidRender(async () => {
       const mermaid = await loadMermaid()
@@ -96,6 +105,7 @@ const MermaidBlock = memo(function MermaidBlock({ children }: MermaidBlockProps)
       .catch(() => {
         if (mounted) {
           setSvg(null)
+          setFailed(true)
         }
       })
 
@@ -111,7 +121,7 @@ const MermaidBlock = memo(function MermaidBlock({ children }: MermaidBlockProps)
   }, [svg])
 
   if (!svg) {
-    return <CodeBlock>{children}</CodeBlock>
+    return <CodeBlock mermaidError={failed}>{children}</CodeBlock>
   }
 
   return (
