@@ -391,6 +391,21 @@ for provider in GITHUB GITLAB FEISHU; do
   fi
 done
 
+feishu_protocol="${OAUTH2_FEISHU_PROTOCOL_VERSION:-v3}"
+case "$feishu_protocol" in
+  v2|v3) ;;
+  *) error "OAUTH2_FEISHU_PROTOCOL_VERSION must be either v2 or v3" ;;
+esac
+
+# OAuth endpoints are sent directly to the provider. Validate them here so a
+# typo fails before the release container starts.
+for feishu_endpoint in OAUTH2_FEISHU_AUTHORIZATION_URI OAUTH2_FEISHU_TOKEN_URI OAUTH2_FEISHU_USER_INFO_URI; do
+  eval "feishu_endpoint_value=\${$feishu_endpoint:-}"
+  if [ -n "$feishu_endpoint_value" ]; then
+    validate_url "$feishu_endpoint"
+  fi
+done
+
 if [ "$errors" -gt 0 ]; then
   echo "Release config validation failed: $errors error(s), $warnings warning(s)." >&2
   exit 1

@@ -303,6 +303,37 @@ services:
   确认，因此 `emailVerified` 恒为 false；若在 `application.yml` 中把
   `skillhub.access-policy.mode` 设为 `EMAIL_DOMAIN`，该策略会拒绝所有未验证邮箱，
   飞书登录将一律失败。启用飞书时请保留默认的 `OPEN` 或改用其他准入模式。
+
+  启用飞书前，使用一个测试租户完成一次真实回调验收。不要把真实 client secret
+  写入仓库、报告或聊天记录；只在受控的 `.env.release`、CI Secret 或 Kubernetes
+  Secret 中注入：
+
+  1. 在飞书自建应用中登记
+     `https://<公网域名>/login/oauth2/code/feishu`，并开启用户信息所需权限。
+  2. 在受控环境设置 `OAUTH2_FEISHU_CLIENT_ID`、`OAUTH2_FEISHU_CLIENT_SECRET`，确认
+     `OAUTH2_FEISHU_PROTOCOL_VERSION` 与 token endpoint 匹配，然后运行：
+
+     ```bash
+     make validate-release-config
+     docker compose --env-file .env.release -f compose.release.yml up -d
+     curl -fsS http://127.0.0.1:8080/actuator/health
+     curl -fsS http://127.0.0.1:8080/api/v1/auth/methods
+     ```
+
+  3. 在登录页选择“飞书”，确认浏览器跳转到配置的授权域名；完成授权后应回到
+     `/login/oauth2/code/feishu`，最终进入 `/` 或原始的 root-relative `returnTo`。
+  4. 用同一个飞书账号再次登录，确认仍绑定同一个 SkillHub 账号；再用已禁用的
+     SkillHub 账号登录，预期跳转 `/access-denied`，且不创建新 Session。
+  5. 检查日志中只有 provider、HTTP 状态、错误码和阶段信息，不应出现 client secret、
+     authorization code、access token、`open_id` 或上游错误文本：
+
+     ```bash
+     docker compose -f compose.release.yml logs --tail=200 server \
+       | rg -i 'client_secret|authorization code|access[_-]?token|open_id|secret|token'
+     ```
+
+  本地 mock 回调只能证明 SkillHub 与协议形状的集成，不能替代上述真实租户验收。
+  没有可用飞书租户时，应将该项记录为“未验证”，不要宣称 Feishu 登录已通过。
 - 如果要启用密码重置验证码邮件，参见：`docs/19-smtp-password-reset-email-setup.md`
 
 ## 8 OIDC 登录配置

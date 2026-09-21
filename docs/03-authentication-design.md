@@ -330,7 +330,7 @@ OAUTH2_FEISHU_USER_INFO_URI=https://open.feishu.cn/open-apis/authen/v1/user_info
 选择对应的标准 token endpoint；如需代理、区域或私有化 endpoint，可通过
 `OAUTH2_FEISHU_TOKEN_URI` 覆盖。授权和 userinfo endpoint 也分别通过
 `OAUTH2_FEISHU_AUTHORIZATION_URI`、`OAUTH2_FEISHU_USER_INFO_URI` 配置。协议版本不合法
-时应用启动失败。不会在 v3 失败后自动使用 v2，因为 authorization code 只能使用一次，
+时发布配置校验失败，应用也会拒绝启动。不会在 v3 失败后自动使用 v2，因为 authorization code 只能使用一次，
 自动重试可能造成重复请求并掩盖配置错误。旧的 `OAUTH2_FEISHU_AUTHORIZE_URI` 和
 `OAUTH2_FEISHU_BASE_URI` 仍作为 base-URI 兼容回退，但新部署应使用完整 endpoint 变量。
 
