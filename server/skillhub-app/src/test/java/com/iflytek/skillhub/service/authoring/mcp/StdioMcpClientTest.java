@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.service.authoring.mcp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -85,5 +87,47 @@ class StdioMcpClientTest {
                 List.of("definitely-not-a-real-command-xyz"), Map.of(), new ObjectMapper())
                 .listTools(Duration.ofSeconds(10)))
                 .isInstanceOf(Exception.class);
+    }
+
+    @Test
+    void unterminatedHugeLineIsRejectedAndTheProcessKilled() {
+        // a hostile stdio server streaming one endless line must not exhaust
+        // memory: the capped reader destroys the process past the limit
+        String floodServer = """
+                import sys, time
+                sys.stdout.write('x' * (5 * 1024 * 1024))
+                sys.stdout.flush()
+                time.sleep(60)
+                """;
+        StdioMcpClient client;
+        try {
+            client = new StdioMcpClient("flood", List.of("python3", "-c", floodServer),
+                    Map.of(), new ObjectMapper());
+        } catch (Exception exception) {
+            // python3 disappeared between the class check and here
+            org.junit.jupiter.api.Assumptions.assumeTrue(false, exception.getMessage());
+            return;
+        }
+        assertThatThrownBy(() -> client.listTools(Duration.ofSeconds(30)))
+                .isInstanceOf(Exception.class)
+                .hasMessageContaining("longer than");
+        client.close();
+    }
+
+    @Test
+    void teardownCommandRunsOnClose() throws Exception {
+        // docker-wrapped stdio servers rely on this: a killed docker client can
+        // leave its container behind, so close() must run the cleanup command
+        Path marker = Files.createTempFile("skillhub-stdio-teardown", ".marker");
+        Files.deleteIfExists(marker);
+        StdioMcpClient client = new StdioMcpClient("cleaned",
+                List.of("python3", "-c", FAKE_SERVER), Map.of(), new ObjectMapper(),
+                List.of("touch", marker.toString()), false);
+        client.listTools(Duration.ofSeconds(10));
+        client.close();
+        assertThat(Files.exists(marker))
+                .as("the teardown command must have run after process destruction")
+                .isTrue();
+        Files.deleteIfExists(marker);
     }
 }

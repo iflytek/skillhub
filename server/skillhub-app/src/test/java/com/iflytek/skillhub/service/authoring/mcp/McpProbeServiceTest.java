@@ -1,8 +1,10 @@
 package com.iflytek.skillhub.service.authoring.mcp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.config.AuthoringProperties;
 import com.iflytek.skillhub.domain.authoring.validation.FindingDraft;
 import com.iflytek.skillhub.domain.authoring.validation.FindingSeverity;
+import com.iflytek.skillhub.service.authoring.TestingAuthoringSecurityPolicy;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -19,8 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class McpProbeServiceTest {
 
-    private final McpProbeService probeService =
-            new McpProbeService(new McpClientFactory(new ObjectMapper()));
+    private final McpProbeService probeService = new McpProbeService(new McpClientFactory(
+            new ObjectMapper(), new AuthoringProperties(),
+            TestingAuthoringSecurityPolicy.permissive()));
 
     private TestingMcpHttpServer mcpServer;
 

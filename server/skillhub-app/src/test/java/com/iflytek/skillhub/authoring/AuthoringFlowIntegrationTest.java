@@ -297,7 +297,53 @@ class AuthoringFlowIntegrationTest {
                 .contains("SPEC_MISSING", "MCP_CONNECT_FAILED");
     }
 
+    @Test
+    void securityPolicyRejectsUnsafeBindingsAtSaveTime() {
+        SkillDraft draft = draftService.createDraft(NS_SLUG, USER, "security-flow",
+                "exercises the binding security policy", null);
+        draftService.saveFile(draft.getId(), USER, "SKILL.md", validSkillMd(), "text/markdown", null, null);
+
+        // cloud metadata endpoints are always blocked — even under the test
+        // profile where loopback/RFC1918 endpoints are deliberately allowed
+        assertBindingRejected(() -> bindingService.saveBinding(draft.getId(), USER, "local-script",
+                Map.of("interpreter", "sh"), null,
+                List.of(Map.of("name", "metadata", "transport", "http",
+                        "endpoint", "http://169.254.169.254/latest/meta-data/")), null),
+                "link-local");
+
+        // envRefs outside the configured allowlist are rejected: bindings must
+        // not be able to read arbitrary server environment variables
+        assertBindingRejected(() -> bindingService.saveBinding(draft.getId(), USER, "local-script",
+                Map.of("interpreter", "sh"), null,
+                List.of(Map.of("name", "env-hog", "transport", "http",
+                        "endpoint", "http://127.0.0.1:9/mcp",
+                        "envRefs", List.of("HOME"))), null),
+                "env-allowlist");
+
+        // the LLM surface is guarded too — those requests carry the server API key
+        assertBindingRejected(() -> bindingService.saveBinding(draft.getId(), USER, "openai-compatible",
+                Map.of("endpoint", "http://169.254.169.254/v1", "model", "test-model"), null, null, null),
+                "link-local");
+
+        // the allowlisted env ref saves fine (loopback is allowed under the test profile)
+        bindingService.saveBinding(draft.getId(), USER, "local-script",
+                Map.of("interpreter", "sh"), null,
+                List.of(Map.of("name", "env-ok", "transport", "http",
+                        "endpoint", "http://127.0.0.1:9/mcp",
+                        "envRefs", List.of("TEST_ALLOWED_MCP_VAR"))), null);
+    }
+
     // ---------------------------------------------------------------- helpers
+
+    /** Save-time rejection: a 400 whose first message arg explains the reason. */
+    private static void assertBindingRejected(Runnable save, String reasonFragment) {
+        try {
+            save.run();
+            fail("binding save should have been rejected: " + reasonFragment);
+        } catch (com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException exception) {
+            assertThat(String.valueOf(exception.messageArgs()[0])).contains(reasonFragment);
+        }
+    }
 
     private ValidationRun awaitTerminal(Long runId) {
         long deadline = System.currentTimeMillis() + 60_000;

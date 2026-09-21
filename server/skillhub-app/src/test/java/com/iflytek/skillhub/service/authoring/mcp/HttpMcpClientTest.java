@@ -1,10 +1,16 @@
 package com.iflytek.skillhub.service.authoring.mcp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.net.httpserver.HttpServer;
+import java.io.ByteArrayInputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -97,5 +103,70 @@ class HttpMcpClientTest {
                     .isInstanceOf(Exception.class)
                     .hasMessageContaining("dead");
         }
+    }
+
+    @Test
+    void redirectsAreNeverFollowed() throws Exception {
+        // a public URL answering 302 towards a link-local target is the classic
+        // SSRF bypass: the client must surface the redirect as an error, not follow it
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer redirector = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        redirector.createContext("/", exchange -> {
+            requests.incrementAndGet();
+            exchange.getResponseHeaders().set("Location", "http://169.254.169.254/mcp");
+            exchange.sendResponseHeaders(302, -1);
+            exchange.close();
+        });
+        redirector.start();
+        try (HttpMcpClient client = new HttpMcpClient("redirector",
+                "http://127.0.0.1:" + redirector.getAddress().getPort() + "/mcp",
+                httpClient, objectMapper, Map.of())) {
+            assertThatThrownBy(() -> client.listTools(Duration.ofSeconds(5)))
+                    .isInstanceOf(Exception.class)
+                    .hasMessageContaining("302");
+        } finally {
+            redirector.stop(0);
+        }
+        assertThat(requests.get())
+                .as("the redirect target must never be requested")
+                .isEqualTo(1);
+    }
+
+    @Test
+    void oversizedResponseBodyIsRejected() throws Exception {
+        // 3 MiB body against a 2 MiB cap: a hostile endpoint must not be able to
+        // buffer an unbounded response in server memory
+        HttpServer flood = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        flood.createContext("/", exchange -> {
+            byte[] bytes = new byte[3 * 1024 * 1024];
+            java.util.Arrays.fill(bytes, (byte) 'x');
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(bytes);
+            }
+            exchange.close();
+        });
+        flood.start();
+        try (HttpMcpClient client = new HttpMcpClient("flood",
+                "http://127.0.0.1:" + flood.getAddress().getPort() + "/mcp",
+                httpClient, objectMapper, Map.of())) {
+            assertThatThrownBy(() -> client.listTools(Duration.ofSeconds(10)))
+                    .isInstanceOf(Exception.class)
+                    .hasMessageContaining("exceeds");
+        } finally {
+            flood.stop(0);
+        }
+    }
+
+    @Test
+    void readBodyCappedAllowsBodiesUnderTheLimit() throws Exception {
+        byte[] small = "hello".getBytes(StandardCharsets.UTF_8);
+        assertThat(HttpMcpClient.readBodyCapped(new ByteArrayInputStream(small), 10))
+                .isEqualTo("hello");
+        assertThatThrownBy(() -> HttpMcpClient.readBodyCapped(
+                new ByteArrayInputStream(small), 3))
+                .isInstanceOf(java.io.IOException.class)
+                .hasMessageContaining("exceeds");
     }
 }

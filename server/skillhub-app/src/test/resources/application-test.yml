@@ -47,6 +47,19 @@ skillhub:
   security:
     scanner:
       enabled: false
+  authoring:
+    local-script:
+      # tests exercise the inline script runtime directly; no docker needed
+      execution-mode: inline
+    openai-compatible:
+      # fake LLM endpoints in tests bind to loopback
+      allow-private-endpoints: true
+    mcp:
+      # fake MCP servers in tests bind to loopback; link-local stays blocked
+      allow-private-endpoints: true
+      stdio-enabled: true
+      # the one variable bindings may reference in tests; everything else is rejected
+      env-allowlist: TEST_ALLOWED_MCP_VAR
 
 logging:
   level:
