@@ -39,6 +39,16 @@ grep -Fq 'fsGroupChangePolicy: OnRootMismatch' "$TMP_DIR/default.yaml"
 grep -Fq 'type: Recreate' "$TMP_DIR/default.yaml"
 grep -A1 -F 'name: SKILLHUB_SUITE_REVIEW_WRITES_ENABLED' "$TMP_DIR/default.yaml" \
   | grep -Fq 'value: "false"'
+if grep -Fq 'name: OAUTH2_FEISHU_REDIRECT_URI' "$TMP_DIR/default.yaml"; then
+  fail "default Helm rendering must omit an empty Feishu redirect URI so Spring can derive baseUrl"
+fi
+
+render feishu-redirect "$CHART_DIR" \
+  --set-string oauth2.feishu.redirectUri=https://skills.example.com/login/oauth2/code/feishu \
+  --show-only templates/server-deployment.yaml >"$TMP_DIR/feishu-redirect.yaml"
+grep -A1 -F 'name: OAUTH2_FEISHU_REDIRECT_URI' "$TMP_DIR/feishu-redirect.yaml" \
+  | grep -Fq 'value: "https://skills.example.com/login/oauth2/code/feishu"' \
+  || fail "Helm must inject an explicitly configured Feishu redirect URI"
 
 render suite-review-enabled "$CHART_DIR" \
   --set server.suiteReviewWritesEnabled=true \

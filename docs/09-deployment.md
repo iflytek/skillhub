@@ -305,8 +305,9 @@ services:
     - `OAUTH2_FEISHU_PROTOCOL_VERSION=v3`
     - `OAUTH2_FEISHU_TOKEN_URI=https://accounts.feishu.cn/oauth/v3/token`
     - `OAUTH2_FEISHU_USER_INFO_URI=https://open.feishu.cn/open-apis/authen/v1/user_info`
-    - `OAUTH2_FEISHU_REDIRECT_URI=`（可选；默认使用 `{baseUrl}/login/oauth2/code/feishu`，
-      经过反向代理或本地动态端口时应显式设置完整回调 URL）
+    - `OAUTH2_FEISHU_REDIRECT_URI=`（可选；Compose 默认根据
+      `SKILLHUB_PUBLIC_BASE_URL` 生成 `/login/oauth2/code/feishu`，Helm/K8s 未设置时由
+      Spring 使用 `{baseUrl}`；经过特殊反向代理或本地动态端口时应显式设置完整回调 URL）
 
     Lark 国际版、私有化部署或企业网关可分别覆盖这三个完整 endpoint；历史的
     `OAUTH2_FEISHU_AUTHORIZE_URI` / `OAUTH2_FEISHU_BASE_URI` 仍可作为 base-URI

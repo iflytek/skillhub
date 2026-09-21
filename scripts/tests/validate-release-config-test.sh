@@ -71,6 +71,14 @@ write_env "$valid_env" "release-download-secret-32-bytes-minimum"
 printf '%s\n' "SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING=true" >>"$valid_env"
 "$SCRIPT" "$valid_env" >/dev/null
 
+compose_default_redirect="$tmp/compose-default-redirect.txt"
+SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET=release-download-secret-32-bytes-minimum \
+SKILLHUB_PUBLIC_BASE_URL=https://skillhub.example.com \
+  docker compose -f "$REPO_ROOT/compose.release.yml" config \
+  | grep -A1 'OAUTH2_FEISHU_REDIRECT_URI:' >"$compose_default_redirect"
+grep -Fq 'https://skillhub.example.com/login/oauth2/code/feishu' "$compose_default_redirect" \
+  || fail "compose must derive the default Feishu redirect URI from SKILLHUB_PUBLIC_BASE_URL"
+
 valid_feishu_env="$tmp/valid-feishu.env"
 write_env "$valid_feishu_env" "release-download-secret-32-bytes-minimum"
 cat >>"$valid_feishu_env" <<'EOF'
