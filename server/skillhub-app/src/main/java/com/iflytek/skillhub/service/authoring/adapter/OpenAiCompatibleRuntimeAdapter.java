@@ -9,6 +9,7 @@ import com.iflytek.skillhub.domain.authoring.runtime.RuntimeEventSink;
 import com.iflytek.skillhub.domain.authoring.runtime.RuntimeExecutionContext;
 import com.iflytek.skillhub.domain.authoring.runtime.SkillRuntimeAdapter;
 import com.iflytek.skillhub.domain.authoring.runtime.TaskResult;
+import com.iflytek.skillhub.domain.authoring.service.AuthoringSecurityPolicy;
 import com.iflytek.skillhub.domain.authoring.spec.TaskType;
 import com.iflytek.skillhub.domain.authoring.spec.ValidationTaskSpec;
 import com.iflytek.skillhub.service.authoring.mcp.HttpMcpClient;
@@ -16,6 +17,7 @@ import com.iflytek.skillhub.service.authoring.mcp.McpClient;
 import com.iflytek.skillhub.service.authoring.mcp.McpClientFactory;
 import com.iflytek.skillhub.service.authoring.mcp.McpTool;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -55,15 +57,21 @@ public class OpenAiCompatibleRuntimeAdapter implements SkillRuntimeAdapter {
     private final AuthoringProperties properties;
     private final ObjectMapper objectMapper;
     private final McpClientFactory mcpClientFactory;
+    private final AuthoringSecurityPolicy securityPolicy;
     private final HttpClient httpClient;
 
     public OpenAiCompatibleRuntimeAdapter(AuthoringProperties properties, ObjectMapper objectMapper,
-                                          McpClientFactory mcpClientFactory) {
+                                          McpClientFactory mcpClientFactory,
+                                          AuthoringSecurityPolicy securityPolicy) {
         this.properties = properties;
         this.objectMapper = objectMapper;
         this.mcpClientFactory = mcpClientFactory;
+        this.securityPolicy = securityPolicy;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(15))
+                // never follow redirects: a public endpoint answering 302 towards
+                // a link-local target must not become an SSRF bypass
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .build();
     }
 
@@ -95,6 +103,14 @@ public class OpenAiCompatibleRuntimeAdapter implements SkillRuntimeAdapter {
         if (endpoint == null || model == null) {
             throw new IllegalStateException(
                     "openai-compatible runtime requires endpoint and model (binding config or server defaults)");
+        }
+        // requests carry the server-side API key, so the destination must pass
+        // the SSRF guard before any credential leaves the host
+        String endpointRejection = securityPolicy.endpointRejection(
+                endpoint, AuthoringSecurityPolicy.EndpointUse.LLM_API);
+        if (endpointRejection != null) {
+            throw new IllegalStateException(
+                    "openai-compatible endpoint is not allowed: " + endpointRejection);
         }
         String url = endpoint.endsWith("/") ? endpoint + "chat/completions" : endpoint + "/chat/completions";
         Duration requestTimeout = Duration.ofMillis(Math.max(task.timeoutMs(), 1_000));
@@ -278,13 +294,14 @@ public class OpenAiCompatibleRuntimeAdapter implements SkillRuntimeAdapter {
         if (config.getApiKey() != null && !config.getApiKey().isBlank()) {
             requestBuilder.header("Authorization", "Bearer " + config.getApiKey());
         }
-        HttpResponse<String> response =
-                httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
+        HttpResponse<InputStream> response =
+                httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
+        String body = HttpMcpClient.readBodyCapped(response.body(), HttpMcpClient.MAX_RESPONSE_BYTES);
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IOException("chat completion failed with HTTP " + response.statusCode()
-                    + ": " + truncate(response.body(), 500));
+                    + ": " + truncate(body, 500));
         }
-        return objectMapper.readTree(response.body()).path("choices").path(0).path("message");
+        return objectMapper.readTree(body).path("choices").path(0).path("message");
     }
 
     private void appendToolReply(ArrayNode messages, String toolCallId, String content) {

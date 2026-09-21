@@ -245,10 +245,11 @@ skillhub:
     maintenance-interval-ms: ${SKILLHUB_AUTHORING_MAINTENANCE_INTERVAL_MS:30000}
     local-script:
       enabled: ${SKILLHUB_AUTHORING_LOCAL_SCRIPT_ENABLED:true}
-      # inline: subprocess on the server host (local dev only).
-      # docker: script runs in a locked-down container — no network, memory/cpu/pids
-      # caps, read-only rootfs, all capabilities dropped. Use for production.
-      execution-mode: ${SKILLHUB_AUTHORING_LOCAL_SCRIPT_MODE:inline}
+      # docker is the production default: scripts run in a locked-down container —
+      # no network, memory/cpu/pids caps, read-only rootfs, all capabilities dropped.
+      # inline runs subprocesses on the server host and is only allowed with a
+      # local/dev/test profile (the startup guard fails fast otherwise).
+      execution-mode: ${SKILLHUB_AUTHORING_LOCAL_SCRIPT_MODE:docker}
       docker:
         # must provide the interpreters your skills use (alpine ships sh only)
         image: ${SKILLHUB_AUTHORING_DOCKER_IMAGE:alpine:3.20}
@@ -265,6 +266,25 @@ skillhub:
       timeout-ms: ${SKILLHUB_AUTHORING_LLM_TIMEOUT_MS:120000}
       # rounds of chat-completion (with MCP tool execution between rounds) per prompt task
       max-tool-rounds: ${SKILLHUB_AUTHORING_LLM_MAX_TOOL_ROUNDS:4}
+      # SSRF guard: set true only for private-network LLM endpoints (e.g. internal vLLM);
+      # loopback/RFC1918 destinations are rejected by default, link-local always
+      allow-private-endpoints: ${SKILLHUB_AUTHORING_LLM_ALLOW_PRIVATE:false}
+    mcp:
+      # SSRF guard for http/sse MCP endpoints: private/loopback addresses are
+      # rejected by default; link-local (cloud metadata) is always rejected
+      allow-private-endpoints: ${SKILLHUB_AUTHORING_MCP_ALLOW_PRIVATE:false}
+      # stdio MCP servers spawn server-side processes — off unless explicitly enabled
+      stdio-enabled: ${SKILLHUB_AUTHORING_MCP_STDIO_ENABLED:false}
+      # server environment variables a binding may reference via envRefs
+      # (comma-separated, e.g. MCP_ECHO_TOKEN,WEATHER_API_KEY)
+      env-allowlist: ${SKILLHUB_AUTHORING_MCP_ENV_ALLOWLIST:}
+      docker:
+        # isolation profile for stdio MCP servers in docker execution mode
+        image: ${SKILLHUB_AUTHORING_MCP_DOCKER_IMAGE:alpine:3.20}
+        memory: ${SKILLHUB_AUTHORING_MCP_DOCKER_MEMORY:256m}
+        cpus: ${SKILLHUB_AUTHORING_MCP_DOCKER_CPUS:1.0}
+        pids-limit: ${SKILLHUB_AUTHORING_MCP_DOCKER_PIDS_LIMIT:128}
+        tmpfs-size: ${SKILLHUB_AUTHORING_MCP_DOCKER_TMPFS_SIZE:64m}
   profile:
     moderation:
       machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true} # Enable machine review (e.g. sensitive word detection)

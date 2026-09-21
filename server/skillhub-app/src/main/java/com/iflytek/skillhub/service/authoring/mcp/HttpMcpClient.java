@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -19,12 +21,15 @@ import java.util.Map;
  * MCP client for the streamable-HTTP transport (also used for legacy SSE
  * endpoints that accept plain JSON-RPC POSTs). Each request is one JSON-RPC
  * POST; responses may arrive as a bare JSON object or as a text/event-stream
- * body whose data lines carry the JSON-RPC message.
+ * body whose data lines carry the JSON-RPC message. Response bodies are
+ * size-capped so a hostile endpoint cannot exhaust server memory.
  */
 public class HttpMcpClient implements McpClient {
 
     public static final String PROTOCOL_VERSION = "2024-11-05";
     public static final String CLIENT_NAME = "skillhub-authoring";
+    /** One HTTP response body may not exceed this many bytes. */
+    public static final int MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 
     private final String serverName;
     private final String endpoint;
@@ -118,22 +123,23 @@ public class HttpMcpClient implements McpClient {
             builder.header("Mcp-Session-Id", sessionId);
         }
 
-        HttpResponse<String> response;
+        HttpResponse<InputStream> response;
         try {
-            response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofString());
+            response = httpClient.send(builder.build(), HttpResponse.BodyHandlers.ofInputStream());
         } catch (IOException exception) {
             throw new IOException("MCP server '" + serverName + "' request failed ("
                     + method + "): " + exception, exception);
         }
+        String body = readBodyCapped(response.body(), MAX_RESPONSE_BYTES);
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IOException("MCP server '" + serverName + "' returned HTTP "
-                    + response.statusCode() + " for " + method);
+                    + response.statusCode() + " for " + method + ": " + truncate(body, 200));
         }
         String sessionHeader = response.headers().firstValue("Mcp-Session-Id").orElse(null);
         if (sessionHeader != null) {
             sessionId = sessionHeader;
         }
-        JsonNode message = parseMessage(response.body(), request.path("id").asInt());
+        JsonNode message = parseMessage(body, request.path("id").asInt());
         if (message.has("error")) {
             throw new IOException("MCP server '" + serverName + "' error on " + method + ": "
                     + message.path("error").path("message").asText());
@@ -227,5 +233,32 @@ public class HttpMcpClient implements McpClient {
         for (JsonNode call : toolCalls) {
             calls.add(call.deepCopy());
         }
+    }
+
+    /**
+     * Reads a response body fully into a UTF-8 string, refusing bodies beyond
+     * {@code maxBytes}: a hostile endpoint must not be able to buffer an
+     * unbounded response in server memory.
+     */
+    public static String readBodyCapped(InputStream body, int maxBytes) throws IOException {
+        try (body) {
+            ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+            byte[] chunk = new byte[8192];
+            int read;
+            while ((read = body.read(chunk)) != -1) {
+                if (buffer.size() + read > maxBytes) {
+                    throw new IOException("response body exceeds " + maxBytes + " bytes");
+                }
+                buffer.write(chunk, 0, read);
+            }
+            return buffer.toString(StandardCharsets.UTF_8);
+        }
+    }
+
+    private static String truncate(String value, int limit) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= limit ? value : value.substring(0, limit) + "…";
     }
 }

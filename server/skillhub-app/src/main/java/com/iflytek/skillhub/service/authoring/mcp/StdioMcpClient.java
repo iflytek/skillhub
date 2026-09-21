@@ -19,24 +19,48 @@ import java.util.concurrent.TimeUnit;
  * MCP client for the stdio transport: the declared command is spawned as a
  * subprocess and JSON-RPC messages are exchanged as newline-delimited JSON on
  * its stdin/stdout. Only environment variables named in {@code envRefs} are
- * passed through; the process is destroyed on close.
+ * passed through; the process is destroyed on close. A single stdout line is
+ * capped so a hostile server cannot exhaust memory with an unterminated line.
  */
 public class StdioMcpClient implements McpClient {
+
+    /** One JSON-RPC message may not exceed this many characters. */
+    private static final int MAX_LINE_CHARS = 2 * 1024 * 1024;
+    private static final long TEARDOWN_TIMEOUT_MS = 5_000;
 
     private final String serverName;
     private final Process process;
     private final BufferedWriter stdin;
     private final BufferedReader stdout;
     private final ObjectMapper objectMapper;
+    private final List<String> teardownCommand;
     private int nextId = 1;
 
     public StdioMcpClient(String serverName, List<String> command, Map<String, String> environment,
                           ObjectMapper objectMapper) throws IOException {
+        this(serverName, command, environment, objectMapper, null, false);
+    }
+
+    /**
+     * @param teardownCommand best-effort cleanup executed after the process is
+     *                        destroyed (e.g. {@code docker rm -f <container>});
+     *                        may be null
+     * @param inheritEnvironment when true the parent environment is kept — only
+     *                        legitimate for docker-wrapped commands, where the
+     *                        docker CLI needs it to reach the daemon and the
+     *                        container only receives its explicit {@code -e} vars
+     */
+    public StdioMcpClient(String serverName, List<String> command, Map<String, String> environment,
+                          ObjectMapper objectMapper, List<String> teardownCommand,
+                          boolean inheritEnvironment) throws IOException {
         this.serverName = serverName;
         this.objectMapper = objectMapper;
+        this.teardownCommand = teardownCommand;
         ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.environment().clear();
-        processBuilder.environment().putAll(environment);
+        if (!inheritEnvironment) {
+            processBuilder.environment().clear();
+            processBuilder.environment().putAll(environment);
+        }
         processBuilder.redirectErrorStream(false);
         this.process = processBuilder.start();
         this.stdin = new BufferedWriter(
@@ -106,6 +130,26 @@ public class StdioMcpClient implements McpClient {
             process.destroyForcibly();
             Thread.currentThread().interrupt();
         }
+        runTeardown();
+    }
+
+    /**
+     * Best-effort cleanup after the process is gone: a SIGKILLed
+     * {@code docker run} client can leave its container behind, so the
+     * docker-wrapped mode removes the container by name.
+     */
+    private void runTeardown() {
+        if (teardownCommand == null) {
+            return;
+        }
+        try {
+            Process cleanup = new ProcessBuilder(teardownCommand).start();
+            if (!cleanup.waitFor(TEARDOWN_TIMEOUT_MS, TimeUnit.MILLISECONDS)) {
+                cleanup.destroyForcibly();
+            }
+        } catch (IOException | InterruptedException exception) {
+            // cleanup is best-effort; the container also exits via --rm
+        }
     }
 
     private JsonNode request(String method, ObjectNode params, Duration timeout) throws Exception {
@@ -144,7 +188,7 @@ public class StdioMcpClient implements McpClient {
         try {
             long deadline = System.nanoTime() + timeout.toNanos();
             while (System.nanoTime() < deadline) {
-                String line = stdout.readLine();
+                String line = readLineCapped();
                 if (line == null) {
                     throw new IOException("MCP server '" + serverName + "' (stdio) closed its output");
                 }
@@ -166,5 +210,27 @@ public class StdioMcpClient implements McpClient {
         } finally {
             watchdog.interrupt();
         }
+    }
+
+    /**
+     * Reads one line like {@link BufferedReader#readLine()} but refuses lines
+     * beyond {@link #MAX_LINE_CHARS}: a hostile stdio server could otherwise
+     * buffer an unterminated line of unbounded length in memory.
+     */
+    private String readLineCapped() throws IOException {
+        StringBuilder line = new StringBuilder();
+        int character;
+        while ((character = stdout.read()) != -1) {
+            if (character == '\n' || character == '\r') {
+                return line.toString();
+            }
+            line.append((char) character);
+            if (line.length() > MAX_LINE_CHARS) {
+                process.destroyForcibly();
+                throw new IOException("MCP server '" + serverName
+                        + "' (stdio) sent a line longer than " + MAX_LINE_CHARS + " chars");
+            }
+        }
+        return line.length() == 0 ? null : line.toString();
     }
 }
