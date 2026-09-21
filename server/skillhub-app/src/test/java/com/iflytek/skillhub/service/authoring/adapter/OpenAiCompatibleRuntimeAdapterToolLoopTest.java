@@ -10,6 +10,7 @@ import com.iflytek.skillhub.domain.authoring.runtime.RuntimeExecutionContext;
 import com.iflytek.skillhub.domain.authoring.runtime.TaskResult;
 import com.iflytek.skillhub.domain.authoring.spec.TaskType;
 import com.iflytek.skillhub.domain.authoring.spec.ValidationTaskSpec;
+import com.iflytek.skillhub.service.authoring.TestingAuthoringSecurityPolicy;
 import com.iflytek.skillhub.service.authoring.mcp.McpClientFactory;
 import com.iflytek.skillhub.service.authoring.mcp.TestingMcpHttpServer;
 import com.sun.net.httpserver.HttpExchange;
@@ -82,7 +83,9 @@ class OpenAiCompatibleRuntimeAdapterToolLoopTest {
         openAi = new FakeOpenAiEndpoint();
         properties = new AuthoringProperties();
         properties.getOpenAiCompatible().setEnabled(true);
-        adapter = new OpenAiCompatibleRuntimeAdapter(properties, MAPPER, new McpClientFactory(MAPPER));
+        adapter = new OpenAiCompatibleRuntimeAdapter(properties, MAPPER,
+                new McpClientFactory(MAPPER, properties, TestingAuthoringSecurityPolicy.permissive()),
+                TestingAuthoringSecurityPolicy.permissive());
         Files.writeString(workspace.resolve("SKILL.md"), "---\nname: test\n---\nUse the weather tools.\n");
         trace.clear();
     }

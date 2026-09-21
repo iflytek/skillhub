@@ -13,6 +13,8 @@ set -euo pipefail
 #   case 4 — MCP probe: dead MCP endpoint → MCP_CONNECT_FAILED finding; a local
 #            fake MCP server → tools discovered in the event log; unknown
 #            toolFilters → warning without failing the run
+#   case 5 — security guards: cloud-metadata endpoints and envRefs outside the
+#            allowlist are rejected at binding save time
 #
 # Requires the local dev profile (mock auth enabled). Usage:
 #   scripts/authoring-smoke-test.sh [base-url]
@@ -444,7 +446,59 @@ print(match["ruleCode"] if match else "none")')"
 assert_equals "MCP_TOOL_FILTER_UNKNOWN warning reported" "MCP_TOOL_FILTER_UNKNOWN" "$FILTERED_RULE"
 
 kill "$FAKE_MCP_PID" 2>/dev/null || true
+wait "$FAKE_MCP_PID" 2>/dev/null || true
 FAKE_MCP_PID=""
+
+# ---------------------------------------------------------------- case 5: security guards
+
+echo
+echo "--- Case 5: binding security guards reject at save time ---"
+
+SEC_NAME="security-skill-$RUN_ID"
+SEC_RESPONSE="$(api POST /api/web/authoring/drafts \
+  "{\"namespaceSlug\":\"$SLUG\",\"name\":\"$SEC_NAME\"}")"
+assert_code "Security guard draft created" "$SEC_RESPONSE" "0"
+SEC_DRAFT_ID="$(json_field "$SEC_RESPONSE" "data.id")"
+
+SEC_MD="---
+name: $SEC_NAME
+description: exercises the binding security policy
+---
+
+# Security guard skill
+"
+api PUT "/api/web/authoring/drafts/$SEC_DRAFT_ID/files" \
+  "{\"path\":\"SKILL.md\",\"content\":$(python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))' <<< "$SEC_MD"),\"contentType\":\"text/markdown\"}" >/dev/null
+
+# Cloud metadata endpoints are always blocked — even on the local profile where
+# loopback/RFC1918 endpoints are deliberately allowed. Reason text assertions
+# live in AuthoringFlowIntegrationTest; here we pin the save-time rejection.
+METADATA_BINDING="$(api PUT "/api/web/authoring/drafts/$SEC_DRAFT_ID/runtime" \
+  '{"agentType":"local-script","config":{"interpreter":"sh"},"toolAllowlist":[],"mcpServers":[{"name":"metadata-thief","transport":"http","endpoint":"http://169.254.169.254/latest/meta-data/"}]}')"
+if [[ "$(json_field "$METADATA_BINDING" "code")" != "0" ]]; then
+  pass "Cloud metadata MCP endpoint rejected at save"
+else
+  fail "Cloud metadata MCP endpoint must be rejected at save"
+fi
+
+# envRefs outside the (empty) allowlist are rejected: bindings must not read
+# arbitrary server environment variables.
+ENVREF_BINDING="$(api PUT "/api/web/authoring/drafts/$SEC_DRAFT_ID/runtime" \
+  '{"agentType":"local-script","config":{"interpreter":"sh"},"toolAllowlist":[],"mcpServers":[{"name":"env-hog","transport":"http","endpoint":"http://127.0.0.1:9/mcp","envRefs":["HOME"]}]}')"
+if [[ "$(json_field "$ENVREF_BINDING" "code")" != "0" ]]; then
+  pass "envRefs outside the allowlist rejected at save"
+else
+  fail "envRefs outside the allowlist must be rejected at save"
+fi
+
+# The LLM surface is guarded too — those requests would carry the server API key.
+LLM_BINDING="$(api PUT "/api/web/authoring/drafts/$SEC_DRAFT_ID/runtime" \
+  '{"agentType":"openai-compatible","config":{"endpoint":"http://169.254.169.254/v1","model":"test-model"},"toolAllowlist":[],"mcpServers":[]}')"
+if [[ "$(json_field "$LLM_BINDING" "code")" != "0" ]]; then
+  pass "Cloud metadata LLM endpoint rejected at save"
+else
+  fail "Cloud metadata LLM endpoint must be rejected at save"
+fi
 
 # ---------------------------------------------------------------- summary
 
