@@ -77,11 +77,11 @@ Provider Adapter
 
 首批统一身份核心应先证明所有外部公共登录都会经过同一个账号状态、绑定、资料权威和 session 决策门禁；公共 OAuth 的持久化仍可保留现有 legacy binding，避免第一批迁移存量 GitHub/GitLab 身份。企业 Organization 登录复用同一核心并增加企业上下文。不能再新增 `FeishuLoginService`、`DingTalkLoginService` 这类各自建号、绑定和建 session 的旁路。
 
-### 现有飞书、钉钉 PR 与统一身份架构的接入边界（设计建议，尚未实现）
+### 飞书、钉钉 Provider 与统一身份架构的接入边界
 
-2026-09-17 只读核对的开放 PR：飞书 [#696](https://github.com/iflytek/skillhub/pull/696)，head `d3f1d5e65af8139a6021eca52a5d7a114156f3c3`；钉钉 [#467](https://github.com/iflytek/skillhub/pull/467)，head `0b21fe2f34c6901abf5bc017e37f1d432e66fe33`。这里只说明接入方向，不构成代码 Review 通过或合并准备结论。
+2026-09-22 状态：R1-A 统一身份核心已合并；飞书公共 Provider Adapter 已合并但仍需真实厂商登录验收；钉钉公共 Provider Adapter 已合并并完成真实钉钉往返验证修正。二者仍是公共平台登录能力，不等同于每个 Organization 单独配置凭证、策略与成员上下文的企业登录。
 
-两者当前主要提供部署级公共 OAuth 登录：配置一个 Provider registration，匿名 catalog 暴露按钮，通过旧 callback/claims/binding 路径登录。它们不等同于每个 Organization 单独配置凭证、策略与成员上下文的企业登录。当前本地公共 OAuth 已经过 LegacyPlatformIdentityCoreBridge 的统一决策评估，但旧 binding persistence 仍是权威；企业 redirect 则经 Adapter、IdentityAssertion、EnterpriseIdentityAssociationService 和企业 session。不能描述为所有写入路径已经统一迁移完成。
+公共 Provider 当前主要提供部署级 OAuth 登录：配置一个 Provider registration，匿名 catalog 暴露按钮，通过公共 OAuth callback 进入统一身份核心门禁，同时 legacy `identity_binding` persistence 仍是公共 OAuth 的写入权威。企业 redirect 后续经 Adapter、IdentityAssertion、EnterpriseIdentityAssociationService 和企业 session。不能描述为所有写入路径已经统一迁移到 Binding V2。
 
 接入分三批，而不是为每家厂商复制身份核心：
 
@@ -91,7 +91,7 @@ Provider Adapter
 
 公共按钮与企业连接可以并存：公共按钮使用平台配置，企业入口先确定 Organization/connection 再跳转其身份源。共享协议客户端与验证逻辑，不共享租户凭证或放宽租户边界。前端公共图标 resolver 当前只识别 GitHub/GitLab/OIDC，接入厂商 PR 时需同步支持其已提供的真实图标；不能只合后端然后声称完整入口已接通。
 
-身份坐标必须包含可信的组织/连接上下文、issuer 与 typed subject；裸 open_id/unionId/userId、昵称或邮箱不能代表全球唯一企业身份。钉钉 PR 的 unionId→openId→userId fallback 在字段可用性变化时可能改变主 subject，接入前需定义稳定主 subject 和有证明的 alias/迁移策略，不能静默改键。飞书的 open_id 需保留应用作用域；union_id 不自动证明跨应用或跨组织可合号。邮箱必须有可靠的验证依据才进入 VerifiedEmail，禁止仅因返回邮箱或名称相同而绑定。
+身份坐标必须包含可信的组织/连接上下文、issuer 与 typed subject；裸 open_id/unionId/userId、昵称或邮箱不能代表全球唯一企业身份。钉钉公共 Provider 的稳定主 subject 是 `unionId`，不以 `openId` 或 `userId` 做运行时 fallback：`openId` 按应用隔离，`userId` 按组织隔离，任一字段可用性变化都可能把同一人拆成不同平台账号。当前 R1-A2 不做别名迁移；如果将来需要接受历史 `openId`/`userId`、切换 subject 或支持企业钉钉连接，必须以独立迁移完成：先生成候选 alias 冲突报告，再由管理员/运维确认，最后写入显式 alias/binding 记录。运行时登录不得因为“找不到 unionId”而静默改用其他字段，也不得仅凭邮箱或昵称合号。飞书的 open_id 需保留应用作用域；union_id 不自动证明跨应用或跨组织可合号。邮箱必须有可靠的验证依据才进入 VerifiedEmail，禁止仅因返回邮箱或名称相同而绑定。
 
 组织、部门与人员目录同步属于后续 provisioning connection，不能复用登录 token 暗中拉取通讯录。实现前分别验证公共登录回归、企业连接隔离、旧 binding 兼容、验证 email、账号禁用与回调防重放；当前没有执行真实飞书/钉钉登录验收。
 
