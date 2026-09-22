@@ -334,6 +334,13 @@ fallback，否则同一个人会被拆成两个平台账号）、只有在 Provi
 所有权时才置 `emailVerified=true`、远程调用要有超时与响应大小上限、
 claims 提取过程不记录 subject/email/token。
 
+钉钉公共 Provider 的主 subject 固定为 `unionId`。`openId` 是应用作用域，`userId`
+是组织作用域，都不能作为登录时的自动 fallback；否则一次字段缺失或连接变化就可能让
+同一用户生成新的平台账号。当前版本不执行别名迁移。后续如果要兼容历史 `openId` /
+`userId` 绑定、切换 subject，或把协议代码复用到企业钉钉连接，必须走显式迁移：
+先离线生成候选 alias 与冲突报告，再经管理员确认写入 alias/binding 记录；运行时
+不得静默改键，也不得仅凭邮箱或昵称合并账号。
+
 #### 飞书 token 协议版本
 
 飞书 token client 支持显式选择 `v2` 或 `v3`，默认值为 `v3`：
