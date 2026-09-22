@@ -94,9 +94,6 @@ class LoginConnectionLifecyclePersistenceTest {
     private LoginConnectionLifecycleService lifecycleService;
 
     @Autowired
-    private IdentityOperationRepository identityOperationRepository;
-
-    @Autowired
     private EntityManager entityManager;
 
     @Autowired

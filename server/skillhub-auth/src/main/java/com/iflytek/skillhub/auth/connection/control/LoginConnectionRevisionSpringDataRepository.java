@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 interface LoginConnectionRevisionSpringDataRepository
         extends JpaRepository<StoredLoginConnectionRevision, String> {
 
+    Optional<StoredLoginConnectionRevision> findFirstByConnectionIdOrderByRevisionDescIdDesc(
+            String connectionId
+    );
+
     Optional<StoredLoginConnectionRevision> findByConnectionIdAndId(
             String connectionId,
             String id

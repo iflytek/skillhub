@@ -147,8 +147,6 @@ public class EnterpriseConnectionQueryRepository {
                     revision.getAdapterContractVersion(),
                     revision.getConfigSchemaVersion(),
                     Map.copyOf(objectMapper.readValue(revision.getTypedConfig(), CONFIG_TYPE)),
-                    revision.correlationPolicy().verifiedEmailCorrelationEnabled(),
-                    revision.correlationPolicy().jitProvisioningEnabled(),
                     revision.getCreatedAt()
             );
         } catch (Exception invalidStoredConfiguration) {

@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.connection.control;
 
 import com.iflytek.skillhub.auth.connection.core.ConnectionHandle;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
@@ -14,6 +15,14 @@ public class JpaLoginConnectionRepositoryAdapter implements LoginConnectionRepos
 
     public JpaLoginConnectionRepositoryAdapter(LoginConnectionSpringDataRepository delegate) {
         this.delegate = Objects.requireNonNull(delegate, "delegate");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LoginConnection> findAllByOrganizationId(String organizationId) {
+        return delegate.findAllByOrganizationIdOrderByCreatedAtDescIdDesc(
+                requireText(organizationId, "organizationId")
+        );
     }
 
     @Override

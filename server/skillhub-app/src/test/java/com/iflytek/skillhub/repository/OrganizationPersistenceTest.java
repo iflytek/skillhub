@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.iflytek.skillhub.domain.organization.MembershipSourceType;
 import com.iflytek.skillhub.domain.organization.Organization;
+import com.iflytek.skillhub.domain.organization.OrganizationAccessGuard;
 import com.iflytek.skillhub.domain.organization.OrganizationAuthorizationPolicy;
 import com.iflytek.skillhub.domain.organization.OrganizationAuthorizationService;
 import com.iflytek.skillhub.domain.organization.OrganizationDomain;
@@ -63,6 +64,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         JpaOrganizationMembershipRepositoryAdapter.class,
         JpaOrganizationDomainRepositoryAdapter.class,
         JpaOrganizationRoleBindingRepositoryAdapter.class,
+        OrganizationAccessGuard.class,
         OrganizationAuthorizationPolicy.class,
         OrganizationAuthorizationService.class,
         OrganizationRoleBindingService.class
@@ -362,7 +364,7 @@ class OrganizationPersistenceTest {
 
         assertThat(membershipRepository.findCurrentByOrganizationIdAndSource(
                 organization.getId(),
-                MembershipSourceType.DIRECTORY,
+                MembershipSourceType.JIT,
                 "directory-user-replacement"
         )).get().extracting(OrganizationMembership::getId).isEqualTo(replacement.getId());
         assertThat(entityManager.find(OrganizationMembership.class, history.getId()).getStatus())
@@ -630,7 +632,7 @@ class OrganizationPersistenceTest {
     ) {
         OrganizationMembership membership = OrganizationMembership.provisioned(
                 organizationId,
-                MembershipSourceType.DIRECTORY,
+                MembershipSourceType.JIT,
                 sourceId,
                 userId,
                 userId + "@example.com",

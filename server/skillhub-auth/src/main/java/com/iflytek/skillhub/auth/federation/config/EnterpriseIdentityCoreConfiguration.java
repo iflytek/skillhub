@@ -14,7 +14,9 @@ import org.springframework.context.annotation.Configuration;
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties({
         IdentityCoreProperties.class,
-        EnterpriseIdentityRolloutProperties.class
+        EnterpriseIdentityRolloutProperties.class,
+        EnterpriseOidcProperties.class,
+        EnterpriseSecretEnvelopeProperties.class
 })
 public class EnterpriseIdentityCoreConfiguration {
 

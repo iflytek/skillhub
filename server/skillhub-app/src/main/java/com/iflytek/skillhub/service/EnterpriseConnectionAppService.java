@@ -15,7 +15,6 @@ import com.iflytek.skillhub.auth.connection.core.AdapterKey;
 import com.iflytek.skillhub.auth.connection.secret.LoginConnectionSecretService;
 import com.iflytek.skillhub.auth.connection.secret.SecretMaterial;
 import com.iflytek.skillhub.auth.connection.secret.SecretPurpose;
-import com.iflytek.skillhub.auth.federation.core.IdentityCorrelationPolicySettings;
 import com.iflytek.skillhub.auth.operation.IdentityOperation;
 import com.iflytek.skillhub.auth.operation.IdentityOperationRepository;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
@@ -144,7 +143,6 @@ public class EnterpriseConnectionAppService {
                 1,
                 prepared,
                 secretVersion,
-                policy(request.verifiedEmailCorrelationEnabled(), request.jitProvisioningEnabled()),
                 actorUserId,
                 now
         ));
@@ -207,7 +205,6 @@ public class EnterpriseConnectionAppService {
                 previous.getRevision() + 1,
                 prepared,
                 secretVersion,
-                policy(request.verifiedEmailCorrelationEnabled(), request.jitProvisioningEnabled()),
                 actorUserId,
                 now
         ));
@@ -349,7 +346,6 @@ public class EnterpriseConnectionAppService {
             long revisionNumber,
             PreparedLoginConnectionRevision prepared,
             Long secretVersion,
-            IdentityCorrelationPolicySettings correlationPolicy,
             String actorUserId,
             Instant now
     ) {
@@ -365,7 +361,6 @@ public class EnterpriseConnectionAppService {
                 prepared.capabilitiesJson(),
                 prepared.typedConfigJson(),
                 secretVersion,
-                correlationPolicy,
                 actorUserId,
                 now
         );
@@ -399,17 +394,6 @@ public class EnterpriseConnectionAppService {
         return prepared.secretPurpose().orElseThrow(() -> new DomainBadRequestException(
                 "error.loginConnection.secret.unsupported"
         ));
-    }
-
-    private static IdentityCorrelationPolicySettings policy(
-            boolean verifiedEmail,
-            boolean jit
-    ) {
-        try {
-            return new IdentityCorrelationPolicySettings(verifiedEmail, jit);
-        } catch (IllegalArgumentException invalid) {
-            throw new DomainBadRequestException("error.loginConnection.correlation.invalid");
-        }
     }
 
     private LoginConnection requireConnection(String organizationId, String connectionId) {

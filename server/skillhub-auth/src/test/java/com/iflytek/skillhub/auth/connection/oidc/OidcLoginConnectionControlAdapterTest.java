@@ -46,7 +46,7 @@ class OidcLoginConnectionControlAdapterTest {
         );
 
         assertThat(prepared.adapterDescriptor()).isEqualTo(
-                OidcRedirectAuthenticationAdapter.supportedDescriptor()
+                OidcLoginConnectionRuntimeSnapshotMaterializer.supportedDescriptor()
         );
         assertThat(prepared.typedConfigJson()).contains(
                 "https://id.example.com", "skillhub", "openid", "email"
@@ -82,7 +82,7 @@ class OidcLoginConnectionControlAdapterTest {
         LoginConnectionRuntimeSnapshot<OidcLoginConnectionRuntimeConfig> runtime = runtime();
         doReturn(runtime).when(materializer).materialize(revision);
         given(secrets.resolve(
-                runtime.secretReference().orElseThrow(),
+                revision.secretReference().orElseThrow(),
                 SecretPurpose.LOGIN_CLIENT_SECRET,
                 NOW
         )).willReturn(SecretMaterial.copyOf("top-secret".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
@@ -101,7 +101,7 @@ class OidcLoginConnectionControlAdapterTest {
         LoginConnectionRuntimeSnapshot<OidcLoginConnectionRuntimeConfig> runtime = runtime();
         doReturn(runtime).when(materializer).materialize(revision);
         given(secrets.resolve(
-                runtime.secretReference().orElseThrow(),
+                revision.secretReference().orElseThrow(),
                 SecretPurpose.LOGIN_CLIENT_SECRET,
                 NOW
         )).willReturn(SecretMaterial.copyOf("top-secret".getBytes(java.nio.charset.StandardCharsets.UTF_8)));
@@ -137,10 +137,7 @@ class OidcLoginConnectionControlAdapterTest {
                 "connection-1",
                 new ConnectionHandle("login-test-handle"),
                 1,
-                OidcRedirectAuthenticationAdapter.supportedDescriptor(),
-                Optional.of(new com.iflytek.skillhub.auth.connection.secret.SecretReference(
-                        "org-1", "connection-1", SecretPurpose.LOGIN_CLIENT_SECRET, 1
-                )),
+                OidcLoginConnectionRuntimeSnapshotMaterializer.supportedDescriptor(),
                 new OidcLoginConnectionRuntimeConfig(
                         new OidcIssuer("https://id.example.com"),
                         "skillhub",
@@ -163,8 +160,7 @@ class OidcLoginConnectionControlAdapterTest {
                 "{\"issuer\":\"https://id.example.com\",\"clientId\":\"skillhub\",\"scopes\":[\"openid\"]}",
                 Optional.of(new com.iflytek.skillhub.auth.connection.secret.SecretReference(
                         "org-1", "connection-1", SecretPurpose.LOGIN_CLIENT_SECRET, 1
-                )),
-                com.iflytek.skillhub.auth.federation.core.IdentityCorrelationPolicySettings.disabled()
+                ))
         );
     }
 }

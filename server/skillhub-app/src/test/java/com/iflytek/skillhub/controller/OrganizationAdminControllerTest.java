@@ -195,8 +195,6 @@ class OrganizationAdminControllerTest {
                                 "clientId", "skillhub",
                                 "scopes", List.of("openid")
                         ),
-                        false,
-                        false,
                         NOW
                 ),
                 new LoginConnectionSecretSummaryResponse(true, NOW, null),
@@ -217,12 +215,10 @@ class OrganizationAdminControllerTest {
                                   "adapterKey": "oidc",
                                   "configuration": {
                                     "issuer": "https://id.example.com",
-                                    "clientId": "skillhub",
-                                    "scopes": ["openid"]
+                                  "clientId": "skillhub",
+                                  "scopes": ["openid"]
                                   },
-                                  "clientSecret": "never-echo-this-secret",
-                                  "verifiedEmailCorrelationEnabled": false,
-                                  "jitProvisioningEnabled": false
+                                  "clientSecret": "never-echo-this-secret"
                                 }
                                 """))
                 .andExpect(status().isOk())

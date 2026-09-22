@@ -6,16 +6,12 @@ import java.util.Map;
 
 public record LoginConnectionRevisionCreateRequest(
         @NotEmpty Map<String, Object> configuration,
-        @Size(min = 1, max = 4096) String clientSecret,
-        boolean verifiedEmailCorrelationEnabled,
-        boolean jitProvisioningEnabled
+        @Size(min = 1, max = 4096) String clientSecret
 ) {
 
     @Override
     public String toString() {
         return "LoginConnectionRevisionCreateRequest[configuration=<redacted>"
-                + ", clientSecret=" + (clientSecret == null ? "unchanged" : "<redacted>")
-                + ", verifiedEmailCorrelationEnabled=" + verifiedEmailCorrelationEnabled
-                + ", jitProvisioningEnabled=" + jitProvisioningEnabled + "]";
+                + ", clientSecret=" + (clientSecret == null ? "unchanged" : "<redacted>") + "]";
     }
 }

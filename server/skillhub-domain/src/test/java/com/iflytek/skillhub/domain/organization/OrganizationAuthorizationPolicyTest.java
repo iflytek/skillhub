@@ -35,7 +35,7 @@ class OrganizationAuthorizationPolicyTest {
                         OrganizationAdministrativeAction.VIEW_MEMBERS,
                         Set.of(
                                 OrganizationRole.ORG_OWNER,
-                                OrganizationRole.DIRECTORY_ADMIN,
+                                OrganizationRole.MEMBER_ADMIN,
                                 OrganizationRole.ORG_AUDITOR
                         )
                 ),
@@ -44,6 +44,7 @@ class OrganizationAuthorizationPolicyTest {
                         Set.of(
                                 OrganizationRole.ORG_OWNER,
                                 OrganizationRole.IDENTITY_ADMIN,
+                                OrganizationRole.LOGIN_SECRET_ADMIN,
                                 OrganizationRole.ORG_AUDITOR
                         )
                 ),
@@ -65,35 +66,15 @@ class OrganizationAuthorizationPolicyTest {
                 ),
                 Map.entry(
                         OrganizationAdministrativeAction.ROTATE_LOGIN_SECRETS,
-                        Set.of(OrganizationRole.IDENTITY_ADMIN)
+                        Set.of(OrganizationRole.LOGIN_SECRET_ADMIN)
                 ),
                 Map.entry(
                         OrganizationAdministrativeAction.RESOLVE_IDENTITY_CONFLICTS,
                         Set.of(OrganizationRole.IDENTITY_ADMIN)
                 ),
                 Map.entry(
-                        OrganizationAdministrativeAction.MANAGE_DIRECTORY_CONNECTIONS,
-                        Set.of(OrganizationRole.DIRECTORY_ADMIN)
-                ),
-                Map.entry(
-                        OrganizationAdministrativeAction.ROTATE_DIRECTORY_CREDENTIALS,
-                        Set.of(OrganizationRole.DIRECTORY_ADMIN)
-                ),
-                Map.entry(
                         OrganizationAdministrativeAction.MANAGE_MEMBERS,
-                        Set.of(OrganizationRole.DIRECTORY_ADMIN)
-                ),
-                Map.entry(
-                        OrganizationAdministrativeAction.RUN_DIRECTORY_SYNCHRONIZATION,
-                        Set.of(OrganizationRole.DIRECTORY_ADMIN)
-                ),
-                Map.entry(
-                        OrganizationAdministrativeAction.MANAGE_ENTITLEMENT_MAPPINGS,
-                        Set.of(OrganizationRole.ENTITLEMENT_ADMIN)
-                ),
-                Map.entry(
-                        OrganizationAdministrativeAction.VIEW_MAPPING_IMPACT,
-                        Set.of(OrganizationRole.ENTITLEMENT_ADMIN)
+                        Set.of(OrganizationRole.MEMBER_ADMIN)
                 ),
                 Map.entry(
                         OrganizationAdministrativeAction.VIEW_AUDIT,
@@ -119,7 +100,7 @@ class OrganizationAuthorizationPolicyTest {
     void combinedRolesReceiveOnlyTheUnionOfTheirExplicitActions() {
         Set<OrganizationRole> roles = Set.of(
                 OrganizationRole.IDENTITY_ADMIN,
-                OrganizationRole.ENTITLEMENT_ADMIN
+                OrganizationRole.LOGIN_SECRET_ADMIN
         );
 
         assertThat(policy.isAllowed(
@@ -128,7 +109,7 @@ class OrganizationAuthorizationPolicyTest {
         )).isTrue();
         assertThat(policy.isAllowed(
                 roles,
-                OrganizationAdministrativeAction.MANAGE_ENTITLEMENT_MAPPINGS
+                OrganizationAdministrativeAction.ROTATE_LOGIN_SECRETS
         )).isTrue();
         assertThat(policy.isAllowed(
                 roles,

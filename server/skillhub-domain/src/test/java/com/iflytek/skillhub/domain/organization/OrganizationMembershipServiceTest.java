@@ -39,6 +39,9 @@ class OrganizationMembershipServiceTest {
     @Mock
     private UserAccountRepository userAccountRepository;
 
+    @Mock
+    private OrganizationAccessGuard accessGuard;
+
     private OrganizationMembershipService service;
 
     @BeforeEach
@@ -49,7 +52,7 @@ class OrganizationMembershipServiceTest {
                 roleBindingRepository,
                 userAccountRepository,
                 new OrganizationAuthorizationService(
-                        membershipRepository,
+                        accessGuard,
                         roleBindingRepository,
                         new OrganizationAuthorizationPolicy()
                 )
@@ -175,14 +178,10 @@ class OrganizationMembershipServiceTest {
     }
 
     private void givenDirectoryAdministrator() {
-        given(membershipRepository.findCurrentByOrganizationIdAndUserId(
-                ORGANIZATION_ID,
-                ACTOR_ID
-        )).willReturn(Optional.of(activeMembership(ACTOR_ID)));
         given(roleBindingRepository.findActiveByOrganizationIdAndUserId(
                 ORGANIZATION_ID,
                 ACTOR_ID
-        )).willReturn(List.of(binding(ACTOR_ID, OrganizationRole.DIRECTORY_ADMIN)));
+        )).willReturn(List.of(binding(ACTOR_ID, OrganizationRole.MEMBER_ADMIN)));
     }
 
     private Organization organization() {

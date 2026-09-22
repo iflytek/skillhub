@@ -25,8 +25,6 @@ public class OrganizationAuthorizationPolicy {
                             Set.of(
                                     OrganizationRole.ORG_OWNER,
                                     OrganizationRole.IDENTITY_ADMIN,
-                                    OrganizationRole.LOGIN_SECRET_ADMIN,
-                                    OrganizationRole.MEMBER_ADMIN,
                                     OrganizationRole.ORG_AUDITOR
                             )
                     ),
@@ -44,15 +42,6 @@ public class OrganizationAuthorizationPolicy {
                                     OrganizationRole.ORG_OWNER,
                                     OrganizationRole.IDENTITY_ADMIN,
                                     OrganizationRole.LOGIN_SECRET_ADMIN,
-                                    OrganizationRole.MEMBER_ADMIN,
-                                    OrganizationRole.ORG_AUDITOR
-                            )
-                    ),
-                    Map.entry(
-                            OrganizationAdministrativeAction.VIEW_LOGIN_CONNECTIONS,
-                            Set.of(
-                                    OrganizationRole.ORG_OWNER,
-                                    OrganizationRole.IDENTITY_ADMIN,
                                     OrganizationRole.ORG_AUDITOR
                             )
                     ),

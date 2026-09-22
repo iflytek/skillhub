@@ -1996,6 +1996,278 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organizationId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/role-bindings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listRoleBindings"];
+        put?: never;
+        post: operations["grantRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMembers_2"];
+        put?: never;
+        post: operations["addMember_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/members/{membershipId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspendMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/members/{membershipId}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reactivateMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/members/{membershipId}/deprovision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["deprovisionMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_5"];
+        put?: never;
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspend_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["testRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/domains": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listDomains"];
+        put?: never;
+        post: operations["issueDomainChallenge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/domains/{domainId}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verifyDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/domains/{domainId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disableDomain"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/decommission": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["decommission"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/device/authorize": {
         parameters: {
             query?: never;
@@ -2380,6 +2652,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_7"];
+        put?: never;
+        post: operations["create_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/namespaces/{slug}/unfreeze": {
         parameters: {
             query?: never;
@@ -2435,9 +2723,9 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["listMembers_2"];
+        get: operations["listMembers_3"];
         put?: never;
-        post: operations["addMember_2"];
+        post: operations["addMember_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4336,6 +4624,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listMine"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -4471,7 +4807,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_5"];
+        get: operations["list_6"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4797,6 +5133,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["deleteSkillById_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/role-bindings/{bindingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revokeRole"];
         options?: never;
         head?: never;
         patch?: never;
@@ -5568,6 +5920,233 @@ export interface components {
         ClawHubDeleteResponse: {
             ok?: boolean;
         };
+        ApiResponseOrganizationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["OrganizationResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        OrganizationResponse: {
+            id?: string;
+            slug?: string;
+            displayName?: string;
+            /** @enum {string} */
+            status?: "ACTIVE" | "SUSPENDED" | "DECOMMISSIONED";
+            /** Format: int64 */
+            authorityVersion?: number;
+            createdBy?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            callerRoles?: ("ORG_OWNER" | "IDENTITY_ADMIN" | "LOGIN_SECRET_ADMIN" | "MEMBER_ADMIN" | "ORG_AUDITOR")[];
+        };
+        OrganizationRoleBindingCreateRequest: {
+            userId: string;
+            /** @enum {string} */
+            role: "ORG_OWNER" | "IDENTITY_ADMIN" | "LOGIN_SECRET_ADMIN" | "MEMBER_ADMIN" | "ORG_AUDITOR";
+        };
+        ApiResponseOrganizationRoleBindingResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["OrganizationRoleBindingResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        OrganizationRoleBindingResponse: {
+            id?: string;
+            organizationId?: string;
+            userId?: string;
+            accountDisplayName?: string;
+            accountEmail?: string;
+            /** @enum {string} */
+            role?: "ORG_OWNER" | "IDENTITY_ADMIN" | "LOGIN_SECRET_ADMIN" | "MEMBER_ADMIN" | "ORG_AUDITOR";
+            /** @enum {string} */
+            status?: "ACTIVE" | "REVOKED";
+            createdBy?: string;
+            revokedBy?: string;
+            /** Format: date-time */
+            revokedAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        OrganizationMemberCreateRequest: {
+            userId: string;
+        };
+        ApiResponseOrganizationMemberResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["OrganizationMemberResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        OrganizationMemberResponse: {
+            id?: string;
+            organizationId?: string;
+            userId?: string;
+            /** @enum {string} */
+            status?: "INVITED" | "PROVISIONED" | "ACTIVE" | "SUSPENDED" | "DEPROVISIONED";
+            /** @enum {string} */
+            sourceType?: "INVITATION" | "MANUAL" | "JIT";
+            sourceId?: string;
+            organizationDisplayName?: string;
+            organizationEmail?: string;
+            accountDisplayName?: string;
+            accountEmail?: string;
+            department?: string;
+            employeeNumber?: string;
+            /** Format: int64 */
+            authorityVersion?: number;
+            /** Format: date-time */
+            activatedAt?: string;
+            /** Format: date-time */
+            suspendedAt?: string;
+            /** Format: date-time */
+            deprovisionedAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        LoginConnectionCreateRequest: {
+            displayName: string;
+            adapterKey: string;
+            configuration: {
+                [key: string]: Record<string, never>;
+            };
+            clientSecret?: string;
+        };
+        ApiResponseLoginConnectionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LoginConnectionResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        LoginConnectionHealthResponse: {
+            status?: string;
+            failureReason?: string;
+            /** Format: date-time */
+            checkedAt?: string;
+        };
+        LoginConnectionResponse: {
+            id?: string;
+            publicHandle?: string;
+            displayName?: string;
+            adapterKey?: string;
+            status?: string;
+            activeRevisionId?: string;
+            lastTestedRevisionId?: string;
+            latestRevision?: components["schemas"]["LoginConnectionRevisionResponse"];
+            secret?: components["schemas"]["LoginConnectionSecretSummaryResponse"];
+            health?: components["schemas"]["LoginConnectionHealthResponse"];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        LoginConnectionRevisionResponse: {
+            id?: string;
+            /** Format: int64 */
+            revision?: number;
+            adapterContractVersion?: string;
+            /** Format: int32 */
+            configSchemaVersion?: number;
+            configuration?: {
+                [key: string]: Record<string, never>;
+            };
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        LoginConnectionSecretSummaryResponse: {
+            configured?: boolean;
+            /** Format: date-time */
+            updatedAt?: string;
+            /** Format: date-time */
+            previousValidUntil?: string;
+        };
+        ConfirmedConnectionActionRequest: {
+            confirmed?: boolean;
+        };
+        LoginConnectionRevisionCreateRequest: {
+            configuration: {
+                [key: string]: Record<string, never>;
+            };
+            clientSecret?: string;
+        };
+        ApiResponseLoginConnectionTestResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LoginConnectionTestResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        LoginConnectionTestResponse: {
+            success?: boolean;
+            revisionId?: string;
+            failureReason?: string;
+            /** Format: date-time */
+            checkedAt?: string;
+        };
+        OrganizationDomainCreateRequest: {
+            domain: string;
+        };
+        ApiResponseOrganizationDomainChallengeResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["OrganizationDomainChallengeResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        OrganizationDomainChallengeResponse: {
+            domainId?: string;
+            domain?: string;
+            /** @enum {string} */
+            method?: "DNS_TXT";
+            recordName?: string;
+            recordValue?: string;
+        };
+        ApiResponseOrganizationDomainResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["OrganizationDomainResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        OrganizationDomainResponse: {
+            id?: string;
+            organizationId?: string;
+            domain?: string;
+            /** @enum {string} */
+            status?: "PENDING" | "VERIFIED" | "DISABLED";
+            /** @enum {string} */
+            verificationMethod?: "DNS_TXT";
+            /** Format: date-time */
+            verifiedAt?: string;
+            /** Format: date-time */
+            lastCheckedAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         AuthorizeRequest: {
             userCode?: string;
         };
@@ -5719,6 +6298,11 @@ export interface components {
             /** Format: int64 */
             id?: number;
             status?: string;
+        };
+        OrganizationCreateRequest: {
+            slug: string;
+            displayName: string;
+            initialOwnerUserId: string;
         };
         AdminNamespaceDetailResponse: {
             /** Format: int64 */
@@ -7065,6 +7649,87 @@ export interface components {
         ClawHubResolveResponse: {
             match?: components["schemas"]["VersionInfo"];
             latestVersion?: components["schemas"]["VersionInfo"];
+        };
+        ApiResponsePageResponseOrganizationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseOrganizationResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseOrganizationResponse: {
+            items?: components["schemas"]["OrganizationResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponsePageResponseOrganizationRoleBindingResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseOrganizationRoleBindingResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseOrganizationRoleBindingResponse: {
+            items?: components["schemas"]["OrganizationRoleBindingResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponsePageResponseOrganizationMemberResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseOrganizationMemberResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseOrganizationMemberResponse: {
+            items?: components["schemas"]["OrganizationMemberResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponseListLoginConnectionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LoginConnectionResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ApiResponsePageResponseOrganizationDomainResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseOrganizationDomainResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PageResponseOrganizationDomainResponse: {
+            items?: components["schemas"]["OrganizationDomainResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
         };
         ApiResponseListAuthProviderResponse: {
             /** Format: int32 */
@@ -11301,6 +11966,521 @@ export interface operations {
             };
         };
     };
+    suspend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationResponse"];
+                };
+            };
+        };
+    };
+    listRoleBindings: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseOrganizationRoleBindingResponse"];
+                };
+            };
+        };
+    };
+    grantRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationRoleBindingCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationRoleBindingResponse"];
+                };
+            };
+        };
+    };
+    reactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationResponse"];
+                };
+            };
+        };
+    };
+    listMembers_2: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseOrganizationMemberResponse"];
+                };
+            };
+        };
+    };
+    addMember_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationMemberCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationMemberResponse"];
+                };
+            };
+        };
+    };
+    suspendMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationMemberResponse"];
+                };
+            };
+        };
+    };
+    reactivateMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationMemberResponse"];
+                };
+            };
+        };
+    };
+    deprovisionMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationMemberResponse"];
+                };
+            };
+        };
+    };
+    list_5: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginConnectionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    suspend_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    createRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginConnectionRevisionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    testRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionTestResponse"];
+                };
+            };
+        };
+    };
+    activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    listDomains: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseOrganizationDomainResponse"];
+                };
+            };
+        };
+    };
+    issueDomainChallenge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationDomainCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationDomainChallengeResponse"];
+                };
+            };
+        };
+    };
+    verifyDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationDomainResponse"];
+                };
+            };
+        };
+    };
+    disableDomain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                domainId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationDomainResponse"];
+                };
+            };
+        };
+    };
+    decommission: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationResponse"];
+                };
+            };
+        };
+    };
     authorizeDevice: {
         parameters: {
             query?: never;
@@ -11867,6 +13047,53 @@ export interface operations {
             };
         };
     };
+    list_7: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseOrganizationResponse"];
+                };
+            };
+        };
+    };
+    create_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationResponse"];
+                };
+            };
+        };
+    };
     unfreezeNamespace_2: {
         parameters: {
             query?: never;
@@ -11937,7 +13164,7 @@ export interface operations {
             };
         };
     };
-    listMembers_2: {
+    listMembers_3: {
         parameters: {
             query?: {
                 page?: number;
@@ -11962,7 +13189,7 @@ export interface operations {
             };
         };
     };
-    addMember_2: {
+    addMember_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -14934,6 +16161,74 @@ export interface operations {
             };
         };
     };
+    listMine: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseOrganizationResponse"];
+                };
+            };
+        };
+    };
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationResponse"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
     health: {
         parameters: {
             query?: never;
@@ -15110,7 +16405,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_6: {
         parameters: {
             query?: {
                 status?: string;
@@ -15595,6 +16890,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                };
+            };
+        };
+    };
+    revokeRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                bindingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationRoleBindingResponse"];
                 };
             };
         };

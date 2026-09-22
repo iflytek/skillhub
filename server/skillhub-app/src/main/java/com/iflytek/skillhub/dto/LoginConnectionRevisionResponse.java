@@ -9,8 +9,6 @@ public record LoginConnectionRevisionResponse(
         String adapterContractVersion,
         int configSchemaVersion,
         Map<String, Object> configuration,
-        boolean verifiedEmailCorrelationEnabled,
-        boolean jitProvisioningEnabled,
         Instant createdAt
 ) {
 }

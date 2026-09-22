@@ -11,7 +11,10 @@ import com.iflytek.skillhub.auth.connection.control.LoginConnectionTestProbe;
 import com.iflytek.skillhub.auth.connection.control.PreparedLoginConnectionRevision;
 import com.iflytek.skillhub.auth.connection.core.AdapterDescriptor;
 import com.iflytek.skillhub.auth.connection.core.AdapterKey;
+import com.iflytek.skillhub.auth.connection.core.AdapterContractVersion;
+import com.iflytek.skillhub.auth.connection.core.ConnectionKind;
 import com.iflytek.skillhub.auth.connection.core.ConnectionUnavailableException;
+import com.iflytek.skillhub.auth.connection.core.InteractionModel;
 import com.iflytek.skillhub.auth.connection.core.LoginConnectionRuntimeSnapshot;
 import com.iflytek.skillhub.auth.connection.secret.SecretMaterial;
 import com.iflytek.skillhub.auth.connection.secret.SecretMaterialResolver;
@@ -77,7 +80,7 @@ public final class OidcLoginConnectionControlAdapter implements LoginConnectionC
             OidcIssuer issuer = new OidcIssuer(requiredString(values, "issuer"));
             String clientId = requiredString(values, "clientId");
             List<String> scopes = scopes(values.get("scopes"));
-            AdapterDescriptor descriptor = OidcRedirectAuthenticationAdapter.supportedDescriptor();
+            AdapterDescriptor descriptor = supportedDescriptor();
             Map<String, Object> persisted = new LinkedHashMap<>();
             persisted.put("issuer", issuer.value());
             persisted.put("clientId", clientId);
@@ -104,7 +107,7 @@ public final class OidcLoginConnectionControlAdapter implements LoginConnectionC
         return candidate -> {
             LoginConnectionRuntimeSnapshot<OidcLoginConnectionRuntimeConfig> runtime =
                     requireOidcRuntime(candidate);
-            var reference = runtime.secretReference().orElseThrow(() -> failure(
+            var reference = candidate.secretReference().orElseThrow(() -> failure(
                     LoginConnectionTestFailureReason.CREDENTIAL
             ));
             try (SecretMaterial ignored = secrets.resolve(
@@ -205,5 +208,20 @@ public final class OidcLoginConnectionControlAdapter implements LoginConnectionC
             LoginConnectionTestFailureReason reason
     ) {
         return new LoginConnectionTestException(reason);
+    }
+
+    private static AdapterDescriptor supportedDescriptor() {
+        return new AdapterDescriptor(
+                OidcLoginConnectionRuntimeConfig.ADAPTER_KEY,
+                new AdapterContractVersion(1, 0),
+                ConnectionKind.LOGIN,
+                1,
+                Optional.of(InteractionModel.REDIRECT),
+                Set.of(
+                        com.iflytek.skillhub.auth.connection.core.AdapterCapability.IDENTITY_ASSERTION,
+                        com.iflytek.skillhub.auth.connection.core.AdapterCapability.VERIFIED_EMAIL_ASSERTION,
+                        com.iflytek.skillhub.auth.connection.core.AdapterCapability.PROFILE_ATTRIBUTE_ASSERTION
+                )
+        );
     }
 }

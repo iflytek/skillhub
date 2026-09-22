@@ -20,6 +20,14 @@ public class JpaLoginConnectionRevisionRepositoryAdapter
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<StoredLoginConnectionRevision> findLatestByConnectionId(String connectionId) {
+        return delegate.findFirstByConnectionIdOrderByRevisionDescIdDesc(
+                requireText(connectionId, "connectionId")
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<StoredLoginConnectionRevision> findByConnectionIdAndId(
             String connectionId,
             String revisionId
