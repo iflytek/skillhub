@@ -49,15 +49,20 @@ public class CustomOidcUserService implements OAuth2UserService<OidcUserRequest,
 
         OidcUser upstreamUser = delegate.loadUser(request);
         OAuthClaims claims = toOAuthClaims(request, upstreamUser);
-        log.debug("OIDC claims extracted - provider: {}, subject: {}, email present: {}, emailVerified: {}",
-                claims.provider(), claims.subject(), claims.email() != null, claims.emailVerified());
+        log.debug("OIDC claims extracted: provider={}, subjectPresent={}, emailPresent={}, emailVerified={}",
+                claims.provider(),
+                claims.subject() != null && !claims.subject().isBlank(),
+                claims.email() != null,
+                claims.emailVerified());
 
         PlatformPrincipal principal;
         try {
             principal = oauthLoginFlowService.authenticate(claims);
         } catch (OAuth2AuthenticationException e) {
-            log.warn("OIDC authentication failed for registration '{}', subject '{}': {}",
-                    registrationId, claims.subject(), e.getMessage(), e);
+            log.warn("OIDC authentication failed: registration={}, subjectPresent={}, errorCode={}",
+                    registrationId,
+                    claims.subject() != null && !claims.subject().isBlank(),
+                    e.getError().getErrorCode());
             throw e;
         }
         log.debug("OIDC authentication succeeded - userId: {}, roles: {}",

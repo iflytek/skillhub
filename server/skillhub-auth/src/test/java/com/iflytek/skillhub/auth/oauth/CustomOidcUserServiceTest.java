@@ -1,5 +1,9 @@
 package com.iflytek.skillhub.auth.oauth;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import java.time.Instant;
 import java.util.List;
@@ -7,6 +11,7 @@ import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest;
@@ -15,6 +20,7 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserService;
 import org.springframework.security.oauth2.core.AuthorizationGrantType;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.oidc.IdTokenClaimNames;
 import org.springframework.security.oauth2.core.oidc.OidcIdToken;
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo;
@@ -186,6 +192,49 @@ class CustomOidcUserServiceTest {
         assertThat(captured.email()).isNull();
         assertThat(captured.emailVerified()).isFalse();
         assertThat(captured.subject()).isEqualTo("oidc-sub-unverified");
+    }
+
+    @Test
+    void loadUser_logsPresenceFlagsWithoutSubjectEmailOrFailureDescription() {
+        OAuthLoginFlowService loginFlowService = mock(OAuthLoginFlowService.class);
+        OAuth2UserService<OidcUserRequest, OidcUser> delegate = mock();
+        CustomOidcUserService service = new CustomOidcUserService(loginFlowService, delegate);
+        OidcUserRequest request = oidcRequest();
+        OidcUser upstreamUser = oidcUser(Map.of(
+                IdTokenClaimNames.SUB, "sensitive-oidc-subject",
+                "email", "sensitive@example.com",
+                "email_verified", true,
+                "preferred_username", "sensitive-user"
+        ));
+        when(delegate.loadUser(request)).thenReturn(upstreamUser);
+        when(loginFlowService.authenticate(any()))
+                .thenThrow(new OAuth2AuthenticationException(
+                        new OAuth2Error("access_denied",
+                                "subject sensitive-oidc-subject email sensitive@example.com", null)));
+
+        Logger logger = (Logger) LoggerFactory.getLogger(CustomOidcUserService.class);
+        Level previousLevel = logger.getLevel();
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.setLevel(Level.DEBUG);
+        logger.addAppender(appender);
+        try {
+            assertThatThrownBy(() -> service.loadUser(request))
+                    .isInstanceOf(OAuth2AuthenticationException.class);
+        } finally {
+            logger.detachAppender(appender);
+            logger.setLevel(previousLevel);
+            appender.stop();
+        }
+
+        String logged = appender.list.stream()
+                .map(ILoggingEvent::getFormattedMessage)
+                .collect(java.util.stream.Collectors.joining("\n"));
+        assertThat(logged).contains("subjectPresent=true", "emailPresent=true", "errorCode=access_denied");
+        assertThat(logged)
+                .doesNotContain("sensitive-oidc-subject")
+                .doesNotContain("sensitive@example.com")
+                .doesNotContain("sensitive-user");
     }
 
     private static OidcUserRequest oidcRequest() {

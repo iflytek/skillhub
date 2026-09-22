@@ -89,6 +89,6 @@
   - [x] 9.2.1 Make ACTIVE public OAuth fail closed on unified-core Denied/Conflict before creating active or pending legacy bindings; LEGACY and SHADOW keep existing behavior.
   - [ ] 9.2.2 Optional follow-up: evaluate whether platform-scoped public OAuth should switch runtime write authority to V2 after R1-A is stable; do not block unified authentication rollout on this cutover.
 - [ ] 9.3 Rework the Feishu PR as a public Provider Adapter first, with stable subject, verified email semantics, catalog rendering, real login validation, and no enterprise side effects.
-- [ ] 9.4 Rework the DingTalk PR as a public Provider Adapter first; define a stable primary subject and explicit alias/migration policy before any merge.
+- [x] 9.4 Rework the DingTalk PR as a public Provider Adapter first; define a stable primary subject and explicit alias/migration policy before any merge.
 - [ ] 9.5 Add a repeatable public-provider acceptance path using real vendor test credentials or an explicit reference service for each provider; mocked catalog buttons only prove presentation and navigation.
 - [ ] 9.6 Add enterprise Feishu/DingTalk Login Connection adapters only after public-provider behavior is stable, reusing protocol code but adding Organization/LoginConnection context and enterprise session guards.

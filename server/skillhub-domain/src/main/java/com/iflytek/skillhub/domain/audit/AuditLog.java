@@ -30,6 +30,15 @@ public class AuditLog {
     @Column(name = "target_id")
     private Long targetId;
 
+    @Column(name = "organization_id", length = 64)
+    private String organizationId;
+
+    @Column(name = "target_ref", length = 128)
+    private String targetReference;
+
+    @Column(length = 32)
+    private String result;
+
     @Column(name = "request_id", length = 64)
     private String requestId;
 
@@ -57,10 +66,41 @@ public class AuditLog {
                     String userAgent,
                     String detailJson,
                     Instant createdAt) {
+        this(
+                actorUserId,
+                action,
+                targetType,
+                targetId,
+                null,
+                null,
+                null,
+                requestId,
+                clientIp,
+                userAgent,
+                detailJson,
+                createdAt
+        );
+    }
+
+    public AuditLog(String actorUserId,
+                    String action,
+                    String targetType,
+                    Long targetId,
+                    String organizationId,
+                    String targetReference,
+                    String result,
+                    String requestId,
+                    String clientIp,
+                    String userAgent,
+                    String detailJson,
+                    Instant createdAt) {
         this.actorUserId = actorUserId;
         this.action = action;
         this.targetType = targetType;
         this.targetId = targetId;
+        this.organizationId = organizationId;
+        this.targetReference = targetReference;
+        this.result = result;
         this.requestId = requestId;
         this.clientIp = clientIp;
         this.userAgent = userAgent;
@@ -73,6 +113,9 @@ public class AuditLog {
     public String getAction() { return action; }
     public String getTargetType() { return targetType; }
     public Long getTargetId() { return targetId; }
+    public String getOrganizationId() { return organizationId; }
+    public String getTargetReference() { return targetReference; }
+    public String getResult() { return result; }
     public String getRequestId() { return requestId; }
     public String getClientIp() { return clientIp; }
     public String getUserAgent() { return userAgent; }

@@ -7,7 +7,6 @@ import java.util.stream.Collectors;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.oauth2.client.endpoint.DefaultAuthorizationCodeTokenResponseClient;
 import org.springframework.security.oauth2.core.endpoint.OAuth2AccessTokenResponse;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +26,7 @@ public class DispatchingTokenResponseClient
 
     @Autowired
     public DispatchingTokenResponseClient(List<ProviderTokenResponseClient> providerClients) {
-        this(providerClients, new DefaultAuthorizationCodeTokenResponseClient());
+        this(providerClients, OAuth2TokenResponseClients.standard());
     }
 
     DispatchingTokenResponseClient(

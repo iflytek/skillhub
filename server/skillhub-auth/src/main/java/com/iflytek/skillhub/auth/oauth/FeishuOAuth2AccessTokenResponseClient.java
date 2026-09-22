@@ -16,7 +16,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
-import org.springframework.security.oauth2.client.endpoint.DefaultAuthorizationCodeTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AccessTokenResponseClient;
 import org.springframework.security.oauth2.client.endpoint.OAuth2AuthorizationCodeGrantRequest;
 import org.springframework.security.oauth2.core.OAuth2AccessToken;
@@ -55,12 +54,12 @@ public class FeishuOAuth2AccessTokenResponseClient
     public FeishuOAuth2AccessTokenResponseClient(
             @Value("${OAUTH2_FEISHU_PROTOCOL_VERSION:v3}") String protocolVersion) {
         this(RestClient.builder().requestFactory(defaultRequestFactory()),
-                new DefaultAuthorizationCodeTokenResponseClient(), protocolVersion);
+                OAuth2TokenResponseClients.standard(), protocolVersion);
     }
 
     FeishuOAuth2AccessTokenResponseClient(
             RestClient.Builder restClientBuilder) {
-        this(restClientBuilder, new DefaultAuthorizationCodeTokenResponseClient(), V3);
+        this(restClientBuilder, OAuth2TokenResponseClients.standard(), V3);
     }
 
     FeishuOAuth2AccessTokenResponseClient(

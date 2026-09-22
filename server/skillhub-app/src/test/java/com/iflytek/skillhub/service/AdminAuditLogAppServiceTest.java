@@ -72,9 +72,34 @@ class AdminAuditLogAppServiceTest {
                 any(MapSqlParameterSource.class),
                 any(RowMapper.class));
         verify(jdbcTemplate).query(
-                contains("CAST(al.target_id AS TEXT) = :resourceId"),
+                contains("COALESCE(al.target_ref, CAST(al.target_id AS TEXT)) = :resourceId"),
                 any(MapSqlParameterSource.class),
                 any(RowMapper.class));
+    }
+
+    @Test
+    void rowMapper_prefersOpaqueTargetReferenceAndFallsBackToLegacyTargetId() throws Exception {
+        RowMapper<AuditLogItemResponse> rowMapper = captureRowMapper();
+        ResultSet enterpriseRow = stubRowWithCreatedAt(
+                OffsetDateTime.of(2026, 5, 29, 8, 53, 0, 0, ZoneOffset.UTC));
+        when(enterpriseRow.getString("detail_json")).thenReturn(null);
+        when(enterpriseRow.getString("target_type")).thenReturn("ORGANIZATION");
+        when(enterpriseRow.getString("target_ref")).thenReturn("org-opaque-id");
+        when(enterpriseRow.getObject("target_id")).thenReturn(42L);
+
+        AuditLogItemResponse enterpriseItem = rowMapper.mapRow(enterpriseRow, 0);
+
+        assertThat(enterpriseItem.resourceId()).isEqualTo("org-opaque-id");
+        assertThat(enterpriseItem.details()).isEqualTo("ORGANIZATION:org-opaque-id");
+
+        ResultSet legacyRow = stubRowWithCreatedAt(
+                OffsetDateTime.of(2026, 5, 29, 8, 53, 0, 0, ZoneOffset.UTC));
+        when(legacyRow.getString("detail_json")).thenReturn(null);
+
+        AuditLogItemResponse legacyItem = rowMapper.mapRow(legacyRow, 0);
+
+        assertThat(legacyItem.resourceId()).isEqualTo("42");
+        assertThat(legacyItem.details()).isEqualTo("PROMOTION:42");
     }
 
     /**
@@ -188,6 +213,7 @@ class AdminAuditLogAppServiceTest {
         when(rs.getString("detail_json")).thenReturn("{}");
         when(rs.getString("target_type")).thenReturn("PROMOTION");
         when(rs.getObject("target_id")).thenReturn(42L);
+        when(rs.getString("target_ref")).thenReturn(null);
         when(rs.getString("client_ip")).thenReturn("127.0.0.1");
         when(rs.getString("request_id")).thenReturn("req-1");
         when(rs.getObject("created_at", OffsetDateTime.class)).thenReturn(createdAt);
