@@ -39,6 +39,16 @@ wait_for_nginx() {
   fail "$container did not become healthy"
 }
 
+create_test_network() {
+  local subnet
+  for subnet in 172.29.0.0/24 172.30.0.0/24 192.168.252.0/24 10.254.0.0/24; do
+    if docker network create --driver bridge --subnet "$subnet" "$NETWORK" >/dev/null 2>&1; then
+      return 0
+    fi
+  done
+  fail "could not create a test network with an explicit subnet"
+}
+
 start_proxy() {
   local container="$1"
   local trust_forwarded_proto="$2"
@@ -82,7 +92,7 @@ server {
 }
 EOF
 
-docker network create "$NETWORK" >/dev/null
+create_test_network
 docker run --detach \
   --name "$BACKEND" \
   --network "$NETWORK" \
@@ -165,15 +175,26 @@ new_ip="$(container_ip "$DNS_NEW_BACKEND")"
 [[ "$old_ip" != "$new_ip" ]] || fail "replacement backend reused old IP $old_ip"
 
 refreshed=false
+saw_stale_response=false
+refresh_started=$SECONDS
 for attempt in {1..36}; do
-  if actual="$(docker exec "$DNS_PROXY" wget -qO- http://127.0.0.1/api/dns 2>/dev/null)" \
-    && [[ "$actual" == second ]]; then
-    refreshed=true
-    break
+  if actual="$(docker exec "$DNS_PROXY" wget -qO- http://127.0.0.1/api/dns 2>/dev/null)"; then
+    if [[ "$actual" == second ]]; then
+      refreshed=true
+      break
+    fi
+    [[ "$actual" == stale ]] \
+      || fail "DNS proxy returned unexpected backend marker '$actual'"
+    saw_stale_response=true
   fi
   sleep 0.5
 done
 [[ "$refreshed" == true ]] \
   || { docker logs "$DNS_PROXY" >&2 || true; fail "unchanged proxy did not reach replacement backend $new_ip"; }
+[[ "$saw_stale_response" == true ]] \
+  || fail "replacement did not expose the cached old address before the resolver TTL expired"
+refresh_elapsed=$((SECONDS - refresh_started))
+((refresh_elapsed <= 12)) \
+  || fail "DNS refresh took ${refresh_elapsed}s, exceeding the 12s test boundary"
 
-echo "nginx-forwarded-proto-test passed, including DNS refresh ($old_ip -> $new_ip)"
+echo "nginx-forwarded-proto-test passed, including DNS refresh ($old_ip -> $new_ip) in ${refresh_elapsed}s; stale cache observed=$saw_stale_response"
