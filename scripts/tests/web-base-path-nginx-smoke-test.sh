@@ -15,7 +15,6 @@ fi
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 NGINX_IMAGE="${NGINX_SMOKE_IMAGE:-nginx:alpine}"
 name="skillhub-base-path-smoke-$$"
-port=18080
 
 tmp=$(mktemp -d)
 cleanup() {
@@ -23,6 +22,10 @@ cleanup() {
   rm -rf "$tmp"
 }
 trap cleanup EXIT
+
+published_port() {
+  docker inspect --format '{{(index (index .NetworkSettings.Ports "80/tcp") 0).HostPort}}' "$1"
+}
 
 html="$tmp/html"
 mkdir -p "$html/assets" "$html/registry"
@@ -40,7 +43,7 @@ cp "$ROOT_DIR/web/docker-entrypoint.d/30-runtime-config.sh" "$entrypoint_d/30-ru
 chmod +x "$entrypoint_d/20-base-path.sh" "$entrypoint_d/30-runtime-config.sh"
 
 if ! docker run -d --name "$name" \
-    -p "$port:80" \
+    -p 127.0.0.1::80 \
     -e NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
     -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
     -e SKILLHUB_TRUST_FORWARDED_PROTO=false \
@@ -50,11 +53,12 @@ if ! docker run -d --name "$name" \
     -v "$ROOT_DIR/web/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro" \
     -v "$entrypoint_d/20-base-path.sh:/docker-entrypoint.d/20-base-path.sh:ro" \
     -v "$entrypoint_d/30-runtime-config.sh:/docker-entrypoint.d/30-runtime-config.sh:ro" \
-    "$NGINX_IMAGE" >/dev/null 2>&1; then
-  printf '%s\n' 'web-base-path-nginx-smoke-test skipped (docker run failed, e.g. no image/network)'
-  exit 0
+    "$NGINX_IMAGE" >/dev/null; then
+  echo 'nginx container failed to start' >&2
+  exit 1
 fi
 
+port=$(published_port "$name")
 base="http://127.0.0.1:$port"
 ready=0
 i=0
@@ -152,9 +156,8 @@ printf '%s\n' 'INDEX_HTML_MARKER' >"$default_html/index.html"
 cp "$ROOT_DIR/web/src/docs/skill.md.template" "$default_html/registry/skill.md.template"
 cp "$ROOT_DIR/web/runtime-config.js.template" "$default_html/runtime-config.js.template"
 name_default="$name-default"
-port_default=18082
 docker run -d --name "$name_default" \
-  -p "$port_default:80" \
+  -p 127.0.0.1::80 \
   -e NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
   -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
   -e SKILLHUB_TRUST_FORWARDED_PROTO=false \
@@ -165,6 +168,7 @@ docker run -d --name "$name_default" \
   -v "$entrypoint_d/30-runtime-config.sh:/docker-entrypoint.d/30-runtime-config.sh:ro" \
   "$NGINX_IMAGE" >/dev/null
 
+port_default=$(published_port "$name_default")
 default_base="http://127.0.0.1:$port_default"
 i=0
 until curl -fsS -o /dev/null "$default_base/nginx-health" 2>/dev/null; do
@@ -205,9 +209,8 @@ printf '%s\n' 'INDEX_HTML_MARKER' >"$trusted_html/index.html"
 cp "$ROOT_DIR/web/src/docs/skill.md.template" "$trusted_html/registry/skill.md.template"
 cp "$ROOT_DIR/web/runtime-config.js.template" "$trusted_html/runtime-config.js.template"
 name_trusted="$name-trusted"
-port_trusted=18083
 docker run -d --name "$name_trusted" \
-  -p "$port_trusted:80" \
+  -p 127.0.0.1::80 \
   -e NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
   -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
   -e SKILLHUB_TRUST_FORWARDED_PROTO=true \
@@ -217,6 +220,7 @@ docker run -d --name "$name_trusted" \
   -v "$entrypoint_d/20-base-path.sh:/docker-entrypoint.d/20-base-path.sh:ro" \
   -v "$entrypoint_d/30-runtime-config.sh:/docker-entrypoint.d/30-runtime-config.sh:ro" \
   "$NGINX_IMAGE" >/dev/null
+port_trusted=$(published_port "$name_trusted")
 trusted_base="http://127.0.0.1:$port_trusted"
 i=0
 until curl -fsS -o /dev/null "$trusted_base/nginx-health" 2>/dev/null; do
@@ -245,10 +249,9 @@ printf '%s\n' 'FIXED_APP_JS_MARKER' >"$fixed_html/assets/app.js"
 baked_file="$tmp/baked-base-path"
 printf '%s' '/fixed/' >"$baked_file"
 fixed_name="$name-fixed"
-fixed_port=18081
 
 docker run -d --name "$fixed_name" \
-  -p "$fixed_port:80" \
+  -p 127.0.0.1::80 \
   -e NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
   -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
   -e SKILLHUB_TRUST_FORWARDED_PROTO=false \
@@ -258,8 +261,9 @@ docker run -d --name "$fixed_name" \
   -v "$baked_file:/etc/skillhub/baked-base-path:ro" \
   -v "$ROOT_DIR/web/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro" \
   -v "$entrypoint_d/20-base-path.sh:/docker-entrypoint.d/20-base-path.sh:ro" \
-  "$NGINX_IMAGE" >/dev/null 2>&1
+  "$NGINX_IMAGE" >/dev/null
 
+fixed_port=$(published_port "$fixed_name")
 fixed_base="http://127.0.0.1:$fixed_port"
 ready=0
 i=0
