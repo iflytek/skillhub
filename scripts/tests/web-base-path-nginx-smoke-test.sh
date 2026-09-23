@@ -41,6 +41,7 @@ chmod +x "$entrypoint_d/20-base-path.sh" "$entrypoint_d/30-runtime-config.sh"
 
 if ! docker run -d --name "$name" \
     -p "$port:80" \
+    -e NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
     -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
     -e SKILLHUB_TRUST_FORWARDED_PROTO=false \
     -e SKILLHUB_WEB_BASE_PATH=/skillhub/ \
@@ -154,6 +155,7 @@ name_default="$name-default"
 port_default=18082
 docker run -d --name "$name_default" \
   -p "$port_default:80" \
+  -e NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
   -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
   -e SKILLHUB_TRUST_FORWARDED_PROTO=false \
   -e SKILLHUB_WEB_BASE_PATH=/skillhub/ \
@@ -206,6 +208,7 @@ name_trusted="$name-trusted"
 port_trusted=18083
 docker run -d --name "$name_trusted" \
   -p "$port_trusted:80" \
+  -e NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
   -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
   -e SKILLHUB_TRUST_FORWARDED_PROTO=true \
   -e SKILLHUB_WEB_BASE_PATH=/skillhub/ \
@@ -246,6 +249,7 @@ fixed_port=18081
 
 docker run -d --name "$fixed_name" \
   -p "$fixed_port:80" \
+  -e NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
   -e SKILLHUB_API_UPSTREAM=http://127.0.0.1:9 \
   -e SKILLHUB_TRUST_FORWARDED_PROTO=false \
   -e SKILLHUB_WEB_BASE_PATH= \

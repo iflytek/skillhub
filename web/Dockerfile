@@ -13,6 +13,7 @@ RUN pnpm build
 
 FROM nginx:alpine
 ENV SKILLHUB_TRUST_FORWARDED_PROTO=false
+ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 # Record a fixed build-time base so the entrypoint defaults SKILLHUB_WEB_BASE_PATH
 # to it and generates matching Nginx routing without repeating the value at runtime.
 # Placeholder builds (the default) intentionally write no file and default to '/'.

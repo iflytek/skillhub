@@ -2,6 +2,8 @@ server_tokens off;
 server {
     listen 80;
     server_name _;
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+    set $skillhub_api_upstream "${SKILLHUB_API_UPSTREAM}";
     root /usr/share/nginx/html;
     index index.html;
 
@@ -34,7 +36,7 @@ server {
     }
 
     location /api/ {
-        proxy_pass ${SKILLHUB_API_UPSTREAM};
+        proxy_pass $skillhub_api_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -43,7 +45,7 @@ server {
     }
 
     location /oauth2/ {
-        proxy_pass ${SKILLHUB_API_UPSTREAM};
+        proxy_pass $skillhub_api_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -52,7 +54,7 @@ server {
     }
 
     location /login/oauth2/ {
-        proxy_pass ${SKILLHUB_API_UPSTREAM};
+        proxy_pass $skillhub_api_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -61,7 +63,7 @@ server {
     }
 
     location /.well-known/ {
-        proxy_pass ${SKILLHUB_API_UPSTREAM};
+        proxy_pass $skillhub_api_upstream;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

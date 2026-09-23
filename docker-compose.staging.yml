@@ -70,6 +70,7 @@ services:
       - ./web/dist:/usr/share/nginx/html:ro
       - ./web/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
     environment:
+      NGINX_ENTRYPOINT_LOCAL_RESOLVERS: "1"
       SKILLHUB_API_UPSTREAM: http://server:8080
       SKILLHUB_WEB_API_BASE_URL: ""
       SKILLHUB_PUBLIC_BASE_URL: ""
