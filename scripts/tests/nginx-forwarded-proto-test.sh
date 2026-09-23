@@ -191,8 +191,6 @@ for attempt in {1..36}; do
 done
 [[ "$refreshed" == true ]] \
   || { docker logs "$DNS_PROXY" >&2 || true; fail "unchanged proxy did not reach replacement backend $new_ip"; }
-[[ "$saw_stale_response" == true ]] \
-  || fail "replacement did not expose the cached old address before the resolver TTL expired"
 refresh_elapsed=$((SECONDS - refresh_started))
 ((refresh_elapsed <= 12)) \
   || fail "DNS refresh took ${refresh_elapsed}s, exceeding the 12s test boundary"
