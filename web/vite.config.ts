@@ -7,6 +7,7 @@ import { validateBasePath } from './base-path-config'
 const JS_BUILD_TARGET = 'es2020'
 const LEGACY_BROWSER_TARGETS = ['chrome83', 'edge83', 'firefox78', 'safari14']
 const basePath = validateBasePath(process.env.VITE_BASE_PATH ?? '/')
+const apiProxyTarget = process.env.VITE_API_PROXY_TARGET ?? 'http://localhost:8080'
 const guideTemplate = readFileSync(path.resolve(__dirname, 'src/docs/skill.md.template'), 'utf8')
 const safeHostPattern = /^(?:[A-Za-z0-9.-]+|\[[0-9A-Fa-f:.]+\])(?::[0-9]{1,5})?$/
 
@@ -88,11 +89,11 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://localhost:8080',
+        target: apiProxyTarget,
         changeOrigin: true,
       },
       '/oauth2': {
-        target: 'http://localhost:8080',
+        target: apiProxyTarget,
         changeOrigin: true,
       },
       '/login/oauth2': {

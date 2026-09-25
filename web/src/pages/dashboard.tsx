@@ -7,7 +7,7 @@ import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import {
   Star, Heart, Package, Boxes, Key, Shield, Flag, Globe,
-  UserCog, Lock, Bell, Clock, ChevronDown, ChevronRight,
+  UserCog, Lock, Bell, Clock, ChevronDown, ChevronRight, PenTool,
 } from 'lucide-react'
 
 /**
@@ -50,6 +50,7 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
       { key: 'stars', icon: Star, label: 'sidebar.stars', to: '/dashboard/stars' },
       { key: 'subscriptions', icon: Heart, label: 'sidebar.subscriptions', to: '/dashboard/subscriptions' },
       { key: 'tokens', icon: Key, label: 'sidebar.tokens', to: '/dashboard/tokens' },
+      { key: 'authoring', icon: PenTool, label: 'sidebar.authoring', to: '/dashboard/authoring' },
       { key: 'reviewProgress', icon: Clock, label: 'sidebar.reviewProgress', to: '/dashboard/review-progress' },
     ],
   },

@@ -710,3 +710,123 @@ export interface NotificationPreferenceItem {
 export interface NotificationUnreadCount {
   count: number
 }
+
+// Authoring workbench types (draft create/edit/validate/submit flow)
+export interface AuthoringDraft {
+  id: number
+  namespaceId: number
+  name: string
+  requirement?: string
+  revision: number
+  contentDigest: string
+  validated: boolean
+  validatedRevision?: number
+  validatedRunId?: number
+  submittedSkillId?: number
+  submittedVersionId?: number
+  submittedAt?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DraftFileSummary {
+  id?: number
+  path: string
+  sha256: string
+  size: number
+  contentType?: string
+  updatedAt?: string
+}
+
+export interface DraftFileContent {
+  path: string
+  sha256: string
+  size: number
+  contentType?: string
+  content: string
+}
+
+export interface SaveDraftFileOutcome {
+  draft: AuthoringDraft
+  file: DraftFileSummary
+  created: boolean
+  revisionAdvanced: boolean
+}
+
+export interface RuntimeBindingInfo {
+  // null while the draft has no saved binding yet (the form falls back to
+  // its local-script default)
+  agentType: string | null
+  config: Record<string, unknown>
+  toolAllowlist: string[]
+  mcpServers: Record<string, unknown>[]
+  updatedAt?: string
+}
+
+export type ValidationRunStatus =
+  | 'QUEUED'
+  | 'PREPARING'
+  | 'RUNNING'
+  | 'SUCCEEDED'
+  | 'FAILED'
+  | 'CANCELLED'
+  | 'TIMED_OUT'
+
+export interface ValidationRunInfo {
+  id: number
+  draftId: number
+  draftRevision: number
+  status: ValidationRunStatus
+  cancelRequested: boolean
+  active: boolean
+  terminal: boolean
+  errorCount: number
+  warningCount: number
+  triggeredBy: string
+  startedAt?: string
+  finishedAt?: string
+  createdAt: string
+  summary: Record<string, unknown>
+}
+
+export interface ValidationEventInfo {
+  seq: number
+  type: string
+  phase?: string
+  payload: Record<string, unknown>
+  createdAt?: string
+}
+
+export interface FilePatch {
+  filePath: string
+  oldSha256?: string
+  oldValue?: string
+  newValue?: string
+}
+
+export interface FixSuggestionInfo {
+  description?: string
+  patches?: FilePatch[]
+}
+
+export interface ValidationFindingInfo {
+  id: number
+  runId: number
+  layer: 'STRUCTURE' | 'CONFIG' | 'BEHAVIOR'
+  ruleCode: string
+  severity: 'ERROR' | 'WARNING'
+  filePath?: string
+  location?: string
+  message: string
+  suggestion?: FixSuggestionInfo | null
+  status: 'OPEN' | 'APPLIED' | 'DISMISSED'
+  appliedRevision?: number
+  createdAt: string
+}
+
+export interface SubmitDraftOutcome {
+  skillId: number
+  versionId: number
+  slug: string
+  version: string
+}
