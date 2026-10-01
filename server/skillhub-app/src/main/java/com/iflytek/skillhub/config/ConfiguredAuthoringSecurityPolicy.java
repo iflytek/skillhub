@@ -4,6 +4,7 @@ import com.iflytek.skillhub.domain.authoring.service.AuthoringSecurityPolicy;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -13,9 +14,10 @@ import org.springframework.stereotype.Component;
  * <p>SSRF posture: the server only makes outbound requests to public
  * addresses. Link-local addresses (which include the 169.254.169.254 cloud
  * metadata service), multicast, and the unspecified address are always
- * rejected. Loopback, RFC1918, unique-local IPv6, and CGNAT ranges are
- * rejected unless the surface-specific {@code allow-private-endpoints} flag
- * is set (used by local development to reach loopback fake servers).
+ * rejected. Loopback, RFC1918, unique-local IPv6, CGNAT, and the RFC 2544
+ * benchmark range (198.18.0.0/15) are rejected unless the surface-specific
+ * {@code allow-private-endpoints} flag is set (used by local development to
+ * reach loopback fake servers).
  *
  * <p>Known limitation: the guard resolves the hostname at check time; the
  * HttpClient re-resolves at connect time, which mitigates (but cannot fully
@@ -25,10 +27,24 @@ import org.springframework.stereotype.Component;
 @Component
 public class ConfiguredAuthoringSecurityPolicy implements AuthoringSecurityPolicy {
 
-    private final AuthoringProperties properties;
+    /** Resolves a host to addresses; the default delegates to the JDK resolver. */
+    @FunctionalInterface
+    interface HostResolver {
+        InetAddress[] resolve(String host) throws UnknownHostException;
+    }
 
+    private final AuthoringProperties properties;
+    private final HostResolver resolver;
+
+    @Autowired
     public ConfiguredAuthoringSecurityPolicy(AuthoringProperties properties) {
+        this(properties, InetAddress::getAllByName);
+    }
+
+    /** Test seam: injects a deterministic resolver so tests need no network. */
+    ConfiguredAuthoringSecurityPolicy(AuthoringProperties properties, HostResolver resolver) {
         this.properties = properties;
+        this.resolver = resolver;
     }
 
     @Override
@@ -53,7 +69,7 @@ public class ConfiguredAuthoringSecurityPolicy implements AuthoringSecurityPolic
 
         InetAddress[] addresses;
         try {
-            addresses = InetAddress.getAllByName(host);
+            addresses = resolver.resolve(host);
         } catch (UnknownHostException exception) {
             return "cannot resolve host '" + host + "'";
         }
@@ -92,7 +108,8 @@ public class ConfiguredAuthoringSecurityPolicy implements AuthoringSecurityPolic
         boolean privateRange = address.isLoopbackAddress()
                 || address.isSiteLocalAddress()
                 || isUniqueLocalIpv6(address)
-                || isCarrierGradeNat(address);
+                || isCarrierGradeNat(address)
+                || isBenchmarkRange(address);
         if (privateRange && !allowPrivate) {
             return "private/loopback address is blocked unless allow-private-endpoints"
                     + " is enabled: " + address.getHostAddress();
@@ -111,5 +128,15 @@ public class ConfiguredAuthoringSecurityPolicy implements AuthoringSecurityPolic
         byte[] bytes = address.getAddress();
         return bytes.length == 4 && (bytes[0] & 0xFF) == 100
                 && (bytes[1] & 0xFF) >= 64 && (bytes[1] & 0xFF) <= 127;
+    }
+
+    /**
+     * 198.18.0.0/15 RFC 2544 benchmark range: reserved, never a legitimate
+     * endpoint, and used as the synthetic pool by fake-IP VPN/proxy resolvers.
+     */
+    private static boolean isBenchmarkRange(InetAddress address) {
+        byte[] bytes = address.getAddress();
+        return bytes.length == 4 && (bytes[0] & 0xFF) == 198
+                && (bytes[1] & 0xFE) == 18;
     }
 }

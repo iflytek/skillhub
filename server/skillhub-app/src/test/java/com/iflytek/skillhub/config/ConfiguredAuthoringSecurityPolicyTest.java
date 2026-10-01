@@ -104,14 +104,37 @@ class ConfiguredAuthoringSecurityPolicyTest {
     }
 
     @Test
-    void unresolvableOrSyntheticHostsNeverPassSilently() {
-        // a hostname that resolves nowhere is rejected for that reason; on
-        // networks whose DNS answers every query with a synthetic private
-        // range (some VPNs), the address classification rejects it instead —
-        // either way the endpoint must not pass silently
-        String rejection = policy.endpointRejection("http://this-host-does-not-exist.invalid/mcp",
-                AuthoringSecurityPolicy.EndpointUse.MCP_SERVER);
-        assertThat(rejection).isNotNull();
+    void unresolvableOrSyntheticHostsNeverPassSilently() throws Exception {
+        // Resolution is stubbed through the test seam: whether a bogus host
+        // fails to resolve (normal network) or a fake-IP VPN answers it with
+        // a synthetic range, the endpoint must not pass silently.
+        ConfiguredAuthoringSecurityPolicy unresolved = new ConfiguredAuthoringSecurityPolicy(
+                properties, host -> { throw new java.net.UnknownHostException("nx"); });
+        assertThat(unresolved.endpointRejection("http://this-host-does-not-exist.invalid/mcp",
+                AuthoringSecurityPolicy.EndpointUse.MCP_SERVER))
+                .contains("cannot resolve host");
+
+        // fake-IP VPN resolvers answer everything inside 198.18.0.0/15
+        java.net.InetAddress fakeVpnAnswer = java.net.InetAddress.getByAddress(
+                new byte[] {(byte) 198, 18, 1, (byte) 200});
+        ConfiguredAuthoringSecurityPolicy fakeDns = new ConfiguredAuthoringSecurityPolicy(
+                properties, host -> new java.net.InetAddress[] {fakeVpnAnswer});
+        assertThat(fakeDns.endpointRejection("http://anything.example/mcp",
+                AuthoringSecurityPolicy.EndpointUse.MCP_SERVER)).isNotNull();
+    }
+
+    @Test
+    void rfc2544BenchmarkRangeFollowsThePrivateFlag() {
+        assertThat(policy.endpointRejection("http://198.18.1.200/mcp",
+                AuthoringSecurityPolicy.EndpointUse.MCP_SERVER)).isNotNull();
+        assertThat(policy.endpointRejection("http://198.19.255.1/mcp",
+                AuthoringSecurityPolicy.EndpointUse.MCP_SERVER)).isNotNull();
+        // 198.20.x.x is public (just outside the /15)
+        assertThat(policy.endpointRejection("http://198.20.0.1/mcp",
+                AuthoringSecurityPolicy.EndpointUse.MCP_SERVER)).isNull();
+        properties.getMcp().setAllowPrivateEndpoints(true);
+        assertThat(policy.endpointRejection("http://198.18.1.200/mcp",
+                AuthoringSecurityPolicy.EndpointUse.MCP_SERVER)).isNull();
     }
 
     @Test

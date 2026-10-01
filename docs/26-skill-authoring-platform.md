@@ -223,12 +223,13 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
   - **SSRF 防护**：MCP http/sse endpoint 与 OpenAI 兼容 endpoint 在保存时、
     连接时双重校验——只允许 http(s)，主机必须可解析，且解析到的地址不得为
     链路本地（含云元数据 169.254.169.254）、组播或未指定地址（无条件拒绝），
-    也不得为环回/RFC1918/ULA/CGNAT（除非对应表面的 `allow-private-endpoints`
-    放行）。HTTP 客户端从不跟随重定向（30x 直接报错），单响应体上限 2MiB，
-    stdio 单行上限 2MiB——阻断"公网 URL 302 跳元数据"与超大响应/超长行的
-    内存耗尽攻击。已知边界：策略在检查时解析域名，HttpClient 连接时再次解析，
-    可缓解但无法完全消除 DNS rebinding 竞态（绑定已校验地址的 socket 会破坏
-    虚拟主机 endpoint，未实现）。
+    也不得为环回/RFC1918/ULA/CGNAT/RFC 2544 基准段 198.18.0.0/15（除非对应
+    表面的 `allow-private-endpoints` 放行；198.18.0.0/15 为保留段，也是
+    fake-IP 代理/VPN 解析器的合成地址池）。HTTP 客户端从不跟随重定向（30x
+    直接报错），单响应体上限 2MiB，stdio 单行上限 2MiB——阻断"公网 URL 302
+    跳元数据"与超大响应/超长行的内存耗尽攻击。已知边界：策略在检查时解析
+    域名，HttpClient 连接时再次解析，可缓解但无法完全消除 DNS rebinding
+    竞态（绑定已校验地址的 socket 会破坏虚拟主机 endpoint，未实现）。
   - **生产强制容器**：`execution-mode` 默认 `docker`；若在非 local/dev/test
     profile 下配置了 inline，应用启动即失败（`AuthoringStartupGuard`）。
   - **其余既有边界**：脚本在清空环境的最小工作区执行、解释器白名单、路径
@@ -300,7 +301,7 @@ skill-scanner :8000，`local` profile）上实跑全链路并留档，16/16 检�
 | 领域单测 | `skillhub-domain/…/authoring/` | `DraftStructureValidatorTest`（结构规则与修复建议）、`ValidationSpecParserTest`（防御式 YAML 解析、任务/断言语义）、`AssertionEvaluatorTest`（全部断言类型与失败信息）、`SkillScaffoldGeneratorTest` |
 | 运行时单测 | `skillhub-app/…/authoring/adapter/` | `DockerScriptCommandBuilderTest`（隔离参数与挂载构造）、`DockerScriptRuntimeAdapterTest`（真实容器内实证：无网络路由、只读根文件系统、工作区可写、输出捕获；无 Docker 时静默跳过）、`OpenAiCompatibleRuntimeAdapterToolLoopTest`（agent 循环：MCP 工具发现→模型调用→真实执行→轨迹回填，toolFilters/toolAllowlist 过滤、轮数上限） |
 | MCP 单测 | `skillhub-app/…/authoring/mcp/` | `HttpMcpClientTest`（initialize/tools 握手、会话头复用、SSE 帧解析、错误结果、不可达报错、**30x 重定向不跟随、2MiB 响应上限**，对真实本地 HTTP 服务器）、`StdioMcpClientTest`（stdio 传输对 python3 子进程；**2MiB 单行上限 + 进程销毁、关闭时清理命令执行**）、`McpProbeServiceTest`（连不上→`MCP_CONNECT_FAILED`、未知 toolFilter→告警、可跳过畸形声明）、`McpClientFactoryTest`（**连接时安全策略：被拒 endpoint/被禁 stdio 不建连不建进程、envRefs 白名单过滤、docker 包装参数**） |
-| 安全策略单测 | `skillhub-app/…/config/` | `ConfiguredAuthoringSecurityPolicyTest`（SSRF 地址分类：云元数据/链路本地无条件拒绝、环回/RFC1918/ULA/CGNAT 按表面开关、公网放行）、`AuthoringStartupGuardTest`（非 local/dev/test profile + inline → 启动失败） |
+| 安全策略单测 | `skillhub-app/…/config/` | `ConfiguredAuthoringSecurityPolicyTest`（SSRF 地址分类：云元数据/链路本地无条件拒绝、环回/RFC1918/ULA/CGNAT/198.18.0.0/15 按表面开关、公网放行、不可解析与 fake-IP 合成应答均拒绝——经注入 resolver，不依赖网络）、`AuthoringStartupGuardTest`（非 local/dev/test profile + inline → 启动失败） |
 | 端到端集成 | `skillhub-app/…/authoring/AuthoringFlowIntegrationTest` | Testcontainers 真实 PostgreSQL 上跑通完整闭环：建草稿 → 改文件 → 绑定运行时 → 三层验证 → 修复发现 → 复验 → 提交（`ddl-auto=validate` 顺带校验 V66 与实体映射一致） |
 | 前端单测 | `web/src/features/authoring/*.test.*` | 事件按 seq 合并去重、SSE 生命周期（回放合并、终态关闭、断线轮询降级）、修复 diff 预览、二进制文件 base64 处理 |
 | 浏览器 E2E | `web/e2e/authoring-flow.spec.ts` | Playwright 真实 API 全 UI 闭环：创建草稿（命名空间/名称对话框）→ 文件编辑（SKILL.md/脚本/validation.yaml）→ 保存运行时绑定 → 启动验证至 Succeeded（事件控制台含脚本输出）→ 提交对话框过闸；坏 frontmatter → 失败发现 → diff 预览 → 两步确认应用修复 → 一键复验通过；二进制资源上传 → 只读面板（大小/类型/sha256）与字节级校验。断言落在持久 UI 状态（按钮态、徽章、响应体）而非易失 toast |
