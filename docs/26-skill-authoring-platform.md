@@ -262,6 +262,11 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
 
 上述流程已固化为 `scripts/riscv64-verify.sh`（自动识别宿主架构：riscv64 主机
 原生执行，其余走 QEMU；对独立数据库跑 创建→验证→SUCCEEDED→事件流检查）。
+拿到真机后，`scripts/riscv64-native-setup.sh` 可以一键完成环境准备：安装
+Docker/PostgreSQL/Redis（apt 与 dnf 系）、建空库、放通 docker 网桥、原生构建
+镜像并跑完验证，全过程落盘为 `riscv64-native-evidence-*.log`。注意原生构建
+需 `--build-arg BUILD_IMAGE=eclipse-temurin:21-jdk-noble`（Dockerfile 默认的
+Alpine JDK 构建镜像无 riscv64 变体，Noble 有）——setup 脚本已自动处理。
 在真实 RISC-V64 硬件或 CI runner 上完成原生验证时，除直接运行该脚本外，
 按以下清单执行并留档：
 
@@ -273,8 +278,10 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
    脚本隔离执行）；
 5. 浏览器 E2E（`e2e/authoring-flow.spec.ts`）对准该实例跑通。
 
-截至 2026-09-20，本项目尚无原生 RISC-V 硬件资源，上述第 1–5 项为待完成项，
-已有证据为 QEMU 模拟级（见上）。
+截至 2026-10-01，本项目尚无原生 RISC-V 硬件资源，上述第 1–5 项为待完成项，
+已有证据为 QEMU 模拟级（见上）。已向 PLCT RVLab / INCHI RVLab 提交真机
+使用申请（开源项目免费通道，开通周期约一周），获批后按上述脚本补齐原生
+证据。
 
 ### 发布管线端到端证据（2026-09-21）
 

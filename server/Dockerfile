@@ -1,6 +1,9 @@
 # Build the architecture-neutral JAR on the Buildx host. This avoids emulating
 # the complete Maven build when the target image is linux/riscv64.
-FROM --platform=$BUILDPLATFORM eclipse-temurin:21-jdk-alpine AS build
+# On a native riscv64 host pass --build-arg BUILD_IMAGE=eclipse-temurin:21-jdk-noble
+# (the Alpine JDK image has no riscv64 variant; the Noble one does).
+ARG BUILD_IMAGE=eclipse-temurin:21-jdk-alpine
+FROM --platform=$BUILDPLATFORM ${BUILD_IMAGE} AS build
 WORKDIR /app
 
 # Cache dependencies
