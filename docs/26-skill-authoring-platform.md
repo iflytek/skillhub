@@ -278,10 +278,32 @@ Alpine JDK 构建镜像无 riscv64 变体，Noble 有）——setup 脚本已自
    脚本隔离执行）；
 5. 浏览器 E2E（`e2e/authoring-flow.spec.ts`）对准该实例跑通。
 
-截至 2026-10-01，本项目尚无原生 RISC-V 硬件资源，上述第 1–5 项为待完成项，
-已有证据为 QEMU 模拟级（见上）。已向 PLCT RVLab / INCHI RVLab 提交真机
-使用申请（开源项目免费通道，开通周期约一周），获批后按上述脚本补齐原生
-证据。
+截至 2026-10-01，上述第 1–5 项中已有部分由**真机 CI**覆盖（见下节），第 4–5
+项仍待在独占真机环境补齐；PLCT / INCHI RVLab 的真机使用申请已提交
+（开源项目免费通道，开通周期约一周），获批后可补齐剩余项。
+
+#### 真机 RISC-V64 CI 证据（2026-10-02，Cloud-V 板卡 runner）
+
+`zjncs/skillhub` 仓库的 `.github/workflows/riscv64-native.yml` 挂在
+Cloud-V / 10xEngineers 提供的免费真机 GitHub runner 上（物理 VisionFive 2
+板卡，每次任务全新容器，无需账号或 token）。首次运行
+（[run 37035583787](https://github.com/zjncs/skillhub/actions/runs/37035583787)，
+提交 `9f3451d2`）**全绿，全程约 14 分钟**：
+
+- **板卡原生性**：`Linux sf2-4 7.0.0-30-generic #30.1~24.04.1-Ubuntu …
+  riscv64 riscv64 riscv64 GNU/Linux`，`/proc/cpuinfo` 无 qemu 标记；
+- **原生构建**：板卡上 apt 安装 openjdk-21 / postgresql / redis-server 后，
+  Maven 在 riscv64 上完成整个多模块构建；
+- **验证流程**（`scripts/riscv64-verify.sh` jar 模式，7/7 通过）：服务器在
+  riscv64 用户态运行 → 健康检查通过 → 创建草稿 → 脚手架读取 → 绑定 →
+  验证运行 `SUCCEEDED` → 脚本 stdout 出现在事件流（12 条事件）。
+
+对照上面的原生清单：第 1、3 项已由此覆盖；第 2 项的平台服务在板卡上以
+riscv64 原生包运行（容器镜像的 riscv64 变体另行经 `docker manifest inspect`
+验证：`postgres:16`/`alpine:3.20`/`eclipse-temurin:21-jre-noble` 均有，
+`redis:7` 无）；第 4（docker 执行模式重跑）、5（浏览器 E2E）待独占真机
+环境补齐。该 workflow 带 `if: github.repository == 'zjncs/skillhub'` 守卫，
+上游仓库无此 runner，不会被排队。
 
 ### 发布管线端到端证据（2026-09-21）
 
