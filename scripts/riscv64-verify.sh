@@ -2,26 +2,37 @@
 
 # RISC-V64 live verification of the authoring platform.
 #
-# Boots the linux/riscv64 server image (native on riscv64 hosts, QEMU-emulated
+# Boots the linux/riscv64 server (native on riscv64 hosts, QEMU-emulated
 # elsewhere) against a dedicated PostgreSQL database and drives the full
 # authoring flow over the REST API:
 #   create draft → read scaffold → save script + validation.yaml → bind runtime
 #   → validate → SUCCEEDED → script stdout visible in the event stream.
 #
+# Boot modes (SKILLHUB_RISCV_BOOT_MODE, default docker):
+#   docker — run the linux/riscv64 image (see "Building the image" below);
+#   jar   — run an already-built jar directly with java (no Docker needed;
+#           used by the real-board CI workflow, where the build itself proves
+#           the toolchain and PG/Redis run as services on the board).
+#
 # The script assumes:
-#   - the image exists (see "Building the image" below);
-#   - PostgreSQL and Redis are reachable from the container (defaults use
-#     host.docker.internal on ports 5432/6379);
+#   - docker mode: the image exists; PostgreSQL and Redis are reachable from
+#     the container (defaults use host.docker.internal on ports 5432/6379);
+#   - jar mode: SKILLHUB_RISCV_JAR exists (default
+#     server/skillhub-app/target/skillhub-app-0.1.0.jar) and PG/Redis answer
+#     on localhost;
 #   - the DB given by SKILLHUB_RISCV_DB is EMPTY — Flyway migrates it from zero
 #     (the script never touches your main dev database).
 #
 # Usage:
 #   scripts/riscv64-verify.sh [image]        # default skillhub-server:riscv64
 #   SKILLHUB_RISCV_DB=mydb scripts/riscv64-verify.sh myimage:tag
+#   SKILLHUB_RISCV_BOOT_MODE=jar SKILLHUB_RISCV_DB=mydb scripts/riscv64-verify.sh
 #
 # Building the image (on any host; buildx + QEMU required on non-riscv64):
 #   cd server && docker buildx build --platform linux/riscv64 \
 #     -t skillhub-server:riscv64 --load .
+# On a native riscv64 host pass --build-arg BUILD_IMAGE=eclipse-temurin:21-jdk-noble
+# (the default Alpine JDK build stage has no riscv64 variant).
 #
 # Native hardware note: on a real riscv64 host (uname -m == riscv64) the same
 # script runs without emulation; the log line marks which mode you are in.
@@ -32,8 +43,12 @@ set -u
 
 IMAGE="${1:-skillhub-server:riscv64}"
 DB_NAME="${SKILLHUB_RISCV_DB:-skillhub_riscv_check}"
-HOST="${SKILLHUB_RISCV_DB_HOST:-host.docker.internal}"
+MODE="${SKILLHUB_RISCV_BOOT_MODE:-docker}"
+JAR="${SKILLHUB_RISCV_JAR:-server/skillhub-app/target/skillhub-app-0.1.0.jar}"
+HOST="${SKILLHUB_RISCV_DB_HOST:-$([[ "$MODE" == "jar" ]] && echo localhost || echo host.docker.internal)}"
 CONTAINER="skillhub-riscv-check"
+SERVER_PID=""
+SERVER_LOG="/tmp/skillhub-riscv-verify.log"
 BASE_URL="http://localhost:18082"
 COOKIE="$(mktemp)"
 PASS=0
@@ -71,13 +86,22 @@ api() {
 }
 
 cleanup() {
-  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+  if [[ -n "$SERVER_PID" ]]; then
+    kill "$SERVER_PID" >/dev/null 2>&1 || true
+  fi
+  if [[ "$MODE" == "docker" ]]; then
+    docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+  fi
   rm -f "$COOKIE"
 }
 trap cleanup EXIT
 
 echo "=== RISC-V64 authoring platform verification ==="
-echo "image: $IMAGE"
+if [[ "$MODE" == "docker" ]]; then
+  echo "image: $IMAGE"
+else
+  echo "jar: $JAR"
+fi
 echo "database: $DB_NAME on $HOST"
 ARCH="$(uname -m)"
 if [[ "$ARCH" == "riscv64" ]]; then
@@ -87,19 +111,28 @@ else
 fi
 echo
 
-echo "--- 1. boot the linux/riscv64 image ---"
-docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
-docker run -d --name "$CONTAINER" -p 18082:8080 "$IMAGE" \
-  --spring.profiles.active=local \
-  --spring.datasource.url="jdbc:postgresql://$HOST:5432/$DB_NAME" \
-  --spring.data.redis.host="$HOST" >/dev/null || { echo "docker run failed"; exit 1; }
-
-IMAGE_ARCH="$(docker inspect "$CONTAINER" --format '{{.Image}}' >/dev/null 2>&1 && docker exec "$CONTAINER" uname -m 2>/dev/null || echo unknown)"
-echo "arch inside container: $IMAGE_ARCH"
-if [[ "$IMAGE_ARCH" == "riscv64" ]]; then
-  pass "container userland is riscv64"
+echo "--- 1. boot the server (boot mode: $MODE) ---"
+if [[ "$MODE" == "docker" ]]; then
+  docker rm -f "$CONTAINER" >/dev/null 2>&1 || true
+  docker run -d --name "$CONTAINER" -p 18082:8080 "$IMAGE" \
+    --spring.profiles.active=local \
+    --spring.datasource.url="jdbc:postgresql://$HOST:5432/$DB_NAME" \
+    --spring.data.redis.host="$HOST" >/dev/null || { echo "docker run failed"; exit 1; }
+  IMAGE_ARCH="$(docker inspect "$CONTAINER" --format '{{.Image}}' >/dev/null 2>&1 && docker exec "$CONTAINER" uname -m 2>/dev/null || echo unknown)"
 else
-  fail "container userland is '$IMAGE_ARCH', expected riscv64"
+  [[ -f "$JAR" ]] || { echo "jar not found at $JAR — build it or set SKILLHUB_RISCV_JAR"; exit 1; }
+  java -jar "$JAR" --spring.profiles.active=local --server.port=18082 \
+    --spring.datasource.url="jdbc:postgresql://$HOST:5432/$DB_NAME" \
+    --spring.data.redis.host="$HOST" > "$SERVER_LOG" 2>&1 &
+  SERVER_PID=$!
+  echo "server pid $SERVER_PID (log: $SERVER_LOG)"
+  IMAGE_ARCH="$(uname -m)"
+fi
+echo "arch the server runs on: $IMAGE_ARCH"
+if [[ "$IMAGE_ARCH" == "riscv64" ]]; then
+  pass "server userland is riscv64"
+else
+  fail "server userland is '$IMAGE_ARCH', expected riscv64"
 fi
 
 HEALTHY=0
@@ -110,10 +143,18 @@ for i in $(seq 1 90); do
     HEALTHY=1
     break
   fi
-  if ! docker ps --format '{{.Names}}' | grep -q "^$CONTAINER$"; then
-    echo "CONTAINER DIED — last logs:"
-    docker logs "$CONTAINER" 2>&1 | tail -30
-    exit 1
+  if [[ "$MODE" == "docker" ]]; then
+    if ! docker ps --format '{{.Names}}' | grep -q "^$CONTAINER$"; then
+      echo "CONTAINER DIED — last logs:"
+      docker logs "$CONTAINER" 2>&1 | tail -30
+      exit 1
+    fi
+  else
+    if ! kill -0 "$SERVER_PID" 2>/dev/null; then
+      echo "SERVER DIED — last logs:"
+      tail -30 "$SERVER_LOG"
+      exit 1
+    fi
   fi
   sleep 10
 done
@@ -121,7 +162,11 @@ if [[ "$HEALTHY" == "1" ]]; then
   pass "server boots and becomes healthy"
 else
   fail "server did not become healthy in 900s"
-  docker logs "$CONTAINER" 2>&1 | tail -30
+  if [[ "$MODE" == "docker" ]]; then
+    docker logs "$CONTAINER" 2>&1 | tail -30
+  else
+    tail -30 "$SERVER_LOG"
+  fi
   exit 1
 fi
 
@@ -170,7 +215,7 @@ for _ in $(seq 1 60); do
   sleep 5
 done
 if [[ "$STATUS" == "SUCCEEDED" ]]; then
-  pass "validation run SUCCEEDED (script executed in the container's riscv64 userland)"
+  pass "validation run SUCCEEDED (script executed in the server's riscv64 userland)"
 else
   fail "validation run ended as $STATUS"
 fi

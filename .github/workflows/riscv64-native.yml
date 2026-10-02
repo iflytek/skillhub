@@ -1,0 +1,71 @@
+name: riscv64-native
+
+# Real-riscv64 CI on the free Cloud-V / 10xEngineers board runners
+# (https://10x-engineers.github.io/riscv-ci-partners/). Each job provisions a
+# fresh container on a physical board; the run proves, on native hardware:
+# the JDK 21 toolchain builds the project, PostgreSQL/Redis serve it, and the
+# authoring flow (create → validate → SUCCEEDED → event stream) passes.
+#
+# Guarded to the fork on purpose: iflytek/skillhub has no such runner
+# installed, so an unguarded job would sit queued there forever.
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/skill-authoring-validation]
+
+jobs:
+  authoring-on-riscv64:
+    if: github.repository == 'zjncs/skillhub'
+    runs-on: [self-hosted, visionfive2]
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record the board (native-proof evidence)
+        run: |
+          uname -a
+          head -5 /proc/cpuinfo
+          if grep -qi qemu /proc/cpuinfo; then
+            echo "WARNING: qemu markers in cpuinfo — this board looks emulated"
+          else
+            echo "OK: no qemu markers in cpuinfo"
+          fi
+
+      - name: Install JDK 21, PostgreSQL, Redis
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql redis-server curl unzip
+          if ! sudo apt-get install -y openjdk-21-jdk-headless; then
+            echo "apt JDK 21 unavailable — falling back to the Temurin riscv64 tarball"
+            curl -fsSL "https://api.adoptium.net/v3/binary/latest/21/ga/linux/riscv64/jdk/hotspot/normal/eclipse" -o /tmp/jdk21.tgz
+            mkdir -p "$HOME/jdk21"
+            tar -xzf /tmp/jdk21.tgz -C "$HOME/jdk21" --strip-components=1
+            echo "$HOME/jdk21/bin" >> "$GITHUB_PATH"
+            "$HOME/jdk21/bin/java" -version
+          else
+            java -version
+          fi
+
+      - name: Start services and create the empty database
+        run: |
+          sudo service postgresql start
+          sudo service redis-server start
+          sudo -u postgres psql -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$ BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'skillhub') THEN
+              CREATE ROLE skillhub LOGIN PASSWORD 'skillhub_dev';
+            END IF;
+          END $$;
+          SQL
+          sudo -u postgres psql -c "DROP DATABASE IF EXISTS skillhub_riscv_ci;"
+          sudo -u postgres psql -c "CREATE DATABASE skillhub_riscv_ci OWNER skillhub;"
+
+      - name: Native riscv64 build (Maven on the board)
+        run: |
+          cd server
+          ./mvnw -B package -pl skillhub-app -am -DskipTests
+
+      - name: Boot the server and drive the authoring flow
+        run: |
+          SKILLHUB_RISCV_BOOT_MODE=jar SKILLHUB_RISCV_DB=skillhub_riscv_ci \
+            bash scripts/riscv64-verify.sh
