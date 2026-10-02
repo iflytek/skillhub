@@ -5,8 +5,8 @@ import { describe, expect, test } from 'bun:test'
 import { allProfiles, profileMap } from '../../../src/agents/detector'
 
 describe('agent profiles', () => {
-  test('has 17 tier 1 profiles', () => {
-    expect(allProfiles).toHaveLength(17)
+  test('has 18 tier 1 profiles', () => {
+    expect(allProfiles).toHaveLength(18)
   })
 
   test('all profiles have unique ids', () => {
@@ -15,7 +15,7 @@ describe('agent profiles', () => {
   })
 
   test('profileMap contains all profiles', () => {
-    expect(profileMap.size).toBe(17)
+    expect(profileMap.size).toBe(18)
     expect(profileMap.has('astudio')).toBe(true)
     expect(profileMap.has('claude-code')).toBe(true)
     expect(profileMap.has('codex')).toBe(true)
@@ -23,6 +23,7 @@ describe('agent profiles', () => {
     expect(profileMap.has('dsh')).toBe(true)
     expect(profileMap.has('kilo')).toBe(true)
     expect(profileMap.has('pi')).toBe(true)
+    expect(profileMap.has('zcode')).toBe(true)
   })
 
   test('claude-code profile returns correct roots', () => {
@@ -40,6 +41,13 @@ describe('agent profiles', () => {
   test('cursor profile returns correct roots', () => {
     const profile = profileMap.get('cursor')!
     expect(profile.projectRoots('/repo')).toEqual(['/repo/.cursor/skills'])
+  })
+
+  test('zcode profile returns correct roots', () => {
+    const profile = profileMap.get('zcode')!
+    expect(profile.displayName).toBe('ZCode')
+    expect(profile.projectRoots('/repo')).toEqual(['/repo/.zcode/skills'])
+    expect(profile.userRoots('/home/user')).toEqual(['/home/user/.zcode/skills'])
   })
 
   test('DeepSeek Harness exposes and detects its project and user skills directories', async () => {

@@ -6,6 +6,8 @@ All notable CLI behavior changes are documented in this file.
 
 ### Added
 
+- Add the `zcode` agent profile, displayed as ZCode, with automatic detection of project-level
+  and user-level `.zcode/skills` directories.
 - Add the `dsh` agent profile, displayed as DeepSeek Harness, with automatic detection of
   project-level and user-level `.dsh/skills` directories.
 - Add OAuth Device Flow to `skillhub login` when no API token is supplied, including best-effort
