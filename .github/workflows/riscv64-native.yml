@@ -2,12 +2,17 @@ name: riscv64-native
 
 # Real-riscv64 CI on the free Cloud-V / 10xEngineers board runners
 # (https://10x-engineers.github.io/riscv-ci-partners/). Each job provisions a
-# fresh container on a physical board; the run proves, on native hardware:
-# the JDK 21 toolchain builds the project, PostgreSQL/Redis serve it, and the
-# authoring flow (create → validate → SUCCEEDED → event stream) passes.
+# fresh container on a physical board. Guarded to the fork on purpose:
+# iflytek/skillhub has no such runner, an unguarded job would queue forever.
 #
-# Guarded to the fork on purpose: iflytek/skillhub has no such runner
-# installed, so an unguarded job would sit queued there forever.
+#   authoring-on-riscv64           — jar boot, scripts run natively (every push)
+#   authoring-docker-mode-on-riscv64 — jar boot with execution-mode=docker:
+#                                     validation scripts run inside the
+#                                     alpine:3.20 riscv64 container (every push)
+#   backend-tests-on-riscv64       — full ./mvnw test suite on a Banana Pi F3
+#                                     (manual dispatch only: multi-hour, and a
+#                                     different board type so it never blocks
+#                                     the quick verification jobs)
 on:
   workflow_dispatch:
   push:
@@ -69,3 +74,108 @@ jobs:
         run: |
           SKILLHUB_RISCV_BOOT_MODE=jar SKILLHUB_RISCV_DB=skillhub_riscv_ci \
             bash scripts/riscv64-verify.sh
+
+  authoring-docker-mode-on-riscv64:
+    if: github.repository == 'zjncs/skillhub'
+    runs-on: [self-hosted, visionfive2]
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record the board (native-proof evidence)
+        run: |
+          uname -a
+          if grep -qi qemu /proc/cpuinfo; then
+            echo "WARNING: qemu markers in cpuinfo — this board looks emulated"
+          else
+            echo "OK: no qemu markers in cpuinfo"
+          fi
+
+      - name: Install JDK 21, PostgreSQL, Redis
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql redis-server curl unzip
+          if ! sudo apt-get install -y openjdk-21-jdk-headless; then
+            curl -fsSL "https://api.adoptium.net/v3/binary/latest/21/ga/linux/riscv64/jdk/hotspot/normal/eclipse" -o /tmp/jdk21.tgz
+            mkdir -p "$HOME/jdk21"
+            tar -xzf /tmp/jdk21.tgz -C "$HOME/jdk21" --strip-components=1
+            echo "$HOME/jdk21/bin" >> "$GITHUB_PATH"
+          fi
+          java -version
+
+      - name: Start services and create the empty database
+        run: |
+          sudo service postgresql start
+          sudo service redis-server start
+          sudo -u postgres psql -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$ BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'skillhub') THEN
+              CREATE ROLE skillhub LOGIN PASSWORD 'skillhub_dev';
+            END IF;
+          END $$;
+          SQL
+          sudo -u postgres psql -c "DROP DATABASE IF EXISTS skillhub_riscv_ci_docker;"
+          sudo -u postgres psql -c "CREATE DATABASE skillhub_riscv_ci_docker OWNER skillhub;"
+
+      - name: Native riscv64 build (Maven on the board)
+        run: |
+          cd server
+          ./mvnw -B package -pl skillhub-app -am -DskipTests
+
+      - name: Verify with execution-mode=docker (scripts run in alpine:3.20 riscv64)
+        env:
+          SKILLHUB_AUTHORING_LOCAL_SCRIPT_MODE: docker
+        run: |
+          SKILLHUB_RISCV_BOOT_MODE=jar SKILLHUB_RISCV_DB=skillhub_riscv_ci_docker \
+            bash scripts/riscv64-verify.sh
+          echo "NOTE: the TOOL_RESULT event in the log above must say \"backend\":\"docker\""
+
+  backend-tests-on-riscv64:
+    if: github.repository == 'zjncs/skillhub' && github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, bpi-f3]
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Record the board (native-proof evidence)
+        run: |
+          uname -a
+          head -5 /proc/cpuinfo
+          if grep -qi qemu /proc/cpuinfo; then
+            echo "WARNING: qemu markers in cpuinfo — this board looks emulated"
+          else
+            echo "OK: no qemu markers in cpuinfo"
+          fi
+          docker version 2>/dev/null | head -4 || echo "docker not available in job"
+
+      - name: Install JDK 21
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl unzip
+          if ! sudo apt-get install -y openjdk-21-jdk-headless; then
+            curl -fsSL "https://api.adoptium.net/v3/binary/latest/21/ga/linux/riscv64/jdk/hotspot/normal/eclipse" -o /tmp/jdk21.tgz
+            mkdir -p "$HOME/jdk21"
+            tar -xzf /tmp/jdk21.tgz -C "$HOME/jdk21" --strip-components=1
+            echo "$HOME/jdk21/bin" >> "$GITHUB_PATH"
+          fi
+          java -version
+
+      # Best-effort probe: record whether a system browser exists on riscv64.
+      # Playwright ships no riscv64 driver, so full browser E2E stays on the
+      # dev machine; this step documents browser availability for the record.
+      - name: Probe system browser availability (best-effort)
+        continue-on-error: true
+        run: |
+          sudo apt-get install -y chromium-browser 2>/dev/null \
+            || sudo apt-get install -y chromium 2>/dev/null \
+            || sudo apt-get install -y firefox-esr 2>/dev/null \
+            || true
+          (chromium --version || chromium-browser --version || firefox-esr --version) 2>/dev/null \
+            || echo "no system browser package available on this riscv64 distro"
+
+      - name: Full backend test suite on riscv64
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: "true"
+        run: |
+          cd server
+          ./mvnw -B test
