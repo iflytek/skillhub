@@ -192,8 +192,10 @@ fi
 
 api PUT "/api/web/authoring/drafts/$DRAFT_ID/files" \
   '{"path":"scripts/check.sh","content":"#!/bin/sh\necho riscv-script-OK\n","contentType":"text/x-shellscript"}' >/dev/null
+# generous task timeout: first docker execution-mode runs may pull the
+# alpine:3.20 riscv64 image before the script can start
 api PUT "/api/web/authoring/drafts/$DRAFT_ID/files" \
-  '{"path":"validation.yaml","content":"version: 1\ntasks:\n  - name: smoke\n    description: script runs on riscv64\n    type: script\n    script: scripts/check.sh\n    args: []\n    timeoutMs: 60000\n    assertions:\n      - type: exit_code\n        equals: 0\n      - type: stdout_contains\n        value: riscv-script-OK\n"}' >/dev/null
+  '{"path":"validation.yaml","content":"version: 1\ntasks:\n  - name: smoke\n    description: script runs on riscv64\n    type: script\n    script: scripts/check.sh\n    args: []\n    timeoutMs: 180000\n    assertions:\n      - type: exit_code\n        equals: 0\n      - type: stdout_contains\n        value: riscv-script-OK\n"}' >/dev/null
 
 BINDING="$(api PUT "/api/web/authoring/drafts/$DRAFT_ID/runtime" \
   '{"agentType":"local-script","config":{"interpreter":"sh"},"toolAllowlist":[],"mcpServers":[]}')"
@@ -218,6 +220,12 @@ if [[ "$STATUS" == "SUCCEEDED" ]]; then
   pass "validation run SUCCEEDED (script executed in the server's riscv64 userland)"
 else
   fail "validation run ended as $STATUS"
+  # surface the findings so failures are diagnosable from the job log alone
+  FINDINGS="$(api GET "/api/web/authoring/runs/$RUN_ID/findings")"
+  JSON_INPUT="$FINDINGS" python3 -c '
+import json, os
+for f in json.loads(os.environ["JSON_INPUT"])["data"]:
+    print("      finding: [%s/%s] %s" % (f.get("layer"), f.get("ruleCode"), f.get("message")))' 2>/dev/null || true
 fi
 
 EVENTS="$(api GET "/api/web/authoring/runs/$RUN_ID/events")"

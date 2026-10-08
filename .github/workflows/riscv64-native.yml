@@ -122,6 +122,19 @@ jobs:
           cd server
           ./mvnw -B package -pl skillhub-app -am -DskipTests
 
+      # Pre-flight: the docker execution-mode bind-mounts the workspace into
+      # the container; on runners where the job container shares the host
+      # docker daemon this only works when workspace paths exist on the host
+      # too. Round-trip a bind mount first so the failure mode (if any) is
+      # visible and the alpine image is pulled before the timed task runs.
+      - name: Docker pre-flight (image pull + bind-mount round-trip)
+        run: |
+          docker version --format 'client {{.Client.Version}} / server {{.Server.Version}}'
+          docker pull alpine:3.20
+          mkdir -p "$PWD/.docker-probe" && echo bind-mount-OK > "$PWD/.docker-probe/probe.txt"
+          docker run --rm -v "$PWD/.docker-probe:/probe" alpine:3.20 cat /probe/probe.txt
+          rm -rf "$PWD/.docker-probe"
+
       - name: Verify with execution-mode=docker (scripts run in alpine:3.20 riscv64)
         env:
           SKILLHUB_AUTHORING_LOCAL_SCRIPT_MODE: docker
@@ -132,7 +145,9 @@ jobs:
 
   backend-tests-on-riscv64:
     if: github.repository == 'zjncs/skillhub' && github.event_name == 'workflow_dispatch'
-    runs-on: [self-hosted, bpi-f3]
+    # bpi-f3 boards never provisioned a runner; the VisionFive 2 pool works.
+    # Jobs on the same board type run sequentially — fine for a manual run.
+    runs-on: [self-hosted, visionfive2]
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
@@ -159,6 +174,13 @@ jobs:
             echo "$HOME/jdk21/bin" >> "$GITHUB_PATH"
           fi
           java -version
+
+      # Testcontainers pulls these during the suite; pulling first keeps the
+      # pull time out of the test timeouts (images stay cached on the board).
+      - name: Pre-pull Testcontainers images
+        run: |
+          docker pull postgres:16-alpine
+          docker pull alpine:3.20
 
       # Best-effort probe: record whether a system browser exists on riscv64.
       # Playwright ships no riscv64 driver, so full browser E2E stays on the
