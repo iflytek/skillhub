@@ -215,3 +215,13 @@ jobs:
         run: |
           cd server
           ./mvnw -B test
+
+      # The board's small disk fills up with the Maven repo, images and build
+      # artifacts; freeing space before the job ends keeps the runner's
+      # post-job cleanup (which failed once with disk pressure) healthy.
+      - name: Free disk space for the runner
+        if: always()
+        run: |
+          rm -rf server/*/target || true
+          docker image prune -f || true
+          df -h / | tail -1
