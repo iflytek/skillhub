@@ -21,7 +21,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Executes real behavior tasks through the docker backend and proves the
  * isolation profile inside the container: no network interfaces beyond loopback,
  * read-only root filesystem, and the workspace mounted writable. Skipped
- * silently when no docker daemon is reachable.
+ * silently when no docker daemon is reachable, or when the daemon resolves
+ * bind-mount sources against a filesystem where the workspace does not exist
+ * (CI runners whose job container shares the host daemon behave this way).
  */
 class DockerScriptRuntimeAdapterTest {
 
@@ -31,7 +33,7 @@ class DockerScriptRuntimeAdapterTest {
     private final AuthoringProperties properties = new AuthoringProperties();
 
     @BeforeAll
-    static void requireDockerWithImage() {
+    static void requireDockerWithImage() throws Exception {
         DockerScriptCommandBuilder probe = new DockerScriptCommandBuilder(new AuthoringProperties());
         Assumptions.assumeTrue(probe.available(), "docker daemon not reachable");
         try {
@@ -41,6 +43,24 @@ class DockerScriptRuntimeAdapterTest {
             }
         } catch (Exception exception) {
             Assumptions.assumeTrue(false, "alpine image unavailable: " + exception.getMessage());
+        }
+        // Round-trip a bind mount: on shared-daemon CI runners the -v source is
+        // resolved against the host filesystem and comes up empty, which is an
+        // environment limitation, not something these tests should fail on.
+        Path probeDir = Files.createTempDirectory("docker-mount-probe");
+        Path probeFile = probeDir.resolve("probe.txt");
+        Files.writeString(probeFile, "bind-mount-OK");
+        try {
+            Process roundTrip = new ProcessBuilder("docker", "run", "--rm",
+                    "-v", probeDir + ":/probe", "alpine:3.20", "cat", "/probe/probe.txt")
+                    .redirectErrorStream(true).start();
+            String output = new String(roundTrip.getInputStream().readAllBytes());
+            roundTrip.waitFor();
+            Assumptions.assumeTrue(output.contains("bind-mount-OK"),
+                    "docker bind-mounts do not round-trip on this host (shared-daemon runner?)");
+        } finally {
+            Files.deleteIfExists(probeFile);
+            Files.deleteIfExists(probeDir);
         }
     }
 

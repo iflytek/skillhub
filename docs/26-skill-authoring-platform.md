@@ -297,6 +297,11 @@ Cloud-V / 10xEngineers 提供的免费真机 GitHub runner 上（物理 VisionFi
 - **验证流程**（`scripts/riscv64-verify.sh` jar 模式，7/7 通过）：服务器在
   riscv64 用户态运行 → 健康检查通过 → 创建草稿 → 脚手架读取 → 绑定 →
   验证运行 `SUCCEEDED` → 脚本 stdout 出现在事件流（12 条事件）。
+- **全量后端测试在真机首跑（2026-10-08）**：1085 个测试中 1081 个通过，
+  仅有的 4 个失败全部来自 `DockerScriptRuntimeAdapterTest`——即上文共享
+  daemon 的 bind-mount 限制（环境问题，非架构问题）。该测试现已加入
+  bind-mount 往返假设（与"无 Docker 时静默跳过"同一模式）：在此类
+  runner 上优雅跳过，在真实 Docker 环境照常执行（本地验证 4/4 通过）。
 
 对照上面的原生清单：第 1、3 项已由此覆盖；第 2 项的平台服务在板卡上以
 riscv64 原生包运行（容器镜像的 riscv64 变体另行经 `docker manifest inspect`
