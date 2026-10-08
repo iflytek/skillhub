@@ -302,11 +302,11 @@ Cloud-V / 10xEngineers 提供的免费真机 GitHub runner 上（物理 VisionFi
   daemon 的 bind-mount 限制（环境问题，非架构问题）。该测试现已加入
   bind-mount 往返假设（与"无 Docker 时静默跳过"同一模式）：在此类
   runner 上优雅跳过，在真实 Docker 环境照常执行（本地验证 4/4 通过）。
-  复跑确认：**`BUILD SUCCESS`，1081 个测试 0 失败 0 错误**（39 分 40 秒，
-  4 个 docker 适配器测试按假设跳过）——整个后端套件在物理 RISC-V64
-  板卡上原生通过。该 run 的 job 结论因 runner 侧 checkout 收尾清理步骤
-  失败而标红（板卡磁盘压力所致的基础设施问题），测试证据以 Maven 日志
-  为准（run 37756270319 留档）。
+  复跑确认：**`BUILD SUCCESS`，1081 个测试 0 失败 0 错误**（38 分 42 秒，
+  4 个 docker 适配器测试按假设跳过），且整个 run 三 job 全绿
+  （[run 37762771959](https://github.com/zjncs/skillhub/actions/runs/37762771959)，
+  含磁盘清理步骤以规避板卡收尾清理的磁盘压力问题）。——整个后端套件
+  在物理 RISC-V64 板卡上原生通过。
 
 对照上面的原生清单：第 1、3 项已由此覆盖；第 2 项的平台服务在板卡上以
 riscv64 原生包运行（容器镜像的 riscv64 变体另行经 `docker manifest inspect`
