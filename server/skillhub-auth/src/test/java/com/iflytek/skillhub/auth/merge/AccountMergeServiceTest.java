@@ -117,6 +117,21 @@ class AccountMergeServiceTest {
     }
 
     @Test
+    void verify_rejectsInitiatorEvenWhenTheyKnowTheReturnedToken() throws Exception {
+        AccountMergeRequest request = request("usr_primary", "usr_secondary", "encoded");
+        given(mergeRequestRepository.findByIdAndPrimaryUserId(7L, "usr_primary")).willReturn(Optional.of(request));
+        given(passwordEncoder.matches("raw-token", "encoded")).willReturn(true);
+        given(userAccountRepository.findById("usr_primary"))
+            .willReturn(Optional.of(new UserAccount("usr_primary", "primary", "primary@example.com", null)));
+        given(userAccountRepository.findById("usr_secondary"))
+            .willReturn(Optional.of(new UserAccount("usr_secondary", "secondary", "secondary@example.com", null)));
+
+        assertThatThrownBy(() -> service.verify("usr_primary", 7L, "raw-token"))
+            .isInstanceOf(AuthFlowException.class);
+        assertThat(request.getStatus()).isEqualTo(AccountMergeRequest.STATUS_PENDING);
+    }
+
+    @Test
     void confirm_migratesBindingsRolesTokensAndMemberships() throws Exception {
         UserAccount primary = new UserAccount("usr_primary", "primary", "primary@example.com", null);
         UserAccount secondary = new UserAccount("usr_secondary", "secondary", "", null);
