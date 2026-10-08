@@ -301,8 +301,13 @@ Cloud-V / 10xEngineers 提供的免费真机 GitHub runner 上（物理 VisionFi
 对照上面的原生清单：第 1、3 项已由此覆盖；第 2 项的平台服务在板卡上以
 riscv64 原生包运行（容器镜像的 riscv64 变体另行经 `docker manifest inspect`
 验证：`postgres:16`/`alpine:3.20`/`eclipse-temurin:21-jre-noble` 均有，
-`redis:7` 无）；第 4（docker 执行模式重跑）、5（浏览器 E2E）待独占真机
-环境补齐。该 workflow 带 `if: github.repository == 'zjncs/skillhub'` 守卫，
+`redis:7` 无）；第 4 项（docker 执行模式重跑）在板卡 CI 上**不可验证**——
+Cloud-V 这类共享宿主 daemon 的 runner 会按宿主文件系统解析 bind-mount 源
+路径，job 容器内的工作区路径在宿主上不存在（预检往返测试留档：
+`cat: can't open '/probe/probe.txt'`），docker 执行模式的验证以本地真实
+Docker 环境的证据为准（验证事件流记录 `backend: docker`、退出码 0，且
+`DockerScriptRuntimeAdapterTest` 在真实容器中实证隔离参数）；第 5 项
+（浏览器 E2E）待独占真机环境补齐。该 workflow 带 `if: github.repository == 'zjncs/skillhub'` 守卫，
 上游仓库无此 runner，不会被排队。
 
 ### 发布管线端到端证据（2026-09-21）
