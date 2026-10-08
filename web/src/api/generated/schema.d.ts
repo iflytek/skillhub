@@ -2573,6 +2573,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/account/merge/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cli/v1/skills/{namespace}/publish": {
         parameters: {
             query?: never;
@@ -4609,6 +4625,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/account/merge/requests/{mergeRequestId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["approvalDetails"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download": {
         parameters: {
             query?: never;
@@ -5866,7 +5898,6 @@ export interface components {
         MergeVerifyRequest: {
             /** Format: int64 */
             mergeRequestId: number;
-            verificationToken: string;
         };
         MergeInitiateRequest: {
             secondaryIdentifier: string;
@@ -5884,10 +5915,13 @@ export interface components {
             /** Format: int64 */
             mergeRequestId?: number;
             secondaryUserId?: string;
-            verificationToken?: string;
             expiresAt?: string;
         };
         ConfirmMergeRequest: {
+            /** Format: int64 */
+            mergeRequestId: number;
+        };
+        CancelMergeRequest: {
             /** Format: int64 */
             mergeRequestId: number;
         };
@@ -7467,6 +7501,22 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        ApiResponseMergeApprovalDetailsResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["MergeApprovalDetailsResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        MergeApprovalDetailsResponse: {
+            /** Format: int64 */
+            mergeRequestId?: number;
+            primaryUserId?: string;
+            primaryDisplayName?: string;
+            expiresAt?: string;
         };
         ApiResponseCliResolveResponse: {
             /** Format: int32 */
@@ -12401,6 +12451,30 @@ export interface operations {
             };
         };
     };
+    cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelMergeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMessageResponse"];
+                };
+            };
+        };
+    };
     publish_3: {
         parameters: {
             query?: never;
@@ -15524,6 +15598,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePageResponseAuditLogItemResponse"];
+                };
+            };
+        };
+    };
+    approvalDetails: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mergeRequestId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMergeApprovalDetailsResponse"];
                 };
             };
         };

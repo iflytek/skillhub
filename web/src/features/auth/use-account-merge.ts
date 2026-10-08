@@ -8,9 +8,21 @@ export function useInitiateAccountMerge() {
   })
 }
 
+export function useInspectAccountMerge() {
+  return useMutation({
+    mutationFn: (mergeRequestId: number) => accountApi.getMergeApprovalDetails(mergeRequestId),
+  })
+}
+
 export function useVerifyAccountMerge() {
   return useMutation({
     mutationFn: (request: MergeVerifyRequest) => accountApi.verifyMerge(request),
+  })
+}
+
+export function useCancelAccountMerge() {
+  return useMutation({
+    mutationFn: (request: MergeConfirmRequest) => accountApi.cancelMerge(request),
   })
 }
 

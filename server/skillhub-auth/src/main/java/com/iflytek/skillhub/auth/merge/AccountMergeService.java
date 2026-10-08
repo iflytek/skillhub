@@ -16,11 +16,9 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
-import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -28,7 +26,6 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,9 +49,7 @@ public class AccountMergeService {
     private final UserRoleBindingRepository userRoleBindingRepository;
     private final ApiTokenRepository apiTokenRepository;
     private final NamespaceMemberRepository namespaceMemberRepository;
-    private final PasswordEncoder passwordEncoder;
     private final Clock clock;
-    private final SecureRandom secureRandom = new SecureRandom();
 
     public AccountMergeService(AccountMergeRequestRepository mergeRequestRepository,
                                UserAccountRepository userAccountRepository,
@@ -63,7 +58,6 @@ public class AccountMergeService {
                                UserRoleBindingRepository userRoleBindingRepository,
                                ApiTokenRepository apiTokenRepository,
                                NamespaceMemberRepository namespaceMemberRepository,
-                               PasswordEncoder passwordEncoder,
                                Clock clock) {
         this.mergeRequestRepository = mergeRequestRepository;
         this.userAccountRepository = userAccountRepository;
@@ -72,11 +66,12 @@ public class AccountMergeService {
         this.userRoleBindingRepository = userRoleBindingRepository;
         this.apiTokenRepository = apiTokenRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
-        this.passwordEncoder = passwordEncoder;
         this.clock = clock;
     }
 
-    public record InitiationResult(Long mergeRequestId, String secondaryUserId, String verificationToken, Instant expiresAt) {}
+    public record InitiationResult(Long mergeRequestId, String secondaryUserId, Instant expiresAt) {}
+
+    public record ApprovalDetails(Long mergeRequestId, String primaryUserId, String primaryDisplayName, Instant expiresAt) {}
 
     @Transactional
     public InitiationResult initiate(String primaryUserId, String secondaryIdentifier) {
@@ -84,12 +79,15 @@ public class AccountMergeService {
         UserAccount secondaryUser = resolveSecondaryUser(secondaryIdentifier);
         validateMergePair(primaryUser, secondaryUser);
 
-        if (mergeRequestRepository.existsBySecondaryUserIdAndStatus(
-            secondaryUser.getId(),
-            AccountMergeRequest.STATUS_PENDING
-        )) {
-            throw new AuthFlowException(HttpStatus.CONFLICT, "error.auth.merge.pendingExists");
-        }
+        mergeRequestRepository.findBySecondaryUserIdAndStatus(secondaryUser.getId(), AccountMergeRequest.STATUS_PENDING)
+            .ifPresent(existing -> {
+                if (existing.getTokenExpiresAt() != null && !existing.getTokenExpiresAt().isBefore(currentTime())) {
+                    throw new AuthFlowException(HttpStatus.CONFLICT, "error.auth.merge.pendingExists");
+                }
+                existing.setStatus(AccountMergeRequest.STATUS_CANCELLED);
+                existing.setVerificationToken(null);
+                mergeRequestRepository.saveAndFlush(existing);
+            });
 
         Optional<LocalCredential> primaryCredential = localCredentialRepository.findByUserId(primaryUserId);
         Optional<LocalCredential> secondaryCredential = localCredentialRepository.findByUserId(secondaryUser.getId());
@@ -97,38 +95,55 @@ public class AccountMergeService {
             throw new AuthFlowException(HttpStatus.CONFLICT, "error.auth.merge.localCredentialConflict");
         }
 
-        String rawToken = generateVerificationToken();
         AccountMergeRequest request = new AccountMergeRequest(
             primaryUserId,
             secondaryUser.getId(),
-            passwordEncoder.encode(rawToken),
+            null,
             currentTime().plus(Duration.ofMinutes(30))
         );
         request = mergeRequestRepository.save(request);
-        return new InitiationResult(request.getId(), secondaryUser.getId(), rawToken, request.getTokenExpiresAt());
+        return new InitiationResult(request.getId(), secondaryUser.getId(), request.getTokenExpiresAt());
+    }
+
+    @Transactional(readOnly = true)
+    public ApprovalDetails getApprovalDetails(String secondaryUserId, Long mergeRequestId) {
+        AccountMergeRequest request = loadPendingApproval(secondaryUserId, mergeRequestId);
+        UserAccount primaryUser = loadActiveUser(request.getPrimaryUserId());
+        return new ApprovalDetails(request.getId(), primaryUser.getId(), primaryUser.getDisplayName(), request.getTokenExpiresAt());
     }
 
     @Transactional
-    public void verify(String primaryUserId, Long mergeRequestId, String verificationToken) {
-        AccountMergeRequest request = mergeRequestRepository.findByIdAndPrimaryUserId(mergeRequestId, primaryUserId)
+    public void verify(String secondaryUserId, Long mergeRequestId) {
+        AccountMergeRequest request = loadPendingApproval(secondaryUserId, mergeRequestId, true);
+        loadActiveUser(request.getPrimaryUserId());
+        request.setStatus(AccountMergeRequest.STATUS_VERIFIED);
+        request.setTokenExpiresAt(currentTime().plus(Duration.ofMinutes(30)));
+        request.setVerificationToken(null);
+        mergeRequestRepository.save(request);
+    }
+
+    private AccountMergeRequest loadPendingApproval(String secondaryUserId, Long mergeRequestId) {
+        return loadPendingApproval(secondaryUserId, mergeRequestId, false);
+    }
+
+    private AccountMergeRequest loadPendingApproval(String secondaryUserId, Long mergeRequestId, boolean lock) {
+        AccountMergeRequest request = (lock
+            ? mergeRequestRepository.findLockedById(mergeRequestId)
+            : mergeRequestRepository.findById(mergeRequestId))
             .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.requestNotFound"));
+        if (!request.getSecondaryUserId().equals(secondaryUserId)) {
+            throw new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.requestNotFound");
+        }
         if (!AccountMergeRequest.STATUS_PENDING.equals(request.getStatus())) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.requestNotPending");
         }
         if (request.getTokenExpiresAt() == null || request.getTokenExpiresAt().isBefore(currentTime())) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.tokenExpired");
         }
-        if (!passwordEncoder.matches(verificationToken, request.getVerificationToken())) {
-            throw new AuthFlowException(HttpStatus.UNAUTHORIZED, "error.auth.merge.invalidToken");
-        }
-
-        loadActiveUser(primaryUserId);
-        UserAccount secondaryUser = userAccountRepository.findById(request.getSecondaryUserId())
-            .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.secondaryNotFound"));
-        validateMergePair(loadActiveUser(primaryUserId), secondaryUser);
-
-        request.setStatus(AccountMergeRequest.STATUS_VERIFIED);
-        mergeRequestRepository.save(request);
+        UserAccount secondaryUser = loadActiveUser(secondaryUserId);
+        UserAccount primaryUser = loadActiveUser(request.getPrimaryUserId());
+        validateMergePair(primaryUser, secondaryUser);
+        return request;
     }
 
     @Transactional
@@ -137,6 +152,9 @@ public class AccountMergeService {
             .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.requestNotFound"));
         if (!AccountMergeRequest.STATUS_VERIFIED.equals(request.getStatus())) {
             throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.requestNotVerified");
+        }
+        if (request.getTokenExpiresAt() == null || request.getTokenExpiresAt().isBefore(currentTime())) {
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.tokenExpired");
         }
 
         UserAccount primaryUser = loadActiveUser(primaryUserId);
@@ -164,6 +182,23 @@ public class AccountMergeService {
         request.setCompletedAt(currentTime());
         request.setVerificationToken(null);
         mergeRequestRepository.save(request);
+    }
+
+    @Transactional
+    public void cancel(String actorUserId, Long mergeRequestId) {
+        AccountMergeRequest request = mergeRequestRepository.findLockedById(mergeRequestId)
+            .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.requestNotFound"));
+        if (!actorUserId.equals(request.getPrimaryUserId()) && !actorUserId.equals(request.getSecondaryUserId())) {
+            throw new AuthFlowException(HttpStatus.NOT_FOUND, "error.auth.merge.requestNotFound");
+        }
+        if (AccountMergeRequest.STATUS_COMPLETED.equals(request.getStatus())) {
+            throw new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.merge.requestNotPending");
+        }
+        if (!AccountMergeRequest.STATUS_CANCELLED.equals(request.getStatus())) {
+            request.setStatus(AccountMergeRequest.STATUS_CANCELLED);
+            request.setVerificationToken(null);
+            mergeRequestRepository.save(request);
+        }
     }
 
     private UserAccount resolveSecondaryUser(String identifier) {
@@ -274,12 +309,6 @@ public class AccountMergeService {
             credential.setUserId(primaryUserId);
             localCredentialRepository.save(credential);
         });
-    }
-
-    private String generateVerificationToken() {
-        byte[] tokenBytes = new byte[24];
-        secureRandom.nextBytes(tokenBytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(tokenBytes);
     }
 
     private Instant currentTime() {

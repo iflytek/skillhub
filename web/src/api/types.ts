@@ -84,13 +84,18 @@ export interface MergeInitiateRequest {
 export interface MergeInitiateResponse {
   mergeRequestId: number
   secondaryUserId: string
-  verificationToken: string
+  expiresAt: string
+}
+
+export interface MergeApprovalDetails {
+  mergeRequestId: number
+  primaryUserId: string
+  primaryDisplayName: string
   expiresAt: string
 }
 
 export interface MergeVerifyRequest {
   mergeRequestId: number
-  verificationToken: string
 }
 
 export interface MergeConfirmRequest {

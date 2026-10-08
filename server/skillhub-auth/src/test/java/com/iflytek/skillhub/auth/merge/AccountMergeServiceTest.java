@@ -34,7 +34,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class AccountMergeServiceTest {
@@ -53,9 +52,6 @@ class AccountMergeServiceTest {
     private ApiTokenRepository apiTokenRepository;
     @Mock
     private NamespaceMemberRepository namespaceMemberRepository;
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
     private AccountMergeService service;
     private Clock clock;
 
@@ -70,7 +66,6 @@ class AccountMergeServiceTest {
             userRoleBindingRepository,
             apiTokenRepository,
             namespaceMemberRepository,
-            passwordEncoder,
             clock
         );
     }
@@ -83,52 +78,88 @@ class AccountMergeServiceTest {
         given(userAccountRepository.findById("usr_primary")).willReturn(Optional.of(primary));
         given(localCredentialRepository.findByUsernameIgnoreCase("secondary")).willReturn(Optional.of(secondaryCredential));
         given(userAccountRepository.findById("usr_secondary")).willReturn(Optional.of(secondary));
-        given(mergeRequestRepository.existsBySecondaryUserIdAndStatus("usr_secondary", AccountMergeRequest.STATUS_PENDING))
-            .willReturn(false);
+        given(mergeRequestRepository.findBySecondaryUserIdAndStatus("usr_secondary", AccountMergeRequest.STATUS_PENDING))
+            .willReturn(Optional.empty());
         given(localCredentialRepository.findByUserId("usr_primary")).willReturn(Optional.empty());
         given(localCredentialRepository.findByUserId("usr_secondary")).willReturn(Optional.of(secondaryCredential));
-        given(passwordEncoder.encode(any())).willReturn("encoded-token");
         given(mergeRequestRepository.save(any(AccountMergeRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
 
         var result = service.initiate("usr_primary", "secondary");
 
         assertThat(result.secondaryUserId()).isEqualTo("usr_secondary");
-        assertThat(result.verificationToken()).isNotBlank();
         assertThat(result.expiresAt()).isEqualTo(Instant.parse("2026-03-18T00:30:00Z"));
-        verify(mergeRequestRepository).save(any(AccountMergeRequest.class));
+        org.mockito.ArgumentCaptor<AccountMergeRequest> saved = org.mockito.ArgumentCaptor.forClass(AccountMergeRequest.class);
+        verify(mergeRequestRepository).save(saved.capture());
+        assertThat(saved.getValue().getVerificationToken()).isNull();
     }
 
     @Test
-    void verify_marksRequestVerifiedWhenTokenMatches() throws Exception {
+    void initiate_cancelsExpiredPendingRequestBeforeRetry() throws Exception {
+        UserAccount primary = new UserAccount("usr_primary", "primary", null, null);
+        UserAccount secondary = new UserAccount("usr_secondary", "secondary", null, null);
+        LocalCredential credential = new LocalCredential("usr_secondary", "secondary", "hash");
+        AccountMergeRequest expired = request("usr_primary", "usr_secondary", null);
+        expired.setTokenExpiresAt(Instant.parse("2026-03-17T23:59:00Z"));
+        given(userAccountRepository.findById("usr_primary")).willReturn(Optional.of(primary));
+        given(localCredentialRepository.findByUsernameIgnoreCase("secondary")).willReturn(Optional.of(credential));
+        given(userAccountRepository.findById("usr_secondary")).willReturn(Optional.of(secondary));
+        given(mergeRequestRepository.findBySecondaryUserIdAndStatus("usr_secondary", AccountMergeRequest.STATUS_PENDING))
+            .willReturn(Optional.of(expired));
+        given(localCredentialRepository.findByUserId("usr_primary")).willReturn(Optional.empty());
+        given(localCredentialRepository.findByUserId("usr_secondary")).willReturn(Optional.of(credential));
+        given(mergeRequestRepository.saveAndFlush(expired)).willReturn(expired);
+        given(mergeRequestRepository.save(any(AccountMergeRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+
+        service.initiate("usr_primary", "secondary");
+
+        assertThat(expired.getStatus()).isEqualTo(AccountMergeRequest.STATUS_CANCELLED);
+        verify(mergeRequestRepository).saveAndFlush(expired);
+    }
+
+    @Test
+    void verify_marksRequestVerifiedForSecondaryAccount() throws Exception {
         UserAccount primary = new UserAccount("usr_primary", "primary", "primary@example.com", null);
         UserAccount secondary = new UserAccount("usr_secondary", "secondary", "", null);
         AccountMergeRequest request = request("usr_primary", "usr_secondary", "encoded");
 
-        given(mergeRequestRepository.findByIdAndPrimaryUserId(7L, "usr_primary")).willReturn(Optional.of(request));
+        given(mergeRequestRepository.findLockedById(7L)).willReturn(Optional.of(request));
         given(userAccountRepository.findById("usr_primary")).willReturn(Optional.of(primary));
         given(userAccountRepository.findById("usr_secondary")).willReturn(Optional.of(secondary));
-        given(passwordEncoder.matches("raw-token", "encoded")).willReturn(true);
         given(mergeRequestRepository.save(any(AccountMergeRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
 
-        service.verify("usr_primary", 7L, "raw-token");
+        service.verify("usr_secondary", 7L);
 
         assertThat(request.getStatus()).isEqualTo(AccountMergeRequest.STATUS_VERIFIED);
+        assertThat(request.getTokenExpiresAt()).isEqualTo(Instant.parse("2026-03-18T00:30:00Z"));
         verify(mergeRequestRepository).save(request);
     }
 
     @Test
-    void verify_rejectsInitiatorEvenWhenTheyKnowTheReturnedToken() throws Exception {
+    void verify_rejectsInitiatorEvenWhenTheyKnowTheRequestId() throws Exception {
         AccountMergeRequest request = request("usr_primary", "usr_secondary", "encoded");
-        given(mergeRequestRepository.findByIdAndPrimaryUserId(7L, "usr_primary")).willReturn(Optional.of(request));
-        given(passwordEncoder.matches("raw-token", "encoded")).willReturn(true);
-        given(userAccountRepository.findById("usr_primary"))
-            .willReturn(Optional.of(new UserAccount("usr_primary", "primary", "primary@example.com", null)));
-        given(userAccountRepository.findById("usr_secondary"))
-            .willReturn(Optional.of(new UserAccount("usr_secondary", "secondary", "secondary@example.com", null)));
+        given(mergeRequestRepository.findLockedById(7L)).willReturn(Optional.of(request));
 
-        assertThatThrownBy(() -> service.verify("usr_primary", 7L, "raw-token"))
-            .isInstanceOf(AuthFlowException.class);
+        assertThatThrownBy(() -> service.verify("usr_primary", 7L))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.merge.requestNotFound");
         assertThat(request.getStatus()).isEqualTo(AccountMergeRequest.STATUS_PENDING);
+    }
+
+    @Test
+    void approvalDetails_showsDestinationOnlyToSecondaryAccount() throws Exception {
+        AccountMergeRequest request = request("usr_primary", "usr_secondary", null);
+        given(mergeRequestRepository.findById(7L)).willReturn(Optional.of(request));
+        given(userAccountRepository.findById("usr_primary"))
+            .willReturn(Optional.of(new UserAccount("usr_primary", "Primary Name", null, null)));
+        given(userAccountRepository.findById("usr_secondary"))
+            .willReturn(Optional.of(new UserAccount("usr_secondary", "Secondary Name", null, null)));
+
+        var details = service.getApprovalDetails("usr_secondary", 7L);
+        assertThat(details.primaryUserId()).isEqualTo("usr_primary");
+        assertThat(details.primaryDisplayName()).isEqualTo("Primary Name");
+        assertThatThrownBy(() -> service.getApprovalDetails("usr_other", 7L))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.merge.requestNotFound");
     }
 
     @Test
@@ -173,16 +204,54 @@ class AccountMergeServiceTest {
     }
 
     @Test
-    void verify_rejectsInvalidToken() throws Exception {
-        AccountMergeRequest request = request("usr_primary", "usr_secondary", "encoded");
-        given(mergeRequestRepository.findByIdAndPrimaryUserId(7L, "usr_primary")).willReturn(Optional.of(request));
-        given(passwordEncoder.matches("bad-token", "encoded")).willReturn(false);
+    void verify_rejectsExpiredApproval() throws Exception {
+        AccountMergeRequest request = request("usr_primary", "usr_secondary", null);
+        request.setTokenExpiresAt(Instant.parse("2026-03-17T23:59:00Z"));
+        given(mergeRequestRepository.findLockedById(7L)).willReturn(Optional.of(request));
 
-        assertThatThrownBy(() -> service.verify("usr_primary", 7L, "bad-token"))
+        assertThatThrownBy(() -> service.verify("usr_secondary", 7L))
             .isInstanceOf(AuthFlowException.class)
-            .hasMessageContaining("error.auth.merge.invalidToken");
+            .hasMessageContaining("error.auth.merge.tokenExpired");
 
         verify(identityBindingRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void confirm_rejectsExpiredApprovalWithoutMigratingData() throws Exception {
+        AccountMergeRequest request = request("usr_primary", "usr_secondary", null);
+        request.setStatus(AccountMergeRequest.STATUS_VERIFIED);
+        request.setTokenExpiresAt(Instant.parse("2026-03-17T23:59:00Z"));
+        given(mergeRequestRepository.findByIdAndPrimaryUserId(7L, "usr_primary")).willReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> service.confirm("usr_primary", 7L))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.merge.tokenExpired");
+        verify(identityBindingRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void cancel_allowsSecondaryAccountToRevokeApproval() throws Exception {
+        AccountMergeRequest request = request("usr_primary", "usr_secondary", null);
+        request.setStatus(AccountMergeRequest.STATUS_VERIFIED);
+        given(mergeRequestRepository.findLockedById(7L)).willReturn(Optional.of(request));
+        given(mergeRequestRepository.save(request)).willReturn(request);
+
+        service.cancel("usr_secondary", 7L);
+
+        assertThat(request.getStatus()).isEqualTo(AccountMergeRequest.STATUS_CANCELLED);
+        verify(mergeRequestRepository).save(request);
+    }
+
+    @Test
+    void cancel_rejectsUnrelatedAccountWithoutChangingState() throws Exception {
+        AccountMergeRequest request = request("usr_primary", "usr_secondary", null);
+        given(mergeRequestRepository.findLockedById(7L)).willReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> service.cancel("usr_other", 7L))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.merge.requestNotFound");
+        assertThat(request.getStatus()).isEqualTo(AccountMergeRequest.STATUS_PENDING);
+        verify(mergeRequestRepository, never()).save(any());
     }
 
     private AccountMergeRequest request(String primaryUserId, String secondaryUserId, String token) throws Exception {

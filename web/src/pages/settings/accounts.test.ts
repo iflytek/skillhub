@@ -12,7 +12,9 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/features/auth/use-account-merge', () => ({
   useInitiateAccountMerge: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useInspectAccountMerge: () => ({ mutateAsync: vi.fn(), isPending: false, data: null, reset: vi.fn() }),
   useVerifyAccountMerge: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCancelAccountMerge: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useConfirmAccountMerge: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }))
 

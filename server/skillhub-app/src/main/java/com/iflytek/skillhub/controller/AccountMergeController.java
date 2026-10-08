@@ -7,11 +7,14 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.MergeInitiateRequest;
 import com.iflytek.skillhub.dto.MergeInitiateResponse;
 import com.iflytek.skillhub.dto.MergeVerifyRequest;
+import com.iflytek.skillhub.dto.MergeApprovalDetailsResponse;
 import com.iflytek.skillhub.dto.MessageResponse;
 import com.iflytek.skillhub.exception.UnauthorizedException;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,8 +45,21 @@ public class AccountMergeController extends BaseApiController {
         return ok("response.success.created", new MergeInitiateResponse(
             result.mergeRequestId(),
             result.secondaryUserId(),
-            result.verificationToken(),
             result.expiresAt().toString()
+        ));
+    }
+
+    @GetMapping("/requests/{mergeRequestId}")
+    public ApiResponse<MergeApprovalDetailsResponse> approvalDetails(
+        @AuthenticationPrincipal PlatformPrincipal principal,
+        @PathVariable Long mergeRequestId
+    ) {
+        if (principal == null) {
+            throw new UnauthorizedException("error.auth.required");
+        }
+        var details = accountMergeService.getApprovalDetails(principal.userId(), mergeRequestId);
+        return ok("response.success.read", new MergeApprovalDetailsResponse(
+            details.mergeRequestId(), details.primaryUserId(), details.primaryDisplayName(), details.expiresAt().toString()
         ));
     }
 
@@ -55,8 +71,7 @@ public class AccountMergeController extends BaseApiController {
         }
         accountMergeService.verify(
             principal.userId(),
-            request.mergeRequestId(),
-            request.verificationToken()
+            request.mergeRequestId()
         );
         return ok("response.success.updated", new MessageResponse("Account merge verified"));
     }
@@ -71,5 +86,16 @@ public class AccountMergeController extends BaseApiController {
         return ok("response.success.updated", new MessageResponse("Account merge completed"));
     }
 
+    @PostMapping("/cancel")
+    public ApiResponse<MessageResponse> cancel(@AuthenticationPrincipal PlatformPrincipal principal,
+                                               @Valid @RequestBody CancelMergeRequest request) {
+        if (principal == null) {
+            throw new UnauthorizedException("error.auth.required");
+        }
+        accountMergeService.cancel(principal.userId(), request.mergeRequestId());
+        return ok("response.success.updated", new MessageResponse("Account merge cancelled"));
+    }
+
     public record ConfirmMergeRequest(@jakarta.validation.constraints.NotNull Long mergeRequestId) {}
+    public record CancelMergeRequest(@jakarta.validation.constraints.NotNull Long mergeRequestId) {}
 }

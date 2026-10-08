@@ -7,7 +7,7 @@ import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import {
   Star, Heart, Package, Boxes, Key, Shield, Flag, Globe,
-  UserCog, Lock, Bell, Clock, ChevronDown, ChevronRight,
+  UserCog, Lock, Bell, Clock, ChevronDown, ChevronRight, Link2,
 } from 'lucide-react'
 
 /**
@@ -38,6 +38,7 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
     items: [
       { key: 'profile', icon: UserCog, label: 'sidebar.profile', to: '/settings/profile' },
       { key: 'security', icon: Lock, label: 'sidebar.security', to: '/settings/security', passwordCapability: true },
+      { key: 'accounts', icon: Link2, label: 'sidebar.accounts', to: '/settings/accounts' },
       { key: 'notifications', icon: Bell, label: 'sidebar.notifications', to: '/settings/notifications' },
     ],
   },

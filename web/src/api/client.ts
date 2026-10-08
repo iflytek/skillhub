@@ -13,6 +13,7 @@ import type {
   LocalRegisterRequest,
   MergeInitiateRequest,
   MergeInitiateResponse,
+  MergeApprovalDetails,
   MergeVerifyRequest,
   ReviewSkillDetail,
   ReviewProgressPage,
@@ -458,8 +459,22 @@ export const accountApi = {
     })
   },
 
+  async getMergeApprovalDetails(mergeRequestId: number): Promise<MergeApprovalDetails> {
+    return fetchJson<MergeApprovalDetails>(`/api/v1/account/merge/requests/${mergeRequestId}`)
+  },
+
   async verifyMerge(request: MergeVerifyRequest): Promise<void> {
     await fetchJson<void>('/api/v1/account/merge/verify', {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
+    })
+  },
+
+  async cancelMerge(request: MergeConfirmRequest): Promise<void> {
+    await fetchJson<void>('/api/v1/account/merge/cancel', {
       method: 'POST',
       headers: await ensureCsrfHeaders({
         'Content-Type': 'application/json',
