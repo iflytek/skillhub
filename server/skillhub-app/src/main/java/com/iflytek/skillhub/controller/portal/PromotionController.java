@@ -108,4 +108,13 @@ public class PromotionController extends BaseApiController {
                                                                 @RequestAttribute("userId") String userId) {
         return ok("response.success.read", governanceWorkflowAppService.getPromotionDetail(id, userId));
     }
+
+    @GetMapping("/source/{sourceSkillId}/state")
+    public ApiResponse<com.iflytek.skillhub.domain.review.PromotionState> getPromotionSourceState(
+            @PathVariable Long sourceSkillId,
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+        return ok("response.success.read", governanceWorkflowAppService.getPromotionSourceState(
+                sourceSkillId, userId, userNsRoles));
+    }
 }

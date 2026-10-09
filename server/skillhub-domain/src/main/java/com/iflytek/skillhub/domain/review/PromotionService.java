@@ -80,6 +80,14 @@ public class PromotionService {
                                             Long targetNamespaceId, String userId,
                                             Map<Long, NamespaceRole> userNamespaceRoles,
                                             Set<String> platformRoles) {
+        return submitPromotionInternal(sourceSkillId, sourceVersionId, targetNamespaceId,
+                userId, userNamespaceRoles, platformRoles, false);
+    }
+
+    private PromotionRequest submitPromotionInternal(Long sourceSkillId, Long sourceVersionId,
+                                            Long targetNamespaceId, String userId,
+                                            Map<Long, NamespaceRole> userNamespaceRoles,
+                                            Set<String> platformRoles, boolean legacyAuth) {
         Skill sourceSkill = skillRepository.findById(sourceSkillId)
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sourceSkillId));
 
@@ -94,11 +102,16 @@ public class PromotionService {
             throw new DomainBadRequestException("promotion.version_not_published", sourceVersionId);
         }
 
+        assertSkillActive(sourceSkill);
+
         Namespace sourceNamespace = namespaceRepository.findById(sourceSkill.getNamespaceId())
                 .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
         assertNamespaceActive(sourceNamespace);
 
-        if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, platformRoles)) {
+        boolean permitted = legacyAuth
+                ? permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles)
+                : permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, platformRoles);
+        if (!permitted) {
             throw new DomainForbiddenException("promotion.submit.no_permission");
         }
 
@@ -113,12 +126,14 @@ public class PromotionService {
                 .ifPresent(existing -> {
                     throw new DomainBadRequestException("promotion.duplicate_pending", sourceVersionId);
                 });
-        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.APPROVED)
-                .ifPresent(existing -> {
-                    throw new DomainBadRequestException("promotion.already_promoted", sourceSkillId);
-                });
-
         PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
+        promotionRequestRepository.findActiveInitialBySourceSkillId(sourceSkillId)
+                .ifPresent(initial -> {
+                    Skill target = requireActiveTarget(initial, sourceSkill, targetNamespaceId);
+                    assertTargetVersionAvailable(target.getId(), sourceVersion.getVersion());
+                    request.setRequestKind(PromotionRequestKind.UPDATE);
+                    request.setTargetSkillId(target.getId());
+                });
         PromotionRequest saved = promotionRequestRepository.save(request);
         eventPublisher.publishEvent(new PromotionSubmittedEvent(
                 saved.getId(), saved.getSourceSkillId(), saved.getSourceVersionId(),
@@ -130,50 +145,8 @@ public class PromotionService {
     public PromotionRequest submitPromotion(Long sourceSkillId, Long sourceVersionId,
                                             Long targetNamespaceId, String userId,
                                             Map<Long, NamespaceRole> userNamespaceRoles) {
-        Skill sourceSkill = skillRepository.findById(sourceSkillId)
-                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sourceSkillId));
-
-        SkillVersion sourceVersion = skillVersionRepository.findById(sourceVersionId)
-                .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", sourceVersionId));
-
-        if (!sourceVersion.getSkillId().equals(sourceSkillId)) {
-            throw new DomainBadRequestException("promotion.version_skill_mismatch", sourceVersionId, sourceSkillId);
-        }
-
-        if (sourceVersion.getStatus() != SkillVersionStatus.PUBLISHED) {
-            throw new DomainBadRequestException("promotion.version_not_published", sourceVersionId);
-        }
-
-        Namespace sourceNamespace = namespaceRepository.findById(sourceSkill.getNamespaceId())
-                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
-        assertNamespaceActive(sourceNamespace);
-
-        if (!permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles)) {
-            throw new DomainForbiddenException("promotion.submit.no_permission");
-        }
-
-        Namespace targetNamespace = namespaceRepository.findById(targetNamespaceId)
-                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", targetNamespaceId));
-
-        if (targetNamespace.getType() != NamespaceType.GLOBAL) {
-            throw new DomainBadRequestException("promotion.target_not_global", targetNamespaceId);
-        }
-
-        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.PENDING)
-                .ifPresent(existing -> {
-                    throw new DomainBadRequestException("promotion.duplicate_pending", sourceVersionId);
-                });
-        promotionRequestRepository.findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.APPROVED)
-                .ifPresent(existing -> {
-                    throw new DomainBadRequestException("promotion.already_promoted", sourceSkillId);
-                });
-
-        PromotionRequest request = new PromotionRequest(sourceSkillId, sourceVersionId, targetNamespaceId, userId);
-        PromotionRequest saved = promotionRequestRepository.save(request);
-        eventPublisher.publishEvent(new PromotionSubmittedEvent(
-                saved.getId(), saved.getSourceSkillId(), saved.getSourceVersionId(),
-                saved.getSubmittedBy()));
-        return saved;
+        return submitPromotionInternal(sourceSkillId, sourceVersionId, targetNamespaceId, userId,
+                userNamespaceRoles, Set.of(), true);
     }
 
     /**
@@ -195,7 +168,8 @@ public class PromotionService {
         }
 
         int updated = promotionRequestRepository.updateStatusWithVersion(
-                promotionId, ReviewTaskStatus.APPROVED, reviewerId, comment, null, request.getVersion());
+                promotionId, ReviewTaskStatus.APPROVED, reviewerId, comment,
+                request.getTargetSkillId(), request.getVersion());
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
@@ -208,24 +182,47 @@ public class PromotionService {
         SkillVersion sourceVersion = skillVersionRepository.findById(approvedRequest.getSourceVersionId())
                 .orElseThrow(() -> new DomainNotFoundException("skill_version.not_found", approvedRequest.getSourceVersionId()));
 
-        assertTargetSkillNotExists(approvedRequest, sourceSkill);
+        if (!sourceVersion.getSkillId().equals(sourceSkill.getId())
+                || sourceVersion.getStatus() != SkillVersionStatus.PUBLISHED) {
+            throw new DomainBadRequestException("promotion.version_not_published", sourceVersion.getId());
+        }
+        assertSkillActive(sourceSkill);
+        Namespace sourceNamespace = namespaceRepository.findById(sourceSkill.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
+        assertNamespaceActive(sourceNamespace);
 
-        // Create new skill in global namespace
-        Skill newSkill = new Skill(approvedRequest.getTargetNamespaceId(), sourceSkill.getSlug(),
-                sourceSkill.getOwnerId(), SkillVisibility.PUBLIC);
-        newSkill.setDisplayName(sourceSkill.getDisplayName());
-        newSkill.setSummary(sourceSkill.getSummary());
-        newSkill.setSourceSkillId(sourceSkill.getId());
-        newSkill.setCreatedBy(reviewerId);
-        newSkill.setUpdatedBy(reviewerId);
-        try {
-            newSkill = skillRepository.save(newSkill);
-        } catch (DataIntegrityViolationException ex) {
-            throw duplicateTargetSkillConflict(sourceSkill.getSlug(), ex);
+        Skill targetSkill;
+        if (approvedRequest.getRequestKind() == PromotionRequestKind.UPDATE) {
+            PromotionRequest initial = promotionRequestRepository.findActiveInitialBySourceSkillId(sourceSkill.getId())
+                    .orElseThrow(() -> new DomainBadRequestException("promotion.target_inactive", sourceSkill.getId()));
+            targetSkill = requireActiveTarget(initial, sourceSkill, approvedRequest.getTargetNamespaceId());
+            if (!targetSkill.getId().equals(approvedRequest.getTargetSkillId())) {
+                throw new DomainBadRequestException("promotion.target_inactive", sourceSkill.getId());
+            }
+            // Serialize approval with ordinary uploads that lock target Skill before publishing.
+            entityManager.lock(targetSkill, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            assertTargetVersionAvailable(targetSkill.getId(), sourceVersion.getVersion());
+        } else {
+            if (promotionRequestRepository.findActiveInitialBySourceSkillId(sourceSkill.getId()).isPresent()) {
+                throw new DomainBadRequestException("promotion.already_promoted", sourceSkill.getId());
+            }
+            assertTargetSkillNotExists(approvedRequest, sourceSkill);
+            targetSkill = new Skill(approvedRequest.getTargetNamespaceId(), sourceSkill.getSlug(),
+                    sourceSkill.getOwnerId(), SkillVisibility.PUBLIC);
+            targetSkill.setDisplayName(sourceSkill.getDisplayName());
+            targetSkill.setSummary(sourceSkill.getSummary());
+            targetSkill.setSourceSkillId(sourceSkill.getId());
+            targetSkill.setCreatedBy(reviewerId);
+            targetSkill.setUpdatedBy(reviewerId);
+            try {
+                targetSkill = skillRepository.save(targetSkill);
+            } catch (DataIntegrityViolationException ex) {
+                throw duplicateTargetSkillConflict(sourceSkill.getSlug(), ex);
+            }
         }
 
         // Create new version copying metadata from source
-        SkillVersion newVersion = new SkillVersion(newSkill.getId(), sourceVersion.getVersion(),
+        SkillVersion newVersion = new SkillVersion(targetSkill.getId(), sourceVersion.getVersion(),
                 sourceVersion.getCreatedBy());
         newVersion.setStatus(SkillVersionStatus.PUBLISHED);
         newVersion.setPublishedAt(currentTime());
@@ -237,11 +234,16 @@ public class PromotionService {
         newVersion.setTotalSize(sourceVersion.getTotalSize());
         newVersion.setBundleReady(sourceVersion.isBundleReady());
         newVersion.setDownloadReady(sourceVersion.isDownloadReady());
-        newVersion = skillVersionRepository.save(newVersion);
+        try {
+            newVersion = skillVersionRepository.save(newVersion);
+            skillVersionRepository.flush();
+        } catch (DataIntegrityViolationException ex) {
+            throw new DomainBadRequestException("promotion.target_version_conflict", sourceVersion.getVersion());
+        }
 
         // Update skill's latest version
-        newSkill.setLatestVersionId(newVersion.getId());
-        skillRepository.save(newSkill);
+        targetSkill.setLatestVersionId(newVersion.getId());
+        skillRepository.save(targetSkill);
 
         // Copy file records (reuse storageKey)
         List<SkillFile> sourceFiles = skillFileRepository.findByVersionId(approvedRequest.getSourceVersionId());
@@ -253,11 +255,12 @@ public class PromotionService {
         skillFileRepository.saveAll(copiedFiles);
 
         // Update promotion request with target skill id
-        approvedRequest.setTargetSkillId(newSkill.getId());
+        approvedRequest.setTargetSkillId(targetSkill.getId());
+        approvedRequest.setTargetVersionId(newVersion.getId());
         PromotionRequest savedRequest = promotionRequestRepository.save(approvedRequest);
 
         eventPublisher.publishEvent(new SkillPublishedEvent(
-                newSkill.getId(), newVersion.getId(), reviewerId));
+                targetSkill.getId(), newVersion.getId(), reviewerId));
         eventPublisher.publishEvent(new PromotionApprovedEvent(
                 approvedRequest.getId(), approvedRequest.getSourceSkillId(),
                 reviewerId, approvedRequest.getSubmittedBy()));
@@ -274,13 +277,40 @@ public class PromotionService {
     }
 
     private void assertTargetSkillNotExists(PromotionRequest approvedRequest, Skill sourceSkill) {
-        skillRepository.findByNamespaceIdAndSlugAndOwnerId(
-                approvedRequest.getTargetNamespaceId(),
-                sourceSkill.getSlug(),
-                sourceSkill.getOwnerId()
-        ).ifPresent(existing -> {
-            throw duplicateTargetSkillConflict(sourceSkill.getSlug(), null);
-        });
+        for (Skill existing : skillRepository.findByNamespaceIdAndSlug(
+                approvedRequest.getTargetNamespaceId(), sourceSkill.getSlug())) {
+            if (!skillVersionRepository.findBySkillIdAndStatus(
+                            existing.getId(), SkillVersionStatus.PUBLISHED).isEmpty()) {
+                throw duplicateTargetSkillConflict(sourceSkill.getSlug(), null);
+            }
+            if (existing.getOwnerId().equals(sourceSkill.getOwnerId())) {
+                throw duplicateTargetSkillConflict(sourceSkill.getSlug(), null);
+            }
+        }
+    }
+
+    private Skill requireActiveTarget(PromotionRequest initial, Skill sourceSkill, Long targetNamespaceId) {
+        Skill target = skillRepository.findById(initial.getTargetSkillId())
+                .orElseThrow(() -> new DomainBadRequestException("promotion.target_inactive", sourceSkill.getId()));
+        if (!target.getNamespaceId().equals(targetNamespaceId)
+                || !sourceSkill.getId().equals(target.getSourceSkillId())
+                || !sourceSkill.getOwnerId().equals(target.getOwnerId())
+                || target.getStatus() != SkillStatus.ACTIVE || target.isHidden()) {
+            throw new DomainBadRequestException("promotion.target_inactive", sourceSkill.getId());
+        }
+        return target;
+    }
+
+    private void assertTargetVersionAvailable(Long targetSkillId, String version) {
+        if (skillVersionRepository.findBySkillIdAndVersion(targetSkillId, version).isPresent()) {
+            throw new DomainBadRequestException("promotion.target_version_conflict", version);
+        }
+    }
+
+    private void assertSkillActive(Skill skill) {
+        if (skill.getStatus() != SkillStatus.ACTIVE || skill.isHidden()) {
+            throw new DomainBadRequestException("promotion.source_inactive", skill.getId());
+        }
     }
 
     private DomainBadRequestException duplicateTargetSkillConflict(String slug, Exception cause) {
@@ -309,7 +339,8 @@ public class PromotionService {
         }
 
         int updated = promotionRequestRepository.updateStatusWithVersion(
-                promotionId, ReviewTaskStatus.REJECTED, reviewerId, comment, null, request.getVersion());
+                promotionId, ReviewTaskStatus.REJECTED, reviewerId, comment,
+                request.getTargetSkillId(), request.getVersion());
         if (updated == 0) {
             throw new ConcurrentModificationException("Promotion request was modified concurrently");
         }
@@ -332,6 +363,36 @@ public class PromotionService {
 
     public boolean canViewPromotion(PromotionRequest request, String userId, Set<String> platformRoles) {
         return permissionChecker.canViewPromotion(request, userId, platformRoles);
+    }
+
+    @Transactional(readOnly = true)
+    public PromotionState getSourceState(Long sourceSkillId, String userId,
+                                         Map<Long, NamespaceRole> userNamespaceRoles,
+                                         Set<String> platformRoles) {
+        Skill source = skillRepository.findById(sourceSkillId)
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sourceSkillId));
+        if (!permissionChecker.canSubmitPromotion(source, userId, userNamespaceRoles, platformRoles)) {
+            throw new DomainForbiddenException("promotion.submit.no_permission");
+        }
+        PromotionRequest pending = promotionRequestRepository
+                .findBySourceSkillIdAndStatus(sourceSkillId, ReviewTaskStatus.PENDING).orElse(null);
+        PromotionRequest initial = promotionRequestRepository.findActiveInitialBySourceSkillId(sourceSkillId)
+                .orElse(null);
+        if (initial == null) {
+            return new PromotionState(pending != null ? "PENDING" : "INITIAL", null, null,
+                    pending != null ? pending.getId() : null);
+        }
+        Skill target = skillRepository.findById(initial.getTargetSkillId())
+                .orElseThrow(() -> new DomainBadRequestException("promotion.target_inactive", sourceSkillId));
+        if (!source.getId().equals(target.getSourceSkillId())
+                || !source.getOwnerId().equals(target.getOwnerId())
+                || !initial.getTargetNamespaceId().equals(target.getNamespaceId())) {
+            throw new DomainBadRequestException("promotion.target_inactive", sourceSkillId);
+        }
+        String currentVersion = target.getLatestVersionId() == null ? null : skillVersionRepository
+                .findById(target.getLatestVersionId()).map(SkillVersion::getVersion).orElse(null);
+        return new PromotionState(pending != null ? "PENDING" : "UPDATE", target.getId(),
+                currentVersion, pending != null ? pending.getId() : null);
     }
 
     private void assertNamespaceActive(Namespace namespace) {

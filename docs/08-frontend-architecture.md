@@ -59,7 +59,7 @@
 | 页面 | 路径 | 所需角色 | 说明 |
 |------|------|---------|------|
 | 审核中心 | `/admin/reviews` | SKILL_ADMIN | 全局待审核列表 |
-| 提升审核 | `/admin/promotions` | SKILL_ADMIN | 提升到全局的申请列表 |
+| 提升审核 | `/admin/promotions` | SKILL_ADMIN | 首次提升、再次更新和撤销申请的审核与历史 |
 | 技能管理 | `/admin/skills` | SKILL_ADMIN | 隐藏/恢复技能、撤回已发布版本 |
 | 用户管理 | `/admin/users` | USER_ADMIN | 用户列表、角色分配、准入审批、封禁/解封 |
 | 审计日志 | `/admin/audit-logs` | AUDITOR | 操作日志查询 |

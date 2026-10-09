@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useApprovePromotion, usePromotionList, useRejectPromotion } from '@/features/promotion/use-promotion-list'
+import { useAdminPromotionRevocationHistory, useApprovePromotionRevocation, usePendingPromotionRevocations, useRejectPromotionRevocation } from '@/features/promotion/use-promotion-revocations'
+import { ConfirmDialog } from '@/shared/components/confirm-dialog'
+import { toast } from '@/shared/lib/toast'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
@@ -112,6 +115,7 @@ function PendingPromotionCard({
     <Card className="space-y-4 p-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 space-y-1">
+          <span className="text-xs font-semibold text-primary">{t(item.requestKind === 'UPDATE' ? 'promotions.kindUpdate' : 'promotions.kindInitial')}</span>
           <h3 className="break-words font-heading text-base font-semibold text-foreground">{item.sourceSkillDisplayName}</h3>
           <p className="break-words text-sm text-muted-foreground [overflow-wrap:anywhere]">{promotionCoordinate(item)}</p>
         </div>
@@ -124,12 +128,20 @@ function PendingPromotionCard({
       ) : null}
       <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
         <span>{t('promotions.versionTag', { version: item.sourceVersion })}</span>
+        {item.requestKind === 'UPDATE' && (
+          <span>{t('promotions.targetVersionTag', { version: item.targetCurrentVersion ?? t('promotions.emptyValue') })}</span>
+        )}
         <span>{t('promotions.submitterTag', { user: submitter })}</span>
         <span>{t('promotions.fileCountTag', { count: item.sourceVersionFileCount })}</span>
         <span>{t('promotions.packageSizeTag', { size: formatFileSize(item.sourceVersionTotalSize) })}</span>
         <span>{t('promotions.downloadCountTag', { value: formatCompactCount(item.sourceSkillDownloadCount) })}</span>
         <span>{t('promotions.starCountTag', { value: formatCompactCount(item.sourceSkillStarCount) })}</span>
       </div>
+      {item.requestKind === 'UPDATE' && (
+        <p className="rounded-lg bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+          {t('promotions.updateReviewHint')}
+        </p>
+      )}
       <Input
         placeholder={t('promotions.commentPlaceholder')}
         value={comment}
@@ -178,6 +190,110 @@ function PendingPromotionList({ page, onPageChange }: { page: number; onPageChan
         />
       ))}
       <PromotionPagination data={data} onPageChange={onPageChange} />
+    </div>
+  )
+}
+
+function PendingRevocationList() {
+  const { t, i18n } = useTranslation()
+  const { data, isLoading, error } = usePendingPromotionRevocations()
+  const approveMutation = useApprovePromotionRevocation()
+  const rejectMutation = useRejectPromotionRevocation()
+  const [commentById, setCommentById] = useState<Record<number, string>>({})
+  const [approveId, setApproveId] = useState<number | null>(null)
+  const target = data?.find((item) => item.id === approveId)
+
+  if (isLoading) return <div className="h-32 animate-shimmer rounded-xl" />
+  if (error) return <p className="text-sm text-destructive">{t('promotions.revocationLoadError')}</p>
+  if (!data?.length) return <div className="rounded-xl border border-dashed border-border/70 p-10 text-center text-muted-foreground">{t('promotions.revocationEmpty')}</div>
+
+  const handleApprove = async () => {
+    if (!target) return
+    try {
+      await approveMutation.mutateAsync({ id: target.id, comment: commentById[target.id] ?? '' })
+      setApproveId(null)
+      toast.success(t('promotions.revocationApproved'))
+    } catch (failure) {
+      toast.error(t('promotions.revocationActionError'), failure instanceof Error ? failure.message : '')
+    }
+  }
+
+  const handleReject = async (id: number) => {
+    try {
+      await rejectMutation.mutateAsync({ id, comment: commentById[id] ?? '' })
+      toast.success(t('promotions.revocationRejected'))
+    } catch (failure) {
+      toast.error(t('promotions.revocationActionError'), failure instanceof Error ? failure.message : '')
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      {data.map((item) => (
+        <Card key={item.id} className="space-y-3 p-5">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="font-semibold text-foreground">@global/{item.skillSlug}</p>
+              <p className="text-sm text-muted-foreground">{t('promotions.revocationIds', { source: item.sourceSkillId, target: item.targetSkillId })}</p>
+            </div>
+            <span className="text-sm text-muted-foreground">{formatLocalDateTime(item.submittedAt, i18n.language)}</span>
+          </div>
+          <p className="text-sm text-muted-foreground">{t('promotions.submitterTag', { user: item.submittedBy })}</p>
+          {item.reason && <p className="text-sm text-muted-foreground">{t('promotions.revocationReason', { reason: item.reason })}</p>}
+          <Input
+            aria-label={t('promotions.commentPlaceholder')}
+            placeholder={t('promotions.commentPlaceholder')}
+            value={commentById[item.id] ?? ''}
+            onChange={(event) => setCommentById((previous) => ({ ...previous, [item.id]: event.target.value }))}
+          />
+          <div className="flex flex-wrap gap-3">
+            <Button variant="destructive" onClick={() => setApproveId(item.id)} disabled={approveMutation.isPending || rejectMutation.isPending}>
+              {t('promotions.approveRevocation')}
+            </Button>
+            <Button variant="outline" onClick={() => handleReject(item.id)} disabled={approveMutation.isPending || rejectMutation.isPending}>
+              {t('promotions.rejectRevocation')}
+            </Button>
+          </div>
+        </Card>
+      ))}
+      <ConfirmDialog
+        open={approveId !== null}
+        onOpenChange={(open) => { if (!open) setApproveId(null) }}
+        title={t('promotions.revocationConfirmTitle')}
+        description={t('promotions.revocationConfirmDescription', { slug: target?.skillSlug ?? '' })}
+        confirmText={t('promotions.approveRevocation')}
+        variant="destructive"
+        onConfirm={handleApprove}
+      />
+    </div>
+  )
+}
+
+function RevocationHistoryList() {
+  const { t, i18n } = useTranslation()
+  const [page, setPage] = useState(0)
+  const { data, isLoading, error } = useAdminPromotionRevocationHistory(page, PAGE_SIZE)
+
+  if (isLoading) return <div className="h-32 animate-shimmer rounded-xl" />
+  if (error) return <p className="text-sm text-destructive">{t('promotions.revocationLoadError')}</p>
+  if (!data?.items.length) return <div className="rounded-xl border border-dashed border-border/70 p-10 text-center text-muted-foreground">{t('promotions.revocationHistoryEmpty')}</div>
+
+  const totalPages = data.size > 0 ? Math.ceil(data.total / data.size) : 0
+  return (
+    <div className="space-y-4">
+      {data.items.map((item) => (
+        <Card key={item.id} className="space-y-2 p-5 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="font-semibold text-foreground">@global/{item.skillSlug}</p>
+            <span className="text-muted-foreground">{item.reviewedAt ? formatLocalDateTime(item.reviewedAt, i18n.language) : t('promotions.emptyValue')}</span>
+          </div>
+          <p className="text-muted-foreground">{t(`promotions.revocationStatus.${item.status}`)} · {t('promotions.revocationIds', { source: item.sourceSkillId, target: item.targetSkillId })}</p>
+          <p className="text-muted-foreground">{t('promotions.revocationActors', { submitter: item.submittedBy, reviewer: item.reviewedBy ?? t('promotions.emptyValue') })}</p>
+          {item.reason && <p className="break-words text-muted-foreground">{t('promotions.revocationReason', { reason: item.reason })}</p>}
+          {item.reviewComment && <p className="break-words text-muted-foreground">{t('promotions.revocationReviewComment', { comment: item.reviewComment })}</p>}
+        </Card>
+      ))}
+      {totalPages > 1 && <Pagination page={data.page} totalPages={totalPages} onPageChange={setPage} />}
     </div>
   )
 }
@@ -255,6 +371,7 @@ function PromotionHistoryTable({
                 <TableCell>
                   <div className="min-w-0">
                     <div className="break-words font-medium text-foreground">{item.sourceSkillDisplayName}</div>
+                    <div className="text-xs text-primary">{t(item.requestKind === 'UPDATE' ? 'promotions.kindUpdate' : 'promotions.kindInitial')}</div>
                     <div className="break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">{sourceCoordinate(item)}</div>
                   </div>
                 </TableCell>
@@ -317,11 +434,19 @@ export function PromotionsPage() {
       <Tabs defaultValue="PENDING">
         <TabsList>
           <TabsTrigger value="PENDING">{t('promotions.tabPending')}</TabsTrigger>
+          <TabsTrigger value="REVOCATIONS">{t('promotions.tabRevocations')}</TabsTrigger>
+          <TabsTrigger value="REVOCATION_HISTORY">{t('promotions.tabRevocationHistory')}</TabsTrigger>
           <TabsTrigger value="APPROVED">{t('promotions.tabApproved')}</TabsTrigger>
           <TabsTrigger value="REJECTED">{t('promotions.tabRejected')}</TabsTrigger>
         </TabsList>
         <TabsContent value="PENDING" className="mt-6">
           <PendingPromotionList page={pages.PENDING} onPageChange={(page) => changePage('PENDING', page)} />
+        </TabsContent>
+        <TabsContent value="REVOCATIONS" className="mt-6">
+          <PendingRevocationList />
+        </TabsContent>
+        <TabsContent value="REVOCATION_HISTORY" className="mt-6">
+          <RevocationHistoryList />
         </TabsContent>
         <TabsContent value="APPROVED" className="mt-6">
           <PromotionHistoryTable

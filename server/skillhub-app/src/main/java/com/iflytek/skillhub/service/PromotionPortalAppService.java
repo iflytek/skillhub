@@ -7,6 +7,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.review.PromotionRequest;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.PromotionService;
+import com.iflytek.skillhub.domain.review.PromotionState;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -70,7 +71,12 @@ public class PromotionPortalAppService {
                 userId,
                 promotion.getId(),
                 auditContext,
-                AuditDetail.of("sourceSkillId", sourceSkillId, "sourceVersionId", sourceVersionId)
+                AuditDetail.builder()
+                        .put("sourceSkillId", sourceSkillId)
+                        .put("sourceVersionId", sourceVersionId)
+                        .put("requestKind", promotion.getRequestKind().name())
+                        .put("targetSkillId", promotion.getTargetSkillId())
+                        .build()
         );
         return governanceQueryRepository.getPromotionResponse(promotion);
     }
@@ -87,7 +93,15 @@ public class PromotionPortalAppService {
                 platformRoles(userId)
         );
         recordAudit("PROMOTION_APPROVE", userId, promotion.getId(), auditContext,
-                detailWithComment(comment, promotion.getSubmittedBy().equals(userId)));
+                promotion.getRequestKind() == com.iflytek.skillhub.domain.review.PromotionRequestKind.INITIAL
+                        ? detailWithComment(comment, promotion.getSubmittedBy().equals(userId))
+                        : AuditDetail.builder()
+                                .put("requestKind", promotion.getRequestKind().name())
+                                .put("targetSkillId", promotion.getTargetSkillId())
+                                .put("targetVersionId", promotion.getTargetVersionId())
+                                .put("comment", comment)
+                                .put("selfReview", promotion.getSubmittedBy().equals(userId) ? Boolean.TRUE : null)
+                                .build());
         return governanceQueryRepository.getPromotionResponse(promotion);
     }
 
@@ -150,6 +164,12 @@ public class PromotionPortalAppService {
             throw new DomainForbiddenException("promotion.no_permission");
         }
         return governanceQueryRepository.getPromotionResponse(promotion);
+    }
+
+    public PromotionState getSourceState(Long sourceSkillId, String userId,
+                                         Map<Long, NamespaceRole> userNsRoles) {
+        return promotionService.getSourceState(sourceSkillId, userId, normalizeRoles(userNsRoles),
+                platformRoles(userId));
     }
 
     private ReviewTaskStatus parsePromotionStatus(String status) {

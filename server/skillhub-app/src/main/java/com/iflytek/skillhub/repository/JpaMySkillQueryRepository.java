@@ -164,9 +164,6 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
         if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.PENDING).isPresent()) {
             return false;
         }
-        if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.APPROVED).isPresent()) {
-            return false;
-        }
         return publishedVersion != null && "PUBLISHED".equals(publishedVersion.status());
     }
 

@@ -24,6 +24,13 @@ public class PromotionRequest {
     private Long targetSkillId;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "request_kind", nullable = false)
+    private PromotionRequestKind requestKind = PromotionRequestKind.INITIAL;
+
+    @Column(name = "target_version_id")
+    private Long targetVersionId;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ReviewTaskStatus status = ReviewTaskStatus.PENDING;
 
@@ -65,6 +72,14 @@ public class PromotionRequest {
     public Long getTargetNamespaceId() { return targetNamespaceId; }
 
     public Long getTargetSkillId() { return targetSkillId; }
+
+    public PromotionRequestKind getRequestKind() { return requestKind; }
+
+    public void setRequestKind(PromotionRequestKind requestKind) { this.requestKind = requestKind; }
+
+    public Long getTargetVersionId() { return targetVersionId; }
+
+    public void setTargetVersionId(Long targetVersionId) { this.targetVersionId = targetVersionId; }
 
     public void setTargetSkillId(Long targetSkillId) {
         this.targetSkillId = targetSkillId;

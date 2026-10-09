@@ -22,6 +22,8 @@ import type {
   PromotionSortDirection,
   PromotionStatus,
   PromotionTask,
+  PromotionSourceState,
+  PromotionRevocation,
   AuditLogItem,
   SkillSummary,
   SkillReport,
@@ -1049,6 +1051,10 @@ export const reviewApi = {
 }
 
 export const promotionApi = {
+  async getSourceState(sourceSkillId: number): Promise<PromotionSourceState> {
+    return fetchJson<PromotionSourceState>(`${WEB_API_PREFIX}/promotions/source/${sourceSkillId}/state`)
+  },
+
   async submit(request: { sourceSkillId: number; sourceVersionId: number; targetNamespaceId: number }): Promise<void> {
     await fetchJson<void>(`${WEB_API_PREFIX}/promotions`, {
       method: 'POST',
@@ -1097,6 +1103,46 @@ export const promotionApi = {
       }),
       body: JSON.stringify({ comment }),
     })
+  },
+}
+
+export const promotionRevocationApi = {
+  submit(sourceSkillId: number, reason: string): Promise<PromotionRevocation> {
+    return fetchJson<PromotionRevocation>(`${WEB_API_PREFIX}/promotion-revocations`, {
+      method: 'POST',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ sourceSkillId, reason }),
+    })
+  },
+  direct(sourceSkillId: number, reason: string): Promise<PromotionRevocation> {
+    return fetchJson<PromotionRevocation>(`${WEB_API_PREFIX}/promotion-revocations/source/${sourceSkillId}/direct`, {
+      method: 'POST',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ sourceSkillId, reason }),
+    })
+  },
+  approve(id: number, comment: string): Promise<PromotionRevocation> {
+    return fetchJson<PromotionRevocation>(`${WEB_API_PREFIX}/promotion-revocations/${id}/approve`, {
+      method: 'POST',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+  reject(id: number, comment: string): Promise<PromotionRevocation> {
+    return fetchJson<PromotionRevocation>(`${WEB_API_PREFIX}/promotion-revocations/${id}/reject`, {
+      method: 'POST',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ comment }),
+    })
+  },
+  pending(): Promise<PromotionRevocation[]> {
+    return fetchJson<PromotionRevocation[]>(`${WEB_API_PREFIX}/promotion-revocations/pending`)
+  },
+  history(sourceSkillId: number): Promise<PromotionRevocation[]> {
+    return fetchJson<PromotionRevocation[]>(`${WEB_API_PREFIX}/promotion-revocations/source/${sourceSkillId}/history`)
+  },
+  adminHistory(page: number, size: number): Promise<PagedResponse<PromotionRevocation>> {
+    return fetchJson<PagedResponse<PromotionRevocation>>(`${WEB_API_PREFIX}/promotion-revocations/history?page=${page}&size=${size}`)
   },
 }
 

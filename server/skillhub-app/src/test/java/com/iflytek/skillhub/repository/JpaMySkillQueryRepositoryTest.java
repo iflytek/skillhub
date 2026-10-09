@@ -74,7 +74,6 @@ class JpaMySkillQueryRepositoryTest {
         given(skillVersionRepository.findBySkillIdAndStatus(2L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
         given(skillVersionRepository.findBySkillId(2L)).willReturn(List.of(publishedVersion, rejectedVersion));
         given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
-        given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
 
         var responses = repository.getSkillSummaries(List.of(skill), "user-1");
 
@@ -103,7 +102,6 @@ class JpaMySkillQueryRepositoryTest {
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
         given(skillVersionRepository.findBySkillIdAndStatus(3L, SkillVersionStatus.PUBLISHED)).willReturn(List.of(publishedVersion));
         given(promotionRequestRepository.findBySourceSkillIdAndStatus(3L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
-        given(promotionRequestRepository.findBySourceSkillIdAndStatus(3L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
 
         var responses = repository.getSkillSummaries(List.of(skill), "viewer-1");
 

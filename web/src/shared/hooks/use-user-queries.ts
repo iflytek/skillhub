@@ -78,8 +78,17 @@ export function useSubmitPromotion() {
     mutationFn: submitPromotion,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] })
+      queryClient.invalidateQueries({ queryKey: ['promotion-source-state'] })
       queryClient.invalidateQueries({ queryKey: ['governance'] })
       queryClient.invalidateQueries({ queryKey: ['skills'] })
     },
+  })
+}
+
+export function usePromotionSourceState(sourceSkillId: number, enabled: boolean) {
+  return useQuery({
+    queryKey: ['promotion-source-state', sourceSkillId],
+    queryFn: () => promotionApi.getSourceState(sourceSkillId),
+    enabled,
   })
 }
