@@ -127,6 +127,12 @@
       "sha256": "005b0d9afda5bb8f4dd8b8d43b2201e26f2f2792a1d7b57dc7667367d543e76e"
     },
     {
+      "slug": "triage-nda",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-10-09/42f6a62c-2cf0-44be-acff-b204ac3e5b8c/1791511392660/459104671707d8c2adf19bce0ba97c361de644643e0434a2e325ef45e11c1ca8.zip",
+      "sha256": "459104671707d8c2adf19bce0ba97c361de644643e0434a2e325ef45e11c1ca8"
+    },
+    {
       "slug": "video-frames",
       "version": "1.0.0",
       "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/4136bddd-868a-44e3-a16e-16321433733c/skillhub-builtin-skills/video-frames/1.0.0/7b4e9f1fb30b5f8318b061e1c5aeda0249d73746acc548ee4d7ff13b3d999966.zip",
