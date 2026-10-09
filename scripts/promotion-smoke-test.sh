@@ -366,6 +366,229 @@ else
   fail "Promoted global bundle should contain the source SKILL.md"
 fi
 
+# A published team update goes through a second, separate global review.
+cat > "$WORK_DIR/SKILL.md" <<EOF
+---
+name: Promotion Smoke $SLUG
+description: Promotion smoke test updated
+version: 1.1.0
+---
+Updated Body
+EOF
+python3 - "$WORK_DIR" <<'PY'
+from pathlib import Path
+import sys
+import zipfile
+
+work_dir = Path(sys.argv[1])
+with zipfile.ZipFile(work_dir / "skill-update.zip", "w", zipfile.ZIP_DEFLATED) as archive:
+    archive.write(work_dir / "SKILL.md", "SKILL.md")
+PY
+
+UPDATE_PUBLISH_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  -H "X-XSRF-TOKEN: $USER_CSRF" \
+  -F "file=@$WORK_DIR/skill-update.zip;type=application/zip" \
+  -F "visibility=PUBLIC" \
+  "$BASE_URL/api/web/skills/$SLUG/publish")"
+assert_code "Owner can submit a new team version" "$UPDATE_PUBLISH_RESPONSE" "0"
+
+UPDATE_REVIEW_READY=false
+for _ in $(seq 1 60); do
+  SKILL_DETAIL_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+    "$BASE_URL/api/web/skills/$SLUG/$SKILL_SLUG")"
+  if JSON_INPUT="$SKILL_DETAIL_RESPONSE" python3 - <<'PY'
+import json
+import os
+
+data = json.loads(os.environ["JSON_INPUT"]).get("data") or {}
+version = data.get("ownerPreviewVersion") or {}
+raise SystemExit(0 if version.get("version") == "1.1.0" and version.get("status") == "PENDING_REVIEW" else 1)
+PY
+  then
+    UPDATE_REVIEW_READY=true
+    break
+  fi
+  sleep 1
+done
+if [[ "$UPDATE_REVIEW_READY" != "true" ]]; then
+  fail "New team version did not finish scanning within 60 seconds"
+  exit 1
+fi
+pass "New team version is ready for review"
+
+UPDATE_REVIEW_ID=""
+for _ in $(seq 1 60); do
+  PENDING_REVIEWS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+    "$BASE_URL/api/web/reviews?status=PENDING&namespaceId=$NAMESPACE_ID")"
+  UPDATE_REVIEW_ID="$(JSON_INPUT="$PENDING_REVIEWS_RESPONSE" python3 - "$SKILL_SLUG" <<'PY'
+import json
+import os
+import sys
+
+items = json.loads(os.environ["JSON_INPUT"])["data"]["items"]
+match = next((item for item in items if item["skillSlug"] == sys.argv[1]), None)
+print(match["id"] if match else "")
+PY
+)"
+  if [[ -n "$UPDATE_REVIEW_ID" ]]; then
+    break
+  fi
+  sleep 1
+done
+if [[ -z "$UPDATE_REVIEW_ID" ]]; then
+  fail "New team version should become reviewable"
+  exit 1
+fi
+
+APPROVE_UPDATE_REVIEW_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/reviews/$UPDATE_REVIEW_ID/approve" \
+  -d '{"comment":"approved team update"}')"
+assert_code "Admin approves the team update first" "$APPROVE_UPDATE_REVIEW_RESPONSE" "0"
+
+TEAM_VERSIONS_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  "$BASE_URL/api/web/skills/$SLUG/$SKILL_SLUG/versions")"
+TEAM_UPDATE_VERSION_ID="$(JSON_INPUT="$TEAM_VERSIONS_RESPONSE" python3 - <<'PY'
+import json
+import os
+
+items = json.loads(os.environ["JSON_INPUT"])["data"]["items"]
+match = next((item for item in items if item["version"] == "1.1.0" and item["status"] == "PUBLISHED"), None)
+print(match["id"] if match else "")
+PY
+)"
+if [[ -z "$TEAM_UPDATE_VERSION_ID" ]]; then
+  fail "Team update must be PUBLISHED before global submission"
+  exit 1
+fi
+pass "Team update is published before global submission"
+
+SUBMIT_UPDATE_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  -H "X-XSRF-TOKEN: $USER_CSRF" -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotions" \
+  -d "{\"sourceSkillId\":$SKILL_ID,\"sourceVersionId\":$TEAM_UPDATE_VERSION_ID,\"targetNamespaceId\":$GLOBAL_NAMESPACE_ID}")"
+assert_code "Owner submits the published team version to existing global skill" "$SUBMIT_UPDATE_RESPONSE" "0"
+UPDATE_PROMOTION_ID="$(json_field "$SUBMIT_UPDATE_RESPONSE" "data.id")"
+if JSON_INPUT="$SUBMIT_UPDATE_RESPONSE" python3 - "$TARGET_SKILL_ID" <<'PY'
+import json
+import os
+import sys
+
+data = json.loads(os.environ["JSON_INPUT"])["data"]
+raise SystemExit(0 if data["requestKind"] == "UPDATE" and data["targetSkillId"] == int(sys.argv[1]) else 1)
+PY
+then
+  pass "Update request remains linked to the original global skill"
+else
+  fail "Update request should target the original global skill"
+fi
+
+APPROVE_UPDATE_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotions/$UPDATE_PROMOTION_ID/approve" \
+  -d '{"comment":"approved global update"}')"
+assert_code "Admin approves update to existing global skill" "$APPROVE_UPDATE_RESPONSE" "0"
+
+GLOBAL_VERSIONS_RESPONSE="$(curl -sS "$BASE_URL/api/web/skills/global/$SKILL_SLUG/versions")"
+if JSON_INPUT="$GLOBAL_VERSIONS_RESPONSE" python3 - <<'PY'
+import json
+import os
+
+items = json.loads(os.environ["JSON_INPUT"])["data"]["items"]
+published = {item["version"] for item in items if item["status"] == "PUBLISHED"}
+raise SystemExit(0 if {"1.0.0", "1.1.0"}.issubset(published) else 1)
+PY
+then
+  pass "Global skill retains both published versions"
+else
+  fail "Global skill should retain both published versions"
+fi
+
+SUBMIT_REVOCATION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  -H "X-XSRF-TOKEN: $USER_CSRF" -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotion-revocations" \
+  -d "{\"sourceSkillId\":$SKILL_ID,\"reason\":\"promotion smoke cleanup\"}")"
+assert_code "Owner requests revocation of the global derivative" "$SUBMIT_REVOCATION_RESPONSE" "0"
+REVOCATION_ID="$(json_field "$SUBMIT_REVOCATION_RESPONSE" "data.id")"
+
+UNAUTHORIZED_REVOCATION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  -H "X-XSRF-TOKEN: $USER_CSRF" -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotion-revocations/$REVOCATION_ID/approve" \
+  -d '{"comment":"unauthorized"}')"
+assert_code "Owner cannot approve their own revocation request" "$UNAUTHORIZED_REVOCATION_RESPONSE" "403"
+
+APPROVE_REVOCATION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotion-revocations/$REVOCATION_ID/approve" \
+  -d '{"comment":"approved revocation"}')"
+assert_code "Admin approves global revocation" "$APPROVE_REVOCATION_RESPONSE" "0"
+
+REVOKED_GLOBAL_STATUS="$(curl -sS -o "$WORK_DIR/revoked-global.json" -w '%{http_code}' \
+  "$BASE_URL/api/web/skills/global/$SKILL_SLUG")"
+if [[ "$REVOKED_GLOBAL_STATUS" == "400" || "$REVOKED_GLOBAL_STATUS" == "404" ]] \
+    && JSON_INPUT="$(cat "$WORK_DIR/revoked-global.json")" python3 - <<'PY'
+import json
+import os
+
+response = json.loads(os.environ["JSON_INPUT"])
+raise SystemExit(0 if response.get("code") in (400, 404)
+                 and response.get("data") is None
+                 and "not found" in response.get("msg", "").lower() else 1)
+PY
+then
+  pass "Revoked global skill detail is unavailable"
+else
+  fail "Revoked global skill detail should be unavailable (got HTTP $REVOKED_GLOBAL_STATUS)"
+fi
+
+TEAM_BUNDLE="$WORK_DIR/team-update.zip"
+TEAM_DOWNLOAD_STATUS="$(curl -sS -L -o "$TEAM_BUNDLE" -w '%{http_code}' \
+  -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" \
+  "$BASE_URL/api/web/skills/$SLUG/$SKILL_SLUG/versions/1.1.0/download")"
+if [[ "$TEAM_DOWNLOAD_STATUS" == "200" ]] && python3 - "$TEAM_BUNDLE" <<'PY'
+import sys
+import zipfile
+
+with zipfile.ZipFile(sys.argv[1]) as archive:
+    content = archive.read("SKILL.md").decode("utf-8")
+raise SystemExit(0 if "Updated Body" in content else 1)
+PY
+then
+  pass "Team source files remain downloadable after revocation"
+else
+  fail "Team source files must remain readable after global revocation"
+fi
+
+REPROMOTION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-user" -b "$USER_COOKIE" -c "$USER_COOKIE" \
+  -H "X-XSRF-TOKEN: $USER_CSRF" -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotions" \
+  -d "{\"sourceSkillId\":$SKILL_ID,\"sourceVersionId\":$TEAM_UPDATE_VERSION_ID,\"targetNamespaceId\":$GLOBAL_NAMESPACE_ID}")"
+assert_code "Owner can submit a new initial promotion after revocation" "$REPROMOTION_RESPONSE" "0"
+REPROMOTION_ID="$(json_field "$REPROMOTION_RESPONSE" "data.id")"
+if [[ "$(json_field "$REPROMOTION_RESPONSE" "data.requestKind")" == "INITIAL" ]]; then
+  pass "Re-promotion starts a new application instead of restoring the old target"
+else
+  fail "Re-promotion should start a new initial application"
+fi
+
+APPROVE_REPROMOTION_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotions/$REPROMOTION_ID/approve" \
+  -d '{"comment":"approved re-promotion"}')"
+assert_code "Admin can approve re-promotion using the released address" "$APPROVE_REPROMOTION_RESPONSE" "0"
+NEW_TARGET_SKILL_ID="$(json_field "$APPROVE_REPROMOTION_RESPONSE" "data.targetSkillId")"
+if [[ "$NEW_TARGET_SKILL_ID" != "$TARGET_SKILL_ID" ]]; then
+  pass "Re-promotion creates a new global skill ID"
+else
+  fail "Re-promotion must not restore the deleted global skill ID"
+fi
+
+DIRECT_REVOKE_RESPONSE="$(curl -sS -H "X-Mock-User-Id: local-admin" -b "$ADMIN_COOKIE" -c "$ADMIN_COOKIE" \
+  -H "X-XSRF-TOKEN: $ADMIN_CSRF" -H "Content-Type: application/json" \
+  -X POST "$BASE_URL/api/web/promotion-revocations/source/$SKILL_ID/direct" \
+  -d '{"reason":"promotion smoke cleanup after re-promotion"}')"
+assert_code "Admin can directly revoke the new global derivative" "$DIRECT_REVOKE_RESPONSE" "0"
+
 echo
 echo "Results: $PASS passed, $FAIL failed"
 if [[ "$FAIL" -ne 0 ]]; then

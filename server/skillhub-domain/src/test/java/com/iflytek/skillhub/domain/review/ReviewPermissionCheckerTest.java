@@ -202,6 +202,13 @@ class ReviewPermissionCheckerTest {
     }
 
     @Test
+    void removedTeamAdminCannotSubmitPromotionForForeignSkill() {
+        Skill sourceSkill = new Skill(10L, "skill-a", "user-2", SkillVisibility.PUBLIC);
+        assertFalse(checker.canSubmitPromotion(sourceSkill, "user-1", Map.of(), Set.of()));
+        assertTrue(checker.canSubmitPromotion(sourceSkill, "user-1", Map.of(), Set.of("SKILL_ADMIN")));
+    }
+
+    @Test
     void submitterCanReadOwnPromotion() {
         PromotionRequest req = new PromotionRequest(1L, 1L, 1L, "user-1");
         assertTrue(checker.canReadPromotion(req, "user-1", Set.of()));

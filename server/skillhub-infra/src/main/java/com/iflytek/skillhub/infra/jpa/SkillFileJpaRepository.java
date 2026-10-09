@@ -15,4 +15,5 @@ public interface SkillFileJpaRepository extends JpaRepository<SkillFile, Long>, 
     List<SkillFile> findByVersionId(Long versionId);
     List<SkillFile> findByVersionIdIn(List<Long> versionIds);
     void deleteByVersionId(Long versionId);
+    boolean existsByStorageKeyAndVersionIdNotIn(String storageKey, List<Long> versionIds);
 }

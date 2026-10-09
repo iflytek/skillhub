@@ -933,9 +933,6 @@ public class SkillQueryService {
         if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.PENDING).isPresent()) {
             return false;
         }
-        if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.APPROVED).isPresent()) {
-            return false;
-        }
         return canManageRestrictedSkill(skill, currentUserId, userNsRoles);
     }
 

@@ -7,6 +7,7 @@ import com.iflytek.skillhub.domain.report.SkillReportRepository;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.SkillFileRepository;
@@ -88,15 +89,31 @@ public class SkillHardDeleteService {
 
     @Transactional
     public void hardDeleteSkill(Skill skill, String namespaceSlug, String actorUserId, String clientIp, String userAgent) {
+        if (skill.getSourceSkillId() != null
+                || promotionRequestRepository.findActiveInitialBySourceSkillId(skill.getId()).isPresent()) {
+            throw new DomainBadRequestException("promotion.revocation.required");
+        }
+        deleteSkill(skill, namespaceSlug, actorUserId, clientIp, userAgent, false);
+    }
+
+    /** Deletes a revoked global derivative while retaining its promotion and revocation history. */
+    @Transactional
+    public void hardDeleteRevokedPromotionTarget(Skill skill, String namespaceSlug,
+                                                 String actorUserId, String clientIp, String userAgent) {
+        deleteSkill(skill, namespaceSlug, actorUserId, clientIp, userAgent, true);
+    }
+
+    private void deleteSkill(Skill skill, String namespaceSlug, String actorUserId,
+                             String clientIp, String userAgent, boolean preservePromotionHistory) {
         List<SkillVersion> versions = skillVersionRepository.findBySkillId(skill.getId());
         List<Long> versionIds = versions.stream().map(SkillVersion::getId).toList();
 
         List<String> storageKeys = new ArrayList<>();
         for (SkillVersion version : versions) {
             List<SkillFile> files = skillFileRepository.findByVersionId(version.getId());
-            files.stream()
-                    .map(SkillFile::getStorageKey)
+            files.stream().map(SkillFile::getStorageKey)
                     .filter(key -> key != null && !key.isBlank())
+                    .filter(key -> !skillFileRepository.existsByStorageKeyAndVersionIdNotIn(key, versionIds))
                     .forEach(storageKeys::add);
             storageKeys.add(buildBundleStorageKey(skill.getId(), version.getId()));
         }
@@ -109,7 +126,9 @@ public class SkillHardDeleteService {
 
         // Also removes detached historical attempts whose replaced skill version no longer exists.
         reviewTaskRepository.deleteBySkillId(skill.getId());
-        promotionRequestRepository.deleteBySourceSkillIdOrTargetSkillId(skill.getId(), skill.getId());
+        if (!preservePromotionHistory) {
+            promotionRequestRepository.deleteBySourceSkillIdOrTargetSkillId(skill.getId(), skill.getId());
+        }
         skillTagRepository.deleteBySkillId(skill.getId());
         skillStarRepository.deleteBySkillId(skill.getId());
         skillRatingRepository.deleteBySkillId(skill.getId());
@@ -125,7 +144,7 @@ public class SkillHardDeleteService {
 
         auditLogService.record(
                 actorUserId,
-                "DELETE_SKILL_HARD",
+                preservePromotionHistory ? "REVOKE_PROMOTION_TARGET" : "DELETE_SKILL_HARD",
                 "SKILL",
                 skill.getId(),
                 null,

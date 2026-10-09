@@ -176,7 +176,6 @@ class MySkillAppServiceTest {
         given(skillVersionRepository.findBySkillId(2L)).willReturn(List.of(publishedVersion));
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(namespace));
         given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.PENDING)).willReturn(Optional.empty());
-        given(promotionRequestRepository.findBySourceSkillIdAndStatus(2L, ReviewTaskStatus.APPROVED)).willReturn(Optional.empty());
 
         var skills = service.listMySkills("user-1", 0, 10);
 

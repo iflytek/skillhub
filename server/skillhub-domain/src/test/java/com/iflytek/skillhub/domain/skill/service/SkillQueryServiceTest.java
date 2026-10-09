@@ -1051,7 +1051,6 @@ class SkillQueryServiceTest {
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
         when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING)).thenReturn(Optional.empty());
-        when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.APPROVED)).thenReturn(Optional.empty());
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
 
@@ -1090,7 +1089,7 @@ class SkillQueryServiceTest {
     }
 
     @Test
-    void testGetSkillDetail_ShouldHidePromotionWhenSkillAlreadyPromoted() throws Exception {
+    void testGetSkillDetail_ShouldAllowSubmittingAnotherVersionAfterInitialPromotion() throws Exception {
         String namespaceSlug = "team-ns";
         String skillSlug = "team-skill";
         String userId = "owner-1";
@@ -1111,12 +1110,10 @@ class SkillQueryServiceTest {
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
         when(skillVersionRepository.findById(11L)).thenReturn(Optional.of(published));
         when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.PENDING)).thenReturn(Optional.empty());
-        when(promotionRequestRepository.findBySourceSkillIdAndStatus(1L, ReviewTaskStatus.APPROVED))
-                .thenReturn(Optional.of(mock(com.iflytek.skillhub.domain.review.PromotionRequest.class)));
 
         SkillQueryService.SkillDetailDTO result = service.getSkillDetail(namespaceSlug, skillSlug, userId, userNsRoles);
 
-        assertFalse(result.canSubmitPromotion());
+        assertTrue(result.canSubmitPromotion());
     }
 
     @Test

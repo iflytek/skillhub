@@ -9,6 +9,7 @@ import com.iflytek.skillhub.dto.PromotionResponseDto;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.repository.GovernanceQueryRepository;
 import java.lang.reflect.Field;
+import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -56,8 +57,9 @@ class PromotionPortalAppServiceTest {
     @Test
     void approvePromotion_recordsSelfReviewAuditDetailForSuperAdminSelfApproval() {
         PromotionRequest promotion = promotionRequest(PROMOTION_ID, SUPER_ADMIN_ID);
+        when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(promotion));
         when(rbacService.getUserRoleCodes(SUPER_ADMIN_ID)).thenReturn(Set.of("SUPER_ADMIN"));
-        when(promotionService.approvePromotion(PROMOTION_ID, SUPER_ADMIN_ID, "ship", Set.of("SUPER_ADMIN")))
+        when(promotionService.approvePromotion(PROMOTION_ID, SUPER_ADMIN_ID, "ship", Set.of("SUPER_ADMIN"), Set.of("SUPER_ADMIN")))
                 .thenReturn(promotion);
         when(governanceQueryRepository.getPromotionResponse(promotion)).thenReturn(response(promotion));
 
@@ -110,8 +112,10 @@ class PromotionPortalAppServiceTest {
     @Test
     void approvePromotion_keepsExistingAuditDetailForReviewerApprovingOthersPromotion() {
         PromotionRequest promotion = promotionRequest(PROMOTION_ID, SUBMITTER_ID);
+        when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(promotion));
         when(rbacService.getUserRoleCodes(REVIEWER_ID)).thenReturn(Set.of("SKILL_ADMIN"));
-        when(promotionService.approvePromotion(PROMOTION_ID, REVIEWER_ID, "ship", Set.of("SKILL_ADMIN")))
+        when(rbacService.getUserRoleCodes(SUBMITTER_ID)).thenReturn(Set.of());
+        when(promotionService.approvePromotion(PROMOTION_ID, REVIEWER_ID, "ship", Set.of("SKILL_ADMIN"), Set.of()))
                 .thenReturn(promotion);
         when(governanceQueryRepository.getPromotionResponse(promotion)).thenReturn(response(promotion));
 
@@ -141,8 +145,10 @@ class PromotionPortalAppServiceTest {
         // failed after the promotion had already been approved.
         String comment = "looks good\nbut rename it \"foo\"\tfirst\\done";
         PromotionRequest promotion = promotionRequest(PROMOTION_ID, SUBMITTER_ID);
+        when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(promotion));
         when(rbacService.getUserRoleCodes(REVIEWER_ID)).thenReturn(Set.of("SKILL_ADMIN"));
-        when(promotionService.approvePromotion(PROMOTION_ID, REVIEWER_ID, comment, Set.of("SKILL_ADMIN")))
+        when(rbacService.getUserRoleCodes(SUBMITTER_ID)).thenReturn(Set.of());
+        when(promotionService.approvePromotion(PROMOTION_ID, REVIEWER_ID, comment, Set.of("SKILL_ADMIN"), Set.of()))
                 .thenReturn(promotion);
         when(governanceQueryRepository.getPromotionResponse(promotion)).thenReturn(response(promotion));
 

@@ -312,8 +312,16 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 |------|------|------|
 | GET | `/api/v1/promotions` | 待审核提升申请列表（需 `SKILL_ADMIN` / `SUPER_ADMIN`；路由不在 `/admin/*` 下） |
 | GET | `/api/v1/promotions/{id}` | 提升申请详情（提交人本人或 `SKILL_ADMIN` / `SUPER_ADMIN` 可读） |
+| GET | `/api/v1/promotions/source/{sourceSkillId}/state` | 来源团队技能的提升状态和关联全局版本（服务端校验来源管理权限） |
 | POST | `/api/v1/promotions/{id}/approve` | 通过提升申请（需 `SKILL_ADMIN` / `SUPER_ADMIN`） |
 | POST | `/api/v1/promotions/{id}/reject` | 拒绝提升申请（需 `SKILL_ADMIN` / `SUPER_ADMIN`） |
+| GET | `/api/v1/promotion-revocations/pending` | 待审撤销申请（需平台技能管理员） |
+| GET | `/api/v1/promotion-revocations/history?page=0&size=20` | 已审核撤销申请历史，服务端分页（需平台技能管理员） |
+| GET | `/api/v1/promotion-revocations/{id}` | 撤销申请详情（提交人或平台技能管理员） |
+| GET | `/api/v1/promotion-revocations/source/{sourceSkillId}/history` | 来源技能的撤销申请历史（按来源权限读取） |
+| POST | `/api/v1/promotion-revocations/{id}/approve` | 审核通过撤销并删除全局派生技能 |
+| POST | `/api/v1/promotion-revocations/{id}/reject` | 拒绝撤销申请 |
+| POST | `/api/v1/promotion-revocations/source/{sourceSkillId}/direct` | 平台技能管理员直接撤销，仍写申请及审计 |
 | POST | `/api/v1/admin/skills/{id}/hide` | 隐藏技能（仅 `SUPER_ADMIN`） |
 | POST | `/api/v1/admin/skills/{id}/unhide` | 恢复技能（仅 `SUPER_ADMIN`） |
 | POST | `/api/v1/admin/skills/versions/{versionId}/yank` | 撤回已发布版本（`SKILL_ADMIN` / `SUPER_ADMIN`） |
@@ -350,7 +358,8 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 | GET | `/api/v1/reviews?namespaceId={id}` | 该空间待审核列表 |
 | POST | `/api/v1/reviews/{id}/approve` | 空间管理员审核通过 |
 | POST | `/api/v1/reviews/{id}/reject` | 空间管理员审核拒绝 |
-| POST | `/api/v1/promotions` | 申请提升到全局 |
+| POST | `/api/v1/promotions` | 首次提升或再次提交已发布团队版本；后者自动关联原全局技能，均需平台审核 |
+| POST | `/api/v1/promotion-revocations` | 来源 owner 或 namespace 管理员申请撤销提升 |
 
 ## 7.8 `latest` 语义说明
 
