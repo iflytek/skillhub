@@ -216,13 +216,17 @@ class PromotionServiceTest {
         void shouldThrowWhenVersionNotPublished() {
             Skill sourceSkill = createSourceSkill();
             SkillVersion sv = createPublishedVersion();
-            sv.setStatus(SkillVersionStatus.DRAFT);
 
             when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(sourceSkill));
             when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sv));
 
-            assertThrows(DomainBadRequestException.class,
-                    () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of()));
+            for (SkillVersionStatus status : List.of(SkillVersionStatus.DRAFT,
+                    SkillVersionStatus.PENDING_REVIEW, SkillVersionStatus.REJECTED, SkillVersionStatus.YANKED)) {
+                sv.setStatus(status);
+                assertThrows(DomainBadRequestException.class,
+                        () -> promotionService.submitPromotion(SOURCE_SKILL_ID, SOURCE_VERSION_ID,
+                                TARGET_NAMESPACE_ID, USER_ID, Map.of()));
+            }
         }
 
         @Test
@@ -742,11 +746,16 @@ class PromotionServiceTest {
             when(promotionRequestRepository.findActiveInitialBySourceSkillId(SOURCE_SKILL_ID))
                     .thenReturn(Optional.of(initialLink()));
             when(skillRepository.findById(NEW_SKILL_ID)).thenReturn(Optional.of(linkedTarget()));
+            SkillVersion occupied = new SkillVersion(NEW_SKILL_ID, version.getVersion(), USER_ID);
             when(skillVersionRepository.findBySkillIdAndVersion(NEW_SKILL_ID, version.getVersion()))
-                    .thenReturn(Optional.of(new SkillVersion(NEW_SKILL_ID, version.getVersion(), USER_ID)));
+                    .thenReturn(Optional.of(occupied));
 
-            assertThrows(DomainBadRequestException.class, () -> promotionService.submitPromotion(
-                    SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of()));
+            for (SkillVersionStatus status : List.of(SkillVersionStatus.DRAFT,
+                    SkillVersionStatus.PENDING_REVIEW, SkillVersionStatus.PUBLISHED)) {
+                occupied.setStatus(status);
+                assertThrows(DomainBadRequestException.class, () -> promotionService.submitPromotion(
+                        SOURCE_SKILL_ID, SOURCE_VERSION_ID, TARGET_NAMESPACE_ID, USER_ID, Map.of()));
+            }
             verify(promotionRequestRepository, never()).save(any(PromotionRequest.class));
         }
 
@@ -821,6 +830,39 @@ class PromotionServiceTest {
                     NEW_SKILL_ID, pending.getVersion());
             verify(skillRepository, times(1)).save(target);
             verify(entityManager).lock(target, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+        }
+
+        @Test
+        void rejectsUpdateApprovalWhenGlobalVersionWasOccupiedAfterSubmission() {
+            PromotionRequest pending = createPendingPromotion();
+            pending.setRequestKind(PromotionRequestKind.UPDATE);
+            pending.setTargetSkillId(NEW_SKILL_ID);
+            PromotionRequest approved = approvedPromotion(pending, "approved");
+            approved.setRequestKind(PromotionRequestKind.UPDATE);
+            approved.setTargetSkillId(NEW_SKILL_ID);
+            Skill target = linkedTarget();
+            SkillVersion sourceVersion = createPublishedVersion();
+            when(promotionRequestRepository.findById(PROMOTION_ID))
+                    .thenReturn(Optional.of(pending), Optional.of(approved));
+            when(permissionChecker.canReviewPromotion(pending, REVIEWER_ID, Set.of("SKILL_ADMIN")))
+                    .thenReturn(true);
+            when(promotionRequestRepository.updateStatusWithVersion(
+                    PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "approved",
+                    NEW_SKILL_ID, pending.getVersion())).thenReturn(1);
+            when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(createSourceSkill()));
+            when(skillVersionRepository.findById(SOURCE_VERSION_ID)).thenReturn(Optional.of(sourceVersion));
+            when(promotionRequestRepository.findActiveInitialBySourceSkillId(SOURCE_SKILL_ID))
+                    .thenReturn(Optional.of(initialLink()));
+            when(skillRepository.findById(NEW_SKILL_ID)).thenReturn(Optional.of(target));
+            when(skillVersionRepository.findBySkillIdAndVersion(NEW_SKILL_ID, sourceVersion.getVersion()))
+                    .thenReturn(Optional.of(new SkillVersion(NEW_SKILL_ID, sourceVersion.getVersion(), USER_ID)));
+
+            DomainBadRequestException error = assertThrows(DomainBadRequestException.class,
+                    () -> promotionService.approvePromotion(PROMOTION_ID, REVIEWER_ID, "approved",
+                            Set.of("SKILL_ADMIN"), Set.of()));
+            assertEquals("promotion.target_version_conflict", error.messageCode());
+            verify(entityManager).lock(target, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
+            verify(skillVersionRepository, never()).save(any(SkillVersion.class));
         }
     }
 
