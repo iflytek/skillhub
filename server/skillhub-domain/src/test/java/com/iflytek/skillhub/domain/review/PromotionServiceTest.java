@@ -732,6 +732,8 @@ class PromotionServiceTest {
             approved.setRequestKind(PromotionRequestKind.UPDATE);
             approved.setTargetSkillId(NEW_SKILL_ID);
             Skill target = linkedTarget();
+            target.setDisplayName("Independently updated global name");
+            target.setSummary("Independently updated global summary");
             // The global skill may have advanced independently. Publication order, not
             // numeric version order, determines the latest version after approval.
             target.setLatestVersionId(999L);
@@ -760,6 +762,8 @@ class PromotionServiceTest {
             assertEquals(NEW_SKILL_ID, result.getTargetSkillId());
             assertEquals(NEW_VERSION_ID, result.getTargetVersionId());
             assertEquals(NEW_VERSION_ID, target.getLatestVersionId());
+            assertEquals("My Skill", target.getDisplayName());
+            assertEquals("A test skill", target.getSummary());
             verify(promotionRequestRepository).updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.APPROVED, REVIEWER_ID, "approved",
                     NEW_SKILL_ID, pending.getVersion());

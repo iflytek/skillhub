@@ -202,6 +202,8 @@ public class PromotionService {
             // Serialize approval with ordinary uploads that lock target Skill before publishing.
             entityManager.lock(targetSkill, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
             assertTargetVersionAvailable(targetSkill.getId(), sourceVersion.getVersion());
+            targetSkill.setDisplayName(sourceSkill.getDisplayName());
+            targetSkill.setSummary(sourceSkill.getSummary());
         } else {
             if (promotionRequestRepository.findActiveInitialBySourceSkillId(sourceSkill.getId()).isPresent()) {
                 throw new DomainBadRequestException("promotion.already_promoted", sourceSkill.getId());

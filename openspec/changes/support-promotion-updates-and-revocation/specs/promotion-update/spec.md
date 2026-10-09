@@ -10,6 +10,7 @@ An authorized source owner or source namespace administrator SHALL be able to su
 - **WHEN** an authorized user submits the version and a platform reviewer approves it
 - **THEN** the same global Skill ID gets a new published version with the team's version string and source-version provenance
 - **AND** the previous global versions remain unchanged
+- **AND** the global skill's display name and summary reflect the source skill at approval time
 
 #### Scenario: Team version is not published
 

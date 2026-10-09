@@ -432,13 +432,15 @@ export function PromotionsPage() {
     <div className="space-y-8 animate-fade-up">
       <DashboardPageHeader title={t('promotions.title')} subtitle={t('promotions.subtitle')} />
       <Tabs defaultValue="PENDING">
-        <TabsList>
-          <TabsTrigger value="PENDING">{t('promotions.tabPending')}</TabsTrigger>
-          <TabsTrigger value="REVOCATIONS">{t('promotions.tabRevocations')}</TabsTrigger>
-          <TabsTrigger value="REVOCATION_HISTORY">{t('promotions.tabRevocationHistory')}</TabsTrigger>
-          <TabsTrigger value="APPROVED">{t('promotions.tabApproved')}</TabsTrigger>
-          <TabsTrigger value="REJECTED">{t('promotions.tabRejected')}</TabsTrigger>
-        </TabsList>
+        <div className="max-w-full overflow-x-auto">
+          <TabsList>
+            <TabsTrigger value="PENDING">{t('promotions.tabPending')}</TabsTrigger>
+            <TabsTrigger value="REVOCATIONS">{t('promotions.tabRevocations')}</TabsTrigger>
+            <TabsTrigger value="REVOCATION_HISTORY">{t('promotions.tabRevocationHistory')}</TabsTrigger>
+            <TabsTrigger value="APPROVED">{t('promotions.tabApproved')}</TabsTrigger>
+            <TabsTrigger value="REJECTED">{t('promotions.tabRejected')}</TabsTrigger>
+          </TabsList>
+        </div>
         <TabsContent value="PENDING" className="mt-6">
           <PendingPromotionList page={pages.PENDING} onPageChange={(page) => changePage('PENDING', page)} />
         </TabsContent>
