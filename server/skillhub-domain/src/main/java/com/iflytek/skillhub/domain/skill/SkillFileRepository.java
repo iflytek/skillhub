@@ -11,4 +11,5 @@ public interface SkillFileRepository {
     SkillFile save(SkillFile file);
     <S extends SkillFile> List<S> saveAll(Iterable<S> files);
     void deleteByVersionId(Long versionId);
+    boolean existsByStorageKeyAndVersionIdNotIn(String storageKey, List<Long> versionIds);
 }

@@ -23,6 +23,9 @@ public interface PromotionRequestJpaRepository extends JpaRepository<PromotionRe
 
     Optional<PromotionRequest> findBySourceSkillIdAndStatus(Long sourceSkillId, ReviewTaskStatus status);
 
+    @Query("SELECT p FROM PromotionRequest p WHERE p.sourceSkillId = :sourceSkillId AND p.requestKind = com.iflytek.skillhub.domain.review.PromotionRequestKind.INITIAL AND p.status = com.iflytek.skillhub.domain.review.ReviewTaskStatus.APPROVED AND p.targetSkillId IS NOT NULL")
+    Optional<PromotionRequest> findActiveInitialBySourceSkillId(@Param("sourceSkillId") Long sourceSkillId);
+
     Page<PromotionRequest> findByStatus(ReviewTaskStatus status, Pageable pageable);
 
     @Query(
@@ -63,7 +66,7 @@ public interface PromotionRequestJpaRepository extends JpaRepository<PromotionRe
         SET p.status = :status,
             p.reviewedBy = :reviewedBy,
             p.reviewComment = :reviewComment,
-            p.targetSkillId = :targetSkillId,
+            p.targetSkillId = COALESCE(:targetSkillId, p.targetSkillId),
             p.reviewedAt = CURRENT_TIMESTAMP,
             p.version = p.version + 1
         WHERE p.id = :id AND p.version = :expectedVersion

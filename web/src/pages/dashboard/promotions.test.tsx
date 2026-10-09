@@ -6,10 +6,15 @@ import type { PromotionStatus, PromotionTask } from '@/api/types'
 const mocks = vi.hoisted(() => ({
   approveMutate: vi.fn(),
   rejectMutate: vi.fn(),
+  approveRevocation: vi.fn(),
+  rejectRevocation: vi.fn(),
+  pendingRevocations: vi.fn(),
+  revocationHistory: vi.fn(),
   usePromotionList: vi.fn(),
   paginationProps: [] as Array<{ page: number; totalPages: number; onPageChange: (page: number) => void }>,
   translations: {
     'promotions.approve': 'Approve',
+    'promotions.approveRevocation': 'Approve revocation',
     'promotions.colReviewComment': 'Review Comment',
     'promotions.colReviewedAt': 'Reviewed At',
     'promotions.colReviewer': 'Reviewer',
@@ -21,9 +26,20 @@ const mocks = vi.hoisted(() => ({
     'promotions.empty': 'No promotion requests',
     'promotions.emptyValue': '-',
     'promotions.fileCountTag': '{{count}} files',
+    'promotions.kindInitial': 'Initial promotion',
+    'promotions.kindUpdate': 'Update global skill',
+    'promotions.targetVersionTag': 'Current global v{{version}}',
+    'promotions.updateReviewHint': 'Approval adds a version to the existing global skill.',
     'promotions.historyTableLabel': 'Promotion history',
     'promotions.packageSizeTag': '{{size}}',
     'promotions.reject': 'Reject',
+    'promotions.rejectRevocation': 'Reject revocation',
+    'promotions.revocationConfirmTitle': 'Confirm revocation approval',
+    'promotions.revocationConfirmDescription': 'Approval deletes @global/{{slug}}.',
+    'promotions.revocationIds': 'Source skill #{{source}} · Global skill #{{target}}',
+    'promotions.revocationReason': 'Reason: {{reason}}',
+    'promotions.revocationActors': 'Requested by {{submitter}} · Reviewed by {{reviewer}}',
+    'promotions.revocationStatus.APPROVED': 'Revoked',
     'promotions.sortReviewedTimeAsc': 'Sort by reviewed time ascending',
     'promotions.sortReviewedTimeDesc': 'Sort by reviewed time descending',
     'promotions.starCountTag': '{{value}} stars',
@@ -31,6 +47,8 @@ const mocks = vi.hoisted(() => ({
     'promotions.subtitle': 'Review promotion requests',
     'promotions.tabApproved': 'Approved',
     'promotions.tabPending': 'Pending',
+    'promotions.tabRevocations': 'Revocations to review',
+    'promotions.tabRevocationHistory': 'Revocation history',
     'promotions.tabRejected': 'Rejected',
     'promotions.title': 'Promotion Review',
     'promotions.versionTag': 'v{{version}}',
@@ -59,6 +77,15 @@ vi.mock('@/features/promotion/use-promotion-list', () => ({
   usePromotionList: (params: unknown) => mocks.usePromotionList(params),
   useRejectPromotion: () => ({ mutate: mocks.rejectMutate, isPending: false }),
 }))
+
+vi.mock('@/features/promotion/use-promotion-revocations', () => ({
+  useApprovePromotionRevocation: () => ({ mutateAsync: mocks.approveRevocation, isPending: false }),
+  usePendingPromotionRevocations: () => mocks.pendingRevocations(),
+  useAdminPromotionRevocationHistory: (...args: unknown[]) => mocks.revocationHistory(...args),
+  useRejectPromotionRevocation: () => ({ mutateAsync: mocks.rejectRevocation, isPending: false }),
+}))
+
+vi.mock('@/shared/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
 vi.mock('@/shared/components/dashboard-page-header', () => ({
   DashboardPageHeader: ({ title, subtitle }: { title: string; subtitle: string }) => (
@@ -199,6 +226,8 @@ describe('PromotionsPage', () => {
     vi.clearAllMocks()
     mocks.paginationProps.length = 0
     installPromotionListMock()
+    mocks.pendingRevocations.mockReturnValue({ data: [], isLoading: false, error: null })
+    mocks.revocationHistory.mockReturnValue({ data: { items: [], total: 0, page: 0, size: 20 }, isLoading: false, error: null })
   })
 
   afterEach(() => cleanup())
@@ -216,6 +245,61 @@ describe('PromotionsPage', () => {
     expect(screen.getByText('1.8 MB')).toBeTruthy()
     expect(screen.getByText('18 downloads')).toBeTruthy()
     expect(screen.getByText('5 stars')).toBeTruthy()
+  })
+
+  it('reviews a revocation only after a destructive confirmation', async () => {
+    mocks.pendingRevocations.mockReturnValue({
+      data: [{ id: 7, sourceSkillId: 101, targetSkillId: 202, skillSlug: 'knowledge-helper', submittedAt: '2026-06-18T12:00:00Z', submittedBy: 'owner-1', reason: 'Outdated' }],
+      isLoading: false,
+      error: null,
+    })
+    mocks.approveRevocation.mockResolvedValue(undefined)
+    render(<PromotionsPage />)
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Revocations to review' }))
+    expect(screen.getByText('@global/knowledge-helper')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Approve revocation' }))
+    expect(mocks.approveRevocation).not.toHaveBeenCalled()
+    const dialog = screen.getByRole('dialog', { name: 'Confirm revocation approval' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Approve revocation' }))
+    await waitFor(() => expect(mocks.approveRevocation).toHaveBeenCalledWith({ id: 7, comment: '' }))
+  })
+
+  it('shows reviewed revocations in the admin history tab', () => {
+    mocks.revocationHistory.mockReturnValue({
+      data: { items: [{ id: 8, status: 'APPROVED', sourceSkillId: 101, targetSkillId: 202, skillSlug: 'knowledge-helper', submittedBy: 'owner-1', reviewedBy: 'admin-1', reviewedAt: '2026-06-18T13:00:00Z', reason: 'Outdated', reviewComment: null }], total: 1, page: 0, size: 20 },
+      isLoading: false,
+      error: null,
+    })
+    render(<PromotionsPage />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Revocation history' }))
+    expect(mocks.revocationHistory).toHaveBeenCalledWith(0, 20)
+    expect(screen.getByText('@global/knowledge-helper')).toBeTruthy()
+    expect(screen.getByText(/Revoked/)).toBeTruthy()
+  })
+
+  it('rejects a revocation request with the entered review comment', async () => {
+    mocks.pendingRevocations.mockReturnValue({
+      data: [{ id: 7, sourceSkillId: 101, targetSkillId: 202, skillSlug: 'knowledge-helper', submittedAt: '2026-06-18T12:00:00Z', submittedBy: 'owner-1', reason: null }],
+      isLoading: false,
+      error: null,
+    })
+    mocks.rejectRevocation.mockResolvedValue(undefined)
+    render(<PromotionsPage />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Revocations to review' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Review comment (optional)' }), { target: { value: 'Keep the global version' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Reject revocation' }))
+    await waitFor(() => expect(mocks.rejectRevocation).toHaveBeenCalledWith({ id: 7, comment: 'Keep the global version' }))
+  })
+
+  it('shows the source and current global versions for an update request', () => {
+    installPromotionListMock({ pending: [createPromotion({ requestKind: 'UPDATE', sourceVersion: '1.1', targetCurrentVersion: '1.3', targetSkillId: 202 })] })
+    render(<PromotionsPage />)
+
+    expect(screen.getByText('Update global skill')).toBeTruthy()
+    expect(screen.getByText('v1.1')).toBeTruthy()
+    expect(screen.getByText('Current global v1.3')).toBeTruthy()
+    expect(screen.getByText('Approval adds a version to the existing global skill.')).toBeTruthy()
   })
 
   it('paginates pending and history queues independently', () => {

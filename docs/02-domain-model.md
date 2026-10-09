@@ -75,7 +75,7 @@
 | updated_by | varchar(128) | |
 | updated_at | datetime | |
 
-- 唯一约束：`(namespace_id, slug)`
+- 唯一约束：`(namespace_id, slug, owner_id)`；面向公众的同名冲突还须按已发布记录检查不同 owner，避免地址解析歧义
 - `status` 表示 skill 容器生命周期，不再承载“隐藏”语义。隐藏是独立的治理覆盖层，由 `hidden` / `hidden_at` / `hidden_by` 表达
 - 当前代码下的实际可见性判定以 `VisibilityChecker` 为准，规则如下：
   - 若 `hidden=true`：仅 skill owner 或该 namespace 的 `ADMIN` / `OWNER` 可读
@@ -90,7 +90,7 @@
 - `rating_avg` / `rating_count` 冗余字段，避免每次查询聚合
 - `slug`：面向用户的 URL 标识，来自 SKILL.md 的 `name` 字段，首次发布后不可变更。slug 格式校验规则与 namespace slug 相同：`[a-z0-9]([a-z0-9-]*[a-z0-9])?`，同样适用保留词限制，且不得包含连续两个以上的连字符 `--`（为兼容层坐标映射保留）。全局空间（`@global`）下的 skill slug 额外禁止包含 `--`，以避免与兼容层 canonical slug 产生歧义
 - `source_skill_id`：仅在"团队技能提升到全局"场景下填充，记录原始团队空间的 skill ID，用于追溯来源
-- 提升关系的唯一事实来源是 `promotion_request` 表，UI 查询"是否已提升"通过 `SELECT ... FROM promotion_request WHERE source_skill_id=? AND status='APPROVED'` 判定
+- 提升关系的唯一事实来源是 `promotion_request` 表。当前有效全局目标由 `request_kind='INITIAL' AND status='APPROVED' AND target_skill_id IS NOT NULL` 的首次提升记录确定；后续更新记录指向同一目标，撤销时解除目标引用并保留快照。
 
 ### skill_version
 
@@ -98,7 +98,7 @@
 |------|------|------|
 | id | bigint | |
 | skill_id | bigint | |
-| version | varchar(32) | semver |
+| version | varchar(32) | 版本标识；可来自 SKILL.md 或系统生成，不按字符串大小判断“最新” |
 | version_sort | bigint | 排序用数值 |
 | changelog | text | |
 | manifest_json | json | 文件清单 |
@@ -197,6 +197,11 @@
 | source_version_id | bigint | 申请提升的版本 |
 | target_namespace_id | bigint | 目标全局 namespace |
 | target_skill_id | bigint | 审批通过后生成的全局 skill ID，nullable |
+| request_kind | varchar(16) | `INITIAL` / `UPDATE`；存量记录迁移为 `INITIAL` |
+| target_version_id | bigint | 审批形成的全局版本 ID 快照，允许目标撤销后保留 |
+| target_skill_id_snapshot | bigint | 撤销后仍保留原全局 skill ID |
+| target_version_id_snapshot | bigint | 撤销后保留结果版本 ID |
+| revoked_at / revoked_by | datetime / varchar(128) | 撤销生效时间和操作者 |
 | status | enum | `PENDING` / `APPROVED` / `REJECTED` |
 | version | int | 乐观锁版本号，默认 1 |
 | submitted_by | varchar(128) | 提交人 |
@@ -205,11 +210,18 @@
 | submitted_at | datetime | |
 | reviewed_at | datetime | |
 
-- 完整表达"哪个团队 skill 的哪一版被申请提升到哪个全局空间"
-- 审批通过后填充 `target_skill_id`，指向全局空间新创建的 skill
+- 完整表达"哪个团队 skill 的哪一版被申请提升到哪个全局空间"。首次提升新建目标 skill；后续 UPDATE 在同一目标下增加不可变版本，两次发布审核分开进行。
+- 审批通过后填充 `target_skill_id`，指向当前关联的全局 skill；撤销后清空该外键并保留快照和提升历史。
 - `promotion_request` 是提升关系的唯一事实来源，skill 表不再冗余 `promoted_to_skill_id`
-- 业务约束：同一 `source_version_id` 在 `status=PENDING` 时只能存在一条记录，重复提交返回 409 Conflict
-- PostgreSQL 并发约束落地：与 `review_task` 类似，通过唯一索引防止并发重复提交。推荐使用 partial unique index：`CREATE UNIQUE INDEX ON promotion_request (source_version_id) WHERE status = 'PENDING'`，或增加 `deleted` 字段 + `(source_version_id, deleted)` 唯一约束，或采用物理删除 + `(source_version_id)` 唯一约束方案
+- 业务约束：同一来源 skill 同时最多有一条 `PENDING` 提升申请；同一来源同时最多有一条有效 `INITIAL` 提升关系。全局目标有任何同号版本时，不允许 UPDATE 审批覆盖；异号审批按实际发布时间更新 latest。
+- PostgreSQL 以 `source_skill_id WHERE status='PENDING'` 和 `source_skill_id WHERE request_kind='INITIAL' AND status='APPROVED' AND target_skill_id IS NOT NULL` 两个部分唯一索引防止并发重复。
+
+### promotion_revocation_request
+
+- 来源技能所有者或团队管理员可提交撤销，平台管理员审核；平台管理员直接撤销也留存申请和审计。
+- 审核通过时删除全局派生 skill 及其版本、统计和公开入口，不把数据迁回团队 skill；团队原件和共用的文件对象保留。
+- 记录保留原始来源/目标 ID 与坐标、提交人、审核人、理由、状态及时间。目标全局 skill 物理删除后，这些字段仍供管理员审计。
+- 撤销释放旧全局坐标；重新提升须重新申请、审核，并再次检查同名冲突。此前已下载的客户端文件无法收回。
 
 ### skill_star
 

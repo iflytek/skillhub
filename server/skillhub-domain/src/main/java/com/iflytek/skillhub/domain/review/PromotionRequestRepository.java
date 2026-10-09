@@ -13,6 +13,7 @@ public interface PromotionRequestRepository {
     Optional<PromotionRequest> findById(Long id);
     Optional<PromotionRequest> findBySourceVersionIdAndStatus(Long sourceVersionId, ReviewTaskStatus status);
     Optional<PromotionRequest> findBySourceSkillIdAndStatus(Long sourceSkillId, ReviewTaskStatus status);
+    Optional<PromotionRequest> findActiveInitialBySourceSkillId(Long sourceSkillId);
     Page<PromotionRequest> findByStatus(ReviewTaskStatus status, Pageable pageable);
     Page<PromotionRequest> findHistoryByStatusOrderByReviewedAtAsc(ReviewTaskStatus status, Pageable pageable);
     Page<PromotionRequest> findHistoryByStatusOrderByReviewedAtDesc(ReviewTaskStatus status, Pageable pageable);

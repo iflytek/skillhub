@@ -208,6 +208,11 @@ public class GovernanceWorkflowAppService {
         return promotionPortalAppService.getPromotionDetail(promotionId, userId);
     }
 
+    public com.iflytek.skillhub.domain.review.PromotionState getPromotionSourceState(
+            Long sourceSkillId, String userId, Map<Long, NamespaceRole> userNsRoles) {
+        return promotionPortalAppService.getSourceState(sourceSkillId, userId, userNsRoles);
+    }
+
     public SkillLifecycleMutationResponse archiveSkill(String namespace,
                                                        String slug,
                                                        AdminSkillActionRequest request,

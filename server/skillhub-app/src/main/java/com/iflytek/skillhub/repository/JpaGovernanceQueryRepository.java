@@ -161,14 +161,23 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
 
     private PromotionReadBundle loadPromotionBundle(List<PromotionRequest> requests) {
         List<Long> sourceSkillIds = distinct(requests.stream().map(PromotionRequest::getSourceSkillId).toList());
-        Map<Long, Skill> skillsById = sourceSkillIds.isEmpty()
+        List<Long> targetSkillIds = distinct(requests.stream().map(PromotionRequest::getTargetSkillId)
+                .filter(Objects::nonNull).toList());
+        List<Long> allSkillIds = distinct(java.util.stream.Stream.concat(
+                sourceSkillIds.stream(), targetSkillIds.stream()).toList());
+        Map<Long, Skill> skillsById = allSkillIds.isEmpty()
                 ? Map.of()
-                : skillRepository.findByIdIn(sourceSkillIds).stream()
+                : skillRepository.findByIdIn(allSkillIds).stream()
                 .collect(Collectors.toMap(Skill::getId, Function.identity()));
         List<Long> sourceVersionIds = distinct(requests.stream().map(PromotionRequest::getSourceVersionId).toList());
-        Map<Long, SkillVersion> versionsById = sourceVersionIds.isEmpty()
+        List<Long> latestVersionIds = distinct(targetSkillIds.stream()
+                .map(skillsById::get).filter(Objects::nonNull)
+                .map(Skill::getLatestVersionId).filter(Objects::nonNull).toList());
+        List<Long> allVersionIds = distinct(java.util.stream.Stream.concat(
+                sourceVersionIds.stream(), latestVersionIds.stream()).toList());
+        Map<Long, SkillVersion> versionsById = allVersionIds.isEmpty()
                 ? Map.of()
-                : skillVersionRepository.findByIdIn(sourceVersionIds).stream()
+                : skillVersionRepository.findByIdIn(allVersionIds).stream()
                 .collect(Collectors.toMap(SkillVersion::getId, Function.identity()));
         Set<Long> namespaceIds = new LinkedHashSet<>(distinct(requests.stream().map(PromotionRequest::getTargetNamespaceId).toList()));
         namespaceIds.addAll(skillsById.values().stream().map(Skill::getNamespaceId).toList());
@@ -274,8 +283,20 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
                 reviewedBy != null ? reviewedBy.getDisplayName() : null,
                 request.getReviewComment(),
                 request.getSubmittedAt(),
-                request.getReviewedAt()
+                request.getReviewedAt(),
+                request.getRequestKind().name(),
+                targetCurrentVersion(request, bundle),
+                request.getTargetVersionId()
         );
+    }
+
+    private String targetCurrentVersion(PromotionRequest request, PromotionReadBundle bundle) {
+        Skill target = bundle.skillsById().get(request.getTargetSkillId());
+        if (target == null || target.getLatestVersionId() == null) {
+            return null;
+        }
+        SkillVersion version = bundle.versionsById().get(target.getLatestVersionId());
+        return version != null ? version.getVersion() : null;
     }
 
     private GovernanceInboxItemResponse toReviewInboxItem(ReviewTask task, ReviewReadBundle bundle) {

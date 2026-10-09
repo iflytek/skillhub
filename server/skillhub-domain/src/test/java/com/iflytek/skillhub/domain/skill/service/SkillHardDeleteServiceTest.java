@@ -6,6 +6,7 @@ import com.iflytek.skillhub.domain.report.SkillReportRepository;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillFile;
 import com.iflytek.skillhub.domain.skill.SkillFileRepository;
@@ -31,11 +32,13 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @ExtendWith(MockitoExtension.class)
 class SkillHardDeleteServiceTest {
@@ -211,6 +214,43 @@ class SkillHardDeleteServiceTest {
                 argThat(keys -> keys.contains("skills/7/22/README.md") && keys.contains("packages/7/22/bundle.zip")),
                 org.mockito.ArgumentMatchers.contains("s3 down")
         );
+    }
+
+    @Test
+    void revokedTargetKeepsSharedSourceObjectAndPromotionHistory() {
+        Skill target = new Skill(9L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(target, "id", 7L);
+        SkillVersion version = new SkillVersion(7L, "1.0.0", "owner-1");
+        setField(version, "id", 22L);
+        given(skillVersionRepository.findBySkillId(7L)).willReturn(List.of(version));
+        given(skillFileRepository.findByVersionId(22L)).willReturn(List.of(
+                new SkillFile(22L, "SKILL.md", 12L, "text/markdown", "sha1", "source/shared/SKILL.md"),
+                new SkillFile(22L, "README.md", 13L, "text/markdown", "sha2", "target/unique/README.md")
+        ));
+        given(skillFileRepository.existsByStorageKeyAndVersionIdNotIn(eq("source/shared/SKILL.md"), eq(List.of(22L))))
+                .willReturn(true);
+
+        service.hardDeleteRevokedPromotionTarget(target, "global", "admin-1", null, null);
+
+        verify(objectStorageService).deleteObjects(argThat(keys ->
+                !keys.contains("source/shared/SKILL.md")
+                        && keys.contains("target/unique/README.md")
+                        && keys.contains("packages/7/22/bundle.zip")));
+        verify(promotionRequestRepository, never()).deleteBySourceSkillIdOrTargetSkillId(7L, 7L);
+        verify(auditLogService).record(eq("admin-1"), eq("REVOKE_PROMOTION_TARGET"),
+                eq("SKILL"), eq(7L), eq(null), eq(null), eq(null),
+                eq("{\"namespaceId\":9,\"slug\":\"demo-skill\"}"));
+    }
+
+    @Test
+    void ordinaryHardDeleteCannotBypassRevocationReviewForDerivedTarget() {
+        Skill target = new Skill(9L, "demo-skill", "owner-1", SkillVisibility.PUBLIC);
+        setField(target, "id", 7L);
+        target.setSourceSkillId(3L);
+
+        assertThatThrownBy(() -> service.hardDeleteSkill(target, "global", "owner-1", null, null))
+                .isInstanceOf(DomainBadRequestException.class);
+        verify(skillRepository, never()).delete(target);
     }
 
     private void setField(Object target, String fieldName, Object value) {

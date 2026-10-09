@@ -170,7 +170,9 @@ class JpaGovernanceQueryRepositoryTest {
         UserAccount submitter = new UserAccount("submitter", "Submitter", "submitter@example.com", null);
         UserAccount reviewer = new UserAccount("reviewer", "Reviewer", "reviewer@example.com", null);
 
-        given(skillRepository.findByIdIn(List.of(201L))).willReturn(List.of(skill));
+        Skill targetSkill = new Skill(12L, "skill-a", "submitter", SkillVisibility.PUBLIC);
+        setField(targetSkill, "id", 301L);
+        given(skillRepository.findByIdIn(List.of(201L, 301L))).willReturn(List.of(skill, targetSkill));
         given(skillVersionRepository.findByIdIn(List.of(101L))).willReturn(List.of(version));
         given(namespaceRepository.findByIdIn(List.of(12L, 11L))).willReturn(List.of(targetNamespace, sourceNamespace));
         given(userAccountRepository.findByIdIn(List.of("submitter", "reviewer")))
