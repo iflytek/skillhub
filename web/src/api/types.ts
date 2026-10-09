@@ -17,7 +17,7 @@ export type OAuthProvider = Omit<components['schemas']['AuthProviderResponse'], 
 
 export interface AuthMethod {
   id: string
-  methodType: 'PASSWORD' | 'OAUTH_REDIRECT' | 'DIRECT_PASSWORD' | 'SESSION_BOOTSTRAP' | string
+  methodType: 'PASSWORD' | 'PASSWORD_REGISTRATION' | 'OAUTH_REDIRECT' | 'DIRECT_PASSWORD' | 'SESSION_BOOTSTRAP' | string
   provider: string
   displayName: string
   actionUrl: string

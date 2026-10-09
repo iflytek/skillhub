@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ArrowRight, Eye, EyeOff, LockKeyhole, UserRound } from 'lucide-react'
 import { getSessionBootstrapRuntimeConfig } from '@/api/client'
 import { AuthShell } from '@/features/auth/auth-shell'
+import { getLocalAuthAvailability } from '@/features/auth/local-auth-availability'
 import { AuthMethodButtonList } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
@@ -31,11 +32,13 @@ export function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState<{ username?: string, password?: string }>({})
   const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
   const returnTo = resolveAuthReturnTo(search.returnTo)
-  const { data: authMethods, isLoading: authMethodsLoading } = useAuthMethods(returnTo)
+  const { data: authMethods, isLoading: authMethodsLoading, isError: authMethodsError } = useAuthMethods(returnTo)
   const disabledMessage = search.reason === 'accountDisabled' ? t('apiError.auth.accountDisabled') : null
   const bootstrapMethod = authMethods?.find((method) => method.methodType === 'SESSION_BOOTSTRAP')
   const hasOrganizationMethod = bootstrapConfig.enabled
   const hasExternalMethods = authMethods?.some((method) => method.methodType === 'OAUTH_REDIRECT')
+  const localAuth = getLocalAuthAvailability(authMethods, authMethodsError)
+  const activeLoginMode = localAuth.login ? loginMode : 'organization'
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -79,7 +82,7 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        {hasOrganizationMethod ? (
+        {hasOrganizationMethod && localAuth.login ? (
           <div role="group" aria-label={t('login.loginMode')} className="grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900">
             <button type="button" aria-pressed={loginMode === 'personal'} onClick={() => setLoginMode('personal')} className={`h-11 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 xl:h-10 ${loginMode === 'personal' ? 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100' : 'text-muted-foreground hover:text-foreground'}`}>
               {t('login.tabPersonal')}
@@ -90,7 +93,8 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        <div hidden={loginMode !== 'personal'}>
+        {localAuth.login ? (
+        <div hidden={activeLoginMode !== 'personal'}>
         <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="username">{t('login.username')}</label>
@@ -162,9 +166,10 @@ export function LoginPage() {
               </Button>
         </form>
         </div>
+        ) : null}
 
         {bootstrapConfig.enabled ? (
-          <div hidden={loginMode !== 'organization'} className="space-y-2">
+          <div hidden={activeLoginMode !== 'organization'} className="space-y-2">
             <SessionBootstrapEntry
               methodDisplayName={bootstrapMethod?.displayName}
               onAuthenticated={() => navigate({ to: returnTo })}
@@ -183,13 +188,15 @@ export function LoginPage() {
           </section>
         ) : null}
 
-        <p className="text-center text-sm text-muted-foreground">
-          {t('login.noAccount')}
-          {' '}
-          <Link to="/register" search={{ returnTo }} className="font-medium text-sky-700 hover:underline dark:text-sky-300">
-            {t('login.register')}
-          </Link>
-        </p>
+        {localAuth.registration ? (
+          <p className="text-center text-sm text-muted-foreground">
+            {t('login.noAccount')}
+            {' '}
+            <Link to="/register" search={{ returnTo }} className="font-medium text-sky-700 hover:underline dark:text-sky-300">
+              {t('login.register')}
+            </Link>
+          </p>
+        ) : null}
 
         <p className="mt-auto text-center text-xs text-muted-foreground">
           {t('login.agreementPrefix')}

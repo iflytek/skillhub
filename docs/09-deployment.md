@@ -547,6 +547,26 @@ override 或部署平台环境变量把上述 `SPRING_SECURITY_*` 变量注入 `
 容器。Kubernetes 部署同理，将这些变量放入 `backend-deployment.yaml` 的
 `server` 容器环境变量或统一的配置管理系统中。
 
+### 8.1 关闭本地账号或自助注册
+
+只通过外部身份源（OIDC、GitHub、飞书、钉钉等）登录时，本地账号密码入口默认仍然开放，
+任何能访问服务的人都能调用 `/api/v1/auth/local/register` 注册账号，且不受 IdP 的
+组成员、MFA、停用等访问控制约束。可以用下面两个开关收口：
+
+| 配置项 | 环境变量 | Helm value | 默认 | 关闭后的行为 |
+| --- | --- | --- | --- | --- |
+| `skillhub.auth.local.enabled` | `SKILLHUB_AUTH_LOCAL_ENABLED` | `auth.local.enabled` | `true` | 本地登录、注册、修改密码、密码重置（含管理员触发）一律返回 `403`；`/api/v1/auth/methods` 不再返回 `local-password`、`local-registration` 和 `direct-local`，登录页只显示已配置的外部入口 |
+| `skillhub.auth.local.registration-enabled` | `SKILLHUB_AUTH_LOCAL_REGISTRATION_ENABLED` | `auth.local.registrationEnabled` | `true` | 仅关闭自助注册，已有本地账号（如 bootstrap 管理员）仍可登录；登录页隐藏注册入口 |
+
+注意：
+
+- 关闭 `auth.local.enabled` 前，先确认至少有一个外部身份源可用，并且管理员账号已绑定外部身份，
+  否则会失去管理员入口。
+- Helm chart 默认 `auth.direct.provider=local`，它复用本地账号校验。关闭本地账号时要同时
+  关闭 `auth.direct.enabled` 或换成其他 provider，否则 chart 会拒绝渲染。
+- `access-policy`（`EMAIL_DOMAIN`、`PROVIDER_ALLOWLIST`、`SUBJECT_WHITELIST`）只作用于
+  OAuth 登录流程，不会限制本地注册。
+
 ## 9 裸金属上线清单
 
 推荐顺序：

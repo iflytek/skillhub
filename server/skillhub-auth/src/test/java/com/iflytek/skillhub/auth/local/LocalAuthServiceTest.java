@@ -8,6 +8,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.entity.Role;
@@ -56,10 +57,13 @@ class LocalAuthServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    private LocalAuthProperties localAuthProperties;
+
     private LocalAuthService service;
 
     @BeforeEach
     void setUp() {
+        localAuthProperties = new LocalAuthProperties();
         service = new LocalAuthService(
             credentialRepository,
             userAccountRepository,
@@ -68,7 +72,8 @@ class LocalAuthServiceTest {
             new PasswordPolicyValidator(),
             passwordEncoder,
             CLOCK,
-            eventPublisher
+            eventPublisher,
+            localAuthProperties
         );
     }
 
@@ -282,5 +287,73 @@ class LocalAuthServiceTest {
         assertThatThrownBy(() -> service.register("Alice", "Abcd123!", "   "))
             .isInstanceOf(AuthFlowException.class)
             .hasMessageContaining("validation.auth.local.email.notBlank");
+    }
+
+    @Test
+    void register_whenLocalAuthDisabled_failsClosedWithoutCreatingAccount() {
+        localAuthProperties.setEnabled(false);
+
+        assertThatThrownBy(() -> service.register("Alice", "Abcd123!", "alice@example.com"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.disabled")
+            .extracting("status")
+            .isEqualTo(HttpStatus.FORBIDDEN);
+
+        verifyNoInteractions(credentialRepository, userAccountRepository, globalNamespaceMembershipService, eventPublisher);
+    }
+
+    @Test
+    void register_whenRegistrationDisabled_failsClosedWithoutCreatingAccount() {
+        localAuthProperties.setRegistrationEnabled(false);
+
+        assertThatThrownBy(() -> service.register("Alice", "Abcd123!", "alice@example.com"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.registrationDisabled")
+            .extracting("status")
+            .isEqualTo(HttpStatus.FORBIDDEN);
+
+        verifyNoInteractions(credentialRepository, userAccountRepository, globalNamespaceMembershipService, eventPublisher);
+    }
+
+    @Test
+    void login_whenRegistrationDisabled_stillAllowsExistingAccounts() {
+        localAuthProperties.setRegistrationEnabled(false);
+        LocalCredential credential = new LocalCredential("usr_1", "alice", "encoded");
+        UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
+
+        given(credentialRepository.findByUsernameIgnoreCase("alice")).willReturn(Optional.of(credential));
+        given(userAccountRepository.findById("usr_1")).willReturn(Optional.of(user));
+        given(passwordEncoder.matches("Abcd123!", "encoded")).willReturn(true);
+        given(userRoleBindingRepository.findByUserId("usr_1")).willReturn(List.of());
+
+        var principal = service.login("alice", "Abcd123!");
+
+        assertThat(principal.userId()).isEqualTo("usr_1");
+    }
+
+    @Test
+    void login_whenLocalAuthDisabled_failsClosedWithoutCheckingCredentials() {
+        localAuthProperties.setEnabled(false);
+
+        assertThatThrownBy(() -> service.login("alice", "Abcd123!"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.disabled")
+            .extracting("status")
+            .isEqualTo(HttpStatus.FORBIDDEN);
+
+        verifyNoInteractions(credentialRepository, passwordEncoder);
+    }
+
+    @Test
+    void changePassword_whenLocalAuthDisabled_failsClosed() {
+        localAuthProperties.setEnabled(false);
+
+        assertThatThrownBy(() -> service.changePassword("usr_1", "Abcd123!", "Newpass123!"))
+            .isInstanceOf(AuthFlowException.class)
+            .hasMessageContaining("error.auth.local.disabled")
+            .extracting("status")
+            .isEqualTo(HttpStatus.FORBIDDEN);
+
+        verifyNoInteractions(credentialRepository, passwordEncoder);
     }
 }

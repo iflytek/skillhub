@@ -2,6 +2,7 @@ package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.auth.bootstrap.PassiveSessionAuthenticator;
 import com.iflytek.skillhub.auth.direct.DirectAuthProvider;
+import com.iflytek.skillhub.auth.local.LocalAuthProperties;
 import com.iflytek.skillhub.auth.oauth.OAuthLoginRedirectSupport;
 import com.iflytek.skillhub.config.AuthSessionBootstrapProperties;
 import com.iflytek.skillhub.config.DirectAuthProperties;
@@ -28,17 +29,20 @@ public class AuthMethodCatalog {
     private final AuthSessionBootstrapProperties sessionBootstrapProperties;
     private final List<DirectAuthProvider> directAuthProviders;
     private final List<PassiveSessionAuthenticator> passiveSessionAuthenticators;
+    private final LocalAuthProperties localAuthProperties;
 
     public AuthMethodCatalog(OAuth2ClientProperties oAuth2ClientProperties,
                              DirectAuthProperties directAuthProperties,
                              AuthSessionBootstrapProperties sessionBootstrapProperties,
                              List<DirectAuthProvider> directAuthProviders,
-                             List<PassiveSessionAuthenticator> passiveSessionAuthenticators) {
+                             List<PassiveSessionAuthenticator> passiveSessionAuthenticators,
+                             LocalAuthProperties localAuthProperties) {
         this.oAuth2ClientProperties = oAuth2ClientProperties;
         this.directAuthProperties = directAuthProperties;
         this.sessionBootstrapProperties = sessionBootstrapProperties;
         this.directAuthProviders = directAuthProviders;
         this.passiveSessionAuthenticators = passiveSessionAuthenticators;
+        this.localAuthProperties = localAuthProperties;
     }
 
     public List<AuthProviderResponse> listOAuthProviders(String returnTo) {
@@ -71,13 +75,24 @@ public class AuthMethodCatalog {
         String sanitizedReturnTo = OAuthLoginRedirectSupport.sanitizeReturnTo(returnTo);
         List<AuthMethodResponse> methods = new ArrayList<>();
 
-        methods.add(new AuthMethodResponse(
-            "local-password",
-            "PASSWORD",
-            "local",
-            "Local Account",
-            "/api/v1/auth/local/login"
-        ));
+        if (localAuthProperties.isEnabled()) {
+            methods.add(new AuthMethodResponse(
+                "local-password",
+                "PASSWORD",
+                "local",
+                "Local Account",
+                "/api/v1/auth/local/login"
+            ));
+        }
+        if (localAuthProperties.isRegistrationAvailable()) {
+            methods.add(new AuthMethodResponse(
+                "local-registration",
+                "PASSWORD_REGISTRATION",
+                "local",
+                "Local Account Registration",
+                "/api/v1/auth/local/register"
+            ));
+        }
 
         oAuth2ClientProperties.getRegistration().entrySet().stream()
             .filter(entry -> isValidOAuthProvider(entry.getValue()))
@@ -94,6 +109,7 @@ public class AuthMethodCatalog {
 
         if (directAuthProperties.isEnabled()) {
             directAuthProviders.stream()
+                .filter(DirectAuthProvider::isAvailable)
                 .sorted(Comparator.comparing(DirectAuthProvider::providerCode))
                 .forEach(provider -> methods.add(new AuthMethodResponse(
                     "direct-" + provider.providerCode(),

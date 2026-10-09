@@ -390,6 +390,7 @@
     "hasAccount": "已有账号？",
     "login": "返回登录",
     "oauthHint": "直接使用现有 OAuth 账户进入平台，无需再创建本地密码。",
+    "disabled": "当前服务未开放自助注册。请使用已有账号登录，或联系管理员开通。",
     "usernameRequired": "请输入用户名",
     "usernameInvalid": "仅支持字母、数字或下划线（3-64 位）",
     "usernameExists": "用户名已存在",

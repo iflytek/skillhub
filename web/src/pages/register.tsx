@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ApiError } from '@/api/client'
 import { AuthShell } from '@/features/auth/auth-shell'
+import { getLocalAuthAvailability } from '@/features/auth/local-auth-availability'
 import { AuthMethodButtonList } from '@/features/auth/login-button'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
 import { useLocalRegister } from '@/features/auth/use-local-auth'
@@ -63,8 +64,9 @@ export function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null)
 
   const returnTo = resolveAuthReturnTo(search.returnTo)
-  const { data: authMethods, isLoading: authMethodsLoading } = useAuthMethods(returnTo)
+  const { data: authMethods, isLoading: authMethodsLoading, isError: authMethodsError } = useAuthMethods(returnTo)
   const hasExternalMethods = authMethods?.some((method) => method.methodType === 'OAUTH_REDIRECT')
+  const registrationAvailable = getLocalAuthAvailability(authMethods, authMethodsError).registration
 
   function validateUsername(value: string) {
     const trimmed = value.trim()
@@ -178,6 +180,7 @@ export function RegisterPage() {
           <p className="text-sm text-muted-foreground sm:text-base">{t('register.subtitle')}</p>
         </div>
 
+        {registrationAvailable ? (
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="register-username">{t('register.username')}</label>
@@ -264,6 +267,22 @@ export function RegisterPage() {
             </Link>
           </p>
         </form>
+        ) : (
+          <div className="space-y-4">
+            <p role="status" className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              {t('register.disabled')}
+            </p>
+            <p className="text-center text-sm text-muted-foreground">
+              <Link
+                to="/login"
+                search={{ returnTo }}
+                className="font-medium text-primary hover:underline"
+              >
+                {t('register.login')}
+              </Link>
+            </p>
+          </div>
+        )}
 
         {authMethodsLoading || hasExternalMethods ? (
           <div className="space-y-3 border-t border-border/70 pt-5">

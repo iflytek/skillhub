@@ -6,6 +6,9 @@ import static org.mockito.Mockito.mock;
 import com.iflytek.skillhub.auth.bootstrap.PassiveSessionAuthenticator;
 import com.iflytek.skillhub.auth.direct.DirectAuthProvider;
 import com.iflytek.skillhub.auth.direct.DirectAuthRequest;
+import com.iflytek.skillhub.auth.direct.LocalDirectAuthProvider;
+import com.iflytek.skillhub.auth.local.LocalAuthProperties;
+import com.iflytek.skillhub.auth.local.LocalAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.config.AuthSessionBootstrapProperties;
 import com.iflytek.skillhub.config.DirectAuthProperties;
@@ -30,7 +33,8 @@ class AuthMethodCatalogTest {
             new DirectAuthProperties(),
             new AuthSessionBootstrapProperties(),
             List.of(),
-            List.of()
+            List.of(),
+            new LocalAuthProperties()
         );
 
         assertThat(catalog.listOAuthProviders(null))
@@ -38,7 +42,51 @@ class AuthMethodCatalogTest {
             .containsExactly("valid");
         assertThat(catalog.listMethods(null))
             .extracting(method -> method.id())
-            .containsExactly("local-password", "oauth-valid");
+            .containsExactly("local-password", "local-registration", "oauth-valid");
+    }
+
+    @Test
+    void listMethodsShouldDropLocalEntriesWhenLocalAuthIsDisabled() {
+        OAuth2ClientProperties oauthProperties = new OAuth2ClientProperties();
+        oauthProperties.getRegistration().put("oidc", registration("production-client", "Company SSO"));
+        DirectAuthProperties directAuthProperties = new DirectAuthProperties();
+        directAuthProperties.setEnabled(true);
+        LocalAuthProperties localAuthProperties = new LocalAuthProperties();
+        localAuthProperties.setEnabled(false);
+
+        AuthMethodCatalog catalog = new AuthMethodCatalog(
+            oauthProperties,
+            directAuthProperties,
+            new AuthSessionBootstrapProperties(),
+            List.of(new LocalDirectAuthProvider(mock(LocalAuthService.class), localAuthProperties)),
+            List.of(),
+            localAuthProperties
+        );
+
+        assertThat(catalog.listMethods(null))
+            .extracting(method -> method.id())
+            .containsExactly("oauth-oidc");
+    }
+
+    @Test
+    void listMethodsShouldKeepLocalLoginButDropRegistrationWhenSignUpIsClosed() {
+        DirectAuthProperties directAuthProperties = new DirectAuthProperties();
+        directAuthProperties.setEnabled(true);
+        LocalAuthProperties localAuthProperties = new LocalAuthProperties();
+        localAuthProperties.setRegistrationEnabled(false);
+
+        AuthMethodCatalog catalog = new AuthMethodCatalog(
+            new OAuth2ClientProperties(),
+            directAuthProperties,
+            new AuthSessionBootstrapProperties(),
+            List.of(new LocalDirectAuthProvider(mock(LocalAuthService.class), localAuthProperties)),
+            List.of(),
+            localAuthProperties
+        );
+
+        assertThat(catalog.listMethods(null))
+            .extracting(method -> method.id())
+            .containsExactly("local-password", "direct-local");
     }
 
     @Test
@@ -88,7 +136,8 @@ class AuthMethodCatalogTest {
             directAuthProperties,
             bootstrapProperties,
             List.of(directProvider),
-            List.of(bootstrapProvider)
+            List.of(bootstrapProvider),
+            new LocalAuthProperties()
         );
 
         assertThat(catalog.listMethods(null))
@@ -137,7 +186,8 @@ class AuthMethodCatalogTest {
             directAuthProperties,
             bootstrapProperties,
             List.of(directProvider),
-            List.of(bootstrapProvider)
+            List.of(bootstrapProvider),
+            new LocalAuthProperties()
         );
 
         assertThat(catalog.listMethods(null))

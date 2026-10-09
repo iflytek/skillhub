@@ -21,6 +21,12 @@ auth:
   direct:
     enabled: true
     provider: local
+  # 本地账号（用户名 + 密码）。只用外部身份源登录时设为 false；
+  # 关闭后 direct.provider 不能再是 local。
+  local:
+    enabled: true
+    # 保留已有本地账号（如 bootstrap 管理员），但禁止自助注册
+    registrationEnabled: true
 
 oauth2:
   feishu:

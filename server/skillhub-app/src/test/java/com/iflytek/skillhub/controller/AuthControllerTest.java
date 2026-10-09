@@ -172,9 +172,10 @@ class AuthControllerTest {
         mockMvc.perform(get("/api/v1/auth/methods").param("returnTo", "/dashboard/publish"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.code").value(0))
-            .andExpect(jsonPath("$.data.length()").value(2))
-            .andExpect(jsonPath("$.data[*].id", hasItems("local-password", "oauth-github")))
+            .andExpect(jsonPath("$.data.length()").value(3))
+            .andExpect(jsonPath("$.data[*].id", hasItems("local-password", "local-registration", "oauth-github")))
             .andExpect(jsonPath("$.data[?(@.id=='local-password')].methodType").value(hasItems("PASSWORD")))
+            .andExpect(jsonPath("$.data[?(@.id=='local-registration')].methodType").value(hasItems("PASSWORD_REGISTRATION")))
             .andExpect(jsonPath("$.data[?(@.id=='oauth-github')].actionUrl")
                 .value(hasItems("/oauth2/authorization/github?returnTo=%2Fdashboard%2Fpublish")));
     }

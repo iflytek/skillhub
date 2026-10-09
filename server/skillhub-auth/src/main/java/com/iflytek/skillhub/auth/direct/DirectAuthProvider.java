@@ -13,5 +13,13 @@ public interface DirectAuthProvider {
         return providerCode();
     }
 
+    /**
+     * Whether the provider can currently authenticate users. Unavailable providers are left out
+     * of the auth method catalog.
+     */
+    default boolean isAvailable() {
+        return true;
+    }
+
     PlatformPrincipal authenticate(DirectAuthRequest request);
 }

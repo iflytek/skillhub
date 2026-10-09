@@ -41,6 +41,7 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
     private final PasswordResetProperties properties;
+    private final LocalAuthProperties localAuthProperties;
 
     public PasswordResetService(PasswordResetRequestRepository resetRequestRepository,
                                 UserAccountRepository userAccountRepository,
@@ -48,7 +49,8 @@ public class PasswordResetService {
                                 PasswordPolicyValidator passwordPolicyValidator,
                                 PasswordEncoder passwordEncoder,
                                 JavaMailSender mailSender,
-                                PasswordResetProperties properties) {
+                                PasswordResetProperties properties,
+                                LocalAuthProperties localAuthProperties) {
         this.resetRequestRepository = resetRequestRepository;
         this.userAccountRepository = userAccountRepository;
         this.credentialRepository = credentialRepository;
@@ -56,6 +58,7 @@ public class PasswordResetService {
         this.passwordEncoder = passwordEncoder;
         this.mailSender = mailSender;
         this.properties = properties;
+        this.localAuthProperties = localAuthProperties;
     }
 
     /**
@@ -64,6 +67,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void requestPasswordReset(String email) {
+        ensureLocalAuthEnabled();
         String normalizedEmail = normalizeEmail(email);
         validateEmail(normalizedEmail);
         Optional<UserAccount> userOpt = findEligibleUserByEmail(normalizedEmail);
@@ -95,6 +99,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void adminTriggerPasswordReset(String userId, String adminUserId) {
+        ensureLocalAuthEnabled();
         UserAccount user = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.admin.user.notFound", userId));
 
@@ -124,6 +129,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void confirmPasswordReset(String email, String code, String newPassword) {
+        ensureLocalAuthEnabled();
         String normalizedEmail = normalizeEmail(email);
         validateEmail(normalizedEmail);
         UserAccount user = findUserByEmail(normalizedEmail)
@@ -154,6 +160,12 @@ public class PasswordResetService {
         matchedRequest.markConsumed(now);
         resetRequestRepository.save(matchedRequest);
         invalidatePendingRequests(user.getId(), now);
+    }
+
+    private void ensureLocalAuthEnabled() {
+        if (!localAuthProperties.isEnabled()) {
+            throw new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.local.disabled");
+        }
     }
 
     private void invalidatePendingRequests(String userId, Instant now) {

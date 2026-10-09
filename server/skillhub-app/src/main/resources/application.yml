@@ -155,6 +155,11 @@ skillhub:
   auth:
     mock:
       enabled: ${SKILLHUB_AUTH_MOCK_ENABLED:false}
+    local:
+      # Set to false when an external identity provider is the only login path.
+      enabled: ${SKILLHUB_AUTH_LOCAL_ENABLED:true}
+      # Keeps existing local accounts (such as the bootstrap admin) but blocks new sign-ups.
+      registration-enabled: ${SKILLHUB_AUTH_LOCAL_REGISTRATION_ENABLED:true}
     direct:
       enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:false}
     session-bootstrap:

@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 
+const LOCAL_METHODS = vi.hoisted(() => [
+  { id: 'local-password', methodType: 'PASSWORD' },
+  { id: 'local-registration', methodType: 'PASSWORD_REGISTRATION' },
+])
+
 const authMethodsFixture = vi.hoisted(() => ({
-  methods: [] as Array<{ id: string, methodType: string }>,
+  methods: LOCAL_METHODS as Array<{ id: string, methodType: string }>,
   isLoading: false,
 }))
 
@@ -82,11 +87,25 @@ describe('RegisterPage', () => {
   })
 
   it('shows OAuth entry only when providers are advertised', () => {
-    authMethodsFixture.methods = [{ id: 'github', methodType: 'OAUTH_REDIRECT' }]
+    authMethodsFixture.methods = [...LOCAL_METHODS, { id: 'github', methodType: 'OAUTH_REDIRECT' }]
     const html = renderToStaticMarkup(<RegisterPage />)
 
     expect(html).toContain('register.oauthHint')
     expect(html).toContain('OAuth buttons')
-    authMethodsFixture.methods = []
+    authMethodsFixture.methods = LOCAL_METHODS
+  })
+
+  it('replaces the form with a notice when the server closes registration', () => {
+    authMethodsFixture.methods = [
+      { id: 'local-password', methodType: 'PASSWORD' },
+      { id: 'github', methodType: 'OAUTH_REDIRECT' },
+    ]
+    const html = renderToStaticMarkup(<RegisterPage />)
+
+    expect(html).toContain('register.disabled')
+    expect(html).not.toContain('register.submit')
+    expect(html).toContain('register.login')
+    expect(html).toContain('OAuth buttons')
+    authMethodsFixture.methods = LOCAL_METHODS
   })
 })

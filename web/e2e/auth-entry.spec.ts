@@ -2,6 +2,22 @@ import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
 
+const LOCAL_PASSWORD_METHOD = {
+  id: 'local-password',
+  methodType: 'PASSWORD',
+  provider: 'local',
+  displayName: 'Local Account',
+  actionUrl: '/api/v1/auth/local/login',
+}
+
+const LOCAL_REGISTRATION_METHOD = {
+  id: 'local-registration',
+  methodType: 'PASSWORD_REGISTRATION',
+  provider: 'local',
+  displayName: 'Local Account Registration',
+  actionUrl: '/api/v1/auth/local/register',
+}
+
 test.describe('Auth Entry', () => {
   test.beforeEach(async ({ page }) => {
     await setEnglishLocale(page)
@@ -46,6 +62,8 @@ test.describe('Auth Entry', () => {
           code: 0,
           msg: 'ok',
           data: [
+            LOCAL_PASSWORD_METHOD,
+            LOCAL_REGISTRATION_METHOD,
             {
               id: 'github',
               methodType: 'OAUTH_REDIRECT',
@@ -76,7 +94,7 @@ test.describe('Auth Entry', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ code: 0, msg: 'ok', data: [] }),
+        body: JSON.stringify({ code: 0, msg: 'ok', data: [LOCAL_PASSWORD_METHOD, LOCAL_REGISTRATION_METHOD] }),
       })
     })
 
@@ -84,6 +102,24 @@ test.describe('Auth Entry', () => {
 
     await expect(page.getByRole('button', { name: 'Register & Login' })).toBeVisible()
     await expect(page.getByText('Sign in directly with your existing OAuth account')).toHaveCount(0)
+  })
+
+  test('hides self-registration when the server closes it', async ({ page }) => {
+    await page.route('**/api/v1/auth/methods*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ code: 0, msg: 'ok', data: [LOCAL_PASSWORD_METHOD] }),
+      })
+    })
+
+    await page.goto('/login')
+    await expect(page.getByRole('button', { name: 'Login' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Sign up now' })).toHaveCount(0)
+
+    await page.goto('/register')
+    await expect(page.getByText('Self-registration is turned off on this server.', { exact: false })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Register & Login' })).toHaveCount(0)
   })
 
   test('keeps the login form available when the session status check fails', async ({ page }) => {

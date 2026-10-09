@@ -390,6 +390,7 @@
     "hasAccount": "Already have an account?",
     "login": "Back to login",
     "oauthHint": "Sign in directly with your existing OAuth account, no local password needed.",
+    "disabled": "Self-registration is turned off on this server. Sign in with an existing account or ask your administrator for access.",
     "usernameRequired": "Username is required",
     "usernameInvalid": "Only letters, numbers, or underscores allowed (3-64 characters)",
     "usernameExists": "Username already exists",

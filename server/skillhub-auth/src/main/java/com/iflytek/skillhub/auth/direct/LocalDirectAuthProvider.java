@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.auth.direct;
 
+import com.iflytek.skillhub.auth.local.LocalAuthProperties;
 import com.iflytek.skillhub.auth.local.LocalAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import org.springframework.stereotype.Component;
@@ -11,9 +12,12 @@ import org.springframework.stereotype.Component;
 public class LocalDirectAuthProvider implements DirectAuthProvider {
 
     private final LocalAuthService localAuthService;
+    private final LocalAuthProperties localAuthProperties;
 
-    public LocalDirectAuthProvider(LocalAuthService localAuthService) {
+    public LocalDirectAuthProvider(LocalAuthService localAuthService,
+                                   LocalAuthProperties localAuthProperties) {
         this.localAuthService = localAuthService;
+        this.localAuthProperties = localAuthProperties;
     }
 
     @Override
@@ -24,6 +28,11 @@ public class LocalDirectAuthProvider implements DirectAuthProvider {
     @Override
     public String displayName() {
         return "Local Account";
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return localAuthProperties.isEnabled();
     }
 
     @Override

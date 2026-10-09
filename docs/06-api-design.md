@@ -129,7 +129,8 @@ Public API 的可见性规则：
 
 `/api/v1/auth/methods` 返回统一登录方式目录。典型项包括：
 
-- `PASSWORD`：现有本地账号密码登录
+- `PASSWORD`：现有本地账号密码登录，`skillhub.auth.local.enabled=false` 时不返回
+- `PASSWORD_REGISTRATION`：本地账号自助注册入口，本地账号或 `skillhub.auth.local.registration-enabled` 关闭时不返回
 - `OAUTH_REDIRECT`：OAuth 跳转登录
 - `DIRECT_PASSWORD`：默认关闭的直连认证兼容入口
 - `SESSION_BOOTSTRAP`：默认关闭的被动会话引导入口
@@ -147,6 +148,13 @@ Public API 的可见性规则：
       "provider": "local",
       "displayName": "Local Account",
       "actionUrl": "/api/v1/auth/local/login"
+    },
+    {
+      "id": "local-registration",
+      "methodType": "PASSWORD_REGISTRATION",
+      "provider": "local",
+      "displayName": "Local Account Registration",
+      "actionUrl": "/api/v1/auth/local/register"
     },
     {
       "id": "oauth-github",

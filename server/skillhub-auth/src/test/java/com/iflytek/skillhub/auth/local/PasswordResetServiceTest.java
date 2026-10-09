@@ -50,6 +50,8 @@ class PasswordResetServiceTest {
     @Mock
     private JavaMailSender mailSender;
 
+    private LocalAuthProperties localAuthProperties;
+
     private PasswordResetService service;
 
     @BeforeEach
@@ -58,6 +60,7 @@ class PasswordResetServiceTest {
         properties.setCodeExpiry(Duration.ofMinutes(10));
         properties.setEmailFromAddress("noreply@skillhub.local");
         properties.setEmailFromName("SkillHub");
+        localAuthProperties = new LocalAuthProperties();
         service = new PasswordResetService(
                 resetRequestRepository,
                 userAccountRepository,
@@ -65,8 +68,28 @@ class PasswordResetServiceTest {
                 new PasswordPolicyValidator(),
                 passwordEncoder,
                 mailSender,
-                properties
+                properties,
+                localAuthProperties
         );
+    }
+
+    @Test
+    void passwordResetFlows_whenLocalAuthDisabled_failClosedWithoutSendingEmail() {
+        localAuthProperties.setEnabled(false);
+
+        assertThatThrownBy(() -> service.requestPasswordReset("alice@example.com"))
+                .isInstanceOf(AuthFlowException.class)
+                .hasMessageContaining("error.auth.local.disabled")
+                .extracting("status")
+                .isEqualTo(HttpStatus.FORBIDDEN);
+        assertThatThrownBy(() -> service.confirmPasswordReset("alice@example.com", "123456", "Newpass123!"))
+                .isInstanceOf(AuthFlowException.class)
+                .hasMessageContaining("error.auth.local.disabled");
+        assertThatThrownBy(() -> service.adminTriggerPasswordReset("usr_1", "admin"))
+                .isInstanceOf(AuthFlowException.class)
+                .hasMessageContaining("error.auth.local.disabled");
+
+        verifyNoInteractions(resetRequestRepository, userAccountRepository, credentialRepository, mailSender);
     }
 
     @Test

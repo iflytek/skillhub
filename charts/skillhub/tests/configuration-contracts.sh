@@ -300,10 +300,25 @@ render s3-rolling "$CHART_DIR" \
   --show-only templates/server-deployment.yaml >"$TMP_DIR/s3-rolling.yaml"
 grep -Fq 'type: RollingUpdate' "$TMP_DIR/s3-rolling.yaml"
 
+grep -Fq 'auth-local-enabled: "true"' "$TMP_DIR/default.yaml"
+grep -Fq 'auth-local-registration-enabled: "true"' "$TMP_DIR/default.yaml"
+render local-auth-off "$CHART_DIR" \
+  --set auth.direct.enabled=false \
+  --set auth.local.enabled=false \
+  --set auth.local.registrationEnabled=false >"$TMP_DIR/local-auth-off.yaml"
+grep -Fq 'auth-local-enabled: "false"' "$TMP_DIR/local-auth-off.yaml"
+grep -Fq 'auth-local-registration-enabled: "false"' "$TMP_DIR/local-auth-off.yaml"
+grep -Fq 'name: SKILLHUB_AUTH_LOCAL_ENABLED' "$TMP_DIR/local-auth-off.yaml"
+grep -Fq 'name: SKILLHUB_AUTH_LOCAL_REGISTRATION_ENABLED' "$TMP_DIR/local-auth-off.yaml"
+
 assert_rejected server-off --set server.enabled=false
 assert_rejected direct-auth-without-provider \
   --set auth.direct.enabled=true \
   --set-string auth.direct.provider=
+assert_rejected direct-local-without-local-auth \
+  --set auth.direct.enabled=true \
+  --set auth.direct.provider=local \
+  --set auth.local.enabled=false
 assert_rejected ingress-without-server-service --set ingress.enabled=true --set server.service.enabled=false
 assert_rejected ingress-without-web-service --set ingress.enabled=true --set web.service.enabled=false
 assert_rejected multi-without-rwx --set server.replicaCount=2

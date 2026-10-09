@@ -297,6 +297,16 @@ spec:
                 configMapKeyRef:
                   name: {{ include "skillhub.fullname" . }}-config
                   key: auth-direct-enabled
+            - name: SKILLHUB_AUTH_LOCAL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-local-enabled
+            - name: SKILLHUB_AUTH_LOCAL_REGISTRATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-local-registration-enabled
             - name: SKILLHUB_BUILTIN_SKILLS_ENABLED
               valueFrom:
                 configMapKeyRef:

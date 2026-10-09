@@ -31,6 +31,14 @@
             "enabled": { "type": "boolean" },
             "provider": { "type": "string" }
           }
+        },
+        "local": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "registrationEnabled": { "type": "boolean" }
+          }
         }
       }
     },

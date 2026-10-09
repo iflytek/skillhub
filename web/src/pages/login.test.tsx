@@ -3,8 +3,13 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach } from 'vitest'
 import { describe, expect, it, vi } from 'vitest'
 
+const LOCAL_METHODS = vi.hoisted(() => [
+  { id: 'local-password', methodType: 'PASSWORD' },
+  { id: 'local-registration', methodType: 'PASSWORD_REGISTRATION' },
+])
+
 const authMethodsFixture = vi.hoisted(() => ({
-  methods: [] as Array<{ id: string, methodType: string }>,
+  methods: LOCAL_METHODS as Array<{ id: string, methodType: string }>,
   bootstrapEnabled: false,
   directEnabled: false,
   isError: false,
@@ -82,7 +87,7 @@ import { LoginPage } from './login'
 describe('LoginPage', () => {
   afterEach(() => {
     cleanup()
-    authMethodsFixture.methods = []
+    authMethodsFixture.methods = LOCAL_METHODS
     authMethodsFixture.bootstrapEnabled = false
     authMethodsFixture.directEnabled = false
     authMethodsFixture.isError = false
@@ -173,6 +178,33 @@ describe('LoginPage', () => {
 
     expect(screen.queryByRole('button', { name: 'login.tabEnterprise' })).toBeNull()
     expect(screen.queryByText('session bootstrap')).toBeNull()
+  })
+
+  it('hides the password form and sign-up link when the server disables local accounts', () => {
+    authMethodsFixture.methods = [{ id: 'oauth-oidc', methodType: 'OAUTH_REDIRECT' }]
+    render(<LoginPage />)
+
+    expect(screen.queryByLabelText('login.password')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'login.submit' })).toBeNull()
+    expect(screen.queryByText('login.register')).toBeNull()
+  })
+
+  it('keeps password login but hides sign-up when registration is closed', () => {
+    authMethodsFixture.methods = [{ id: 'local-password', methodType: 'PASSWORD' }]
+    render(<LoginPage />)
+
+    expect(screen.getByRole('button', { name: 'login.submit' })).toBeTruthy()
+    expect(screen.queryByText('login.register')).toBeNull()
+  })
+
+  it('shows session bootstrap directly when it is the only configured entry', () => {
+    authMethodsFixture.methods = [{ id: 'bootstrap-proxy', methodType: 'SESSION_BOOTSTRAP' }]
+    authMethodsFixture.bootstrapEnabled = true
+    render(<LoginPage />)
+
+    expect(screen.queryByRole('button', { name: 'login.tabEnterprise' })).toBeNull()
+    expect(screen.queryByLabelText('login.password')).toBeNull()
+    expect(screen.getByText('session bootstrap').closest('[hidden]')).toBeNull()
   })
 
   it('preserves configured session bootstrap when the method catalog is unavailable', () => {

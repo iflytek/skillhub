@@ -6,6 +6,9 @@
 {{- if and .Values.auth.direct.enabled (not .Values.auth.direct.provider) -}}
 {{- fail "auth.direct.enabled=true requires auth.direct.provider" -}}
 {{- end -}}
+{{- if and .Values.auth.direct.enabled (eq (toString .Values.auth.direct.provider) "local") (not (dig "local" "enabled" true .Values.auth)) -}}
+{{- fail "auth.direct.provider=local requires auth.local.enabled=true; disable auth.direct or choose another provider" -}}
+{{- end -}}
 
 {{- if and .Values.ingress.enabled (not .Values.server.service.enabled) -}}
 {{- fail "ingress.enabled=true requires server.service.enabled=true" -}}
