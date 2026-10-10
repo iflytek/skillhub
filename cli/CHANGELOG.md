@@ -6,6 +6,8 @@ All notable CLI behavior changes are documented in this file.
 
 ### Added
 
+- Add `skillhub suite install|check|upgrade|remove` for Skill Suites on compatible registries
+  (SkillHub v0.2.20+), with local-change protection and stale-snapshot rejection on upgrade.
 - Add the `dsh` agent profile, displayed as DeepSeek Harness, with automatic detection of
   project-level and user-level `.dsh/skills` directories.
 - Add OAuth Device Flow to `skillhub login` when no API token is supplied, including best-effort
