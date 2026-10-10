@@ -67,15 +67,21 @@ public class InitialAuthSettingsInitializer implements ApplicationRunner {
             }
             return null;
         });
+        Long existingUsers = null;
         if (settings.findBySettingKey(LocalAuthSettingsService.SETTING_KEY).isEmpty()) {
+            existingUsers = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM user_account", Long.class);
+            boolean newInstallation = existingUsers == 0L;
             settings.save(new SystemSetting(LocalAuthSettingsService.SETTING_KEY, Map.of(
-                    LocalAuthSettingsService.PASSWORD_LOGIN_KEY, properties.isPasswordLoginEnabled(),
-                    LocalAuthSettingsService.SELF_REGISTRATION_KEY, properties.isSelfRegistrationEnabled())));
+                    LocalAuthSettingsService.PASSWORD_LOGIN_KEY,
+                    newInstallation ? properties.isPasswordLoginEnabled() : true,
+                    LocalAuthSettingsService.SELF_REGISTRATION_KEY,
+                    newInstallation ? properties.isSelfRegistrationEnabled() : true)));
         }
         if (settings.findBySettingKey(GRANT_SEED_MARKER).isPresent()) {
             return;
         }
-        if (jdbcTemplate.queryForObject("SELECT COUNT(*) FROM user_account", Long.class) == 0L) {
+        if ((existingUsers != null ? existingUsers
+                : jdbcTemplate.queryForObject("SELECT COUNT(*) FROM user_account", Long.class)) == 0L) {
             seedInitialRules();
         }
         settings.save(new SystemSetting(GRANT_SEED_MARKER, Map.of("initialized", true)));

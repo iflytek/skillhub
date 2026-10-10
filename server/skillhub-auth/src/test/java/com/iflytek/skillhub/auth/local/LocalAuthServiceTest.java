@@ -103,6 +103,17 @@ class LocalAuthServiceTest {
     }
 
     @Test
+    void disabledPasswordLoginStopsChangePasswordBeforeCredentialLookup() {
+        doThrow(new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.local.login.disabled"))
+            .when(authSettings).requirePasswordLogin();
+
+        assertThatThrownBy(() -> service.changePassword("usr_1", "old", "Newpass123!"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+        verifyNoInteractions(credentialRepository, passwordEncoder);
+    }
+
+    @Test
     void register_createsUserAndCredential() {
         given(credentialRepository.existsByUsernameIgnoreCase("alice")).willReturn(false);
         given(userAccountRepository.findByEmailIgnoreCase("alice@example.com")).willReturn(Optional.empty());

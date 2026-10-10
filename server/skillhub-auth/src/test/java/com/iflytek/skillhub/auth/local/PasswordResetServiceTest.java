@@ -88,6 +88,28 @@ class PasswordResetServiceTest {
     }
 
     @Test
+    void disabledPasswordLoginStopsResetConfirmationBeforeCodeLookup() {
+        doThrow(new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.local.login.disabled"))
+                .when(authSettings).requirePasswordLogin();
+
+        assertThatThrownBy(() -> service.confirmPasswordReset("alice@example.com", "123456", "Abcd123!"))
+                .isInstanceOf(AuthFlowException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+        verifyNoInteractions(userAccountRepository, resetRequestRepository, credentialRepository);
+    }
+
+    @Test
+    void disabledPasswordLoginStopsAdminResetBeforeAccountLookup() {
+        doThrow(new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.local.login.disabled"))
+                .when(authSettings).requirePasswordLogin();
+
+        assertThatThrownBy(() -> service.adminTriggerPasswordReset("usr_1", "admin_1"))
+                .isInstanceOf(AuthFlowException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+        verifyNoInteractions(userAccountRepository, resetRequestRepository, credentialRepository);
+    }
+
+    @Test
     void requestPasswordReset_withEligibleEmail_savesRequestAndSendsEmail() {
         UserAccount user = new UserAccount("usr_1", "alice", "alice@example.com", null);
         given(userAccountRepository.findByEmailIgnoreCase("alice@example.com")).willReturn(Optional.of(user));

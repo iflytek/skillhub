@@ -49,6 +49,41 @@ class InitialAuthSettingsInitializerTest {
     }
 
     @Test
+    void emptyDatabaseUsesConfiguredLoginFlags() {
+        when(settings.findBySettingKey(LocalAuthSettingsService.SETTING_KEY)).thenReturn(Optional.empty());
+        when(settings.findBySettingKey("auth.initial-role-grants.initialized")).thenReturn(Optional.empty());
+        when(jdbc.queryForObject("SELECT COUNT(*) FROM user_account", Long.class)).thenReturn(0L);
+        InitialAuthSettingsProperties properties = new InitialAuthSettingsProperties();
+        properties.setPasswordLoginEnabled(false);
+        properties.setSelfRegistrationEnabled(false);
+
+        new InitialAuthSettingsInitializer(properties, settings, rules, roles, new ObjectMapper(), jdbc).run(args);
+
+        verify(settings).save(org.mockito.ArgumentMatchers.argThat(setting ->
+                setting.getSettingKey().equals(LocalAuthSettingsService.SETTING_KEY)
+                        && setting.getValue().equals(Map.of("passwordLoginEnabled", false,
+                                "selfRegistrationEnabled", false))));
+    }
+
+    @Test
+    void existingUsersUpgradeWithSafeDefaultsEvenWhenDeploymentFlagsAreDisabled() {
+        when(settings.findBySettingKey(LocalAuthSettingsService.SETTING_KEY)).thenReturn(Optional.empty());
+        when(settings.findBySettingKey("auth.initial-role-grants.initialized")).thenReturn(Optional.empty());
+        when(jdbc.queryForObject("SELECT COUNT(*) FROM user_account", Long.class)).thenReturn(2L);
+        InitialAuthSettingsProperties properties = new InitialAuthSettingsProperties();
+        properties.setPasswordLoginEnabled(false);
+        properties.setSelfRegistrationEnabled(false);
+
+        new InitialAuthSettingsInitializer(properties, settings, rules, roles, new ObjectMapper(), jdbc).run(args);
+
+        verify(settings).save(org.mockito.ArgumentMatchers.argThat(setting ->
+                setting.getSettingKey().equals(LocalAuthSettingsService.SETTING_KEY)
+                        && setting.getValue().equals(Map.of("passwordLoginEnabled", true,
+                                "selfRegistrationEnabled", true))));
+        verify(rules, never()).save(any());
+    }
+
+    @Test
     void existingMarkerPreventsDeletedRulesFromBeingSeededAgain() {
         when(settings.findBySettingKey(LocalAuthSettingsService.SETTING_KEY))
                 .thenReturn(Optional.of(new SystemSetting(LocalAuthSettingsService.SETTING_KEY,

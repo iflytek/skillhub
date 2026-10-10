@@ -178,11 +178,11 @@ class IdentityBindingServiceTest {
 
     @Test
     void bindOrCreate_grantIsVisibleInFirstPrincipalBeforeSessionCreation() {
-        OAuthClaims claims = new OAuthClaims("feishu", "external-1", "admin@example.com", true, "admin", Map.of());
+        OAuthClaims claims = new OAuthClaims("github", "external-1", "admin@example.com", true, "admin", Map.of());
         Role role = new Role();
         ReflectionTestUtils.setField(role, "code", "SUPER_ADMIN");
         AtomicBoolean granted = new AtomicBoolean();
-        when(bindingRepo.findByProviderCodeAndSubject("feishu", "external-1")).thenReturn(Optional.empty());
+        when(bindingRepo.findByProviderCodeAndSubject("github", "external-1")).thenReturn(Optional.empty());
         when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         doAnswer(invocation -> {
             granted.set(true);
@@ -201,9 +201,9 @@ class IdentityBindingServiceTest {
 
     @Test
     void bindOrCreate_doesNotMergeWithLocalAccountSharingEmail() {
-        OAuthClaims claims = new OAuthClaims("feishu", "external-1", "shared@example.com", true,
+        OAuthClaims claims = new OAuthClaims("github", "external-1", "shared@example.com", true,
                 "external-user", Map.of());
-        when(bindingRepo.findByProviderCodeAndSubject("feishu", "external-1")).thenReturn(Optional.empty());
+        when(bindingRepo.findByProviderCodeAndSubject("github", "external-1")).thenReturn(Optional.empty());
         when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
 

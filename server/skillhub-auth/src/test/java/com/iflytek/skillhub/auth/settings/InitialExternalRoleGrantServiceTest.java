@@ -36,12 +36,12 @@ class InitialExternalRoleGrantServiceTest {
 
     @Test
     void verifiedEmailConsumesMatchingRuleAndGrantsNewUser() {
-        ExternalRoleGrantRule rule = new ExternalRoleGrantRule("feishu", "admin@example.com", role, null);
-        when(rules.lockByIdentityAndStatus("feishu", "admin@example.com", ExternalRoleGrantRule.Status.ACTIVE))
+        ExternalRoleGrantRule rule = new ExternalRoleGrantRule("github", "admin@example.com", role, null);
+        when(rules.lockByIdentityAndStatus("github", "admin@example.com", ExternalRoleGrantRule.Status.ACTIVE))
                 .thenReturn(Optional.of(rule));
         when(role.getCode()).thenReturn("SUPER_ADMIN");
 
-        service.grantForNewUser(new OAuthClaims("FEISHU", "external-42", " Admin@Example.COM ", true,
+        service.grantForNewUser(new OAuthClaims("GITHUB", "external-42", " Admin@Example.COM ", true,
                 "admin", Map.of()), "usr_new");
 
         ArgumentCaptor<UserRoleBinding> grant = ArgumentCaptor.forClass(UserRoleBinding.class);
@@ -58,7 +58,7 @@ class InitialExternalRoleGrantServiceTest {
 
     @Test
     void unverifiedEmailCannotConsumeRule() {
-        service.grantForNewUser(new OAuthClaims("feishu", "external-42", "admin@example.com", false,
+        service.grantForNewUser(new OAuthClaims("github", "external-42", "admin@example.com", false,
                 "admin", Map.of()), "usr_new");
 
         verify(rules, never()).lockByIdentityAndStatus(any(), any(), eq(ExternalRoleGrantRule.Status.ACTIVE));
@@ -68,10 +68,10 @@ class InitialExternalRoleGrantServiceTest {
 
     @Test
     void absentActiveRuleDoesNotGrantOrAudit() {
-        when(rules.lockByIdentityAndStatus("feishu", "admin@example.com", ExternalRoleGrantRule.Status.ACTIVE))
+        when(rules.lockByIdentityAndStatus("github", "admin@example.com", ExternalRoleGrantRule.Status.ACTIVE))
                 .thenReturn(Optional.empty());
 
-        service.grantForNewUser(new OAuthClaims("feishu", "external-42", "admin@example.com", true,
+        service.grantForNewUser(new OAuthClaims("github", "external-42", "admin@example.com", true,
                 "admin", Map.of()), "usr_new");
 
         verify(bindings, never()).save(any());
