@@ -160,6 +160,9 @@ public class SystemAuthSettingsAppService {
         if (!PROVIDER.matcher(normalized).matches()) {
             throw new DomainBadRequestException("error.system.roleGrant.invalidProvider");
         }
+        if ("feishu".equals(normalized) || "dingtalk".equals(normalized)) {
+            throw new DomainBadRequestException("error.system.roleGrant.unverifiedProvider");
+        }
         return normalized;
     }
 

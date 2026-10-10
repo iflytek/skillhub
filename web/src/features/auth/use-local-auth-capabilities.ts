@@ -5,6 +5,6 @@ export function useLocalAuthCapabilities() {
   return useQuery({
     queryKey: ['auth', 'local-capabilities'],
     queryFn: authApi.getLocalCapabilities,
-    staleTime: 30_000,
+    staleTime: 0,
   })
 }

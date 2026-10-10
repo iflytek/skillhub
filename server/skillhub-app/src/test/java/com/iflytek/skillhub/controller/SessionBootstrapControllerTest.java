@@ -2,6 +2,8 @@ package com.iflytek.skillhub.controller;
 
 import com.iflytek.skillhub.auth.bootstrap.PassiveSessionAuthenticator;
 import com.iflytek.skillhub.auth.local.LocalCredentialRepository;
+import com.iflytek.skillhub.auth.settings.LocalAuthSettings;
+import com.iflytek.skillhub.auth.settings.LocalAuthSettingsService;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -51,6 +53,14 @@ class SessionBootstrapControllerTest {
 
     @MockBean
     private LocalCredentialRepository localCredentialRepository;
+
+    @MockBean
+    private LocalAuthSettingsService localAuthSettingsService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void localAuthEnabled() {
+        given(localAuthSettingsService.current()).willReturn(new LocalAuthSettings(1L, true, true, 0L, null));
+    }
 
     @Test
     void sessionBootstrapShouldEstablishSessionWhenAuthenticatorSucceeds() throws Exception {

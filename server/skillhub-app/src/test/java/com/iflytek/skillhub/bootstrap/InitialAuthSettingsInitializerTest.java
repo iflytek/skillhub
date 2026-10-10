@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.auth.repository.RoleRepository;
@@ -63,5 +64,20 @@ class InitialAuthSettingsInitializerTest {
         verify(settings, never()).save(any());
         verify(rules, never()).save(any());
         verify(jdbc, never()).queryForObject(eq("SELECT COUNT(*) FROM user_account"), eq(Long.class));
+    }
+
+    @Test
+    void initialGrantForUnverifiedProviderFailsStartupInsteadOfCreatingDeadRule() {
+        when(settings.findBySettingKey(LocalAuthSettingsService.SETTING_KEY)).thenReturn(Optional.empty());
+        when(settings.findBySettingKey("auth.initial-role-grants.initialized")).thenReturn(Optional.empty());
+        when(jdbc.queryForObject("SELECT COUNT(*) FROM user_account", Long.class)).thenReturn(0L);
+        InitialAuthSettingsProperties properties = new InitialAuthSettingsProperties();
+        properties.setRoleGrantsJson("[{\"provider\":\"feishu\",\"email\":\"admin@example.com\",\"role\":\"SUPER_ADMIN\"}]");
+
+        assertThatThrownBy(() -> new InitialAuthSettingsInitializer(
+                properties, settings, rules, roles, new ObjectMapper(), jdbc).run(args))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("verified email");
+        verify(rules, never()).save(any());
     }
 }

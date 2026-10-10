@@ -8,6 +8,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 
 import com.iflytek.skillhub.auth.entity.IdentityBinding;
 import com.iflytek.skillhub.auth.entity.Role;
@@ -28,6 +30,7 @@ import com.iflytek.skillhub.domain.user.UserStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -171,6 +174,44 @@ class IdentityBindingServiceTest {
         PlatformPrincipal principal = service.bindOrCreate(claims, UserStatus.ACTIVE);
 
         assertThat(principal.platformRoles()).containsExactly("USER");
+    }
+
+    @Test
+    void bindOrCreate_grantIsVisibleInFirstPrincipalBeforeSessionCreation() {
+        OAuthClaims claims = new OAuthClaims("feishu", "external-1", "admin@example.com", true, "admin", Map.of());
+        Role role = new Role();
+        ReflectionTestUtils.setField(role, "code", "SUPER_ADMIN");
+        AtomicBoolean granted = new AtomicBoolean();
+        when(bindingRepo.findByProviderCodeAndSubject("feishu", "external-1")).thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doAnswer(invocation -> {
+            granted.set(true);
+            return null;
+        }).when(initialRoleGrants).grantForNewUser(any(), any());
+        when(roleBindingRepo.findByUserId(any())).thenAnswer(invocation -> granted.get()
+                ? List.of(new UserRoleBinding(invocation.getArgument(0), role)) : List.of());
+
+        PlatformPrincipal principal = service.bindOrCreate(claims, UserStatus.ACTIVE);
+
+        assertThat(principal.platformRoles()).contains("SUPER_ADMIN");
+        var ordered = inOrder(initialRoleGrants, roleBindingRepo);
+        ordered.verify(initialRoleGrants).grantForNewUser(claims, principal.userId());
+        ordered.verify(roleBindingRepo).findByUserId(principal.userId());
+    }
+
+    @Test
+    void bindOrCreate_doesNotMergeWithLocalAccountSharingEmail() {
+        OAuthClaims claims = new OAuthClaims("feishu", "external-1", "shared@example.com", true,
+                "external-user", Map.of());
+        when(bindingRepo.findByProviderCodeAndSubject("feishu", "external-1")).thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        PlatformPrincipal principal = service.bindOrCreate(claims, UserStatus.ACTIVE);
+
+        assertThat(principal.userId()).startsWith("usr_");
+        verify(userRepo, never()).findByEmailIgnoreCase(any());
+        verify(initialRoleGrants).grantForNewUser(claims, principal.userId());
     }
 
     @Test

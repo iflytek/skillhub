@@ -8,7 +8,7 @@
 
 - [x] 在本地登录、direct 本地认证、注册和密码管理服务端入口执行对应开关；关闭密码登录时一并阻止会直接建会话的本地注册。
 - [x] 在 OAuth 普通准入允许后的首次 ACTIVE 账号创建事务中匹配并消费角色规则，首次主体包含新角色。
-- [ ] 在统一身份核心的 `LEGACY`、`SHADOW`、`ACTIVE` 模式下核对公开 OAuth 接入点；保持旧身份绑定写入权威与同邮箱不自动合并的现有行为。
+- [x] 在统一身份核心的 `LEGACY`、`SHADOW`、`ACTIVE` 模式下核对公开 OAuth 接入点；保持旧身份绑定写入权威与同邮箱不自动合并的现有行为（`OAuthLoginFlowServiceTest`、`IdentityBindingServiceTest`）。
 - [ ] 保持已有账号、准入拒绝、未验证邮箱、停用规则、并发首次登录和人工角色修改的既定行为。
 
 ## 3. API 与 Web

@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
+const capabilities = vi.hoisted(() => ({ passwordLoginEnabled: true }))
+
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: unknown }) => children,
 }))
@@ -22,7 +24,7 @@ vi.mock('@/api/client', () => ({
 }))
 
 vi.mock('@/features/auth/use-local-auth-capabilities', () => ({
-  useLocalAuthCapabilities: () => ({ data: { passwordLoginEnabled: true }, isError: false }),
+  useLocalAuthCapabilities: () => ({ data: { passwordLoginEnabled: capabilities.passwordLoginEnabled }, isError: false }),
 }))
 
 vi.mock('@/shared/ui/button', () => ({
@@ -54,5 +56,13 @@ describe('ResetPasswordPage', () => {
     expect(html).toContain('resetPassword.title')
     expect(html).toContain('resetPassword.sendCode')
     expect(html).toContain('resetPassword.submit')
+  })
+
+  it('hides reset actions when password login is disabled', () => {
+    capabilities.passwordLoginEnabled = false
+    const html = renderToStaticMarkup(<ResetPasswordPage />)
+    expect(html).not.toContain('resetPassword.sendCode')
+    expect(html).toContain('systemConfig.passwordDisabled')
+    capabilities.passwordLoginEnabled = true
   })
 })

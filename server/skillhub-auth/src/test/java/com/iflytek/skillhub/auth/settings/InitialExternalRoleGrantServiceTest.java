@@ -52,6 +52,8 @@ class InitialExternalRoleGrantServiceTest {
         assertThat(rule.getMatchedSubject()).isEqualTo("external-42");
         assertThat(rule.getGrantedUserId()).isEqualTo("usr_new");
         verify(rules).saveAndFlush(rule);
+        verify(audit).record(eq(null), eq("INITIAL_ROLE_GRANTED"), eq("EXTERNAL_ROLE_GRANT_RULE"),
+                eq(rule.getId()), eq(null), eq(null), eq(null), any());
     }
 
     @Test
@@ -61,5 +63,18 @@ class InitialExternalRoleGrantServiceTest {
 
         verify(rules, never()).lockByIdentityAndStatus(any(), any(), eq(ExternalRoleGrantRule.Status.ACTIVE));
         verify(bindings, never()).save(any());
+        verify(audit, never()).record(any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void absentActiveRuleDoesNotGrantOrAudit() {
+        when(rules.lockByIdentityAndStatus("feishu", "admin@example.com", ExternalRoleGrantRule.Status.ACTIVE))
+                .thenReturn(Optional.empty());
+
+        service.grantForNewUser(new OAuthClaims("feishu", "external-42", "admin@example.com", true,
+                "admin", Map.of()), "usr_new");
+
+        verify(bindings, never()).save(any());
+        verify(audit, never()).record(any(), any(), any(), any(), any(), any(), any(), any());
     }
 }

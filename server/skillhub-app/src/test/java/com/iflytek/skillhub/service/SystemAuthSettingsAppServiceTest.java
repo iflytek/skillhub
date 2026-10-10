@@ -9,6 +9,7 @@ import static org.mockito.ArgumentMatchers.any;
 import com.iflytek.skillhub.auth.repository.RoleRepository;
 import com.iflytek.skillhub.auth.settings.ExternalRoleGrantRule;
 import com.iflytek.skillhub.auth.settings.ExternalRoleGrantRuleRepository;
+import com.iflytek.skillhub.auth.settings.LocalAuthSettings;
 import com.iflytek.skillhub.auth.settings.LocalAuthSettingsService;
 import com.iflytek.skillhub.auth.settings.SystemSetting;
 import com.iflytek.skillhub.auth.settings.SystemSettingRepository;
@@ -24,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class SystemAuthSettingsAppServiceTest {
@@ -54,14 +56,46 @@ class SystemAuthSettingsAppServiceTest {
     }
 
     @Test
+    void successfulSettingsChangeWritesAuditAndReturnsStoredValue() {
+        SystemSetting current = new SystemSetting("auth.local",
+                Map.of("passwordLoginEnabled", true, "selfRegistrationEnabled", true));
+        ReflectionTestUtils.setField(current, "id", 1L);
+        when(settings.findBySettingKey("auth.local")).thenReturn(Optional.of(current));
+        when(localSettings.current()).thenReturn(new LocalAuthSettings(1L, false, true, 1L, null));
+
+        var response = service.updateLocalSettings(
+                new SystemAuthSettingsUpdateRequest(false, true, 0L), "admin",
+                new AuditRequestContext("127.0.0.1", "test"));
+
+        org.assertj.core.api.Assertions.assertThat(response.passwordLoginEnabled()).isFalse();
+        org.assertj.core.api.Assertions.assertThat(current.getValue().get("passwordLoginEnabled")).isEqualTo(false);
+        verify(settings).saveAndFlush(current);
+        verify(audit).record(org.mockito.ArgumentMatchers.eq("admin"),
+                org.mockito.ArgumentMatchers.eq("SYSTEM_AUTH_SETTINGS_UPDATE"),
+                org.mockito.ArgumentMatchers.eq("SYSTEM_SETTING"),
+                org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq(null),
+                org.mockito.ArgumentMatchers.eq("127.0.0.1"),
+                org.mockito.ArgumentMatchers.eq("test"), any());
+    }
+
+    @Test
     void duplicateActiveGrantIsRejectedBeforeWrite() {
         when(rules.existsByProviderCodeAndNormalizedEmailAndStatus(
-                "feishu", "admin@example.com", ExternalRoleGrantRule.Status.ACTIVE)).thenReturn(true);
+                "github", "admin@example.com", ExternalRoleGrantRule.Status.ACTIVE)).thenReturn(true);
 
         assertThatThrownBy(() -> service.createRule(
-                new ExternalRoleGrantCreateRequest(" FEISHU ", "Admin@Example.Com", "SUPER_ADMIN"),
+                new ExternalRoleGrantCreateRequest(" GITHUB ", "Admin@Example.Com", "SUPER_ADMIN"),
                 "admin", new AuditRequestContext(null, null)))
                 .isInstanceOf(DomainConflictException.class);
+        verify(rules, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void providerWithoutVerifiedEmailCannotCreateDeadGrantRule() {
+        assertThatThrownBy(() -> service.createRule(
+                new ExternalRoleGrantCreateRequest("feishu", "admin@example.com", "SUPER_ADMIN"),
+                "admin", new AuditRequestContext(null, null)))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException.class);
         verify(rules, never()).saveAndFlush(any());
     }
 }

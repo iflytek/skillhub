@@ -1684,7 +1684,7 @@
     "registrationRequiresLogin": "Password login is off, so registration is currently unavailable. The registration setting is retained.",
     "lockoutWarning": "Admins who rely only on passwords will not be able to sign in again. Continue?",
     "initialRoleRules": "Initial external account role rules",
-    "ruleHelp": "Applies only when a new external account is created after passing the existing access policy. A local account with the same email is not merged. Grant existing users a role in User Management.",
+    "ruleHelp": "Applies only when a new external account is created after passing the existing access policy. A local account with the same email is not merged. Grant existing users a role in User Management. Feishu and DingTalk do not currently provide verified email, so these rules are unavailable for them.",
     "provider": "Identity provider code",
     "email": "Verified email",
     "role": "Platform role",

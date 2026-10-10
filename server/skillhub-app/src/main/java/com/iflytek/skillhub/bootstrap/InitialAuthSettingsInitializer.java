@@ -99,6 +99,9 @@ public class InitialAuthSettingsInitializer implements ApplicationRunner {
             if (!PROVIDER.matcher(provider).matches() || !EMAIL.matcher(email).matches()) {
                 throw new IllegalStateException("Invalid initial role grant identity");
             }
+            if ("feishu".equals(provider) || "dingtalk".equals(provider)) {
+                throw new IllegalStateException("Provider does not attest verified email for initial role grants: " + provider);
+            }
             if (!identities.add(provider + ":" + email)) {
                 throw new IllegalStateException("Duplicate initial role grant identity");
             }

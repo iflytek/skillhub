@@ -22,7 +22,17 @@ export function SystemConfigPage() {
   const refresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['system-config'] })
   }
-  const updateSettings = useMutation({ mutationFn: systemConfigApi.updateLocalAuth, onSuccess: refresh })
+  const updateSettings = useMutation({
+    mutationFn: systemConfigApi.updateLocalAuth,
+    onSuccess: async (value) => {
+      queryClient.setQueryData(['auth', 'local-capabilities'], {
+        passwordLoginEnabled: value.passwordLoginEnabled,
+        selfRegistrationEnabled: value.selfRegistrationEnabled,
+        registrationAvailable: value.passwordLoginEnabled && value.selfRegistrationEnabled,
+      })
+      await refresh()
+    },
+  })
   const createRule = useMutation({ mutationFn: systemConfigApi.createRoleGrant, onSuccess: refresh })
   const updateRule = useMutation({
     mutationFn: ({ id, version, code }: { id: number; version: number; code: string }) =>

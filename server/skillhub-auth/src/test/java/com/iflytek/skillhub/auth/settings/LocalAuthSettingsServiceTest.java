@@ -11,6 +11,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataAccessResourceFailureException;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -69,6 +71,17 @@ class LocalAuthSettingsServiceTest {
     void missingSettingFailsClosed() {
         when(repository.findBySettingKey("auth.local")).thenReturn(Optional.empty());
         assertThatThrownBy(() -> new LocalAuthSettingsService(repository).requirePasswordLogin())
-                .isInstanceOf(AuthFlowException.class);
+                .isInstanceOf(AuthFlowException.class)
+                .extracting("status").isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+    }
+
+    @Test
+    void databaseFailureFailsClosedWithServiceUnavailable() {
+        when(repository.findBySettingKey("auth.local"))
+                .thenThrow(new DataAccessResourceFailureException("database unavailable"));
+
+        assertThatThrownBy(() -> new LocalAuthSettingsService(repository).requirePasswordLogin())
+                .isInstanceOf(AuthFlowException.class)
+                .extracting("status").isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 }
