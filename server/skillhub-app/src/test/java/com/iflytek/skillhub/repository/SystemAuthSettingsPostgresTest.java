@@ -123,10 +123,7 @@ class SystemAuthSettingsPostgresTest {
         TransactionTemplate transactions = new TransactionTemplate(transactionManager);
         Long ruleId = transactions.execute(status -> rules.save(new ExternalRoleGrantRule(
                 "github", email, roles.findByCode("SUPER_ADMIN").orElseThrow(), "admin")).getId());
-        IdentityBindingService bindingService = new IdentityBindingService(
-                identities, users, userRoles, mock(GlobalNamespaceMembershipService.class),
-                mock(ApplicationEventPublisher.class), transactionManager,
-                new InitialExternalRoleGrantService(rules, userRoles, mock(AuditLogService.class)));
+        IdentityBindingService bindingService = bindingService();
         OAuthClaims claims = new OAuthClaims("github", subject, email, true, "admin", Map.of());
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch start = new CountDownLatch(1);
@@ -163,6 +160,47 @@ class SystemAuthSettingsPostgresTest {
             assertThat(userRoles.findByUserId(firstPrincipal.userId())).isEmpty();
             assertThat(rules.findById(ruleId).orElseThrow().getGrantedUserId()).isEqualTo(firstPrincipal.userId());
         }
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void concurrentDifferentSubjectsSharingEmailCannotBothConsumeRule() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String email = suffix + "@example.com";
+        TransactionTemplate transactions = new TransactionTemplate(transactionManager);
+        Long ruleId = transactions.execute(status -> rules.save(new ExternalRoleGrantRule(
+                "github", email, roles.findByCode("SUPER_ADMIN").orElseThrow(), "admin")).getId());
+        IdentityBindingService bindingService = bindingService();
+        OAuthClaims firstClaims = new OAuthClaims("github", "first-" + suffix, email, true, "first", Map.of());
+        OAuthClaims secondClaims = new OAuthClaims("github", "second-" + suffix, email, true, "second", Map.of());
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> firstLogin(bindingService, firstClaims, ready, start));
+            var second = executor.submit(() -> firstLogin(bindingService, secondClaims, ready, start));
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            PlatformPrincipal firstPrincipal = first.get(20, TimeUnit.SECONDS);
+            PlatformPrincipal secondPrincipal = second.get(20, TimeUnit.SECONDS);
+
+            assertThat(firstPrincipal.userId()).isNotEqualTo(secondPrincipal.userId());
+            assertThat(firstPrincipal.platformRoles().contains("SUPER_ADMIN"))
+                    .isNotEqualTo(secondPrincipal.platformRoles().contains("SUPER_ADMIN"));
+            ExternalRoleGrantRule consumed = rules.findById(ruleId).orElseThrow();
+            assertThat(consumed.getStatus()).isEqualTo(ExternalRoleGrantRule.Status.CONSUMED);
+            assertThat(consumed.getGrantedUserId()).isIn(firstPrincipal.userId(), secondPrincipal.userId());
+            assertThat(consumed.getMatchedSubject()).isIn(firstClaims.subject(), secondClaims.subject());
+            assertThat(userRoles.findByUserId(firstPrincipal.userId()).size()
+                    + userRoles.findByUserId(secondPrincipal.userId()).size()).isEqualTo(1);
+        }
+    }
+
+    private IdentityBindingService bindingService() {
+        return new IdentityBindingService(identities, users, userRoles,
+                mock(GlobalNamespaceMembershipService.class), mock(ApplicationEventPublisher.class),
+                transactionManager, new InitialExternalRoleGrantService(
+                        rules, userRoles, mock(AuditLogService.class)));
     }
 
     private static PlatformPrincipal firstLogin(IdentityBindingService service, OAuthClaims claims,
