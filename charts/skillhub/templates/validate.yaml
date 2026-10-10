@@ -1,0 +1,147 @@
+{{- /* Cross-field validation that JSON Schema cannot express reliably. */ -}}
+{{- $absoluteHttpUrlPattern := "^https?://(\\[[0-9A-Fa-f:.]+\\]|[A-Za-z0-9]([A-Za-z0-9.-]*[A-Za-z0-9])?)(:[0-9]{1,5})?([/?#][^[:space:]]*)?$" -}}
+{{- if not .Values.server.enabled -}}
+{{- fail "server.enabled=false is unsupported because the bundled web component requires the SkillHub server" -}}
+{{- end -}}
+{{- if and .Values.auth.direct.enabled (not .Values.auth.direct.provider) -}}
+{{- fail "auth.direct.enabled=true requires auth.direct.provider" -}}
+{{- end -}}
+
+{{- if and .Values.ingress.enabled (not .Values.server.service.enabled) -}}
+{{- fail "ingress.enabled=true requires server.service.enabled=true" -}}
+{{- end -}}
+{{- if and .Values.ingress.enabled (not .Values.web.service.enabled) -}}
+{{- fail "ingress.enabled=true requires web.service.enabled=true" -}}
+{{- end -}}
+{{- if and .Values.ingress.enabled .Values.ingress.certManager.enabled (not .Values.ingress.tls) -}}
+{{- fail "ingress.certManager.enabled=true requires at least one ingress.tls entry" -}}
+{{- end -}}
+{{- range $host := .Values.ingress.hosts -}}
+{{- range $path := $host.paths -}}
+{{- if regexMatch "^/(api|oauth2|login/oauth2|\\.well-known)(/|$)" $path.path -}}
+{{- fail "ingress.hosts[].paths reserves /api, /oauth2, /login/oauth2 and /.well-known for the SkillHub server" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- if .Values.publicBaseUrl -}}
+{{- if not (regexMatch $absoluteHttpUrlPattern .Values.publicBaseUrl) -}}
+{{- fail (printf "publicBaseUrl must be an absolute http(s) URL with a host (e.g. https://skills.example.com): %s" .Values.publicBaseUrl) -}}
+{{- end -}}
+{{- if regexMatch "[?#]" .Values.publicBaseUrl -}}
+{{- fail (printf "publicBaseUrl must not contain a query ('?') or fragment ('#'); it is concatenated with paths like /cli/auth and /.well-known/clawhub.json: %s" .Values.publicBaseUrl) -}}
+{{- end -}}
+{{- end -}}
+
+{{- $webBasePath := .Values.web.basePath | default "" -}}
+{{- if and (ne $webBasePath "") (ne $webBasePath "/") -}}
+{{- if not (regexMatch "^(/[A-Za-z0-9_~-][A-Za-z0-9._~-]*)+/$" $webBasePath) -}}
+{{- fail (printf "web.basePath must be '/' or a normalized sub-path that starts and ends with '/' and has no '.'/'..' or empty segments (matches the runtime and release-config checks): %s" $webBasePath) -}}
+{{- end -}}
+{{- $firstSegment := index (splitList "/" $webBasePath) 1 -}}
+{{- if has $firstSegment (list "api" "oauth2" "login" "assets" "registry" "nginx-health" ".well-known" "runtime-config.js") -}}
+{{- fail (printf "web.basePath must not start with a segment reserved by the SkillHub server (%s); it would shadow the server's own Nginx location: %s" $firstSegment $webBasePath) -}}
+{{- end -}}
+{{- $suffix := trimSuffix "/" $webBasePath -}}
+{{- if .Values.publicBaseUrl -}}
+{{- $publicPath := trimSuffix "/" (regexReplaceAll "^[a-zA-Z][a-zA-Z0-9+.-]*://[^/]+" .Values.publicBaseUrl "") -}}
+{{- if ne $publicPath $suffix -}}
+{{- fail (printf "publicBaseUrl path (%s) must equal web.basePath without its trailing slash (%s) so CLI, install, and Quick Start URLs keep the prefix" $publicPath $suffix) -}}
+{{- end -}}
+{{- end -}}
+{{- $apiBase := .Values.web.apiBaseUrl | default "" -}}
+{{- if and (ne $apiBase "") (not (regexMatch "^https?://" $apiBase)) (ne $apiBase $suffix) -}}
+{{- fail (printf "web.apiBaseUrl (%s) must equal web.basePath without its trailing slash (%s) for same-origin sub-path routing, or be an absolute URL for a separate API host" $apiBase $suffix) -}}
+{{- end -}}
+{{- end -}}
+
+{{- range $name := list "server" "web" "scanner" -}}
+{{- $component := index $.Values $name -}}
+{{- $enabled := true -}}
+{{- if hasKey $component "enabled" -}}
+{{- $enabled = $component.enabled -}}
+{{- end -}}
+{{- if and $enabled $component.autoscaling.enabled -}}
+{{- if gt ($component.autoscaling.minReplicas | int) ($component.autoscaling.maxReplicas | int) -}}
+{{- fail (printf "%s.autoscaling.minReplicas must not exceed maxReplicas" $name) -}}
+{{- end -}}
+{{- if and (not $component.autoscaling.targetCPUUtilizationPercentage) (not $component.autoscaling.targetMemoryUtilizationPercentage) -}}
+{{- fail (printf "%s.autoscaling requires at least one CPU or memory utilization target" $name) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- $localStorageReplicas := .Values.server.replicaCount | int -}}
+{{- if .Values.server.autoscaling.enabled -}}
+{{- $localStorageReplicas = .Values.server.autoscaling.maxReplicas | int -}}
+{{- end -}}
+{{- if and (not .Values.s3.enabled) (gt $localStorageReplicas 1) -}}
+{{- if not .Values.server.storage.accessMode -}}
+{{- fail "local storage with multiple server replicas requires server.storage.accessMode=ReadWriteMany and an RWX-capable StorageClass; use S3 otherwise" -}}
+{{- end -}}
+{{- if ne .Values.server.storage.accessMode "ReadWriteMany" -}}
+{{- fail "local storage with multiple server replicas requires server.storage.accessMode=ReadWriteMany" -}}
+{{- end -}}
+{{- end -}}
+
+{{- if and (not .Values.postgresql.enabled) (not .Values.externalDatabase.host) -}}
+{{- fail "postgresql.enabled=false requires externalDatabase.host for dependency checks" -}}
+{{- end -}}
+{{- if and .Values.externalRedis.sentinel.enabled .Values.externalRedis.cluster.enabled -}}
+{{- fail "externalRedis.sentinel.enabled and externalRedis.cluster.enabled are mutually exclusive" -}}
+{{- end -}}
+{{- if and .Values.redis.enabled .Values.externalRedis.cluster.enabled -}}
+{{- fail "externalRedis.cluster.enabled=true requires redis.enabled=false" -}}
+{{- end -}}
+{{- if and (not .Values.redis.enabled) (not .Values.externalRedis.sentinel.enabled) (not .Values.externalRedis.cluster.enabled) (not .Values.externalRedis.host) -}}
+{{- fail "redis.enabled=false requires externalRedis.host" -}}
+{{- end -}}
+{{- if and (not .Values.redis.enabled) .Values.externalRedis.sentinel.enabled (not .Values.externalRedis.sentinel.nodes) -}}
+{{- fail "external Redis Sentinel requires at least one externalRedis.sentinel.nodes entry" -}}
+{{- end -}}
+{{- if and (not .Values.redis.enabled) .Values.externalRedis.cluster.enabled (not .Values.externalRedis.cluster.nodes) -}}
+{{- fail "external Redis Cluster requires at least one externalRedis.cluster.nodes entry" -}}
+{{- end -}}
+{{- if and (not .Values.redis.enabled) .Values.externalRedis.cluster.enabled -}}
+{{- range $node := .Values.externalRedis.cluster.nodes -}}
+{{- if not (regexMatch "^[A-Za-z0-9._-]+:[0-9]{1,5}$" $node) -}}
+{{- fail (printf "externalRedis.cluster.nodes entry must use host:port: %s" $node) -}}
+{{- end -}}
+{{- $parts := splitList ":" $node -}}
+{{- $port := last $parts | int -}}
+{{- if or (lt $port 1) (gt $port 65535) -}}
+{{- fail (printf "externalRedis.cluster.nodes port must be between 1 and 65535: %s" $node) -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- if and .Values.s3.endpoint (not (regexMatch $absoluteHttpUrlPattern .Values.s3.endpoint)) -}}
+{{- fail "s3.endpoint must be an absolute HTTP(S) URL" -}}
+{{- end -}}
+{{- if and .Values.s3.publicEndpoint (not (regexMatch $absoluteHttpUrlPattern .Values.s3.publicEndpoint)) -}}
+{{- fail "s3.publicEndpoint must be an absolute HTTP(S) URL" -}}
+{{- end -}}
+
+{{- if not .Values.secrets.allowAutoGenerated -}}
+{{- if not .Values.existingSecret -}}
+{{- if not (or .Values.secrets.bootstrapAdminPassword .Values.bootstrapAdmin.password) -}}
+{{- fail "secrets.allowAutoGenerated=false requires secrets.bootstrapAdminPassword or bootstrapAdmin.password" -}}
+{{- end -}}
+{{- if not .Values.secrets.downloadAnonCookieSecret -}}
+{{- fail "secrets.allowAutoGenerated=false requires secrets.downloadAnonCookieSecret" -}}
+{{- end -}}
+{{- end -}}
+{{- if and .Values.postgresql.enabled (not .Values.postgresql.auth.existingSecret) -}}
+{{- if and .Values.postgresql.auth.enablePostgresUser (not .Values.postgresql.auth.postgresPassword) -}}
+{{- fail "secrets.allowAutoGenerated=false requires postgresql.auth.postgresPassword or postgresql.auth.existingSecret" -}}
+{{- end -}}
+{{- if and .Values.postgresql.auth.username (ne .Values.postgresql.auth.username "postgres") (not .Values.postgresql.auth.password) -}}
+{{- fail "secrets.allowAutoGenerated=false requires postgresql.auth.password or postgresql.auth.existingSecret" -}}
+{{- end -}}
+{{- if and (eq .Values.postgresql.architecture "replication") (not .Values.postgresql.auth.replicationPassword) -}}
+{{- fail "secrets.allowAutoGenerated=false requires postgresql.auth.replicationPassword for replication architecture" -}}
+{{- end -}}
+{{- end -}}
+{{- if and .Values.redis.enabled .Values.redis.auth.enabled (not .Values.redis.auth.existingSecret) (not .Values.redis.auth.password) -}}
+{{- fail "secrets.allowAutoGenerated=false requires redis.auth.password or redis.auth.existingSecret" -}}
+{{- end -}}
+{{- end -}}

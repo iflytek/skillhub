@@ -1,0 +1,14 @@
+# Non-production credentials used only for deterministic chart tests.
+secrets:
+  bootstrapAdminPassword: test-bootstrap-password
+  downloadAnonCookieSecret: test-download-cookie-secret-at-least-32-chars
+
+postgresql:
+  auth:
+    postgresPassword: test-postgres-password
+    password: test-postgresql-user-password
+    replicationPassword: test-postgresql-replication-password
+
+redis:
+  auth:
+    password: test-redis-password

@@ -1,0 +1,106 @@
+package com.iflytek.skillhub.domain.audit;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import java.time.Instant;
+
+@Entity
+@Table(name = "audit_log")
+public class AuditLog {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "actor_user_id", length = 128)
+    private String actorUserId;
+
+    @Column(nullable = false, length = 64)
+    private String action;
+
+    @Column(name = "target_type", length = 64)
+    private String targetType;
+
+    @Column(name = "target_id")
+    private Long targetId;
+
+    @Column(name = "organization_id", length = 64)
+    private String organizationId;
+
+    @Column(name = "target_ref", length = 128)
+    private String targetRef;
+
+    @Column(name = "result", length = 32)
+    private String result;
+
+    @Column(name = "request_id", length = 64)
+    private String requestId;
+
+    @Column(name = "client_ip", length = 64)
+    private String clientIp;
+
+    @Column(name = "user_agent", length = 512)
+    private String userAgent;
+
+    @Column(name = "detail_json")
+    @JdbcTypeCode(SqlTypes.JSON)
+    private String detailJson;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    protected AuditLog() {}
+
+    public AuditLog(String actorUserId,
+                    String action,
+                    String targetType,
+                    Long targetId,
+                    String requestId,
+                    String clientIp,
+                    String userAgent,
+                    String detailJson,
+                    Instant createdAt) {
+        this.actorUserId = actorUserId;
+        this.action = action;
+        this.targetType = targetType;
+        this.targetId = targetId;
+        this.requestId = requestId;
+        this.clientIp = clientIp;
+        this.userAgent = userAgent;
+        this.detailJson = detailJson;
+        this.createdAt = createdAt;
+    }
+
+    public static AuditLog organizationSuccess(String actorUserId,
+                                               String action,
+                                               String organizationId,
+                                               String requestId,
+                                               Instant createdAt) {
+        AuditLog log = new AuditLog(actorUserId, action, "ORGANIZATION", null,
+                requestId, null, null, null, createdAt);
+        log.organizationId = organizationId;
+        log.targetRef = organizationId;
+        log.result = "SUCCESS";
+        return log;
+    }
+
+    public Long getId() { return id; }
+    public String getActorUserId() { return actorUserId; }
+    public String getAction() { return action; }
+    public String getTargetType() { return targetType; }
+    public Long getTargetId() { return targetId; }
+    public String getOrganizationId() { return organizationId; }
+    public String getTargetRef() { return targetRef; }
+    public String getResult() { return result; }
+    public String getRequestId() { return requestId; }
+    public String getClientIp() { return clientIp; }
+    public String getUserAgent() { return userAgent; }
+    public String getDetailJson() { return detailJson; }
+    public Instant getCreatedAt() { return createdAt; }
+}

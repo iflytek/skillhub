@@ -1,0 +1,27 @@
+apiVersion: v2
+name: skillhub
+description: Self-hosted, open-source agent skill registry for enterprises.
+type: application
+version: 0.1.0
+appVersion: 0.2.14
+keywords:
+  - skillhub
+  - ai
+  - skills
+home: https://github.com/iflytek/skillhub
+icon: https://raw.githubusercontent.com/iflytek/skillhub/main/skillhub-logo.svg
+sources:
+  - https://github.com/iflytek/skillhub
+
+dependencies:
+  # PostgreSQL - Bitnami 官方 chart，支持 HA、备份、监控
+  - name: postgresql
+    version: "18.6.10"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: postgresql.enabled
+
+  # Redis - Bitnami 官方 chart，支持集群模式、哨兵模式
+  - name: redis
+    version: "25.5.3"
+    repository: "oci://registry-1.docker.io/bitnamicharts"
+    condition: redis.enabled

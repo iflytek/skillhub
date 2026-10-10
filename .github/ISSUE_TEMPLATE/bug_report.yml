@@ -1,0 +1,40 @@
+name: Bug Report
+description: Report a defect in SkillHub
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps To Reproduce
+      description: Include commands, requests, or UI flow
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Branch, commit, runtime profile, browser, OS, etc.
+  - type: textarea
+    id: api-impact
+    attributes:
+      label: API Contract Impact
+      description: If relevant, include the request path, response shape, and whether `web/src/api/generated/schema.d.ts` appears stale.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs Or Screenshots

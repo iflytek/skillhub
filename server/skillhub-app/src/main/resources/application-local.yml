@@ -1,0 +1,60 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  flyway:
+    enabled: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/skillhub
+    username: skillhub
+    password: skillhub_dev
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  session:
+    store-type: redis
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${OAUTH2_GITHUB_CLIENT_ID:local-placeholder}
+            client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:local-placeholder}
+
+skillhub:
+  suite:
+    review-writes-enabled: ${SKILLHUB_SUITE_REVIEW_WRITES_ENABLED:true}
+  auth:
+    mock:
+      enabled: true
+  ratelimit:
+    download:
+      anonymous-cookie-secret: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET:local-dev-download-secret-32-bytes}
+  notification:
+    cleanup:
+      read-retention-days: 30
+      unread-retention-days: 90
+  security:
+    scanner:
+      enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:true}
+      base-url: ${SKILLHUB_SECURITY_SCANNER_URL:http://localhost:8000}
+      mode: ${SKILLHUB_SECURITY_SCANNER_MODE:upload}
+    stream:
+      reclaim-enabled: ${SKILLHUB_SCAN_STREAM_RECLAIM_ENABLED:true}
+      reclaim-min-idle: ${SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE:PT16M}
+      reclaim-batch-size: ${SKILLHUB_SCAN_STREAM_RECLAIM_BATCH_SIZE:20}
+      reclaim-interval: ${SKILLHUB_SCAN_STREAM_RECLAIM_INTERVAL:PT30S}
+  bootstrap:
+    admin:
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:true}
+  profile:
+    moderation:
+      machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true}
+      human-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:true}
+
+logging:
+  level:
+    com.iflytek.skillhub: INFO
+    org.springframework.security: WARN

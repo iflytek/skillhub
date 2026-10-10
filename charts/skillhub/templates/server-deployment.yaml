@@ -1,0 +1,468 @@
+{{- if .Values.server.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "skillhub.fullname" . }}-server
+  labels:
+    {{- include "skillhub.server.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.server.autoscaling.enabled }}
+  replicas: {{ .Values.server.replicaCount }}
+  {{- end }}
+  strategy:
+    {{- if and (not .Values.s3.enabled) (ne .Values.server.storage.accessMode "ReadWriteMany") }}
+    type: Recreate
+    {{- else }}
+    type: RollingUpdate
+    {{- end }}
+  selector:
+    matchLabels:
+      {{- include "skillhub.server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "skillhub.server.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- range $key, $val := .Values.server.podAnnotations }}
+        {{ $key }}: {{ $val }}
+        {{- end }}
+    spec:
+      {{- with .Values.server.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- $secrets := .Values.server.imagePullSecrets }}
+      {{- if $secrets }}
+      imagePullSecrets:
+        {{- toYaml $secrets | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: wait-for-dependencies
+          image: {{ printf "%s/%s:%s" .Values.server.dependencyWait.image.registry .Values.server.dependencyWait.image.repository .Values.server.dependencyWait.image.tag | quote }}
+          imagePullPolicy: {{ .Values.server.dependencyWait.image.pullPolicy }}
+          env:
+            - name: DB_HOST
+              value: {{ include "skillhub.postgresql.serviceName" . | quote }}
+            - name: DB_PORT
+              value: {{ include "skillhub.postgresql.port" . | quote }}
+            - name: REDIS_HOST
+              value: {{ include "skillhub.redis.serviceName" . | quote }}
+            - name: REDIS_PORT
+              value: {{ include "skillhub.redis.port" . | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT}..."
+              until nc -z -w 2 "${DB_HOST}" "${DB_PORT}"; do sleep 2; done
+              echo "PostgreSQL is ready!"
+              echo "Waiting for Redis at ${REDIS_HOST}:${REDIS_PORT}..."
+              until nc -z -w 2 "${REDIS_HOST}" "${REDIS_PORT}"; do sleep 2; done
+              echo "Redis is ready!"
+      containers:
+        - name: server
+          image: {{ .Values.server.image.registry | default .Values.images.registry }}/skillhub-server:{{ .Values.server.image.tag | default .Values.images.tag | default (printf "v%s" .Chart.AppVersion) }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.server.service.port }}
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              {{- $profiles := .Values.springProfilesActive }}
+              {{- if and .Values.redis.enabled .Values.redis.sentinel.enabled }}
+              {{- $profiles = printf "%s,redis-sentinel" $profiles }}
+              {{- else if and (not .Values.redis.enabled) .Values.externalRedis.sentinel.enabled }}
+              {{- $profiles = printf "%s,redis-sentinel" $profiles }}
+              {{- end }}
+              value: {{ $profiles | quote }}
+            - name: SKILLHUB_SUITE_REVIEW_WRITES_ENABLED
+              value: {{ .Values.server.suiteReviewWritesEnabled | quote }}
+
+            # Database
+            - name: SPRING_DATASOURCE_URL
+              value: {{ include "skillhub.jdbcUrl" . | quote }}
+            - name: SPRING_DATASOURCE_USERNAME
+              value: {{ include "skillhub.postgresql.username" . | quote }}
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.postgresql.enabled }}
+                  name: {{ include "skillhub.postgresql.secretName" . }}
+                  key: {{ include "skillhub.postgresql.passwordKey" . }}
+                  {{- else }}
+                  name: {{ include "skillhub.secretName" . }}
+                  key: spring-datasource-password
+                  {{- end }}
+
+            # Redis
+            {{- if and .Values.redis.enabled .Values.redis.sentinel.enabled }}
+            - name: SPRING_DATA_REDIS_SENTINEL_MASTER
+              value: {{ .Values.redis.sentinel.masterSet | default "mymaster" | quote }}
+            - name: SPRING_DATA_REDIS_SENTINEL_NODES
+              value: {{ include "skillhub.redis.sentinel.nodes" . | quote }}
+            # Bitnami Sentinel pods advertise pod-local addresses that can differ from
+            # the headless-service FQDNs used by clients inside Kubernetes.
+            - name: SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST
+              value: "false"
+            {{- else if and (not .Values.redis.enabled) .Values.externalRedis.sentinel.enabled }}
+            - name: SPRING_DATA_REDIS_SENTINEL_MASTER
+              value: {{ .Values.externalRedis.sentinel.masterSet | default "mymaster" | quote }}
+            - name: SPRING_DATA_REDIS_SENTINEL_NODES
+              value: {{ join "," .Values.externalRedis.sentinel.nodes | quote }}
+            {{- else if and (not .Values.redis.enabled) .Values.externalRedis.cluster.enabled }}
+            - name: SPRING_DATA_REDIS_CLUSTER_NODES
+              value: {{ join "," .Values.externalRedis.cluster.nodes | quote }}
+            - name: SPRING_DATA_REDIS_CLUSTER_MAX_REDIRECTS
+              value: {{ .Values.externalRedis.cluster.maxRedirects | quote }}
+            {{- else }}
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: redis-host
+            - name: SPRING_DATA_REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: redis-port
+            {{- end }}
+
+            {{- if and (not .Values.redis.enabled) .Values.externalRedis.username }}
+            - name: SPRING_DATA_REDIS_USERNAME
+              value: {{ .Values.externalRedis.username | quote }}
+            {{- end }}
+            {{- if and (not .Values.redis.enabled) .Values.externalRedis.tls.enabled }}
+            - name: SPRING_DATA_REDIS_SSL_ENABLED
+              value: "true"
+            {{- end }}
+            {{- if and (not .Values.redis.enabled) .Values.externalRedis.connectTimeout }}
+            - name: SPRING_DATA_REDIS_CONNECT_TIMEOUT
+              value: {{ .Values.externalRedis.connectTimeout | quote }}
+            {{- end }}
+            {{- if and (not .Values.redis.enabled) .Values.externalRedis.timeout }}
+            - name: SPRING_DATA_REDIS_TIMEOUT
+              value: {{ .Values.externalRedis.timeout | quote }}
+            {{- end }}
+            {{- if and (not .Values.redis.enabled) .Values.externalRedis.clientName }}
+            - name: SPRING_DATA_REDIS_CLIENT_NAME
+              value: {{ .Values.externalRedis.clientName | quote }}
+            {{- end }}
+            {{- if and (not .Values.redis.enabled) .Values.externalRedis.sentinel.enabled .Values.externalRedis.sentinel.username }}
+            - name: SPRING_DATA_REDIS_SENTINEL_USERNAME
+              value: {{ .Values.externalRedis.sentinel.username | quote }}
+            {{- end }}
+
+            {{- if or (and .Values.redis.enabled .Values.redis.sentinel.enabled) (and (not .Values.redis.enabled) .Values.externalRedis.sentinel.enabled) }}
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.redis.enabled }}
+                  name: {{ include "skillhub.redis.secretName" . }}
+                  key: {{ include "skillhub.redis.passwordKey" . }}
+                  {{- else }}
+                  name: {{ include "skillhub.secretName" . }}
+                  key: redis-password
+                  {{- end }}
+                  optional: true
+            - name: SPRING_DATA_REDIS_SENTINEL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.redis.enabled }}
+                  name: {{ include "skillhub.redis.secretName" . }}
+                  key: {{ include "skillhub.redis.passwordKey" . }}
+                  {{- else }}
+                  name: {{ include "skillhub.secretName" . }}
+                  key: redis-sentinel-password
+                  {{- end }}
+                  optional: true
+            {{- else if or .Values.redis.enabled .Values.externalRedis.password .Values.existingSecret }}
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  {{- if .Values.redis.enabled }}
+                  name: {{ include "skillhub.redis.secretName" . }}
+                  {{- else }}
+                  name: {{ include "skillhub.secretName" . }}
+                  {{- end }}
+                  key: {{ if .Values.redis.enabled }}{{ include "skillhub.redis.passwordKey" . }}{{ else }}redis-password{{ end }}
+                  optional: true
+            {{- end }}
+
+            # Storage
+            - name: STORAGE_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: storage-base-path
+            - name: SKILLHUB_STORAGE_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: skillhub-storage-provider
+
+            {{- if .Values.s3.enabled }}
+            - name: SKILLHUB_STORAGE_S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: s3-bucket
+            - name: SKILLHUB_STORAGE_S3_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: s3-endpoint
+            - name: SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: s3-public-endpoint
+            - name: SKILLHUB_STORAGE_S3_REGION
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: s3-region
+            - name: SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: s3-force-path-style
+            - name: SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: s3-disable-chunked-encoding
+            - name: SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: s3-auto-create-bucket
+            - name: SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: s3-presign-expiry
+            - name: SKILLHUB_STORAGE_S3_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: skillhub-storage-s3-access-key
+                  optional: true
+            - name: SKILLHUB_STORAGE_S3_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: skillhub-storage-s3-secret-key
+                  optional: true
+            {{- end }}
+
+            # Scanner
+            - name: SKILLHUB_SECURITY_SCANNER_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: skill-scanner-enabled
+            - name: SKILLHUB_SECURITY_SCANNER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: skill-scanner-url
+            - name: SKILLHUB_SECURITY_SCANNER_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: skill-scanner-mode
+
+            # Session
+            - name: SESSION_COOKIE_SECURE
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: session-cookie-secure
+
+            # Public URL and authentication
+            - name: SKILLHUB_PUBLIC_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: public-base-url
+            - name: DEVICE_AUTH_VERIFICATION_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: device-auth-verification-uri
+            - name: SKILLHUB_AUTH_DIRECT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-direct-enabled
+            - name: SKILLHUB_AUTH_INITIAL_PASSWORD_LOGIN_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-initial-password-login-enabled
+            - name: SKILLHUB_AUTH_INITIAL_SELF_REGISTRATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-initial-self-registration-enabled
+            - name: SKILLHUB_AUTH_INITIAL_ROLE_GRANTS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: auth-initial-role-grants-json
+                  optional: true
+            - name: SKILLHUB_BUILTIN_SKILLS_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: builtin-skills-enabled
+            - name: SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: skillhub-download-anon-cookie-secret
+
+            # Bootstrap Admin
+            - name: BOOTSTRAP_ADMIN_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: bootstrap-admin-enabled
+            - name: BOOTSTRAP_ADMIN_USER_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: bootstrap-admin-user-id
+            - name: BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: bootstrap-admin-username
+            - name: BOOTSTRAP_ADMIN_DISPLAY_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: bootstrap-admin-display-name
+            - name: BOOTSTRAP_ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: bootstrap-admin-email
+            - name: BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: bootstrap-admin-password
+                  optional: true
+
+            # OAuth2 GitHub (optional)
+            - name: OAUTH2_GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: oauth2-github-client-id
+                  optional: true
+            - name: OAUTH2_GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: oauth2-github-client-secret
+                  optional: true
+
+            # OAuth2 Feishu (optional)
+            - name: OAUTH2_FEISHU_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: oauth2-feishu-client-id
+                  optional: true
+            - name: OAUTH2_FEISHU_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: oauth2-feishu-client-secret
+                  optional: true
+            - name: OAUTH2_FEISHU_AUTHORIZATION_URI
+              value: {{ .Values.oauth2.feishu.authorizationUri | default "https://accounts.feishu.cn/open-apis/authen/v1/authorize" | quote }}
+            - name: OAUTH2_FEISHU_PROTOCOL_VERSION
+              value: {{ .Values.oauth2.feishu.protocolVersion | default "v3" | quote }}
+            - name: OAUTH2_FEISHU_TOKEN_URI
+              value: {{ .Values.oauth2.feishu.tokenUri | default "https://accounts.feishu.cn/oauth/v3/token" | quote }}
+            - name: OAUTH2_FEISHU_USER_INFO_URI
+              value: {{ .Values.oauth2.feishu.userInfoUri | default "https://open.feishu.cn/open-apis/authen/v1/user_info" | quote }}
+            {{- with .Values.oauth2.feishu.redirectUri }}
+            - name: OAUTH2_FEISHU_REDIRECT_URI
+              value: {{ . | quote }}
+            {{- end }}
+
+            # OAuth2 DingTalk (optional)
+            - name: OAUTH2_DINGTALK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: oauth2-dingtalk-client-id
+                  optional: true
+            - name: OAUTH2_DINGTALK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: oauth2-dingtalk-client-secret
+                  optional: true
+            - name: OAUTH2_DINGTALK_AUTHORIZE_URI
+              value: {{ .Values.oauth2.dingtalk.authorizeBaseUri | quote }}
+            - name: OAUTH2_DINGTALK_BASE_URI
+              value: {{ .Values.oauth2.dingtalk.apiBaseUri | quote }}
+            {{- with .Values.oauth2.dingtalk.redirectUri }}
+            - name: OAUTH2_DINGTALK_REDIRECT_URI
+              value: {{ . | quote }}
+            {{- end }}
+            - name: OAUTH2_DINGTALK_DISPLAY_NAME
+              value: {{ .Values.oauth2.dingtalk.displayName | quote }}
+
+            {{- if .Values.server.javaOpts }}
+            - name: JAVA_OPTS
+              value: {{ .Values.server.javaOpts }}
+            {{- end }}
+
+            {{- with .Values.server.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+
+          {{- if and .Values.server.enabled (not .Values.s3.enabled) }}
+          volumeMounts:
+            - name: skillhub-storage
+              mountPath: /var/lib/skillhub/storage
+          {{- end }}
+
+          resources:
+            {{- toYaml .Values.server.resources | nindent 12 }}
+
+          startupProbe:
+            {{- toYaml .Values.server.probes.startup | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.server.probes.readiness | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.server.probes.liveness | nindent 12 }}
+
+      {{- if and .Values.server.enabled (not .Values.s3.enabled) }}
+      volumes:
+        - name: skillhub-storage
+          persistentVolumeClaim:
+            claimName: {{ include "skillhub.fullname" . }}-server-data
+      {{- end }}
+      {{- with .Values.server.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.server.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+{{- end }}

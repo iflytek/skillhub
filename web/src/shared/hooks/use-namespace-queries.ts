@@ -1,0 +1,264 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import type { Namespace, NamespaceMember, ManagedNamespace, CreateNamespaceRequest, NamespaceCandidateUser, NamespaceRole, BatchMemberResponse, PagedResponse } from '@/api/types'
+import { namespaceApi } from '@/api/client'
+import { ApiError } from '@/shared/lib/api-error'
+import { replaceNamespaceMemberRole } from '@/shared/lib/namespace-member-cache'
+import { shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
+
+async function getMyNamespaces(): Promise<ManagedNamespace[]> {
+  return namespaceApi.listMine()
+}
+
+export function shouldFallbackToLegacyNamespaceList(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 404
+}
+
+async function getMyNamespacesPage(params: { page?: number; size?: number } = {}): Promise<PagedResponse<ManagedNamespace>> {
+  try {
+    return await namespaceApi.listMinePage(params)
+  } catch (error) {
+    if (!shouldFallbackToLegacyNamespaceList(error)) {
+      throw error
+    }
+    // Local development may still be backed by an older server image without the paginated endpoint.
+    // Fall back to the legacy list endpoint and slice client-side so the page remains usable.
+    const namespaces = await namespaceApi.listMine()
+    const page = params.page ?? 0
+    const size = params.size ?? 10
+    const start = page * size
+    return {
+      items: namespaces.slice(start, start + size),
+      total: namespaces.length,
+      page,
+      size,
+    }
+  }
+}
+
+async function createNamespace(request: CreateNamespaceRequest): Promise<Namespace> {
+  return namespaceApi.create(request)
+}
+
+async function getNamespaceDetail(slug: string): Promise<Namespace> {
+  return namespaceApi.getDetail(slug)
+}
+
+async function getNamespaceMembers(slug: string, page = 0, size = 20): Promise<PagedResponse<NamespaceMember>> {
+  return namespaceApi.listMembers(slug, { page, size })
+}
+
+async function searchNamespaceMemberCandidates(params: { slug: string; search: string }): Promise<NamespaceCandidateUser[]> {
+  return namespaceApi.searchMemberCandidates(params.slug, params.search)
+}
+
+async function addNamespaceMember(params: { slug: string; userId: string; role: NamespaceRole }): Promise<NamespaceMember> {
+  return namespaceApi.addMember(params.slug, { userId: params.userId, role: params.role })
+}
+
+async function updateNamespaceMemberRole(params: { slug: string; userId: string; role: NamespaceRole }): Promise<NamespaceMember> {
+  return namespaceApi.updateMemberRole(params.slug, params.userId, params.role)
+}
+
+async function removeNamespaceMember(params: { slug: string; userId: string }): Promise<void> {
+  return namespaceApi.removeMember(params.slug, params.userId)
+}
+
+async function deleteNamespace(params: { slug: string }): Promise<void> {
+  return namespaceApi.delete(params.slug)
+}
+
+async function batchAddNamespaceMembers(params: { slug: string; members: Array<{ userId: string; role: string }> }): Promise<BatchMemberResponse> {
+  return namespaceApi.batchAddMembers(params.slug, params.members)
+}
+
+function invalidateNamespaceQueries(queryClient: ReturnType<typeof useQueryClient>, slug: string) {
+  queryClient.invalidateQueries({ queryKey: ['namespaces', 'my'] })
+  queryClient.invalidateQueries({ queryKey: ['namespaces', slug] })
+  queryClient.invalidateQueries({ queryKey: ['namespaces', slug, 'members'] })
+  queryClient.invalidateQueries({ queryKey: ['reviews'] })
+}
+
+export function useMyNamespaces() {
+  return useQuery({
+    queryKey: ['namespaces', 'my'],
+    queryFn: getMyNamespaces,
+  })
+}
+
+export function useMyNamespacesPage(params: { page?: number; size?: number } = {}) {
+  return useQuery({
+    queryKey: ['namespaces', 'my', 'page', params],
+    queryFn: () => getMyNamespacesPage(params),
+    placeholderData: (previousData) => previousData,
+  })
+}
+
+export function useCreateNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: createNamespace,
+    onSuccess: (namespace) => {
+      queryClient.invalidateQueries({ queryKey: ['namespaces', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['namespaces', namespace.slug] })
+      queryClient.invalidateQueries({ queryKey: ['namespaces'] })
+    },
+  })
+}
+
+export function useNamespaceDetail(slug: string) {
+  return useQuery({
+    queryKey: ['namespaces', slug],
+    queryFn: () => getNamespaceDetail(slug),
+    enabled: !!slug,
+  })
+}
+
+export function useNamespaceMembers(slug: string, page = 0, size = 20) {
+  return useQuery({
+    queryKey: ['namespaces', slug, 'members', { page, size }],
+    queryFn: () => getNamespaceMembers(slug, page, size),
+    enabled: !!slug,
+  })
+}
+
+export function useNamespaceMemberCandidates(slug: string, search: string, enabled = true) {
+  return useQuery({
+    queryKey: ['namespaces', slug, 'member-candidates', search],
+    queryFn: () => searchNamespaceMemberCandidates({ slug, search }),
+    enabled: shouldEnableNamespaceMemberCandidates(slug, search, enabled),
+  })
+}
+
+export function useAddNamespaceMember() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: addNamespaceMember,
+    onSuccess: (_member, variables) => {
+      // Skip optimistic update for additions — appending to every cached page
+      // causes duplicates across pages. Invalidation refreshes correctly.
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useBatchAddNamespaceMembers() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: batchAddNamespaceMembers,
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useUpdateNamespaceMemberRole() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateNamespaceMemberRole,
+    onSuccess: (member, variables) => {
+      queryClient.setQueriesData<PagedResponse<NamespaceMember>>(
+        { queryKey: ['namespaces', variables.slug, 'members'] },
+        (currentPage) => replaceNamespaceMemberRole(currentPage, variables.userId, member.role),
+      )
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useRemoveNamespaceMember() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: removeNamespaceMember,
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useFreezeNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug }: { slug: string }) => namespaceApi.freeze(slug),
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useUnfreezeNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug }: { slug: string }) => namespaceApi.unfreeze(slug),
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useArchiveNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug, reason }: { slug: string; reason?: string }) => namespaceApi.archive(slug, reason),
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useRestoreNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug }: { slug: string }) => namespaceApi.restore(slug),
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+export function useUpdateNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug, displayName, description }: { slug: string; displayName?: string; description?: string }) =>
+      namespaceApi.update(slug, { displayName, description }),
+    onSuccess: (namespace) => {
+      queryClient.invalidateQueries({ queryKey: ['namespaces', namespace.slug] })
+      queryClient.invalidateQueries({ queryKey: ['namespaces', 'my'] })
+    },
+  })
+}
+
+export function useTransferNamespaceOwnership() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ slug, newOwnerUserId }: { slug: string; newOwnerUserId: string }) =>
+      namespaceApi.transferOwnership(slug, newOwnerUserId),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['namespaces', variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['namespaces', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['namespaces', variables.slug, 'members'] })
+    },
+  })
+}
+
+export function useDeleteNamespace() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: deleteNamespace,
+    onSuccess: (_data, variables) => {
+      invalidateNamespaceQueries(queryClient, variables.slug)
+      queryClient.invalidateQueries({ queryKey: ['namespaces'] })
+    },
+  })
+}

@@ -1,0 +1,2361 @@
+{
+ "_comment": "zero-slop pattern database. Each pattern: name, cat(egory), rx (Python regex, case-insensitive), w (weight ~ how damning one hit is). Lexicon: LLM-overrepresented terms -> per-hit weight (matched as word prefix). learned.json merges over this at runtime.",
+ "patterns": [
+  {
+   "name": "hedge-stem",
+   "cat": "hedging",
+   "rx": "\\bit(?:(?:'|\u2019)s| is| has) (?:worth noting|worth mentioning|important to (?:note|remember|understand)|crucial to)\\b|\\bit should be noted\\b|\\bit bears mentioning\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "hedge-stack",
+   "cat": "hedging",
+   "rx": "\\b(?:might|may|could)\\s+(?:possibly|potentially|perhaps)\\b",
+   "w": 3,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "arguably",
+   "cat": "hedging",
+   "rx": "\\barguably\\b",
+   "w": 2,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "that-said",
+   "cat": "hedging",
+   "rx": "(?:^|\\. )That said,",
+   "w": 1.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "listicle-stem",
+   "cat": "scaffolding",
+   "rx": "\\b(?:there are (?:several|a few|many|numerous) (?:key |important )?(?:factors|things|ways|reasons|considerations|lessons|takeaways)|here are (?:a few|some|three|five|\\d+))\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "signpost-transition",
+   "cat": "scaffolding",
+   "rx": "(?:^|\\. )(?:Moreover|Furthermore|Additionally|In addition),",
+   "w": 2.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "conclusion-scaffold",
+   "cat": "scaffolding",
+   "rx": "\\b(?:in conclusion|in summary|to sum up|ultimately, |overall, |the key takeaway|at the end of the day|all in all|when all is said and done)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "meta-commentary",
+   "cat": "scaffolding",
+   "rx": "\\b(?:let me (?:walk you through|break (?:this|it) down|explain|paint (?:you )?a picture)|in this (?:article|post|piece), (?:we|i)(?:'ll| will)|let(?:(?:'|\u2019)s| us) (?:dive|unpack|explore|take a closer look|break (?:it|this) down))\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "whether-youre",
+   "cat": "scaffolding",
+   "rx": "\\bwhether you(?:(?:'|\u2019)re| are) (?:a|an|at|just|new)\\b",
+   "w": 3,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "lesson-n-stem",
+   "cat": "scaffolding",
+   "rx": "(?:^|\\n)[ \\t]*(?:lesson|takeaway|tip|step|mistake) #?\\d+[:.]",
+   "w": 3,
+   "m": true,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "placeholder",
+   "cat": "artifact",
+   "rx": "\\[(?:first name|your name|company(?: name)?|name|date|recipient|sender|topic|subject|salutation|closing|position|department|project name|insert[^\\]]*|fill in[^\\]]*|add[^\\]]*|todo[^\\]]*|tbd[^\\]]*)\\]",
+   "w": 7,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-22"
+  },
+  {
+   "name": "walk-away-with",
+   "cat": "marketing",
+   "rx": "\\b(?:walk away with|actionable (?:insights|takeaways|tips)|practical (?:tips|techniques|takeaways|strategies) you can (?:apply|use))\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "so-you-dont-have-to",
+   "cat": "marketing",
+   "rx": "\\bso you do(?:n(?:'|\u2019)t| not) have to\\b|\\bfind out the hard way\\b|\\bskip (?:that|the) (?:part|pain|struggle)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "spirit-of-transparency",
+   "cat": "puffery",
+   "rx": "\\bin the spirit of (?:transparency|openness)\\b|\\ba significant portion of\\b|\\bthe short version is\\b|\\bfull transparency[,:]",
+   "w": 3.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "emotional-labor",
+   "cat": "linkedin",
+   "rx": "\\b(?:hardest (?:decision|thing) (?:of|i)|poured (?:everything|our hearts?)|i owe it to|writing this (?:post|is)n?(?:'|\u2019)?t? ?(?:is )?(?:painful|hard)|with a heavy heart)\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "aphorism-formula",
+   "cat": "drama",
+   "rx": "\\b\\w+ is(?:n(?:'|\u2019)t| not) the opposite of \\w+\\b|\\bis(?:n(?:'|\u2019)t| not) (?:a|the) (?:destination|sprint)[,.;] (?:it|but)\\b|\\bit(?:(?:'|\u2019)s| is| has) a marathon\\b",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "question-hook-opener",
+   "cat": "performed",
+   "rx": "\\A(?:[^.!?\\n]{0,80}\\?)",
+   "w": 2.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "manufactured-stakes",
+   "cat": "stakes",
+   "rx": "\\bin today(?:(?:'|\u2019)s| is| has) (?:fast-paced|rapidly (?:evolving|changing)|digital|competitive|ever-changing|modern|world|market|economy|climate|society|business|workplace|environment)\\b|\\bnow more than ever\\b|\\bthe stakes have never been higher\\b|\\bin an era (?:of|where)\\b|\\bin the age of\\b|\\bin this day and age\\b|\\bin the fast-paced world of\\b",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "ever-evolving",
+   "cat": "stakes",
+   "rx": "\\bever-(?:evolving|changing|growing)\\b",
+   "w": 3,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "performed-candor",
+   "cat": "performed",
+   "rx": "\\b(?:let(?:(?:'|\u2019)s| us) be (?:honest|real|clear)|here(?:(?:'|\u2019)s| is) the (?:thing|truth|kicker|deal|catch|detail|part|wrinkle|nuance|upshot|punchline|rub)|i(?:'|\u2019)ll be honest|the (?:uncomfortable|hard) truth is|truth be told|no fluff|real talk|not gonna lie|if i(?:'|\u2019)m being honest|let me be (?:crystal |perfectly )?clear)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "social-validation",
+   "cat": "performed",
+   "rx": "\\b(?:i (?:know|realize) i(?:'|\u2019)m not alone|you(?:'|\u2019)re not (?:alone|imagining it)|if you(?:'|\u2019)ve (?:felt|noticed) [\\w '\u2019-]{2,36}, you(?:'|\u2019)re not (?:alone|imagining it))\\b",
+   "hints": ["not alone", "not imagining it"],
+   "w": 2.5,
+   "first_seen": "2026-09-03",
+   "last_confirmed": "2026-09-03"
+  },
+  {
+   "name": "faux-insight",
+   "cat": "performed",
+   "rx": "\\b(?:what (?:most people|nobody) (?:get(?:s)? wrong|tells you|misses)|the part everyone misses|most people (?:don't|won't|never) (?:realize|see|notice)|here(?:(?:'|\u2019)s| is| has) what (?:i|we) learned)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "rhetorical-opener",
+   "cat": "performed",
+   "rx": "\\b(?:ever wondered|what if i told you|have you ever (?:wondered|noticed|felt))\\b|\\bplot twist:",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "read-again",
+   "cat": "performed",
+   "rx": "\\b(?:read that again|let that (?:sink in|marinate)|sit with that|i(?:'|\u2019)ll wait|you (?:read|heard) that (?:right|correctly))\\b",
+   "w": 6,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "mic-drop-frag",
+   "cat": "performed",
+   "rx": "\\bthat(?:(?:'|\u2019)s| is| has) it\\. that(?:(?:'|\u2019)s| is| has) the\\b|\\bmic drop\\b|\\bchef(?:'|\u2019)s kiss\\b|\\*checks notes\\*",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "not-x-but-y",
+   "cat": "contrast",
+   "rx": "\\b(?:is|are|was|were)(?:n(?:'|\u2019)t| not) just (?:about )?\\w[\\w '\u2019-]{0,40}[.,;:\\u2014\\u2013-]+\\s*(?:it|they|he|she|we)(?:(?:'|\u2019)s|(?:'|\u2019)re| is| are| was| were)\\b|\\bnot (?:just|only|merely) [\\w '\u2019-]{2,40}[,;:\\u2014\\u2013-]+\\s*but\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "its-not-its",
+   "cat": "contrast",
+   "rx": "\\b(?:it|this|that)(?:(?:'|\u2019)s| is| was)(?: really| actually)? not (?:just )?(?:about )?[\\w '\u2019-]{2,40}[.,;:\\u2014\\u2013-]+\\s*(?:it|this|that)(?:(?:'|\u2019)s| is| was)\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "question-isnt",
+   "cat": "contrast",
+   "rx": "\\bthe (?:real |hard |big |key )?(?:question|answer|problem|issue|point|goal|key|secret|difference|challenge|trick|magic|lesson|story|irony|hard part|best part) (?:is|was)(?:n(?:'|\u2019)t| not)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "negative-listing",
+   "cat": "contrast",
+   "rx": "\\bnot (?:a|an|the) [\\w '\u2019-]{2,30}\\. not (?:a|an|the) \\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "staged-negative-ladder",
+   "cat": "contrast",
+   "rx": "(?:^|[.!?]\\s+|\\n)[\u2013\u2014*+\u2022-]*\\s*not in (?:an? |the )?[\\w '\u2019-]{2,32}\\.\\s*(?:[\u2013\u2014*+\u2022-]+\\s*)?not in (?:an? |the )?[\\w '\u2019-]{2,32}\\.\\s*(?:[\u2013\u2014*+\u2022-]+\\s*)?but in (?:an? |the )?[\\w '\u2019-]{2,48}",
+   "hints": ["not in a", "not in the"],
+   "w": 5,
+   "first_seen": "2026-09-03",
+   "last_confirmed": "2026-09-03"
+  },
+  {
+   "name": "this-isnt-about",
+   "cat": "contrast",
+   "rx": "\\bthis (?:is|was)(?:n(?:'|\u2019)t| not) (?:just )?about\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "triadic-adjectives",
+   "cat": "triads",
+   "rx": "\\b\\w+(?:ic|ive|ble|ant|ent|ful|ous|ed|al|ing)?, \\w+(?:ic|ive|ble|ant|ent|ful|ous|ed|al|ing)?, and \\w+(?:ic|ive|ble|ant|ent|ful|ous|ed|al|ing)\\b",
+   "w": 1.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "no-x-no-y-just-z",
+   "cat": "triads",
+   "rx": "\\bno \\w[\\w ]{0,20}[,.] no \\w[\\w ]{0,20}[,.] (?:just|only)\\b",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "puffery-testament",
+   "cat": "puffery",
+   "rx": "\\b(?:stands? as a testament|serves? as a (?:testament|reminder)|is a testament to|marks? a pivotal|pivotal moment|plays? a (?:vital|crucial|key|significant|critical|central) role|solidif(?:y|ies) (?:its|their)|underscor(?:es|ing) (?:its|the)|cements? (?:its|their) (?:position|place|status))\\b",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "rich-tapestry",
+   "cat": "puffery",
+   "rx": "\\b(?:rich (?:tapestry|history|heritage)|vibrant (?:community|ecosystem|culture)|nestled (?:in|among|between)|breathtaking|must-(?:visit|see))\\b|\\b(?:stunning )?natural beauty\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "superficial-ing",
+   "cat": "puffery",
+   "rx": ", (?:highlighting|underscoring|showcasing|reflecting|demonstrating|signaling|cementing|reinforcing|ensuring|solidifying|marking|positioning) (?:the|its|their|a|how)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "weasel-attribution",
+   "cat": "puffery",
+   "rx": "\\b(?:experts (?:agree|say|believe)|industry (?:reports|leaders) (?:suggest|agree)|studies (?:show|suggest)|many argue|widely (?:regarded|considered|seen) as|some critics argue|observers have (?:cited|noted)|research shows)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "marketing-register",
+   "cat": "marketing",
+   "rx": "\\b(?:game.?chang(?:er|ing)|paradigm shift|cutting.?edge|state-of-the-art|best-in-class|world-class|next-level|seamless(?:ly)?|frictionless|turnkey|synergy|supercharge|revolutioniz\\w+|transformative|disruptive innovation)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "this-changes",
+   "cat": "marketing",
+   "rx": "\\bthis (?:changes everything|is huge|is a big deal)\\b",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "unlock-potential",
+   "cat": "marketing",
+   "rx": "\\b(?:unlock(?:ing)? (?:the |your |new )?(?:full |true )?(?:potential|power|value|opportunities)|take .{0,25}to the next level|empower(?:s|ing)? (?:teams?|users?|people|you)\\b)",
+   "w": 4.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "future-is",
+   "cat": "marketing",
+   "rx": "\\bthe future (?:of \\w+ )?is (?:here|now|bright)\\b|\\bwe(?:(?:'|\u2019)re| are) just getting started\\b|\\bfuture you will thank you\\b|\\bstay tuned\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "announce-excited",
+   "cat": "linkedin",
+   "rx": "\\b(?:(?:i(?:'|\u2019)m|i am) |we(?:(?:'|\u2019)re| are) )?(?:beyond |incredibly |truly |so )?(?:excited|thrilled|humbled|honored|proud|delighted) (?:to|and)\\b",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "engagement-bait",
+   "cat": "linkedin",
+   "rx": "\\b(?:agree\\?|thoughts\\?|what(?:(?:'|\u2019)s| is) your (?:take|experience)|drop a comment|let me know in the comments|share this with|share if you|tag someone|repost if|follow (?:me|for more)|sound off in|save this post|bookmark this|link in (?:bio|the )?(?:first )?comments?|dm me\\b|comment [\"\u201c']?\\w{1,15}[\"\u201d']? (?:below )?and i(?:'|\u2019)ll|my dms are (?:always )?open|what about you\\?)\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "emoji-arrow-bullet",
+   "cat": "linkedin",
+   "rx": "(?:^|\\n)[ \\t]*(?:\ud83d\udc49|\u2705|\ud83d\udd39|\u27a1\ufe0f|\u2728|\ud83d\ude80|\ud83d\udca1|\ud83d\udd25|\u2192)\\s",
+   "w": 2.5,
+   "m": true,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "hashtag-cluster",
+   "cat": "linkedin",
+   "rx": "(?:#\\w+\\s*){3,}",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "journey-gratitude",
+   "cat": "linkedin",
+   "rx": "\\b(?:this journey|the journey (?:so far|ahead)|grateful (?:for|to)|could(?:n(?:'|\u2019)t| not) have done it without|huge (?:thanks|shout.?out)|humbled and)\\b",
+   "w": 3,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "lessons-learned-stem",
+   "cat": "linkedin",
+   "rx": "\\b(?:here(?:(?:'|\u2019)s| is| has) what (?:it|that) taught me|\\d+ (?:key )?(?:lessons|takeaways|things) (?:i(?:'|\u2019ve)? learned|from))\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "colon-reveal",
+   "cat": "drama",
+   "rx": "(?:^|\\. )The (?:best|craziest|wildest|most \\w+) part\\??[:.]",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "emphasis-crutch",
+   "cat": "drama",
+   "rx": "\\b(?:make no mistake|make it count|and (?:honestly|frankly)\\?|the result\\?|the outcome\\?|spoiler(?: alert)?:)|(?:^|\\. |\\n)Honestly\\? ",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "transformation-chain",
+   "cat": "drama",
+   "rx": "\\b(\\w+) becomes (\\w+)\\. \\2 becomes\\b",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "corrective-reveal",
+   "cat": "drama",
+   "rx": "\\byou(?:'|\u2019)ve been told\\b|\\bhere(?:(?:'|\u2019)s| is| has) the truth:",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "copula-boast",
+   "cat": "verbs",
+   "rx": "\\b(?:boasts?|boasting) (?:a|an|the|over|more)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "serves-as-hub",
+   "cat": "verbs",
+   "rx": "\\bserves? as a (?:centralized |central )?(?:hub|platform|solution|gateway)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "weak-verb-phrase",
+   "cat": "verbs",
+   "rx": "\\b(?:has the ability to|is able to|in order to|made the decision to|conduct(?:ed)? an analysis|has the potential to)\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "filler-intensifier",
+   "cat": "filler",
+   "rx": "\\b(?:truly|genuinely|incredibly|remarkably|undoubtedly|undeniably|absolutely essential|significantly enhanc\\w+)\\b",
+   "w": 2,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "vague-quantifier",
+   "cat": "filler",
+   "rx": "\\b(?:a (?:wide|vast|diverse) (?:variety|range|array) of|countless|myriad|a plethora of|numerous)\\b",
+   "w": 3,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "deep-dive",
+   "cat": "filler",
+   "rx": "\\b(?:deep dive|dive (?:deep(?:er)? )?into|double.?click on)\\b",
+   "w": 3,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "assistant-voice",
+   "cat": "assistant",
+   "rx": "\\b(?:great question|i(?:'|\u2019)d be happy to|i hope this (?:helps|email finds you well)|certainly!|absolutely!|without further ado|buckle up)\\b",
+   "w": 6,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "as-an-ai",
+   "cat": "assistant",
+   "rx": "\\bas an ai\\b|\\bas a language model\\b",
+   "w": 10,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "false-range",
+   "cat": "misc",
+   "rx": "\\bfrom [\\w '\u2019-]{3,30} to [\\w '\u2019-]{3,30}(?:,| and) [\\w '\u2019-]{3,30}\\b",
+   "w": 1.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "landscape-navigate",
+   "cat": "misc",
+   "rx": "\\b(?:navigat(?:e|ing) the [\\w ]{0,20}landscape|the (?:\\w+ )?landscape (?:of|is|has)|in the (?:\\w+ )?space[,.])|\\bin the world of\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "key-takeaway-bold",
+   "cat": "misc",
+   "rx": "\\*\\*(?:key takeaway|the bottom line|pro tip|remember)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "isnt-about-its-about",
+   "cat": "contrast",
+   "rx": "\\b(?:is|are|was|were)(?:n(?:'|\u2019)t| not) (?:just |really |only )?about [\\w '\u2019-]{2,40}[.,;:\\u2014\\u2013-]+\\s*(?:it|this|that|they)(?:(?:(?:'|\u2019))s|(?:(?:'|\u2019))re| is| are| was| were)(?: about)?\\b",
+   "w": 5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "never-about",
+   "cat": "contrast",
+   "rx": "\\b(?:was|is|are|has(?: been)?|have(?: been)?) never (?:been )?about\\b|\\bit(?:'|\u2019)s never been about\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "didnt-just",
+   "cat": "contrast",
+   "rx": "\\b(?:did|does|do)(?:n(?:'|\u2019)t| not) just [\\w '\u2019-]{2,40}[.,;:\\u2014\\u2013-]+\\s*(?:we|they|it|he|she|i|you) \\w+",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "less-about-more-about",
+   "cat": "contrast",
+   "rx": "\\bless about [\\w '\u2019-]{2,40}(?:[.,;:\\u2014\\u2013-]+|\\s+and)\\s*more about\\b",
+   "w": 5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "less-like-more-like",
+   "cat": "contrast",
+   "rx": "\\b(?:feel(?:s|ing)?|seem(?:s|ing)?) less like (?:an? |the )?[\\w '\u2019-]{2,48}(?:,| and)? (?:an? )?(?:little )?more like (?:an? |the )?[\\w '\u2019-]{2,48}",
+   "hints": ["less like", "more like"],
+   "w": 4,
+   "first_seen": "2026-09-03",
+   "last_confirmed": "2026-09-03"
+  },
+  {
+   "name": "thats-not-thats",
+   "cat": "contrast",
+   "rx": "\\bthat(?:(?:(?:'|\u2019))s| is) not [\\w '\u2019-]{2,30}[.,;:\\u2014\\u2013-]+\\s*that(?:(?:(?:'|\u2019))s| is)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "isocolon-ditransitive",
+   "cat": "contrast",
+   "rx": "\\b(let|give|hand|show|tell|offer|teach|buy|cost|earn|save|bring|send|win)s? you\\b[^.!?]{0,70}[.!?]\\s+[^.!?]{0,70}\\b\\1s? you\\b",
+   "hints": ["you"],
+   "w": 4.5,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26"
+  },
+  {
+   "name": "this-is-what-looks-like",
+   "cat": "contrast",
+   "rx": "(?:^|[.!?]\\s+|\\n)(?:this|that) is what [\\w '\u2019-]{2,40} looks like\\b",
+   "hints": ["looks like"],
+   "w": 4,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26"
+  },
+  {
+   "name": "no-x-had-to",
+   "cat": "contrast",
+   "rx": "(?:^|[.!?]\\s+|\\n)No [\\w '\u2019-]{2,40} (?:had to|needed to|has to|ever) [\\w '\u2019-]{2,60}\\.\\s+[\\w '\u2019-]{2,40} (?:did|made|chose|decided|built|released|shipped|published)\\b",
+   "hints": ["had to", "needed to", "has to", "ever"],
+   "w": 4,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26"
+  },
+  {
+   "name": "not-the-but-the",
+   "cat": "contrast",
+   "rx": "\\bnot the [\\w '\u2019-]{2,30}[,;] but the\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "not-because-but-because",
+   "cat": "contrast",
+   "rx": "\\bnot because [\\w '\u2019-]{2,40}[,;] but because\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "more-than-just",
+   "cat": "contrast",
+   "rx": "\\b(?:is|are|was|were|it(?:'|\u2019)s|they(?:'|\u2019)re) (?:so much )?more than just\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "ai-wont-replace",
+   "cat": "contrast",
+   "rx": "\\bwon(?:'|\u2019)t (?:replace|take) your jobs?\\b|\\bwon(?:'|\u2019)t replace \\w+[.,;] (?:but )?(?:a |an |the |someone |people |those )?[\\w ]{0,30}(?:using|who use)\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "stop-start",
+   "cat": "contrast",
+   "rx": "(?:^|[.!?]\\s+|\\n)Stop [\\w '\u2019,-]{2,40}\\. Start [a-z]",
+   "w": 4.5,
+   "m": true,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "x-is-dead-long-live",
+   "cat": "contrast",
+   "rx": "\\bis dead[.,;] long live\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "do-this-instead",
+   "cat": "contrast",
+   "rx": "\\b(?:do|try|read|use) this instead\\b|\\bwhat to do instead\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "gone-are-the-days",
+   "cat": "stakes",
+   "rx": "\\bgone are the days\\b",
+   "w": 5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "in-a-world-where",
+   "cat": "stakes",
+   "rx": "\\bin a world (?:where|of|that(?:'|\u2019)s)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "imagine-a-world",
+   "cat": "stakes",
+   "rx": "\\b(?:imagine|picture|envision) (?:a world|a future|this)[:,. ]",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "year-is-hook",
+   "cat": "stakes",
+   "rx": "\\bit(?:(?:(?:'|\u2019))s| is) 20\\d\\d(?:,)? and\\b|\\bthe year is 20\\d\\d\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "increasingly-x-world",
+   "cat": "stakes",
+   "rx": "\\bin an increasingly [\\w-]+ (?:world|landscape|market|economy|era|society)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "since-dawn-of",
+   "cat": "stakes",
+   "rx": "\\bsince the dawn of\\b|\\bthroughout (?:human )?history\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "no-secret",
+   "cat": "performed",
+   "rx": "\\bit(?:(?:(?:'|\u2019))s| is) no secret\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "lets-face-it",
+   "cat": "performed",
+   "rx": "\\blet(?:(?:(?:'|\u2019))s| us) face it\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "we-need-to-talk",
+   "cat": "performed",
+   "rx": "\\bwe need to talk about\\b|\\bthe conversation (?:we|nobody|no one) (?:need(?:s)? to|should) (?:be )?(?:hav|start)\\w*\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "hot-take-label",
+   "cat": "overcorrection",
+   "rx": "(?:^|\\n|\\. )(?:hot take|unpopular opinion|controversial (?:take|opinion))[:.,]",
+   "w": 4,
+   "m": true,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "can-we-talk-about",
+   "cat": "performed",
+   "rx": "\\bcan we (?:talk about|all agree|be honest about)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "raise-your-hand",
+   "cat": "linkedin",
+   "rx": "\\braise your hand if\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "thats-when-it-hit",
+   "cat": "drama",
+   "rx": "\\b(?:that(?:'|\u2019)s when|then) it hit me\\b|\\bit hit me[:.,]",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "little-did-i-know",
+   "cat": "drama",
+   "rx": "\\blittle did (?:i|we|they|he|she) know\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "changed-everything",
+   "cat": "drama",
+   "rx": "\\b(?:changed|changes) everything\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "rest-is-history",
+   "cat": "drama",
+   "rx": "\\bthe rest(?:, as they say,)? is history\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "fast-forward",
+   "cat": "drama",
+   "rx": "\\bfast.?forward (?:to|a few|six|two|three|four|five|ten|\\d+)\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "one-thing-is-certain",
+   "cat": "drama",
+   "rx": "\\bone thing(?:(?:(?:'|\u2019))s| is) (?:certain|clear|for sure)\\b|\\bif there(?:(?:(?:'|\u2019))s| is) one thing\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "cannot-be-overstated",
+   "cat": "drama",
+   "rx": "\\bcan(?:not|(?:'|\u2019)t) be overstated\\b|\\bcan(?:not|(?:'|\u2019)t) stress (?:this|it) enough\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "wait-for-it",
+   "cat": "drama",
+   "rx": "\\bwait for it\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "further-from-truth",
+   "cat": "drama",
+   "rx": "\\bcould(?:n(?:'|\u2019)t)? (?:not )?be further from the truth\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "understatement-formula",
+   "cat": "drama",
+   "rx": "\\bwould be (?:an|the) understatement\\b|\\bis (?:an|the) understatement of\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "full-stop-period",
+   "cat": "drama",
+   "rx": "(?:^|\\. |\\n)(?:Full stop|Period|End of story|Enough said)\\.",
+   "w": 3.5,
+   "m": true,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "results-speak",
+   "cat": "drama",
+   "rx": "\\bspeaks? for (?:itself|themselves)\\b|\\bnumbers (?:do(?:n(?:'|\u2019)t| not)|never) lie\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "only-time-will-tell",
+   "cat": "drama",
+   "rx": "\\bonly time will tell\\b|\\btime will tell\\b|\\bremains to be seen\\b|\\bthe jury is (?:still )?out\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "possibilities-endless",
+   "cat": "marketing",
+   "rx": "\\bthe possibilities are (?:endless|limitless)\\b|\\bendless possibilities\\b|\\bimplications are (?:far-reaching|profound|enormous)\\b",
+   "w": 5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "exciting-times",
+   "cat": "marketing",
+   "rx": "\\bexciting times (?:ahead|for)\\b|\\bwatch this space\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "double-edged-sword",
+   "cat": "cliche",
+   "rx": "\\bdouble.?edged sword\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "here-to-stay",
+   "cat": "cliche",
+   "rx": "\\b(?:is|are) here to stay\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "tip-of-iceberg",
+   "cat": "cliche",
+   "rx": "\\btip of the iceberg\\b|\\bscratch(?:ed|ing)? the surface\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "elephant-in-room",
+   "cat": "cliche",
+   "rx": "\\belephant in the room\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "perfect-storm",
+   "cat": "cliche",
+   "rx": "\\ba perfect storm\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "ticks-all-boxes",
+   "cat": "cliche",
+   "rx": "\\b(?:ticks?|checks?)(?:ing)? all the (?:right )?boxes\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "win-win",
+   "cat": "cliche",
+   "rx": "\\bwin.win\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "best-of-both-worlds",
+   "cat": "cliche",
+   "rx": "\\bbest of both worlds\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "match-made-in-heaven",
+   "cat": "cliche",
+   "rx": "\\bmatch made in heaven\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "world-by-storm",
+   "cat": "cliche",
+   "rx": "\\b(?:took|taking|taken|take) the (?:world|internet) by storm\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "rollercoaster",
+   "cat": "cliche",
+   "rx": "\\bemotional roller.?coaster\\b|\\broller.?coaster of emotions\\b|\\ba wild ride\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "wear-many-hats",
+   "cat": "cliche",
+   "rx": "\\bwear(?:s|ing)? many hats\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "move-the-needle",
+   "cat": "cliche",
+   "rx": "\\bmov(?:e|es|ing) the needle\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "boil-the-ocean",
+   "cat": "cliche",
+   "rx": "\\bboil(?:ing)? the ocean\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "low-hanging-fruit",
+   "cat": "cliche",
+   "rx": "\\blow.hanging fruit\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "circle-back",
+   "cat": "cliche",
+   "rx": "\\bcircle back\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "secret-weapon",
+   "cat": "cliche",
+   "rx": "\\bsecret (?:weapon|sauce|ingredient)\\b|\\bholy grail\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "hidden-gem",
+   "cat": "cliche",
+   "rx": "\\bhidden gem\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "proverb-drop",
+   "cat": "cliche",
+   "rx": "\\brome wasn(?:'|\u2019)t built in a day\\b|\\bproof is in the pudding\\b|\\bactions speak louder than words\\b|\\bslow and steady wins\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "rubber-meets-road",
+   "cat": "cliche",
+   "rx": "\\brubber (?:meets|hits) the road\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "wake-up-call",
+   "cat": "cliche",
+   "rx": "\\bwake.?up call\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "stark-reminder",
+   "cat": "cliche",
+   "rx": "\\b(?:stark|grim|sobering|powerful|poignant|timely) reminder\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "sheds-light",
+   "cat": "cliche",
+   "rx": "\\bshed(?:s|ding)? (?:new |some )?light on\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "paints-picture",
+   "cat": "cliche",
+   "rx": "\\bpaints? a (?:\\w+ )?picture\\b|\\bspeaks? volumes\\b|\\bthe (?:data|numbers) tells? (?:a|the|its own) story\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "speaks-to-importance",
+   "cat": "cliche",
+   "rx": "\\bspeaks? to the (?:importance|value|power|need)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "begs-the-question",
+   "cat": "cliche",
+   "rx": "\\bbegs? the question\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "alarming-rate",
+   "cat": "cliche",
+   "rx": "\\bat an alarming rate\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "pays-dividends",
+   "cat": "cliche",
+   "rx": "\\bpays? dividends\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "new-normal",
+   "cat": "cliche",
+   "rx": "\\bthe new normal\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "ahead-of-curve",
+   "cat": "cliche",
+   "rx": "\\b(?:stay(?:ed|ing)?|get|keep) ahead of the (?:curve|competition|game)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "paves-the-way",
+   "cat": "cliche",
+   "rx": "\\bpav(?:e|es|ed|ing) the way\\b|\\bset(?:s|ting)? the stage for\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "bridge-the-gap",
+   "cat": "cliche",
+   "rx": "\\bbridg(?:e|es|ing) the gap\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "backbone-of",
+   "cat": "cliche",
+   "rx": "\\bthe backbone of\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "at-the-forefront",
+   "cat": "cliche",
+   "rx": "\\bat the forefront\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "unsung-hero",
+   "cat": "cliche",
+   "rx": "\\bunsung hero(?:es)?\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "uncharted-territory",
+   "cat": "cliche",
+   "rx": "\\buncharted (?:territory|waters)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "next-frontier",
+   "cat": "cliche",
+   "rx": "\\bthe (?:next|final|new) frontier\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "whole-new-level",
+   "cat": "cliche",
+   "rx": "\\ba whole new level\\b|\\bto a whole new\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "seat-at-the-table",
+   "cat": "cliche",
+   "rx": "\\bseat at the table\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "north-star",
+   "cat": "cliche",
+   "rx": "\\bnorth star\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "level-up-your",
+   "cat": "marketing",
+   "rx": "\\blevel(?:ing)? up your\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "on-steroids",
+   "cat": "cliche",
+   "rx": "\\bon steroids\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "wild-west",
+   "cat": "cliche",
+   "rx": "\\bwild west of\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "magic-happens",
+   "cat": "cliche",
+   "rx": "\\bwhere the magic happens\\b|\\bthe (?:real )?magic (?:happens|is|lies)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "real-conversation-closer",
+   "cat": "performed",
+   "rx": "\\bwhere the (?:real|genuine|meaningful) (?:conversation|conversations|connection|connections) (?:is|are) (?:starting to |finally )?(?:happen|happening|taking place)\\b",
+   "hints": ["real conversation", "genuine conversation", "meaningful conversation"],
+   "w": 3,
+   "first_seen": "2026-09-03",
+   "last_confirmed": "2026-09-03"
+  },
+  {
+   "name": "recipe-for",
+   "cat": "cliche",
+   "rx": "\\brecipe for (?:disaster|success)\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "breath-of-fresh-air",
+   "cat": "cliche",
+   "rx": "\\bbreath of fresh air\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "tide-is-turning",
+   "cat": "cliche",
+   "rx": "\\bthe tide (?:is|has) turn\\w+\\b|\\bwinds of change\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "watershed-moment",
+   "cat": "cliche",
+   "rx": "\\b(?:watershed|defining) moment\\b|\\b(?:seismic|tectonic) shift\\b|\\binflection point\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "new-era",
+   "cat": "cliche",
+   "rx": "\\busher(?:s|ed|ing)? in (?:a|the|an)\\b|\\b(?:dawn|start) of a new era\\b|\\ba new era of\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "represents-significant",
+   "cat": "puffery",
+   "rx": "\\b(?:represents?|marks?) a (?:significant|major|fundamental|profound) (?:shift|milestone|step|change|leap)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "lasting-legacy",
+   "cat": "puffery",
+   "rx": "\\b(?:lasting|enduring) (?:legacy|impact|impression)\\b|\\bleaves? a lasting\\b|\\bindelible mark\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "deeply-rooted",
+   "cat": "puffery",
+   "rx": "\\bdeeply rooted\\b|\\brich cultural heritage\\b|\\bcontinues? to (?:inspire|thrive|resonate)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "in-the-heart-of",
+   "cat": "puffery",
+   "rx": "\\bin the heart of\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "treasure-trove",
+   "cat": "puffery",
+   "rx": "\\btreasure trove\\b|\\ba wealth of (?:knowledge|information|experience|insights)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "labor-of-love",
+   "cat": "cliche",
+   "rx": "\\blabou?r of love\\b|\\bblood, sweat,? and tears\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "full-circle",
+   "cat": "cliche",
+   "rx": "\\b(?:come|came|comes|coming) full circle\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "other-plans",
+   "cat": "drama",
+   "rx": "\\b(?:life|fate|the universe) had other plans\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "story-for-another-day",
+   "cat": "cliche",
+   "rx": "\\ba (?:story|topic|conversation|post) for another (?:day|time|post)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "leave-you-with",
+   "cat": "cliche",
+   "rx": "\\bi(?:'|\u2019)ll leave you with\\b|\\bfood for thought\\b|\\bparting thought\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "force-to-be-reckoned",
+   "cat": "cliche",
+   "rx": "\\bforce to be reckoned with\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "shaping-the-future",
+   "cat": "marketing",
+   "rx": "\\bshap(?:e|es|ing) the future of\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "whats-possible",
+   "cat": "marketing",
+   "rx": "\\b(?:redefin|reimagin)\\w+ what(?:'|\u2019)s possible\\b|\\bpush(?:es|ing)? the (?:boundaries|limits|envelope)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "harness-the-power",
+   "cat": "marketing",
+   "rx": "\\bharness(?:ing|es)? the (?:power|potential) of\\b|\\bunlock(?:ing|s)? the power\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "quantum-leap",
+   "cat": "cliche",
+   "rx": "\\bquantum leap\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "look-no-further",
+   "cat": "marketing",
+   "rx": "\\blook no further\\b|\\byou(?:'|\u2019)ve come to the right place\\b",
+   "w": 5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "second-to-none",
+   "cat": "marketing",
+   "rx": "\\bsecond to none\\b|\\bbest.kept secret\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "thought-leader",
+   "cat": "cliche",
+   "rx": "\\bthought.leader(?:s|ship)?\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "peace-of-mind",
+   "cat": "marketing",
+   "rx": "\\bpeace of mind\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "pull-back-curtain",
+   "cat": "cliche",
+   "rx": "\\bpeel(?:s|ing)? back the (?:layers|onion)\\b|\\bpull(?:s|ing)? back the curtain\\b|\\blift(?:s|ing)? the veil\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "perfect-blend",
+   "cat": "puffery",
+   "rx": "\\b(?:perfect|unique|potent|heady) (?:blend|mix|combination) of\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "something-for-everyone",
+   "cat": "puffery",
+   "rx": "\\bsomething for everyone\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "sets-apart",
+   "cat": "puffery",
+   "rx": "\\bsets? (?:it|them|us|you|\\w+) apart\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "nothing-short-of",
+   "cat": "puffery",
+   "rx": "\\bnothing short of\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "masterclass-in",
+   "cat": "puffery",
+   "rx": "\\ba masterclass in\\b|\\ba love letter to\\b|\\ba stroke of genius\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "in-equal-measure",
+   "cat": "puffery",
+   "rx": "\\bin equal measure\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "is-a-breeze",
+   "cat": "marketing",
+   "rx": "\\bis a breeze\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "icing-on-cake",
+   "cat": "cliche",
+   "rx": "\\b(?:icing|cherry) on (?:the )?(?:cake|top)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "silver-lining",
+   "cat": "cliche",
+   "rx": "\\bsilver lining\\b|\\blight at the end of the tunnel\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "delicate-balance",
+   "cat": "cliche",
+   "rx": "\\ba (?:delicate|fine) (?:balance|line) between\\b|\\bstrik(?:e|es|ing) (?:a|the right) balance\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "boils-down-to",
+   "cat": "cliche",
+   "rx": "\\b(?:it all )?boils? down to\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "bottom-line-label",
+   "cat": "cliche",
+   "rx": "(?:^|\\. |\\n)(?:The )?[Bb]ottom line[:,]",
+   "w": 3.5,
+   "m": true,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "grand-scheme",
+   "cat": "cliche",
+   "rx": "\\bin the grand scheme of things\\b|\\bthe bigger picture\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "writing-on-wall",
+   "cat": "cliche",
+   "rx": "\\bwriting (?:is )?on the wall\\b|\\bcautionary tale\\b|\\bhindsight is (?:20\\/20|twenty)\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "worth-weight-gold",
+   "cat": "cliche",
+   "rx": "\\bworth (?:its|their) weight in gold\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "is-poised-to",
+   "cat": "puffery",
+   "rx": "\\b(?:is|are|stands?) poised to\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "continues-to-evolve",
+   "cat": "stakes",
+   "rx": "\\bcontinues? to evolve\\b|\\bis (?:constantly|always) evolving\\b|\\bas (?:technology|ai) (?:continues to )?(?:evolves?|advances?)\\b|\\bas we navigate\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "alike-formula",
+   "cat": "puffery",
+   "rx": "\\b(?:beginners?|experts?|professionals?|novices?|veterans?|fans?|critics?|users?|developers?|consumers?|businesses|enthusiasts?) and [\\w-]+ alike\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "in-a-nutshell",
+   "cat": "scaffolding",
+   "rx": "\\bin a nutshell\\b|\\bto put it simply\\b|\\bsimply put\\b|\\blong story short\\b|\\bsuffice it to say\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "needless-to-say",
+   "cat": "scaffolding",
+   "rx": "\\bneedless to say\\b|\\bit goes without saying\\b|\\bit bears repeating\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "at-its-core",
+   "cat": "scaffolding",
+   "rx": "\\bin essence\\b|\\bat (?:its|their) core\\b|\\bat the (?:very )?heart of\\b|\\bthe heart of the matter\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "when-it-comes-to",
+   "cat": "scaffolding",
+   "rx": "\\bwhen it comes to\\b",
+   "w": 2,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "heres-a-breakdown",
+   "cat": "scaffolding",
+   "rx": "\\bhere(?:(?:(?:'|\u2019))s| is) a (?:quick |full |complete )?(?:breakdown|rundown)\\b|\\beverything you need to know\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "might-be-wondering",
+   "cat": "scaffolding",
+   "rx": "\\byou (?:might|may) be (?:wondering|asking|thinking)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "sound-familiar",
+   "cat": "performed",
+   "rx": "\\bsound familiar\\?",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "weve-all-been-there",
+   "cat": "performed",
+   "rx": "\\bwe(?:'|\u2019)ve all been there\\b|\\bwe(?:'|\u2019)ve all (?:seen|felt|done) (?:it|this|that)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "think-of-it-as",
+   "cat": "scaffolding",
+   "rx": "\\bthink of (?:it|this) as\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "believe-it-or-not",
+   "cat": "scaffolding",
+   "rx": "\\bbelieve it or not\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "but-i-digress",
+   "cat": "performed",
+   "rx": "\\bbut i digress\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "hear-me-out",
+   "cat": "performed",
+   "rx": "\\bhear me out\\b|\\bstick with me\\b|\\bstay with me here\\b|\\bbear with me here\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "do-yourself-a-favor",
+   "cat": "performed",
+   "rx": "\\bdo yourself a favor\\b|\\bthank me later\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "trust-me",
+   "cat": "performed",
+   "rx": "\\btrust me[,.]|\\btrust me on this\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "i-get-it",
+   "cat": "performed",
+   "rx": "\\bi get it[.,] |\\blook, i get it\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "look-opener",
+   "cat": "overcorrection",
+   "rx": "(?:^|\\. |\\n)Look[,\\u2014] ",
+   "w": 2.5,
+   "m": true,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "if-this-resonates",
+   "cat": "linkedin",
+   "rx": "\\bif this resonate[sd]\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "say-it-louder",
+   "cat": "linkedin",
+   "rx": "\\bsay it louder\\b|\\bfor the people in the back\\b",
+   "w": 5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "normalize-x",
+   "cat": "linkedin",
+   "rx": "(?:^|\\. |\\n)Normalize \\w+ing\\b",
+   "w": 3.5,
+   "m": true,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "this-is-your-sign",
+   "cat": "linkedin",
+   "rx": "\\bthis is your (?:sign|reminder|permission)\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "today-years-old",
+   "cat": "linkedin",
+   "rx": "\\btoday years old\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "psa-protip",
+   "cat": "scaffolding",
+   "rx": "(?:^|\\n)PSA:|\\bpro.tip:|\\bfun fact:|\\bfriendly reminder\\b|\\bgentle reminder\\b",
+   "w": 3,
+   "m": true,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "ill-go-first",
+   "cat": "linkedin",
+   "rx": "\\bi(?:'|\u2019)ll go first\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "reach-out-touch-base",
+   "cat": "email",
+   "rx": "\\b(?:wanted to|thought i(?:'|\u2019)d) (?:reach out|touch base|follow up)\\b|\\bjust (?:reaching out|following up|checking in)\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "dont-hesitate",
+   "cat": "email",
+   "rx": "\\bdo(?:n(?:'|\u2019)t| not) hesitate to (?:reach out|contact|ask)\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "chatbot-residue",
+   "cat": "assistant",
+   "rx": "\\bwould you like me to\\b|\\blet me know if you(?:'|\u2019)d like\\b|\\bi hope this message finds you\\b|\\bmy (?:training data|knowledge cutoff)\\b|\\bas of my last (?:update|training)\\b",
+   "w": 7,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "chatgpt-artifact",
+   "cat": "artifact",
+   "rx": "\\boaicite\\b|\\boai_citation\\b|\\bciteturn\\d|\\butm_source=(?:chatgpt(?:\\.com)?|openai(?:\\.com)?|copilot(?:\\.com)?|claude\\.ai|perplexity\\.ai|gemini\\.google\\.com)\\b|\\breferrer=grok\\.com\\b|:?contentReference\\[(?:oaicite:)?|\\battributableIndex\\b|\\[cite: ?\\d|\\bturn\\d+(?:search|news|image|view)\\d+\\b|\\[span_\\d|\\(start_span\\)|\\bgrok_(?:card|render)|\\bppl-ai-file-upload\\b|\\battached_file\\b",
+   "w": 10,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-22"
+  },
+  {
+   "name": "regenerate-response-artifact",
+   "cat": "artifact",
+   "rx": "(?:^|\\n)[ \\t]*Regenerate response[ \\t]*(?:$|\\n)",
+   "w": 10,
+   "m": true,
+   "first_seen": "2026-08-22",
+   "last_confirmed": "2026-08-22"
+  },
+  {
+   "name": "as-we-move-forward",
+   "cat": "scaffolding",
+   "rx": "\\bas we (?:move|look) (?:forward|ahead)\\b|\\bthe road ahead\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "strap-in",
+   "cat": "performed",
+   "rx": "\\bstrap (?:in|yourselves)\\b|\\bgrab a (?:coffee|cup of coffee)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "blink-of-an-eye",
+   "cat": "cliche",
+   "rx": "\\bin the blink of an eye\\b|\\bwithout missing a beat\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "serious-note",
+   "cat": "performed",
+   "rx": "\\bon a (?:more )?serious note\\b|\\b(?:all )?jokes aside\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "cue-the",
+   "cat": "drama",
+   "rx": "(?:^|\\. |\\n)Cue (?:the|a) \\w+|\\bdrum.?roll\\b",
+   "w": 3.5,
+   "m": true,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "personal-news",
+   "cat": "linkedin",
+   "rx": "\\b(?:some )?personal news[:.]|\\b(?:big|exciting) news[:.]|\\b(?:a new|the next) chapter\\b|\\bbittersweet\\b|\\bwith mixed emotions\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "couldnt-be-prouder",
+   "cat": "linkedin",
+   "rx": "\\bcould(?:n(?:'|\u2019)t| not) be (?:more proud|prouder|more excited|happier|more thrilled)\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "cant-help-but",
+   "cat": "performed",
+   "rx": "\\bcan(?:not|(?:'|\u2019)t) help but\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "as-i-reflect",
+   "cat": "linkedin",
+   "rx": "\\bas i (?:sit here and )?reflect\\b|\\breflecting on (?:the past|my|this past)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "on-a-mission-to",
+   "cat": "marketing",
+   "rx": "\\bon a mission to\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "passionate-about",
+   "cat": "linkedin",
+   "rx": "\\bpassionate about\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "intersection-of",
+   "cat": "linkedin",
+   "rx": "\\bat the intersection of\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "navigating-complexities",
+   "cat": "misc",
+   "rx": "\\bnavigat\\w+ the (?:complexities|challenges|nuances|uncertaint\\w+) of\\b",
+   "w": 4,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "comprehensive-guide",
+   "cat": "marketing",
+   "rx": "\\b(?:comprehensive|ultimate|complete|definitive) guide\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "everyone-talking",
+   "cat": "performed",
+   "rx": "\\b(?:everyone|everybody)(?:(?:(?:'|\u2019))s| is) talking about\\b|\\b(?:nobody|no one)(?:(?:(?:'|\u2019))s| is)? talk(?:s|ing)? about\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "while-everyone-else",
+   "cat": "performed",
+   "rx": "\\bwhile everyone (?:else )?(?:is )?(?:busy|distracted|chasing|focused|arguing)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "pct-of-people",
+   "cat": "performed",
+   "rx": "\\b(?:90|95|99)% of (?:people|us|you|companies|founders|teams|businesses)\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "in-the-trenches",
+   "cat": "cliche",
+   "rx": "\\bin the trenches\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "roll-up-sleeves",
+   "cat": "cliche",
+   "rx": "\\broll(?:ing)? up (?:my|our|your|their) sleeves\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "hit-ground-running",
+   "cat": "cliche",
+   "rx": "\\bhit the ground running\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "table-stakes",
+   "cat": "cliche",
+   "rx": "\\btable stakes\\b",
+   "w": 3,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "heres-how-why",
+   "cat": "scaffolding",
+   "rx": "\\bhere(?:(?:'|\u2019)s| is) how (?:i|we|you|to|it)\\b|\\bhere(?:(?:'|\u2019)s| is) why[:.]",
+   "w": 2.5,
+   "first_seen": "2026-08-14",
+   "last_confirmed": "2026-08-14"
+  },
+  {
+   "name": "challenges-outlook",
+   "cat": "scaffolding",
+   "rx": "\\bchallenges and (?:future )?(?:prospects|outlook|opportunities)\\b|\\bfuture (?:outlook|prospects)\\b|\\bdespite (?:these|its|the) challenges\\b",
+   "w": 4,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "one-could-argue",
+   "cat": "hedging",
+   "rx": "\\bone (?:could|might) argue\\b",
+   "w": 3,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "not-all-created-equal",
+   "cat": "cliche",
+   "rx": "\\bnot all \\w+ (?:is|are) created equal\\b",
+   "w": 4,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "thats-where-comes-in",
+   "cat": "marketing",
+   "rx": "\\bthat(?:'|\u2019)s where [\\w '\u2019-]{2,30} comes? in\\b",
+   "w": 4,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "what-does-this-mean",
+   "cat": "scaffolding",
+   "rx": "\\bwhat does (?:this|that|it) mean for (?:you|your)\\b|\\bso,? what does (?:this|that) mean\\b",
+   "w": 4,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "why-it-matters",
+   "cat": "scaffolding",
+   "rx": "(?:^|\\n)Why (?:it|this) matters[:.]?(?:\\s|$)|\\bwhy (?:it|this) matters:",
+   "w": 3,
+   "m": true,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "counting-preamble",
+   "cat": "scaffolding",
+   "rx": "(?:^|\\. |\\n)(?:Two|Three|Four|Five) (?:factors|things|reasons|lessons|principles|constraints|trends) (?:explain|shape|define|drive|stand out)\\b",
+   "w": 3.5,
+   "m": true,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "whether-its-abc",
+   "cat": "scaffolding",
+   "rx": "\\bwhether it(?:'|\u2019)s [\\w '\u2019-]{2,30}, [\\w '\u2019-]{2,30},? or\\b",
+   "w": 3,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "false-vulnerability",
+   "cat": "linkedin",
+   "rx": "\\bnot saying this to brag\\b|\\bi(?:'|\u2019)ve been quiet about this\\b|\\bi do(?:n(?:'|\u2019)t| not) (?:usually|normally|often) (?:post|share|talk about)\\b",
+   "w": 4,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "told-me-impossible",
+   "cat": "linkedin",
+   "rx": "\\b(?:they|everyone|people) (?:told|said) (?:me|us) it (?:could|would)n(?:'|\u2019)t (?:be done|work)\\b",
+   "w": 4.5,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "first-and-foremost",
+   "cat": "scaffolding",
+   "rx": "\\bfirst and foremost\\b",
+   "w": 3,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "out-of-box-silos",
+   "cat": "cliche",
+   "rx": "\\bout.of.the.box (?:thinking|ideas)\\b|\\bbreak(?:ing)? down silos\\b|\\bthink(?:ing)? outside the box\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "with-the-advent",
+   "cat": "stakes",
+   "rx": "\\bwith the advent of\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "valuable-insights",
+   "cat": "marketing",
+   "rx": "\\bvaluable insights\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "key-turning-point",
+   "cat": "puffery",
+   "rx": "\\b(?:key|major|crucial) turning point\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "metaphor-of-family",
+   "cat": "puffery",
+   "rx": "\\ba (?:symphony|labyrinth|mosaic|kaleidoscope|constellation) of\\b|\\ba tapestry of\\b",
+   "w": 4,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "quietly-verbing",
+   "cat": "puffery",
+   "rx": "\\bquietly (?:becoming|building|shipping|winning|reshaping|revolutionizing|leading)\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-15",
+   "last_confirmed": "2026-08-15"
+  },
+  {
+   "name": "hired-adversary",
+   "cat": "performed",
+   "rx": "\\b(?:hired|recruited|enlisted|summoned) (?:an?|our(?: own)?|the|its(?: own)?|their(?: own)?) (?:adversar(?:y|ies)|skeptics?|saboteurs?|nemesis|devil(?:'|’)s advocates?)\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "turns-out-payoff",
+   "cat": "performed",
+   "rx": "\\bturn(?:s|ed)? out to (?:carry|hold|conceal|hide|contain|exact) (?:an?|the|its) [\\w’'-]+ (?:signal|lesson|truth|cost|price|tax|message|meaning|weight|story)\\b",
+   "w": 2,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "has-receipts",
+   "cat": "performed",
+   "rx": "\\b(?:has|got) receipts\\b|\\bthe receipts to prove it\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "hyperbole-universal",
+   "cat": "performed",
+   "rx": "\\b(?:nothing|no ?one|nobody|nowhere) (?:on (?:this )?earth|on the planet|in (?:human |recorded )?history)\\b|\\bknown to man(?:kind)?\\b",
+   "w": 2,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "argue-with-artifact",
+   "cat": "performed",
+   "rx": "\\b(?:meter|scorer|score|number|metric|model|tool|system|algorithm|dashboard|spreadsheet|checklist|rubric|benchmark|report|chart) (?:that )?you can (?:argue|reason|disagree) with\\b",
+   "w": 2.5,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "vibe-register",
+   "cat": "performed",
+   "rx": "\\b(?:is|isn(?:'|’)t|was|not|just) a vibe\\b|\\bvibe check\\b|\\bwith vibes\\b",
+   "w": 2,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "where-x-lives",
+   "cat": "performed",
+   "rx": "\\b(?:gap|middle|space|margin|delta|blind spot|seam|crack)s? (?:is|are) where [\\w-]+ (?:lives?|hides?)\\b",
+   "w": 2,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "billed-conceit",
+   "cat": "performed",
+   "rx": "\\b(?:bill|cost|tax|other half) lands on\\b|\\bgets? billed to\\b",
+   "w": 2,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "on-the-tin",
+   "cat": "performed",
+   "rx": "\\bon the tin\\b",
+   "w": 2,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "minding-own-business",
+   "cat": "performed",
+   "rx": "\\bminding (?:its|their) own business\\b",
+   "w": 2,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "economics-brutal",
+   "cat": "performed",
+   "rx": "\\bthe (?:economics|math|numbers) (?:is|are) brutal\\b",
+   "w": 2,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "opens-the-hood",
+   "cat": "performed",
+   "rx": "\\b(?:open|pop)s? the hood\\b",
+   "w": 2,
+   "first_seen": "2026-08-24",
+   "last_confirmed": "2026-08-24"
+  },
+  {
+   "name": "generic-benefit-stack",
+   "cat": "marketing",
+   "rx": "(?is)\\b(?:platform|solution|product|service|tool)\\b(?=.{0,260}\\b(?:helps?|designed|offers?|combines?|gives?)\\b)(?=(?:.{0,260}?\\b(?:value|efficien\\w*|capabilit\\w*|experience|goals?|collaborat\\w*|work together|change how\\b)\\b){2}).{0,260}",
+   "w": 1,
+   "first_seen": "2026-08-25",
+   "last_confirmed": "2026-08-25"
+  }
+ ],
+ "lexicon": {
+  "delve": 6,
+  "delving": 6,
+  "tapestry": 6,
+  "beacon": 5,
+  "realm": 4,
+  "testament": 5,
+  "multifaceted": 5,
+  "meticulous": 4,
+  "intricate": 3,
+  "paramount": 4,
+  "pivotal": 3,
+  "crucial": 1.5,
+  "foster": 3,
+  "utilize": 3,
+  "facilitate": 3,
+  "embark": 4,
+  "holistic": 3,
+  "synergy": 5,
+  "spearhead": 3,
+  "commendable": 4,
+  "noteworthy": 3,
+  "invaluable": 3,
+  "unwavering": 4,
+  "unparalleled": 4,
+  "ever-evolving": 5,
+  "groundbreaking": 3,
+  "burgeoning": 4,
+  "myriad": 4,
+  "plethora": 5,
+  "albeit": 2,
+  "whilst": 2,
+  "furthermore": 2,
+  "moreover": 2,
+  "additionally": 1.5,
+  "notably": 1.5,
+  "importantly": 2,
+  "vibrant": 2.5,
+  "bustling": 4,
+  "nestled": 4,
+  "actionable": 2.5,
+  "impactful": 3,
+  "learnings": 3,
+  "utilization": 3,
+  "operationalize": 3,
+  "empower": 3.5,
+  "supercharge": 5,
+  "gamechang": 5,
+  "game-chang": 5,
+  "cutting-edge": 4,
+  "seamless": 4,
+  "frictionless": 5,
+  "transformative": 4,
+  "revolutionize": 4.5,
+  "reimagine": 3.5,
+  "garner": 3.5,
+  "bolster": 3,
+  "whopping": 3.5,
+  "staggering": 2.5,
+  "jaw-dropping": 3.5,
+  "mind-blowing": 3.5,
+  "mind-boggling": 3.5,
+  "picturesque": 3.5,
+  "steadfast": 3,
+  "indelible": 4,
+  "captivat": 3,
+  "unleash": 3.5,
+  "untapped": 3.5,
+  "skyrocket": 4,
+  "turbocharg": 4.5,
+  "future-proof": 4,
+  "cornerstone": 3,
+  "linchpin": 3.5,
+  "trailblaz": 4,
+  "unprecedented": 3,
+  "unmatched": 3.5,
+  "unrivaled": 4,
+  "top-notch": 3.5,
+  "demystif": 3.5,
+  "elucidat": 4,
+  "cultivat": 2.5,
+  "unveil": 2.5,
+  "quintessential": 3.5,
+  "transcend": 2.5,
+  "renowned": 3,
+  "whirlwind": 3,
+  "must-have": 3.5,
+  "hassle-free": 4,
+  "game-changing": 5,
+  "visionary": 2.5,
+  "industry-leading": 3,
+  "interplay": 3.5,
+  "insightful": 2.5,
+  "enduring": 2,
+  "results-driven": 3,
+  "customer-centric": 3
+ },
+ "riders": {
+  "leverage": 2,
+  "leveraging": 2.5,
+  "robust": 1.5,
+  "harness": 1.0,
+  "elevat": 3,
+  "streamline": 2.5,
+  "landscape": 2,
+  "navigate": 1.5,
+  "showcas": 3,
+  "underscore": 3,
+  "insights": 1,
+  "journey": 1.5,
+  "resonate": 3,
+  "emphasiz": 2,
+  "enhanc": 1.5,
+  "highlight": 1.5,
+  "amplif": 2,
+  "innovativ": 2,
+  "comprehensive": 1.5,
+  "embrac": 1.5,
+  "unpack": 2,
+  "nuanc": 1.5,
+  "catalys": 2,
+  "profound": 1.5,
+  "orchestrat": 2,
+  "fight against": 2
+ },
+ "rider_triggers": [
+  "seamless",
+  "frictionless",
+  "empower",
+  "synergy",
+  "cutting-edge",
+  "state-of-the-art",
+  "best-in-class",
+  "world-class",
+  "game-chang",
+  "supercharge",
+  "turnkey",
+  "paradigm",
+  "transformative",
+  "revolutioniz",
+  "unparalleled",
+  "unlock the",
+  "next-level",
+  "elevate your",
+  "thrilled",
+  "excited to announce",
+  "unleash",
+  "skyrocket",
+  "turbocharg",
+  "future-proof",
+  "look no further"
+ ]
+}

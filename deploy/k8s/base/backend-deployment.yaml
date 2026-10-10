@@ -1,0 +1,289 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skillhub-server
+  labels:
+    app.kubernetes.io/name: skillhub-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: skillhub-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: skillhub-server
+    spec:
+      containers:
+        - name: server
+          image: ghcr.io/iflytek/skillhub-server:edge
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+
+            # Database
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: spring-datasource-url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: spring-datasource-username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: spring-datasource-password
+
+            # Redis
+            - name: SPRING_DATA_REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-host
+            - name: SPRING_DATA_REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-port
+            - name: SPRING_DATA_REDIS_CLUSTER_NODES
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-cluster-nodes
+                  optional: true
+            - name: SPRING_DATA_REDIS_CLUSTER_MAX_REDIRECTS
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-cluster-max-redirects
+                  optional: true
+            - name: SPRING_DATA_REDIS_SENTINEL_MASTER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-sentinel-master
+                  optional: true
+            - name: SPRING_DATA_REDIS_SENTINEL_NODES
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-sentinel-nodes
+                  optional: true
+            - name: SPRING_DATA_REDIS_SENTINEL_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-sentinel-username
+                  optional: true
+            - name: SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-sentinel-check-list
+                  optional: true
+            - name: SPRING_DATA_REDIS_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-username
+                  optional: true
+            - name: SPRING_DATA_REDIS_SSL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-ssl-enabled
+                  optional: true
+            - name: SPRING_DATA_REDIS_CONNECT_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-connect-timeout
+                  optional: true
+            - name: SPRING_DATA_REDIS_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-timeout
+                  optional: true
+            - name: SPRING_DATA_REDIS_CLIENT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: redis-client-name
+                  optional: true
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: redis-password
+                  optional: true
+            - name: SPRING_DATA_REDIS_SENTINEL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: redis-sentinel-password
+                  optional: true
+
+            # Storage
+            - name: STORAGE_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: storage-base-path
+            - name: SKILLHUB_STORAGE_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skillhub-storage-provider
+
+            # Scanner
+            - name: SKILLHUB_SECURITY_SCANNER_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-enabled
+            - name: SKILLHUB_SECURITY_SCANNER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-url
+            - name: SKILLHUB_SECURITY_SCANNER_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-mode
+            - name: SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scanner-read-timeout
+            - name: SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: skill-scan-reclaim-min-idle
+
+            # Session
+            - name: SESSION_COOKIE_SECURE
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: session-cookie-secure
+
+            # Bootstrap Admin (non-sensitive from ConfigMap)
+            - name: BOOTSTRAP_ADMIN_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-enabled
+            - name: BOOTSTRAP_ADMIN_USER_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-user-id
+            - name: BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-username
+            - name: BOOTSTRAP_ADMIN_DISPLAY_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-display-name
+            - name: BOOTSTRAP_ADMIN_EMAIL
+              valueFrom:
+                configMapKeyRef:
+                  name: skillhub-config
+                  key: bootstrap-admin-email
+
+            # Bootstrap Admin Password (sensitive from Secret)
+            - name: BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: bootstrap-admin-password
+                  optional: true
+
+            # OAuth2 GitHub (optional)
+            - name: OAUTH2_GITHUB_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-github-client-id
+                  optional: true
+            - name: OAUTH2_GITHUB_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-github-client-secret
+                  optional: true
+
+            # OAuth2 Feishu (optional)
+            - name: OAUTH2_FEISHU_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-feishu-client-id
+                  optional: true
+            - name: OAUTH2_FEISHU_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-feishu-client-secret
+                  optional: true
+            - name: OAUTH2_FEISHU_AUTHORIZATION_URI
+              value: "https://accounts.feishu.cn/open-apis/authen/v1/authorize"
+            - name: OAUTH2_FEISHU_PROTOCOL_VERSION
+              value: "v3"
+            - name: OAUTH2_FEISHU_TOKEN_URI
+              value: "https://accounts.feishu.cn/oauth/v3/token"
+            - name: OAUTH2_FEISHU_USER_INFO_URI
+              value: "https://open.feishu.cn/open-apis/authen/v1/user_info"
+
+            # OAuth2 DingTalk (optional)
+            - name: OAUTH2_DINGTALK_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-dingtalk-client-id
+                  optional: true
+            - name: OAUTH2_DINGTALK_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: skillhub-secret
+                  key: oauth2-dingtalk-client-secret
+                  optional: true
+            - name: OAUTH2_DINGTALK_AUTHORIZE_URI
+              value: "https://login.dingtalk.com"
+            - name: OAUTH2_DINGTALK_BASE_URI
+              value: "https://api.dingtalk.com"
+            - name: OAUTH2_DINGTALK_DISPLAY_NAME
+              value: "钉钉"
+          volumeMounts:
+            - name: skillhub-storage
+              mountPath: /var/lib/skillhub/storage
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 15
+      volumes:
+        - name: skillhub-storage
+          persistentVolumeClaim:
+            claimName: skillhub-storage-pvc

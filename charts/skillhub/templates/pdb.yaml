@@ -1,0 +1,21 @@
+{{- range $name := list "server" "web" "scanner" }}
+{{- $component := index $.Values $name }}
+{{- $enabled := true }}
+{{- if hasKey $component "enabled" }}
+{{- $enabled = $component.enabled }}
+{{- end }}
+{{- if and $enabled $component.podDisruptionBudget.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "skillhub.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include (printf "skillhub.%s.labels" $name) $ | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include (printf "skillhub.%s.selectorLabels" $name) $ | nindent 6 }}
+  minAvailable: {{ $component.podDisruptionBudget.minAvailable }}
+{{- end }}
+{{- end }}

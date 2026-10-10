@@ -1,0 +1,434 @@
+#!/usr/bin/env node
+import { cac } from 'cac'
+import { doctorCommand } from './commands/doctor'
+import { commands, formatCommandList, helpCommand } from './commands/help'
+import { installCommand, type InstallCommandOptions } from './commands/install'
+import { listCommand, type ListCommandOptions } from './commands/list'
+import { loginCommand } from './commands/login'
+import { logoutCommand } from './commands/logout'
+import { publishCommand, type PublishCommandOptions } from './commands/publish'
+import { removeCommand, type RemoveCommandOptions } from './commands/remove'
+import { searchCommand } from './commands/search'
+import { suiteCommand, type SuiteCommandOptions } from './commands/suite'
+import { syncDiffCommand, syncPullCommand, syncPushCommand, syncStatusCommand, type SyncCommonOptions, type SyncPullOptions, type SyncPushOptions } from './commands/sync'
+import { updateCommand } from './commands/update'
+import { upgradeCommand, type UpgradeCommandOptions } from './commands/upgrade'
+import { versionCommand } from './commands/version'
+import { whoamiCommand } from './commands/whoami'
+import { EXIT } from './shared/constants'
+import { CliError } from './shared/errors'
+import { renderError } from './shared/output'
+
+const cli = cac('skillhub')
+
+/** Normalize cac's repeatable option: string | string[] | undefined -> string[] | undefined */
+function toArray(val: string | string[] | undefined): string[] | undefined {
+  if (val === undefined) return undefined
+  return Array.isArray(val) ? val : [val]
+}
+
+/** Read a string option before cac/mri coerces numeric-looking values to numbers. */
+function rawStringOption(argv: string[], name: string): string | undefined {
+  const optionWithEquals = `${name}=`
+  const end = argv.indexOf('--')
+  const args = end === -1 ? argv : argv.slice(0, end)
+  let value: string | undefined
+  let occurrences = 0
+
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index]!
+    if (argument === name) {
+      occurrences += 1
+      const candidate = args[index + 1]
+      if (candidate === undefined || candidate.startsWith('-')) {
+        throw new CliError(`option "${name}" value is missing`, EXIT.usage)
+      }
+      value = candidate
+      index += 1
+    } else if (argument.startsWith(optionWithEquals)) {
+      occurrences += 1
+      value = argument.slice(optionWithEquals.length)
+      if (!value) {
+        throw new CliError(`option "${name}" value is missing`, EXIT.usage)
+      }
+    }
+  }
+
+  if (occurrences > 1) {
+    throw new CliError(`option "${name}" cannot be repeated`, EXIT.usage)
+  }
+  return value
+}
+
+async function runCommand(action: () => Promise<string>, json = false): Promise<void> {
+  try {
+    const output = await action()
+    if (output) {
+      process.stdout.write(`${output}\n`)
+    }
+  } catch (error) {
+    const exitCode = error instanceof CliError ? error.exitCode : 1
+    process.stderr.write(`${renderError(error, json)}\n`)
+    process.exit(exitCode)
+  }
+}
+
+const KNOWN_COMMANDS = Object.keys(commands)
+
+function levenshteinDistance(left: string, right: string): number {
+  const rows = left.length + 1
+  const cols = right.length + 1
+  const matrix = Array.from({ length: rows }, () => Array<number>(cols).fill(0))
+
+  for (let row = 0; row < rows; row += 1) matrix[row]![0] = row
+  for (let col = 0; col < cols; col += 1) matrix[0]![col] = col
+
+  for (let row = 1; row < rows; row += 1) {
+    for (let col = 1; col < cols; col += 1) {
+      const cost = left[row - 1] === right[col - 1] ? 0 : 1
+      matrix[row]![col] = Math.min(
+        matrix[row - 1]![col]! + 1,
+        matrix[row]![col - 1]! + 1,
+        matrix[row - 1]![col - 1]! + cost
+      )
+    }
+  }
+
+  return matrix[left.length]![right.length]!
+}
+
+function findCommandSuggestions(input: string): string[] {
+  return KNOWN_COMMANDS
+    .map(command => ({
+      command,
+      score: command.startsWith(input)
+        ? 0
+        : command.includes(input)
+          ? 1
+          : levenshteinDistance(input, command)
+    }))
+    .filter(({ command, score }) =>
+      command.startsWith(input) ||
+      (input.length > 2 && command.includes(input)) ||
+      score <= Math.max(2, Math.floor(command.length / 3))
+    )
+    .sort((left, right) => left.score - right.score || left.command.localeCompare(right.command))
+    .map(({ command }) => command)
+    .slice(0, 3)
+}
+
+function renderCommandDirectory(): string {
+  return ['Available commands:', formatCommandList()].join('\n')
+}
+
+function exitWithOutput(output: string, exitCode: number): never {
+  process.stderr.write(`${output}\n`)
+  process.exit(exitCode)
+}
+
+function exitWithCliError(error: CliError, json: boolean, humanOutput?: string): never {
+  return exitWithOutput(json ? renderError(error, true) : (humanOutput ?? renderError(error, false)), error.exitCode)
+}
+
+function exitUnknownCommand(command: string, json: boolean): never {
+  const suggestions = findCommandSuggestions(command)
+  const lines = [`unknown command "${command}" for "skillhub"`, '']
+
+  if (suggestions.length > 0) {
+    lines.push(`Did you mean ${suggestions.length === 1 ? 'this' : 'one of these'}?`)
+    lines.push(...suggestions.map(suggestion => `    ${suggestion}`))
+    lines.push('')
+  }
+
+  lines.push('Usage:  skillhub <command> [flags]', '')
+  lines.push(renderCommandDirectory(), '')
+  lines.push('Run "skillhub help" for more information.')
+  return exitWithCliError(new CliError(`unknown command "${command}" for "skillhub"`, 5), json, lines.join('\n'))
+}
+
+function exitUnknownFlag(flag: string, json: boolean): never {
+  return exitWithCliError(new CliError(`unknown flag: ${flag}`, 5), json, [
+    `unknown flag: ${flag}`,
+    '',
+    'Usage:  skillhub <command> [flags]',
+    '',
+    renderCommandDirectory(),
+    '',
+    'Run "skillhub help" for more information.'
+  ].join('\n'))
+}
+
+function handleCliParseError(error: unknown, json: boolean): never {
+  if (!(error instanceof Error)) {
+    return exitWithCliError(new CliError('unexpected failure', 1), json, 'Unexpected error')
+  }
+
+  if (error.name === 'CACError') {
+    const message = error.message
+
+    if (/unknown option/i.test(message)) {
+      const match = message.match(/unknown option ["`]?([^"`]+)["`]?/i)
+      return exitUnknownFlag(match?.[1] ?? 'unknown', json)
+    }
+
+    if (message.includes('missing required args')) {
+      const match = message.match(/command `([^`]+)`/)
+      const cmdName = match?.[1] ?? 'command'
+      const firstWord = cmdName.split(' ')[0] ?? 'command'
+
+      return exitWithCliError(new CliError('missing required argument', 5), json, [
+        'Error: missing required argument',
+        '',
+        `Usage:  skillhub ${cmdName}`,
+        '',
+        `Run "skillhub help ${firstWord}" for more information.`
+      ].join('\n'))
+    }
+
+    const cleanMessage = message.replace(/`/g, '"')
+    return exitWithCliError(new CliError(cleanMessage, 5), json)
+  }
+
+  return exitWithCliError(new CliError('unexpected failure', 1), json, `Unexpected error: ${error.message}`)
+}
+
+function isJsonRequested(argv: string[]): boolean {
+  return argv.includes('--json')
+}
+
+function readUnknownCommand(argv: string[]): string | undefined {
+  const firstArg = argv[0]
+  if (!firstArg || firstArg.startsWith('-') || KNOWN_COMMANDS.includes(firstArg)) {
+    return undefined
+  }
+  return firstArg
+}
+
+cli
+  .command('', 'Show help')
+  .action(() => runCommand(() => helpCommand([])))
+
+cli
+  .command('help [command]', 'Show help')
+  .option('--json', 'Output JSON')
+  .action((command: string | undefined, options: { json?: boolean }) => {
+    const args = [...(command ? [command] : []), ...(options.json ? ['--json'] : [])]
+    return runCommand(() => helpCommand(args), Boolean(options.json))
+  })
+
+cli
+  .command('version', 'Show CLI version')
+  .option('--json', 'Output JSON')
+  .action((options: { json?: boolean }) => {
+    return runCommand(() => versionCommand(options.json ? ['--json'] : []), Boolean(options.json))
+  })
+
+cli
+  .command('update', 'Update CLI to latest version')
+  .option('--check', 'Check for updates without installing')
+  .option('--json', 'Output JSON')
+  .action((options: { check?: boolean; json?: boolean }) => {
+    return runCommand(() => updateCommand(options), Boolean(options.json))
+  })
+
+cli
+  .command('login', 'Log in with OAuth Device Flow or an API token')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--no-open', 'Do not open the verification URL in a browser')
+  .option('--json', 'Output JSON')
+  .action((options: { registry?: string; token?: string; open?: boolean; json?: boolean }) => {
+    return runCommand(
+      () => loginCommand({ ...options, noOpen: options.open === false }),
+      Boolean(options.json)
+    )
+  })
+
+cli
+  .command('logout', 'Remove local token')
+  .option('--registry <url>', 'Registry URL')
+  .option('--json', 'Output JSON')
+  .action((options: { registry?: string; json?: boolean }) => {
+    return runCommand(() => logoutCommand(options), Boolean(options.json))
+  })
+
+cli
+  .command('whoami', 'Verify current token')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--json', 'Output JSON')
+  .action((options: { registry?: string; token?: string; json?: boolean }) => {
+    return runCommand(() => whoamiCommand(options), Boolean(options.json))
+  })
+
+cli
+  .command('search [query]', 'Search published skills')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--limit <n>', 'Max results', { default: 20 })
+  .option('--json', 'Output JSON')
+  .action((query: string | undefined, options: { registry?: string; token?: string; limit?: number; json?: boolean }) => {
+    return runCommand(() => searchCommand(query ?? '', options), Boolean(options.json))
+  })
+
+cli
+  .command('install <coordinate>', 'Install a skill locally')
+  .option('--namespace <slug>', 'Namespace for a bare skill slug')
+  .option('--version <v>', 'Version')
+  .option('--scope <scope>', 'Install scope: user or project')
+  .option('--agent <profile>', 'Agent profile (repeatable)')
+  .option('--dir <path>', 'Install directory')
+  .option('--force', 'Overwrite existing')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--json', 'Output JSON')
+  .action((slug: string, options: InstallCommandOptions & { agent?: string | string[] }) => {
+    return runCommand(() => installCommand(slug, {
+      ...options,
+      version: rawStringOption(process.argv.slice(2), '--version'),
+      agent: toArray(options.agent)
+    }), Boolean(options.json))
+  })
+
+cli
+  .command('suite <action> <coordinate>', 'Manage Skill Suites on compatible registries')
+  .option('--version <v>', 'Exact Suite version for install')
+  .option('--scope <scope>', 'Install scope: user or project')
+  .option('--agent <profile>', 'Agent profile (repeatable)')
+  .option('--dir <path>', 'Install directory')
+  .option('--force', 'Replace local changes during install or upgrade')
+  .option('--check', 'Show an upgrade plan without writing')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--json', 'Output JSON')
+  .action((action: string, coordinate: string, options: SuiteCommandOptions & { agent?: string | string[] }) => {
+    return runCommand(
+      () => suiteCommand(action, coordinate, {
+        ...options,
+        version: rawStringOption(process.argv.slice(2), '--version'),
+        agent: toArray(options.agent)
+      }),
+      Boolean(options.json)
+    )
+  })
+
+cli
+  .command('upgrade [...coordinates]', 'Upgrade explicitly selected installed skills')
+  .option('--namespace <slug>', 'Filter a bare slug by namespace')
+  .option('--agent <profile>', 'Filter installed targets by Agent (repeatable)')
+  .option('--dir <path>', 'Filter installed targets by directory')
+  .option('--registry <url>', 'Filter by installation source registry')
+  .option('--token <token>', 'API token override')
+  .option('--check', 'Show the exact plan without writing')
+  .option('--force', 'Replace local changes from the same source')
+  .option('--json', 'Output JSON')
+  .action((coordinates: string[], options: UpgradeCommandOptions & { agent?: string | string[] }) => {
+    return runCommand(
+      () => upgradeCommand(coordinates, { ...options, agent: toArray(options.agent) }),
+      Boolean(options.json)
+    )
+  })
+
+cli
+  .command('sync <action> [path]', 'Synchronize and maintain a namespace workspace')
+  .option('--namespace <slug>', 'Namespace (required; global is not supported)')
+  .option('--skill <slug>', 'Skill to pull (repeatable)')
+  .option('--dir <path>', 'Skill workspace directory')
+  .option('--check', 'Show changes without downloading')
+  .option('--prune', 'Remove managed local skills missing remotely')
+  .option('--force', 'Overwrite local changes')
+  .option('--all', 'Push every skill directory in the workspace')
+  .option('--visibility <v>', 'Visibility (public|namespace-only|private)', { default: 'namespace-only' })
+  .option('--dry-run', 'Validate without uploading')
+  .option('--submit-review', 'Submit an uploaded version for review when required')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--json', 'Output JSON')
+  .action((action: string, path: string | undefined, options: SyncPullOptions & SyncPushOptions & { skill?: string | string[] }) => {
+    if (action !== 'pull' && options.skill !== undefined) {
+      return runCommand(
+        () => Promise.reject(new CliError('--skill is only valid with sync pull', EXIT.usage)),
+        Boolean(options.json)
+      )
+    }
+    const command = action === 'pull'
+      ? () => syncPullCommand({
+          ...options,
+          ...(options.skill === undefined ? {} : { skill: toArray(options.skill)! })
+        })
+      : action === 'status'
+        ? () => syncStatusCommand(options as SyncCommonOptions)
+        : action === 'diff'
+          ? () => syncDiffCommand(options as SyncCommonOptions)
+          : action === 'push'
+            ? () => syncPushCommand(path, options)
+            : () => Promise.reject(new CliError(
+                `unknown sync action: ${action}`,
+                EXIT.usage,
+                { next: 'use pull, status, diff, or push' }
+              ))
+    return runCommand(command, Boolean(options.json))
+  })
+
+cli
+  .command('list', 'List local installs')
+  .option('--agent <profile>', 'Filter by agent (repeatable)')
+  .option('--dir <path>', 'Filter by directory')
+  .option('--registry <url>', 'Registry URL')
+  .option('--json', 'Output JSON')
+  .action((options: ListCommandOptions & { agent?: string | string[] }) => {
+    return runCommand(() => listCommand({ ...options, agent: toArray(options.agent) }), Boolean(options.json))
+  })
+
+cli
+  .command('remove <coordinate>', 'Remove local or remote skill')
+  .option('--agent <profile>', 'Filter by agent (repeatable)')
+  .option('--all', 'Remove all targets')
+  .option('--remote', 'Delete remote skill')
+  .option('--hard', 'Skip confirmation for remote delete')
+  .option('--namespace <slug>', 'Namespace for local or remote delete')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--json', 'Output JSON')
+  .action((coordinate: string, options: RemoveCommandOptions & { agent?: string | string[] }) => {
+    return runCommand(() => removeCommand(coordinate, { ...options, agent: toArray(options.agent) }), Boolean(options.json))
+  })
+
+cli
+  .command('doctor', 'Scan project and merge into local inventory')
+  .option('--json', 'Output JSON')
+  .action((options: { json?: boolean }) => {
+    return runCommand(() => doctorCommand(options), Boolean(options.json))
+  })
+
+cli
+  .command('publish <path>', 'Publish a local skill package')
+  .option('--namespace <slug>', 'Namespace')
+  .option('--visibility <v>', 'Visibility (public|namespace-only|private)')
+  .option('--dry-run', 'Validate without publishing')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--json', 'Output JSON')
+  .action((path: string, options: PublishCommandOptions) => {
+    return runCommand(() => publishCommand(path, options), Boolean(options.json))
+  })
+
+cli.help()
+
+if (import.meta.main) {
+  const args = process.argv.slice(2)
+  if (args.length === 1 && (args[0] === '--version' || args[0] === '-v')) {
+    await runCommand(() => versionCommand([]))
+  } else {
+    const json = isJsonRequested(args)
+    const unknownCommand = readUnknownCommand(args)
+    if (unknownCommand) {
+      exitUnknownCommand(unknownCommand, json)
+    }
+    try {
+      cli.parse(process.argv)
+    } catch (error) {
+      handleCliParseError(error, json)
+    }
+  }
+}

@@ -1,0 +1,62 @@
+name: Issue Triage
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - reopened
+  issue_comment:
+    types:
+      - created
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to re-triage manually
+        required: true
+
+concurrency:
+  group: issue-triage-${{ github.event.issue.number || inputs.issue_number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triage:
+    if: |
+      github.event_name != 'issue_comment' ||
+      (
+        github.event.issue.pull_request == null &&
+        contains(github.event.comment.body, '/retriage')
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - uses: denoland/setup-deno@667a34cdef165d8d2b2e98dde39547c9daac7282 # v2.0.4
+        with:
+          deno-version: v2.x
+
+      - name: Run triage
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_TRIAGE_LLM_MODE: ${{ vars.ISSUE_TRIAGE_LLM_MODE }}
+          ISSUE_TRIAGE_LLM_BASE_URL: ${{ vars.ISSUE_TRIAGE_LLM_BASE_URL }}
+          ISSUE_TRIAGE_LLM_MODEL: ${{ vars.ISSUE_TRIAGE_LLM_MODEL }}
+          ISSUE_TRIAGE_LLM_TIMEOUT_MS: ${{ vars.ISSUE_TRIAGE_LLM_TIMEOUT_MS }}
+          ISSUE_TRIAGE_LLM_MAX_ATTEMPTS: ${{ vars.ISSUE_TRIAGE_LLM_MAX_ATTEMPTS }}
+          ISSUE_TRIAGE_LLM_RETRY_BACKOFF_MS: ${{ vars.ISSUE_TRIAGE_LLM_RETRY_BACKOFF_MS }}
+          ISSUE_TRIAGE_LLM_TEMPERATURE: ${{ vars.ISSUE_TRIAGE_LLM_TEMPERATURE }}
+          ISSUE_TRIAGE_LLM_MAX_COMMENTS: ${{ vars.ISSUE_TRIAGE_LLM_MAX_COMMENTS }}
+          ISSUE_TRIAGE_LLM_MAX_COMMENT_CHARS: ${{ vars.ISSUE_TRIAGE_LLM_MAX_COMMENT_CHARS }}
+          ISSUE_TRIAGE_LLM_MAX_BODY_CHARS: ${{ vars.ISSUE_TRIAGE_LLM_MAX_BODY_CHARS }}
+          ISSUE_TRIAGE_LLM_API_KEY: ${{ secrets.ISSUE_TRIAGE_LLM_API_KEY }}
+        run: |
+          deno run --allow-env --allow-net \
+            .github/scripts/issue-triage.ts \
+            --owner "${{ github.repository_owner }}" \
+            --repo "${{ github.event.repository.name }}" \
+            --issue-number "${{ github.event.issue.number || inputs.issue_number }}"

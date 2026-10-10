@@ -1,0 +1,24 @@
+{{- if and .Values.ingress.enabled .Values.ingress.certManager.enabled }}
+{{- range $index, $tls := .Values.ingress.tls }}
+{{- if $index }}
+---
+{{- end }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ $tls.secretName }}-cert
+  labels:
+    {{- include "skillhub.labels" $ | nindent 4 }}
+spec:
+  secretName: {{ $tls.secretName }}
+  duration: 2160h
+  renewBefore: 360h
+  dnsNames:
+    {{- range $tls.hosts }}
+    - {{ . | quote }}
+    {{- end }}
+  issuerRef:
+    name: {{ $.Values.ingress.certManager.issuerName | quote }}
+    kind: {{ $.Values.ingress.certManager.issuerKind | quote }}
+{{- end }}
+{{- end }}

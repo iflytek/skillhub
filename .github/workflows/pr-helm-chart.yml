@@ -1,0 +1,223 @@
+name: PR Helm Chart
+
+on:
+  pull_request:
+    paths:
+      - charts/skillhub/**
+      - .github/workflows/pr-helm-chart.yml
+      - .github/workflows/publish-chart.yml
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+concurrency:
+  group: pr-helm-chart-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint Chart
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: charts/skillhub
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+
+      - name: Build dependencies
+        run: helm dependency build .
+
+      - name: Lint chart
+        run: helm lint --strict . -f tests/test-values.yaml
+
+      - name: Validate configuration contracts
+        run: bash tests/configuration-contracts.sh
+
+      - name: Validate chart metadata
+        run: |
+          CHART_VERSION=$(helm show chart . | grep '^version:' | awk '{print $2}')
+          APP_VERSION=$(helm show chart . | grep '^appVersion:' | awk '{print $2}')
+          echo "Chart version: $CHART_VERSION"
+          echo "App version: $APP_VERSION"
+          if [ -z "$CHART_VERSION" ]; then
+            echo "ERROR: Chart version is empty"
+            exit 1
+          fi
+
+  template:
+    name: Template Validation
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: charts/skillhub
+
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - name: bitnami-default
+            description: Bitnami 默认配置
+            args: ""
+          - name: external-db-redis
+            description: 外部 PostgreSQL + Redis
+            args: >-
+              --set postgresql.enabled=false
+              --set redis.enabled=false
+              --set externalDatabase.host=postgres.example.com
+              --set externalDatabase.password=secret
+              --set externalRedis.host=redis.example.com
+              --set externalRedis.password=secret
+          - name: postgresql-replication
+            description: PostgreSQL 主从 + Redis 主从
+            args: >-
+              --set postgresql.architecture=replication
+              --set redis.architecture=replication
+          - name: redis-sentinel
+            description: Redis 哨兵模式
+            args: >-
+              --set redis.architecture=replication
+              --set redis.sentinel.enabled=true
+          - name: external-redis-cluster
+            description: 外部 Redis Cluster
+            args: >-
+              --set redis.enabled=false
+              --set externalRedis.cluster.enabled=true
+              --set-json 'externalRedis.cluster.nodes=["redis-0.example.com:6379","redis-1.example.com:6379","redis-2.example.com:6379"]'
+          - name: ingress-tls-certmanager
+            description: Ingress + TLS + cert-manager
+            args: >-
+              --set ingress.enabled=true
+              --set-json 'ingress.hosts=[{"host":"skills.example.com","paths":[{"path":"/","pathType":"Prefix"}]}]'
+              --set-json 'ingress.tls=[{"hosts":["skills.example.com"],"secretName":"skills-tls"}]'
+              --set ingress.certManager.enabled=true
+          - name: s3-storage
+            description: S3 存储
+            args: >-
+              --set s3.enabled=true
+              --set s3.bucket=test-bucket
+              --set s3.endpoint=https://s3.amazonaws.com
+              --set s3.region=us-east-1
+          - name: external-secret
+            description: 外部 Secret
+            args: >-
+              --set existingSecret=my-custom-secret
+          - name: scanner-disabled
+            description: 禁用 Scanner
+            args: >-
+              --set scanner.enabled=false
+          - name: hpa-pdb
+            description: HPA + PDB
+            args: >-
+              --set server.autoscaling.enabled=true
+              --set web.autoscaling.enabled=true
+              --set scanner.autoscaling.enabled=true
+              --set server.storage.accessMode=ReadWriteMany
+              --set server.podDisruptionBudget.enabled=true
+              --set web.podDisruptionBudget.enabled=true
+              --set scanner.podDisruptionBudget.enabled=true
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+
+      - name: Build dependencies
+        run: helm dependency build .
+
+      - name: Render template - ${{ matrix.scenario.name }}
+        run: |
+          echo "## ${{ matrix.scenario.description }}"
+          helm template test-release . -f tests/test-values.yaml ${{ matrix.scenario.args }} > rendered.yaml
+          echo "✅ Template rendered successfully"
+
+      - name: Validate resources
+        run: |
+          RESOURCES=$(grep -c '^kind:' rendered.yaml || true)
+          echo "Rendered $RESOURCES resources for ${{ matrix.scenario.name }}"
+          if [ "$RESOURCES" -eq 0 ]; then
+            echo "ERROR: No resources rendered for ${{ matrix.scenario.name }}"
+            exit 1
+          fi
+
+      - name: Validate default dependency wiring
+        if: ${{ matrix.scenario.name == 'bitnami-default' }}
+        run: |
+          helm template test-release . -f tests/test-values.yaml --show-only templates/server-deployment.yaml > server.yaml
+          grep -Fq 'value: "test-release-postgresql"' server.yaml
+          grep -Fq 'value: "test-release-redis-master"' server.yaml
+          grep -Fq 'name: test-release-postgresql' server.yaml
+          grep -Fq 'name: test-release-redis' server.yaml
+          grep -Fq 'key: password' server.yaml
+          grep -Fq 'key: redis-password' server.yaml
+          if grep -Fq 'test-release-skillhub-postgresql' server.yaml; then
+            echo 'ERROR: Server references a non-existent PostgreSQL service'
+            exit 1
+          fi
+          if grep -Fq 'test-release-skillhub-redis' server.yaml; then
+            echo 'ERROR: Server references a non-existent Redis service'
+            exit 1
+          fi
+
+      - name: Schema validation (kubeconform)
+        uses: docker://ghcr.io/yannh/kubeconform@sha256:faffaf43f95aa6425306e1ab8d6fcad72acb9049158f38e574c085ea1ec0f64e # v0.8.0
+        with:
+          entrypoint: '/kubeconform'
+          args: "-strict -summary -output text -schema-location default -schema-location https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json charts/skillhub/rendered.yaml"
+
+  install-upgrade:
+    name: Install and Upgrade Smoke (${{ matrix.scenario }})
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        scenario:
+          - default
+          - sentinel
+          - s3
+          - ingress-tls
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+
+      - name: Create Kubernetes cluster
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
+        with:
+          cluster_name: skillhub-helm-smoke
+          wait: 120s
+
+      - name: Run install and upgrade smoke
+        env:
+          HELM_SMOKE_SCENARIO: ${{ matrix.scenario }}
+        run: bash charts/skillhub/tests/install-upgrade-smoke.sh

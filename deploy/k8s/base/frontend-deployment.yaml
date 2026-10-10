@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: skillhub-web
+  labels:
+    app.kubernetes.io/name: skillhub-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: skillhub-web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: skillhub-web
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/iflytek/skillhub-web:edge
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: SKILLHUB_API_UPSTREAM
+              value: http://skillhub-server:8080
+            # Leave empty so a fixed-base image keeps its baked base; set to e.g. /skillhub/ to override.
+            - name: SKILLHUB_WEB_BASE_PATH
+              value: ""
+            - name: SKILLHUB_WEB_API_BASE_URL
+              value: ""
+          ports:
+            - containerPort: 80
+              name: http
+          readinessProbe:
+            httpGet:
+              path: /nginx-health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /nginx-health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15

@@ -1,0 +1,40 @@
+{{- range $name := list "server" "web" "scanner" }}
+{{- $component := index $.Values $name }}
+{{- $enabled := true }}
+{{- if hasKey $component "enabled" }}
+{{- $enabled = $component.enabled }}
+{{- end }}
+{{- if and $enabled $component.autoscaling.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "skillhub.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include (printf "skillhub.%s.labels" $name) $ | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "skillhub.fullname" $ }}-{{ $name }}
+  minReplicas: {{ $component.autoscaling.minReplicas }}
+  maxReplicas: {{ $component.autoscaling.maxReplicas }}
+  metrics:
+    {{- if $component.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $component.autoscaling.targetCPUUtilizationPercentage }}
+    {{- end }}
+    {{- if $component.autoscaling.targetMemoryUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ $component.autoscaling.targetMemoryUtilizationPercentage }}
+    {{- end }}
+{{- end }}
+{{- end }}

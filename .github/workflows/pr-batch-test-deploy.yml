@@ -1,0 +1,161 @@
+name: PR Batch Test Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_numbers:
+        description: "Comma/newline separated PR numbers to merge onto the base branch"
+        required: true
+        type: string
+      base_ref:
+        description: "Base branch to build from"
+        required: false
+        default: main
+        type: string
+      deploy_channel:
+        description: "Floating image tag used by the shared HK test machine"
+        required: false
+        default: manual-test-hk
+        type: string
+
+concurrency:
+  group: pr-batch-test-runtime
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+  pull-requests: read
+
+env:
+  DOCKER_PLATFORM: linux/amd64
+
+jobs:
+  build-and-deploy:
+    name: Build And Deploy Manual Test Batch
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ensure helper scripts are executable
+        run: chmod +x scripts/prepare-pr-batch.sh scripts/deploy-test-runtime.sh
+
+      - name: Validate deploy secrets
+        env:
+          TEST_RUNTIME_SSH_HOST: ${{ secrets.TEST_RUNTIME_SSH_HOST }}
+          TEST_RUNTIME_SSH_KEY: ${{ secrets.TEST_RUNTIME_SSH_KEY }}
+        run: |
+          [[ -n "${TEST_RUNTIME_SSH_HOST}" ]] || { echo "::error::Missing secret TEST_RUNTIME_SSH_HOST"; exit 1; }
+          [[ -n "${TEST_RUNTIME_SSH_KEY}" ]] || { echo "::error::Missing secret TEST_RUNTIME_SSH_KEY"; exit 1; }
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Merge selected PRs onto base ref
+        id: batch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          scripts/prepare-pr-batch.sh \
+            --pr-list "${{ inputs.pr_numbers }}" \
+            --base-ref "${{ inputs.base_ref }}" \
+            --deploy-channel "${{ inputs.deploy_channel }}"
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          file: ./server/Dockerfile
+          platforms: ${{ env.DOCKER_PLATFORM }}
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/skillhub-server:${{ steps.batch.outputs.deploy_tag }}
+            ghcr.io/${{ github.repository_owner }}/skillhub-server:${{ steps.batch.outputs.immutable_tag }}
+          cache-from: type=gha,scope=manual-test-server
+          cache-to: type=gha,mode=max,scope=manual-test-server
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          file: ./web/Dockerfile
+          platforms: ${{ env.DOCKER_PLATFORM }}
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/skillhub-web:${{ steps.batch.outputs.deploy_tag }}
+            ghcr.io/${{ github.repository_owner }}/skillhub-web:${{ steps.batch.outputs.immutable_tag }}
+          cache-from: type=gha,scope=manual-test-web
+          cache-to: type=gha,mode=max,scope=manual-test-web
+
+      - name: Build and push scanner image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./scanner
+          file: ./scanner/Dockerfile
+          platforms: ${{ env.DOCKER_PLATFORM }}
+          push: true
+          provenance: false
+          sbom: false
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/skillhub-scanner:${{ steps.batch.outputs.deploy_tag }}
+            ghcr.io/${{ github.repository_owner }}/skillhub-scanner:${{ steps.batch.outputs.immutable_tag }}
+          cache-from: type=gha,scope=manual-test-scanner
+          cache-to: type=gha,mode=max,scope=manual-test-scanner
+
+      - name: Prepare deploy key
+        id: ssh
+        env:
+          TEST_RUNTIME_SSH_KEY: ${{ secrets.TEST_RUNTIME_SSH_KEY }}
+        run: |
+          key_file="${RUNNER_TEMP}/test-runtime.key"
+          printf '%s\n' "${TEST_RUNTIME_SSH_KEY}" > "${key_file}"
+          chmod 600 "${key_file}"
+          echo "key_file=${key_file}" >> "${GITHUB_OUTPUT}"
+
+      - name: Deploy batch images to HK test runtime
+        env:
+          TEST_RUNTIME_SSH_HOST: ${{ secrets.TEST_RUNTIME_SSH_HOST }}
+          TEST_RUNTIME_SSH_USER: ${{ secrets.TEST_RUNTIME_SSH_USER }}
+          TEST_RUNTIME_SSH_PORT: ${{ secrets.TEST_RUNTIME_SSH_PORT }}
+        run: |
+          ssh_port="${TEST_RUNTIME_SSH_PORT:-22}"
+          ssh_user="${TEST_RUNTIME_SSH_USER:-skillhub-deploy}"
+          scripts/deploy-test-runtime.sh \
+            --host "${TEST_RUNTIME_SSH_HOST}" \
+            --user "${ssh_user}" \
+            --port "${ssh_port}" \
+            --key-file "${{ steps.ssh.outputs.key_file }}" \
+            --deploy-tag "${{ steps.batch.outputs.deploy_tag }}" \
+            --immutable-tag "${{ steps.batch.outputs.immutable_tag }}" \
+            --merged-sha "${{ steps.batch.outputs.merged_sha }}" \
+            --pr-csv "${{ steps.batch.outputs.pr_csv }}" \
+            --run-url "https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Publish final summary
+        run: |
+          {
+            echo "### HK manual test runtime updated"
+            echo
+            echo "- URL: \`https://skill.xf-yun.com.cn\`"
+            echo "- Base ref: \`${{ steps.batch.outputs.base_ref }}\`"
+            echo "- Floating tag: \`${{ steps.batch.outputs.deploy_tag }}\`"
+            echo "- Immutable tag: \`${{ steps.batch.outputs.immutable_tag }}\`"
+            echo "- Merged SHA: \`${{ steps.batch.outputs.merged_sha }}\`"
+            echo "- PR list: \`${{ steps.batch.outputs.pr_csv }}\`"
+          } >> "${GITHUB_STEP_SUMMARY}"

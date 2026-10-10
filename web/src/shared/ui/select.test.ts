@@ -1,0 +1,67 @@
+import { describe, expect, it } from 'vitest'
+import {
+  SELECT_CONTENT_CLASS_NAME,
+  SELECT_ITEM_CLASS_NAME,
+  SELECT_SCROLL_BUTTON_CLASS_NAME,
+  SELECT_TRIGGER_CLASS_NAME,
+  SelectContent,
+  normalizeSelectValue,
+} from './select'
+
+describe('shared select contract', () => {
+  it('keeps the trigger aligned with the existing input styling language', () => {
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('h-9')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('rounded-md')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('border-border/60')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('bg-background/40')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:outline-none')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:ring-4')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:ring-ring/15')
+    expect(SELECT_TRIGGER_CLASS_NAME).toContain('focus-visible:border-ring')
+  })
+
+  it('uses themed panel and item classes for the floating listbox', () => {
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('bg-popover')
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('text-popover-foreground')
+    expect(SELECT_ITEM_CLASS_NAME).toContain('focus:bg-accent')
+    expect(SELECT_ITEM_CLASS_NAME).toContain('data-[disabled]:opacity-50')
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('data-[state=open]:animate-in')
+    expect(SELECT_CONTENT_CLASS_NAME).not.toContain('data-[state=closed]:animate-out')
+  })
+
+  it('exports SelectContent as an in-tree content component', () => {
+    expect(SelectContent).toBeDefined()
+    expect(SelectContent.displayName).toBeDefined()
+  })
+
+  it('keeps the dropdown and selected items visually discoverable', () => {
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('shadow-md')
+    expect(SELECT_ITEM_CLASS_NAME).toContain('pl-8')
+    expect(SELECT_ITEM_CLASS_NAME).toContain('rounded-md')
+  })
+
+  it('keeps long option lists inside the available viewport', () => {
+    expect(SELECT_CONTENT_CLASS_NAME).toContain(
+      'max-h-[var(--radix-select-content-available-height)]'
+    )
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-y-auto')
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-x-hidden')
+  })
+
+  it('does not move popper content with static translate utilities', () => {
+    expect(SELECT_CONTENT_CLASS_NAME).not.toContain('translate-y-1')
+    expect(SELECT_CONTENT_CLASS_NAME).not.toContain('translate-x-1')
+  })
+
+  it('uses pointer cursors for expanded select interactions', () => {
+    expect(SELECT_ITEM_CLASS_NAME).toContain('cursor-pointer')
+    expect(SELECT_SCROLL_BUTTON_CLASS_NAME).toContain('cursor-pointer')
+  })
+
+  it('maps empty and nullish form state to an undefined Radix value', () => {
+    expect(normalizeSelectValue('')).toBeUndefined()
+    expect(normalizeSelectValue(null)).toBeUndefined()
+    expect(normalizeSelectValue(undefined)).toBeUndefined()
+    expect(normalizeSelectValue('PUBLIC')).toBe('PUBLIC')
+  })
+})

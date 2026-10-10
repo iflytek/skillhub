@@ -1,0 +1,326 @@
+server:
+  port: 8080
+  shutdown: graceful
+  forward-headers-strategy: framework
+  servlet:
+    session:
+      timeout: ${SERVER_SERVLET_SESSION_TIMEOUT:8h}
+      cookie:
+        http-only: true
+        secure: ${SESSION_COOKIE_SECURE:false}
+        same-site: lax
+
+spring:
+  messages:
+    basename: messages
+    fallback-to-system-locale: false
+  application:
+    name: skillhub
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: UTC
+  jackson:
+    time-zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/skillhub}
+    username: ${SPRING_DATASOURCE_USERNAME:skillhub}
+    password: ${SPRING_DATASOURCE_PASSWORD:skillhub_dev}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:${REDIS_HOST:localhost}}
+      port: ${SPRING_DATA_REDIS_PORT:${REDIS_PORT:6379}}
+      password: ${SPRING_DATA_REDIS_PASSWORD:${REDIS_PASSWORD:}}
+      database: ${SPRING_DATA_REDIS_DATABASE:0}
+  session:
+    store-type: redis
+    redis:
+      namespace: ${SESSION_REDIS_NAMESPACE:skillhub:session}
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${OAUTH2_GITHUB_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET:placeholder}
+            scope:
+              - read:user
+              - user:email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: GitHub
+            authorization-grant-type: authorization_code
+          gitlab:
+            client-id: ${OAUTH2_GITLAB_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_GITLAB_CLIENT_SECRET:placeholder}
+            scope:
+              - read_user
+              - email
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: ${OAUTH2_GITLAB_DISPLAY_NAME:GitLab}
+          feishu:
+            provider: feishu
+            client-id: ${OAUTH2_FEISHU_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_FEISHU_CLIENT_SECRET:placeholder}
+            # Feishu scopes are configured on the open platform app itself
+            # (contact:user.base:readonly, contact:user.email:readonly).
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_post
+            redirect-uri: "${OAUTH2_FEISHU_REDIRECT_URI:{baseUrl}/login/oauth2/code/{registrationId}}"
+            client-name: ${OAUTH2_FEISHU_DISPLAY_NAME:飞书}
+          dingtalk:
+            client-id: ${OAUTH2_DINGTALK_CLIENT_ID:placeholder}
+            client-secret: ${OAUTH2_DINGTALK_CLIENT_SECRET:placeholder}
+            # No scope is declared on purpose. DingTalk's authorize endpoint wants scope=openid,
+            # but declaring it here makes Spring treat the registration as OIDC and attach a
+            # nonce, which DingTalk rejects. DingTalkAuthorizationRequestCustomizer adds the
+            # scope back to the outgoing URI without turning this into an OIDC flow.
+            authorization-grant-type: authorization_code
+            # DingTalk is a confidential client that happens to carry its secret in a JSON body,
+            # which DingTalkTokenResponseClient builds. client-secret-post is the honest
+            # description; "none" would additionally make Spring apply PKCE, and the DingTalk token
+            # request sends no code_verifier to match the challenge.
+            client-authentication-method: client_secret_post
+            redirect-uri: "${OAUTH2_DINGTALK_REDIRECT_URI:{baseUrl}/login/oauth2/code/{registrationId}}"
+            client-name: ${OAUTH2_DINGTALK_DISPLAY_NAME:钉钉}
+        provider:
+          github:
+            api-base-url: ${OAUTH2_GITHUB_API_BASE_URL:https://api.github.com}
+            user-info-uri: https://api.github.com/user
+          gitlab:
+            authorization-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/oauth/authorize
+            token-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/oauth/token
+            user-info-uri: ${OAUTH2_GITLAB_BASE_URI:https://gitlab.com}/api/v4/user
+            user-name-attribute: username
+          feishu:
+            # Full endpoints are configurable for Lark, private deployments, and gateways.
+            # The legacy base-URI variables remain as compatibility fallbacks.
+            authorization-uri: ${OAUTH2_FEISHU_AUTHORIZATION_URI:${OAUTH2_FEISHU_AUTHORIZE_URI:https://accounts.feishu.cn}/open-apis/authen/v1/authorize}
+            # Supported values: v2 and v3. V3 is the default; selection is explicit and never falls back.
+            token-uri: ${OAUTH2_FEISHU_TOKEN_URI:https://accounts.feishu.cn/oauth/v3/token}
+            user-info-uri: ${OAUTH2_FEISHU_USER_INFO_URI:${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v1/user_info}
+            user-name-attribute: open_id
+          dingtalk:
+            authorization-uri: ${OAUTH2_DINGTALK_AUTHORIZE_URI:https://login.dingtalk.com}/oauth2/auth
+            token-uri: ${OAUTH2_DINGTALK_BASE_URI:https://api.dingtalk.com}/v1.0/oauth2/userAccessToken
+            user-info-uri: ${OAUTH2_DINGTALK_BASE_URI:https://api.dingtalk.com}/v1.0/contact/users/me
+            user-name-attribute: unionId
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:25}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SPRING_MAIL_SMTP_AUTH:false}
+          starttls:
+            enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
+
+skillhub:
+  suite:
+    # Fail closed for deployment modes whose upgrade topology is unknown. Single-instance
+    # distributions explicitly enable this after ruling out mixed application versions.
+    review-writes-enabled: ${SKILLHUB_SUITE_REVIEW_WRITES_ENABLED:false}
+    bundle:
+      preview-ttl: ${SKILLHUB_SUITE_BUNDLE_PREVIEW_TTL:30m}
+      confirmation-enabled: ${SKILLHUB_SUITE_BUNDLE_CONFIRMATION_ENABLED:false}
+  observability:
+    tracing-mode: ${SKILLHUB_TRACING_MODE:none}
+    log-format: ${SKILLHUB_LOG_FORMAT:text}
+    log-async-queue-size: ${SKILLHUB_LOG_ASYNC_QUEUE_SIZE:1024}
+    service-version: ${SKILLHUB_SERVICE_VERSION:unknown}
+    service-environment: ${SKILLHUB_SERVICE_ENVIRONMENT:local}
+  builtin-skills:
+    enabled: ${SKILLHUB_BUILTIN_SKILLS_ENABLED:true}
+  redis:
+    sentinel:
+      check-sentinels-list: ${SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST:true}
+  auth:
+    initial-settings:
+      password-login-enabled: ${SKILLHUB_AUTH_INITIAL_PASSWORD_LOGIN_ENABLED:true}
+      self-registration-enabled: ${SKILLHUB_AUTH_INITIAL_SELF_REGISTRATION_ENABLED:true}
+      role-grants-json: '${SKILLHUB_AUTH_INITIAL_ROLE_GRANTS_JSON:[]}'
+    mock:
+      enabled: ${SKILLHUB_AUTH_MOCK_ENABLED:false}
+    direct:
+      enabled: ${SKILLHUB_AUTH_DIRECT_ENABLED:false}
+    session-bootstrap:
+      enabled: ${SKILLHUB_AUTH_SESSION_BOOTSTRAP_ENABLED:false}
+    password-reset:
+      code-expiry: ${SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY:PT10M}
+      email-from-address: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS:noreply@skillhub.local}
+      email-from-name: ${SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME:SkillHub}
+  namespace:
+    # Whether a newly activated account gets a namespace of its own.
+    # Slug and display-name templates use safe code defaults in PersonalNamespaceProvisioningProperties.
+    personal-provisioning:
+      enabled: ${SKILLHUB_NAMESPACE_PERSONAL_PROVISIONING_ENABLED:true}
+  public:
+    base-url: ${SKILLHUB_PUBLIC_BASE_URL:}
+  access-policy:
+    mode: OPEN
+  storage:
+    provider: ${SKILLHUB_STORAGE_PROVIDER:local}
+    local:
+      base-path: ${STORAGE_BASE_PATH:/tmp/skillhub-storage}
+    s3:
+      endpoint: ${SKILLHUB_STORAGE_S3_ENDPOINT:}
+      public-endpoint: ${SKILLHUB_STORAGE_S3_PUBLIC_ENDPOINT:}
+      bucket: ${SKILLHUB_STORAGE_S3_BUCKET:skillhub}
+      access-key: ${SKILLHUB_STORAGE_S3_ACCESS_KEY:}
+      secret-key: ${SKILLHUB_STORAGE_S3_SECRET_KEY:}
+      region: ${SKILLHUB_STORAGE_S3_REGION:us-east-1}
+      force-path-style: ${SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE:true}
+      disable-chunked-encoding: ${SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING:false}
+      auto-create-bucket: ${SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET:false}
+      presign-expiry: ${SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY:PT10M}
+      max-connections: ${SKILLHUB_STORAGE_S3_MAX_CONNECTIONS:100}
+      connection-acquisition-timeout: ${SKILLHUB_STORAGE_S3_CONNECTION_ACQUISITION_TIMEOUT:PT2S}
+      api-call-attempt-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_ATTEMPT_TIMEOUT:PT10S}
+      api-call-timeout: ${SKILLHUB_STORAGE_S3_API_CALL_TIMEOUT:PT30S}
+  label:
+    max-definitions: ${SKILLHUB_LABEL_MAX_DEFINITIONS:100}
+    max-per-skill: ${SKILLHUB_LABEL_MAX_PER_SKILL:10}
+    max-per-suite: ${SKILLHUB_LABEL_MAX_PER_SUITE:10}
+  search:
+    engine: postgres
+    rebuild-on-startup: false
+    semantic:
+      enabled: true
+      weight: 0.35
+      candidate-multiplier: 8
+      max-candidates: 120
+  ratelimit:
+    # Master switch for per-endpoint request rate limiting. Set false (or
+    # SKILLHUB_RATELIMIT_ENABLED=false) to turn quota checks off entirely.
+    enabled: ${SKILLHUB_RATELIMIT_ENABLED:true}
+    # Per-category threshold overrides. Unset categories use the built-in
+    # @RateLimit annotation defaults, so this block is optional and changes
+    # nothing until you set a value. Each override applies to every endpoint
+    # sharing that category. Override via env vars, e.g.:
+    #   SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_AUTHENTICATED=120
+    #   SKILLHUB_RATELIMIT_CATEGORIES_SEARCH_ANONYMOUS=40
+    #   SKILLHUB_RATELIMIT_CATEGORIES_PUBLISH_WINDOW_SECONDS=3600
+    # categories:
+    #   search:
+    #     authenticated: 60
+    #     anonymous: 20
+    #   download:
+    #     authenticated: 120
+    #     anonymous: 30
+    #   publish:
+    #     authenticated: 10
+    #     window-seconds: 60
+    download:
+      anonymous-cookie-name: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_NAME:skillhub_anon_dl}
+      anonymous-cookie-max-age: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_MAX_AGE:P30D}
+      anonymous-cookie-secret: ${SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET:}
+  publish:
+    max-file-count: 100
+    max-single-file-size: 10485760 # 10MB
+    max-package-size: 104857600 # 100MB
+    # allowed-file-extensions: uses SkillPackagePolicy.ALLOWED_EXTENSIONS by default
+    # Override via SKILLHUB_PUBLISH_ALLOWED_FILE_EXTENSIONS env var if needed
+  profile:
+    moderation:
+      machine-review: ${SKILLHUB_PROFILE_MACHINE_REVIEW_ENABLED:true} # Enable machine review (e.g. sensitive word detection)
+      human-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:true} # Enable human review queue
+    fields:
+      displayName:
+        editable: true
+        requires-review: ${SKILLHUB_PROFILE_HUMAN_REVIEW_ENABLED:true}
+      email:
+        editable: false
+        requires-review: false
+  device-auth:
+    verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/device}
+  security:
+    scanner:
+      enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:true}
+      base-url: ${SKILLHUB_SECURITY_SCANNER_URL:http://localhost:8000}
+      health-path: /health
+      scan-path: /scan-upload
+      mode: ${SKILLHUB_SECURITY_SCANNER_MODE:local}
+      connect-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_CONNECT_TIMEOUT:5000}
+      # Keep this above the longest expected scan. Availability failures remain pending
+      # and are reclaimed later instead of moving the skill to SCAN_FAILED.
+      read-timeout-ms: ${SKILLHUB_SECURITY_SCANNER_READ_TIMEOUT:900000}
+      retry-max-attempts: ${SKILLHUB_SECURITY_SCANNER_RETRY_MAX:3}
+      analyzers:
+        behavioral: ${SKILLHUB_SCANNER_USE_BEHAVIORAL:true}
+        llm: ${SKILLHUB_SCANNER_USE_LLM:false}
+        llm-provider: ${SKILLHUB_SCANNER_LLM_PROVIDER:anthropic}
+        llm-consensus-runs: ${SKILLHUB_SCANNER_LLM_CONSENSUS_RUNS:1}
+        meta: ${SKILLHUB_SCANNER_USE_META:false}
+        ai-defense: ${SKILLHUB_SCANNER_USE_AI_DEFENSE:false}
+        ai-defense-api-key: ${SKILLHUB_SCANNER_AI_DEFENSE_API_KEY:}
+        virus-total: ${SKILLHUB_SCANNER_USE_VIRUSTOTAL:false}
+        trigger: ${SKILLHUB_SCANNER_USE_TRIGGER:false}
+      policy:
+        preset: ${SKILLHUB_SCANNER_POLICY_PRESET:balanced}
+        custom-policy-path: ${SKILLHUB_SCANNER_CUSTOM_POLICY_PATH:}
+        fail-on-severity: ${SKILLHUB_SCANNER_FAIL_ON_SEVERITY:high}
+    stream:
+      # Keep temporary scanner outages recoverable, but do not retain Redis Pending entries forever.
+      max-unavailable-age: ${SKILLHUB_SECURITY_STREAM_MAX_UNAVAILABLE_AGE:PT1H}
+      key: ${SKILLHUB_SCAN_STREAM_KEY:skillhub:scan:requests}
+      group: ${SKILLHUB_SCAN_STREAM_GROUP:skillhub-scanners}
+      reclaim-enabled: ${SKILLHUB_SCAN_STREAM_RECLAIM_ENABLED:true}
+      # Must exceed scanner read-timeout so an active task is not reclaimed prematurely.
+      reclaim-min-idle: ${SKILLHUB_SCAN_STREAM_RECLAIM_MIN_IDLE:PT16M}
+      reclaim-batch-size: ${SKILLHUB_SCAN_STREAM_RECLAIM_BATCH_SIZE:20}
+      reclaim-interval: ${SKILLHUB_SCAN_STREAM_RECLAIM_INTERVAL:PT30S}
+  bootstrap:
+    admin:
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+      user-id: ${BOOTSTRAP_ADMIN_USER_ID:docker-admin}
+      username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:ChangeMe!2026}
+      display-name: ${BOOTSTRAP_ADMIN_DISPLAY_NAME:Admin}
+      email: ${BOOTSTRAP_ADMIN_EMAIL:admin@skillhub.local}
+
+management:
+  tracing:
+    sampling:
+      probability: ${SKILLHUB_TRACING_SAMPLING_PROBABILITY:0.1}
+    baggage:
+      enabled: false
+    propagation:
+      type: W3C
+  otlp:
+    tracing:
+      timeout: ${SKILLHUB_OTLP_TIMEOUT:5s}
+      compression: ${SKILLHUB_OTLP_COMPRESSION:gzip}
+  health:
+    mail:
+      enabled: ${MANAGEMENT_HEALTH_MAIL_ENABLED:false}
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: skillhub
+    export:
+      prometheus:
+        enabled: false

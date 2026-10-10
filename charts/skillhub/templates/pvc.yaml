@@ -1,0 +1,23 @@
+{{- if and .Values.server.enabled (not .Values.s3.enabled) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "skillhub.fullname" . }}-server-data
+  labels:
+    {{- include "skillhub.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  {{- $accessMode := .Values.server.storage.accessMode }}
+  {{- if not $accessMode }}
+  {{- $accessMode = "ReadWriteOnce" }}
+  {{- end }}
+  accessModes:
+    - {{ $accessMode }}
+  {{- if .Values.server.storage.storageClassName }}
+  storageClassName: {{ .Values.server.storage.storageClassName | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.server.storage.size }}
+{{- end }}

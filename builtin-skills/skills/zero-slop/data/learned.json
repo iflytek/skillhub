@@ -1,0 +1,198 @@
+{
+ "_comment": "Continuous-learning overlay. Same schema as patterns.json; merged over it at runtime by slopscore.py. Add new tells here (with a dated entry in learned-log.md). Lexicon entries here override base weights; patterns append (to soften a base pattern, edit patterns.json). Keep this file valid JSON at all times.",
+ "patterns": [
+  {
+   "name": "has-too-often",
+   "cat": "scaffolding",
+   "rx": "\\bha(?:s|ve) too often\\b",
+   "w": 3.5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "quiet-part-out-loud",
+   "cat": "performed",
+   "rx": "\\bsays? the quiet part out loud\\b",
+   "w": 3,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "arrow-in-prose",
+   "cat": "spec-notation",
+   "rx": "(?-i:[a-z0-9)])[^.!?\\n]{0,30}(?:\u2192|->)\\s*(?-i:[a-z0-9(])",
+   "w": 1.0,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03",
+   "demoted": "2026-08-04"
+  },
+  {
+   "name": "threshold-dump",
+   "cat": "spec-notation",
+   "rx": "[\u2264\u2265][^.!?\\n]{1,50}[\u2264\u2265]",
+   "w": 3,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "fake-first-person-authority",
+   "cat": "overcorrection",
+   "rx": "\\b(?:i(?:'|\u2019)ve|i have) (?:seen|watched) (?:this|it) (?:happen )?(?:a hundred times|over and over|again and again)\\b|\\bin my experience,\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "everyone-says-wrong",
+   "cat": "overcorrection",
+   "rx": "\\bevery(?:one|body) (?:says|thinks|tells you)[^.!?]{0,40}(?:they(?:'|\u2019)re| they are | but )\\s*wrong\\b",
+   "w": 5,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "staccato-emphasis",
+   "cat": "overcorrection",
+   "rx": "\\b\\w+\\. (?:A lot|Deeply|Enormously|Massively)\\. ",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "hard-truth-posture",
+   "cat": "overcorrection",
+   "rx": "\\bthe (?:hard|honest|real) (?:truth|answer|version)(?: is|:)\\b|\\bnobody wants to (?:hear|say) (?:this|it)\\b",
+   "w": 4,
+   "first_seen": "2026-08-03",
+   "last_confirmed": "2026-08-03"
+  },
+  {
+   "name": "thats-the-thing",
+   "cat": "scaffolding",
+   "rx": "\\b(?:and\\s+)?that'?s?\\s+the\\s+thing\\s+(?:about|with)\\b",
+   "w": 3,
+   "first_seen": "2026-08-04",
+   "last_confirmed": "2026-08-04",
+   "source": "manual",
+   "example": "And that's the thing about scaling"
+  },
+  {
+   "name": "fragment-question-pivot",
+   "cat": "rhetorical",
+   "rx": "(?:^|[.!?]\\s+|\\n)(?:And |But |Then )?(?:The|My|Our|His|Her|Their)\\s+(?:real\\s+|actual\\s+|best\\s+|worst\\s+|biggest\\s+|good\\s+|bad\\s+|craziest\\s+)?(?:kicker|twist|catch|issue|problem|result|point|irony|upshot|reality|truth|part|news|surprise|difference|takeaway|lesson|mistake|secret|beauty|verdict|answer|goal|advice)\\?\\s",
+   "w": 5,
+   "first_seen": "2026-08-04",
+   "last_confirmed": "2026-08-15",
+   "source": "community-taxonomy"
+  },
+  {
+   "name": "theres-a-twist",
+   "cat": "rhetorical",
+   "rx": "\\b(?:but\\s+)?there'?s?\\s+(?:a|the)\\s+(?:twist|catch|kicker|rub)\\b",
+   "w": 4,
+   "first_seen": "2026-08-04",
+   "last_confirmed": "2026-08-04",
+   "source": "community-taxonomy"
+  },
+  {
+   "name": "not-only-but-also",
+   "cat": "rhetorical",
+   "rx": "\\bnot\\s+only\\s+\\w+(?:\\s+\\w+){0,6}?\\s+but\\s+also\\b",
+   "w": 3,
+   "first_seen": "2026-08-04",
+   "last_confirmed": "2026-08-04",
+   "source": "community-taxonomy"
+  },
+  {
+   "name": "explainer-restatement",
+   "cat": "scaffolding",
+   "rx": "(?:^|[.!?]\\s+|\\n)\\s*(?:This|That|These|Those)\\s+(?:indicates?|shows?|demonstrates?|means?|suggests?|highlights?|underscores?|illustrates?)\\s+(?:that\\b|the\\b|how\\b|why\\b)",
+   "w": 3.5,
+   "first_seen": "2026-08-04",
+   "last_confirmed": "2026-08-04",
+   "source": "community-taxonomy"
+  },
+  {
+   "name": "tacked-on-moral",
+   "cat": "scaffolding",
+   "rx": "\\b(?:the\\s+)?(?:lesson|moral|takeaway)\\s+(?:here\\s+|of\\s+the\\s+story\\s+|from\\s+(?:this|all\\s+this)\\s+)?is\\b",
+   "w": 4,
+   "first_seen": "2026-08-04",
+   "last_confirmed": "2026-08-04",
+   "source": "community-taxonomy"
+  },
+  {
+   "name": "lingering-attention",
+   "cat": "performed",
+   "rx": "\\b(?:the|that|this)\\s+(?:one\\s+)?(?:line|quote|bit|part|idea|point|framing|comment|thing|phrase)\\s+(?:that\\s+)?i\\s+keep\\s+(?:coming\\s+back\\s+to|thinking\\s+about)\\b|\\bi\\s+can(?:'|’)?t\\s+stop\\s+thinking\\s+about\\b|\\b(?:has|have|had|been|be)\\s+(?:been\\s+)?rattling\\s+around\\s+(?:in\\s+)?my\\s+(?:head|brain)\\b|\\bi(?:'|’)?ve\\s+been\\s+chewing\\s+on\\s+(?:this|that)\\b",
+   "hints": ["i keep", "i can't", "i can’t", "rattling", "been chewing"],
+   "w": 3.5,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26",
+   "source": "conorbronsdon/avoid-ai-writing@40328bd"
+  },
+  {
+   "name": "social-endorsement-closer",
+   "cat": "linkedin",
+   "rx": "\\bthis\\s+one(?:'|’)?s?\\s+(?:is\\s+)?(?:well\\s+|really\\s+|definitely\\s+)?worth\\s+(?:your\\s+time|the\\s+read|a\\s+read|reading|watching|a\\s+listen|a\\s+watch|a\\s+look)\\b|\\bdo\\s+yourself\\s+a\\s+favou?r\\s+and\\s+(?:read|watch|check\\s+out)\\s+(?:this|it)\\b|\\byou\\s+(?:really\\s+)?(?:won(?:'|’)?t|do(?:n(?:'|’)?t|\\s+not)|will\\s+not)\\s+want\\s+to\\s+miss\\s+this(?:\\s+one)?\\s*(?:[:.!?]|$)|\\bdo(?:n(?:'|’)?t|\\s+not)\\s+sleep\\s+on\\s+this(?:\\s+one)?\\b",
+   "hints": ["worth", "favor", "favour", "miss this", "sleep on"],
+   "w": 4,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26",
+   "source": "conorbronsdon/avoid-ai-writing@40328bd"
+  },
+  {
+   "name": "chat-roleplay-action",
+   "cat": "artifact",
+   "rx": "(?:^|[^*])\\*(?:nods?|sighs?|laughs?|smiles?|frowns?|shrugs?|grins?|winks?|chuckles?|gasps?|pauses?|thinks?|wonders?|whispers?|shouts?|gestures?|raises?|leans?|turns?|looks?|glances?|smirks?|blinks?|nodding|sighing|laughing|smiling|thinking|gesturing)\\b[^*\\n]{0,70}\\*(?:$|[^*])",
+   "hints": ["*"],
+   "w": 8,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26",
+   "source": "conorbronsdon/avoid-ai-writing@40328bd"
+  },
+  {
+   "name": "reasoning-artifact",
+   "cat": "artifact",
+   "rx": "\\b(?:let me think (?:this through|step by step)|here(?:'|’)s my thought process|working through this logically|to approach this systematically)\\b",
+   "hints": ["let me think", "thought process", "working through", "approach this systematically"],
+   "w": 6,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26",
+   "source": "conorbronsdon/avoid-ai-writing@40328bd"
+  },
+  {
+   "name": "novelty-inflation",
+   "cat": "rhetorical",
+   "rx": "\\b(?:the (?:failure mode|problem|insight) nobody(?:'|’)?s? (?:is )?(?:naming|talking about)|what nobody tells you|the insight everyone(?:'|’)?s? missing)\\b",
+   "hints": ["nobody", "everyone"],
+   "w": 4,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26",
+   "source": "conorbronsdon/avoid-ai-writing@40328bd"
+  },
+  {
+   "name": "emotional-flatline",
+   "cat": "performed",
+   "rx": "\\b(?:what surprised me most|i was fascinated to (?:discover|learn)|what struck me was|i was excited to learn|the most interesting part)\\b",
+   "hints": ["surprised", "fascinated", "struck me", "excited", "interesting"],
+   "w": 3,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26",
+   "source": "conorbronsdon/avoid-ai-writing@40328bd"
+  },
+  {
+   "name": "acknowledgment-loop",
+   "cat": "artifact",
+   "rx": "\\b(?:to answer your question|you(?:'|’)re asking (?:about|whether)|the question of whether)\\b",
+   "hints": ["answer your question", "asking", "question of whether"],
+   "w": 3,
+   "first_seen": "2026-08-26",
+   "last_confirmed": "2026-08-26",
+   "source": "conorbronsdon/avoid-ai-writing@40328bd"
+  }
+ ],
+ "lexicon": {
+  "ascertain": 3
+ }
+}

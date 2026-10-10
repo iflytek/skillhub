@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "skillhub.fullname" . }}-web
+  labels:
+    {{- include "skillhub.web.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.web.autoscaling.enabled }}
+  replicas: {{ .Values.web.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "skillhub.web.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "skillhub.web.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ toYaml (dict "web" .Values.web "publicBaseUrl" .Values.publicBaseUrl "auth" .Values.auth) | sha256sum }}
+        {{- range $key, $val := .Values.web.podAnnotations }}
+        {{ $key }}: {{ $val }}
+        {{- end }}
+    spec:
+      {{- $secrets := .Values.web.imagePullSecrets }}
+      {{- if $secrets }}
+      imagePullSecrets:
+        {{- toYaml $secrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: web
+          image: {{ .Values.web.image.registry | default .Values.images.registry }}/skillhub-web:{{ .Values.web.image.tag | default .Values.images.tag | default (printf "v%s" .Chart.AppVersion) }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          env:
+            - name: SKILLHUB_API_UPSTREAM
+              value: http://{{ include "skillhub.fullname" . }}-server:{{ .Values.server.service.port }}
+            - name: SKILLHUB_PUBLIC_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: public-base-url
+            - name: SKILLHUB_WEB_AUTH_DIRECT_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-direct-enabled
+            - name: SKILLHUB_WEB_AUTH_DIRECT_PROVIDER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-direct-provider
+            - name: SKILLHUB_WEB_BASE_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: web-base-path
+            - name: SKILLHUB_WEB_API_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: web-api-base-url
+            {{- with .Values.web.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - containerPort: {{ .Values.web.service.port }}
+              name: http
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.web.probes.readiness | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.web.probes.liveness | nindent 12 }}
+      {{- with .Values.web.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

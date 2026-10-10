@@ -1,0 +1,305 @@
+openapi: 3.0.3
+info:
+  title: SkillHub CLI Authentication API
+  version: 1.0.0
+  description: >-
+    Authentication contract for CLI identity and public skill reads. A valid
+    Bearer credential overrides a Web Session identity. Once the Bearer scheme
+    is used, the credential must be valid: empty, malformed, unknown, expired,
+    or revoked Bearer credentials return HTTP 401 and never fall back to the
+    Session or anonymous access. An absent Authorization header or an
+    unsupported scheme such as Basic preserves a valid Web Session. Without a
+    Session, public reads use anonymous visibility and whoami returns HTTP 401.
+servers:
+  - url: /
+tags:
+  - name: CLI Authentication
+  - name: CLI Skills
+paths:
+  /api/cli/v1/auth/whoami:
+    get:
+      tags: [CLI Authentication]
+      summary: Return the current CLI identity
+      operationId: cliWhoAmI
+      description: Requires a valid Bearer credential or Web Session. Bearer takes priority over Session; invalid Bearer returns 401 without Session fallback. An absent or non-Bearer Authorization header preserves Session, but returns 401 when no Session exists.
+      security:
+        - bearerAuth: []
+        - sessionAuth: []
+      responses:
+        '200':
+          description: Authenticated CLI identity
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CliWhoAmIEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/cli/v1/skills/search:
+    get:
+      tags: [CLI Skills]
+      summary: Search CLI-installable skills
+      operationId: cliSearchSkills
+      description: Valid Bearer overrides Web Session. Invalid Bearer returns 401 without Session fallback. An absent or non-Bearer Authorization header preserves Session; without Session, the request uses anonymous public visibility.
+      security:
+        - {}
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: {type: string}
+          example: pdf
+          description: Optional search text.
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, format: int32, default: 20}
+          example: 20
+          description: Maximum number of results.
+      responses:
+        '200':
+          description: Search result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CliSearchEnvelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /api/cli/v1/skills/{namespace}/{slug}/resolve:
+    get:
+      tags: [CLI Skills]
+      summary: Resolve a skill version
+      operationId: cliResolveSkill
+      description: Valid Bearer overrides Web Session. Invalid Bearer returns 401 without Session fallback. An absent or non-Bearer Authorization header preserves Session; without Session, the request uses anonymous public visibility.
+      security:
+        - {}
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Namespace'
+        - $ref: '#/components/parameters/Slug'
+        - name: version
+          in: query
+          required: false
+          schema: {type: string}
+          example: 1.0.0
+          description: Optional exact version; omitted resolves latest.
+      responses:
+        '200':
+          description: Resolved version
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CliResolveEnvelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /api/cli/v1/skills/{namespace}/{slug}/download:
+    get:
+      tags: [CLI Skills]
+      summary: Download the latest installable skill version
+      operationId: cliDownloadLatestSkill
+      description: Valid Bearer overrides Web Session. Invalid Bearer returns 401 without Session fallback. An absent or non-Bearer Authorization header preserves Session; without Session, the request uses anonymous public visibility.
+      security:
+        - {}
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Namespace'
+        - $ref: '#/components/parameters/Slug'
+      responses:
+        '200':
+          $ref: '#/components/responses/Download'
+        '302':
+          $ref: '#/components/responses/DownloadRedirect'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/StorageUnavailable'
+  /api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download:
+    get:
+      tags: [CLI Skills]
+      summary: Download an exact installable skill version
+      operationId: cliDownloadSkillVersion
+      description: Valid Bearer overrides Web Session. Invalid Bearer returns 401 without Session fallback. An absent or non-Bearer Authorization header preserves Session; without Session, the request uses anonymous public visibility.
+      security:
+        - {}
+        - sessionAuth: []
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Namespace'
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Version'
+      responses:
+        '200':
+          $ref: '#/components/responses/Download'
+        '302':
+          $ref: '#/components/responses/DownloadRedirect'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/StorageUnavailable'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: SkillHub API token
+      description: API token issued by SkillHub. A valid token overrides Web Session; invalid lifecycle states all return the same 401 response without Session fallback.
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: SESSION
+      description: Spring Session browser identity. It is preserved when Authorization is absent or uses a non-Bearer scheme, and is overridden by a valid Bearer token.
+  parameters:
+    Namespace:
+      name: namespace
+      in: path
+      required: true
+      schema: {type: string}
+      example: global
+      description: Namespace slug.
+    Slug:
+      name: slug
+      in: path
+      required: true
+      schema: {type: string}
+      example: pdf-parser
+      description: Skill slug.
+    Version:
+      name: version
+      in: path
+      required: true
+      schema: {type: string}
+      example: 1.0.0
+      description: Exact semantic version.
+  responses:
+    Download:
+      description: ZIP package stream
+      headers:
+        Content-Disposition:
+          schema: {type: string}
+          description: Attachment filename.
+      content:
+        application/zip:
+          schema: {type: string, format: binary}
+    DownloadRedirect:
+      description: Redirect to a presigned object-storage URL
+      headers:
+        Location:
+          schema: {type: string, format: uri}
+    BadRequest:
+      description: Namespace, skill, or version cannot be resolved.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+    Unauthorized:
+      description: No valid supported identity is present where required, or the Bearer credential is empty, malformed, unknown, expired, revoked, or belongs to an unavailable user. Invalid Bearer never falls back to Web Session.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+          example:
+            code: 401
+            msg: Authentication required
+            data: null
+            timestamp: '2026-07-28T00:00:00Z'
+            requestId: req-123
+    Forbidden:
+      description: Credential is valid but token scope or resource permission is insufficient.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+          example:
+            code: 403
+            msg: Forbidden
+            data: null
+            timestamp: '2026-07-28T00:00:00Z'
+            requestId: req-123
+    StorageUnavailable:
+      description: Object storage is unavailable.
+      content:
+        application/json:
+          schema: {$ref: '#/components/schemas/ErrorEnvelope'}
+  schemas:
+    Envelope:
+      type: object
+      required: [code, msg, data, timestamp, requestId]
+      properties:
+        code: {type: integer, format: int32}
+        msg: {type: string}
+        data: {type: object, nullable: true}
+        timestamp: {type: string, format: date-time}
+        requestId: {type: string, example: req-123}
+    ErrorEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data: {type: object, nullable: true, example: null}
+    CliWhoAmIEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CliWhoAmI'
+    CliWhoAmI:
+      type: object
+      required: [handle, displayName, email]
+      properties:
+        handle: {type: string, example: user-123}
+        displayName: {type: string, example: CLI User}
+        email: {type: string, format: email, nullable: true, example: cli@example.com, description: Email address when available; the required field is null when the account has no email.}
+    CliSearchEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CliSearchResult'
+    CliSearchResult:
+      type: object
+      required: [items, total, limit]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CliSearchItem'}
+        total: {type: integer, format: int64, example: 1}
+        limit: {type: integer, format: int32, example: 20}
+    CliSearchItem:
+      type: object
+      required: [namespace, slug, latestVersion]
+      properties:
+        namespace: {type: string, example: global}
+        slug: {type: string, example: pdf-parser}
+        latestVersion: {type: string, example: 1.2.0}
+        summary: {type: string, nullable: true, example: Parse PDF files}
+    CliResolveEnvelope:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/CliResolveResult'
+    CliResolveResult:
+      type: object
+      required: [namespace, slug, version, versionId, fingerprint, downloadUrl]
+      properties:
+        namespace: {type: string, example: global}
+        slug: {type: string, example: pdf-parser}
+        version: {type: string, example: 1.2.0}
+        versionId: {type: integer, format: int64, example: 42}
+        fingerprint: {type: string, example: 'sha256:abc123'}
+        downloadUrl: {type: string, example: /api/v1/skills/global/pdf-parser/versions/1.2.0/download}

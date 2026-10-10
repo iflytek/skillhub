@@ -1,0 +1,1011 @@
+/** @vitest-environment jsdom */
+
+import { renderToStaticMarkup } from 'react-dom/server'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { MouseEvent, ReactNode } from 'react'
+import type { SkillFile } from '@/api/types'
+
+const toastMocks = vi.hoisted(() => ({
+  success: vi.fn(),
+  error: vi.fn(),
+}))
+
+const navigateMock = vi.fn()
+const hasRoleMock = vi.fn<(role: string) => boolean>((role: string) => role === 'USER')
+const useSkillDetailMock = vi.fn()
+const useSkillLabelsMock = vi.fn()
+const useSkillVersionsMock = vi.fn()
+const useSkillFilesMock = vi.fn()
+const useSkillReadmeMock = vi.fn()
+const useSkillFileMock = vi.fn()
+const usePromotionSourceStateMock = vi.fn()
+const submitPromotionMock = vi.fn()
+const submitRevocationMock = vi.fn()
+const directRevocationMock = vi.fn()
+const useRevocationHistoryMock = vi.fn()
+const routeParams = { namespace: 'global', slug: 'demo-skill' }
+const searchMock = vi.hoisted(() => ({ value: { returnTo: '/dashboard/skills', version: undefined as string | undefined } }))
+let authState: {
+  user: { userId: string; platformRoles: string[] } | null
+  hasRole: (role: string) => boolean
+} = {
+  user: { userId: 'owner-1', platformRoles: ['USER'] },
+  hasRole: hasRoleMock,
+}
+
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => navigateMock,
+  useParams: () => routeParams,
+  useRouterState: () => ({ pathname: '/space/global/demo-skill', searchStr: '', hash: '' }),
+  useSearch: () => searchMock.value,
+  Link: ({
+    to,
+    search,
+    children,
+    className,
+  }: {
+    to: string
+    search?: Record<string, unknown>
+    children?: ReactNode
+    className?: string
+  }) => (
+    <a href={to} data-search={JSON.stringify(search ?? {})} className={className}>
+      {children}
+    </a>
+  ),
+}))
+
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string) => key,
+      i18n: { language: 'zh' },
+    }),
+  }
+})
+
+vi.mock('@tanstack/react-query', () => ({
+  useQuery: () => ({ data: null, isLoading: false, error: null }),
+  useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+}))
+
+vi.mock('@/features/auth/use-auth', () => ({
+  useAuth: () => authState,
+}))
+
+vi.mock('@/features/report/use-skill-reports', () => ({
+  useSubmitSkillReport: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}))
+
+vi.mock('@/features/security-audit/security-audit-summary', () => ({
+  SecurityAuditSummary: ({ versionId, versionStatus }: { versionId: number; versionStatus?: string }) => (
+    <div data-testid="security-audit-summary">audit:{versionId}:{versionStatus}</div>
+  ),
+}))
+
+vi.mock('@/shared/lib/toast', () => ({
+  toast: { success: toastMocks.success, error: toastMocks.error },
+}))
+
+vi.mock('@/api/client', () => ({
+  adminApi: {
+    hideSkill: vi.fn(),
+    unhideSkill: vi.fn(),
+    yankVersion: vi.fn(),
+  },
+  ApiError: class ApiError extends Error {
+    serverMessageKey?: string
+  },
+  buildApiUrl: (value: string) => value,
+  WEB_API_PREFIX: '/api/web',
+}))
+
+vi.mock('@/shared/lib/date-time', () => ({
+  formatLocalDateTime: (value: string) => value,
+}))
+
+vi.mock('@/shared/lib/skill-download-cache', () => ({
+  incrementSkillDownloadCount: vi.fn(),
+}))
+
+vi.mock('@/shared/lib/number-format', () => ({
+  formatCompactCount: (value: number) => String(value),
+}))
+
+vi.mock('@/features/skill/markdown-renderer', () => ({
+  MarkdownRenderer: ({
+    content,
+    onLinkClick,
+  }: {
+    content: string
+    onLinkClick?: (href: string, event: MouseEvent<HTMLAnchorElement>) => void
+  }) => (
+    <div>
+      <div>markdown:{content}</div>
+      <a href="docs/usage.md" onClick={(event) => onLinkClick?.('docs/usage.md', event)}>
+        Usage
+      </a>
+      <a href="docs/missing.md" onClick={(event) => onLinkClick?.('docs/missing.md', event)}>
+        Missing
+      </a>
+      <a
+        href="#"
+        onClick={(event) => {
+          event.preventDefault()
+          onLinkClick?.('https://example.com', event)
+        }}
+      >
+        External
+      </a>
+      <a
+        href="#intro"
+        onClick={(event) => {
+          event.preventDefault()
+          onLinkClick?.('#intro', event)
+        }}
+      >
+        Anchor
+      </a>
+    </div>
+  ),
+}))
+
+vi.mock('@/features/skill/file-preview-dialog', () => ({
+  FilePreviewDialog: ({
+    open,
+    node,
+    onLinkClick,
+  }: {
+    open: boolean
+    node: { path: string } | null
+    onLinkClick?: (href: string, event: MouseEvent<HTMLAnchorElement>) => void
+  }) => (
+    open && node
+      ? (
+          <div role="dialog">
+            preview:{node.path}
+            {onLinkClick && (
+              <a href="nested.md" onClick={(event) => onLinkClick('nested.md', event)}>
+                Nested
+              </a>
+            )}
+          </div>
+        )
+      : null
+  ),
+}))
+
+vi.mock('@/features/skill/file-tree', () => ({
+  FileTree: () => <div>files</div>,
+}))
+
+vi.mock('@/features/skill/install-command', () => ({
+  InstallCommand: () => <div>install</div>,
+  isPortableSkillVersion: () => true,
+}))
+
+vi.mock('@/features/social/rating-input', () => ({
+  RatingInput: () => <div>__RATING_WIDGET__</div>,
+}))
+
+vi.mock('@/features/social/star-button', () => ({
+  StarButton: () => <div>__STAR_WIDGET__</div>,
+}))
+
+vi.mock('@/shared/hooks/use-skill-queries', () => ({
+  useSkillDetail: () => useSkillDetailMock(),
+  useSkillLabels: () => useSkillLabelsMock(),
+  useVisibleLabels: () => ({
+    data: [{ slug: 'code-generation', type: 'RECOMMENDED', displayName: 'Code Generation' }],
+    isLoading: false,
+  }),
+  useAdminLabelDefinitions: () => ({ data: [], isLoading: false }),
+  useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useSkillVersions: (...args: unknown[]) => useSkillVersionsMock(...args),
+  useSkillVersionDetail: () => ({ data: undefined }),
+  useSkillFiles: (...args: unknown[]) => useSkillFilesMock(...args),
+  useSkillReadme: (...args: unknown[]) => useSkillReadmeMock(...args),
+  useSkillFile: (...args: unknown[]) => useSkillFileMock(...args),
+  useArchiveSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteSkillVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useRereleaseSkillVersion: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useUnarchiveSkill: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useWithdrawSkillReview: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useSubmitForReview: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useConfirmPublish: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}))
+
+vi.mock('@/shared/hooks/use-label-queries', () => ({
+  useSkillLabels: () => useSkillLabelsMock(),
+  useVisibleLabels: () => ({
+    data: [{ slug: 'code-generation', type: 'RECOMMENDED', displayName: 'Code Generation' }],
+    isLoading: false,
+  }),
+  useAdminLabelDefinitions: () => ({ data: [], isLoading: false }),
+  useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+  useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
+vi.mock('@/shared/hooks/use-user-queries', () => ({
+  useSubmitPromotion: () => ({ mutateAsync: submitPromotionMock, isPending: false }),
+  usePromotionSourceState: (...args: unknown[]) => usePromotionSourceStateMock(...args),
+}))
+
+vi.mock('@/features/promotion/use-promotion-revocations', () => ({
+  usePromotionRevocationHistory: (...args: unknown[]) => useRevocationHistoryMock(...args),
+  useSubmitPromotionRevocation: () => ({ mutateAsync: submitRevocationMock, isPending: false }),
+  useDirectPromotionRevocation: () => ({ mutateAsync: directRevocationMock, isPending: false }),
+}))
+
+import { SkillDetailPage } from './skill-detail'
+
+function createSkill(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 1,
+    slug: 'demo-skill',
+    displayName: 'Demo Skill',
+    ownerId: 'owner-1',
+    ownerDisplayName: 'Owner One',
+    summary: 'summary',
+    visibility: 'PUBLIC',
+    status: 'ACTIVE',
+    downloadCount: 12,
+    starCount: 2,
+    ratingAvg: 4.5,
+    ratingCount: 2,
+    hidden: false,
+    namespace: 'global',
+    canManageLifecycle: true,
+    canSubmitPromotion: false,
+    canInteract: true,
+    canReport: true,
+    headlineVersion: { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+    publishedVersion: { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+    ownerPreviewVersion: undefined,
+    resolutionMode: 'PUBLISHED',
+    ...overrides,
+  }
+}
+
+function createSkillFile(filePath: string): SkillFile {
+  return {
+    id: filePath.length,
+    filePath,
+    fileSize: 128,
+    contentType: 'text/markdown',
+    sha256: `sha-${filePath}`,
+  }
+}
+
+describe('SkillDetailPage', () => {
+  afterEach(() => cleanup())
+
+  beforeEach(() => {
+    routeParams.namespace = 'global'
+    routeParams.slug = 'demo-skill'
+    submitPromotionMock.mockReset()
+    submitRevocationMock.mockReset()
+    directRevocationMock.mockReset()
+    useRevocationHistoryMock.mockReturnValue({ data: [], isLoading: false, error: null })
+    usePromotionSourceStateMock.mockReturnValue({ data: undefined, isLoading: false, error: null })
+    searchMock.value = { returnTo: '/dashboard/skills', version: undefined }
+    navigateMock.mockReset()
+    useSkillFilesMock.mockReset()
+    useSkillReadmeMock.mockReset()
+    useSkillFileMock.mockReset()
+    toastMocks.success.mockReset()
+    toastMocks.error.mockReset()
+    hasRoleMock.mockImplementation((role: string) => role === 'USER')
+    authState = {
+      user: { userId: 'owner-1', platformRoles: ['USER'] },
+      hasRole: hasRoleMock,
+    }
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill(),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 10,
+          version: '1.0.0',
+          status: 'PUBLISHED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: '2026-03-20T00:00:00Z',
+          downloadAvailable: true,
+        },
+      ],
+    })
+    useSkillLabelsMock.mockReturnValue({
+      data: undefined,
+    })
+    useSkillFilesMock.mockReturnValue({ data: [] })
+    useSkillReadmeMock.mockReturnValue({ data: '# Demo', error: null })
+    useSkillFileMock.mockReturnValue({ data: null, isLoading: false, error: null })
+  })
+
+  it('offers a published team version for review against the current global version', async () => {
+    routeParams.namespace = 'team-ai'
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ namespace: 'team-ai', canSubmitPromotion: true }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    usePromotionSourceStateMock.mockReturnValue({
+      data: { requestKind: 'UPDATE', targetSkillId: 42, targetCurrentVersion: '1.3.0', pendingPromotionId: null },
+      isLoading: false,
+      error: null,
+    })
+    submitPromotionMock.mockResolvedValue(undefined)
+
+    render(<SkillDetailPage />)
+
+    expect(usePromotionSourceStateMock).toHaveBeenCalledWith(1, true)
+    expect(screen.getByText('skillDetail.promotionGlobalCurrent')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'skillDetail.submitGlobalUpdate' }))
+    const dialog = screen.getByRole('dialog', { name: 'skillDetail.globalUpdateConfirmTitle' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'skillDetail.submitGlobalUpdate' }))
+    await waitFor(() => expect(submitPromotionMock).toHaveBeenCalledWith({ sourceSkillId: 1, sourceVersionId: 10 }))
+  })
+
+  it('shows a pending request without another submission action', () => {
+    routeParams.namespace = 'team-ai'
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ namespace: 'team-ai', canSubmitPromotion: false }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    usePromotionSourceStateMock.mockReturnValue({
+      data: { requestKind: 'PENDING', targetSkillId: 42, targetCurrentVersion: '1.3.0', pendingPromotionId: 7 },
+      isLoading: false,
+      error: null,
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(screen.getByText('skillDetail.promotionPending')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'skillDetail.submitGlobalUpdate' })).toBeNull()
+  })
+
+  it('submits a revocation request for the linked global skill', async () => {
+    routeParams.namespace = 'team-ai'
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ namespace: 'team-ai', canSubmitPromotion: true }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    usePromotionSourceStateMock.mockReturnValue({
+      data: { requestKind: 'UPDATE', targetSkillId: 42, targetCurrentVersion: '1.3.0', pendingPromotionId: null },
+      isLoading: false,
+      error: null,
+    })
+    submitRevocationMock.mockResolvedValue(undefined)
+
+    render(<SkillDetailPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'skillDetail.requestRevocation' }))
+    const dialog = screen.getByRole('dialog', { name: 'skillDetail.revocationConfirmTitle' })
+    fireEvent.change(within(dialog).getByRole('textbox', { name: 'skillDetail.revocationReasonLabel' }), { target: { value: 'No longer safe' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'skillDetail.requestRevocation' }))
+    await waitFor(() => expect(submitRevocationMock).toHaveBeenCalledWith({ sourceSkillId: 1, reason: 'No longer safe' }))
+  })
+
+  it('blocks duplicate revocation and global update actions while revocation is pending', () => {
+    routeParams.namespace = 'team-ai'
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ namespace: 'team-ai', canSubmitPromotion: true }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    usePromotionSourceStateMock.mockReturnValue({
+      data: { requestKind: 'UPDATE', targetSkillId: 42, targetCurrentVersion: '1.3.0', pendingPromotionId: null },
+      isLoading: false,
+      error: null,
+    })
+    useRevocationHistoryMock.mockReturnValue({
+      data: [{ id: 7, status: 'PENDING', submittedAt: '2026-06-18T12:00:00Z' }],
+      isLoading: false,
+      error: null,
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(screen.getByText('skillDetail.revocationPending')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'skillDetail.requestRevocation' })).toBeNull()
+    expect((screen.getByRole('button', { name: 'skillDetail.submitGlobalUpdate' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('keeps revocation available when the source has no published versions left', () => {
+    routeParams.namespace = 'team-ai'
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ namespace: 'team-ai', canSubmitPromotion: false, publishedVersion: undefined, headlineVersion: undefined }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({ data: [] })
+    usePromotionSourceStateMock.mockReturnValue({
+      data: { requestKind: 'UPDATE', targetSkillId: 42, targetCurrentVersion: '1.3.0', pendingPromotionId: null },
+      isLoading: false,
+      error: null,
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(screen.getByRole('button', { name: 'skillDetail.requestRevocation' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'skillDetail.submitGlobalUpdate' })).toBeNull()
+  })
+
+  it('offers direct revocation to a platform administrator outside the source team', async () => {
+    routeParams.namespace = 'team-ai'
+    hasRoleMock.mockImplementation((role: string) => role === 'SKILL_ADMIN')
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ namespace: 'team-ai', canManageLifecycle: false, canSubmitPromotion: false }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    usePromotionSourceStateMock.mockReturnValue({
+      data: { requestKind: 'UPDATE', targetSkillId: 42, targetCurrentVersion: '1.3.0', pendingPromotionId: null },
+      isLoading: false,
+      error: null,
+    })
+    directRevocationMock.mockResolvedValue(undefined)
+
+    render(<SkillDetailPage />)
+
+    expect(usePromotionSourceStateMock).toHaveBeenCalledWith(1, true)
+    fireEvent.click(screen.getByRole('button', { name: 'skillDetail.directRevocation' }))
+    const dialog = screen.getByRole('dialog', { name: 'skillDetail.revocationConfirmTitle' })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'skillDetail.directRevocation' }))
+    await waitFor(() => expect(directRevocationMock).toHaveBeenCalledWith({ sourceSkillId: 1, reason: '' }))
+  })
+
+  it('loads the exact version requested by a Suite member link', () => {
+    searchMock.value = { returnTo: '/suite/global/care-workflow?version=1.0.0', version: '0.9.0' }
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 10,
+          version: '1.0.0',
+          status: 'PUBLISHED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: '2026-03-20T00:00:00Z',
+          downloadAvailable: true,
+        },
+        {
+          id: 9,
+          version: '0.9.0',
+          status: 'PUBLISHED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 10,
+          publishedAt: '2026-03-10T00:00:00Z',
+          downloadAvailable: true,
+        },
+      ],
+    })
+
+    render(<SkillDetailPage />)
+
+    expect(useSkillFilesMock).toHaveBeenCalledWith('global', 'demo-skill', '0.9.0', true)
+    expect(useSkillReadmeMock).toHaveBeenCalledWith('global', 'demo-skill', '0.9.0', null, true)
+  })
+
+  it('shows hard delete action for the skill owner', () => {
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.deleteSkill')
+  })
+
+  it('hides hard delete action when the viewer is not the owner or super admin', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ ownerId: 'someone-else' }),
+      isLoading: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).not.toContain('skillDetail.deleteSkill')
+  })
+
+  it('renders public skill details for an anonymous viewer', () => {
+    authState = {
+      user: null,
+      hasRole: vi.fn(() => false),
+    }
+
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        canManageLifecycle: false,
+        canInteract: true,
+        visibility: 'PUBLIC',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('Demo Skill')
+    expect(html).toContain('install')
+    expect(html).not.toContain('skillDetail.loginRequired')
+    expect(html).not.toContain('skillDetail.deleteSkill')
+  })
+
+  it('shows a visible suite that uses this skill as its entry', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        entryForSuites: [{
+          suiteId: 7,
+          namespace: 'team-ai',
+          slug: 'research-workflow',
+          displayName: 'Research Workflow',
+          version: '2.0.0',
+          memberCount: 4,
+          currentSkillEntry: true,
+          visibleSiblingMembers: [],
+          restrictedMemberCount: 0,
+          omittedVisibleMemberCount: 0,
+        }],
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.suiteMembershipTitle')
+    expect(html).toContain('skillDetail.suiteMembershipEntryRole')
+    expect(html).toContain('Research Workflow')
+    expect(html).toContain('@team-ai/research-workflow@2.0.0')
+    expect(html).toContain('skillDetail.suiteEntryMemberCount')
+  })
+
+  it('shows the empty membership state when the skill is in no visible suite', () => {
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.suiteMembershipTitle')
+    expect(html).toContain('skillDetail.suiteMembershipEmpty')
+  })
+
+  it('shows ordinary membership, visible siblings, protected counts, and remaining pages', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        memberOfSuites: {
+          items: [{
+            suiteId: 8,
+            namespace: 'team-ai',
+            slug: 'analysis-pack',
+            displayName: 'Analysis Pack',
+            version: '3.0.0',
+            memberCount: 12,
+            currentSkillEntry: false,
+            visibleSiblingMembers: [{
+              skillId: 22,
+              namespace: 'team-ai',
+              slug: 'entry-skill',
+              displayName: 'Entry Skill',
+              version: '1.0.0',
+              entry: true,
+              available: true,
+            }],
+            restrictedMemberCount: 2,
+            omittedVisibleMemberCount: 1,
+          }],
+          total: 21,
+          page: 0,
+          size: 20,
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('Analysis Pack')
+    expect(html).toContain('skillDetail.suiteMembershipMemberRole')
+    expect(html).toContain('Entry Skill')
+    expect(html).toContain('skillDetail.suiteMembershipRestricted')
+    expect(html).toContain('skillDetail.suiteMembershipOmitted')
+    expect(html).toContain('skillDetail.suiteMembershipMore')
+  })
+
+  it('renders every visible suite when a skill belongs to multiple suites', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        memberOfSuites: {
+          items: [
+            {
+              suiteId: 8,
+              namespace: 'team-ai',
+              slug: 'analysis-pack',
+              displayName: 'Analysis Pack',
+              version: '3.0.0',
+              memberCount: 2,
+              currentSkillEntry: false,
+              visibleSiblingMembers: [],
+              restrictedMemberCount: 0,
+              omittedVisibleMemberCount: 0,
+            },
+            {
+              suiteId: 9,
+              namespace: 'global',
+              slug: 'research-starter',
+              displayName: 'Research Starter',
+              version: '1.0.0',
+              memberCount: 3,
+              currentSkillEntry: true,
+              visibleSiblingMembers: [],
+              restrictedMemberCount: 0,
+              omittedVisibleMemberCount: 0,
+            },
+          ],
+          total: 2,
+          page: 0,
+          size: 20,
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('Analysis Pack')
+    expect(html).toContain('Research Starter')
+    expect(html).toContain('@team-ai/analysis-pack@3.0.0')
+    expect(html).toContain('@global/research-starter@1.0.0')
+  })
+
+  it('renders an unavailable sibling as text instead of a skill link', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        memberOfSuites: {
+          items: [{
+            suiteId: 8,
+            namespace: 'team-ai',
+            slug: 'analysis-pack',
+            displayName: 'Analysis Pack',
+            version: '3.0.0',
+            memberCount: 2,
+            currentSkillEntry: false,
+            visibleSiblingMembers: [{
+              skillId: 22,
+              namespace: 'team-ai',
+              slug: 'paused-skill',
+              displayName: 'Paused Skill',
+              version: '1.0.0',
+              entry: true,
+              available: false,
+            }],
+            restrictedMemberCount: 0,
+            omittedVisibleMemberCount: 0,
+          }],
+          total: 1,
+          page: 0,
+          size: 20,
+        },
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('Paused Skill')
+    expect(html).toContain('title="skillDetail.suiteMembershipUnavailable"')
+    expect(html).not.toContain('/space/team-ai/paused-skill')
+  })
+
+  it('wraps a long skill name instead of widening the mobile page', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({ displayName: 'review-runtime-1788284593-353294' }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('text-balance break-words text-4xl')
+    expect(html).toContain('[overflow-wrap:anywhere]')
+  })
+
+  it('shows the label management panel for a user who can manage the skill lifecycle', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        labels: [{ slug: 'official', type: 'RECOMMENDED', displayName: 'Official' }],
+      }),
+      isLoading: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.labelsSectionTitle')
+    expect(html).toContain('skillDetail.removeLabel')
+    expect(html).toContain('skillDetail.addLabel')
+  })
+
+  it('links skill label chips to the search page filtered by that label', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        ownerId: 'someone-else',
+        canManageLifecycle: false,
+        labels: [{ slug: 'code-generation', type: 'RECOMMENDED', displayName: 'Code Generation' }],
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('href="/search"')
+    expect(html).toContain('&quot;label&quot;:&quot;code-generation&quot;')
+    expect(html).toContain('Code Generation')
+  })
+
+  it('hides the label management panel when the viewer lacks label permissions', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        ownerId: 'someone-else',
+        canManageLifecycle: false,
+      }),
+      isLoading: false,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).not.toContain('skillDetail.labelsSectionTitle')
+  })
+
+  it('does not render dependent social controls while the detail query is still refetching', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill(),
+      isLoading: false,
+      isFetching: true,
+      error: null,
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(useSkillVersionsMock).toHaveBeenCalledWith('global', 'demo-skill', false)
+    expect(html).not.toContain('__STAR_WIDGET__')
+    expect(html).not.toContain('__RATING_WIDGET__')
+  })
+
+  it('renders rejected owner preview without pending-review copy', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        canInteract: false,
+        headlineVersion: { id: 11, version: '1.1.0', status: 'REJECTED' },
+        publishedVersion: undefined,
+        ownerPreviewVersion: { id: 11, version: '1.1.0', status: 'REJECTED' },
+        resolutionMode: 'OWNER_PREVIEW',
+        ownerPreviewReviewComment: 'manifest validation failed',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 11,
+          version: '1.1.0',
+          status: 'REJECTED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: null,
+          downloadAvailable: false,
+        },
+      ],
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.rejectedBadge')
+    expect(html).toContain('skillDetail.rejectedFeedbackTitle')
+    expect(html).toContain('manifest validation failed')
+    expect(html).not.toContain('skillDetail.pendingPreviewBadge')
+    expect(html).not.toContain('skillDetail.pendingPreviewTitle')
+  })
+
+  it('renders pending review status in the header for scan-failed owner preview versions', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        canInteract: false,
+        headlineVersion: { id: 12, version: '1.2.0', status: 'SCAN_FAILED' },
+        publishedVersion: undefined,
+        ownerPreviewVersion: { id: 12, version: '1.2.0', status: 'SCAN_FAILED' },
+        resolutionMode: 'OWNER_PREVIEW',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 12,
+          version: '1.2.0',
+          status: 'SCAN_FAILED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: null,
+          downloadAvailable: false,
+        },
+      ],
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('skillDetail.versionStatusPendingReview')
+    expect(html).not.toContain('skillDetail.versionStatusScanFailed')
+  })
+
+  it('binds scan retry to the failed owner preview when a published version remains visible', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        canManageLifecycle: true,
+        headlineVersion: { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+        publishedVersion: { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+        ownerPreviewVersion: { id: 12, version: '1.2.0', status: 'SCAN_FAILED' },
+        resolutionMode: 'PUBLISHED',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        { id: 10, version: '1.0.0', status: 'PUBLISHED', downloadAvailable: true },
+        { id: 12, version: '1.2.0', status: 'SCAN_FAILED', downloadAvailable: false },
+      ],
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('audit:12:SCAN_FAILED')
+    expect(html).not.toContain('audit:10:PUBLISHED')
+  })
+
+  it('allows long pending review versions to wrap inside the review card', () => {
+    useSkillDetailMock.mockReturnValue({
+      data: createSkill({
+        headlineVersion: { id: 13, version: '20260326.055640-build-with-very-long-suffix', status: 'PENDING_REVIEW' },
+        publishedVersion: { id: 10, version: '20260326.055538', status: 'PUBLISHED' },
+        ownerPreviewVersion: { id: 13, version: '20260326.055640-build-with-very-long-suffix', status: 'PENDING_REVIEW' },
+        resolutionMode: 'PUBLISHED',
+      }),
+      isLoading: false,
+      isFetching: false,
+      error: null,
+    })
+    useSkillVersionsMock.mockReturnValue({
+      data: [
+        {
+          id: 13,
+          version: '20260326.055640-build-with-very-long-suffix',
+          status: 'PENDING_REVIEW',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: null,
+          downloadAvailable: false,
+        },
+        {
+          id: 10,
+          version: '20260326.055538',
+          status: 'PUBLISHED',
+          changelog: '',
+          fileCount: 1,
+          totalSize: 12,
+          publishedAt: '2026-03-20T00:00:00Z',
+          downloadAvailable: true,
+        },
+      ],
+    })
+
+    const html = renderToStaticMarkup(<SkillDetailPage />)
+
+    expect(html).toContain('break-all')
+    expect(html).toContain('leading-snug')
+  })
+
+  it('opens a file preview when overview markdown relative link matches a package file', () => {
+    useSkillFilesMock.mockReturnValue({
+      data: [
+        createSkillFile('README.md'),
+        createSkillFile('docs/usage.md'),
+      ],
+    })
+
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByRole('link', { name: 'Usage' }))
+
+    expect(screen.getByRole('dialog').textContent).toContain('preview:docs/usage.md')
+    expect(toastMocks.error).not.toHaveBeenCalled()
+  })
+
+  it('resolves links inside previewed markdown files against the previewed file path', () => {
+    useSkillFilesMock.mockReturnValue({
+      data: [
+        createSkillFile('README.md'),
+        createSkillFile('docs/usage.md'),
+        createSkillFile('docs/nested.md'),
+      ],
+    })
+
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByRole('link', { name: 'Usage' }))
+    expect(screen.getByRole('dialog').textContent).toContain('preview:docs/usage.md')
+
+    fireEvent.click(screen.getByRole('link', { name: 'Nested' }))
+
+    expect(screen.getByRole('dialog').textContent).toContain('preview:docs/nested.md')
+    expect(toastMocks.error).not.toHaveBeenCalled()
+  })
+
+  it('keeps the viewer on the detail page and shows a toast for missing package files', () => {
+    useSkillFilesMock.mockReturnValue({
+      data: [
+        createSkillFile('README.md'),
+        createSkillFile('docs/usage.md'),
+      ],
+    })
+
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByRole('link', { name: 'Missing' }))
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      'skillDetail.packageLinkMissingTitle',
+      'skillDetail.packageLinkMissingDescription',
+    )
+  })
+
+  it('leaves external links and same-document anchors alone', () => {
+    useSkillFilesMock.mockReturnValue({
+      data: [
+        createSkillFile('README.md'),
+        createSkillFile('docs/usage.md'),
+      ],
+    })
+
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByRole('link', { name: 'External' }))
+    fireEvent.click(screen.getByRole('link', { name: 'Anchor' }))
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(toastMocks.error).not.toHaveBeenCalled()
+  })
+})

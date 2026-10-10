@@ -1,0 +1,755 @@
+# skillhub 认证与授权设计
+
+## 0. 身份标识约束
+
+- `PlatformPrincipal.userId` 必须是稳定的字符串标识，而不是 `Long`。
+- 用户身份在系统内的主契约是字符串 `userId`；认证、授权、审计、资源 owner 判定都基于该字符串进行。
+- 外部身份源的 `subject`、企业 SSO UID、工号型字符串等都必须可以原样或经确定性映射后进入系统，禁止先压缩成自增整数再作为正式用户主键在全链路传播。
+- 历史草案里的整型用户主键描述全部废弃，当前认证与授权设计只承认字符串身份主键。
+
+## 1. 认证架构
+
+```
+请求进入
+  │
+  ▼
+┌─────────────────────────────┐
+│  Layer 1: OAuth2/OIDC Login │  Spring Security OAuth2 Client
+│  (GitHub/GitLab/OIDC 可扩展) │  授权码模式 (Authorization Code)
+│  Layer 1b: Session Bootstrap│  显式被动会话引导（默认关闭）
+└─────────────┬───────────────┘
+              │ OAuth2User
+              ▼
+┌─────────────────────────────┐
+│  Layer 2: Access Policy     │  准入策略判定
+│  (认证成功 ≠ 有权使用平台)    │  白名单/邮箱域名/开放注册
+└─────────────┬───────────────┘
+              │ 准入通过
+              ▼
+┌─────────────────────────────┐
+│  Layer 3: Identity Mapping  │  OAuth2 用户 → 平台用户
+│  (查询/创建 identity_binding) │  自动注册 + 信息同步
+└─────────────┬───────────────┘
+              │ PlatformPrincipal
+              ▼
+┌─────────────────────────────┐
+│  Layer 4: Session / Token   │  Web: Spring Session (Redis)
+│                             │  CLI: Device Flow + Bearer Token
+└─────────────┬───────────────┘
+              │ SecurityContext
+              ▼
+┌─────────────────────────────┐
+│  Layer 5: Authorization     │  RBAC + 资源级判定
+└─────────────────────────────┘
+```
+
+## 2. 准入策略（Access Policy）
+
+OAuth 认证成功仅代表身份可信，不代表有权使用平台。准入层在认证成功后、创建平台用户前执行。
+
+```java
+// 基于 claims 的准入策略，与 Provider 无关
+public interface AccessPolicy {
+    AccessDecision evaluate(OAuthClaims claims);
+}
+
+public record OAuthClaims(
+    String provider,          // github, google, wechat
+    String subject,           // provider 唯一 ID
+    String email,             // nullable（微信等可能无邮箱）
+    boolean emailVerified,    // 是否已验证
+    String providerLogin,     // 如 GitHub login
+    Map<String, Object> extra
+) {}
+
+public enum AccessDecision {
+    ALLOW,              // 准入，继续创建/绑定平台用户
+    DENY,               // 拒绝，不建立 Session，重定向到拒绝页
+    PENDING_APPROVAL    // 等待管理员审批，不建立业务 Session
+}
+```
+
+### 2.1 一期支持的策略（通过配置切换）
+
+```yaml
+astron:
+  access-policy:
+    mode: EMAIL_DOMAIN   # OPEN / PROVIDER_ALLOWLIST / EMAIL_DOMAIN / SUBJECT_WHITELIST
+    allowed-providers:
+      - github
+    allowed-email-domains:
+      - company.com
+      - subsidiary.com
+```
+
+| 策略 | 判定依据 | 说明 |
+|------|---------|------|
+| `OPEN` | 无限制 | 所有 OAuth 登录用户自动准入 |
+| `PROVIDER_ALLOWLIST` | `claims.provider` | 仅允许指定 Provider 登录 |
+| `EMAIL_DOMAIN` | `claims.email` + `claims.emailVerified` | 仅允许已验证邮箱且域名匹配（email 为空或未验证则 DENY） |
+| `SUBJECT_WHITELIST` | `claims.provider` + `claims.subject` | 按 `provider:subject` 白名单，管理员预添加 |
+
+### 2.2 准入失败处理
+
+- `DENY`：抛出 `OAuth2AccessDeniedException`，由 `failureHandler` 重定向到 `/access-denied` 页面。不创建用户，不建立 Session。
+- `PENDING_APPROVAL`：创建 `user_account`（status=`PENDING`），但不建立业务 Session。抛出 `AccountPendingException`，由 `failureHandler` 重定向到 `/pending-approval` 页面（纯静态提示页，无需登录态）。管理员在后台审批后状态变为 `ACTIVE`，用户下次 OAuth 登录才会正常建立 Session。
+
+安全边界：PENDING / DISABLED / MERGED 用户和 system account 绝不会通过交互式登录获得
+业务 Session。外部身份命中这些账号时，在更新用户资料或加载角色前直接拒绝。
+
+### 2.3 扩展性
+
+后续新增 OAuth Provider（Google、GitLab、微信）时，准入策略与 Provider 无关，统一在 AccessPolicy 层判定，不需要重做入驻逻辑。
+
+## 3. Web 认证流程（OAuth2 / OIDC Authorization Code）
+
+```
+浏览器点击"登录"
+    │
+    ▼
+前端跳转: /oauth2/authorization/github
+    │
+    ▼
+Spring Security 重定向到 GitHub 授权页
+    │
+    ▼
+用户在 GitHub 授权
+    │
+    ▼
+GitHub 回调: /login/oauth2/code/github?code=xxx&state=xxx
+    │
+    ▼
+Spring Security 自动完成:
+  ① 用 code 换取 access_token
+  ② 调用 GitHub API 获取用户信息
+  ③ 触发自定义 OAuth2UserService
+    │
+    ▼
+CustomOAuth2UserService / CustomOidcUserService:
+  ① 从 OAuth2User 提取 provider + externalId → 构建 OAuthClaims
+  ② AccessPolicy.evaluate(claims) → 准入判定
+  │
+  ├── DENY → 抛出 OAuth2AccessDeniedException → failureHandler 重定向 /access-denied（不建立 Session）
+  ├── PENDING_APPROVAL → 创建 PENDING 用户 → 抛出 AccountPendingException → failureHandler 重定向 /pending-approval（不建立 Session）
+  └── ALLOW ↓
+  │
+  ③ 查询 identity_binding 是否已绑定
+  ├── 已绑定 → 加载平台用户，检查用户状态（DISABLED → 抛异常），同步最新头像/昵称
+  └── 未绑定 → 创建 user_account(ACTIVE) + identity_binding
+    │
+    ▼
+AuthenticationSuccessHandler:
+  ① 创建 Spring Session (Redis)
+  ② 重定向到前端页面 (可配置的 redirect_uri)
+```
+
+OIDC 登录沿用同一条业务链路，但由 Spring Security 的 `oidcUserService`
+分支处理。`CustomOidcUserService` 会把标准 OIDC claims 映射为
+`OAuthClaims`：
+
+- `provider`：Spring OAuth2 client registration id，例如 `okta`、`keycloak`
+  或 `oidc`
+- `subject`：OIDC `sub`
+- `email` / `emailVerified`：`email` 与 `email_verified`
+- `providerLogin`：优先 `preferred_username`，其次 `name`、`email`、`sub`
+- `picture` 会同步为 `avatar_url`，供现有头像同步逻辑复用
+
+因此 OIDC 不需要新增数据库表；现有 `identity_binding(provider_code,
+subject)` 可以保存任意 OIDC issuer 下的稳定用户标识。不同 IdP 应使用不同
+registration id，避免多个 issuer 的 `sub` 值空间混用。
+
+### 3.1 统一 Session 建立约束
+
+所有 Web 登录入口都必须通过统一的 `PlatformSessionService` 建立登录态，包括：
+
+- 本地用户名密码登录
+- OAuth 登录成功回调
+- `POST /api/v1/auth/direct/login`
+- `POST /api/v1/auth/session/bootstrap`
+- 本地开发态 `MockAuthFilter`
+
+统一约束如下：
+
+- 统一写入 `platformPrincipal`
+- 统一写入 `SPRING_SECURITY_CONTEXT`
+- 统一通过 `HttpSession` 持久化，确保 Spring Session Redis 能无差别接管
+- 交互式登录默认调用 `changeSessionId()`，降低 session fixation 风险
+- 已由 Spring Security 完成认证的入口可以复用现有 `Authentication`，避免重复构造认证结果
+
+这意味着未来私有版新增企业 SSO provider 时，只能扩展认证来源本身，不能绕开统一的 session 建立服务直接操作 Session。
+
+## 3.3 Session Bootstrap 扩展点
+
+为了兼容未来私有部署中的企业 SSO 被动登录，开源版预留显式会话引导协议：
+
+- 接口：`POST /api/v1/auth/session/bootstrap`
+- 用途：前端在同域场景下显式触发一次“读取外部会话并尝试换取 skillhub Session”的流程
+- 默认状态：关闭，开源版不提供任何 `PassiveSessionAuthenticator` 实现
+- 安全边界：默认不做全局自动登录 filter，避免匿名访问时隐式建会话、放大 CSRF 和审计复杂度
+
+扩展接口如下：
+
+```java
+public interface PassiveSessionAuthenticator {
+    String providerCode();
+    Optional<PlatformPrincipal> authenticate(HttpServletRequest request);
+}
+```
+
+约束如下：
+
+- `authenticate()` 只负责验证外部被动会话并返回平台登录所需主体
+- 是否允许启用该入口由 `skillhub.auth.session-bootstrap.enabled` 控制，默认 `false`
+- 未启用时接口返回 `403`
+- 启用但 provider 不受支持时返回 `400`
+- 启用但请求中不存在有效外部会话时返回 `401`
+- 成功时建立标准 Spring Security Session，并返回与 `/api/v1/auth/me` 一致的用户结构
+
+## 3.4 Direct Authentication 扩展点
+
+为兼容未来“前端收集用户名密码，后端调用企业 SSO / RPC 校验”的私有部署模式，开源版增加默认关闭的直连认证抽象：
+
+```java
+public interface DirectAuthProvider {
+    String providerCode();
+    PlatformPrincipal authenticate(DirectAuthRequest request);
+}
+```
+
+对应公共协议：
+
+- `POST /api/v1/auth/direct/login`
+
+约束如下：
+
+- 开源版默认关闭，由 `skillhub.auth.direct.enabled` 控制
+- 关闭时返回 `403`
+- provider 不受支持时返回 `400`
+- provider 认证失败时沿用 provider 自身的认证异常语义
+- 成功时建立标准 Session，并返回与 `/api/v1/auth/me` 一致的用户结构
+- 现有 `/api/v1/auth/local/login` 保持不变，兼容层只是新增可选入口
+
+### 3.5 Spring Security 配置要点
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(info -> info
+                    .userService(customOAuth2UserService))
+                .successHandler(oAuth2SuccessHandler)
+                .failureHandler(oAuth2FailureHandler)
+            )
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers("/api/v1/**"))
+            // ...
+        ;
+    }
+}
+```
+
+### 3.6 OAuth2 Provider 扩展设计
+
+一期只实现 GitHub，但架构支持后续扩展：
+
+```yaml
+# application.yml
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${OAUTH2_GITHUB_CLIENT_ID}
+            client-secret: ${OAUTH2_GITHUB_CLIENT_SECRET}
+            scope: read:user,user:email
+          gitlab:
+            client-id: ${OAUTH2_GITLAB_CLIENT_ID}
+            client-secret: ${OAUTH2_GITLAB_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+          feishu:
+            provider: feishu
+            client-id: ${OAUTH2_FEISHU_CLIENT_ID}
+            client-secret: ${OAUTH2_FEISHU_CLIENT_SECRET}
+            # 飞书的 scope 配在开放平台应用上，不在这里传
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+          dingtalk:
+            client-id: ${OAUTH2_DINGTALK_CLIENT_ID}
+            client-secret: ${OAUTH2_DINGTALK_CLIENT_SECRET}
+            # 故意不声明 scope：钉钉的授权端点要 scope=openid，但在这里声明会让
+            # Spring 把该注册当成 OIDC 客户端并附加 nonce，而钉钉不接受 nonce。
+            # scope=openid 与 prompt=consent 由 DingTalkAuthorizationRequestCustomizer
+            # 在请求阶段补上。
+            # 钉钉是 confidential client，只是由自定义 token client 把 secret 放进 JSON body。
+            # 不使用 none，避免 Spring 自动添加本实现无法应答的 PKCE challenge。
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+        provider:
+          feishu:
+            # Full endpoints are configurable for Lark, private deployments, and gateways.
+            authorization-uri: ${OAUTH2_FEISHU_AUTHORIZATION_URI:${OAUTH2_FEISHU_AUTHORIZE_URI:https://accounts.feishu.cn}/open-apis/authen/v1/authorize}
+            # OAUTH2_FEISHU_PROTOCOL_VERSION supports v2 and v3; default is v3.
+            token-uri: ${OAUTH2_FEISHU_TOKEN_URI:https://accounts.feishu.cn/oauth/v3/token}
+            user-info-uri: ${OAUTH2_FEISHU_USER_INFO_URI:${OAUTH2_FEISHU_BASE_URI:https://open.feishu.cn}/open-apis/authen/v1/user_info}
+```
+
+Spring Security OAuth2 Client 原生支持多 Provider 并存，新增 Provider 只需：
+1. `application.yml` 添加 registration 与 provider 配置
+2. 实现一个 `OAuthClaimsExtractor`，把该 Provider 的属性映射成统一的 `OAuthClaims`
+3. 登录页无需改代码：`/api/v1/auth/methods` 只返回配置了真实 client id 的注册，
+   图标按 provider 名解析为 `/{provider}-logo.svg`
+
+第 2 步是按 Provider 注册一个 Bean，而不是在某个类里按 `registrationId` 分支。
+账号匹配、建号、资料权威和账号守卫都在 `OAuthClaims` 之后共享，Provider 自己不做这些决策。
+
+如果该 Provider 的协议有偏离标准之处，按偏离的环节实现对应的策略接口，
+每个接口都声明自己负责哪个 `registrationId`，由框架分发，不需要在共享类里写分支：
+
+| 偏离环节 | 策略接口 | 现有实现 |
+|---|---|---|
+| 授权请求参数 | `ProviderAuthorizationRequestCustomizer` | 钉钉补 `scope=openid` 与 `prompt=consent` |
+| token 交换 | `ProviderTokenResponseClient` | 钉钉用 JSON body 而非表单 |
+| userinfo 加载 | `ProviderOAuth2UserService` | 飞书拆信封；钉钉用自定义 token header |
+
+以 userinfo 为例：飞书用 `{code, msg, data}` 信封且以 HTTP 200 返回错误，
+钉钉则把 token 放在 `x-acs-dingtalk-access-token` 而不是 `Authorization: Bearer`。
+两者都只接管加载步骤，其余流程不变。该覆盖运行在
+`RemoteIdentityIoExecutor` 边界内，因此 Provider 的 HTTP 调用不会持有数据库事务。
+
+Provider 的实现**不得**自己做账号决策 —— 不建号、不绑定、不建 session。
+这些一律交给统一身份核心，否则每个 Provider 都会长出一套账号逻辑，
+正是统一身份认证要消除的问题。
+
+Provider 侧还需遵守：subject 必须稳定（不要用可能在两次登录间变化的字段做
+fallback，否则同一个人会被拆成两个平台账号）、只有在 Provider 真正证明了邮箱
+所有权时才置 `emailVerified=true`、远程调用要有超时与响应大小上限、
+claims 提取过程不记录 subject/email/token。
+
+钉钉公共 Provider 的主 subject 固定为 `unionId`。`openId` 是应用作用域，`userId`
+是组织作用域，都不能作为登录时的自动 fallback；否则一次字段缺失或连接变化就可能让
+同一用户生成新的平台账号。当前版本不执行别名迁移。后续如果要兼容历史 `openId` /
+`userId` 绑定、切换 subject，或把协议代码复用到企业钉钉连接，必须走显式迁移：
+先离线生成候选 alias 与冲突报告，再经管理员确认写入 alias/binding 记录；运行时
+不得静默改键，也不得仅凭邮箱或昵称合并账号。
+
+#### 飞书 token 协议版本
+
+飞书 token client 支持显式选择 `v2` 或 `v3`，默认值为 `v3`：
+
+```bash
+OAUTH2_FEISHU_PROTOCOL_VERSION=v3
+OAUTH2_FEISHU_AUTHORIZATION_URI=https://accounts.feishu.cn/open-apis/authen/v1/authorize
+OAUTH2_FEISHU_TOKEN_URI=https://accounts.feishu.cn/oauth/v3/token
+OAUTH2_FEISHU_USER_INFO_URI=https://open.feishu.cn/open-apis/authen/v1/user_info
+OAUTH2_FEISHU_REDIRECT_URI=
+
+# 历史 v2 应用可显式切换：
+# OAUTH2_FEISHU_PROTOCOL_VERSION=v2
+# OAUTH2_FEISHU_TOKEN_URI=https://open.feishu.cn/open-apis/authen/v2/oauth/token
+```
+
+两个版本都使用 JSON authorization-code exchange，当前实现会根据协议版本
+选择对应的标准 token endpoint；如需代理、区域或私有化 endpoint，可通过
+`OAUTH2_FEISHU_TOKEN_URI` 覆盖。授权和 userinfo endpoint 也分别通过
+`OAUTH2_FEISHU_AUTHORIZATION_URI`、`OAUTH2_FEISHU_USER_INFO_URI` 配置。协议版本不合法
+时发布配置校验失败，应用也会拒绝启动。不会在 v3 失败后自动使用 v2，因为 authorization code 只能使用一次，
+自动重试可能造成重复请求并掩盖配置错误。旧的 `OAUTH2_FEISHU_AUTHORIZE_URI` 和
+`OAUTH2_FEISHU_BASE_URI` 仍作为 base-URI 兼容回退，但新部署应使用完整 endpoint 变量。
+
+## 4. 核心接口设计
+
+```java
+// 自定义 OAuth2 用户服务，处理准入 + 用户映射
+@Service
+public class CustomOAuth2UserService extends DefaultOAuth2UserService {
+
+    @Override
+    public OAuth2User loadUser(OAuth2UserRequest request) {
+        OAuth2User oAuth2User = super.loadUser(request);
+        String registrationId = request.getClientRegistration().getRegistrationId();
+
+        // 提取标准化 claims（传入 accessToken 用于调用 Provider API，如 GitHub /user/emails）
+        OAuthClaims claims = OAuthClaimsExtractor.extract(registrationId, oAuth2User, request.getAccessToken());
+
+        // 准入策略判定（基于 claims，与 Provider 无关）
+        AccessDecision decision = accessPolicy.evaluate(claims);
+        if (decision == AccessDecision.DENY) {
+            throw new OAuth2AccessDeniedException("Access denied by policy");
+        }
+        if (decision == AccessDecision.PENDING_APPROVAL) {
+            // 创建 PENDING 用户但不返回有效 principal，不建立业务 Session
+            identityBindingService.createPendingUser(registrationId, claims);
+            throw new AccountPendingException("Account pending approval");
+        }
+
+        // 绑定或创建平台用户（仅 ALLOW 才走到这里）
+        UserAccount account = identityBindingService.bindOrCreate(registrationId, claims);
+        if (account.getStatus() == UserStatus.DISABLED) {
+            throw new AccountDisabledException("Account is disabled");
+        }
+
+        return new PlatformOAuth2User(account, oAuth2User.getAuthorities());
+    }
+}
+
+// 按 Provider 提取标准化 claims（每个 Provider 有自己的可信字段契约）
+public class OAuthClaimsExtractor {
+    public static OAuthClaims extract(String registrationId, OAuth2User user,
+                                      OAuth2AccessToken accessToken) {
+        return switch (registrationId) {
+            case "github" -> extractGitHub(user, accessToken);
+            // 后续扩展其他 Provider
+            default -> throw new OAuth2AuthenticationException("Unsupported provider: " + registrationId);
+        };
+    }
+
+    // GitHub: 公开 email 可能为空，需调用 /user/emails API 获取已验证邮箱
+    private static OAuthClaims extractGitHub(OAuth2User user, OAuth2AccessToken accessToken) {
+        String verifiedEmail = GitHubEmailFetcher.fetchVerifiedEmail(accessToken);
+        return new OAuthClaims(
+            "github",
+            String.valueOf(user.getAttribute("id")),
+            verifiedEmail,                    // 从 /user/emails 获取的已验证邮箱，可能为 null
+            verifiedEmail != null,            // 只有确认 verified 才为 true
+            user.getAttribute("login"),
+            Map.of("avatar_url", user.getAttribute("avatar_url"))
+        );
+    }
+
+    // GitHubEmailFetcher: 调用 GitHub /user/emails API，
+    // 返回 primary + verified 的邮箱，无则返回 null
+}
+```
+
+### 4.1 多 Provider 账号合并策略
+
+同一个员工通过不同 OAuth Provider 登录时，可能产生多个 `user_account`。
+
+默认不按邮箱自动合并。当前自助合并要求两个账号分别完成身份确认：
+发起账号创建 30 分钟内有效的请求；待合并账号在自己的已认证会话中查看合并目标并批准；
+最后发起账号在批准后 30 分钟内确认迁移；任一账号可在完成前撤销请求。
+请求 ID 只用于定位请求，不是第二个账号的所有权凭据。
+确认合并时，对两个账号行按 ID 顺序加锁并重新检查状态，防止多个已批准请求并发完成。
+待合并账号已签发的 API Token 在合并时吊销，不转移给主账号；否则旧 Token 会继承主账号权限。
+主账号原有 Token 不变，需要自动化访问的调用方应重新签发 Token。
+账号合并页面当前仍未开放，`/settings/accounts` 保持重定向；上述流程由 API 强制执行。
+
+- 一期 GitHub-only：不需要自动合并，每个 Provider 登录独立创建用户
+- 多 Provider 场景使用显式绑定/合并流程；单独验证邮箱不能证明同时控制两个账号
+- 管理员可在后台手动合并两个 user_account（合并 identity_binding、迁移 skill ownership、合并角色取并集）
+
+合并操作规则：
+- 合并操作写入审计日志
+- 合并后原 user_account 标记为 `MERGED`，保留记录不物理删除
+- 不提供按 email 自动合并；即使 Provider 声明 email 已验证，也不能替代对两个账号控制权
+  的分别证明。未来绑定/合并必须使用显式、可审计的重新认证流程。
+
+## 5. CLI 认证（OAuth Device Flow + 平台凭证）
+
+CLI 主认证基线调整为 OAuth Device Flow。用户在 CLI 中发起授权，浏览器侧完成登录与确认，CLI 轮询后获取平台签发的凭证并访问 CLI API。
+
+- 发起：CLI 请求 device code，展示 `user_code` 与验证地址
+- 授权：用户在浏览器完成 GitHub OAuth 登录并确认绑定
+- 轮询：CLI 使用 `device_code` 轮询授权结果
+- 完成：服务端签发 CLI 可用凭证，CLI 持 `Authorization: Bearer <token>` 调用后续接口
+
+API Token 仍保留，但定位从“CLI 唯一认证方式”调整为“平台通用凭证能力”：
+
+- 用途：自动化脚本、兼容层调用、手工 Token 管理、后续系统集成
+- 存储：只存 SHA-256 哈希，明文只展示一次
+- 校验：从 `Authorization: Bearer <token>` 提取 → 哈希比对 → 加载关联用户 → 检查用户状态
+- 失败闭合与身份优先级：共享认证过滤器只识别 Bearer scheme。有效 Bearer 覆盖已加载的 Web Session 身份；Bearer 为空、格式错误、未知、过期、已吊销、用户缺失或用户禁用时立即返回 401，即使存在有效 Session 也不得回退。缺少 `Authorization` 头或使用 Basic/其他非 Bearer scheme 时保留有效 Session；若无 Session，公共读接口按匿名访问，`whoami` 返回 401
+- 作用域：`skill:read`, `skill:publish`, `skill:delete`, `token:manage`
+- 默认权限：Web 自助创建和 CLI Device Flow 均签发 `skill:read`、`skill:publish`、`skill:delete`；`token:manage` 仅在调用方显式请求时授予
+- 拒绝原因：API Token 缺少作用域或不能访问某个接口时，403 响应返回本地化的安全原因和 `requestId`；其他授权失败仍返回通用信息，避免暴露内部异常
+
+> **一期作用域说明（非最小权限）**：一期 Token 作用域为粗粒度动作级别，不与 namespace 绑定。Token 继承用户的全部权限——如果用户是某个 namespace 的 MEMBER，则该用户的任何 Token（只要包含 `skill:publish` scope）都可以向该 namespace 发布技能。这是有意的一期简化，不满足最小权限原则。后续版本计划引入 namespace 级别的 Token 作用域限定（如 `namespace:ai-team:skill:publish`），或通过 `api_token_scope` 子表实现 Token 与 namespace 的绑定。
+
+## 6. RBAC 授权判定
+
+```
+权限判定 = 平台角色权限（role → permission 查询） ∪ 命名空间角色（namespace_member.role）
+```
+
+一期即上线完整 RBAC，平台角色按最小权限拆分：
+
+| 平台角色 | 职责 |
+|---------|------|
+| `SUPER_ADMIN` | 全部权限，硬判定短路 |
+| `SKILL_ADMIN` | 全局空间审核、提升审核、隐藏/恢复技能、撤回已发布版本 |
+| `USER_ADMIN` | 准入审批、封禁/解封、角色分配（不可分配 SUPER_ADMIN） |
+| `AUDITOR` | 审计日志只读 |
+
+- 命名空间权限仍由 `namespace_member.role`（OWNER / ADMIN / MEMBER）决定
+- 一个用户可持有多个平台角色
+- 普通用户无平台角色，仅通过 namespace 成员关系获得操作权限
+
+判定逻辑：
+1. 从 SecurityContext 获取当前用户
+2. 检查用户状态（`DISABLED` → 拒绝所有操作）
+3. 查询用户的平台角色（`user_role_binding` → `role` → `role_permission`）
+4. `SUPER_ADMIN` 短路：直接通过所有权限检查
+5. 如果涉及命名空间资源，查询用户在该命名空间的角色（`namespace_member.role`）
+6. 检查命名空间状态（`FROZEN` → 拒绝写操作）
+7. 合并平台权限 + 命名空间角色，判定是否满足
+
+| 操作 | 所需权限 | 判定逻辑 |
+|------|---------|---------|
+| 发布技能包 | `skill:publish` | 普通用户要求是目标 namespace 成员；`SUPER_ADMIN` 可绕过成员校验并直发 |
+| 提交已有版本进入审核 | `review:submit` | owner 本人，或 namespace `ADMIN` / `OWNER`，或 `SKILL_ADMIN` / `SUPER_ADMIN` |
+| 管理技能（归档/版本管理） | `skill:manage` | namespace ADMIN 以上，或 owner 本人 |
+| 提升到全局 | `skill:promote` | namespace ADMIN 以上，或 owner 本人 |
+| 审核技能发布 | `review:approve` | namespace `ADMIN` / `OWNER`，或 `SKILL_ADMIN` / `SUPER_ADMIN`；提交人本人仅 `SUPER_ADMIN` 可审核自己的 review task |
+| 审核提升申请 | `promotion:approve` | 持有 SKILL_ADMIN / SUPER_ADMIN |
+| 隐藏/恢复技能 | `skill:manage` | 仅 `SUPER_ADMIN` |
+| 撤回已发布版本（YANK） | `skill:manage` | `SKILL_ADMIN` / `SUPER_ADMIN` |
+| 管理用户角色 | `user:manage` | 持有 USER_ADMIN / SUPER_ADMIN |
+| 审批用户准入 | `user:approve` | 持有 USER_ADMIN / SUPER_ADMIN |
+| 查看审计日志 | `audit:read` | 持有 AUDITOR / SUPER_ADMIN |
+
+权限主轴说明：
+- namespace role 是权限主轴，namespace ADMIN 对空间内所有 skill 有完整管理权，不受 owner 限制
+- `owner_id` 语义为"主要维护人"，owner 作为 MEMBER 时仅可管理自己创建的 skill
+- 企业场景人员流动频繁，owner 离职后 namespace ADMIN 仍能完整管理所有技能
+
+### 6.1 审核与提升 API 路径适用范围
+
+| API 路径 | 适用范围 | 权限要求 |
+|----------|---------|---------|
+| `POST /api/v1/reviews/{id}/approve` | 技能发布审核 | namespace `ADMIN` / `OWNER`，或 `SKILL_ADMIN` / `SUPER_ADMIN` |
+| `POST /api/v1/promotions/{id}/approve` | 提升到全局审核 | `SKILL_ADMIN` / `SUPER_ADMIN` |
+| `GET /api/v1/admin/audit-logs` | 审计日志查询 | AUDITOR / SUPER_ADMIN |
+| `PUT /api/v1/admin/users/{id}/roles` | 用户角色管理 | USER_ADMIN / SUPER_ADMIN |
+| `POST /api/v1/admin/users/{id}/approve` | 用户准入审批 | USER_ADMIN / SUPER_ADMIN |
+
+当前实现中，审核与提升都走统一 portal API；是否允许操作由服务层根据 namespace role 与 platform role 联合判定，而不是靠分叉路由表达。
+
+## 7. Session 设计
+
+- 存储：Spring Session + Redis（必须，多 Pod 环境刚需）
+- 序列化：JSON
+- 过期：默认 8 小时，Redis TTL 自动清理
+
+### 7.1 Session 内容
+
+Session 中存储以下字段：
+- `userId`：平台用户 ID
+- `displayName`：展示名
+- `oauthProvider`：登录使用的 OAuth Provider
+- `currentNamespaceId`：当前选中的命名空间（可选）
+- `platformRoles`：平台角色列表（如 `["SKILL_ADMIN", "AUDITOR"]`），登录时从 `user_role_binding` → `role` 查询写入
+- `roleVersion`：角色版本号，用于缓存一致性
+
+### 7.2 角色缓存一致性机制
+
+平台角色变更需要即时生效（如撤销审核权限），不能等 Session 过期：
+
+1. 每次请求时从 Session 读取 `roleVersion`
+2. 与 Redis 中的 `user:{userId}:roleVersion` 比对
+3. 版本一致 → 直接使用 Session 中的 `platformRoles`
+4. 版本不一致 → 从数据库重新加载角色，更新 Session
+
+管理员修改用户角色时，递增 Redis 中该用户的 `roleVersion`。
+
+## 8. CSRF 防护
+
+采用 Cookie-to-Header 模式：
+- 后端设置 `XSRF-TOKEN` Cookie（`HttpOnly=false`）
+- 前端从 Cookie 读取 Token，放入请求 Header `X-XSRF-TOKEN`
+- 后端校验 Header 与 Cookie 是否一致
+- CLI API（`/api/v1/**`）与兼容层（`/api/v1/**`）豁免 CSRF（使用 Bearer Token，无 Cookie）
+
+## 9. 前端权限控制
+
+### 9.1 `/api/v1/auth/me` 响应结构
+
+```json
+{
+  "code": 0,
+  "msg": "获取成功",
+  "data": {
+    "userId": "usr_42",
+    "displayName": "zhangsan",
+    "email": "zhangsan@company.com",
+    "avatarUrl": "https://...",
+    "oauthProvider": "local",
+    "canChangePassword": true,
+    "platformRoles": ["SKILL_ADMIN", "AUDITOR"]
+  },
+  "timestamp": "2026-03-12T06:00:00Z",
+  "requestId": "req-123"
+}
+```
+
+前端平台级权限判定基于 `platformRoles`；是否展示修改密码入口和表单基于后端返回的 `canChangePassword`。后端通过 `role_permission` 表查询权限码。
+
+统一约束：
+- `/api/v1/auth/me`、`/api/v1/auth/providers` 等 JSON 响应必须统一使用 `code/msg/data/timestamp/requestId` 外层结构。
+- `/api/v1/auth/session/bootstrap` 也必须遵守同一统一响应结构。
+- `msg` 必须走 Spring Boot 标准 `MessageSource` i18n 机制。
+- locale 必须通过请求上下文自动获取，不在 controller 中显式传递。
+- 认证失败返回 `401`，但 JSON 外层结构仍保持一致，例如 `{"code":401,"msg":"需要先登录","data":null,...}`。
+
+### 9.2 usePermission() Hook
+
+```typescript
+function usePermission() {
+  const { data: me } = useQuery({ queryKey: ['auth', 'me'], queryFn: fetchMe })
+
+  const hasRole = (role: string) => me?.platformRoles.includes(role) ?? false
+  const isSuperAdmin = () => hasRole('SUPER_ADMIN')
+  const isSkillAdmin = () => hasRole('SKILL_ADMIN') || isSuperAdmin()
+  const isUserAdmin = () => hasRole('USER_ADMIN') || isSuperAdmin()
+  const isAuditor = () => hasRole('AUDITOR') || isSuperAdmin()
+
+  return {
+    isLoggedIn: !!me,
+    isSuperAdmin,
+    isSkillAdmin,
+    isUserAdmin,
+    isAuditor,
+
+    // 命名空间角色判定
+    getNamespaceRole: (slug: string) =>
+      me?.namespaces.find(n => n.slug === slug)?.role,
+    isNamespaceAdmin: (slug: string) =>
+      ['OWNER', 'ADMIN'].includes(me?.namespaces.find(n => n.slug === slug)?.role ?? ''),
+    isNamespaceMember: (slug: string) =>
+      ['OWNER', 'ADMIN', 'MEMBER'].includes(me?.namespaces.find(n => n.slug === slug)?.role ?? ''),
+  }
+}
+```
+
+### 9.3 路由级守卫
+
+在 TanStack Router `beforeLoad` 中判定：
+
+| 路由 | 条件 |
+|------|------|
+| `/dashboard/*` | 已登录 |
+| `/dashboard/namespaces/{slug}/reviews` | 已登录 + 该 namespace 的 ADMIN 以上 |
+| `/admin/*` | 已登录 + 持有任一平台角色（SUPER_ADMIN / SKILL_ADMIN / USER_ADMIN / AUDITOR） |
+
+不满足条件时：未登录 → 重定向登录；已登录但无权限 → 显示 403 页面。
+
+### 9.4 操作级控制
+
+| 场景 | 判定逻辑 | UI 行为 |
+|------|---------|---------|
+| 技能详情页"提交发布"按钮 | `isNamespaceMember(namespace)` | 非成员不显示 |
+| 审核列表"通过/拒绝"按钮 | 团队空间：`isNamespaceAdmin(namespace)`；全局空间：`isSkillAdmin()` | 无权限不显示 |
+| 用户管理页 | `isUserAdmin()` | 无权限不显示 |
+| 用户管理页"设为 SUPER_ADMIN" | `isSuperAdmin()` | 仅超管可见 |
+| 审计日志页 | `isAuditor()` | 无权限不显示 |
+| 技能详情页"归档"按钮 | `isNamespaceAdmin(namespace)` 或当前用户是 owner | 否则不显示 |
+| 命名空间"添加成员"按钮 | `isNamespaceAdmin(namespace)` | 非管理员不显示 |
+| 收藏/评分按钮 | `isLoggedIn` | 未登录时点击提示登录 |
+
+### 9.5 登录交互
+
+```
+前端登录按钮
+    │
+    ▼
+window.location.href = '/oauth2/authorization/github'
+    │
+    ▼
+(后端 OAuth2 流程，用户无感)
+    │
+    ▼
+回调后重定向到前端 (如 /?login=success)
+    │
+    ▼
+前端检测 URL 参数 → 调用 /api/v1/auth/me → 更新登录态
+```
+
+前端无需引入额外 OAuth 库，登录流程完全由后端 Spring Security 处理。前端只需：
+- 调用 `/api/v1/auth/providers` 获取可用 Provider 列表，动态渲染登录按钮
+- 处理登录后的重定向
+- 通过 `/api/v1/auth/me` 检测登录状态
+
+### 9.6 安全边界原则
+
+- 前端权限控制是 UX 优化，不是安全边界
+- 后端每个写操作接口独立校验权限，不信任前端判定
+- 前端隐藏按钮 ≠ 安全，用户可以直接调 API，后端必须拦截
+
+## 10. 权限矩阵（完整）
+
+以下矩阵列出每个 API 接口的权限判定来源，作为后端实现的唯一参考。
+
+### 10.1 Public API（匿名可访问）
+
+| 接口 | 匿名 | 已登录 | 判定逻辑 |
+|------|------|--------|---------|
+| `GET /api/v1/skills`（搜索） | 仅 `PUBLIC`，且仅搜索 `ACTIVE`、非 hidden、已索引 skill | `PUBLIC + NAMESPACE_ONLY（成员空间）+ PRIVATE（owner/admin）` | `SearchVisibilityScope` + 搜索索引状态 |
+| `GET /api/v1/skills/{ns}/{slug}` | 仅已发布且可见的 `PUBLIC` skill | 同左，另加 owner 可读未发布 skill、namespace `ADMIN` / `OWNER` 可读 hidden | `visibility + latest_version_id + hidden + namespace 成员关系` |
+| `GET /api/v1/skills/{ns}/{slug}/versions` | 仅 `PUBLISHED` 版本 | owner / namespace `ADMIN` / `OWNER` 可见全部五种状态 | 同上 + version status 过滤 |
+| `GET /api/v1/skills/{ns}/{slug}/download` | 仅 `PUBLIC`、`ACTIVE`、非 hidden、命名空间未归档且目标版本可安装的 skill 支持匿名下载 | 已登录后按 visibility 判定；下载目标版本必须可安装 | visibility + namespace status + `SkillInstallability` |
+| `GET /api/v1/skills/{ns}/{slug}/resolve` | 仅 `PUBLIC`、`ACTIVE`、非 hidden、命名空间未归档且目标版本可安装的 skill 可匿名 | 同上 | visibility + namespace status + `SkillInstallability` |
+| `GET /api/v1/namespaces` | 全部 | 全部 | 无限制 |
+
+### 10.2 Authenticated API
+
+| 接口 | 所需权限 | 判定来源 |
+|------|---------|---------|
+| `POST /api/v1/skills/{ns}/{slug}/star` | 已登录 | Session/Token |
+| `POST /api/v1/skills/{ns}/{slug}/rating` | 已登录 | Session/Token |
+| `POST /api/v1/reviews` | owner 本人，或 namespace `ADMIN` / `OWNER`，或 `SKILL_ADMIN` / `SUPER_ADMIN` | `skill.owner_id` / `namespace_member.role` / platform roles |
+| `POST .../versions/{ver}/withdraw-review` | 提交人本人 | `review_task.submitted_by` |
+| `PUT /api/v1/skills/{ns}/{slug}/tags/{tag}` | namespace ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
+| `POST /api/v1/skills/{ns}/{slug}/archive` | namespace ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
+| `POST .../versions/{ver}/rerelease` | namespace ADMIN 以上 或 owner；源版本必须 `PUBLISHED` | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
+| `DELETE .../versions/{ver}` | namespace ADMIN 以上 或 owner（仅 `DRAFT` / `REJECTED`） | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
+| `POST .../versions/{ver}/yank` | namespace ADMIN 以上 或 owner；版本必须 `PUBLISHED`；API Token 需 `skill:publish` | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
+
+### 10.3 CLI API
+
+| 接口 | 凭证规则 | 授权与错误语义 |
+|------|---------|---------------|
+| `GET /api/cli/v1/auth/whoami` | 有效 Web Session 或有效 Bearer Token | 无有效身份返回 401；坏 Bearer 即使存在 Session 也返回 401 |
+| `GET /api/cli/v1/skills/search` | Session 可用；无 Session 时可匿名；提供 Bearer 时必须有效 | 匿名仅返回公开可安装 skill；有效 Bearer 覆盖 Session；坏 Bearer 返回 401，不得降级 |
+| `GET /api/cli/v1/skills/{namespace}/{slug}/resolve` | Session 可用；无 Session 时可匿名读取公开资源；提供 Bearer 时必须有效 | 有效 Bearer 覆盖 Session；坏 Bearer 返回 401；有效身份无资源权限返回 403 |
+| `GET /api/cli/v1/skills/{namespace}/{slug}/download` | Session 可用；无 Session 时可匿名下载公开资源；提供 Bearer 时必须有效 | 有效 Bearer 覆盖 Session；坏 Bearer 返回 401；有效身份无资源权限返回 403 |
+| `GET /api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download` | Session 可用；无 Session 时可匿名下载公开资源；提供 Bearer 时必须有效 | 有效 Bearer 覆盖 Session；坏 Bearer 返回 401；有效身份无资源权限返回 403 |
+
+Spring Security 先加载 Web Session 身份，共享 API token 过滤器随后只处理 Bearer scheme。有效 Bearer 会覆盖 Session，确保请求使用 token 的用户、角色与 scope；Bearer 为空、格式错误、未知、过期、已撤销、用户缺失或用户禁用时，过滤器清除当前身份并立即返回 401，不能回退到 Session 或匿名身份。完全缺少 `Authorization` 头或使用 Basic/其他非 Bearer scheme 时，过滤器不改变已有 Session；如果 Session 也不存在，公共读接口按匿名身份执行，而 `whoami` 返回 401。身份已验证但 token scope 或资源可见性不足时返回 403；服务端不向客户端区分 token 不存在、过期或已撤销。`whoami.email` 字段始终存在，但没有可用邮箱时值为 `null`。
+
+### 10.4 Admin API
+
+| 接口 | 所需平台角色 | 判定来源 |
+|------|------------|---------|
+| `POST /api/v1/admin/skills/{id}/hide` | SUPER_ADMIN | `user_role_binding` → `role_permission` |
+| `POST /api/v1/admin/skills/{id}/unhide` | SUPER_ADMIN | 同上 |
+| `POST /api/v1/admin/skills/versions/{versionId}/yank` | SKILL_ADMIN / SUPER_ADMIN | 同上 |
+| `PUT /api/v1/admin/users/{id}/roles` | USER_ADMIN / SUPER_ADMIN | 同上，且 USER_ADMIN 不可分配 SUPER_ADMIN |
+| `POST /api/v1/admin/users/{id}/approve` | USER_ADMIN / SUPER_ADMIN | 同上 |
+| `POST /api/v1/admin/users/{id}/ban` | USER_ADMIN / SUPER_ADMIN | 同上 |
+| `GET /api/v1/admin/audit-logs` | AUDITOR / SUPER_ADMIN | 同上 |
+
+### 10.5 Namespace API
+
+| 接口 | 所需 namespace 角色 | 判定来源 |
+|------|-------------------|---------|
+| `POST /api/v1/namespaces/{slug}/members` | 该空间 ADMIN 以上 | `namespace_member.role` |
+| `DELETE /api/v1/namespaces/{slug}/members/{userId}` | 该空间 ADMIN 以上 | `namespace_member.role` |
+| `POST /api/v1/promotions` | 该空间 ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
+
+### 10.6 Compatibility API（Bearer Token 认证）
+
+| 接口 | 所需凭证 | 额外判定 |
+|------|---------|---------|
+| `GET /api/v1/whoami` | 任意有效 Bearer Token | 无 |
+| `GET /api/v1/search` | 可选（匿名限 PUBLIC） | `SearchVisibilityScope` |
+| `GET /api/v1/resolve` | 可选（匿名仅限 `PUBLIC`、`ACTIVE`、非 hidden、命名空间未归档且目标版本可安装） | visibility + namespace status + `SkillInstallability` |
+| `GET /api/v1/download/{slug}/{version}` | 可选（匿名仅限 `PUBLIC`、`ACTIVE`、非 hidden、命名空间未归档且目标版本可安装） | visibility + namespace status + `SkillInstallability` |
+| `POST /api/v1/publish` | Bearer Token + `skill:publish` | 普通用户要求目标 namespace 成员；`SUPER_ADMIN` 可绕过（namespace 由 canonical slug 解析） |

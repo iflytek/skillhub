@@ -1,0 +1,79 @@
+{{- if .Values.scanner.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "skillhub.fullname" . }}-scanner
+  labels:
+    {{- include "skillhub.scanner.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.scanner.autoscaling.enabled }}
+  replicas: {{ .Values.scanner.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "skillhub.scanner.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "skillhub.scanner.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ toYaml (dict "scanner" .Values.scanner "secrets" .Values.secrets "existingSecret" .Values.existingSecret) | sha256sum }}
+        {{- range $key, $val := .Values.scanner.podAnnotations }}
+        {{ $key }}: {{ $val }}
+        {{- end }}
+    spec:
+      {{- $secrets := .Values.scanner.imagePullSecrets }}
+      {{- if $secrets }}
+      imagePullSecrets:
+        {{- toYaml $secrets | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: scanner
+          image: {{ .Values.scanner.image.registry | default .Values.images.registry }}/skillhub-scanner:{{ .Values.scanner.image.tag | default .Values.images.tag | default (printf "v%s" .Chart.AppVersion) }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.scanner.service.port }}
+              name: http
+          env:
+            - name: SKILL_SCANNER_LLM_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: skill-scanner-llm-api-key
+                  optional: true
+            - name: SKILL_SCANNER_LLM_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: skill-scanner-llm-base-url
+                  optional: true
+            - name: SKILL_SCANNER_LLM_MODEL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: skill-scanner-llm-model
+                  optional: true
+            {{- with .Values.scanner.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            - name: SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES
+              value: {{ .Values.scanner.maxUploadSizeBytes | quote }}
+          resources:
+            {{- toYaml .Values.scanner.resources | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.scanner.probes.readiness | nindent 12 }}
+          livenessProbe:
+            {{- toYaml .Values.scanner.probes.liveness | nindent 12 }}
+      {{- with .Values.scanner.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.scanner.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.scanner.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

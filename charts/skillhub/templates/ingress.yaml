@@ -1,0 +1,64 @@
+{{- if .Values.ingress.enabled }}
+{{- $hosts := .Values.ingress.hosts }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "skillhub.fullname" . }}
+  labels:
+    {{- include "skillhub.labels" . | nindent 4 }}
+  {{- if .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml .Values.ingress.annotations | nindent 4 }}
+  {{- end }}
+spec:
+  {{- if .Values.ingress.className }}
+  ingressClassName: {{ .Values.ingress.className | quote }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    {{- toYaml .Values.ingress.tls | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range $host := $hosts }}
+    - host: {{ $host.host | quote }}
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "skillhub.fullname" $ }}-server
+                port:
+                  number: {{ $.Values.server.service.port }}
+          - path: /oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "skillhub.fullname" $ }}-server
+                port:
+                  number: {{ $.Values.server.service.port }}
+          - path: /login/oauth2
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "skillhub.fullname" $ }}-server
+                port:
+                  number: {{ $.Values.server.service.port }}
+          - path: /.well-known
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "skillhub.fullname" $ }}-server
+                port:
+                  number: {{ $.Values.server.service.port }}
+          {{- range $path := $host.paths }}
+          - path: {{ $path.path | quote }}
+            pathType: {{ $path.pathType }}
+            backend:
+              service:
+                name: {{ include "skillhub.fullname" $ }}-web
+                port:
+                  number: {{ $.Values.web.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

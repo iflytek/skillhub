@@ -1,0 +1,733 @@
+# SkillHub CLI
+
+SkillHub CLI is the official command-line tool for SkillHub, designed for searching, installing, managing, and publishing Agent skill packages.
+
+## Installation
+
+```bash
+# Install globally via npm
+npm install -g @astron-team/skillhub
+
+# Or run directly with npx
+npx @astron-team/skillhub@latest version
+
+# Or install globally via Bun
+bun add -g @astron-team/skillhub
+```
+
+## Quick Start
+
+```bash
+# Login
+skillhub login --token sk_xxx
+
+# Search skills
+skillhub search pdf
+
+# Install skill to Agent directory
+skillhub install pdf-parser --agent codex
+
+# List installed skills
+skillhub list
+
+# Publish skill
+skillhub publish ./my-skill --namespace myspace
+```
+
+## Registry Configuration
+
+The active registry is resolved in the following priority order:
+
+1. `--registry <url>` command-line argument
+2. `SKILLHUB_REGISTRY` environment variable
+3. `registry` in `~/.skillhub/config.json`
+4. Default value `https://skill.xfyun.cn`
+
+```bash
+# Temporarily use another registry
+skillhub search pdf --registry https://skillhub.example.com
+
+# Set via environment variable (Linux/macOS)
+export SKILLHUB_REGISTRY=https://skillhub.example.com
+```
+
+**Windows PowerShell:**
+
+```powershell
+$env:SKILLHUB_REGISTRY="https://skillhub.example.com"
+```
+
+**Windows CMD:**
+
+```cmd
+set SKILLHUB_REGISTRY=https://skillhub.example.com
+```
+
+## Authentication
+
+Token resolution priority:
+
+1. `--token <token>` command-line argument
+2. `SKILLHUB_TOKEN` environment variable
+3. Token stored in `~/.skillhub/credentials.json` (per registry)
+
+### Login
+
+```bash
+# Login with API token
+skillhub login --token sk_xxx
+
+# Login to specific registry
+skillhub login --token sk_xxx --registry https://skillhub.example.com
+```
+
+`login` validates the token, stores it in `~/.skillhub/credentials.json`, and writes the registry to `~/.skillhub/config.json`.
+
+Both files are updated non-destructively: SkillHub CLI changes only its own `tokens` and `registry`
+fields and preserves unknown fields written by other compatible tools.
+
+When an API-token request is denied, the CLI shows the safe reason returned by the server and its `Request ID`. Use that ID to correlate the failure with server logs. Other authorization failures continue to use a generic message.
+
+### Check Current Identity
+
+```bash
+skillhub whoami
+
+# Check specific registry
+skillhub whoami --registry https://skillhub.example.com
+
+# Temporarily use different token
+skillhub whoami --token sk_other
+```
+
+### Logout
+
+```bash
+skillhub logout
+
+# Logout from specific registry
+skillhub logout --registry https://skillhub.example.com
+```
+
+Logout only removes the token for the specified registry, preserving registry configuration and installation records.
+
+## Search
+
+```bash
+# Keyword search
+skillhub search pdf
+
+# List all skills (empty query)
+skillhub search "" --limit 50
+
+# JSON output
+skillhub search pdf --json
+```
+
+Output format: `namespace/slug  version  summary`
+
+## Install Skills
+
+Install coordinates accept a bare slug (resolved to `global` by default) and
+three equivalent explicit namespace forms. When an explicit coordinate and
+`--namespace` are both present, they must match.
+
+```bash
+# Install to auto-detected Agent directory
+skillhub install pdf-parser
+
+# Equivalent namespace coordinates
+skillhub install team/my-skill
+skillhub install @team/my-skill
+skillhub install team--my-skill
+
+# Choose install scope explicitly
+skillhub install pdf-parser --scope user
+skillhub install pdf-parser --scope project --agent codex
+
+# Specify a namespace for a bare slug
+skillhub install pdf-parser --namespace myspace
+
+# Specify version
+skillhub install pdf-parser --version 1.2.0
+
+# Install to specific Agent
+skillhub install pdf-parser --agent codex
+
+# Install to AStudio's fixed user-level directory
+skillhub install pdf-parser --agent astudio
+
+# Install to Pi's user-level directory (use --scope project for the project directory)
+skillhub install pdf-parser --agent pi
+
+# Install to DeepSeek Harness (use --scope project from the repository root for project skills)
+skillhub install pdf-parser --agent dsh
+
+# Install to multiple Agents
+skillhub install pdf-parser --agent codex --agent claude-code
+
+# Install to custom directory
+skillhub install pdf-parser --dir ~/.claude/skills
+
+# Reinstall a SkillHub-managed installation from the same source
+skillhub install pdf-parser --force
+```
+
+### Install Target Resolution
+
+The CLI determines the installation location using the following logic:
+
+1. If `--dir` is specified: Install to that directory, agent marked as `custom`. `--dir` is mutually exclusive with `--scope` and `--agent`.
+2. If `--scope user|project` is specified: Limit detection to the chosen scope.
+   - With `--agent <profile>`: Install to that profile's user or project skills directory directly.
+   - Without `--agent`: Detect existing skills directories within the chosen scope only. In interactive user scope, the `generic` target (`<home>/.agents/skills/`) is always also offered and can be selected alone or together with detected targets.
+   - No detected directory in the chosen scope → Fallback to `<home>/.agents/skills/` for `--scope user` or `<cwd>/.agents/skills/` for `--scope project`.
+3. If `--agent` is specified (no `--scope`): Install to the corresponding Agent's skills directory (existing behaviour, unchanged).
+4. If none of the above is specified:
+   - **Interactive mode** (stdin and stdout are both TTY, no `--json`): Prompt for `user` or `project` scope first, then continue per the `--scope` rule above.
+   - **Non-interactive mode**: Auto-scan current directory to detect existing Agent config directories. 1 Agent detected → install directly; multiple → error; none detected → fallback to `<cwd>/.agents/skills/`.
+
+> `--dir` cannot be combined with `--scope` or `--agent`.
+
+### Install Paths
+
+Most Agents have both project-level and user-level skills directories. Use `--scope user|project` to control which one is used. AStudio uses its fixed user-level directory only.
+
+| Agent | Project-level Path | User-level Path |
+|-------|-------------------|-----------------|
+| `astudio` (AStudio) | Not supported | `~/.acode/skills/` |
+| `claude-code` | `<project>/.claude/skills/` | `~/.claude/skills/` |
+| `codex` | `<project>/.codex/skills/` | `~/.codex/skills/` |
+| `cursor` | `<project>/.cursor/skills/` | `~/.cursor/skills/` |
+| `dsh` (DeepSeek Harness) | `<project>/.dsh/skills/` | `~/.dsh/skills/` |
+| `github-copilot` | `<project>/.github-copilot/skills/` | `~/.github-copilot/skills/` |
+| `gemini-cli` | `<project>/.gemini/skills/` | `~/.gemini/skills/` |
+| `windsurf` | `<project>/.windsurf/skills/` | `~/.windsurf/skills/` |
+| `kiro-cli` | `<project>/.kiro/skills/` | `~/.kiro/skills/` |
+| `roo` | `<project>/.roo/skills/` | `~/.roo/skills/` |
+| `trae` | `<project>/.trae/skills/` | `~/.trae/skills/` |
+| `trae-cn` | `<project>/.trae-cn/skills/` | `~/.trae-cn/skills/` |
+| `openhands` | `<project>/.openhands/skills/` | `~/.openhands/skills/` |
+| `openclaw` | `<project>/.openclaw/skills/` | `~/.openclaw/skills/` |
+| `opencode` | `<project>/.opencode/skills/` | `~/.opencode/skills/` |
+| `kilo` | `<project>/.kilo/skills/` | `~/.kilo/skills/` |
+| `pi` (Pi) | `<project>/.pi/skills/` | `~/.pi/agent/skills/` |
+| _fallback_ | `<project>/.agents/skills/` | `~/.agents/skills/` |
+
+For a custom path or an unsupported Agent directory, use `--dir` to specify the installation path. In interactive user scope, the `generic` target is offered alongside detected Agent targets. AStudio appears in that selector when `~/.acode/skills/` exists. When `--scope user|project` finds no matching agent directory, the CLI falls back to the `_fallback_` row above.
+
+DeepSeek Harness resolves project skills from the nearest Git repository root, while SkillHub CLI uses the current directory for project-scoped profiles. Run `--scope project --agent dsh` from the repository root. If `DSH_HOME` overrides the default `~/.dsh`, install with `--dir "$DSH_HOME/skills"`.
+
+### File Structure After Installation
+
+```
+.codex/skills/pdf-parser/
+├── ...                          # Extracted skill package files
+└── .skillhub/
+    └── metadata.json            # Installation metadata
+```
+
+`metadata.json` example:
+
+```json
+{
+  "schemaVersion": 1,
+  "registry": "https://skill.xfyun.cn",
+  "namespace": "global",
+  "slug": "pdf-parser",
+  "version": "1.0.0",
+  "versionId": 123,
+  "fingerprint": "sha256:...",
+  "files": { "SKILL.md": "sha256..." },
+  "agent": "codex",
+  "installedAt": "2026-04-28T06:00:00.000Z"
+}
+```
+
+The CLI creates this file after extracting the registry package. It is not included in the downloaded
+ZIP, and `.skillhub/` is excluded when an installed directory is published again.
+
+## Upgrade Installed Skills
+
+```bash
+# Preview without changing files
+skillhub upgrade @global/skillhub-cli --check
+
+# Upgrade one or a bounded list of installed Skills
+skillhub upgrade @global/skillhub-cli
+skillhub upgrade @team/code-review @team/java-guide
+
+# Deterministic machine-readable plan
+skillhub upgrade @team/code-review --check --json
+```
+
+`upgrade` never installs a missing Skill and has no implicit upgrade-all mode. Local changes require
+`--force`; it only replaces a managed installation whose full `registry + namespace + slug` source
+matches.
+
+All targets in one inventory entry are upgraded together. A filter that selects only part of that
+entry is rejected because the current inventory format stores one shared version for all targets.
+The command also keeps the local files when the registry resolves to an older version.
+If a multi-Skill run fails after an earlier upgrade commits, execution stops and reports each item
+as `upgraded`, `failed`, or `not-attempted`; a committed upgrade is never rolled back implicitly.
+New installations store absolute target paths. Reinstall an older entry that still contains relative
+target paths before upgrading it; the CLI cannot safely infer the original working directory.
+
+## Local Management
+
+### List Installed Skills
+
+```bash
+# List all installed skills
+skillhub list
+
+# Filter by Agent
+skillhub list --agent codex
+
+# Filter by multiple Agents
+skillhub list --agent codex --agent claude-code
+
+# Filter by directory
+skillhub list --dir ~/.codex/skills
+
+# JSON output
+skillhub list --json
+```
+
+### Remove Skills
+
+```bash
+# A bare slug removes same-named local installations across namespaces
+skillhub remove pdf-parser
+
+# An explicit namespaced coordinate removes only that namespace
+skillhub remove myspace/pdf-parser
+skillhub remove @myspace/pdf-parser
+skillhub remove myspace--pdf-parser
+
+# Equivalent precise local removal with an explicit namespace
+skillhub remove pdf-parser --namespace myspace
+
+# Remove only specific Agent's installation
+skillhub remove pdf-parser --agent codex
+
+# Remove all targets (skip interactive confirmation)
+skillhub remove pdf-parser --all
+
+# Remove remote skill (requires authentication, prompts for confirmation)
+skillhub remove pdf-parser --remote --namespace myspace
+
+# Skip remote deletion confirmation
+skillhub remove pdf-parser --remote --hard --namespace myspace
+```
+
+> Parameter exclusivity rules:
+> - `--all` cannot be used with `--agent`
+> - `--remote` cannot be used with `--agent` or `--all`
+> - Remote deletion in non-interactive environments requires `--hard`
+
+### Rebuild Local Inventory
+
+```bash
+skillhub doctor
+```
+
+`doctor` performs the following operations:
+
+1. Scans `<cwd>/.<agent>/skills/<slug>/.skillhub/metadata.json`
+2. Groups by `registry + namespace + slug`
+3. Backs up old `inventory.json` (if exists)
+4. Writes new `inventory.json`
+
+If the same skill has version conflicts across different targets, that skill will be skipped and reported.
+
+## Publishing
+
+```bash
+# Publish directory (auto-packaged as zip)
+skillhub publish ./my-skill --namespace myspace
+
+# Publish existing zip file
+skillhub publish ./my-skill.zip --namespace myspace
+
+# Specify visibility
+skillhub publish ./my-skill --namespace myspace --visibility private
+```
+
+Visibility options:
+- `public` (default) — Visible to everyone
+- `namespace-only` — Visible to namespace members only
+- `private` — Visible to yourself only
+
+After successful publication, the skill detail page URL will be displayed.
+
+## Self-Update
+
+```bash
+# Check for new version
+skillhub update --check
+
+# Execute update
+skillhub update
+```
+
+Update mechanism:
+- Installed via npm globally: Auto-executes `npm install -g @astron-team/skillhub@latest`
+- Installed via Bun globally: Auto-executes `bun add -g @astron-team/skillhub@latest`
+- Run via npx: Prompts manual update command
+- Unknown installation method: Prompts manual update
+
+## Environment Variables
+
+| Variable | Description | Priority |
+|----------|-------------|----------|
+| `SKILLHUB_REGISTRY` | Default registry URL | Lower than `--registry` parameter |
+| `SKILLHUB_TOKEN` | API token | Lower than `--token` parameter, higher than stored token |
+
+## Local File Structure
+
+```
+~/.skillhub/
+├── config.json           # User configuration (registry, defaultAgent, etc.)
+├── credentials.json      # API tokens (stored per registry, permissions 0600)
+└── inventory.json        # Installed skills inventory
+```
+
+### config.json
+
+```json
+{
+  "registry": "https://skill.xfyun.cn",
+  "defaultAgent": "codex",
+  "lastUpdateCheckAt": "2026-04-28T06:00:00.000Z"
+}
+```
+
+### credentials.json
+
+```json
+{
+  "tokens": {
+    "https://skill.xfyun.cn": "sk_xxx",
+    "https://skillhub.example.com": "sk_yyy"
+  }
+}
+```
+
+### inventory.json
+
+```json
+{
+  "items": [
+    {
+      "registry": "https://skill.xfyun.cn",
+      "namespace": "global",
+      "slug": "pdf-parser",
+      "version": "1.0.0",
+      "targets": [
+        {
+          "agent": "codex",
+          "rootDir": "/path/to/project/.codex/skills",
+          "installDir": "/path/to/project/.codex/skills/pdf-parser",
+          "installedAt": "2026-04-28T06:00:00.000Z"
+        }
+      ]
+    }
+  ]
+}
+```
+
+## JSON Output
+
+All commands support the `--json` parameter for machine-readable JSON output:
+
+```bash
+skillhub search pdf --json
+skillhub list --json
+skillhub whoami --json
+skillhub install pdf-parser --json
+skillhub remove pdf-parser --json
+skillhub doctor --json
+```
+
+Success response format:
+
+```json
+{
+  "ok": true,
+  ...
+}
+```
+
+Error response format:
+
+```json
+{
+  "ok": false,
+  "message": "error message",
+  "exitCode": 2,
+  "details": {
+    "registry": "https://skill.xfyun.cn",
+    "next": "run `skillhub login`"
+  }
+}
+```
+
+## Exit Codes
+
+| Exit Code | Description |
+|-----------|-------------|
+| 0 | Success |
+| 1 | General error |
+| 2 | Authentication failure |
+| 3 | Network error |
+| 4 | File system error |
+| 5 | Parameter error |
+
+## Command Reference
+
+### help
+
+```bash
+skillhub help
+skillhub help install
+```
+
+Display help information.
+
+### version
+
+```bash
+skillhub version
+skillhub version --json
+```
+
+Display CLI version.
+
+### login
+
+```bash
+skillhub login --token <token> [--registry <url>] [--json]
+```
+
+Save token and registry configuration.
+
+The CLI preserves unknown fields in the shared configuration and credentials documents when it
+updates its own `registry` and `tokens` fields.
+
+### logout
+
+```bash
+skillhub logout [--registry <url>] [--json]
+```
+
+Remove token for specified registry.
+
+### whoami
+
+```bash
+skillhub whoami [--registry <url>] [--token <token>] [--json]
+```
+
+Validate current token and display user information.
+
+### search
+
+```bash
+skillhub search <query> [--registry <url>] [--limit <n>] [--json]
+```
+
+Search published skills.
+
+### install
+
+```bash
+skillhub install <coordinate> [options]
+```
+
+`<coordinate>` accepts a bare slug (`my-skill`, resolved as `global/my-skill`)
+or any of the equivalent explicit namespace forms: `team/my-skill`,
+`@team/my-skill`, and `team--my-skill`. Use `--namespace team` to select a
+non-global namespace for a bare slug. An explicit coordinate may be combined
+with the same `--namespace`; a conflicting value is rejected as a usage error.
+
+Options:
+- `--scope <user|project>` — Install scope (omit for interactive prompt in TTY, or fall back to existing detection in non-TTY)
+- `--namespace <slug>` — Namespace for a bare slug
+- `--version <v>` — Version (default: latest)
+- `--agent <profile>` — Agent profile (repeatable)
+- `--dir <path>` — Custom installation directory (mutually exclusive with `--scope` and `--agent`)
+- `--force` — Replace an existing SkillHub-managed installation from the same source
+- `--registry <url>` — Registry URL
+- `--token <token>` — API token
+- `--json` — JSON output
+
+### upgrade
+
+```bash
+skillhub upgrade <coordinate...> [options]
+```
+
+Options:
+- `--namespace <slug>` — Filter a bare slug by namespace
+- `--agent <profile>` — Filter installed targets by Agent (repeatable)
+- `--dir <path>` — Filter installed targets by directory
+- `--registry <url>` — Filter by installation source registry
+- `--check` — Print the exact plan without modifying files
+- `--force` — Replace local changes only for the same full source identity
+- `--json` — JSON output
+
+### list
+
+```bash
+skillhub list [options]
+```
+
+Options:
+- `--agent <profile>` — Filter by Agent (repeatable)
+- `--dir <path>` — Filter by directory
+- `--registry <url>` — Registry URL
+- `--json` — JSON output
+
+### remove
+
+```bash
+skillhub remove <coordinate> [options]
+```
+
+Options:
+- `--agent <profile>` — Filter by Agent (repeatable)
+- `--all` — Remove all targets
+- `--remote` — Remove remote skill
+- `--hard` — Skip remote deletion confirmation
+- `--namespace <slug>` — Namespace for local or remote deletion
+- `--registry <url>` — Registry URL
+- `--token <token>` — API token
+- `--json` — JSON output
+
+An explicit namespaced coordinate (`team/my-skill`, `@team/my-skill`, or
+`team--my-skill`) or `--namespace team` removes local installations only from
+that namespace. For compatibility, a bare slug removes same-named local
+installations across all namespaces in the current registry.
+
+### doctor
+
+```bash
+skillhub doctor [--json]
+```
+
+Scan project directory and rebuild local inventory.
+
+### publish
+
+```bash
+skillhub publish <path> [options]
+```
+
+Options:
+- `--namespace <slug>` — Namespace
+- `--visibility <v>` — Visibility (`public` | `namespace-only` | `private`)
+- `--registry <url>` — Registry URL
+- `--token <token>` — API token
+- `--json` — JSON output
+
+### update
+
+```bash
+skillhub update [--check] [--json]
+```
+
+Check or execute CLI self-update.
+
+## Security Notes
+
+- Tokens are stored only in user directory `~/.skillhub/credentials.json`
+- On Linux/macOS, credential file permissions are automatically set to `0600`
+- Tokens are never written to any project-local files
+- Remote delete operations require explicit confirmation or `--hard` parameter
+- `remove` command validates path safety to prevent deletion of non-skill directories
+
+## Troubleshooting
+
+### Authentication Failure
+
+```bash
+# Verify token validity
+skillhub whoami
+
+# Re-login
+skillhub login --token sk_xxx
+```
+
+### Network Error
+
+```bash
+# Check if registry is accessible
+curl https://skill.xfyun.cn/api/cli/v1/skills/search?q=test&limit=1
+
+# Use alternative registry
+skillhub search test --registry https://skillhub.example.com
+```
+
+### Installation Directory Conflict
+
+```bash
+# Reinstall only when the existing directory has matching SkillHub source metadata
+skillhub install pdf-parser --force
+
+# Or remove first then install
+skillhub remove pdf-parser
+skillhub install pdf-parser
+```
+
+`--force` never overwrites an unmanaged directory or a Skill installed from another registry,
+namespace, or slug. Move or explicitly remove that directory first.
+
+### Corrupted Inventory
+
+```bash
+# Rebuild inventory
+skillhub doctor
+```
+
+## Local Development Verification
+
+If you're developing SkillHub locally, you can verify the CLI like this:
+
+```bash
+# 1. Build CLI
+cd cli
+bun install
+bun run build
+bun link
+
+# 2. Start local backend
+cd ..
+make dev-all
+
+# 3. Configure CLI to connect to local service (Linux/macOS)
+export SKILLHUB_REGISTRY=http://localhost:8080
+
+# Windows PowerShell:
+# $env:SKILLHUB_REGISTRY="http://localhost:8080"
+
+# Windows CMD:
+# set SKILLHUB_REGISTRY=http://localhost:8080
+
+# 4. Test commands
+skillhub search test
+skillhub install example-skill --agent codex
+skillhub list
+```
+
+## Related Links
+
+- [SkillHub Homepage](https://skill.xfyun.cn)
+- [GitHub Repository](https://github.com/iflytek/skillhub)
+- [Issue Tracker](https://github.com/iflytek/skillhub/issues)
+
+## License
+
+Apache-2.0
+
+Copyright 2026 iFlytek Co., Ltd.

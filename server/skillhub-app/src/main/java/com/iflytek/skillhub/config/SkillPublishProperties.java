@@ -1,0 +1,50 @@
+package com.iflytek.skillhub.config;
+
+import com.iflytek.skillhub.domain.skill.validation.SkillPackagePolicy;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+import java.util.LinkedHashSet;
+import java.util.Set;
+
+@Component
+@ConfigurationProperties(prefix = "skillhub.publish")
+public class SkillPublishProperties {
+
+    private int maxFileCount = 500;
+    private long maxSingleFileSize = 10 * 1024 * 1024;  // 10MB
+    private long maxPackageSize = 100 * 1024 * 1024;
+    private Set<String> allowedFileExtensions = new LinkedHashSet<>(SkillPackagePolicy.ALLOWED_EXTENSIONS);
+
+    public int getMaxFileCount() {
+        return maxFileCount;
+    }
+
+    public void setMaxFileCount(int maxFileCount) {
+        this.maxFileCount = maxFileCount;
+    }
+
+    public long getMaxSingleFileSize() {
+        return maxSingleFileSize;
+    }
+
+    public void setMaxSingleFileSize(long maxSingleFileSize) {
+        this.maxSingleFileSize = maxSingleFileSize;
+    }
+
+    public long getMaxPackageSize() {
+        return maxPackageSize;
+    }
+
+    public void setMaxPackageSize(long maxPackageSize) {
+        this.maxPackageSize = maxPackageSize;
+    }
+
+    public Set<String> getAllowedFileExtensions() {
+        return allowedFileExtensions;
+    }
+
+    public void setAllowedFileExtensions(Set<String> allowedFileExtensions) {
+        this.allowedFileExtensions = new LinkedHashSet<>(allowedFileExtensions);
+    }
+}

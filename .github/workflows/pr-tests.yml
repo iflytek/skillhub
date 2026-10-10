@@ -1,0 +1,121 @@
+name: PR Tests
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - ready_for_review
+  workflow_dispatch:
+
+concurrency:
+  group: pr-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  web-tests:
+    name: Web Build And Test
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Build frontend
+        run: make build-frontend
+
+      - name: Run frontend unit tests
+        run: make test-frontend
+
+  server-tests:
+    name: Server Unit Tests
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Ensure Maven wrapper is executable
+        run: chmod +x server/mvnw
+
+      - name: Validate built-in Skill packages
+        run: make test-builtin-skills
+
+      - name: Run backend unit tests
+        run: make test-backend
+
+  docs-build:
+    name: Docs Build
+    if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Detect docs changes
+        id: changed
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            docs:
+              - 'docs/skillhub/**'
+              - 'weekly/**'
+              - '.github/workflows/pr-tests.yml'
+              - '.github/workflows/deploy-docs.yml'
+
+      - name: Set up Node.js
+        if: steps.changed.outputs.docs == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/skillhub/package-lock.json
+
+      - name: Install docs dependencies
+        if: steps.changed.outputs.docs == 'true'
+        run: cd docs/skillhub && npm ci
+
+      - name: Build VitePress site
+        if: steps.changed.outputs.docs == 'true'
+        run: cd docs/skillhub && npm run build
+
+      - name: Build and validate weekly reports
+        if: steps.changed.outputs.docs == 'true'
+        run: |
+          python3 weekly/scripts/build_site.py \
+            --source weekly/site \
+            --output docs/skillhub/.vitepress/dist/weekly
+          python3 weekly/scripts/validate_site.py \
+            docs/skillhub/.vitepress/dist/weekly

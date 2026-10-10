@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
+    <springProperty name="activeAppender"
+                    source="skillhub.observability.log-format"
+                    defaultValue="text"/>
+    <springProperty name="tracingMode"
+                    source="skillhub.observability.tracing-mode"
+                    defaultValue="none"/>
+    <springProperty name="asyncQueueSize"
+                    source="skillhub.observability.log-async-queue-size"
+                    defaultValue="1024"/>
+    <springProperty name="serviceName"
+                    source="spring.application.name"
+                    defaultValue="skillhub"/>
+    <springProperty name="serviceVersion"
+                    source="skillhub.observability.service-version"
+                    defaultValue="unknown"/>
+    <springProperty name="serviceEnvironment"
+                    source="skillhub.observability.service-environment"
+                    defaultValue="local"/>
+
+    <appender name="text" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <charset>${CONSOLE_LOG_CHARSET}</charset>
+            <pattern>${CONSOLE_LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <appender name="json-console" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="com.iflytek.skillhub.observability.logging.SkillHubEcsEncoder">
+            <serviceName>${serviceName}</serviceName>
+            <serviceVersion>${serviceVersion}</serviceVersion>
+            <serviceEnvironment>${serviceEnvironment}</serviceEnvironment>
+            <tracingMode>${tracingMode}</tracingMode>
+        </encoder>
+    </appender>
+
+    <appender name="json" class="ch.qos.logback.classic.AsyncAppender">
+        <queueSize>${asyncQueueSize}</queueSize>
+        <discardingThreshold>0</discardingThreshold>
+        <neverBlock>true</neverBlock>
+        <includeCallerData>false</includeCallerData>
+        <appender-ref ref="json-console"/>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="${activeAppender}"/>
+    </root>
+</configuration>

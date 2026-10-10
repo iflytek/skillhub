@@ -1,0 +1,397 @@
+package com.iflytek.skillhub.service;
+
+import com.iflytek.skillhub.auth.rbac.RbacService;
+import com.iflytek.skillhub.domain.audit.AuditDetail;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.review.ReviewService;
+import com.iflytek.skillhub.domain.review.ReviewTask;
+import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
+import com.iflytek.skillhub.domain.review.ReviewSubjectType;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
+import com.iflytek.skillhub.domain.suite.SkillSuiteActionContext;
+import com.iflytek.skillhub.domain.suite.SkillSuiteLifecycleService;
+import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.ReviewProgressPageResponse;
+import com.iflytek.skillhub.dto.ReviewTaskResponse;
+import com.iflytek.skillhub.observability.RequestIdAccessor;
+import com.iflytek.skillhub.repository.GovernanceQueryRepository;
+import com.iflytek.skillhub.repository.ReviewProgressQueryRepository;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class ReviewPortalAppService {
+
+    private final ReviewService reviewService;
+    private final ReviewTaskRepository reviewTaskRepository;
+    private final NamespaceRepository namespaceRepository;
+    private final GovernanceQueryRepository governanceQueryRepository;
+    private final ReviewProgressQueryRepository reviewProgressQueryRepository;
+    private final RbacService rbacService;
+    private final AuditLogService auditLogService;
+    private final RequestIdAccessor requestIdAccessor;
+    private final SkillSuiteLifecycleService suiteLifecycleService;
+
+    public ReviewPortalAppService(ReviewService reviewService,
+                                  ReviewTaskRepository reviewTaskRepository,
+                                  NamespaceRepository namespaceRepository,
+                                  GovernanceQueryRepository governanceQueryRepository,
+                                  ReviewProgressQueryRepository reviewProgressQueryRepository,
+                                  RbacService rbacService,
+                                  AuditLogService auditLogService,
+                                  RequestIdAccessor requestIdAccessor,
+                                  SkillSuiteLifecycleService suiteLifecycleService) {
+        this.reviewService = reviewService;
+        this.reviewTaskRepository = reviewTaskRepository;
+        this.namespaceRepository = namespaceRepository;
+        this.governanceQueryRepository = governanceQueryRepository;
+        this.reviewProgressQueryRepository = reviewProgressQueryRepository;
+        this.rbacService = rbacService;
+        this.auditLogService = auditLogService;
+        this.requestIdAccessor = requestIdAccessor;
+        this.suiteLifecycleService = suiteLifecycleService;
+    }
+
+    @Transactional
+    public ReviewTaskResponse submitReview(Long skillVersionId,
+                                           String userId,
+                                           Map<Long, NamespaceRole> userNsRoles,
+                                           AuditRequestContext auditContext) {
+        ReviewTask task = reviewService.submitReview(
+                skillVersionId,
+                userId,
+                normalizeRoles(userNsRoles),
+                platformRoles(userId)
+        );
+        recordAudit("REVIEW_SUBMIT", userId, task.getId(), auditContext, AuditDetail.of("skillVersionId", skillVersionId));
+        return governanceQueryRepository.getReviewTaskResponse(task);
+    }
+
+    @Transactional
+    public ReviewTaskResponse approveReview(Long reviewTaskId,
+                                            String comment,
+                                            String userId,
+                                            Map<Long, NamespaceRole> userNsRoles,
+                                            AuditRequestContext auditContext) {
+        ReviewTask existing = findReview(reviewTaskId);
+        if (existing.getSubjectType() == ReviewSubjectType.SUITE_VERSION) {
+            ReviewTask task = suiteLifecycleService.approveReview(
+                    reviewTaskId, comment, suiteContext(userId, userNsRoles, auditContext));
+            return governanceQueryRepository.getReviewTaskResponse(task);
+        }
+        ReviewTask task = reviewService.approveReview(
+                reviewTaskId,
+                userId,
+                comment,
+                normalizeRoles(userNsRoles),
+                platformRoles(userId)
+        );
+        recordAudit("REVIEW_APPROVE", userId, task.getId(), auditContext, detailWithComment(comment));
+        return governanceQueryRepository.getReviewTaskResponse(task);
+    }
+
+    @Transactional
+    public ReviewTaskResponse rejectReview(Long reviewTaskId,
+                                           String comment,
+                                           String userId,
+                                           Map<Long, NamespaceRole> userNsRoles,
+                                           AuditRequestContext auditContext) {
+        ReviewTask existing = findReview(reviewTaskId);
+        if (existing.getSubjectType() == ReviewSubjectType.SUITE_VERSION) {
+            ReviewTask task = suiteLifecycleService.rejectReview(
+                    reviewTaskId, comment, suiteContext(userId, userNsRoles, auditContext));
+            return governanceQueryRepository.getReviewTaskResponse(task);
+        }
+        ReviewTask task = reviewService.rejectReview(
+                reviewTaskId,
+                userId,
+                comment,
+                normalizeRoles(userNsRoles),
+                platformRoles(userId)
+        );
+        recordAudit("REVIEW_REJECT", userId, task.getId(), auditContext, detailWithComment(comment));
+        return governanceQueryRepository.getReviewTaskResponse(task);
+    }
+
+    @Transactional
+    public void withdrawReview(Long reviewTaskId,
+                               String userId,
+                               Map<Long, NamespaceRole> userNsRoles,
+                               AuditRequestContext auditContext) {
+        ReviewTask task = findReview(reviewTaskId);
+        if (task.getSubjectType() == ReviewSubjectType.SUITE_VERSION) {
+            suiteLifecycleService.withdrawReview(
+                    reviewTaskId, suiteContext(userId, userNsRoles, auditContext));
+            return;
+        }
+        reviewService.withdrawReview(task.getSkillVersionId(), userId);
+        recordAudit(
+                "REVIEW_WITHDRAW",
+                userId,
+                reviewTaskId,
+                auditContext,
+                AuditDetail.of("skillVersionId", task.getSkillVersionId())
+        );
+    }
+
+    public PageResponse<ReviewTaskResponse> listReviews(String status,
+                                                        Long namespaceId,
+                                                        int page,
+                                                        int size,
+                                                        String sortDirection,
+                                                        String userId,
+                                                        Map<Long, NamespaceRole> userNsRoles) {
+        ReviewTaskStatus reviewStatus = ReviewTaskStatus.valueOf(status.toUpperCase());
+        Map<Long, NamespaceRole> namespaceRoles = normalizeRoles(userNsRoles);
+        Set<String> platformRoles = platformRoles(userId);
+        Pageable pageable = buildReviewPageable(reviewStatus, page, size, sortDirection);
+
+        Page<ReviewTask> tasks;
+        if (namespaceId != null) {
+            Namespace namespace = namespaceRepository.findById(namespaceId)
+                    .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", namespaceId));
+            ReviewTask probe = new ReviewTask(0L, namespaceId, userId);
+            if (!reviewService.canReviewNamespace(
+                    probe,
+                    userId,
+                    namespace.getType(),
+                    namespaceRoles,
+                    platformRoles)) {
+                throw new DomainForbiddenException("review.no_permission");
+            }
+            tasks = reviewTaskRepository.findByNamespaceIdAndStatus(namespaceId, reviewStatus, pageable);
+        } else {
+            if (!hasPlatformReviewRole(platformRoles)) {
+                throw new DomainForbiddenException("review.no_permission");
+            }
+            tasks = reviewTaskRepository.findByStatus(reviewStatus, pageable);
+        }
+
+        List<ReviewTask> visibleItems = tasks.getContent().stream()
+                .filter(task -> canViewReview(task, userId, namespaceRoles))
+                .toList();
+
+        return PageResponse.from(new PageImpl<>(
+                governanceQueryRepository.getReviewTaskResponses(visibleItems),
+                tasks.getPageable(),
+                tasks.getTotalElements()
+        ));
+    }
+
+    public PageResponse<ReviewTaskResponse> listPendingReviews(Long namespaceId,
+                                                               int page,
+                                                               int size,
+                                                               String userId,
+                                                               Map<Long, NamespaceRole> userNsRoles) {
+        Namespace namespace = namespaceRepository.findById(namespaceId)
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", namespaceId));
+        ReviewTask probe = new ReviewTask(0L, namespaceId, userId);
+        if (!reviewService.canReviewNamespace(
+                probe,
+                userId,
+                namespace.getType(),
+                normalizeRoles(userNsRoles),
+                platformRoles(userId))) {
+            throw new DomainForbiddenException("review.no_permission");
+        }
+
+        Page<ReviewTask> tasks = reviewTaskRepository.findByNamespaceIdAndStatus(
+                namespaceId, ReviewTaskStatus.PENDING, PageRequest.of(page, size));
+        return PageResponse.from(new PageImpl<>(
+                governanceQueryRepository.getReviewTaskResponses(tasks.getContent()),
+                tasks.getPageable(),
+                tasks.getTotalElements()
+        ));
+    }
+
+    private Pageable buildReviewPageable(ReviewTaskStatus reviewStatus, int page, int size, String sortDirection) {
+        Sort.Direction direction = Sort.Direction.fromOptionalString(sortDirection).orElse(Sort.Direction.DESC);
+        String primaryField = reviewStatus == ReviewTaskStatus.PENDING ? "submittedAt" : "reviewedAt";
+        return PageRequest.of(
+                page,
+                size,
+                Sort.by(
+                        new Sort.Order(direction, primaryField),
+                        new Sort.Order(direction, "id")
+                )
+        );
+    }
+
+    public PageResponse<ReviewTaskResponse> listMySubmissions(int page, int size, String userId) {
+        Page<ReviewTask> tasks = reviewTaskRepository.findBySubmittedByAndStatus(
+                userId, ReviewTaskStatus.PENDING, PageRequest.of(page, size));
+        return PageResponse.from(new PageImpl<>(
+                governanceQueryRepository.getReviewTaskResponses(tasks.getContent()),
+                tasks.getPageable(),
+                tasks.getTotalElements()
+        ));
+    }
+
+    public ReviewProgressPageResponse listMyProgress(
+            String subjectType,
+            String status,
+            String query,
+            int page,
+            int size,
+            String userId) {
+        ReviewSubjectType reviewSubjectType = subjectType == null || subjectType.isBlank()
+                ? null
+                : ReviewSubjectType.valueOf(subjectType.toUpperCase(java.util.Locale.ROOT));
+        ReviewTaskStatus reviewStatus = status == null || status.isBlank()
+                ? null
+                : ReviewTaskStatus.valueOf(status.toUpperCase(java.util.Locale.ROOT));
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        return reviewProgressQueryRepository.findMyProgress(
+                userId,
+                reviewSubjectType,
+                reviewStatus,
+                query != null ? query : "",
+                safePage,
+                safeSize
+        );
+    }
+
+    public List<ReviewTaskResponse> listMyAttempts(Long reviewTaskId, String userId) {
+        ReviewTask anchor = reviewTaskRepository.findById(reviewTaskId)
+                .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", reviewTaskId));
+        if (!anchor.getSubmittedBy().equals(userId)) {
+            throw new DomainForbiddenException("review.no_permission");
+        }
+
+        List<ReviewTask> attempts = anchor.getSubjectType() == ReviewSubjectType.SUITE_VERSION
+                ? reviewTaskRepository
+                .findBySubmittedByAndSubjectTypeAndSubjectIdAndSubjectVersionOrderBySubmittedAtDescIdDesc(
+                        userId, ReviewSubjectType.SUITE_VERSION,
+                        anchor.getSubjectId(), anchor.getSubjectVersion())
+                : reviewTaskRepository
+                .findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
+                        userId, anchor.getSkillId(), anchor.getSkillVersion());
+        return governanceQueryRepository.getReviewTaskResponses(attempts);
+    }
+
+    public List<ReviewTaskResponse> listReviewAttempts(
+            Long reviewTaskId,
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles) {
+        ReviewTask anchor = reviewTaskRepository.findById(reviewTaskId)
+                .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", reviewTaskId));
+        Namespace namespace = namespaceRepository.findById(anchor.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException(
+                        "namespace.not_found", anchor.getNamespaceId()));
+        if (!reviewService.canReviewNamespace(
+                anchor,
+                userId,
+                namespace.getType(),
+                normalizeRoles(userNsRoles),
+                platformRoles(userId))) {
+            throw new DomainForbiddenException("review.no_permission");
+        }
+
+        List<ReviewTask> attempts = anchor.getSubjectType() == ReviewSubjectType.SUITE_VERSION
+                ? reviewTaskRepository
+                .findBySubjectTypeAndSubjectIdAndSubjectVersionOrderBySubmittedAtDescIdDesc(
+                        ReviewSubjectType.SUITE_VERSION,
+                        anchor.getSubjectId(), anchor.getSubjectVersion())
+                : reviewTaskRepository
+                .findBySkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
+                        anchor.getSkillId(), anchor.getSkillVersion());
+        return governanceQueryRepository.getReviewTaskResponses(attempts);
+    }
+
+    public ReviewTaskResponse getReviewDetail(Long reviewTaskId,
+                                              String userId,
+                                              Map<Long, NamespaceRole> userNsRoles) {
+        ReviewTask task = reviewTaskRepository.findById(reviewTaskId)
+                .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", reviewTaskId));
+        Namespace namespace = namespaceRepository.findById(task.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", task.getNamespaceId()));
+        if (!reviewService.canViewReview(
+                task,
+                userId,
+                namespace.getType(),
+                normalizeRoles(userNsRoles),
+                platformRoles(userId))) {
+            throw new DomainForbiddenException("review.no_permission");
+        }
+        return governanceQueryRepository.getReviewTaskResponse(task);
+    }
+
+    private boolean canViewReview(ReviewTask task, String userId, Map<Long, NamespaceRole> namespaceRoles) {
+        Namespace namespace = namespaceRepository.findById(task.getNamespaceId())
+                .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", task.getNamespaceId()));
+        return reviewService.canViewReview(
+                task,
+                userId,
+                namespace.getType(),
+                namespaceRoles,
+                platformRoles(userId)
+        );
+    }
+
+    private Set<String> platformRoles(String userId) {
+        return rbacService.getUserRoleCodes(userId);
+    }
+
+    private ReviewTask findReview(Long reviewTaskId) {
+        return reviewTaskRepository.findById(reviewTaskId)
+                .orElseThrow(() -> new DomainNotFoundException("review_task.not_found", reviewTaskId));
+    }
+
+    private SkillSuiteActionContext suiteContext(
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles,
+            AuditRequestContext auditContext
+    ) {
+        return new SkillSuiteActionContext(
+                userId, normalizeRoles(userNsRoles), platformRoles(userId), requestIdAccessor.current(),
+                auditContext != null ? auditContext.clientIp() : null,
+                auditContext != null ? auditContext.userAgent() : null);
+    }
+
+    private boolean hasPlatformReviewRole(Set<String> platformRoles) {
+        return platformRoles.contains("SKILL_ADMIN")
+                || platformRoles.contains("SUPER_ADMIN");
+    }
+
+    private Map<Long, NamespaceRole> normalizeRoles(Map<Long, NamespaceRole> userNsRoles) {
+        return userNsRoles != null ? userNsRoles : Map.of();
+    }
+
+    private void recordAudit(String action,
+                             String userId,
+                             Long targetId,
+                             AuditRequestContext auditContext,
+                             String detailJson) {
+        auditLogService.record(
+                userId,
+                action,
+                "REVIEW_TASK",
+                targetId,
+                requestIdAccessor.current(),
+                auditContext != null ? auditContext.clientIp() : null,
+                auditContext != null ? auditContext.userAgent() : null,
+                detailJson
+        );
+    }
+
+    private String detailWithComment(String comment) {
+        if (comment == null || comment.isBlank()) {
+            return null;
+        }
+        return AuditDetail.of("comment", comment);
+    }
+}

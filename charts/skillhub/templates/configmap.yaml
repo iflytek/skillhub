@@ -1,0 +1,63 @@
+{{- /*
+SkillHub 应用 ConfigMap
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "skillhub.fullname" . }}-config
+  labels:
+    {{- include "skillhub.labels" . | nindent 4 }}
+data:
+  # Redis 配置
+  redis-host: {{ include "skillhub.redis.host" . | quote }}
+  redis-port: {{ include "skillhub.redis.port" . | quote }}
+
+  # 存储路径
+  storage-base-path: "/var/lib/skillhub/storage"
+
+  # 存储提供者: local | s3
+  skillhub-storage-provider: {{ if .Values.s3.enabled }}"s3"{{ else }}"local"{{ end }}
+
+  {{- if .Values.s3.enabled }}
+  # S3 配置
+  s3-bucket: {{ .Values.s3.bucket | quote }}
+  s3-endpoint: {{ .Values.s3.endpoint | quote }}
+  s3-public-endpoint: {{ .Values.s3.publicEndpoint | quote }}
+  s3-region: {{ .Values.s3.region | quote }}
+  s3-force-path-style: {{ .Values.s3.forcePathStyle | quote }}
+  s3-disable-chunked-encoding: {{ .Values.s3.disableChunkedEncoding | quote }}
+  s3-auto-create-bucket: {{ .Values.s3.autoCreateBucket | quote }}
+  s3-presign-expiry: {{ .Values.s3.presignExpiry | quote }}
+  {{- end }}
+
+  # 技能扫描器
+  skill-scanner-enabled: {{ .Values.scanner.enabled | quote }}
+  skill-scanner-url: {{ printf "http://%s-scanner:%v" (include "skillhub.fullname" .) .Values.scanner.service.port | quote }}
+  skill-scanner-mode: "upload"
+
+  # Bootstrap 管理员
+  bootstrap-admin-enabled: {{ .Values.bootstrapAdmin.enabled | quote }}
+  bootstrap-admin-user-id: {{ .Values.bootstrapAdmin.userId | quote }}
+  bootstrap-admin-username: {{ .Values.bootstrapAdmin.username | quote }}
+  bootstrap-admin-display-name: {{ .Values.bootstrapAdmin.displayName | quote }}
+  bootstrap-admin-email: {{ .Values.bootstrapAdmin.email | quote }}
+
+  # Session
+  session-cookie-secure: {{ or .Values.session.cookieSecure (not (empty .Values.ingress.tls)) .Values.ingress.certManager.enabled | quote }}
+
+  # Public URL and authentication
+  public-base-url: {{ .Values.publicBaseUrl | quote }}
+  {{- $deviceAuthVerificationUri := .Values.deviceAuthVerificationUri }}
+  {{- if and (not $deviceAuthVerificationUri) .Values.publicBaseUrl }}
+  {{- $deviceAuthVerificationUri = printf "%s/cli/auth" (trimSuffix "/" .Values.publicBaseUrl) }}
+  {{- end }}
+  device-auth-verification-uri: {{ $deviceAuthVerificationUri | quote }}
+  auth-direct-enabled: {{ .Values.auth.direct.enabled | quote }}
+  auth-initial-password-login-enabled: {{ .Values.auth.initialSettings.passwordLoginEnabled | quote }}
+  auth-initial-self-registration-enabled: {{ .Values.auth.initialSettings.selfRegistrationEnabled | quote }}
+  auth-direct-provider: {{ .Values.auth.direct.provider | quote }}
+
+  # Sub-path deployment (empty keeps a fixed-base image's baked base; set e.g. /portal/)
+  web-base-path: {{ .Values.web.basePath | default "" | quote }}
+  web-api-base-url: {{ .Values.web.apiBaseUrl | default "" | quote }}
+  builtin-skills-enabled: {{ .Values.builtinSkills.enabled | quote }}

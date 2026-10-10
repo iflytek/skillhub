@@ -1,0 +1,95 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors / IDEs / local tooling
+.claude/
+.codex/
+.idea/
+.omc
+.vscode/
+.classpath
+.project
+.settings/
+*.iml
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment / local config
+.env
+.env.*
+!.env.example
+!.env.*.example
+.dev/
+.memory/
+*.local.json
+
+# Java / Spring Boot
+.gradle/
+build/
+out/
+target/
+*.class
+*.ear
+*.jar
+*.war
+
+# Keep wrapper binaries/config in VCS
+!gradle/wrapper/gradle-wrapper.jar
+!mvnw
+!mvnw.cmd
+
+# Frontend / Node.js
+.cache/
+.eslintcache
+.parcel-cache/
+.vite/
+coverage/
+dist/
+node_modules/
+*.tsbuildinfo
+package-lock.json
+
+# Playwright
+**/.playwright/
+**/playwright-report/
+**/test-results/
+.playwright-mcp/
+
+# Python / temporary files
+*.py[cod]
+.tmp/
+tmp/
+__pycache__/
+weekly/_site/
+
+# Git worktrees
+.worktrees/
+
+# Superpowers (AI planning artifacts)
+.superpowers/
+docs/agents/
+docs/prds/
+docs/requirements/
+docs/review/
+docs/superpowers/
+
+# Local workspace metadata
+CLAUDE.md
+
+# Local report-generation skill
+.agents/skills/generate-skillhub-weekly-report/
+
+# Helm chart dependencies
+charts/skillhub/charts/*.tgz
+
+# Local config file
+.mcp.json

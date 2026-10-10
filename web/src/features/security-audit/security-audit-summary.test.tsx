@@ -1,0 +1,198 @@
+/** @vitest-environment jsdom */
+
+import { renderToStaticMarkup } from 'react-dom/server'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import type { SecurityAuditRecord } from './types'
+import { SecurityAuditSummary } from './security-audit-summary'
+
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, values?: Record<string, unknown>) =>
+        values?.count !== undefined ? `${key}:${values.count}` : key,
+      i18n: { language: 'en' },
+    }),
+  }
+})
+
+function createAudit(overrides: Partial<SecurityAuditRecord> = {}): SecurityAuditRecord {
+  return {
+    id: 1,
+    scanId: 'scan-abc',
+    scannerType: 'semgrep',
+    verdict: 'SAFE',
+    isSafe: true,
+    maxSeverity: null,
+    findingsCount: 0,
+    findings: [],
+    scanDurationSeconds: null,
+    failureReason: null,
+    scannedAt: '2026-03-20T10:00:00Z',
+    createdAt: '2026-03-20T10:00:00Z',
+    ...overrides,
+  }
+}
+
+let mockAudits: SecurityAuditRecord[] | undefined = undefined
+const { retryMutation, toastMocks } = vi.hoisted(() => ({
+  retryMutation: { mutate: vi.fn(), isPending: false },
+  toastMocks: { success: vi.fn(), error: vi.fn() },
+}))
+
+vi.mock('./use-security-audit', () => ({
+  useSecurityAudits: () => ({ data: mockAudits }),
+  useRetrySecurityScan: () => retryMutation,
+}))
+
+vi.mock('@/shared/lib/toast', () => ({ toast: toastMocks }))
+
+// Mock the Dialog components to avoid Radix UI portal / context issues in static render
+vi.mock('@/shared/ui/dialog', () => ({
+  Dialog: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
+  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
+}))
+
+// Mock the SecurityAuditSection to avoid nested hook dependencies
+vi.mock('./security-audit-section', () => ({
+  SecurityAuditSection: () => <div data-testid="audit-section" />,
+}))
+
+describe('SecurityAuditSummary', () => {
+  afterEach(() => {
+    cleanup()
+    vi.clearAllMocks()
+  })
+  it('returns null when audits is undefined', () => {
+    mockAudits = undefined
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toBe('')
+  })
+
+  it('returns null when audits is an empty array', () => {
+    mockAudits = []
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toBe('')
+  })
+
+  it('renders the security audit title when audits exist', () => {
+    mockAudits = [createAudit()]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toContain('securityAudit.title')
+  })
+
+  it('renders the scanner type for each audit', () => {
+    mockAudits = [
+      createAudit({ id: 1, scannerType: 'semgrep' }),
+      createAudit({ id: 2, scannerType: 'trivy' }),
+    ]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toContain('semgrep')
+    expect(html).toContain('trivy')
+  })
+
+  it('renders the verdict badge for each audit', () => {
+    mockAudits = [createAudit({ verdict: 'BLOCKED' })]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toContain('securityAudit.verdict.BLOCKED')
+  })
+
+  it('renders scanning status when the audit has not completed yet', () => {
+    mockAudits = [createAudit({ verdict: 'SUSPICIOUS', scannedAt: null })]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} versionStatus="SCANNING" />)
+
+    expect(html).toContain('securityAudit.statusScanning')
+    expect(html).not.toContain('securityAudit.verdict.SUSPICIOUS')
+  })
+
+  it('renders scan failed status when version scan failed before audit completion', () => {
+    mockAudits = [createAudit({ verdict: 'SUSPICIOUS', scannedAt: null })]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} versionStatus="SCAN_FAILED" />)
+
+    expect(html).toContain('securityAudit.statusScanFailed')
+    expect(html).not.toContain('securityAudit.statusScanning')
+  })
+
+  it('renders retry only for an authorized failed version', () => {
+    mockAudits = [createAudit({ scannedAt: null })]
+
+    const failedHtml = renderToStaticMarkup(
+      <SecurityAuditSummary skillId={1} versionId={10} versionStatus="SCAN_FAILED" canRetry />
+    )
+    const unauthorizedHtml = renderToStaticMarkup(
+      <SecurityAuditSummary skillId={1} versionId={10} versionStatus="SCAN_FAILED" />
+    )
+
+    expect(failedHtml).toContain('securityAudit.retry')
+    expect(unauthorizedHtml).not.toContain('securityAudit.retry')
+  })
+
+  it('starts retry and exposes success and failure feedback callbacks', () => {
+    mockAudits = [createAudit({ scannedAt: null })]
+    render(<SecurityAuditSummary skillId={1} versionId={10} versionStatus="SCAN_FAILED" canRetry />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'securityAudit.retry' }))
+
+    expect(retryMutation.mutate).toHaveBeenCalledOnce()
+    const options = retryMutation.mutate.mock.calls[0]?.[1]
+    options.onSuccess()
+    expect(toastMocks.success).toHaveBeenCalledWith('securityAudit.retrySuccess')
+    options.onError(new Error('scanner unavailable'))
+    expect(toastMocks.error).toHaveBeenCalledWith('securityAudit.retryError', 'scanner unavailable')
+  })
+
+  it('renders the total findings count across all audits', () => {
+    mockAudits = [
+      createAudit({ id: 1, findingsCount: 3 }),
+      createAudit({ id: 2, findingsCount: 5 }),
+    ]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toContain('securityAudit.totalFindings:8')
+  })
+
+  it('renders zero total findings when all audits have zero findings', () => {
+    mockAudits = [
+      createAudit({ id: 1, findingsCount: 0 }),
+      createAudit({ id: 2, findingsCount: 0 }),
+    ]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toContain('securityAudit.totalFindings:0')
+  })
+
+  it('renders the view details button', () => {
+    mockAudits = [createAudit()]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toContain('securityAudit.viewDetails')
+  })
+
+  it('renders the dialog with title and description', () => {
+    mockAudits = [createAudit()]
+
+    const html = renderToStaticMarkup(<SecurityAuditSummary skillId={1} versionId={10} />)
+
+    expect(html).toContain('securityAudit.dialogDescription')
+  })
+})

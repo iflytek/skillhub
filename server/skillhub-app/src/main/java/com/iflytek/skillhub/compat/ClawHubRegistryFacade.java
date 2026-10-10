@@ -1,0 +1,218 @@
+package com.iflytek.skillhub.compat;
+
+import com.iflytek.skillhub.compat.dto.ClawHubRegistryModeration;
+import com.iflytek.skillhub.compat.dto.ClawHubRegistryOwner;
+import com.iflytek.skillhub.compat.dto.ClawHubRegistrySearchItem;
+import com.iflytek.skillhub.compat.dto.ClawHubRegistrySearchResponse;
+import com.iflytek.skillhub.compat.dto.ClawHubRegistrySkill;
+import com.iflytek.skillhub.compat.dto.ClawHubRegistrySkillResponse;
+import com.iflytek.skillhub.compat.dto.ClawHubRegistrySkillVersion;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.skill.Skill;
+import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.domain.user.UserAccountRepository;
+import com.iflytek.skillhub.dto.SkillSummaryResponse;
+import com.iflytek.skillhub.service.SkillSearchAppService;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.springframework.stereotype.Component;
+
+/**
+ * Facade that assembles registry-style compatibility responses from the platform's canonical search
+ * and skill services.
+ */
+@Component
+public class ClawHubRegistryFacade {
+
+    private static final int DEFAULT_LIMIT = 20;
+    private static final int MAX_LIMIT = 100;
+
+    private final CanonicalSlugMapper canonicalSlugMapper;
+    private final SkillSearchAppService skillSearchAppService;
+    private final SkillQueryService skillQueryService;
+    private final CompatSkillLookupService compatSkillLookupService;
+    private final UserAccountRepository userAccountRepository;
+
+    public ClawHubRegistryFacade(
+            CanonicalSlugMapper canonicalSlugMapper,
+            SkillSearchAppService skillSearchAppService,
+            SkillQueryService skillQueryService,
+            CompatSkillLookupService compatSkillLookupService,
+            UserAccountRepository userAccountRepository) {
+        this.canonicalSlugMapper = canonicalSlugMapper;
+        this.skillSearchAppService = skillSearchAppService;
+        this.skillQueryService = skillQueryService;
+        this.compatSkillLookupService = compatSkillLookupService;
+        this.userAccountRepository = userAccountRepository;
+    }
+
+    public ClawHubRegistrySearchResponse search(
+            String keyword,
+            int limit,
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles) {
+        int boundedLimit = clampLimit(limit);
+        List<SkillSummaryResponse> items = skillSearchAppService.search(
+                        keyword,
+                        null,
+                        "relevance",
+                        0,
+                        boundedLimit,
+                        userId,
+                        normalizeRoles(userNsRoles))
+                .items();
+
+        List<ClawHubRegistrySearchItem> results = buildSearchResults(items);
+        return new ClawHubRegistrySearchResponse(results);
+    }
+
+    public ClawHubRegistrySkillResponse getSkill(
+            String canonicalSlug,
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles) {
+        SkillCoordinate coordinate = canonicalSlugMapper.fromCanonical(canonicalSlug);
+        SkillQueryService.SkillDetailDTO detail = skillQueryService.getSkillDetail(
+                coordinate.namespace(),
+                coordinate.slug(),
+                userId,
+                normalizeRoles(userNsRoles));
+
+        CompatSkillLookupService.CompatSkillContext context = compatSkillLookupService.resolveVisible(
+                coordinate.namespace(),
+                coordinate.slug(),
+                userId,
+                normalizeRoles(userNsRoles)
+        );
+        Skill skill = context.skill();
+
+        ClawHubRegistrySkill payload = new ClawHubRegistrySkill(
+                canonicalSlugMapper.toCanonical(coordinate.namespace(), detail.slug()),
+                normalizeDisplayName(detail.displayName(), canonicalSlug),
+                detail.summary(),
+                List.of(),
+                Map.of(),
+                toEpochMillis(skill.getCreatedAt()),
+                toEpochMillis(skill.getUpdatedAt())
+        );
+
+        ClawHubRegistrySkillVersion latestVersion = buildLatestVersion(skill, detail.publishedVersion());
+        ClawHubRegistryOwner owner = buildOwner(skill.getOwnerId());
+
+        return new ClawHubRegistrySkillResponse(
+                payload,
+                latestVersion,
+                owner,
+                ClawHubRegistryModeration.clean()
+        );
+    }
+
+    public String resolveDownloadUrl(
+            String canonicalSlug,
+            String version,
+            String userId,
+            Map<Long, NamespaceRole> userNsRoles) {
+        SkillCoordinate coordinate = canonicalSlugMapper.fromCanonical(canonicalSlug);
+        String normalizedVersion = normalizeVersion(version);
+        return skillQueryService.resolveVersion(
+                        coordinate.namespace(),
+                        coordinate.slug(),
+                        normalizedVersion,
+                        null,
+                        null,
+                        userId,
+                        normalizeRoles(userNsRoles))
+                .downloadUrl();
+    }
+
+    private List<ClawHubRegistrySearchItem> buildSearchResults(List<SkillSummaryResponse> items) {
+        return java.util.stream.IntStream.range(0, items.size())
+                .mapToObj(index -> toSearchItem(items.get(index), index))
+                .toList();
+    }
+
+    private ClawHubRegistrySearchItem toSearchItem(SkillSummaryResponse item, int index) {
+        String canonicalSlug = canonicalSlugMapper.toCanonical(item.namespace(), item.slug());
+        return new ClawHubRegistrySearchItem(
+                canonicalSlug,
+                normalizeDisplayName(item.displayName(), canonicalSlug),
+                item.summary(),
+                item.publishedVersion() != null ? item.publishedVersion().version() : null,
+                scoreFor(index),
+                toEpochMillis(item.updatedAt())
+        );
+    }
+
+    private ClawHubRegistrySkillVersion buildLatestVersion(
+            Skill skill,
+            com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService.VersionProjection projection) {
+        if (projection == null || projection.version() == null || projection.version().isBlank()) {
+            return null;
+        }
+
+        Optional<SkillVersion> latestVersion = compatSkillLookupService.findVersion(skill.getId(), projection.version());
+        if (latestVersion.isEmpty()) {
+            return new ClawHubRegistrySkillVersion(projection.version(), 0L, "", null);
+        }
+
+        SkillVersion entity = latestVersion.get();
+        Instant createdAt = entity.getPublishedAt() != null ? entity.getPublishedAt() : entity.getCreatedAt();
+        return new ClawHubRegistrySkillVersion(
+                entity.getVersion(),
+                toEpochMillis(createdAt),
+                entity.getChangelog() != null ? entity.getChangelog() : "",
+                null
+        );
+    }
+
+    private ClawHubRegistryOwner buildOwner(String ownerId) {
+        if (ownerId == null || ownerId.isBlank()) {
+            return ClawHubRegistryOwner.empty();
+        }
+
+        return userAccountRepository.findById(ownerId)
+                .map(user -> new ClawHubRegistryOwner(
+                        null,
+                        user.getDisplayName(),
+                        user.getAvatarUrl()))
+                .orElseGet(ClawHubRegistryOwner::empty);
+    }
+
+    private Map<Long, NamespaceRole> normalizeRoles(Map<Long, NamespaceRole> userNsRoles) {
+        return userNsRoles != null ? userNsRoles : Map.of();
+    }
+
+    private int clampLimit(int limit) {
+        if (limit <= 0) {
+            return DEFAULT_LIMIT;
+        }
+        return Math.min(limit, MAX_LIMIT);
+    }
+
+    private String normalizeDisplayName(String displayName, String fallback) {
+        if (displayName == null || displayName.isBlank()) {
+            return fallback;
+        }
+        return displayName;
+    }
+
+    private String normalizeVersion(String version) {
+        if (version == null || version.isBlank()) {
+            return null;
+        }
+        return version;
+    }
+
+    private double scoreFor(int index) {
+        return Math.max(0.001d, 1.0d - (index * 0.001d));
+    }
+
+    private long toEpochMillis(Instant timestamp) {
+        if (timestamp == null) {
+            return 0L;
+        }
+        return timestamp.toEpochMilli();
+    }
+}

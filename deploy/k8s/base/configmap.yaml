@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: skillhub-config
+data:
+  # Redis 配置
+  # 使用外部 Redis：修改为外部主机地址
+  # 使用内置 Redis（overlays/with-infra）：保持 redis
+  redis-host: redis
+  redis-port: "6379"
+  # 连接外部 Redis Cluster 时取消下面几行注释。Cluster 节点存在时，
+  # Spring Boot 会自动忽略上面的单机 host/port。
+  # redis-cluster-nodes: "redis-0.example.com:6379,redis-1.example.com:6379,redis-2.example.com:6379"
+  # redis-cluster-max-redirects: "5"
+  # redis-username: "skillhub"
+  # redis-ssl-enabled: "true"
+  # redis-connect-timeout: "5s"
+  # redis-timeout: "3s"
+  # redis-client-name: "skillhub"
+  # 连接外部 Redis Sentinel 时取消下面几行注释。Sentinel 配置优先于
+  # Cluster 和单机 host/port。
+  # redis-sentinel-master: "mymaster"
+  # redis-sentinel-nodes: "sentinel-0.example.com:26379,sentinel-1.example.com:26379,sentinel-2.example.com:26379"
+  # redis-sentinel-username: "sentinel-user"
+  # redis-sentinel-check-list: "true"
+
+  # 技能存储路径
+  storage-base-path: /var/lib/skillhub/storage
+
+  # 存储配置
+  # local: 本地存储（默认）, s3: S3/OSS 对象存储
+  skillhub-storage-provider: local
+
+  # 技能扫描器配置
+  skill-scanner-enabled: "true"
+  skill-scanner-url: http://skillhub-scanner:8000
+  skill-scanner-mode: upload
+  skill-scanner-read-timeout: "900000"
+  skill-scan-reclaim-min-idle: PT16M
+  skill-scanner-max-concurrent-scans: "1"
+  skill-scanner-hard-timeout-seconds: "930"
+  skill-scanner-max-upload-size-bytes: "110100480"
+
+  # Bootstrap 管理员配置（非敏感）
+  bootstrap-admin-enabled: "true"
+  bootstrap-admin-user-id: docker-admin
+  bootstrap-admin-username: admin
+  bootstrap-admin-display-name: Platform Admin
+  bootstrap-admin-email: admin@example.com
+
+  # Session 配置
+  # HTTP 环境设为 false，HTTPS 环境设为 true
+  session-cookie-secure: "false"
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: skillhub-storage-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

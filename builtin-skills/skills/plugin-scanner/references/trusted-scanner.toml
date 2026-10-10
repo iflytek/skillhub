@@ -1,0 +1,5 @@
+[scanner]
+profile = "strict-security"
+
+[rules]
+disabled = []

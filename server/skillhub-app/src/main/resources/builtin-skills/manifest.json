@@ -1,0 +1,154 @@
+{
+  "skills": [
+    {
+      "slug": "skillhub-hello",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/aicontest/2026-06-11/f8a59af3-30d4-4031-80f6-ebff74b05195.zip",
+      "sha256": "acb591ed0891e735c364b955f5b94b2b9ce567c1d9e347312cebfbfde2d93f57"
+    },
+    {
+      "slug": "agentguard",
+      "version": "1.1",
+      "url": "https://bjcdn.openstorage.cn/aicontest/2026-06-12/9d063bc7-223a-4762-adeb-305c268aa29e.zip",
+      "sha256": "77b16d62c1adaf8c1d5ca06b9bff26005bc77da345e6036cc5f1f91bdee1a149"
+    },
+    {
+      "slug": "ai-claim-checker",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/9d8a9ef1-6c63-483a-a54d-b593180572a2/skillhub-builtin-skills/ai-claim-checker/1.0.0/19fd699fc5e67469bb764d5f695894c1a39e49055060152aa6168629ca0f0ea5.zip",
+      "sha256": "19fd699fc5e67469bb764d5f695894c1a39e49055060152aa6168629ca0f0ea5"
+    },
+    {
+      "slug": "cue-omni-reader",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-10/005725ab-145f-44c1-8325-aea268086156/1789021777994/3db1824b213292c7b858e84f591ead0b07fc6862aec33fb6cc95ab6dfc086c83.zip",
+      "sha256": "3db1824b213292c7b858e84f591ead0b07fc6862aec33fb6cc95ab6dfc086c83"
+    },
+    {
+      "slug": "daily-standup-journal",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/c6dc807b-5255-4aa9-8bdd-a708b9d159a6/skillhub-builtin-skills/daily-standup-journal/1.0.0/fd365dd3e1a4302044839bf3317c262c4bad650e0a677b7a1ca1d1ad5b8ab1bd.zip",
+      "sha256": "fd365dd3e1a4302044839bf3317c262c4bad650e0a677b7a1ca1d1ad5b8ab1bd"
+    },
+    {
+      "slug": "decision-matrix",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/73347ade-b71d-42e0-ad14-a63ac761d7ab/skillhub-builtin-skills/decision-matrix/1.0.0/1f284d78ebd8530b10d11a801237c11a0b24a08fe1798587df99ade7686b827a.zip",
+      "sha256": "1f284d78ebd8530b10d11a801237c11a0b24a08fe1798587df99ade7686b827a"
+    },
+    {
+      "slug": "diagram-maker",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/3d36219f-d700-4623-b482-39a39691ec22/skillhub-builtin-skills/diagram-maker/1.0.0/4c2fd87851f7a2a6dfca712887f8135f1696e23e8dc24cbb48f82303029eed17.zip",
+      "sha256": "4c2fd87851f7a2a6dfca712887f8135f1696e23e8dc24cbb48f82303029eed17"
+    },
+    {
+      "slug": "documentation-writer",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/e7e7b3ce-4923-4528-b7b4-e89de10802fa/skillhub-builtin-skills/documentation-writer/1.0.0/6a2cff6c0248c9a01c2475f2467606f06312ffc093c4ac0637ad50ba13b421aa.zip",
+      "sha256": "6a2cff6c0248c9a01c2475f2467606f06312ffc093c4ac0637ad50ba13b421aa"
+    },
+    {
+      "slug": "exam-ready",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/2a4ff8f9-7f57-435f-8eb1-69fe33afa99e/skillhub-builtin-skills/exam-ready/1.0.0/aea81a497157a19e4b136f2cfe3ba0764ebb52e520e4a87fa0446e5465f97663.zip",
+      "sha256": "aea81a497157a19e4b136f2cfe3ba0764ebb52e520e4a87fa0446e5465f97663"
+    },
+    {
+      "slug": "frontend-design",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/fae63ded-f222-4583-a723-d6d9529360e0/skillhub-builtin-skills/frontend-design/1.0.0/67b2f34163874e56ba43a0a9ed3d1012d752615a1a80f0c26608a702d9fe394e.zip",
+      "sha256": "67b2f34163874e56ba43a0a9ed3d1012d752615a1a80f0c26608a702d9fe394e"
+    },
+    {
+      "slug": "ledger-tasks-yylo",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/aicontest/2026-09-22/5fac3d84-44db-4b90-a707-a820a096a2a4.zip",
+      "sha256": "1b8aa3bb329a4f8551f7e262eb1faab1b1e3111b2b2053278aa2e6996099215b"
+    },
+    {
+      "slug": "linkedin-post-formatter",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/4e19c89f-7fa2-44fa-a3bf-90ec959258c0/skillhub-builtin-skills/linkedin-post-formatter/1.0.0/171acf2d0574265b1ececa53759658aeb582aae4c859d4199b1ff322d65f8642.zip",
+      "sha256": "171acf2d0574265b1ececa53759658aeb582aae4c859d4199b1ff322d65f8642"
+    },
+    {
+      "slug": "meeting-note-summarizer",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/6cf347a7-ccc5-4016-b4ca-6263959a1b08/skillhub-builtin-skills/meeting-note-summarizer/1.0.0/5add401203f323bc1cbb350f306d3a5d3f3b16c2ad6578e7cab55d2c196152ca.zip",
+      "sha256": "5add401203f323bc1cbb350f306d3a5d3f3b16c2ad6578e7cab55d2c196152ca"
+    },
+    {
+      "slug": "orca-replay",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/aicontest/2026-09-22/2c7f87a4-b339-47f5-9a8e-f0ad1caad2c6.zip",
+      "sha256": "9184ae8bafab208fe468c9f6b5053ca76dd9e594a96ea57ff66cb370196dbd4b"
+    },
+    {
+      "slug": "plugin-scanner",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-04/7a848563-4bc4-45fa-9be9-9fdc24b3a6d9/1788508241878/e04f0ef5585075296cb31971e572e3c68541156de9b5e5ae50bff0e6ef78cc38.zip",
+      "sha256": "e04f0ef5585075296cb31971e572e3c68541156de9b5e5ae50bff0e6ef78cc38"
+    },
+    {
+      "slug": "retrieval-practice-generator",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/ac9086e8-ee32-4baa-bf42-0bc3f5c59558/skillhub-builtin-skills/retrieval-practice-generator/1.0.0/8e1b21f9c02312378da4d5493297d98a2ce40ba03f83a51e24c97ad53f144dc1.zip",
+      "sha256": "8e1b21f9c02312378da4d5493297d98a2ce40ba03f83a51e24c97ad53f144dc1"
+    },
+    {
+      "slug": "sandbase",
+      "version": "0.1.17",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-10/0cc7b9c3-0e02-4a38-abe9-165e3bf512fb/1789021760801/434325f0b6c7c0b0c32c5608cd76f4fdf2de9e18a703450c80958fa58f970539.zip",
+      "sha256": "434325f0b6c7c0b0c32c5608cd76f4fdf2de9e18a703450c80958fa58f970539"
+    },
+    {
+      "slug": "skillhub-cli",
+      "version": "2.0.2",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-09/53469f90-68ea-4fb2-8a9d-9b129e7de240/1788951840562/4c3d788f83163877e5f4e0607bc2cfa09eb5bb81627e3d690d59d02ba8cf6c49.zip",
+      "sha256": "4c3d788f83163877e5f4e0607bc2cfa09eb5bb81627e3d690d59d02ba8cf6c49"
+    },
+    {
+      "slug": "storytelling-advisor",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/12e1eaea-cffc-4d67-b452-5383868475d2/skillhub-builtin-skills/storytelling-advisor/1.0.0/c44427e0a45e3a63dc47fb2a58e9b40f9db7a6d29715fc38a2d6162e89cd4be3.zip",
+      "sha256": "c44427e0a45e3a63dc47fb2a58e9b40f9db7a6d29715fc38a2d6162e89cd4be3"
+    },
+    {
+      "slug": "study-strategy-selector",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/ac7017cf-7d83-46e0-a467-7e2d199cbd03/skillhub-builtin-skills/study-strategy-selector/1.0.0/ea5ef41b449b823cd996be18c4f6af2d9944a0571aa7c65091327cc1893657f1.zip",
+      "sha256": "ea5ef41b449b823cd996be18c4f6af2d9944a0571aa7c65091327cc1893657f1"
+    },
+    {
+      "slug": "time-blocking-scheduler",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/9b032189-7bba-407e-adb2-bcda2c0c2765/skillhub-builtin-skills/time-blocking-scheduler/1.0.0/005b0d9afda5bb8f4dd8b8d43b2201e26f2f2792a1d7b57dc7667367d543e76e.zip",
+      "sha256": "005b0d9afda5bb8f4dd8b8d43b2201e26f2f2792a1d7b57dc7667367d543e76e"
+    },
+    {
+      "slug": "triage-nda",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-10-09/42f6a62c-2cf0-44be-acff-b204ac3e5b8c/1791511392660/459104671707d8c2adf19bce0ba97c361de644643e0434a2e325ef45e11c1ca8.zip",
+      "sha256": "459104671707d8c2adf19bce0ba97c361de644643e0434a2e325ef45e11c1ca8"
+    },
+    {
+      "slug": "video-frames",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/4136bddd-868a-44e3-a16e-16321433733c/skillhub-builtin-skills/video-frames/1.0.0/7b4e9f1fb30b5f8318b061e1c5aeda0249d73746acc548ee4d7ff13b3d999966.zip",
+      "sha256": "7b4e9f1fb30b5f8318b061e1c5aeda0249d73746acc548ee4d7ff13b3d999966"
+    },
+    {
+      "slug": "weather",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/0170ce8f-ad41-4819-bc50-9b572b1c6510/skillhub-builtin-skills/weather/1.0.0/181e36c0fd6ca5f6cdf224276dd12e0fd203f83456a988a6bcf15cc4f3c20dd6.zip",
+      "sha256": "181e36c0fd6ca5f6cdf224276dd12e0fd203f83456a988a6bcf15cc4f3c20dd6"
+    },
+    {
+      "slug": "zero-slop",
+      "version": "2.10.2",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-09-10/2abb2bab-737c-479e-9c79-d153a140e30b/1789010150588/d84fea7cd1ee53f6582889c89877d9423c1a79b419553f4626e7ab6409da10b0.zip",
+      "sha256": "d84fea7cd1ee53f6582889c89877d9423c1a79b419553f4626e7ab6409da10b0"
+    }
+  ]
+}

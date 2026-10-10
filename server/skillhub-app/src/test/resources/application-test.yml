@@ -1,0 +1,55 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+    banner-mode: "off"
+    log-startup-info: false
+  datasource:
+    generate-unique-name: true
+    url: jdbc:h2:mem:testdb-${random.uuid};MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE DOMAIN IF NOT EXISTS JSONB AS JSON;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create
+    database-platform: org.hibernate.dialect.H2Dialect
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.session.SessionAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: test-client-id
+            client-secret: test-client-secret
+            scope: read:user,user:email
+        provider:
+          github:
+            user-info-uri: https://api.github.com/user
+
+skillhub:
+  auth:
+    enforce-active-user-check: false
+  access-policy:
+    mode: OPEN
+  ratelimit:
+    download:
+      anonymous-cookie-secret: test-download-secret-32-bytes-long
+  security:
+    scanner:
+      enabled: false
+
+logging:
+  level:
+    root: ERROR
+    com.iflytek.skillhub: ERROR
+    org.springframework: ERROR

@@ -1,0 +1,277 @@
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query'
+import type { SkillSummary, SkillDetail, SkillVersion, SkillVersionDetail, SkillVersionCompare, SkillFile, SearchParams, PagedResponse, PublishResult } from '@/api/types'
+import { fetchJson, fetchText, getCsrfHeaders, skillLifecycleApi, WEB_API_PREFIX } from '@/api/client'
+import { clearDeletedSkillQueries } from '@/features/skill/skill-delete-flow'
+import { getSkillDetailQueryKey } from './query-keys'
+import { buildSkillSearchUrl } from './skill-query-helpers'
+
+const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
+
+async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSummary>> {
+  return fetchJson<PagedResponse<SkillSummary>>(buildSkillSearchUrl(params))
+}
+
+async function getSkillDetail(namespace: string, slug: string): Promise<SkillDetail> {
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  return fetchJson<SkillDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}`)
+}
+
+async function getSkillVersions(namespace: string, slug: string): Promise<SkillVersion[]> {
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  const page = await fetchJson<PagedResponse<SkillVersion>>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions`)
+  return page.items
+}
+
+async function getSkillFiles(namespace: string, slug: string, version: string): Promise<SkillFile[]> {
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  return fetchJson<SkillFile[]>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/files`)
+}
+
+async function getSkillVersionDetail(namespace: string, slug: string, version: string): Promise<SkillVersionDetail> {
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  return fetchJson<SkillVersionDetail>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}`)
+}
+
+async function getSkillVersionCompare(namespace: string, slug: string, from: string, to: string): Promise<SkillVersionCompare> {
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  return fetchJson<SkillVersionCompare>(
+    `${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/compare?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`
+  )
+}
+
+async function getSkillDocumentation(namespace: string, slug: string, version: string, path: string): Promise<string> {
+  const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+  return fetchText(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/versions/${encodeURIComponent(version)}/file?path=${encodeURIComponent(path)}`)
+}
+
+async function publishSkill(params: { namespace: string; file: File; visibility: string; confirmWarnings?: boolean }): Promise<PublishResult> {
+  const cleanNamespace = params.namespace.startsWith('@') ? params.namespace.slice(1) : params.namespace
+  const formData = new FormData()
+  formData.append('file', params.file)
+  formData.append('visibility', params.visibility)
+  formData.append('confirmWarnings', String(params.confirmWarnings === true))
+
+  return fetchJson<PublishResult>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/publish`, {
+    method: 'POST',
+    headers: getCsrfHeaders(),
+    body: formData,
+    timeoutMs: PUBLISH_REQUEST_TIMEOUT_MS,
+  })
+}
+
+export function useSearchSkills(params: SearchParams, enabled = true) {
+  return useQuery({
+    queryKey: ['skills', 'search', params],
+    queryFn: () => searchSkills(params),
+    enabled: enabled && params.starredOnly !== true,
+    // Keep prior results while typing/debouncing so the grid is not swapped for
+    // skeletons (unmount churn that races header portals under React 19).
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function useSkillDetail(namespace: string, slug: string, enabled = true) {
+  return useQuery({
+    queryKey: getSkillDetailQueryKey(namespace, slug),
+    queryFn: () => getSkillDetail(namespace, slug),
+    enabled: enabled && !!namespace && !!slug,
+    refetchOnMount: 'always',
+  })
+}
+
+export function useSkillVersions(namespace: string, slug: string, enabled = true) {
+  return useQuery({
+    queryKey: ['skills', namespace, slug, 'versions'],
+    queryFn: () => getSkillVersions(namespace, slug),
+    enabled: enabled && !!namespace && !!slug,
+  })
+}
+
+export function useSkillFiles(namespace: string, slug: string, version?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['skills', namespace, slug, 'versions', version, 'files'],
+    queryFn: () => getSkillFiles(namespace, slug, version!),
+    enabled: enabled && !!namespace && !!slug && !!version,
+  })
+}
+
+export function useSkillReadme(namespace: string, slug: string, version?: string, path?: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ['skills', namespace, slug, 'versions', version, 'readme', path],
+    queryFn: () => getSkillDocumentation(namespace, slug, version!, path!),
+    enabled: enabled && !!namespace && !!slug && !!version && !!path,
+  })
+}
+
+export function useSkillFile(
+  namespace: string,
+  slug: string,
+  version: string | undefined,
+  filePath: string | null,
+  enabled: boolean = true
+) {
+  return useQuery({
+    queryKey: ['skills', namespace, slug, 'versions', version, 'file', filePath],
+    queryFn: () => getSkillDocumentation(namespace, slug, version!, filePath!),
+    enabled: enabled && !!namespace && !!slug && !!version && !!filePath,
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+  })
+}
+
+export function useSkillVersionDetail(namespace: string, slug: string, version?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['skills', namespace, slug, 'versions', version, 'detail'],
+    queryFn: () => getSkillVersionDetail(namespace, slug, version!),
+    enabled: enabled && !!namespace && !!slug && !!version,
+  })
+}
+
+export function useSkillVersionCompare(namespace: string, slug: string, from?: string, to?: string, enabled = true) {
+  return useQuery({
+    queryKey: ['skills', namespace, slug, 'versions', 'compare', from, to],
+    queryFn: () => getSkillVersionCompare(namespace, slug, from!, to!),
+    enabled: enabled && !!namespace && !!slug && !!from && !!to,
+  })
+}
+
+export function usePublishSkill() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: publishSkill,
+    meta: {
+      skipGlobalErrorHandler: true,
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+export function useArchiveSkill() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, reason }: { namespace: string; slug: string; reason?: string }) =>
+      skillLifecycleApi.archiveSkill(namespace, slug, reason),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+export function useUnarchiveSkill() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug }: { namespace: string; slug: string }) =>
+      skillLifecycleApi.unarchiveSkill(namespace, slug),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+export function useDeleteSkillVersion() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, version }: { namespace: string; slug: string; version: string }) =>
+      skillLifecycleApi.deleteVersion(namespace, slug, version),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+export function useDeleteSkill() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, ownerId }: { namespace: string; slug: string; ownerId?: string }) =>
+      skillLifecycleApi.deleteSkill(namespace, slug, ownerId),
+    onSuccess: (data, variables) => {
+      clearDeletedSkillQueries(queryClient, variables.namespace, variables.slug, data.skillId)
+    },
+  })
+}
+
+export function useWithdrawSkillReview() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, version }: { namespace: string; slug: string; version: string }) =>
+      skillLifecycleApi.withdrawReview(namespace, slug, version),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+export function useRereleaseSkillVersion() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, version, targetVersion, confirmWarnings }: { namespace: string; slug: string; version: string; targetVersion: string; confirmWarnings?: boolean }) =>
+      skillLifecycleApi.rereleaseVersion(namespace, slug, version, targetVersion, confirmWarnings),
+    meta: {
+      skipGlobalErrorHandler: true,
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+/**
+ * Submit an UPLOADED version for review.
+ * Transitions version status from UPLOADED to PENDING_REVIEW.
+ */
+export function useSubmitForReview() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, version, targetVisibility }: { namespace: string; slug: string; version: string; targetVisibility: 'PUBLIC' | 'NAMESPACE_ONLY' }) =>
+      skillLifecycleApi.submitForReview(namespace, slug, version, targetVisibility),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}
+
+/**
+ * Confirm publish for a PRIVATE skill version.
+ * Transitions version status from UPLOADED to PUBLISHED without review.
+ */
+export function useConfirmPublish() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ namespace, slug, version }: { namespace: string; slug: string; version: string }) =>
+      skillLifecycleApi.confirmPublish(namespace, slug, version),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['skills', 'my'] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug] })
+      queryClient.invalidateQueries({ queryKey: ['skills', variables.namespace, variables.slug, 'versions'] })
+      queryClient.invalidateQueries({ queryKey: ['skills'] })
+    },
+  })
+}

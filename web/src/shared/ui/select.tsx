@@ -1,0 +1,188 @@
+import * as React from 'react'
+import * as SelectPrimitive from '@radix-ui/react-select'
+import { Check, ChevronDown, ChevronUp } from 'lucide-react'
+import { getPortalContainer } from '@/shared/lib/portal-container'
+import { cn } from '@/shared/lib/utils'
+
+export const SELECT_TRIGGER_CLASS_NAME = cn(
+  'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-border/60 bg-background/40 px-3 py-1.5 text-sm text-foreground',
+  'ring-offset-background transition-[border-color,box-shadow,background-color] duration-150 ease-out',
+  'hover:border-border focus-visible:outline-none focus-visible:border-ring focus-visible:bg-card focus-visible:ring-4 focus-visible:ring-ring/15',
+  'disabled:cursor-not-allowed disabled:opacity-50',
+  'data-[placeholder]:text-muted-foreground [&>span]:line-clamp-1'
+)
+
+export const SELECT_CONTENT_CLASS_NAME = cn(
+  'z-50 max-h-[var(--radix-select-content-available-height)] w-fit min-w-48 max-w-[18rem] overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-md',
+  // In-tree (no Portal): avoids React 19 removeChild races on route unmount.
+  // No exit animations: delayed unmount still races commits when Content was portaled.
+  'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
+  'data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2',
+  'data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2'
+)
+
+export const SELECT_ITEM_CLASS_NAME = cn(
+  'relative flex w-full cursor-pointer select-none items-center rounded-md py-2 pl-8 pr-8 text-sm outline-none',
+  'focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50'
+)
+
+export const SELECT_SCROLL_BUTTON_CLASS_NAME = cn(
+  'flex cursor-pointer items-center justify-center py-1 text-muted-foreground'
+)
+
+export function normalizeSelectValue(value?: string | null) {
+  return typeof value === 'string' && value.length > 0 ? value : undefined
+}
+
+const Select = SelectPrimitive.Root
+const SelectGroup = SelectPrimitive.Group
+const SelectValue = SelectPrimitive.Value
+
+const SelectTrigger = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Trigger>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger>
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Trigger
+    ref={ref}
+    translate="no"
+    className={cn(SELECT_TRIGGER_CLASS_NAME, className)}
+    {...props}
+  >
+    {children}
+    <SelectPrimitive.Icon asChild>
+      <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+    </SelectPrimitive.Icon>
+  </SelectPrimitive.Trigger>
+))
+
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+
+const SelectScrollUpButton = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollUpButton>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.ScrollUpButton
+    ref={ref}
+    className={cn(SELECT_SCROLL_BUTTON_CLASS_NAME, className)}
+    {...props}
+  >
+    <ChevronUp className="h-4 w-4" />
+  </SelectPrimitive.ScrollUpButton>
+))
+
+SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
+
+const SelectScrollDownButton = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.ScrollDownButton>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.ScrollDownButton
+    ref={ref}
+    className={cn(SELECT_SCROLL_BUTTON_CLASS_NAME, className)}
+    {...props}
+  >
+    <ChevronDown className="h-4 w-4" />
+  </SelectPrimitive.ScrollDownButton>
+))
+
+SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
+
+const SelectContent = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
+>(({ className, children, position = 'popper', sideOffset = 4, ...props }, ref) => {
+  const portalContainer = getPortalContainer()
+  const content = (
+    <SelectPrimitive.Content
+      ref={ref}
+      translate="no"
+      sideOffset={sideOffset}
+      className={cn(
+        SELECT_CONTENT_CLASS_NAME,
+        className
+      )}
+      position={position}
+      {...props}
+    >
+      <SelectScrollUpButton />
+      <SelectPrimitive.Viewport
+        className={cn(
+          'p-1',
+          position === 'popper'
+            && 'h-[var(--radix-select-trigger-height)] min-w-[var(--radix-select-trigger-width)]'
+        )}
+      >
+        {children}
+      </SelectPrimitive.Viewport>
+      <SelectScrollDownButton />
+    </SelectPrimitive.Content>
+  )
+
+  // Portal to the shared container when available (e.g. inside a Dialog) so
+  // the dropdown is not clipped by overflow:hidden / overflow-y-auto ancestors.
+  // In-tree still works fine for non-modal contexts.
+  if (portalContainer) {
+    return React.createElement(SelectPrimitive.Portal, { container: portalContainer }, content)
+  }
+
+  return content
+})
+
+SelectContent.displayName = SelectPrimitive.Content.displayName
+
+const SelectLabel = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Label>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Label>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Label
+    ref={ref}
+    className={cn('px-2 py-1.5 text-sm font-semibold text-foreground', className)}
+    {...props}
+  />
+))
+
+SelectLabel.displayName = SelectPrimitive.Label.displayName
+
+const SelectItem = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Item>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Item>
+>(({ className, children, ...props }, ref) => (
+  <SelectPrimitive.Item
+    ref={ref}
+    className={cn(SELECT_ITEM_CLASS_NAME, className)}
+    {...props}
+  >
+    <span className="absolute left-3 flex h-4 w-4 items-center justify-center">
+      <SelectPrimitive.ItemIndicator>
+        <Check className="h-4 w-4" />
+      </SelectPrimitive.ItemIndicator>
+    </span>
+    <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+  </SelectPrimitive.Item>
+))
+
+SelectItem.displayName = SelectPrimitive.Item.displayName
+
+const SelectSeparator = React.forwardRef<
+  React.ElementRef<typeof SelectPrimitive.Separator>,
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Separator>
+>(({ className, ...props }, ref) => (
+  <SelectPrimitive.Separator
+    ref={ref}
+    className={cn('-mx-1 my-1 h-px bg-border', className)}
+    {...props}
+  />
+))
+
+SelectSeparator.displayName = SelectPrimitive.Separator.displayName
+
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+}

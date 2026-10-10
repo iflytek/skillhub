@@ -1,0 +1,61 @@
+{{- /*
+SkillHub Service 资源
+- server/web: 使用组件自己的 service.type 配置（共享同一模板）
+- scanner: 固定 ClusterIP（仅供内部调用）
+*/}}
+
+{{- range $name := list "server" "web" }}
+{{- $component := index $.Values $name }}
+{{- $enabled := true }}
+{{- if hasKey $component "enabled" }}
+{{- $enabled = $component.enabled }}
+{{- end }}
+{{- if and $enabled $component.service.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "skillhub.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include (printf "skillhub.%s.labels" $name) $ | nindent 4 }}
+spec:
+  type: {{ $component.service.type }}
+  {{- if eq $component.service.type "LoadBalancer" }}
+  {{- if $component.service.loadBalancerIP }}
+  loadBalancerIP: {{ $component.service.loadBalancerIP }}
+  {{- end }}
+  {{- if $component.service.loadBalancerSourceRanges }}
+  loadBalancerSourceRanges:
+    {{- toYaml $component.service.loadBalancerSourceRanges | nindent 4 }}
+  {{- end }}
+  {{- end }}
+  ports:
+    - name: http
+      port: {{ $component.service.port }}
+      targetPort: http
+      {{- if and (eq $component.service.type "NodePort") $component.service.nodePort }}
+      nodePort: {{ $component.service.nodePort }}
+      {{- end }}
+  selector:
+    {{- include (printf "skillhub.%s.selectorLabels" $name) $ | nindent 4 }}
+{{- end }}
+{{- end }}
+
+{{- /* Scanner Service（固定 ClusterIP） */}}
+{{- if and .Values.scanner.enabled .Values.scanner.service }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "skillhub.fullname" . }}-scanner
+  labels:
+    {{- include "skillhub.scanner.labels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ .Values.scanner.service.port }}
+      targetPort: http
+  selector:
+    {{- include "skillhub.scanner.selectorLabels" . | nindent 4 }}
+{{- end }}

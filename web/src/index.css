@@ -1,0 +1,703 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ═══════════════════════════════════════════
+       SkillHub — 白 + 近黑（ref: skillhub-clone, TabTin, skillhub.cn）
+       纯白底，冷灰卡片 #f2f3f5，近黑按钮 #202020
+       无品牌色，所有表达通过灰阶深度
+       ═══════════════════════════════════════════ */
+
+    /* ── 基础层 — 纯白底，对标 skillhub-clone / skillhub.cn ── */
+    --background: 0 0% 100%;               /* #ffffff */
+    --foreground: 0 0% 0%;                 /* #000000 文字 */
+    --card: 0 0% 100%;                     /* #ffffff 纯白卡片 */
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+
+    /* ── 主色 — 近黑（无品牌色，对标 skillhub-clone #202020） ── */
+    --primary: 0 0% 13%;                   /* #202020 */
+    --primary-foreground: 0 0% 100%;
+
+    /* ── 表面层 — 冷灰递进 ── */
+    --secondary: 240 3% 97%;               /* #f6f7f9 */
+    --secondary-foreground: 0 0% 0%;
+    --muted: 240 3% 94%;                   /* #eef0f2 */
+    --muted-foreground: 0 0% 45%;          /* #737373，保证辅助文字可读性 */
+
+    /* ── 强调色 — 淡蓝 hover（对齐 TabTin hsl(214 70% 96%)） ── */
+    --accent: 214 70% 96%;                  /* 淡蓝 hover */
+    --accent-foreground: 0 0% 7%;          /* #111111 */
+
+    /* ── 功能色 ── */
+    --destructive: 0 55% 48%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 92%;                    /* rgba(0,0,0,0.08) */
+    --input: 240 3% 95%;                   /* #f2f3f5 */
+    --ring: 0 0% 13%;                      /* #202020 */
+    --radius: 0.625rem;                    /* 10px，对标 skillhub-clone */
+
+    /* ── 扩展色板 ── */
+    --surface-glass: 0 0% 100%;
+    --glow-primary: 0 0% 13%;
+    --glow-accent: 0 0% 7%;
+    --success: 160 50% 40%;
+    --warning: 38 85% 50%;
+
+    /* ── 品牌渐变 — 无（纯黑） ── */
+    --brand-start: #202020;
+    --brand-end: #111111;
+    --brand-gradient: none;
+
+    /* ── 文字语义色 — 对标 clone 的 rgba(0,0,0,0.62) / 0.4 ── */
+    --text-secondary: 0 0% 45%;            /* #737373，正文辅助信息 */
+    --text-muted: 0 0% 38%;
+    --text-placeholder: 0 0% 45%;
+
+    /* ── 边框语义 ── */
+    --border-card: 0 0% 94%;               /* rgba(0,0,0,0.06) */
+
+    /* ── 阴影 token — 极轻，对标 clone 的 0 1px 3px rgba(0,0,0,0.04) ── */
+    --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+    --shadow-card-hover: 0 4px 12px 0 rgb(0 0 0 / 0.08);
+    --shadow-btn-primary: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  }
+
+  .dark {
+    /* ── 基础层 — 暗色保持近黑风格，但提高卡片对比度以改善 hover 可见性 ── */
+    --background: 0 0% 6%;                 /* #0f0f0f */
+    --foreground: 0 0% 94%;                /* 更亮的文字 */
+    --card: 0 0% 10%;                      /* #1a1a1a 稍微亮一点 */
+    --card-foreground: 0 0% 94%;
+    --popover: 0 0% 11%;
+    --popover-foreground: 0 0% 94%;
+
+    /* ── 主色 — 白（暗色下反转） ── */
+    --primary: 0 0% 94%;                   /* 近白 */
+    --primary-foreground: 0 0% 6%;         /* 近黑 */
+
+    /* ── 表面层 — 灰阶递进，提高对比度 ── */
+    --secondary: 0 0% 14%;                 /* 从 12% 提升 */
+    --secondary-foreground: 0 0% 90%;
+    --muted: 0 0% 18%;                     /* 从 15% 提升 */
+    --muted-foreground: 0 0% 68%;          /* 从 60% 提升，图标更清晰 */
+
+    /* ── 强调色 — hover 更明显 ── */
+    --accent: 0 0% 22%;                    /* 从 18% 提升 */
+    --accent-foreground: 0 0% 85%;
+
+    /* ── 功能色 ── */
+    --destructive: 0 45% 48%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 20%;                    /* 从 18% 提升 */
+    --input: 0 0% 16%;
+    --ring: 0 0% 85%;
+
+    /* ── 扩展色板 ── */
+    --surface-glass: 0 0% 10%;
+    --glow-primary: 0 0% 80%;
+    --glow-accent: 0 0% 60%;
+    --success: 160 45% 42%;
+    --warning: 38 80% 48%;
+
+    /* ── 文字语义 — 提高可读性 ── */
+    --text-secondary: 0 0% 75%;            /* 从 70% 提升 */
+    --text-muted: 0 0% 68%;                /* 从 60% 提升 */
+    --text-placeholder: 0 0% 55%;
+
+    /* ── 边框 ── */
+    --border-card: 0 0% 18%;               /* 从 16% 提升 */
+
+    /* ── 阴影 ── */
+    --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.30);
+    --shadow-card-hover: 0 4px 12px 0 rgb(0 0 0 / 0.40);
+    --shadow-btn-primary: 0 1px 2px 0 rgb(0 0 0 / 0.20);
+  }
+
+  /* 暗色模式 card-hover */
+  .dark .card-hover:hover {
+    background: hsl(0 0% 20%);
+    border-color: hsl(0 0% 25%);
+    box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.30);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Plus Jakarta Sans', -apple-system, 'system-ui', 'SF Pro Text', 'PingFang SC', 'HarmonyOS Sans SC', 'Noto Sans SC', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Plus Jakarta Sans', -apple-system, 'system-ui', 'SF Pro Display', 'PingFang SC', 'HarmonyOS Sans SC', system-ui, sans-serif;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  /* Hero 标题负 letter-spacing */
+  .hero-title {
+    letter-spacing: -0.02em;
+    font-weight: 500;
+  }
+
+  .page-title {
+    letter-spacing: -0.02em;
+    font-weight: 500;
+  }
+
+  code, pre, kbd {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+  }
+
+  /* Hide browser-native password reveal button (conflicts with custom toggle) */
+  input[type="password"]::-ms-reveal,
+  input[type="password"]::-ms-clear,
+  input[type="password"]::-webkit-credentials-auto-fill-button {
+    display: none;
+  }
+}
+
+/* ─── Dot-grid background texture ─── */
+.bg-dots {
+  background-image: radial-gradient(circle, hsl(var(--muted-foreground) / 0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ─── Gradient glow orbs ─── */
+.glow-orb-primary {
+  position: fixed;
+  width: 600px;
+  height: 600px;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(var(--glow-primary) / 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.glow-orb-accent {
+  position: fixed;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, hsl(var(--glow-accent) / 0.06) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Glass morphism ─── */
+.glass {
+  background: hsl(var(--surface-glass) / 0.7);
+  backdrop-filter: blur(16px) saturate(1.4);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4);
+  border: 1px solid hsl(var(--border) / 0.5);
+}
+
+.glass-strong {
+  background: hsl(var(--surface-glass) / 0.85);
+  backdrop-filter: blur(24px) saturate(1.6);
+  -webkit-backdrop-filter: blur(24px) saturate(1.6);
+  border: 1px solid hsl(var(--border) / 0.6);
+}
+
+/* ─── Animations ─── */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.scroll-fade-up {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.scroll-fade-up.in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .scroll-fade-up {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease both;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 25%,
+    hsl(var(--muted-foreground) / 0.08) 50%,
+    hsl(var(--muted)) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Stagger delays */
+.delay-1 { animation-delay: 0.1s; }
+.delay-2 { animation-delay: 0.2s; }
+.delay-3 { animation-delay: 0.3s; }
+.delay-4 { animation-delay: 0.4s; }
+.delay-5 { animation-delay: 0.5s; }
+.delay-6 { animation-delay: 0.6s; }
+
+/* ─── Gradient text ─── */
+.text-gradient-primary {
+  background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent)));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-hero {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .text-gradient-hero {
+  background: none;
+  -webkit-text-fill-color: unset;
+  color: hsl(var(--foreground));
+}
+
+/* ─── Card hover lift（已移除，由下方浅蓝灰 hover 替代） ─── */
+
+/* ─── Scrollbar ─── */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* ─── Selection ─── */
+::selection {
+  background: hsl(var(--primary) / 0.3);
+  color: hsl(var(--foreground));
+}
+
+/* ─── Focus ring ─── */
+.focus-ring {
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+}
+
+/* ─── Brand gradient utilities ─── */
+.text-brand-gradient {
+  background: var(--brand-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.bg-brand-gradient {
+  background: var(--brand-gradient);
+}
+
+/* ─── Handle tag (namespace @ pill) ─── */
+.handle-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(199 76% 34%);
+  background: hsl(199 89% 94%);
+  border: 1px solid hsl(199 93% 74%);
+  border-radius: 9999px;
+}
+
+/* ─── Status pills ─── */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  padding: 4px 18px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+  color: white;
+}
+
+.status-pill--published { background: #16a34a; }
+.status-pill--review { background: #c2410c; }
+.status-pill--archived { background: #6b7280; }
+.status-pill--rejected { background: #dc2626; }
+
+/* ─── Role pill ─── */
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 9999px;
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--text-secondary));
+}
+
+/* ─── Soft badges ─── */
+.badge-soft {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.badge-soft-green {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.badge-soft-blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.dark .handle-tag {
+  color: hsl(196 80% 72%);
+  background: hsl(199 70% 15%);
+  border-color: hsl(199 60% 30%);
+}
+
+.dark .badge-soft-green {
+  background: hsl(142 55% 16%);
+  color: hsl(142 70% 72%);
+}
+
+.dark .badge-soft-blue {
+  background: hsl(221 55% 18%);
+  color: hsl(213 90% 75%);
+}
+
+/* ─── Tab active ─── */
+.tab-active {
+  border-bottom: 2px solid hsl(var(--primary));
+  color: hsl(var(--primary));
+}
+
+/* ─── Code block ─── */
+.code-block {
+  background: #1A202C;
+  color: #e5e7eb;
+  border-radius: 12px;
+}
+
+/* ─── Markdown code highlighting ─── */
+.hljs {
+  display: block;
+  color: hsl(var(--foreground) / 0.92);
+  background: transparent;
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: hsl(var(--muted-foreground) / 0.9);
+  font-style: italic;
+}
+
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-name,
+.hljs-section,
+.hljs-link {
+  color: hsl(var(--primary) / 0.95);
+  font-weight: 600;
+}
+
+.hljs-string,
+.hljs-title,
+.hljs-attribute,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+  color: hsl(var(--primary) / 0.85);
+}
+
+.hljs-number,
+.hljs-meta,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-type,
+.hljs-built_in,
+.hljs-params {
+  color: hsl(218 70% 45%);
+}
+
+.hljs-function,
+.hljs-title.function_,
+.hljs-title.class_ {
+  color: hsl(var(--foreground) / 0.95);
+  font-weight: 600;
+}
+
+.hljs-regexp,
+.hljs-subst,
+.hljs-doctag {
+  color: hsl(24 85% 52%);
+}
+
+.hljs-deletion {
+  color: hsl(var(--destructive) / 0.88);
+}
+
+/* ─── Upload zone ─── */
+.upload-zone {
+  border: 2px dashed hsl(var(--border));
+  background: hsl(var(--background));
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.upload-zone:hover {
+  border-color: #202020;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.upload-zone .upload-zone-icon {
+  color: hsl(var(--muted-foreground));
+  transition: color 0.2s ease;
+}
+
+.upload-zone:hover .upload-zone-icon {
+  color: #202020;
+}
+
+/* ─── Feature icon shadow ─── */
+.feature-icon {
+  box-shadow: 0 14px 30px hsl(0 0% 0% / 0.12);
+}
+
+/* ─── Hero input placeholder ─── */
+.hero-input::placeholder {
+  color: hsl(var(--text-placeholder));
+}
+
+/* 技能卡片描述固定为三行，避免长文案拉高网格；完整内容通过 title 提供。 */
+.skill-card-summary {
+  display: -webkit-box;
+  min-height: 3.75rem;
+  max-height: 3.75rem;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* ═══════════════════════════════════════════
+   样式细节增强（不改颜色，只改交互/布局/字体）
+   ═══════════════════════════════════════════ */
+
+/* ─── 胶囊按钮（白 + 近黑风格） ─── */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition: transform 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.btn-pill:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+}
+.btn-pill-primary {
+  background: #202020;
+  color: #fff;
+  box-shadow: 0 1px 0 rgb(255 255 255 / 16%) inset, 0 4px 12px rgb(0 0 0 / 8%);
+}
+.btn-pill-primary:hover {
+  background: #111111;
+  transform: translateY(-1px);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 16%) inset, 0 7px 18px rgb(0 0 0 / 12%);
+}
+.btn-pill-primary:active {
+  background: #000;
+  transform: translateY(0) scale(0.985);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+}
+.btn-pill-outline {
+  background: #f2f2f2;
+  color: #000;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+.btn-pill-outline:hover {
+  background: #e8e8e8;
+  border-color: rgb(0 0 0 / 6%);
+  transform: translateY(-1px);
+}
+.btn-pill-outline:active {
+  background: #dedede;
+  transform: translateY(0) scale(0.985);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-pill,
+  .btn-pill:hover,
+  .btn-pill:active {
+    transform: none;
+    transition-duration: 0.01ms;
+  }
+}
+
+/* ─── 多彩标签（柔和彩色，不改品牌色） ─── */
+.tag-color {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+.tag-orange { background: hsl(30 70% 90%); color: hsl(25 70% 28%); }
+.tag-purple { background: hsl(270 45% 92%); color: hsl(270 40% 32%); }
+.tag-blue   { background: hsl(215 60% 92%); color: hsl(215 55% 30%); }
+.tag-green  { background: hsl(155 50% 90%); color: hsl(155 55% 24%); }
+
+.dark .tag-orange { background: hsl(25 45% 18%); color: hsl(30 70% 72%); }
+.dark .tag-purple { background: hsl(270 30% 20%); color: hsl(270 45% 80%); }
+.dark .tag-blue   { background: hsl(215 40% 18%); color: hsl(215 50% 76%); }
+.dark .tag-green  { background: hsl(155 40% 16%); color: hsl(155 50% 68%); }
+
+/* ─── Card hover（对齐 TabTin hsl(214 70% 96%)，无位移） ─── */
+.card-hover {
+  transition: background 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.card-hover:hover {
+  background: hsl(214 70% 96%);
+  box-shadow: 0 4px 12px 0 rgb(0 0 0 / 0.06);
+  border-color: hsl(214 50% 88%);
+}
+
+/* ─── Container / 选中项模型（淡蓝 tint，对齐 TabTin） ─── */
+.container-tray {
+  background: hsl(214 70% 97%);
+  border-radius: 0.5rem;
+  padding: 0.25rem;
+}
+.container-tray .item-selected {
+  background: #fff;
+  border-radius: 0.375rem;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.04);
+}
+.container-tray .item-selected .text-foreground,
+.container-tray .item-selected [style*="color: hsl(var(--foreground))"] {
+  color: hsl(var(--foreground)) !important;
+}
+.container-tray .item-idle {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+}
+.container-tray .item-idle:hover {
+  background: rgba(0,0,0,0.03);
+}
+
+/* 暗色模式 container-tray */
+.dark .container-tray {
+  background: hsl(0 0% 13%);
+}
+.dark .container-tray .item-selected {
+  background: hsl(0 0% 18%);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.30);
+}
+.dark .container-tray .item-idle:hover {
+  background: rgba(255,255,255,0.04);
+}

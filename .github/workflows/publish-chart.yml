@@ -1,0 +1,86 @@
+name: Publish Helm Chart
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Chart and application version (for example, 0.2.14)
+        required: true
+        type: string
+
+concurrency:
+  group: publish-chart-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      startsWith(github.ref_name, 'v') ||
+      startsWith(github.ref_name, 'chart-v') ||
+      startsWith(github.ref_name, 'helm-v')
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: charts/skillhub
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+
+      - name: Verify dependencies
+        run: helm dependency build .
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Parse version from tag
+        id: ver
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            VER="${{ inputs.version }}"
+          elif [[ "${{ github.ref_name }}" =~ ^(helm|chart)-v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VER="${BASH_REMATCH[2]}"
+          elif [[ "${{ github.ref_name }}" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            VER="${BASH_REMATCH[1]}"
+          else
+            echo "ERROR: Unsupported release tag: ${{ github.ref_name }}"
+            exit 1
+          fi
+          if [[ ! "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "ERROR: Version must use MAJOR.MINOR.PATCH format: $VER"
+            exit 1
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Lint chart
+        run: helm lint . -f tests/test-values.yaml
+
+      - name: Package and push
+        run: |
+          helm package . \
+            --version "${{ steps.ver.outputs.version }}" \
+            --app-version "${{ steps.ver.outputs.version }}" \
+            --destination /tmp/helm-charts
+          helm push /tmp/helm-charts/skillhub-${{ steps.ver.outputs.version }}.tgz \
+            oci://ghcr.io/${{ github.repository_owner }}/charts
+
+      - name: Upload chart artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillhub-${{ steps.ver.outputs.version }}.tgz
+          path: /tmp/helm-charts/skillhub-${{ steps.ver.outputs.version }}.tgz
+          retention-days: 90
