@@ -297,6 +297,22 @@ spec:
                 configMapKeyRef:
                   name: {{ include "skillhub.fullname" . }}-config
                   key: auth-direct-enabled
+            - name: SKILLHUB_AUTH_INITIAL_PASSWORD_LOGIN_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-initial-password-login-enabled
+            - name: SKILLHUB_AUTH_INITIAL_SELF_REGISTRATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: auth-initial-self-registration-enabled
+            - name: SKILLHUB_AUTH_INITIAL_ROLE_GRANTS_JSON
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "skillhub.secretName" . }}
+                  key: auth-initial-role-grants-json
+                  optional: true
             - name: SKILLHUB_BUILTIN_SKILLS_ENABLED
               valueFrom:
                 configMapKeyRef:

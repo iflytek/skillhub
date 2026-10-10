@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.auth.local;
 
+import com.iflytek.skillhub.auth.settings.LocalAuthSettingsService;
+
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.domain.auth.PasswordResetRequest;
 import com.iflytek.skillhub.domain.auth.PasswordResetRequestRepository;
@@ -41,6 +43,7 @@ public class PasswordResetService {
     private final PasswordEncoder passwordEncoder;
     private final JavaMailSender mailSender;
     private final PasswordResetProperties properties;
+    private final LocalAuthSettingsService authSettings;
 
     public PasswordResetService(PasswordResetRequestRepository resetRequestRepository,
                                 UserAccountRepository userAccountRepository,
@@ -48,7 +51,8 @@ public class PasswordResetService {
                                 PasswordPolicyValidator passwordPolicyValidator,
                                 PasswordEncoder passwordEncoder,
                                 JavaMailSender mailSender,
-                                PasswordResetProperties properties) {
+                                PasswordResetProperties properties,
+                                LocalAuthSettingsService authSettings) {
         this.resetRequestRepository = resetRequestRepository;
         this.userAccountRepository = userAccountRepository;
         this.credentialRepository = credentialRepository;
@@ -56,6 +60,7 @@ public class PasswordResetService {
         this.passwordEncoder = passwordEncoder;
         this.mailSender = mailSender;
         this.properties = properties;
+        this.authSettings = authSettings;
     }
 
     /**
@@ -64,6 +69,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void requestPasswordReset(String email) {
+        authSettings.requirePasswordLogin();
         String normalizedEmail = normalizeEmail(email);
         validateEmail(normalizedEmail);
         Optional<UserAccount> userOpt = findEligibleUserByEmail(normalizedEmail);
@@ -95,6 +101,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void adminTriggerPasswordReset(String userId, String adminUserId) {
+        authSettings.requirePasswordLogin();
         UserAccount user = userAccountRepository.findById(userId)
                 .orElseThrow(() -> new AuthFlowException(HttpStatus.NOT_FOUND, "error.admin.user.notFound", userId));
 
@@ -124,6 +131,7 @@ public class PasswordResetService {
      */
     @Transactional
     public void confirmPasswordReset(String email, String code, String newPassword) {
+        authSettings.requirePasswordLogin();
         String normalizedEmail = normalizeEmail(email);
         validateEmail(normalizedEmail);
         UserAccount user = findUserByEmail(normalizedEmail)

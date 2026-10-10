@@ -13,6 +13,8 @@ import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.local.LocalAuthService;
 import com.iflytek.skillhub.auth.local.LocalCredentialRepository;
 import com.iflytek.skillhub.auth.local.PasswordResetService;
+import com.iflytek.skillhub.auth.settings.LocalAuthSettings;
+import com.iflytek.skillhub.auth.settings.LocalAuthSettingsService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
@@ -57,6 +59,15 @@ class LocalAuthControllerTest {
 
     @MockBean
     private LocalCredentialRepository localCredentialRepository;
+
+    @MockBean
+    private LocalAuthSettingsService localAuthSettingsService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void localAuthEnabled() {
+        given(localAuthSettingsService.current()).willReturn(new LocalAuthSettings(1L, true, true, 0L, null));
+    }
+
 
     @Test
     void login_returnsCurrentUserEnvelope() throws Exception {

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 const authMethodsFixture = vi.hoisted(() => ({
   methods: [] as Array<{ id: string, methodType: string }>,
   isLoading: false,
+  registrationAvailable: true,
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -31,6 +32,14 @@ vi.mock('@/features/auth/login-button', () => ({
 
 vi.mock('@/features/auth/use-auth-methods', () => ({
   useAuthMethods: () => ({ data: authMethodsFixture.methods, isLoading: authMethodsFixture.isLoading }),
+}))
+
+vi.mock('@/features/auth/use-local-auth-capabilities', () => ({
+  useLocalAuthCapabilities: () => ({
+    data: { passwordLoginEnabled: true, selfRegistrationEnabled: authMethodsFixture.registrationAvailable,
+      registrationAvailable: authMethodsFixture.registrationAvailable },
+    isError: false,
+  }),
 }))
 
 vi.mock('@/features/auth/use-local-auth', () => ({
@@ -88,5 +97,13 @@ describe('RegisterPage', () => {
     expect(html).toContain('register.oauthHint')
     expect(html).toContain('OAuth buttons')
     authMethodsFixture.methods = []
+  })
+
+  it('hides local registration when disabled', () => {
+    authMethodsFixture.registrationAvailable = false
+    const html = renderToStaticMarkup(<RegisterPage />)
+    expect(html).not.toContain('register.submit')
+    expect(html).toContain('systemConfig.registrationDisabled')
+    authMethodsFixture.registrationAvailable = true
   })
 })

@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.auth.local;
 
+import com.iflytek.skillhub.auth.settings.LocalAuthSettingsService;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -8,6 +10,8 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.entity.Role;
@@ -56,6 +60,9 @@ class LocalAuthServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private LocalAuthSettingsService authSettings;
+
     private LocalAuthService service;
 
     @BeforeEach
@@ -68,8 +75,31 @@ class LocalAuthServiceTest {
             new PasswordPolicyValidator(),
             passwordEncoder,
             CLOCK,
-            eventPublisher
+            eventPublisher,
+            authSettings
         );
+    }
+
+    @Test
+    void disabledPasswordLoginStopsAuthenticationBeforeCredentialLookup() {
+        doThrow(new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.local.login.disabled"))
+            .when(authSettings).requirePasswordLogin();
+
+        assertThatThrownBy(() -> service.login("alice", "Abcd123!"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+        verifyNoInteractions(credentialRepository);
+    }
+
+    @Test
+    void disabledRegistrationStopsAccountCreation() {
+        doThrow(new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.local.registration.disabled"))
+            .when(authSettings).requireSelfRegistration();
+
+        assertThatThrownBy(() -> service.register("alice", "Abcd123!", "alice@example.com"))
+            .isInstanceOf(AuthFlowException.class)
+            .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+        verifyNoInteractions(userAccountRepository, credentialRepository);
     }
 
     @Test

@@ -1674,6 +1674,35 @@
     "pageSuffix": "",
     "goToPage": "Go to page {{page}}"
   },
+  "systemConfig": {
+    "title": "System settings",
+    "localAuth": "Local accounts",
+    "lockoutHelp": "Before disabling password login, confirm that external sign-in and super admin access work.",
+    "grantedTo": "Granted to account {{userId}} (external identity {{subject}})",
+    "passwordLogin": "Allow local password login",
+    "selfRegistration": "Allow local account registration",
+    "registrationRequiresLogin": "Password login is off, so registration is currently unavailable. The registration setting is retained.",
+    "lockoutWarning": "Admins who rely only on passwords will not be able to sign in again. Continue?",
+    "initialRoleRules": "Initial external account role rules",
+    "ruleHelp": "Applies only when a new external account is created after passing the existing access policy. A local account with the same email is not merged. Grant existing users a role in User Management.",
+    "provider": "Identity provider code",
+    "email": "Verified email",
+    "role": "Platform role",
+    "addRule": "Add rule",
+    "disable": "Disable",
+    "disableConfirm": "Disable this initial role rule?",
+    "saved": "Saved",
+    "saveFailed": "Save failed",
+    "loadFailed": "Could not load settings. Refresh and try again.",
+    "capabilitiesUnavailable": "Could not load login settings. Refresh and try again.",
+    "registrationDisabled": "Local registration is disabled. Use another available sign-in method.",
+    "passwordDisabled": "Local password login is disabled. Use another available sign-in method.",
+    "status": {
+      "ACTIVE": "Waiting",
+      "DISABLED": "Disabled",
+      "CONSUMED": "Granted"
+    }
+  },
   "user": {
     "menu": {
       "dashboard": "Dashboard",
@@ -1689,6 +1718,7 @@
       "reports": "Report Management",
       "users": "User Management",
       "labels": "Label Management",
+      "systemConfig": "System Settings",
       "auditLog": "Audit Log",
       "security": "Security Settings",
       "profile": "Profile Settings",

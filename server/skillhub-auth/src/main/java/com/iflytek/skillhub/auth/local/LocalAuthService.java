@@ -2,6 +2,7 @@ package com.iflytek.skillhub.auth.local;
 
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.settings.LocalAuthSettingsService;
 import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.event.UserActivatedEvent;
@@ -47,6 +48,7 @@ public class LocalAuthService {
     private final PasswordEncoder passwordEncoder;
     private final Clock clock;
     private final ApplicationEventPublisher eventPublisher;
+    private final LocalAuthSettingsService authSettings;
 
     public LocalAuthService(LocalCredentialRepository credentialRepository,
                             UserAccountRepository userAccountRepository,
@@ -55,7 +57,8 @@ public class LocalAuthService {
                             PasswordPolicyValidator passwordPolicyValidator,
                             PasswordEncoder passwordEncoder,
                             Clock clock,
-                            ApplicationEventPublisher eventPublisher) {
+                            ApplicationEventPublisher eventPublisher,
+                            LocalAuthSettingsService authSettings) {
         this.credentialRepository = credentialRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -64,6 +67,7 @@ public class LocalAuthService {
         this.passwordEncoder = passwordEncoder;
         this.clock = clock;
         this.eventPublisher = eventPublisher;
+        this.authSettings = authSettings;
     }
 
     /**
@@ -72,6 +76,7 @@ public class LocalAuthService {
      */
     @Transactional
     public PlatformPrincipal register(String username, String password, String email) {
+        authSettings.requireSelfRegistration();
         String normalizedUsername = normalizeUsername(username);
         validateUsername(normalizedUsername);
 
@@ -116,6 +121,7 @@ public class LocalAuthService {
      */
     @Transactional
     public PlatformPrincipal login(String username, String password) {
+        authSettings.requirePasswordLogin();
         String normalizedUsername = normalizeUsername(username);
         LocalCredential credential = credentialRepository.findByUsernameIgnoreCase(normalizedUsername)
             .orElse(null);
@@ -147,6 +153,7 @@ public class LocalAuthService {
      */
     @Transactional
     public void changePassword(String userId, String currentPassword, String newPassword) {
+        authSettings.requirePasswordLogin();
         LocalCredential credential = credentialRepository.findByUserId(userId)
             .orElseThrow(() -> new AuthFlowException(HttpStatus.BAD_REQUEST, "error.auth.local.notEnabled"));
 

@@ -51,6 +51,13 @@ helm -n skillhub upgrade -i skillhub ./charts/skillhub \
 `<publicBaseUrl>/cli/auth`。所有 values 会先经过 `values.schema.json` 和跨字段校验，
 无效的组件、Ingress、HPA 与存储组合会在安装前失败。
 
+首次安装可通过 `auth.initialSettings.passwordLoginEnabled` 和
+`auth.initialSettings.selfRegistrationEnabled` 设置本地认证开关的初始值。
+若要预置外部账号首次授权规则，在受保护的 values 中设置
+`secrets.initialRoleGrantsJson`，或在 `existingSecret` 中提供
+`auth-initial-role-grants-json`。这些值仅用于数据库首次初始化；之后在后台
+“系统配置”中管理。规则格式及管理入口见 [登录开关与外部账号首次授权](../../docs/923-auth-system-settings.md)。
+
 > **Ingress values 迁移：** 当前版本只支持结构化的 `ingress.hosts[]` 和
 > `ingress.tls[]`。旧的 `ingress.host`、`ingress.tls.enabled` 与
 > `ingress.tls.secretName` 不再接受，升级前必须改成本文 Ingress 示例中的数组结构。

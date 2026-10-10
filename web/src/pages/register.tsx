@@ -5,6 +5,7 @@ import { ApiError } from '@/api/client'
 import { AuthShell } from '@/features/auth/auth-shell'
 import { AuthMethodButtonList } from '@/features/auth/login-button'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
+import { useLocalAuthCapabilities } from '@/features/auth/use-local-auth-capabilities'
 import { useLocalRegister } from '@/features/auth/use-local-auth'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -64,6 +65,7 @@ export function RegisterPage() {
 
   const returnTo = resolveAuthReturnTo(search.returnTo)
   const { data: authMethods, isLoading: authMethodsLoading } = useAuthMethods(returnTo)
+  const { data: capabilities, isError: capabilitiesError } = useLocalAuthCapabilities()
   const hasExternalMethods = authMethods?.some((method) => method.methodType === 'OAUTH_REDIRECT')
 
   function validateUsername(value: string) {
@@ -142,6 +144,7 @@ export function RegisterPage() {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!capabilities?.registrationAvailable) return
     const trimmedUsername = username.trim()
     const trimmedEmail = email.trim().toLowerCase()
     const nextFieldErrors: RegisterFieldErrors = {}
@@ -178,7 +181,9 @@ export function RegisterPage() {
           <p className="text-sm text-muted-foreground sm:text-base">{t('register.subtitle')}</p>
         </div>
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        {capabilitiesError ? <p role="alert" className="text-sm text-red-600">{t('systemConfig.capabilitiesUnavailable')}</p> : null}
+        {capabilities && !capabilities.registrationAvailable ? <p className="text-sm text-muted-foreground">{t('systemConfig.registrationDisabled')}</p> : null}
+        {capabilities?.registrationAvailable ? <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="register-username">{t('register.username')}</label>
             <Input
@@ -263,7 +268,7 @@ export function RegisterPage() {
               {t('register.login')}
             </Link>
           </p>
-        </form>
+        </form> : null}
 
         {authMethodsLoading || hasExternalMethods ? (
           <div className="space-y-3 border-t border-border/70 pt-5">

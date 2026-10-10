@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.auth.identity;
 
+import com.iflytek.skillhub.auth.settings.InitialExternalRoleGrantService;
+
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,12 +58,16 @@ class IdentityBindingServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private InitialExternalRoleGrantService initialRoleGrants;
+
     private IdentityBindingService service;
 
     @BeforeEach
     void setUp() {
         service = new IdentityBindingService(bindingRepo, userRepo, roleBindingRepo,
-                globalNamespaceMembershipService, eventPublisher, new ImmediateTransactionOperations());
+                globalNamespaceMembershipService, eventPublisher, initialRoleGrants,
+                new ImmediateTransactionOperations());
     }
 
     @Test
@@ -84,6 +90,7 @@ class IdentityBindingServiceTest {
         verify(userRepo).save(userCaptor.capture());
         verify(globalNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
         verify(bindingRepo).saveAndFlush(any(IdentityBinding.class));
+        verify(initialRoleGrants).grantForNewUser(claims, userCaptor.getValue().getId());
         assertThat(principal.displayName()).isEqualTo("alice");
         assertThat(principal.oauthProvider()).isEqualTo("github");
     }
@@ -124,6 +131,7 @@ class IdentityBindingServiceTest {
         service.bindOrCreate(claims, UserStatus.ACTIVE);
 
         verify(eventPublisher, never()).publishEvent(any(UserActivatedEvent.class));
+        verify(initialRoleGrants, never()).grantForNewUser(any(), any());
     }
 
     @Test
@@ -143,6 +151,7 @@ class IdentityBindingServiceTest {
                 .isInstanceOf(AccountPendingException.class);
 
         verify(globalNamespaceMembershipService, never()).ensureMember(any());
+        verify(initialRoleGrants, never()).grantForNewUser(any(), any());
     }
 
     @Test

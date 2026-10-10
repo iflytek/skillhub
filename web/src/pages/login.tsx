@@ -7,6 +7,7 @@ import { AuthShell } from '@/features/auth/auth-shell'
 import { AuthMethodButtonList } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
+import { useLocalAuthCapabilities } from '@/features/auth/use-local-auth-capabilities'
 import { usePasswordLogin } from '@/features/auth/use-password-login'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -32,6 +33,9 @@ export function LoginPage() {
   const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
   const returnTo = resolveAuthReturnTo(search.returnTo)
   const { data: authMethods, isLoading: authMethodsLoading } = useAuthMethods(returnTo)
+  const { data: localCapabilities, isError: localCapabilitiesError } = useLocalAuthCapabilities()
+  const passwordEnabled = localCapabilities?.passwordLoginEnabled === true
+  const effectiveLoginMode = passwordEnabled ? loginMode : 'organization'
   const disabledMessage = search.reason === 'accountDisabled' ? t('apiError.auth.accountDisabled') : null
   const bootstrapMethod = authMethods?.find((method) => method.methodType === 'SESSION_BOOTSTRAP')
   const hasOrganizationMethod = bootstrapConfig.enabled
@@ -79,7 +83,7 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        {hasOrganizationMethod ? (
+        {hasOrganizationMethod && passwordEnabled ? (
           <div role="group" aria-label={t('login.loginMode')} className="grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900">
             <button type="button" aria-pressed={loginMode === 'personal'} onClick={() => setLoginMode('personal')} className={`h-11 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 xl:h-10 ${loginMode === 'personal' ? 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100' : 'text-muted-foreground hover:text-foreground'}`}>
               {t('login.tabPersonal')}
@@ -90,7 +94,7 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        <div hidden={loginMode !== 'personal'}>
+        {passwordEnabled ? <div hidden={effectiveLoginMode !== 'personal'}>
         <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="username">{t('login.username')}</label>
@@ -161,10 +165,17 @@ export function LoginPage() {
                 <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
               </Button>
         </form>
-        </div>
+        </div> : null}
+
+        {localCapabilitiesError ? (
+          <p className="text-sm text-red-600">{t('systemConfig.capabilitiesUnavailable')}</p>
+        ) : null}
+        {localCapabilities && !passwordEnabled && !bootstrapConfig.enabled && !hasExternalMethods ? (
+          <p className="text-sm text-muted-foreground">{t('systemConfig.passwordDisabled')}</p>
+        ) : null}
 
         {bootstrapConfig.enabled ? (
-          <div hidden={loginMode !== 'organization'} className="space-y-2">
+          <div hidden={effectiveLoginMode !== 'organization'} className="space-y-2">
             <SessionBootstrapEntry
               methodDisplayName={bootstrapMethod?.displayName}
               onAuthenticated={() => navigate({ to: returnTo })}
@@ -183,13 +194,13 @@ export function LoginPage() {
           </section>
         ) : null}
 
-        <p className="text-center text-sm text-muted-foreground">
+        {localCapabilities?.registrationAvailable ? <p className="text-center text-sm text-muted-foreground">
           {t('login.noAccount')}
           {' '}
           <Link to="/register" search={{ returnTo }} className="font-medium text-sky-700 hover:underline dark:text-sky-300">
             {t('login.register')}
           </Link>
-        </p>
+        </p> : null}
 
         <p className="mt-auto text-center text-xs text-muted-foreground">
           {t('login.agreementPrefix')}

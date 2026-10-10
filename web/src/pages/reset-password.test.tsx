@@ -21,6 +21,10 @@ vi.mock('@/api/client', () => ({
   },
 }))
 
+vi.mock('@/features/auth/use-local-auth-capabilities', () => ({
+  useLocalAuthCapabilities: () => ({ data: { passwordLoginEnabled: true }, isError: false }),
+}))
+
 vi.mock('@/shared/ui/button', () => ({
   Button: ({ children }: { children: unknown }) => children,
 }))

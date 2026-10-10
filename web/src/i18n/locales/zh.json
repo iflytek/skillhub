@@ -1673,6 +1673,35 @@
     "pageSuffix": "页",
     "goToPage": "第 {{page}} 页"
   },
+  "systemConfig": {
+    "title": "系统配置",
+    "localAuth": "本地账号",
+    "lockoutHelp": "关闭密码登录前，请先确认外部身份登录和超级管理员权限可用。",
+    "grantedTo": "已授予账号 {{userId}}（外部身份 {{subject}}）",
+    "passwordLogin": "允许本地密码登录",
+    "selfRegistration": "允许自行注册本地账号",
+    "registrationRequiresLogin": "密码登录已关闭，当前无法自行注册；注册设置会保留。",
+    "lockoutWarning": "关闭密码登录后，原本仅靠密码登录的管理员将无法重新登录。确定继续吗？",
+    "initialRoleRules": "外部账号首次授权规则",
+    "ruleHelp": "仅当新外部账号首次创建且通过现有准入策略时生效。相同邮箱的本地账号不会合并；已有账号请在用户管理中授权。",
+    "provider": "身份来源代码",
+    "email": "已验证邮箱",
+    "role": "平台角色",
+    "addRule": "添加规则",
+    "disable": "停用",
+    "disableConfirm": "确定停用这条首次授权规则吗？",
+    "saved": "已保存",
+    "saveFailed": "保存失败",
+    "loadFailed": "配置加载失败，请刷新重试。",
+    "capabilitiesUnavailable": "暂时无法获取登录配置，请刷新重试。",
+    "registrationDisabled": "本地账号注册已关闭。请使用其他可用登录方式。",
+    "passwordDisabled": "本地密码登录已关闭。请使用其他可用登录方式。",
+    "status": {
+      "ACTIVE": "待匹配",
+      "DISABLED": "已停用",
+      "CONSUMED": "已授权"
+    }
+  },
   "user": {
     "menu": {
       "dashboard": "控制台",
@@ -1688,6 +1717,7 @@
       "reports": "举报管理",
       "users": "用户管理",
       "labels": "标签管理",
+      "systemConfig": "系统配置",
       "auditLog": "审计日志",
       "security": "安全设置",
       "profile": "个人设置",

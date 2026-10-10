@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.auth.local;
 
+import com.iflytek.skillhub.auth.settings.LocalAuthSettingsService;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -9,6 +11,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.BDDMockito.given;
 
 import com.iflytek.skillhub.auth.exception.AuthFlowException;
@@ -50,6 +53,9 @@ class PasswordResetServiceTest {
     @Mock
     private JavaMailSender mailSender;
 
+    @Mock
+    private LocalAuthSettingsService authSettings;
+
     private PasswordResetService service;
 
     @BeforeEach
@@ -65,8 +71,20 @@ class PasswordResetServiceTest {
                 new PasswordPolicyValidator(),
                 passwordEncoder,
                 mailSender,
-                properties
+                properties,
+                authSettings
         );
+    }
+
+    @Test
+    void disabledPasswordLoginBlocksResetBeforeEmailLookup() {
+        doThrow(new AuthFlowException(HttpStatus.FORBIDDEN, "error.auth.local.login.disabled"))
+                .when(authSettings).requirePasswordLogin();
+
+        assertThatThrownBy(() -> service.requestPasswordReset("alice@example.com"))
+                .isInstanceOf(AuthFlowException.class)
+                .extracting("status").isEqualTo(HttpStatus.FORBIDDEN);
+        verifyNoInteractions(userAccountRepository, resetRequestRepository, mailSender);
     }
 
     @Test
