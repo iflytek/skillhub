@@ -45,8 +45,8 @@ skillhub-storage       草稿文件按内容寻址存入对象存储（与 Skill
 
 ## 领域模型与数据表
 
-迁移 `V66__authoring_platform.sql` 新增六张表（初稿编号 V60，因上游 #874 统一身份
-平台占用了 V60–V65，rebase 后顺延为 V66）：
+迁移 `V68__authoring_platform.sql` 新增六张表（初稿编号 V60，因上游 #874 统一身份
+平台占用了 V60–V65，rebase 后顺延为 V66，上游 promotion 功能又占用了 V66–V67，再次顺延为 V68）：
 
 | 表 | 职责 |
 | --- | --- |
@@ -198,7 +198,7 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
 
 ### 部署要点
 
-- **数据库**：Flyway 迁移 V66 自动建表，无手工步骤；JSONB 列要求 PostgreSQL
+- **数据库**：Flyway 迁移 V68 自动建表，无手工步骤；JSONB 列要求 PostgreSQL
   （平台既有要求，无新增）。
 - **启用 prompt 任务**：配置 `SKILLHUB_AUTHORING_LLM_ENABLED=true` 并给出
   endpoint/model/api-key；不启用时含 prompt 任务的草稿会得到 `RUNTIME_DISABLED`
@@ -245,7 +245,7 @@ Skill 版本，扫描与审核沿用平台原有机制，没有旁路。
   `eclipse-temurin:21-jre-noble` 的 riscv64 官方变体），`docker image inspect`
   确认 `linux/riscv64`。
 - **启动**：QEMU 模拟下 Spring Boot 91.9 秒完成启动，`/actuator/health` 返回
-  200；Flyway 在全新 PostgreSQL 16 上完成全部迁移（含 V66 创作平台表）。
+  200；Flyway 在全新 PostgreSQL 16 上完成全部迁移（含 V68 创作平台表）。
 - **创作平台全流程（REST API）**：创建草稿 → 读取脚手架 SKILL.md → 保存
   `scripts/check.sh` 与 `validation.yaml` → 保存 local-script 绑定 → 启动验证 →
   运行 `SUCCEEDED`（0 错误 0 警告），12 条事件完整落库且脚本 stdout 出现在事件
@@ -346,7 +346,7 @@ skill-scanner :8000，`local` profile）上实跑全链路并留档，16/16 检�
 | 运行时单测 | `skillhub-app/…/authoring/adapter/` | `DockerScriptCommandBuilderTest`（隔离参数与挂载构造）、`DockerScriptRuntimeAdapterTest`（真实容器内实证：无网络路由、只读根文件系统、工作区可写、输出捕获；无 Docker 时静默跳过）、`OpenAiCompatibleRuntimeAdapterToolLoopTest`（agent 循环：MCP 工具发现→模型调用→真实执行→轨迹回填，toolFilters/toolAllowlist 过滤、轮数上限） |
 | MCP 单测 | `skillhub-app/…/authoring/mcp/` | `HttpMcpClientTest`（initialize/tools 握手、会话头复用、SSE 帧解析、错误结果、不可达报错、**30x 重定向不跟随、2MiB 响应上限**，对真实本地 HTTP 服务器）、`StdioMcpClientTest`（stdio 传输对 python3 子进程；**2MiB 单行上限 + 进程销毁、关闭时清理命令执行**）、`McpProbeServiceTest`（连不上→`MCP_CONNECT_FAILED`、未知 toolFilter→告警、可跳过畸形声明）、`McpClientFactoryTest`（**连接时安全策略：被拒 endpoint/被禁 stdio 不建连不建进程、envRefs 白名单过滤、docker 包装参数**） |
 | 安全策略单测 | `skillhub-app/…/config/` | `ConfiguredAuthoringSecurityPolicyTest`（SSRF 地址分类：云元数据/链路本地无条件拒绝、环回/RFC1918/ULA/CGNAT/198.18.0.0/15 按表面开关、公网放行、不可解析与 fake-IP 合成应答均拒绝——经注入 resolver，不依赖网络）、`AuthoringStartupGuardTest`（非 local/dev/test profile + inline → 启动失败） |
-| 端到端集成 | `skillhub-app/…/authoring/AuthoringFlowIntegrationTest` | Testcontainers 真实 PostgreSQL 上跑通完整闭环：建草稿 → 改文件 → 绑定运行时 → 三层验证 → 修复发现 → 复验 → 提交（`ddl-auto=validate` 顺带校验 V66 与实体映射一致） |
+| 端到端集成 | `skillhub-app/…/authoring/AuthoringFlowIntegrationTest` | Testcontainers 真实 PostgreSQL 上跑通完整闭环：建草稿 → 改文件 → 绑定运行时 → 三层验证 → 修复发现 → 复验 → 提交（`ddl-auto=validate` 顺带校验 V68 与实体映射一致） |
 | 前端单测 | `web/src/features/authoring/*.test.*` | 事件按 seq 合并去重、SSE 生命周期（回放合并、终态关闭、断线轮询降级）、修复 diff 预览、二进制文件 base64 处理 |
 | 浏览器 E2E | `web/e2e/authoring-flow.spec.ts` | Playwright 真实 API 全 UI 闭环：创建草稿（命名空间/名称对话框）→ 文件编辑（SKILL.md/脚本/validation.yaml）→ 保存运行时绑定 → 启动验证至 Succeeded（事件控制台含脚本输出）→ 提交对话框过闸；坏 frontmatter → 失败发现 → diff 预览 → 两步确认应用修复 → 一键复验通过；二进制资源上传 → 只读面板（大小/类型/sha256）与字节级校验。断言落在持久 UI 状态（按钮态、徽章、响应体）而非易失 toast |
 | 活体冒烟 | `scripts/authoring-smoke-test.sh` | 对运行中的服务器 35 项检查、四个场景：全层验证并提交；坏 frontmatter → 定位 → 应用修复 → 复验；守卫（未验证不可提交、跨用户不可读他人草稿）；MCP 探测（死端点报 `MCP_CONNECT_FAILED`、本地假 MCP 服务器工具被发现并写入事件流、未知 toolFilter 仅告警），幂等可重复执行 |
