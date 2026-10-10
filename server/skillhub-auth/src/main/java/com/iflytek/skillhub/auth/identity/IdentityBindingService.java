@@ -10,6 +10,7 @@ import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.rbac.PlatformRoleDefaults;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
+import com.iflytek.skillhub.auth.settings.InitialExternalRoleGrantService;
 import com.iflytek.skillhub.domain.event.UserActivatedEvent;
 import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -40,6 +41,7 @@ public class IdentityBindingService {
     private final GlobalNamespaceMembershipService globalNamespaceMembershipService;
     private final ApplicationEventPublisher eventPublisher;
     private final TransactionOperations transactions;
+    private final InitialExternalRoleGrantService initialRoleGrants;
 
     @Autowired
     public IdentityBindingService(IdentityBindingRepository bindingRepo,
@@ -47,8 +49,10 @@ public class IdentityBindingService {
                                   UserRoleBindingRepository roleBindingRepo,
                                   GlobalNamespaceMembershipService globalNamespaceMembershipService,
                                   ApplicationEventPublisher eventPublisher,
-                                  PlatformTransactionManager transactionManager) {
+                                  PlatformTransactionManager transactionManager,
+                                  InitialExternalRoleGrantService initialRoleGrants) {
         this(bindingRepo, userRepo, roleBindingRepo, globalNamespaceMembershipService, eventPublisher,
+                initialRoleGrants,
                 requiresNewTransactions(transactionManager));
     }
 
@@ -57,6 +61,7 @@ public class IdentityBindingService {
                            UserRoleBindingRepository roleBindingRepo,
                            GlobalNamespaceMembershipService globalNamespaceMembershipService,
                            ApplicationEventPublisher eventPublisher,
+                           InitialExternalRoleGrantService initialRoleGrants,
                            TransactionOperations transactions) {
         this.bindingRepo = bindingRepo;
         this.userRepo = userRepo;
@@ -64,6 +69,7 @@ public class IdentityBindingService {
         this.globalNamespaceMembershipService = globalNamespaceMembershipService;
         this.eventPublisher = eventPublisher;
         this.transactions = transactions;
+        this.initialRoleGrants = initialRoleGrants;
     }
 
     public PlatformPrincipal bindOrCreate(OAuthClaims claims, UserStatus initialStatus) {
@@ -108,6 +114,7 @@ public class IdentityBindingService {
             // Force the unique identity coordinate to be checked before membership or events run.
             bindingRepo.saveAndFlush(binding);
             if (initialStatus == UserStatus.ACTIVE) {
+                initialRoleGrants.grantForNewUser(claims, user.getId());
                 globalNamespaceMembershipService.ensureMember(user.getId());
                 eventPublisher.publishEvent(
                         new UserActivatedEvent(user.getId(), claims.providerLogin(), claims.email()));

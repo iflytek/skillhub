@@ -98,6 +98,7 @@ check_health "Health endpoint" "$ACTUATOR_BASE_URL/actuator/health"
 check_protected_actuator "Prometheus metrics requires auth" "$ACTUATOR_BASE_URL/actuator/prometheus"
 check "Namespaces API requires auth" "$BASE_URL/api/v1/namespaces" "401"
 check "Auth required" "$BASE_URL/api/v1/auth/me" "401"
+check "Local auth capabilities" "$BASE_URL/api/v1/auth/local/capabilities" "200"
 
 curl -s -c "$COOKIE_JAR" "$BASE_URL/api/v1/auth/me" >/dev/null
 CSRF_TOKEN="$(awk '$6 == "XSRF-TOKEN" { print $7 }' "$COOKIE_JAR" | tail -n 1)"
@@ -226,6 +227,26 @@ fi
 
 # Refresh CSRF after login
 ADMIN_CSRF="$(awk '$6 == "XSRF-TOKEN" { print $7 }' "$ADMIN_COOKIE_JAR" | tail -n 1)"
+
+SYSTEM_CONFIG_STATUS="$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" \
+  -b "$ADMIN_COOKIE_JAR" "$BASE_URL/api/v1/admin/system-config/auth/local" || true)"
+if [[ "$SYSTEM_CONFIG_STATUS" == "200" ]]; then
+  echo "PASS: Read system auth settings (HTTP $SYSTEM_CONFIG_STATUS)"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL: Read system auth settings (got $SYSTEM_CONFIG_STATUS)"
+  FAIL=$((FAIL + 1))
+fi
+
+ROLE_GRANTS_STATUS="$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" \
+  -b "$ADMIN_COOKIE_JAR" "$BASE_URL/api/v1/admin/system-config/role-grants" || true)"
+if [[ "$ROLE_GRANTS_STATUS" == "200" ]]; then
+  echo "PASS: Read initial role grant rules (HTTP $ROLE_GRANTS_STATUS)"
+  PASS=$((PASS + 1))
+else
+  echo "FAIL: Read initial role grant rules (got $ROLE_GRANTS_STATUS)"
+  FAIL=$((FAIL + 1))
+fi
 
 # Create label definition
 CREATE_LABEL_STATUS="$(curl --max-time 10 -s -o /dev/null -w "%{http_code}" \

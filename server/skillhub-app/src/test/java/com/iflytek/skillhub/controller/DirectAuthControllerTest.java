@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.iflytek.skillhub.auth.local.LocalCredentialRepository;
 import com.iflytek.skillhub.auth.local.LocalAuthService;
+import com.iflytek.skillhub.auth.settings.LocalAuthSettings;
+import com.iflytek.skillhub.auth.settings.LocalAuthSettingsService;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
@@ -55,6 +57,14 @@ class DirectAuthControllerTest {
 
     @MockBean
     private LocalCredentialRepository localCredentialRepository;
+
+    @MockBean
+    private LocalAuthSettingsService localAuthSettingsService;
+
+    @org.junit.jupiter.api.BeforeEach
+    void localAuthEnabled() {
+        given(localAuthSettingsService.current()).willReturn(new LocalAuthSettings(1L, true, true, 0L, null));
+    }
 
     @Test
     void directLoginShouldAuthenticateViaConfiguredProvider() throws Exception {

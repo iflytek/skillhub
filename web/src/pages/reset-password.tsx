@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { FormEvent, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { authApi } from '@/api/client'
+import { useLocalAuthCapabilities } from '@/features/auth/use-local-auth-capabilities'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -11,6 +12,7 @@ import { Input } from '@/shared/ui/input'
  */
 export function ResetPasswordPage() {
   const { t } = useTranslation()
+  const { data: capabilities, isError: capabilitiesError } = useLocalAuthCapabilities()
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -23,6 +25,7 @@ export function ResetPasswordPage() {
   const emailPattern = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/
 
   async function handleSendCode() {
+    if (!capabilities?.passwordLoginEnabled) return
     const normalizedEmail = email.trim().toLowerCase()
     if (!normalizedEmail) {
       setErrorMessage(t('resetPassword.emailRequired'))
@@ -48,6 +51,7 @@ export function ResetPasswordPage() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    if (!capabilities?.passwordLoginEnabled) return
 
     const normalizedEmail = email.trim().toLowerCase()
     if (!normalizedEmail) {
@@ -95,7 +99,9 @@ export function ResetPasswordPage() {
           <CardDescription>{t('resetPassword.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
-          {isSuccess ? (
+          {capabilitiesError ? <p role="alert" className="text-sm text-red-600">{t('systemConfig.capabilitiesUnavailable')}</p> : null}
+          {capabilities && !capabilities.passwordLoginEnabled ? <p className="text-sm text-muted-foreground">{t('systemConfig.passwordDisabled')}</p> : null}
+          {capabilities?.passwordLoginEnabled && isSuccess ? (
             <div className="space-y-4">
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                 {t('resetPassword.successMessage')}
@@ -104,7 +110,7 @@ export function ResetPasswordPage() {
                 {t('resetPassword.backToLogin')}
               </Link>
             </div>
-          ) : (
+          ) : capabilities?.passwordLoginEnabled ? (
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="reset-password-email">
@@ -179,7 +185,7 @@ export function ResetPasswordPage() {
                 {isSubmitting ? t('resetPassword.submitting') : t('resetPassword.submit')}
               </Button>
             </form>
-          )}
+          ) : null}
         </CardContent>
       </Card>
     </div>

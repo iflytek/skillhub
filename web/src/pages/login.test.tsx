@@ -11,6 +11,8 @@ const authMethodsFixture = vi.hoisted(() => ({
   returnTo: '',
   navigate: vi.fn(),
   mutateAsync: vi.fn(),
+  passwordEnabled: true,
+  registrationAvailable: true,
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -60,6 +62,17 @@ vi.mock('@/features/auth/use-auth-methods', () => ({
   useAuthMethods: () => ({ data: authMethodsFixture.methods, isError: authMethodsFixture.isError }),
 }))
 
+vi.mock('@/features/auth/use-local-auth-capabilities', () => ({
+  useLocalAuthCapabilities: () => ({
+    data: {
+      passwordLoginEnabled: authMethodsFixture.passwordEnabled,
+      selfRegistrationEnabled: authMethodsFixture.registrationAvailable,
+      registrationAvailable: authMethodsFixture.registrationAvailable,
+    },
+    isError: false,
+  }),
+}))
+
 vi.mock('@/features/auth/use-password-login', () => ({
   usePasswordLogin: () => ({
     mutateAsync: authMethodsFixture.mutateAsync,
@@ -86,6 +99,8 @@ describe('LoginPage', () => {
     authMethodsFixture.bootstrapEnabled = false
     authMethodsFixture.directEnabled = false
     authMethodsFixture.isError = false
+    authMethodsFixture.passwordEnabled = true
+    authMethodsFixture.registrationAvailable = true
     authMethodsFixture.returnTo = ''
     authMethodsFixture.navigate.mockClear()
     authMethodsFixture.mutateAsync.mockClear()
@@ -103,6 +118,15 @@ describe('LoginPage', () => {
     expect(html).toContain('login.submit')
     expect(html).not.toContain('login.tabEnterprise')
     expect(html).toContain('login.register')
+  })
+
+  it('hides password and registration entry when local authentication is disabled', () => {
+    authMethodsFixture.passwordEnabled = false
+    authMethodsFixture.registrationAvailable = false
+    const html = renderToStaticMarkup(<LoginPage />)
+    expect(html).not.toContain('login.submit')
+    expect(html).not.toContain('login.register')
+    expect(html).toContain('systemConfig.passwordDisabled')
   })
 
   it('does not expose password routing details when direct login is configured', () => {

@@ -23,6 +23,37 @@ export interface AuthMethod {
   actionUrl: string
 }
 
+export interface LocalAuthCapabilities {
+  passwordLoginEnabled: boolean
+  selfRegistrationEnabled: boolean
+  registrationAvailable: boolean
+}
+
+export interface SystemAuthSettings {
+  passwordLoginEnabled: boolean
+  selfRegistrationEnabled: boolean
+  version: number
+  updatedAt: string
+}
+
+export interface ExternalRoleGrantRule {
+  id: number
+  providerCode: string
+  email: string
+  roleCode: string
+  status: 'ACTIVE' | 'DISABLED' | 'CONSUMED'
+  matchedSubject?: string | null
+  grantedUserId?: string | null
+  grantedAt?: string | null
+  version: number
+  updatedAt: string
+}
+
+export interface PlatformRole {
+  code: string
+  name: string
+}
+
 export type ApiToken = Omit<components['schemas']['TokenSummaryResponse'], 'id' | 'name' | 'tokenPrefix' | 'createdAt'> & {
   id: number
   name: string

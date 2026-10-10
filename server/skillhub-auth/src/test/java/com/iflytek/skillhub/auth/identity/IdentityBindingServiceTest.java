@@ -1,11 +1,15 @@
 package com.iflytek.skillhub.auth.identity;
 
+import com.iflytek.skillhub.auth.settings.InitialExternalRoleGrantService;
+
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 
 import com.iflytek.skillhub.auth.entity.IdentityBinding;
 import com.iflytek.skillhub.auth.entity.Role;
@@ -26,6 +30,7 @@ import com.iflytek.skillhub.domain.user.UserStatus;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,12 +61,16 @@ class IdentityBindingServiceTest {
     @Mock
     private ApplicationEventPublisher eventPublisher;
 
+    @Mock
+    private InitialExternalRoleGrantService initialRoleGrants;
+
     private IdentityBindingService service;
 
     @BeforeEach
     void setUp() {
         service = new IdentityBindingService(bindingRepo, userRepo, roleBindingRepo,
-                globalNamespaceMembershipService, eventPublisher, new ImmediateTransactionOperations());
+                globalNamespaceMembershipService, eventPublisher, initialRoleGrants,
+                new ImmediateTransactionOperations());
     }
 
     @Test
@@ -84,6 +93,7 @@ class IdentityBindingServiceTest {
         verify(userRepo).save(userCaptor.capture());
         verify(globalNamespaceMembershipService).ensureMember(userCaptor.getValue().getId());
         verify(bindingRepo).saveAndFlush(any(IdentityBinding.class));
+        verify(initialRoleGrants).grantForNewUser(claims, userCaptor.getValue().getId());
         assertThat(principal.displayName()).isEqualTo("alice");
         assertThat(principal.oauthProvider()).isEqualTo("github");
     }
@@ -124,6 +134,7 @@ class IdentityBindingServiceTest {
         service.bindOrCreate(claims, UserStatus.ACTIVE);
 
         verify(eventPublisher, never()).publishEvent(any(UserActivatedEvent.class));
+        verify(initialRoleGrants, never()).grantForNewUser(any(), any());
     }
 
     @Test
@@ -143,6 +154,7 @@ class IdentityBindingServiceTest {
                 .isInstanceOf(AccountPendingException.class);
 
         verify(globalNamespaceMembershipService, never()).ensureMember(any());
+        verify(initialRoleGrants, never()).grantForNewUser(any(), any());
     }
 
     @Test
@@ -162,6 +174,44 @@ class IdentityBindingServiceTest {
         PlatformPrincipal principal = service.bindOrCreate(claims, UserStatus.ACTIVE);
 
         assertThat(principal.platformRoles()).containsExactly("USER");
+    }
+
+    @Test
+    void bindOrCreate_grantIsVisibleInFirstPrincipalBeforeSessionCreation() {
+        OAuthClaims claims = new OAuthClaims("github", "external-1", "admin@example.com", true, "admin", Map.of());
+        Role role = new Role();
+        ReflectionTestUtils.setField(role, "code", "SUPER_ADMIN");
+        AtomicBoolean granted = new AtomicBoolean();
+        when(bindingRepo.findByProviderCodeAndSubject("github", "external-1")).thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        doAnswer(invocation -> {
+            granted.set(true);
+            return null;
+        }).when(initialRoleGrants).grantForNewUser(any(), any());
+        when(roleBindingRepo.findByUserId(any())).thenAnswer(invocation -> granted.get()
+                ? List.of(new UserRoleBinding(invocation.getArgument(0), role)) : List.of());
+
+        PlatformPrincipal principal = service.bindOrCreate(claims, UserStatus.ACTIVE);
+
+        assertThat(principal.platformRoles()).contains("SUPER_ADMIN");
+        var ordered = inOrder(initialRoleGrants, roleBindingRepo);
+        ordered.verify(initialRoleGrants).grantForNewUser(claims, principal.userId());
+        ordered.verify(roleBindingRepo).findByUserId(principal.userId());
+    }
+
+    @Test
+    void bindOrCreate_doesNotMergeWithLocalAccountSharingEmail() {
+        OAuthClaims claims = new OAuthClaims("github", "external-1", "shared@example.com", true,
+                "external-user", Map.of());
+        when(bindingRepo.findByProviderCodeAndSubject("github", "external-1")).thenReturn(Optional.empty());
+        when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
+
+        PlatformPrincipal principal = service.bindOrCreate(claims, UserStatus.ACTIVE);
+
+        assertThat(principal.userId()).startsWith("usr_");
+        verify(userRepo, never()).findByEmailIgnoreCase(any());
+        verify(initialRoleGrants).grantForNewUser(claims, principal.userId());
     }
 
     @Test

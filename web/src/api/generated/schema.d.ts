@@ -474,6 +474,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/system-config/role-grants/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateRoleGrant"];
+        post?: never;
+        delete: operations["disableRoleGrant"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-config/auth/local": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getLocalSettings"];
+        put: operations["updateLocalSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/namespaces/{slug}/members/{userId}/role": {
         parameters: {
             query?: never;
@@ -2342,6 +2374,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["approveUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-config/role-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listRoleGrants"];
+        put?: never;
+        post: operations["createRoleGrant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4801,6 +4849,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/local/capabilities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["capabilities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users": {
         parameters: {
             query?: never;
@@ -4809,6 +4873,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listUsers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-config/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listRoles"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5509,6 +5589,59 @@ export interface components {
         AdminUserRoleUpdateRequest: {
             role: string;
         };
+        ExternalRoleGrantUpdateRequest: {
+            roleCode: string;
+            /** Format: int64 */
+            version: number;
+        };
+        ApiResponseExternalRoleGrantRuleResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ExternalRoleGrantRuleResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ExternalRoleGrantRuleResponse: {
+            /** Format: int64 */
+            id?: number;
+            providerCode?: string;
+            email?: string;
+            roleCode?: string;
+            status?: string;
+            matchedSubject?: string;
+            grantedUserId?: string;
+            /** Format: date-time */
+            grantedAt?: string;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        SystemAuthSettingsUpdateRequest: {
+            passwordLoginEnabled: boolean;
+            selfRegistrationEnabled: boolean;
+            /** Format: int64 */
+            version: number;
+        };
+        ApiResponseSystemAuthSettingsResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SystemAuthSettingsResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SystemAuthSettingsResponse: {
+            passwordLoginEnabled?: boolean;
+            selfRegistrationEnabled?: boolean;
+            /** Format: int64 */
+            version?: number;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         AdminLabelUpdateRequest: {
             /** @enum {string} */
             type: "RECOMMENDED" | "PRIVILEGED";
@@ -6082,6 +6215,11 @@ export interface components {
             expiresIn?: number;
             /** Format: int32 */
             interval?: number;
+        };
+        ExternalRoleGrantCreateRequest: {
+            providerCode: string;
+            email: string;
+            roleCode: string;
         };
         AdminSkillMutationResponse: {
             /** Format: int64 */
@@ -7702,6 +7840,20 @@ export interface components {
             displayName?: string;
             actionUrl?: string;
         };
+        ApiResponseLocalAuthCapabilitiesResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LocalAuthCapabilitiesResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        LocalAuthCapabilitiesResponse: {
+            passwordLoginEnabled?: boolean;
+            selfRegistrationEnabled?: boolean;
+            registrationAvailable?: boolean;
+        };
         AdminUserSummaryResponse: {
             id?: string;
             username?: string;
@@ -7728,6 +7880,28 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        ApiResponseListPlatformRoleResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PlatformRoleResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        PlatformRoleResponse: {
+            code?: string;
+            name?: string;
+        };
+        ApiResponseListExternalRoleGrantRuleResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ExternalRoleGrantRuleResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
         AdminSkillReportSummaryResponse: {
             /** Format: int64 */
@@ -9310,6 +9484,100 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
+                };
+            };
+        };
+    };
+    updateRoleGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExternalRoleGrantUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseExternalRoleGrantRuleResponse"];
+                };
+            };
+        };
+    };
+    disableRoleGrant: {
+        parameters: {
+            query: {
+                version: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseExternalRoleGrantRuleResponse"];
+                };
+            };
+        };
+    };
+    getLocalSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSystemAuthSettingsResponse"];
+                };
+            };
+        };
+    };
+    updateLocalSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SystemAuthSettingsUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSystemAuthSettingsResponse"];
                 };
             };
         };
@@ -12447,6 +12715,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseAdminUserMutationResponse"];
+                };
+            };
+        };
+    };
+    listRoleGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListExternalRoleGrantRuleResponse"];
+                };
+            };
+        };
+    };
+    createRoleGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExternalRoleGrantCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseExternalRoleGrantRuleResponse"];
                 };
             };
         };
@@ -16223,6 +16535,26 @@ export interface operations {
             };
         };
     };
+    capabilities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLocalAuthCapabilitiesResponse"];
+                };
+            };
+        };
+    };
     listUsers: {
         parameters: {
             query?: {
@@ -16244,6 +16576,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePageResponseAdminUserSummaryResponse"];
+                };
+            };
+        };
+    };
+    listRoles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListPlatformRoleResponse"];
                 };
             };
         };

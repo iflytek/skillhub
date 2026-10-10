@@ -53,6 +53,8 @@ data:
   {{- end }}
   device-auth-verification-uri: {{ $deviceAuthVerificationUri | quote }}
   auth-direct-enabled: {{ .Values.auth.direct.enabled | quote }}
+  auth-initial-password-login-enabled: {{ .Values.auth.initialSettings.passwordLoginEnabled | quote }}
+  auth-initial-self-registration-enabled: {{ .Values.auth.initialSettings.selfRegistrationEnabled | quote }}
   auth-direct-provider: {{ .Values.auth.direct.provider | quote }}
 
   # Sub-path deployment (empty keeps a fixed-base image's baked base; set e.g. /portal/)

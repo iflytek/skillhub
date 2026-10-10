@@ -34,6 +34,10 @@ import type {
   PagedResponse,
   ReportDisposition,
   AuthMethod,
+  LocalAuthCapabilities,
+  SystemAuthSettings,
+  ExternalRoleGrantRule,
+  PlatformRole,
   OAuthProvider,
   User,
   ManagedNamespace,
@@ -337,6 +341,10 @@ export async function getCurrentUser(): Promise<User | null> {
 export const authApi = {
   getMe: getCurrentUser,
 
+  getLocalCapabilities(): Promise<LocalAuthCapabilities> {
+    return fetchJson<LocalAuthCapabilities>('/api/v1/auth/local/capabilities')
+  },
+
   async getProviders(returnTo?: string): Promise<OAuthProvider[]> {
     const params = returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ''
     const providers = await fetchJson<OAuthProvider[]>(`/api/v1/auth/providers${params}`)
@@ -446,6 +454,51 @@ export const authApi = {
         username: request.username,
         password: request.password,
       }),
+    })
+  },
+}
+
+export const systemConfigApi = {
+  getLocalAuth(): Promise<SystemAuthSettings> {
+    return fetchJson<SystemAuthSettings>('/api/v1/admin/system-config/auth/local')
+  },
+
+  updateLocalAuth(request: Pick<SystemAuthSettings, 'passwordLoginEnabled' | 'selfRegistrationEnabled' | 'version'>): Promise<SystemAuthSettings> {
+    return fetchJson<SystemAuthSettings>('/api/v1/admin/system-config/auth/local', {
+      method: 'PUT',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(request),
+    })
+  },
+
+  listRoles(): Promise<PlatformRole[]> {
+    return fetchJson<PlatformRole[]>('/api/v1/admin/system-config/roles')
+  },
+
+  listRoleGrants(): Promise<ExternalRoleGrantRule[]> {
+    return fetchJson<ExternalRoleGrantRule[]>('/api/v1/admin/system-config/role-grants')
+  },
+
+  createRoleGrant(request: { providerCode: string; email: string; roleCode: string }): Promise<ExternalRoleGrantRule> {
+    return fetchJson<ExternalRoleGrantRule>('/api/v1/admin/system-config/role-grants', {
+      method: 'POST',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(request),
+    })
+  },
+
+  updateRoleGrant(id: number, request: { roleCode: string; version: number }): Promise<ExternalRoleGrantRule> {
+    return fetchJson<ExternalRoleGrantRule>(`/api/v1/admin/system-config/role-grants/${id}`, {
+      method: 'PUT',
+      headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(request),
+    })
+  },
+
+  disableRoleGrant(id: number, version: number): Promise<ExternalRoleGrantRule> {
+    return fetchJson<ExternalRoleGrantRule>(`/api/v1/admin/system-config/role-grants/${id}?version=${version}`, {
+      method: 'DELETE',
+      headers: getCsrfHeaders(),
     })
   },
 }
