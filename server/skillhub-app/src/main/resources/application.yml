@@ -134,6 +134,14 @@ spring:
             enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
 
 skillhub:
+  authoring:
+    # Root directory for per-run isolated validation workspaces
+    workspace-root: ${SKILLHUB_AUTHORING_WORKSPACE_ROOT:${java.io.tmpdir}/skillhub-authoring}
+    executor-threads: ${SKILLHUB_AUTHORING_EXECUTOR_THREADS:4}
+    # Hard wall-clock cap for one whole validation run (15 minutes)
+    run-timeout-ms: ${SKILLHUB_AUTHORING_RUN_TIMEOUT_MS:900000}
+    # Active runs older than this are swept to TIMED_OUT (crash recovery)
+    stale-run-minutes: ${SKILLHUB_AUTHORING_STALE_RUN_MINUTES:30}
   suite:
     # Fail closed for deployment modes whose upgrade topology is unknown. Single-instance
     # distributions explicitly enable this after ruling out mixed application versions.
