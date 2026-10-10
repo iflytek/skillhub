@@ -10,6 +10,8 @@ import com.iflytek.skillhub.auth.repository.RoleRepository;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.auth.identity.IdentityBindingService;
+import com.iflytek.skillhub.auth.local.LocalCredential;
+import com.iflytek.skillhub.auth.local.LocalCredentialRepository;
 import com.iflytek.skillhub.auth.oauth.OAuthClaims;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.settings.ExternalRoleGrantRule;
@@ -73,6 +75,7 @@ class SystemAuthSettingsPostgresTest {
     @Autowired private UserAccountRepository users;
     @Autowired private IdentityBindingRepository identities;
     @Autowired private UserRoleBindingRepository userRoles;
+    @Autowired private LocalCredentialRepository localCredentials;
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private AuditLogJpaRepository auditLogs;
     @Autowired private EntityManager entityManager;
@@ -129,6 +132,7 @@ class SystemAuthSettingsPostgresTest {
         TransactionTemplate transactions = new TransactionTemplate(transactionManager);
         Long ruleId = transactions.execute(status -> {
             users.save(new UserAccount(localUserId, "local", email, null));
+            localCredentials.save(new LocalCredential(localUserId, "local-" + suffix, "test-hash"));
             return rules.save(new ExternalRoleGrantRule(
                     "github", email, roles.findByCode("SUPER_ADMIN").orElseThrow(), "admin")).getId();
         });
@@ -140,6 +144,7 @@ class SystemAuthSettingsPostgresTest {
         assertThat(external.userId()).isNotEqualTo(localUserId);
         assertThat(external.platformRoles()).contains("SUPER_ADMIN");
         assertThat(users.findById(localUserId)).isPresent();
+        assertThat(localCredentials.findByUserId(localUserId)).isPresent();
         assertThat(userRoles.findByUserId(localUserId)).isEmpty();
         assertThat(userRoles.findByUserId(external.userId())).hasSize(1);
         assertThat(identities.findByProviderCodeAndSubject("github", "external-" + suffix)
@@ -148,27 +153,36 @@ class SystemAuthSettingsPostgresTest {
     }
 
     @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void deletedInitialRuleDoesNotReturnAfterInitializerRunsAgain() {
-        jdbc.execute("TRUNCATE TABLE user_account, external_role_grant_rule CASCADE");
-        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM user_account", Long.class)).isZero();
+        TransactionTemplate transactions = new TransactionTemplate(transactionManager);
+        transactions.executeWithoutResult(status -> {
+            jdbc.execute("TRUNCATE TABLE user_account, external_role_grant_rule CASCADE");
+            jdbc.update("DELETE FROM system_setting WHERE setting_key IN (?, ?)",
+                    "auth.local", "auth.initial-role-grants.initialized");
+        });
         InitialAuthSettingsProperties properties = new InitialAuthSettingsProperties();
         properties.setRoleGrantsJson("[{\"provider\":\"github\",\"email\":\"admin@example.com\",\"role\":\"SUPER_ADMIN\"}]");
         InitialAuthSettingsInitializer initializer = new InitialAuthSettingsInitializer(
                 properties, settings, rules, roles, new ObjectMapper(), jdbc);
         ApplicationArguments args = mock(ApplicationArguments.class);
 
-        initializer.run(args);
-        assertThat(rules.findAll()).hasSize(1);
-        Long ruleId = rules.findAll().getFirst().getId();
-        assertThat(settings.findBySettingKey("auth.initial-role-grants.initialized")).isPresent();
+        transactions.executeWithoutResult(status -> initializer.run(args));
+        Long ruleId = transactions.execute(status -> {
+            assertThat(rules.findAll()).hasSize(1);
+            assertThat(settings.findBySettingKey("auth.initial-role-grants.initialized")).isPresent();
+            return rules.findAll().getFirst().getId();
+        });
 
-        rules.deleteById(ruleId);
-        rules.flush();
-        entityManager.clear();
-        initializer.run(args);
+        transactions.executeWithoutResult(status -> rules.deleteById(ruleId));
+        InitialAuthSettingsInitializer restarted = new InitialAuthSettingsInitializer(
+                properties, settings, rules, roles, new ObjectMapper(), jdbc);
+        transactions.executeWithoutResult(status -> restarted.run(args));
 
-        assertThat(rules.findAll()).isEmpty();
-        assertThat(settings.findBySettingKey("auth.initial-role-grants.initialized")).isPresent();
+        transactions.executeWithoutResult(status -> {
+            assertThat(rules.findAll()).isEmpty();
+            assertThat(settings.findBySettingKey("auth.initial-role-grants.initialized")).isPresent();
+        });
     }
 
     @Test
