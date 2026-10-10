@@ -15,6 +15,8 @@
 
 “系统配置”页面分为“本地认证”和“外部账号首次授权”两部分。`system_setting` 保存少量经过代码注册、定型和校验的运行设置，不提供任意键值编辑。首批设置键 `auth.local` 的 JSON 对象包含 `passwordLoginEnabled` 和 `selfRegistrationEnabled`，两者默认均为 `true`。同一行更新这组设置，并使用版本号进行条件更新，避免并发管理操作互相覆盖。
 
+页面内两个开关先形成未保存草稿，由管理员统一保存或放弃。关闭密码登录时，在站内确认框中展示管理员可能无法重新登录的后果，确认后才提交；取消确认保留草稿，不修改服务端。首次授权规则的角色变更也需显式保存，停用规则使用站内确认框。失败时保留可见的错误提示和原编辑内容。
+
 建议表结构：`id BIGSERIAL PRIMARY KEY`、`setting_key VARCHAR(128) UNIQUE NOT NULL`、`value_json JSONB NOT NULL`、`version BIGINT NOT NULL`、`created_at/updated_at TIMESTAMP NOT NULL`、`updated_by VARCHAR(128) NULL`。数据库约束验证 JSON 为对象；应用按设置键验证完整字段、类型和允许值。`id` 可用作现有 `audit_log.target_id`。审计记录操作者、旧值、新值和时间；不得把秘密配置写入设置或审计详情。
 
 认证路径直接读取数据库中已持久化的安全开关。首版不使用单节点内存缓存，以免多副本部署时设置失效不一致；读取失败应返回服务错误，不能以默认“开启”放行。前端只读取可公开的认证能力投影，不暴露通用设置读写接口。
