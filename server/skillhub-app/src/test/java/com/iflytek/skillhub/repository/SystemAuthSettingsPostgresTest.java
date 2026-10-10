@@ -18,7 +18,9 @@ import com.iflytek.skillhub.domain.namespace.GlobalNamespaceMembershipService;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
+import com.iflytek.skillhub.infra.jpa.AuditLogJpaRepository;
 import jakarta.persistence.EntityManager;
+import java.time.Clock;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -69,6 +71,7 @@ class SystemAuthSettingsPostgresTest {
     @Autowired private IdentityBindingRepository identities;
     @Autowired private UserRoleBindingRepository userRoles;
     @Autowired private PlatformTransactionManager transactionManager;
+    @Autowired private AuditLogJpaRepository auditLogs;
     @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbc;
 
@@ -193,6 +196,11 @@ class SystemAuthSettingsPostgresTest {
             assertThat(consumed.getMatchedSubject()).isIn(firstClaims.subject(), secondClaims.subject());
             assertThat(userRoles.findByUserId(firstPrincipal.userId()).size()
                     + userRoles.findByUserId(secondPrincipal.userId()).size()).isEqualTo(1);
+            assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM audit_log WHERE action = ? AND target_id = ?",
+                    Long.class, "INITIAL_ROLE_GRANTED", ruleId)).isEqualTo(1L);
+            assertThat(jdbc.queryForObject("SELECT detail_json ->> 'userId' FROM audit_log "
+                    + "WHERE action = ? AND target_id = ?", String.class, "INITIAL_ROLE_GRANTED", ruleId))
+                    .isEqualTo(consumed.getGrantedUserId());
         }
     }
 
@@ -200,7 +208,7 @@ class SystemAuthSettingsPostgresTest {
         return new IdentityBindingService(identities, users, userRoles,
                 mock(GlobalNamespaceMembershipService.class), mock(ApplicationEventPublisher.class),
                 transactionManager, new InitialExternalRoleGrantService(
-                        rules, userRoles, mock(AuditLogService.class)));
+                        rules, userRoles, new AuditLogService(auditLogs, Clock.systemUTC())));
     }
 
     private static PlatformPrincipal firstLogin(IdentityBindingService service, OAuthClaims claims,
