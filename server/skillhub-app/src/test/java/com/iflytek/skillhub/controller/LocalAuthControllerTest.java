@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -23,6 +24,8 @@ import jakarta.servlet.http.Cookie;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,6 +69,21 @@ class LocalAuthControllerTest {
     @org.junit.jupiter.api.BeforeEach
     void localAuthEnabled() {
         given(localAuthSettingsService.current()).willReturn(new LocalAuthSettings(1L, true, true, 0L, null));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"true,true,true", "true,false,false", "false,true,false", "false,false,false"})
+    void publicCapabilitiesReflectBothSettingsWithoutExposingInternalFields(
+            boolean passwordLogin, boolean selfRegistration, boolean registrationAvailable) throws Exception {
+        given(localAuthSettingsService.current()).willReturn(
+                new LocalAuthSettings(1L, passwordLogin, selfRegistration, 7L, null));
+
+        mockMvc.perform(get("/api/v1/auth/local/capabilities"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.passwordLoginEnabled").value(passwordLogin))
+                .andExpect(jsonPath("$.data.selfRegistrationEnabled").value(selfRegistration))
+                .andExpect(jsonPath("$.data.registrationAvailable").value(registrationAvailable))
+                .andExpect(jsonPath("$.data.version").doesNotExist());
     }
 
 
