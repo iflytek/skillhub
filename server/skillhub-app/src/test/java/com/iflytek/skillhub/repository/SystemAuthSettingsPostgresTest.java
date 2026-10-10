@@ -1,7 +1,11 @@
 package com.iflytek.skillhub.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.bootstrap.InitialAuthSettingsInitializer;
+import com.iflytek.skillhub.bootstrap.InitialAuthSettingsProperties;
 import com.iflytek.skillhub.auth.repository.RoleRepository;
 import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
@@ -28,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -42,8 +47,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import static org.mockito.Mockito.mock;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
@@ -115,6 +118,57 @@ class SystemAuthSettingsPostgresTest {
         assertThat(reloaded.getMatchedSubject()).isEqualTo("external-" + suffix);
         assertThat(reloaded.getGrantedUserId()).isEqualTo(userId);
         assertThat(reloaded.getGrantedAt()).isNotNull();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void sameEmailLocalAccountStaysSeparateFromNewExternalGrant() {
+        String suffix = UUID.randomUUID().toString();
+        String email = suffix + "@example.com";
+        String localUserId = "local_" + suffix;
+        TransactionTemplate transactions = new TransactionTemplate(transactionManager);
+        Long ruleId = transactions.execute(status -> {
+            users.save(new UserAccount(localUserId, "local", email, null));
+            return rules.save(new ExternalRoleGrantRule(
+                    "github", email, roles.findByCode("SUPER_ADMIN").orElseThrow(), "admin")).getId();
+        });
+
+        PlatformPrincipal external = bindingService().bindOrCreate(
+                new OAuthClaims("github", "external-" + suffix, email, true, "external", Map.of()),
+                UserStatus.ACTIVE);
+
+        assertThat(external.userId()).isNotEqualTo(localUserId);
+        assertThat(external.platformRoles()).contains("SUPER_ADMIN");
+        assertThat(users.findById(localUserId)).isPresent();
+        assertThat(userRoles.findByUserId(localUserId)).isEmpty();
+        assertThat(userRoles.findByUserId(external.userId())).hasSize(1);
+        assertThat(identities.findByProviderCodeAndSubject("github", "external-" + suffix)
+                .orElseThrow().getUserId()).isEqualTo(external.userId());
+        assertThat(rules.findById(ruleId).orElseThrow().getGrantedUserId()).isEqualTo(external.userId());
+    }
+
+    @Test
+    void deletedInitialRuleDoesNotReturnAfterInitializerRunsAgain() {
+        jdbc.execute("TRUNCATE TABLE user_account, external_role_grant_rule CASCADE");
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM user_account", Long.class)).isZero();
+        InitialAuthSettingsProperties properties = new InitialAuthSettingsProperties();
+        properties.setRoleGrantsJson("[{\"provider\":\"github\",\"email\":\"admin@example.com\",\"role\":\"SUPER_ADMIN\"}]");
+        InitialAuthSettingsInitializer initializer = new InitialAuthSettingsInitializer(
+                properties, settings, rules, roles, new ObjectMapper(), jdbc);
+        ApplicationArguments args = mock(ApplicationArguments.class);
+
+        initializer.run(args);
+        assertThat(rules.findAll()).hasSize(1);
+        Long ruleId = rules.findAll().getFirst().getId();
+        assertThat(settings.findBySettingKey("auth.initial-role-grants.initialized")).isPresent();
+
+        rules.deleteById(ruleId);
+        rules.flush();
+        entityManager.clear();
+        initializer.run(args);
+
+        assertThat(rules.findAll()).isEmpty();
+        assertThat(settings.findBySettingKey("auth.initial-role-grants.initialized")).isPresent();
     }
 
     @Test

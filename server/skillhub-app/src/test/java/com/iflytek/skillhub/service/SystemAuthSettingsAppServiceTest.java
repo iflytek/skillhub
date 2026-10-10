@@ -92,10 +92,12 @@ class SystemAuthSettingsAppServiceTest {
 
     @Test
     void providerWithoutVerifiedEmailCannotCreateDeadGrantRule() {
-        assertThatThrownBy(() -> service.createRule(
-                new ExternalRoleGrantCreateRequest("feishu", "admin@example.com", "SUPER_ADMIN"),
-                "admin", new AuditRequestContext(null, null)))
-                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException.class);
+        for (String provider : new String[] {"feishu", "dingtalk"}) {
+            assertThatThrownBy(() -> service.createRule(
+                    new ExternalRoleGrantCreateRequest(provider, "admin@example.com", "SUPER_ADMIN"),
+                    "admin", new AuditRequestContext(null, null)))
+                    .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException.class);
+        }
         verify(rules, never()).saveAndFlush(any());
     }
 }
