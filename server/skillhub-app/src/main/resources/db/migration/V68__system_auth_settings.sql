@@ -1,7 +1,7 @@
 CREATE TABLE system_setting (
     id BIGSERIAL PRIMARY KEY,
     setting_key VARCHAR(128) NOT NULL UNIQUE,
-    value_json JSONB NOT NULL CHECK (jsonb_typeof(value_json) = 'object'),
+    value_json JSONB NOT NULL,
     version BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -13,8 +13,7 @@ CREATE TABLE external_role_grant_rule (
     provider_code VARCHAR(64) NOT NULL,
     normalized_email VARCHAR(256) NOT NULL,
     role_id BIGINT NOT NULL REFERENCES role(id),
-    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE'
-        CHECK (status IN ('ACTIVE', 'DISABLED', 'CONSUMED')),
+    status VARCHAR(16) NOT NULL DEFAULT 'ACTIVE',
     matched_subject VARCHAR(256),
     granted_user_id VARCHAR(128) REFERENCES user_account(id),
     granted_at TIMESTAMP,
@@ -22,14 +21,7 @@ CREATE TABLE external_role_grant_rule (
     created_by VARCHAR(128),
     updated_by VARCHAR(128),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT ck_external_role_grant_consumed CHECK (
-        (status = 'CONSUMED' AND matched_subject IS NOT NULL
-            AND granted_user_id IS NOT NULL AND granted_at IS NOT NULL)
-        OR
-        (status <> 'CONSUMED' AND matched_subject IS NULL
-            AND granted_user_id IS NULL AND granted_at IS NULL)
-    )
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE UNIQUE INDEX uq_external_role_grant_active_identity

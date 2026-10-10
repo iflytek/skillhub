@@ -112,6 +112,9 @@ public class ExternalRoleGrantRule {
 
     public void consume(String subject, String userId) {
         if (status != Status.ACTIVE) throw new IllegalStateException("Only active rules may be consumed");
+        if (subject == null || subject.isBlank() || userId == null || userId.isBlank()) {
+            throw new IllegalArgumentException("Consumed rule requires an external subject and user ID");
+        }
         this.status = Status.CONSUMED;
         this.matchedSubject = subject;
         this.grantedUserId = userId;

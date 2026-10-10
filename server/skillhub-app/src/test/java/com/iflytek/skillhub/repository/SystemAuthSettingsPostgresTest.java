@@ -124,6 +124,14 @@ class SystemAuthSettingsPostgresTest {
     }
 
     @Test
+    void authSettingsBusinessRulesHaveNoSqlCheckConstraints() {
+        Integer count = jdbc.queryForObject("SELECT count(*) FROM pg_constraint "
+                + "WHERE contype = 'c' AND conrelid IN "
+                + "('system_setting'::regclass, 'external_role_grant_rule'::regclass)", Integer.class);
+        assertThat(count).isZero();
+    }
+
+    @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void sameEmailLocalAccountStaysSeparateFromNewExternalGrant() {
         String suffix = UUID.randomUUID().toString();
