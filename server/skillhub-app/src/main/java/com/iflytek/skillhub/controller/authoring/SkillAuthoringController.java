@@ -2,9 +2,13 @@ package com.iflytek.skillhub.controller.authoring;
 
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.authoring.SkillDraft;
+import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.authoring.service.DraftSubmitService;
+import com.iflytek.skillhub.domain.authoring.service.FindingFixService;
 import com.iflytek.skillhub.domain.authoring.service.RuntimeBindingService;
 import com.iflytek.skillhub.domain.authoring.service.SkillDraftService;
 import com.iflytek.skillhub.domain.authoring.service.ValidationRunService;
+import com.iflytek.skillhub.domain.authoring.validation.ValidationFinding;
 import com.iflytek.skillhub.domain.authoring.validation.ValidationRun;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.CreateDraftRequest;
@@ -13,6 +17,8 @@ import com.iflytek.skillhub.dto.DraftFileResponse;
 import com.iflytek.skillhub.dto.DraftResponse;
 import com.iflytek.skillhub.dto.RuntimeBindingRequest;
 import com.iflytek.skillhub.dto.RuntimeBindingResponse;
+import com.iflytek.skillhub.dto.SubmitDraftRequest;
+import com.iflytek.skillhub.dto.SubmitDraftResponse;
 import com.iflytek.skillhub.dto.SaveDraftFileRequest;
 import com.iflytek.skillhub.dto.SaveDraftFileResponse;
 import com.iflytek.skillhub.dto.ValidationEventResponse;
@@ -42,8 +48,8 @@ import org.springframework.web.bind.annotation.RestController;
  * SKILL.md scaffold and arbitrary resource files; runtime bindings configure
  * the agent, tool allowlist and MCP servers; validation runs execute the
  * structure, config and behavior layers and report findings with fix
- * suggestions. The fix-apply loop and publish integration arrive with the
- * next layer.
+ * suggestions that can be applied in one click; validated drafts submit into
+ * the existing SkillHub publish pipeline.
  */
 @RestController
 @RequestMapping({"/api/v1/authoring", "/api/web/authoring"})
@@ -52,17 +58,23 @@ public class SkillAuthoringController extends BaseApiController {
     private final SkillDraftService draftService;
     private final RuntimeBindingService bindingService;
     private final ValidationRunService runService;
+    private final DraftSubmitService submitService;
+    private final FindingFixService fixService;
     private final ValidationRunOrchestrator orchestrator;
 
     public SkillAuthoringController(com.iflytek.skillhub.dto.ApiResponseFactory responseFactory,
                                     SkillDraftService draftService,
                                     RuntimeBindingService bindingService,
                                     ValidationRunService runService,
+                                    DraftSubmitService submitService,
+                                    FindingFixService fixService,
                                     ValidationRunOrchestrator orchestrator) {
         super(responseFactory);
         this.draftService = draftService;
         this.bindingService = bindingService;
         this.runService = runService;
+        this.submitService = submitService;
+        this.fixService = fixService;
         this.orchestrator = orchestrator;
     }
 
@@ -271,5 +283,50 @@ public class SkillAuthoringController extends BaseApiController {
         return ok("response.success", runService.listFindings(runId).stream()
                 .map(ValidationFindingResponse::from)
                 .toList());
+    }
+
+    // ---------------------------------------------------------------- fix loop
+
+    @Operation(operationId = "applyFindingFix", summary = "Apply a finding's fix suggestion to the draft")
+    @PostMapping("/runs/{runId}/findings/{findingId}/apply")
+    public ApiResponse<ValidationFindingResponse> applyFindingFix(
+            @PathVariable Long runId,
+            @PathVariable Long findingId,
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "platformRoles", required = false)
+            Set<String> platformRoles) {
+        FindingFixService.FixOutcome outcome = fixService.applyFix(findingId, userId, platformRoles);
+        return ok("response.success.updated", ValidationFindingResponse.from(outcome.finding()));
+    }
+
+    @Operation(operationId = "dismissFindingFix", summary = "Dismiss a finding as not applicable")
+    @PostMapping("/runs/{runId}/findings/{findingId}/dismiss")
+    public ApiResponse<ValidationFindingResponse> dismissFinding(
+            @PathVariable Long runId,
+            @PathVariable Long findingId,
+            @RequestAttribute("userId") String userId,
+            @RequestAttribute(value = "platformRoles", required = false)
+            Set<String> platformRoles) {
+        ValidationFinding finding = fixService.dismissFinding(findingId, userId, platformRoles);
+        return ok("response.success.updated", ValidationFindingResponse.from(finding));
+    }
+
+    // ---------------------------------------------------------------- submission
+
+    @Operation(operationId = "submitValidatedDraft", summary = "Submit a validated draft into the publish pipeline")
+    @PostMapping("/drafts/{draftId}/submit")
+    public ApiResponse<SubmitDraftResponse> submitDraft(@PathVariable Long draftId,
+                                                        @RequestBody(required = false) SubmitDraftRequest request,
+                                                        @RequestAttribute("userId") String userId,
+                                                        @RequestAttribute(value = "platformRoles", required = false)
+                                                        Set<String> platformRoles) {
+        SkillVisibility visibility = request == null || request.visibility() == null
+                ? SkillVisibility.PRIVATE
+                : SkillVisibility.valueOf(request.visibility());
+        Set<String> roles = request == null || request.platformRoles() == null
+                ? platformRoles
+                : request.platformRoles();
+        return ok("response.success.created",
+                SubmitDraftResponse.from(submitService.submit(draftId, userId, visibility, roles)));
     }
 }
