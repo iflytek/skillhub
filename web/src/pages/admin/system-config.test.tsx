@@ -21,6 +21,7 @@ vi.mock('@/api/client', () => ({
 }))
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 
+import { ApiError } from '@/api/client'
 import { SystemConfigPage } from './system-config'
 
 describe('SystemConfigPage', () => {
@@ -79,6 +80,21 @@ describe('SystemConfigPage', () => {
     expect(screen.getByRole('dialog')).not.toBeNull()
     fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'systemConfig.confirmDisableLogin' }))
     await waitFor(() => expect(api.updateLocalAuth).toHaveBeenCalledTimes(2))
+  })
+
+  it('reloads current settings after a concurrent administrator changes them', async () => {
+    api.getLocalAuth.mockResolvedValueOnce({ passwordLoginEnabled: true, selfRegistrationEnabled: true, version: 3 })
+      .mockResolvedValueOnce({ passwordLoginEnabled: true, selfRegistrationEnabled: false, version: 4 })
+    api.updateLocalAuth.mockRejectedValue(new ApiError('Version conflict', 409))
+    setup()
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'systemConfig.passwordLogin' }))
+    fireEvent.click(screen.getByRole('button', { name: 'systemConfig.saveChanges' }))
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'systemConfig.confirmDisableLogin' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect((await screen.findByRole('alert')).textContent).toBe('systemConfig.changedElsewhere')
+    expect((screen.getByRole('checkbox', { name: 'systemConfig.passwordLogin' }) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByRole('checkbox', { name: 'systemConfig.selfRegistration' }) as HTMLInputElement).checked).toBe(false)
+    expect(api.updateLocalAuth).toHaveBeenCalledTimes(1)
   })
 
   it('saves a registration change only after Save, without a lockout confirmation', async () => {
