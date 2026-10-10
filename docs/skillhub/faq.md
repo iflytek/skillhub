@@ -154,6 +154,10 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 脚本会执行一系列初始化操作，生成的运行时配置默认位于 `/tmp/skillhub-runtime/`（包含 `.env.release` 和 docker-compose 文件）。
 
+## Q: 用 Kubernetes 部署对集群版本有要求吗？
+
+A: 官方 [Kubernetes 部署指南](./guide/kubernetes.md) 要求 Kubernetes **v1.24 及以上**，并需要已配置好的 `kubectl` 与默认 StorageClass（用于 PVC）；如需域名访问，还需安装 nginx ingress controller。更低版本的集群未经验证，建议先升级集群再部署。
+
 ## Q: 部署后输入正确的账号密码，却又跳回登录页？
 
 A: 该现象多见于「手动部署」场景（接口异常或初始化未完成导致）。建议：
@@ -247,6 +251,12 @@ docker logs --tail=300 <skillhub-server 容器名> 2>&1 | grep -Ei 'publish|SKIL
 
 A: 技能包根目录必须包含一个 `SKILL.md` 文件，且其 frontmatter 需包含 `name`、`description` 等字段。
 
+## Q: 技能包里可以放 API Key、Token 等凭据吗？
+
+A: 不建议。发布前校验会识别疑似硬编码的 token / secret，并拦截或要求确认（见上文 `registry returned 400` 的排查项）；自 v0.2.20 起，普通标识符、函数返回值、属性访问和字符串表达式不再被误判为凭据，真实密钥仍会被识别。
+
+推荐做法是：技能包里只写需要的环境变量名或占位符，并在 `SKILL.md` 中说明需要配置哪些凭据，由使用方在运行 Skill 的 Agent 环境中配置真实值。目前 SkillHub 不提供为 Skill 托管或注入密钥的功能。
+
 ## Q: 发布时报“技能包校验失败 / malformed input”怎么办？
 
 A: 该错误发生在 zip 解包读取文件名阶段，通常是压缩包不是 UTF-8 编码（例如用 Windows 自带压缩工具生成）或包内含中文路径导致。请使用 UTF-8 编码重新打包，并避免中文 / 特殊字符路径。
@@ -324,6 +334,18 @@ A: 两个高频原因：
 ```bash
 docker compose --env-file .env.release -f compose.release.yml up -d --force-recreate
 ```
+
+## Q: 启动时报 `bind: address already in use`（80 端口被占用）怎么办？
+
+A: 官方 Compose 默认把 Web 入口映射到宿主机 `80` 端口、API 映射到 `8080` 端口。端口被占用时，可以先用 `netstat -tlnp` 或 `lsof -i :80` 找到占用进程；如果不方便停止它，就在 `.env.release` 中修改对外端口（使用一键部署脚本时，文件默认位于 `/tmp/skillhub-runtime/.env.release`）：
+
+```bash
+WEB_PORT=8081
+# 如 8080 也被占用
+API_PORT=18080
+```
+
+修改端口后，请同步把 `SKILLHUB_PUBLIC_BASE_URL` 改成包含新端口的实际访问地址（例如 `http://your-host:8081`），否则登录回调等跳转可能出错。然后按上一条的方法用 `up -d --force-recreate` 重建容器。
 
 ## Q: SkillHub 运行时需要哪些外部依赖？
 

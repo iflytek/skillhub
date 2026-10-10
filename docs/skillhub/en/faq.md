@@ -154,6 +154,10 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 The script performs a series of initialization steps. The generated runtime configuration is located at `/tmp/skillhub-runtime/` by default (containing `.env.release` and the docker-compose file).
 
+## Q: What Kubernetes version does the Kubernetes deployment require?
+
+A: The official [Kubernetes deployment guide](./guide/kubernetes.md) requires Kubernetes **v1.24 or later**, a configured `kubectl`, and a default StorageClass for PVCs; an nginx ingress controller is needed if you want domain-based access. Older clusters have not been validated, so upgrade the cluster before deploying.
+
 ## Q: After deployment, I enter the correct username and password but get redirected back to the login page?
 
 A: This is most commonly seen with **manual deployment** (caused by API errors or incomplete initialization). Suggestions:
@@ -244,6 +248,12 @@ docker logs --tail=300 <skillhub-server container> 2>&1 | grep -Ei 'publish|SKIL
 
 A: The package root directory must contain a `SKILL.md` file, whose frontmatter must include fields such as `name` and `description`.
 
+## Q: Can a skill package contain API keys, tokens or other credentials?
+
+A: It is not recommended. Pre-publish validation detects what look like hard-coded tokens or secrets and blocks the publish or asks for confirmation (see the `registry returned 400` checklist above). Since v0.2.20, ordinary identifiers, function results, property access and string expressions are no longer flagged as credentials, while real secrets are still detected.
+
+Instead, reference only the environment variable names or placeholders the skill needs, document the required credentials in `SKILL.md`, and let users configure the real values in the agent environment that runs the skill. SkillHub does not currently store or inject secrets for skills.
+
 ## Q: Publishing fails with "package validation failed / malformed input" — what do I do?
 
 A: This error occurs while unzipping and reading file names, usually because the archive is not UTF-8 encoded (e.g. created with the built-in Windows compression tool) or contains Chinese/non-ASCII paths. Repackage using UTF-8 encoding and avoid Chinese / special-character paths.
@@ -321,6 +331,18 @@ A: Two common causes:
 ```bash
 docker compose --env-file .env.release -f compose.release.yml up -d --force-recreate
 ```
+
+## Q: Startup fails with `bind: address already in use` (port 80 is taken). What should I do?
+
+A: The official Compose file maps the web entry point to host port `80` and the API to port `8080`. When a port is taken, find the process with `netstat -tlnp` or `lsof -i :80`. If you cannot stop it, change the published ports in `.env.release` (with the one-click script, the file is at `/tmp/skillhub-runtime/.env.release` by default):
+
+```bash
+WEB_PORT=8081
+# if 8080 is also taken
+API_PORT=18080
+```
+
+After changing ports, also set `SKILLHUB_PUBLIC_BASE_URL` to the real access URL including the new port (for example `http://your-host:8081`); otherwise login callbacks and other redirects may break. Then recreate the containers with `up -d --force-recreate` as described in the previous answer.
 
 ## Q: What external dependencies does SkillHub require at runtime?
 
