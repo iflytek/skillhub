@@ -71,7 +71,6 @@ Skill，欢迎分享给 SkillHub 社区，与大家一起丰富开放、实用�
 使用以下命令启动完整的本地环境：
 
 ```bash
-rm -rf /tmp/skillhub-runtime
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
 ```
 
@@ -94,7 +93,13 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
-如果部署遇到问题，请清除现有的运行时目录并重试。
+重新运行或更新部署时，请保留现有的运行时目录。运行时脚本会复用其中的
+`.env.release` 文件；删除该目录会丢失自定义配置，包括公网访问地址和自动生成的匿名下载
+Cookie 密钥。
+
+如果部署遇到问题，请先使用运行时脚本输出的 `ps` 和 `logs` 生命周期命令检查状态与日志，
+再使用相同的运行时目录重试 `up`。如果确实需要重新生成配置，请在清除运行时目录之前备份
+`.env.release`。
 
 ### 前置要求
 
