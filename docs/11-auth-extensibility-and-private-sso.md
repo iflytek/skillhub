@@ -1,5 +1,12 @@
 # 认证扩展与私有 SSO 兼容设计
 
+> 状态说明：本文记录当前 Direct/Passive 私有 SSO 兼容入口。新外部身份实现和这些入口的
+> 后续迁移，以 [统一身份联邦设计](./21-unified-identity-federation-design.md) 为准。
+> `DirectAuthProvider` 和 `PassiveSessionAuthenticator` 直接返回
+> `PlatformPrincipal` 的方式属于待迁移设计，不应继续扩展到 LDAP、CAS、DingTalk、
+> SAML 或新的私有 SSO。新 Adapter 只返回协议验证结果，由统一核心归一化为
+> `IdentityAssertion`。
+
 ## 1. 目标
 
 在不影响当前开源版 OAuth 和本地账号登录能力的前提下，为未来私有仓库接入企业 SSO 预留稳定扩展点，并把代码差异控制在 provider 实现层和少量配置层。
@@ -145,4 +152,4 @@ public interface DirectAuthProvider {
 
 更详细的私有 SSO 接入步骤、最佳实践、测试矩阵和给后续 coding agent 的执行约束，见：
 
-- [12-private-sso-integration-playbook.md](/Users/xudongsun/github/skillhub/docs/12-private-sso-integration-playbook.md)
+- [12-private-sso-integration-playbook.md](./12-private-sso-integration-playbook.md)

@@ -1,5 +1,11 @@
 # skillhub 认证与授权设计
 
+> 外部身份架构说明：LDAP、DingTalk、CAS、SAML、可信代理及其他新外部身份接入，
+> 以 [统一身份联邦设计](./21-unified-identity-federation-design.md) 为准。本文现有
+> `OAuthClaims`、`DirectAuthProvider` 和 `PassiveSessionAuthenticator` 接口描述的是
+> 当前兼容实现，不是新 Provider 的目标扩展契约；新 Provider 只能返回协议验证结果，
+> 由统一核心归一化为 `IdentityAssertion`，不得直接返回 `PlatformPrincipal`。
+
 ## 0. 身份标识约束
 
 - `PlatformPrincipal.userId` 必须是稳定的字符串标识，而不是 `Long`。
