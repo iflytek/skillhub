@@ -27,7 +27,11 @@ type FieldErrors = {
   description?: string
 }
 
-const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/
+// Mirrors SlugValidator.SLUG_PATTERN: a letter/number/symbol, then letters,
+// numbers, symbols or hyphens, then a letter/number/symbol. The `u` flag is
+// required for the \p{...} classes, and the trailing group is not optional so
+// a lone astral character (e.g. an emoji) cannot pass as a two-character slug.
+const SLUG_PATTERN = /^[\p{L}\p{N}\p{So}][\p{L}\p{N}\p{So}-]*[\p{L}\p{N}\p{So}]$/u
 const RESERVED_SLUGS = new Set([
   'admin',
   'api',
