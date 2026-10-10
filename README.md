@@ -114,7 +114,6 @@ with the Skill's source and the problem it solves, or submit a PR by following t
 Start the full local stack with:
 
 ```bash
-rm -rf /tmp/skillhub-runtime
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
 ```
 
@@ -137,7 +136,15 @@ The `--public-url` parameter sets the public access URL for your SkillHub instan
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
 ```
 
-If deployment runs into problems, clear the existing runtime home and retry.
+Keep the existing runtime home when rerunning or updating the deployment. The
+runtime script reuses its `.env.release` file; deleting the directory discards
+your custom configuration, including the public URL and generated anonymous
+download cookie secret.
+
+If deployment runs into problems, inspect the `ps` and `logs` lifecycle commands
+printed by the runtime script, then retry `up` with the same runtime home. If you
+intentionally want a fresh configuration, back up `.env.release` before clearing
+the runtime home.
 
 ## SkillHub CLI
 
