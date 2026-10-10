@@ -16,19 +16,20 @@ import { traeCnProfile } from './profiles/trae-cn'
 import { opencodeProfile } from './profiles/opencode'
 import { kiloProfile } from './profiles/kilo'
 import { piProfile } from './profiles/pi'
+import { zcodeProfile } from './profiles/zcode'
 
 export {
   aStudioProfile, claudeCodeProfile, codexProfile, cursorProfile, dshProfile, githubCopilotProfile,
   geminiCliProfile, openhandsProfile, windsurfProfile, openclawProfile,
   kiroCliProfile, rooProfile, traeProfile, traeCnProfile,
-  opencodeProfile, kiloProfile, piProfile
+  opencodeProfile, kiloProfile, piProfile, zcodeProfile
 }
 
 export const allProfiles: AgentProfile[] = [
   aStudioProfile, claudeCodeProfile, codexProfile, cursorProfile, dshProfile, githubCopilotProfile,
   geminiCliProfile, openhandsProfile, windsurfProfile, openclawProfile,
   kiroCliProfile, rooProfile, traeProfile, traeCnProfile,
-  opencodeProfile, kiloProfile, piProfile
+  opencodeProfile, kiloProfile, piProfile, zcodeProfile
 ]
 
 export const profileMap = new Map(allProfiles.map(p => [p.id, p]))

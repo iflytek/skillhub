@@ -208,6 +208,7 @@ CLI 按以下逻辑确定安装位置：
 | `opencode` | `<project>/.opencode/skills/` | `~/.opencode/skills/` |
 | `kilo` | `<project>/.kilo/skills/` | `~/.kilo/skills/` |
 | `pi`（Pi） | `<project>/.pi/skills/` | `~/.pi/agent/skills/` |
+| `zcode` | `<project>/.zcode/skills/` | `~/.zcode/skills/` |
 | _fallback_ | `<project>/.agents/skills/` | `~/.agents/skills/` |
 
 对于自定义路径或不在列表中的 Agent 目录，使用 `--dir` 显式指定安装路径。交互式 user scope 下会与已探测 Agent 目标一同提供 `generic` 目标；当 `~/.acode/skills/` 存在时，选择器会显示 AStudio。当 `--scope user|project` 找不到匹配的 agent 目录时，CLI 会回退到上表的 `_fallback_` 行。
