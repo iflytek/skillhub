@@ -2,6 +2,16 @@
   "schemaVersion": 1,
   "skills": [
     {
+      "slug": "adversarial-review",
+      "version": "2.5.1",
+      "license": "MIT",
+      "upstream": {
+        "repository": "https://github.com/RevolutionLA/adversarial-review",
+        "commit": "0d007a223a5b0f3a1e09c12d891614683c90956c",
+        "path": "skills/adversarial-review"
+      }
+    },
+    {
       "slug": "ai-claim-checker",
       "version": "1.0.0",
       "license": "CC-BY-SA-4.0",
