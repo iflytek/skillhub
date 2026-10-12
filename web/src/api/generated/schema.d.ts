@@ -2873,6 +2873,74 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/authoring/runs/{runId}/findings/{findingId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss a finding as not applicable */
+        post: operations["dismissFindingFix"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/runs/{runId}/findings/{findingId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss a finding as not applicable */
+        post: operations["dismissFindingFix_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/runs/{runId}/findings/{findingId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply a finding's fix suggestion to the draft */
+        post: operations["applyFindingFix"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/runs/{runId}/findings/{findingId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Apply a finding's fix suggestion to the draft */
+        post: operations["applyFindingFix_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/authoring/runs/{runId}/cancel": {
         parameters: {
             query?: never;
@@ -2901,6 +2969,40 @@ export interface paths {
         put?: never;
         /** Request cooperative cancellation of a run */
         post: operations["cancelValidationRun_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/authoring/drafts/{draftId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a validated draft into the publish pipeline */
+        post: operations["submitValidatedDraft"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/drafts/{draftId}/submit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Submit a validated draft into the publish pipeline */
+        post: operations["submitValidatedDraft_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8580,6 +8682,43 @@ export interface components {
             createdAt?: string;
             readAt?: string;
         };
+        ApiResponseValidationFindingResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ValidationFindingResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        FilePatch: {
+            filePath?: string;
+            oldSha256?: string;
+            oldValue?: string;
+            newValue?: string;
+        };
+        FixSuggestion: {
+            patches?: components["schemas"]["FilePatch"][];
+            description?: string;
+        };
+        ValidationFindingResponse: {
+            /** Format: int64 */
+            id?: number;
+            /** Format: int64 */
+            runId?: number;
+            layer?: string;
+            ruleCode?: string;
+            severity?: string;
+            filePath?: string;
+            location?: string;
+            message?: string;
+            suggestion?: components["schemas"]["FixSuggestion"];
+            status?: string;
+            /** Format: int32 */
+            appliedRevision?: number;
+            /** Format: date-time */
+            createdAt?: string;
+        };
         ApiResponseValidationRunResponse: {
             /** Format: int32 */
             code?: number;
@@ -8614,6 +8753,27 @@ export interface components {
             summary?: {
                 [key: string]: Record<string, never>;
             };
+        };
+        SubmitDraftRequest: {
+            visibility?: string;
+            platformRoles?: string[];
+        };
+        ApiResponseSubmitDraftResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SubmitDraftResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SubmitDraftResponse: {
+            /** Format: int64 */
+            skillId?: number;
+            /** Format: int64 */
+            versionId?: number;
+            slug?: string;
+            version?: string;
         };
         CreateDraftRequest: {
             namespaceSlug: string;
@@ -10421,34 +10581,6 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
-        };
-        FilePatch: {
-            filePath?: string;
-            oldSha256?: string;
-            oldValue?: string;
-            newValue?: string;
-        };
-        FixSuggestion: {
-            patches?: components["schemas"]["FilePatch"][];
-            description?: string;
-        };
-        ValidationFindingResponse: {
-            /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
-            runId?: number;
-            layer?: string;
-            ruleCode?: string;
-            severity?: string;
-            filePath?: string;
-            location?: string;
-            message?: string;
-            suggestion?: components["schemas"]["FixSuggestion"];
-            status?: string;
-            /** Format: int32 */
-            appliedRevision?: number;
-            /** Format: date-time */
-            createdAt?: string;
         };
         SseEmitter: {
             /** Format: int64 */
@@ -17501,6 +17633,98 @@ export interface operations {
             };
         };
     };
+    dismissFindingFix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+                findingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationFindingResponse"];
+                };
+            };
+        };
+    };
+    dismissFindingFix_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+                findingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationFindingResponse"];
+                };
+            };
+        };
+    };
+    applyFindingFix: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+                findingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationFindingResponse"];
+                };
+            };
+        };
+    };
+    applyFindingFix_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: number;
+                findingId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseValidationFindingResponse"];
+                };
+            };
+        };
+    };
     cancelValidationRun: {
         parameters: {
             query?: never;
@@ -17541,6 +17765,58 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseValidationRunResponse"];
+                };
+            };
+        };
+    };
+    submitValidatedDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SubmitDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSubmitDraftResponse"];
+                };
+            };
+        };
+    };
+    submitValidatedDraft_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["SubmitDraftRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSubmitDraftResponse"];
                 };
             };
         };
