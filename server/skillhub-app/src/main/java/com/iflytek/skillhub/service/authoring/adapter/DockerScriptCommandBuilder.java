@@ -2,6 +2,7 @@ package com.iflytek.skillhub.service.authoring.adapter;
 
 import com.iflytek.skillhub.config.AuthoringProperties;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -81,6 +82,7 @@ public class DockerScriptCommandBuilder implements ScriptCommandBuilder {
                                     String runTag) {
         AuthoringProperties.LocalScript.Docker docker = properties.getLocalScript().getDocker();
         String hostWorkspace = realPath(workspace);
+        ensureContainerReadable(workspace);
 
         List<String> command = new ArrayList<>();
         command.add("docker");
@@ -88,6 +90,10 @@ public class DockerScriptCommandBuilder implements ScriptCommandBuilder {
         command.add("--rm");
         command.add("--name");
         command.add(containerName(runTag));
+        hostUser().ifPresent(user -> {
+            command.add("--user");
+            command.add(user);
+        });
         command.add("--network");
         command.add("none");
         command.add("--memory");
@@ -132,6 +138,66 @@ public class DockerScriptCommandBuilder implements ScriptCommandBuilder {
         } catch (IOException | InterruptedException exception) {
             log.warn("Could not force-remove validation container {}: {}",
                     containerName(runTag), exception.getMessage());
+        }
+    }
+
+
+    /** Cached "uid:gid" of the host JVM user, so container-created files stay deletable. */
+    private static final java.util.Optional<String> HOST_USER = resolveHostUser();
+
+    private static java.util.Optional<String> resolveHostUser() {
+        try {
+            String uid = readCommandOutput("id", "-u").trim();
+            String gid = readCommandOutput("id", "-g").trim();
+            if (uid.matches("\\d+") && gid.matches("\\d+")) {
+                return java.util.Optional.of(uid + ":" + gid);
+            }
+        } catch (Exception exception) {
+            // non-POSIX host (e.g. Windows without id): run as the image default
+        }
+        return java.util.Optional.empty();
+    }
+
+    private static String readCommandOutput(String... command) throws Exception {
+        Process process = new ProcessBuilder(command).start();
+        String output;
+        try (var reader = process.inputReader()) {
+            output = reader.lines().findFirst().orElse("");
+        }
+        process.waitFor();
+        return output;
+    }
+
+    private static java.util.Optional<String> hostUser() {
+        return HOST_USER;
+    }
+
+    /**
+     * The container drops every capability (including DAC_OVERRIDE), so the
+     * workspace files must be world-readable (and directories traversable)
+     * on the host or the in-container interpreter cannot open them. Fresh JVM
+     * temp directories are owner-only on Linux, which would break script
+     * execution there; macOS Docker Desktop masks this by remapping
+     * ownership inside the VM.
+     */
+    private static void ensureContainerReadable(Path root) {
+        try (var stream = Files.walk(root)) {
+            stream.forEach(path -> {
+                try {
+                    if (Files.isDirectory(path)) {
+                        // traversable and writable so the script can create
+                        // artifacts inside the mounted workspace
+                        path.toFile().setExecutable(true, false);
+                        path.toFile().setWritable(true, false);
+                    }
+                    path.toFile().setReadable(true, false);
+                } catch (Exception exception) {
+                    // best effort: a locked file surfaces as a task failure
+                    // with the interpreter's own error message
+                }
+            });
+        } catch (IOException exception) {
+            // the mount itself will fail visibly if the tree is unreadable
         }
     }
 
