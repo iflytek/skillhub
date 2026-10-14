@@ -26,6 +26,7 @@ import com.iflytek.skillhub.domain.authoring.validation.ValidationLayer;
 import com.iflytek.skillhub.domain.authoring.validation.ValidationRun;
 import com.iflytek.skillhub.domain.authoring.validation.ValidationRunStatus;
 import com.iflytek.skillhub.domain.shared.exception.DomainConflictException;
+import com.iflytek.skillhub.service.authoring.mcp.McpProbeService;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -474,9 +475,9 @@ public class ValidationRunOrchestrator {
             throws IOException {
         Files.createDirectories(workspace);
         for (PackageEntry entry : entries) {
-            Path target = workspace.resolve(entry.relativePath()).normalize();
+            Path target = workspace.resolve(entry.path()).normalize();
             if (!target.startsWith(workspace.normalize())) {
-                throw new IOException("package entry escapes the workspace: " + entry.relativePath());
+                throw new IOException("package entry escapes the workspace: " + entry.path());
             }
             Files.createDirectories(target.getParent());
             Files.write(target, entry.content());
@@ -485,7 +486,7 @@ public class ValidationRunOrchestrator {
 
     private String readEntryText(List<PackageEntry> entries, String path) {
         return entries.stream()
-                .filter(entry -> entry.relativePath().equals(path))
+                .filter(entry -> entry.path().equals(path))
                 .findFirst()
                 .map(entry -> new String(entry.content(), StandardCharsets.UTF_8))
                 .orElse(null);
