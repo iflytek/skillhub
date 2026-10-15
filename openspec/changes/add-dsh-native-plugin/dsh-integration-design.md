@@ -113,6 +113,8 @@ stateDiagram-v2
 
 apply 注册服务、Remote、UI、配置监听和定时查询时，要将 disposer 归属到 fiber。禁用后不再接受新写操作；当前事务的文件提交不能随组件卸载中断。正常退出尝试完成/恢复并落盘，进程被强制终止则由下次启动恢复核验。
 
+会话页面和工具视图贡献同时依赖 `remote.skillhub`、`slots`、会话 API 的 `sessions` 及会话 UI 的 `uiSession`。`sessions` 可用不表示 renderer 的 session 适配器已安装；声明 `session-maybe` 的贡献必须声明 `uiSession` 依赖。此依赖是插件生命周期前提，不保证宿主在适配器卸载窗口内的渲染原子性；断线与重连仍须独立验收。该服务移除时释放相关面板、工具视图与查询资源，恢复后重新注册且不重复贡献。插件 Client manifest 与兼容基线同步声明 `@deepseek-ai/dsh-client-ui-session`，版本沿用首版精确 DSH 基线。
+
 插件不新增 WebServer 路由，跨端调用统一通过 Remote 服务。
 
 服务名按原字符串注册；`super(ctx,'my-service')` 不会自动变为 `ctx.myService`。本插件应使用明确 service key 和 Context 类型声明。

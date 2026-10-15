@@ -44,6 +44,7 @@ test('official slot declaration loss preserves catalog and independently removes
     ctx.provide('sessions', { scope: () => undefined } as never),
     ctx.provide('layout', { selectPanel: () => {} } as never),
   ];
+  providers.push(ctx.provide('uiSession', {} as never));
   const plugin = ctx.plugin(clientPlugin);
   const flush = async () => { await new Promise(resolve => setTimeout(resolve, 25)); };
   try {
@@ -84,6 +85,51 @@ test('official slot declaration loss preserves catalog and independently removes
     toolsAfterDispose();
   } finally {
     await plugin.dispose();
+    for (const remove of providers.reverse()) await remove();
+    root(); await renderer.dispose();
+  }
+});
+
+test('session adapter loss removes scoped catalog contributions and restoration registers them once', async () => {
+  const SlotRegistry = await loadSlotRegistry();
+  const ctx = new Context();
+  const renderer = ctx.plugin({ apply: (ctx: Context) => { new SlotRegistry(ctx); } });
+  await renderer;
+  const slots = ctx.slots as InstanceType<typeof SlotRegistry>;
+  const root = slots.register({ name: 'root', children: {
+    main: { kind: 'keyed', scope: 'session-maybe' },
+    'sidebar.panellist': { kind: 'list', scope: 'root' },
+  } } as never, () => null);
+  const providers = [
+    ctx.provide('remote', { $mount: async () => async () => {} } as never),
+    ctx.provide('remote.skillhub', {} as never),
+    ctx.provide('sessions', { scope: () => undefined } as never),
+    ctx.provide('layout', { selectPanel: () => {} } as never),
+  ];
+  const plugin = ctx.plugin(clientPlugin);
+  const flush = async () => { await new Promise(resolve => setTimeout(resolve, 25)); };
+  const source = { getSnapshot: () => ({ hooks: {}, keyedHooks: {}, props: {} }), subscribe: () => () => {} };
+  const adapter = { current: source, bindingSource: () => source };
+  let owner: ReturnType<Context['plugin']> | undefined;
+  try {
+    await plugin; await flush();
+    // sessions is available, but the session-maybe renderer cannot run without its UI adapter.
+    expect(slots.entriesOfSlot('main')).toHaveLength(0);
+    expect(slots.entriesOfSlot('sidebar.panellist')).toHaveLength(0);
+    for (let cycle = 0; cycle < 2; cycle++) {
+      owner = ctx.plugin({ inject: ['slots'], apply: (ctx: Context) => {
+        ctx.provide('uiSession', {} as never);
+        ctx.slots.installScope('session', adapter);
+      } });
+      await owner; await flush();
+      expect(slots.entriesOfSlot('main')).toHaveLength(1);
+      expect(slots.entriesOfSlot('sidebar.panellist')).toHaveLength(1);
+      await owner.dispose(); await flush();
+      expect(slots.entriesOfSlot('main')).toHaveLength(0);
+      expect(slots.entriesOfSlot('sidebar.panellist')).toHaveLength(0);
+    }
+  } finally {
+    await plugin.dispose(); await owner?.dispose();
     for (const remove of providers.reverse()) await remove();
     root(); await renderer.dispose();
   }

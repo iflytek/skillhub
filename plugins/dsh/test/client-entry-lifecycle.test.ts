@@ -21,6 +21,7 @@ test('layout loss removes only catalog entries and preserves conversation regist
   const removeRemote = ctx.provide('remote', remote as never);
   const removeSkillHub = ctx.provide('remote.skillhub', {} as never);
   const removeSessions = ctx.provide('sessions', { scope: () => undefined } as never);
+  const removeUiSession = ctx.provide('uiSession', {} as never);
   const plugin = ctx.plugin(clientPlugin);
   const flush = async () => { await new Promise(resolve => setTimeout(resolve, 25)); };
   try {
@@ -40,6 +41,6 @@ test('layout loss removes only catalog entries and preserves conversation regist
     await plugin.dispose();
     expect(entries.size).toBe(0);
   } finally {
-    await plugin.dispose(); await removeSessions(); await removeSkillHub(); await removeRemote(); await slots.dispose();
+    await plugin.dispose(); await removeUiSession(); await removeSessions(); await removeSkillHub(); await removeRemote(); await slots.dispose();
   }
 });

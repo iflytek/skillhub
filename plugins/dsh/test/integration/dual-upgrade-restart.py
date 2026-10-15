@@ -8,10 +8,12 @@ parser=argparse.ArgumentParser(description='Verify dual-target upgrade recovery 
 parser.add_argument('--root', required=True, type=Path)
 parser.add_argument('--node', required=True, type=Path)
 parser.add_argument('--chromium', required=True, type=Path)
+parser.add_argument('--success', action='store_true', help='Verify completed dual-target upgrade history across Host restart')
 parser.add_argument('--crash', action='store_true', help='Kill the isolated Host while its upgrade transaction is paused')
 parser.add_argument('--unsupported-dsh-bin', type=Path, help='Boot an isolated unsupported DSH installation before returning to the original runtime')
 parser.add_argument('--replacement-tarball', type=Path, help='Replace the plugin from a retained local tarball while the Host is stopped')
 args=parser.parse_args()
+assert not (args.success and args.crash)
 root=args.root.resolve()
 assert root != Path(tempfile.gettempdir()).resolve() and root.is_relative_to(Path(tempfile.gettempdir()).resolve()), 'Root must be an isolated temporary directory'
 assert (root/'home/profiles/skillhub-m0/package.json').is_file(), 'Initialize and install the isolated Profile first'
@@ -45,7 +47,9 @@ def wait_file(path,process,timeout=60):
  return json.loads(path.read_text())
 def start_host(port,first,bin_path=None,log_name=None):
  env=dict(os.environ,HOME=str(root/'native-install-home'),USERPROFILE=str(root/'native-install-home'),DSH_HOME=str(root/'home'),DSH_AGENTS_HOME=str(root/'agents'),DSH_TELEMETRY_DISABLED='1')
- if first:env.update(DSH_UPGRADE_FIXTURE='1',DSH_UPGRADE_RECOVERY_FIXTURE='1',DSH_UPGRADE_TWO_TARGETS='1')
+ if first:
+  env.update(DSH_UPGRADE_FIXTURE='1',DSH_UPGRADE_TWO_TARGETS='1')
+  if not args.success:env['DSH_UPGRADE_RECOVERY_FIXTURE']='1'
  else:env['DSH_PROBE_SKIP_DISCOVERY']='1'
  if first and args.crash:env['DSH_UPGRADE_CRASH_FIXTURE']='1'
  logpath=out/(log_name or ('host-initial.log' if first else 'host-restarted.log'))
@@ -73,14 +77,15 @@ try:
  before=[hashes(p) for p in targets];inventory=root/'native-install-home/.skillhub/inventory.json';inventory_before=inventory.read_bytes()
  shutil.copy2(repo/'plugins/dsh/test/integration/upgrade-recovery-probe.mjs',root/'upgrade-recovery-probe.mjs')
  env=dict(os.environ,DSH_PROBE_URL=entry,DSH_PROBE_OUTPUT=str(out),DSH_INSTALL_FIXTURE_TITLE=report['installFixtureTitle'],DSH_INSTALL_FIXTURE_WORKSPACE=report['installFixtureWorkspace'],DSH_PROBE_RESTART='1',DSH_UPGRADE_TWO_TARGETS='1',DSH_FIXTURE_UPDATE_STATE=str(root/'update-state'),DSH_PROBE_CHROMIUM=str(args.chromium.resolve()))
+ if args.success:env['DSH_UPGRADE_SUCCESS']='1'
  if args.crash:env['DSH_UPGRADE_CRASH_FIXTURE']='1'
  log=open(out/'browser.log','w');browser=subprocess.Popen(['node','upgrade-recovery-probe.mjs'],cwd=root,env=env,stdout=log,stderr=log);children.append(browser)
  op=wait_file(out/'restart-ready.json',browser,90)['operationId'];journal=root/'home/skillhub/operations'/f'{op}.json';j=json.loads(journal.read_text())
  if args.crash:
   wait_file(root/'upgrade-crash-ready.json',old)
   assert j['operation']['status']['phase'] not in ['completed','failed','recovery-required']
- else:assert j['operation']['status']['phase']=='recovery-required'
- target_states=[p.exists() for p in targets];assert sum(target_states)==1,target_states
+ else:assert j['operation']['status']['phase']==('completed' if args.success else 'recovery-required')
+ target_states=[p.exists() for p in targets];assert sum(target_states)==(2 if args.success else 1),target_states
  if args.crash:old.kill()
  else:old.terminate()
  old.wait(timeout=30)
@@ -112,10 +117,15 @@ try:
  code=browser.wait(timeout=90)
  if code:print('Browser failed; inspect the private browser.log in the isolated result directory')
  assert code==0,'Browser failed'
- assert inventory.read_bytes()==inventory_before
- assert [hashes(p) for p in targets]==before
- j=json.loads(journal.read_text());assert j['operation']['status']['recovery']=='restored'
- result={'passed':True,'node':subprocess.check_output([node,'-p','process.versions.node'],text=True).strip(),'forcedProcessExit':args.crash,'oldHostExited':True,'newHostStarted':True,'distinctProcesses':True,'samePort':urlsplit(entry).port==urlsplit(new_entry).port,'targetCount':2,'mixedStateBeforeRestart':True,'allTargetHashesRestored':True,'inventoryUnchanged':True,'operationRecovery':'restored','browser':json.loads((out/'upgrade-result.json').read_text())}
+ if args.success:
+  assert all(json.loads((p/'.skillhub/metadata.json').read_text())['version']=='1.3.0' for p in targets)
+  assert all(hashes(p)!=old_hash for p,old_hash in zip(targets,before))
+ else:
+  assert inventory.read_bytes()==inventory_before
+  assert [hashes(p) for p in targets]==before
+ j=json.loads(journal.read_text())
+ assert j['operation']['status']['phase']=='completed' if args.success else j['operation']['status']['recovery']=='restored'
+ result={'passed':True,'node':subprocess.check_output([node,'-p','process.versions.node'],text=True).strip(),'forcedProcessExit':args.crash,'oldHostExited':True,'newHostStarted':True,'distinctProcesses':True,'samePort':urlsplit(entry).port==urlsplit(new_entry).port,'targetCount':2,'mixedStateBeforeRestart':not args.success,'allTargetHashesRestored':not args.success,'inventoryUnchanged':inventory.read_bytes()==inventory_before,'operationRecovery':j['operation']['status']['recovery'],'completedUpgrade':args.success,'browser':json.loads((out/'upgrade-result.json').read_text())}
  if replacement:result.update(replacementVersion=replacement['version'],replacementSha256=hashlib.sha256(args.replacement_tarball.read_bytes()).hexdigest(),replacementFilesMatched=6,pendingJournalUnchangedDuringPackageReplacement=True)
  if unsupported_version:result.update(unsupportedHostVersion=unsupported_version,unsupportedBundleRejected=True,pendingJournalUnchangedAcrossUnsupportedHost=True)
  (out/'host-files-result.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))

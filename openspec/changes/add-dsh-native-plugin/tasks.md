@@ -66,7 +66,7 @@
 - [x] 7.2 实现 openConversationDetail/acknowledgeConversationDetail 与原搜索引用到已查看固定版本的关联；多版本歧义阻断，不静默解析 latest。（实现及定向测试已补齐早期验证记录中的缺口，见“交付缺口核对”。）
 - [x] 7.3 安装工具仅返回 accepted；结果卡片从共享 OperationStore/getOperation 展示终态，历史来源、主机、时间来自原快照。（接受成功仅为 accepted；拒绝为 not-confirmed，见“交付缺口核对”。）
 - [ ] 7.4 按 acceptance.md 逐组留证；阶段顺序以 implementation-design.md 第 9 节为准，日志恢复不后置到写入口上线以后。
-- [ ] 7.5 补齐 lifecycle-design.md §9 与 interface-design.md §5.2 的操作结果展示：核验并提供受影响目标、旧新版本及安全告警信息，覆盖双目标升级与重启后的历史查询。已补 resultDetails 原日志投影、跨目标旧版本保护和四个入口的展示；核心定向回归与真实组件浏览器检查通过，仍待双目标真实 Host 升级和重启历史查询验收。不得透传事务内部路径或原始异常，也不得将当前清单状态冒充原操作结果。
+- [ ] 7.5 补齐 lifecycle-design.md §9 与 interface-design.md §5.2 的操作结果展示：核验并提供受影响目标、旧新版本及安全告警信息，覆盖双目标升级与重启后的历史查询。已补 resultDetails 原日志投影、跨目标旧版本保护和四个入口的展示；核心定向回归、真实组件浏览器、双目标真实 Host 升级成功及中断恢复后的历史查询已取得证据（operation-details-host-result.json）。已补齐 uiSession 依赖并通过 201 项插件测试；修复后完整恢复链路通过，但成功升级的 Host 重启断线窗口仍出现 session-maybe 适配器缺失。官方组件卸载可独立复现同类错误，完整无插件 Host 对照尚未完成，不能据此归因。待断线问题定位与回归后关闭。不得透传事务内部路径或原始异常，也不得将当前清单状态冒充原操作结果。
 
 
 ## 8. 原生机制落地检查

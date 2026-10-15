@@ -1,0 +1,394 @@
+{
+  "artifact": {
+    "commit": "760368c70",
+    "rebuiltFromCurrentSource": true,
+    "sha256": "e4f5a3094049c4fa6588b7523c99e775506ed91c5997da93bdf386b525ac9b7c",
+    "installedMatches": 6,
+    "dsh": "0.2.0-rc.2",
+    "node": "24.2.0",
+    "modelCalled": false
+  },
+  "successAfterHostRestart": {
+    "passed": true,
+    "node": "24.2.0",
+    "forcedProcessExit": false,
+    "oldHostExited": true,
+    "newHostStarted": true,
+    "distinctProcesses": true,
+    "samePort": true,
+    "targetCount": 2,
+    "mixedStateBeforeRestart": false,
+    "allTargetHashesRestored": false,
+    "inventoryUnchanged": false,
+    "operationRecovery": "not-needed",
+    "completedUpgrade": true,
+    "browser": {
+      "passed": true,
+      "operationId": "10787f4c-5cc5-4974-ab15-bf57f2ae11f1",
+      "expectedTargets": 2,
+      "submissions": 1,
+      "recoveries": 0,
+      "hostRestartRequested": true,
+      "originalOperationDetailsVerified": true,
+      "verifiedDetails": [
+        {
+          "operationId": "10787f4c-5cc5-4974-ab15-bf57f2ae11f1",
+          "outcome": "upgraded",
+          "beforeVersion": "1.2.0",
+          "afterVersion": "1.3.0",
+          "targets": [
+            {
+              "label": "目标 1（确认计划顺序）",
+              "outcome": "upgraded"
+            },
+            {
+              "label": "目标 2（确认计划顺序）",
+              "outcome": "upgraded"
+            }
+          ],
+          "warnings": []
+        }
+      ],
+      "errors": []
+    }
+  },
+  "recoveryAfterHostRestart": {
+    "passed": true,
+    "node": "24.2.0",
+    "forcedProcessExit": false,
+    "oldHostExited": true,
+    "newHostStarted": true,
+    "distinctProcesses": true,
+    "samePort": true,
+    "targetCount": 2,
+    "mixedStateBeforeRestart": true,
+    "allTargetHashesRestored": true,
+    "inventoryUnchanged": true,
+    "operationRecovery": "restored",
+    "completedUpgrade": false,
+    "browser": {
+      "passed": true,
+      "operationId": "2c6f209b-7c2c-4b12-ba46-cb85a6c2e9d1",
+      "submissions": 1,
+      "recoveries": 1,
+      "expectedTargets": 2,
+      "historyAfterReload": true,
+      "hostRestartRequested": true,
+      "forcedProcessExit": false,
+      "leaseRefusalAndExplicitRetryVerified": false,
+      "originalOperationDetailsVerified": true,
+      "verifiedDetails": [
+        {
+          "operationId": "2c6f209b-7c2c-4b12-ba46-cb85a6c2e9d1",
+          "outcome": "unknown",
+          "beforeVersion": "1.2.0",
+          "afterVersion": null,
+          "targets": [
+            {
+              "label": "目标 1（确认计划顺序）",
+              "outcome": "unknown"
+            },
+            {
+              "label": "目标 2（确认计划顺序）",
+              "outcome": "unknown"
+            }
+          ],
+          "warnings": []
+        },
+        {
+          "operationId": "2c6f209b-7c2c-4b12-ba46-cb85a6c2e9d1",
+          "outcome": "restored",
+          "beforeVersion": "1.2.0",
+          "afterVersion": null,
+          "targets": [
+            {
+              "label": "目标 1（确认计划顺序）",
+              "outcome": "restored"
+            },
+            {
+              "label": "目标 2（确认计划顺序）",
+              "outcome": "restored"
+            }
+          ],
+          "warnings": []
+        }
+      ],
+      "recoveryResponseLossVerified": true,
+      "oldVersionVisible": true,
+      "closeFocusVerified": true,
+      "errors": []
+    }
+  },
+  "priorRecoveryRun": {
+    "passed": false,
+    "errors": [
+      "scope 'session-maybe' rendered without an installed adapter"
+    ]
+  },
+  "remaining": "Missing session adapter during full Host disconnection remains unresolved. The uiSession dependency candidate still reproduces it; the no-plugin full Host control has not reached a disconnect cycle.",
+  "uiSessionDependencyCandidate": {
+    "artifact": {
+      "sourceIdentity": {
+        "commit": "c21a1753ebd6cc251f7a01efd43473a00248d270",
+        "uncommittedProductionDiffSha256": "9ed17a57ae08315ab01d29d2e47811f54f2bed1716c22a810c6ec23b601b88ed",
+        "productionSourceSha256": {
+          "plugins/dsh/package.json": "f0185715ee22e6f3e3a6e267f88fc35d2c7816377260f623983b1cfcbca176c3",
+          "plugins/dsh/bun.lock": "f2b41743243375ad62ccec69b68793ceb9aabe06ca89176c7d5d8f446bd497ab",
+          "plugins/dsh/src/client/index.tsx": "597c15b0aab1ca0583af8805caa803205cb1391471677b862ac0e569a5c8e09b",
+          "plugins/dsh/src/host/runtime-compatibility.ts": "2165d9d82a31f42154b8acc3413f3231473bb1acad4772bb3f50f9d9a78dfa5e"
+        }
+      },
+      "rebuiltFromCurrentSource": true,
+      "sha256": "8a27c233ae84c2c3bc8444331853cdaad8d64336626d212d1ee8eee4bff07f91",
+      "installedMatches": 6,
+      "dsh": "0.2.0-rc.2",
+      "node": "24.2.0",
+      "modelCalled": false
+    },
+    "runs": {
+      "recoveryImmediateFocus": {
+        "passed": false,
+        "stage": "close-result",
+        "operationId": "afed093f-764d-419b-b428-accf01405d4c",
+        "verifiedDetails": [
+          {
+            "operationId": "afed093f-764d-419b-b428-accf01405d4c",
+            "outcome": "unknown",
+            "beforeVersion": "1.2.0",
+            "afterVersion": null,
+            "targets": [
+              {
+                "label": "目标 1（确认计划顺序）",
+                "outcome": "unknown"
+              },
+              {
+                "label": "目标 2（确认计划顺序）",
+                "outcome": "unknown"
+              }
+            ],
+            "warnings": []
+          },
+          {
+            "operationId": "afed093f-764d-419b-b428-accf01405d4c",
+            "outcome": "restored",
+            "beforeVersion": "1.2.0",
+            "afterVersion": null,
+            "targets": [
+              {
+                "label": "目标 1（确认计划顺序）",
+                "outcome": "restored"
+              },
+              {
+                "label": "目标 2（确认计划顺序）",
+                "outcome": "restored"
+              }
+            ],
+            "warnings": []
+          }
+        ],
+        "errors": [],
+        "failureCode": "CLOSE_RESULT_FOCUS_NOT_RESTORED_AT_IMMEDIATE_CHECK"
+      },
+      "successAfterHostRestart": {
+        "passed": false,
+        "stage": "restarted-history",
+        "operationId": "7f004432-bf35-4ccb-8eb0-d6ae84f1918f",
+        "verifiedDetails": [
+          {
+            "operationId": "7f004432-bf35-4ccb-8eb0-d6ae84f1918f",
+            "outcome": "upgraded",
+            "beforeVersion": "1.2.0",
+            "afterVersion": "1.3.0",
+            "targets": [
+              {
+                "label": "目标 1（确认计划顺序）",
+                "outcome": "upgraded"
+              },
+              {
+                "label": "目标 2（确认计划顺序）",
+                "outcome": "upgraded"
+              }
+            ],
+            "warnings": []
+          }
+        ],
+        "errors": [
+          {
+            "stage": "waiting-host-restart",
+            "message": "scope 'session-maybe' rendered without an installed adapter"
+          }
+        ],
+        "failureCode": "SESSION_SCOPE_ADAPTER_MISSING_DURING_HOST_DISCONNECTION"
+      },
+      "recoveryBoundedFocus": {
+        "passed": true,
+        "node": "24.2.0",
+        "forcedProcessExit": false,
+        "oldHostExited": true,
+        "newHostStarted": true,
+        "distinctProcesses": true,
+        "samePort": true,
+        "targetCount": 2,
+        "mixedStateBeforeRestart": true,
+        "allTargetHashesRestored": true,
+        "inventoryUnchanged": true,
+        "operationRecovery": "restored",
+        "completedUpgrade": false,
+        "browser": {
+          "passed": true,
+          "operationId": "1c9bef5a-72ae-4edb-b319-58d6cda07add",
+          "submissions": 1,
+          "recoveries": 1,
+          "expectedTargets": 2,
+          "historyAfterReload": true,
+          "hostRestartRequested": true,
+          "forcedProcessExit": false,
+          "leaseRefusalAndExplicitRetryVerified": false,
+          "originalOperationDetailsVerified": true,
+          "verifiedDetails": [
+            {
+              "operationId": "1c9bef5a-72ae-4edb-b319-58d6cda07add",
+              "outcome": "unknown",
+              "beforeVersion": "1.2.0",
+              "afterVersion": null,
+              "targets": [
+                {
+                  "label": "目标 1（确认计划顺序）",
+                  "outcome": "unknown"
+                },
+                {
+                  "label": "目标 2（确认计划顺序）",
+                  "outcome": "unknown"
+                }
+              ],
+              "warnings": []
+            },
+            {
+              "operationId": "1c9bef5a-72ae-4edb-b319-58d6cda07add",
+              "outcome": "restored",
+              "beforeVersion": "1.2.0",
+              "afterVersion": null,
+              "targets": [
+                {
+                  "label": "目标 1（确认计划顺序）",
+                  "outcome": "restored"
+                },
+                {
+                  "label": "目标 2（确认计划顺序）",
+                  "outcome": "restored"
+                }
+              ],
+              "warnings": []
+            }
+          ],
+          "recoveryResponseLossVerified": true,
+          "oldVersionVisible": true,
+          "closeFocusVerified": true,
+          "errors": []
+        },
+        "focusObservationDeadlineMs": 3000
+      }
+    },
+    "overallPassed": false,
+    "interpretation": "Result projection and recovery have passing evidence. A bounded-focus recovery pass does not erase the prior focus failure; the success run still records a missing session adapter during Host disconnection."
+  },
+  "officialHostDisconnectControl": {
+    "status": "incomplete",
+    "dsh": "0.2.0-rc.2",
+    "node": "24.2.0",
+    "modelCalled": false,
+    "pluginInstalled": false,
+    "observerLoaded": false,
+    "freshProfileDependenciesEmpty": true,
+    "freshProfileDefaultOverlayUnmodified": true,
+    "officialClientModuleIdsObservedDuringEarlierPreparation": [
+      "@deepseek-ai/dsh-api-gateway",
+      "@deepseek-ai/dsh-api-job-controller",
+      "@deepseek-ai/dsh-api-remotes",
+      "@deepseek-ai/dsh-api-session-controller",
+      "@deepseek-ai/dsh-api-terminal-controller",
+      "@deepseek-ai/dsh-api-workspace-controller",
+      "@deepseek-ai/dsh-api-workspace-files",
+      "@deepseek-ai/dsh-client-connection",
+      "@deepseek-ai/dsh-client-file-upload",
+      "@deepseek-ai/dsh-client-hmr",
+      "@deepseek-ai/dsh-client-locale",
+      "@deepseek-ai/dsh-client-modules",
+      "@deepseek-ai/dsh-client-resources",
+      "@deepseek-ai/dsh-client-shortcuts",
+      "@deepseek-ai/dsh-client-ui-agent-preset",
+      "@deepseek-ai/dsh-client-ui-approval",
+      "@deepseek-ai/dsh-client-ui-attachment",
+      "@deepseek-ai/dsh-client-ui-brand-official",
+      "@deepseek-ai/dsh-client-ui-chat",
+      "@deepseek-ai/dsh-client-ui-commands",
+      "@deepseek-ai/dsh-client-ui-conversation",
+      "@deepseek-ai/dsh-client-ui-cordis",
+      "@deepseek-ai/dsh-client-ui-deliverables",
+      "@deepseek-ai/dsh-client-ui-directory-picker-browse",
+      "@deepseek-ai/dsh-client-ui-goal",
+      "@deepseek-ai/dsh-client-ui-input-trigger",
+      "@deepseek-ai/dsh-client-ui-jobs",
+      "@deepseek-ai/dsh-client-ui-layout",
+      "@deepseek-ai/dsh-client-ui-message-feedback",
+      "@deepseek-ai/dsh-client-ui-model-selection",
+      "@deepseek-ai/dsh-client-ui-open-in-app",
+      "@deepseek-ai/dsh-client-ui-permission-presets",
+      "@deepseek-ai/dsh-client-ui-plan",
+      "@deepseek-ai/dsh-client-ui-plugin-manager",
+      "@deepseek-ai/dsh-client-ui-reference",
+      "@deepseek-ai/dsh-client-ui-renderer",
+      "@deepseek-ai/dsh-client-ui-session",
+      "@deepseek-ai/dsh-client-ui-settings",
+      "@deepseek-ai/dsh-client-ui-settings-account",
+      "@deepseek-ai/dsh-client-ui-settings-agent-loop",
+      "@deepseek-ai/dsh-client-ui-settings-general",
+      "@deepseek-ai/dsh-client-ui-settings-models",
+      "@deepseek-ai/dsh-client-ui-settings-plugin-inventory",
+      "@deepseek-ai/dsh-client-ui-settings-plugins",
+      "@deepseek-ai/dsh-client-ui-settings-session-log",
+      "@deepseek-ai/dsh-client-ui-settings-shell",
+      "@deepseek-ai/dsh-client-ui-settings-subagent",
+      "@deepseek-ai/dsh-client-ui-settings-web-search",
+      "@deepseek-ai/dsh-client-ui-shortcuts",
+      "@deepseek-ai/dsh-client-ui-sidebar",
+      "@deepseek-ai/dsh-client-ui-sidebar-documentpreview",
+      "@deepseek-ai/dsh-client-ui-sidebar-files",
+      "@deepseek-ai/dsh-client-ui-sidebar-right",
+      "@deepseek-ai/dsh-client-ui-sidebar-terminal",
+      "@deepseek-ai/dsh-client-ui-skill",
+      "@deepseek-ai/dsh-client-ui-subagent",
+      "@deepseek-ai/dsh-client-ui-theme",
+      "@deepseek-ai/dsh-client-ui-tool",
+      "@deepseek-ai/dsh-client-ui-trajectory",
+      "@deepseek-ai/dsh-client-ui-user-questions",
+      "@deepseek-ai/dsh-client-ui-workflow-run",
+      "@deepseek-ai/dsh-client-ui-workspace",
+      "@deepseek-ai/dsh-cordis-client-runner",
+      "@deepseek-ai/dsh-session-log-export",
+      "@deepseek-ai/dsh-typert-registry"
+    ],
+    "completedDisconnectCycles": 0,
+    "emptySessionCreationVerified": false,
+    "preparationFailures": [
+      "DEFAULT_WORKSPACE_CREATION_UNAVAILABLE",
+      "CLIENT_SESSION_CONTEXT_NOT_READY",
+      "HOST_READY_TIMEOUT"
+    ],
+    "hostReadyTimeoutMs": 60000,
+    "startupTimeoutsObserved": 2,
+    "startupLogBytesAtTimeout": [
+      0,
+      0
+    ],
+    "retrySkipped": true,
+    "skipReason": "INSUFFICIENT_LOCAL_MEMORY",
+    "resourceObservation": {
+      "availableMemoryMiB": 838,
+      "swapTotalMiB": 8192,
+      "swapUsedMiB": 8192
+    },
+    "controlScriptSha256": "0030d8d2b707cc894528094131b08fa54b8976efff87bece1ffd5ec960a05640",
+    "interpretation": "No full official Host disconnect attribution is established. Resource pressure coincided with startup timeouts but causation was not proven. This turn did not retry because memory had not recovered."
+  }
+}

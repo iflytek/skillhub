@@ -21,6 +21,7 @@
         "@deepseek-ai/dsh-client-ui-layout": "0.2.0-rc.2",
         "@deepseek-ai/dsh-client-ui-plugin-manager": "0.2.0-rc.2",
         "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.2",
+        "@deepseek-ai/dsh-client-ui-session": "0.2.0-rc.2",
         "@deepseek-ai/dsh-client-ui-settings": "0.2.0-rc.2",
         "@deepseek-ai/dsh-client-ui-sidebar": "0.2.0-rc.2",
         "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2",
@@ -90,6 +91,8 @@
     "@deepseek-ai/dsh-client-ui-plugin-manager": ["@deepseek-ai/dsh-client-ui-plugin-manager@0.2.0-rc.2", "https://registry.npmmirror.com/@deepseek-ai/dsh-client-ui-plugin-manager/-/dsh-client-ui-plugin-manager-0.2.0-rc.2.tgz", { "dependencies": { "@deepseek-ai/dsh-timeout": "0.2.0-rc.2", "@deepseek-ai/dsh-typert-protocol": "0.2.0-rc.2", "@deepseek-ai/schemastery": "~3.18.4", "zod": "^4.4.3" }, "peerDependencies": { "@deepseek-ai/cordis": "~4.0.4" } }, "sha512-AncAiGUMawllpfnqirmABN7KXwmVEhu0E8ClJvfsLDhEd2oazZ6nk2nUPHHPu1tVKq+e8IbiTHqwpnlDR7mPUA=="],
 
     "@deepseek-ai/dsh-client-ui-renderer": ["@deepseek-ai/dsh-client-ui-renderer@0.2.0-rc.2", "https://registry.npmmirror.com/@deepseek-ai/dsh-client-ui-renderer/-/dsh-client-ui-renderer-0.2.0-rc.2.tgz", { "peerDependencies": { "@deepseek-ai/cordis": "~4.0.4" } }, "sha512-vQ/LH4A53K1J/UeF5fQs1Dj8km5cnVos7vO0rmj+pJROhE6Vs7pAAKGz5P2e02t2/2to6+iMDu2+SSITrcYWTQ=="],
+
+    "@deepseek-ai/dsh-client-ui-session": ["@deepseek-ai/dsh-client-ui-session@0.2.0-rc.2", "https://registry.npmmirror.com/@deepseek-ai/dsh-client-ui-session/-/dsh-client-ui-session-0.2.0-rc.2.tgz", { "peerDependencies": { "@deepseek-ai/cordis": "~4.0.4" } }, "sha512-QbavrwYkWqdmR4Be7Bv2tNqf+Gh1LV6+rlDkdukMWvdJFSeAmX9Fsctwn8yqgnPRGEHZUfZIjef8zKXIWexuYQ=="],
 
     "@deepseek-ai/dsh-client-ui-settings": ["@deepseek-ai/dsh-client-ui-settings@0.2.0-rc.2", "https://registry.npmmirror.com/@deepseek-ai/dsh-client-ui-settings/-/dsh-client-ui-settings-0.2.0-rc.2.tgz", { "dependencies": { "@deepseek-ai/schemastery": "~3.18.4" }, "peerDependencies": { "@deepseek-ai/cordis": "~4.0.4" } }, "sha512-Kyho8FvRGYb7Ok1t7T429d4Dj/XF8+tE/+MX6T1s41RkXCe7v0sP89i4DUMo6OeUxyE+/uGoAVa5QZXY4O/y+g=="],
 

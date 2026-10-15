@@ -9,21 +9,52 @@ if (!entry || !output || !title || !workspace || !state) throw new Error('Set is
 const browser = await chromium.launch({ headless: true, executablePath: process.env.DSH_PROBE_CHROMIUM });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'en-US' });
 const expectedTargets = process.env.DSH_UPGRADE_TWO_TARGETS === '1' ? 2 : 1;
+const success = process.env.DSH_UPGRADE_SUCCESS === '1';
 const restart = process.env.DSH_PROBE_RESTART === '1';
 const crash = process.env.DSH_UPGRADE_CRASH_FIXTURE === '1';
 const expectBusy = process.env.DSH_EXPECT_RECOVERY_BUSY === '1';
 assert(!crash || restart, 'Crash verification requires Host restart');
 assert(!expectBusy || crash, 'Lease contention probe requires forced Host exit');
 const errors = [];
+let stage = 'initial-load';
+const operationResponses = [];
+const verifiedDetails = [];
+page.on('response', async response => {
+  if (!new URL(response.url()).pathname.endsWith('/getOperation')) return;
+  try { const body = await response.json(); if (body.result?.ok && body.result.value) operationResponses.push(body.result.value); } catch { /* aborted navigation response */ }
+});
 let submissions = 0;
 let recoveries = 0;
 let operationId;
-page.on('pageerror', error => errors.push(error.message.replace(/token=[^\s&]+/g, 'token=[redacted]')));
+page.on('pageerror', error => errors.push({ stage, message: error.message.replace(/token=[^\s&]+/g, 'token=[redacted]') }));
 page.on('request', request => {
   const path = new URL(request.url()).pathname;
   if (path.endsWith('/executePlan')) submissions++;
   if (path.endsWith('/recoverOperation')) recoveries++;
 });
+async function assertDetails(history, outcome, afterVersion) {
+  const deadline = Date.now() + 10000;
+  let operation;
+  while (Date.now() < deadline) {
+    operation = operationResponses.findLast(item => item.operationId === operationId && item.resultDetails?.targets.every(target => target.outcome === outcome));
+    if (operation) break;
+    await delay(50);
+  }
+  assert(operation, 'Expected original operation Remote details');
+  assert.equal(operation.resultDetails.beforeVersion, '1.2.0');
+  assert.equal(operation.resultDetails.afterVersion, afterVersion);
+  assert.equal(operation.resultDetails.targets.length, expectedTargets);
+  assert(operation.resultDetails.warnings.every(warning => ['backup-cleanup', 'removal-cleanup', 'verification-required'].includes(warning)));
+  assert.equal(operation.resultDetails.warnings.length, operation.warningCount);
+  verifiedDetails.push({ operationId, outcome, ...operation.resultDetails });
+  const details = history.locator('details').filter({ has: page.locator('summary', { hasText: '原操作结果详情' }) });
+  if (await details.getAttribute('open') === null) await details.locator('summary').click();
+  await details.getByText('操作前版本：1.2.0', { exact: true }).waitFor();
+  await details.getByText(`操作后版本：${afterVersion ?? '未确认或不适用'}`, { exact: true }).waitFor();
+  const label = { upgraded: '升级完成', unknown: '结果待核验', restored: '已恢复' }[outcome];
+  assert.equal(await details.getByRole('listitem').filter({ hasText: label }).count(), expectedTargets);
+  await details.screenshot({ path: `${output}/operation-details-${outcome}.png` });
+}
 try {
   await page.goto(entry, { waitUntil: 'domcontentloaded' });
   const welcome = page.getByRole('button', { name: 'Continue', exact: true });
@@ -57,12 +88,15 @@ try {
     operationId = result.value.operationId;
     await route.fulfill({ response });
   });
+  stage = 'execute-upgrade';
   await detail.getByRole('button', { name: '确认升级', exact: true }).click();
   if (crash) {
     const deadline = Date.now() + 15000;
     while (!operationId) { assert(Date.now() < deadline, 'Upgrade acceptance unavailable'); await delay(50); }
-  } else await detail.getByRole('button', { name: '核验并恢复', exact: true }).waitFor();
+  } else if (success) await detail.getByText('技能文件升级完成：1.3.0。', { exact: true }).waitFor();
+  else await detail.getByRole('button', { name: '核验并恢复', exact: true }).waitFor();
   if (restart) {
+    stage = 'waiting-host-restart';
     await writeFile(`${output}/restart-ready.json`, JSON.stringify({ operationId }));
     const deadline = Date.now() + 120000;
     let resumed;
@@ -74,12 +108,24 @@ try {
     assert(resumed?.entry, 'Host restart did not complete');
     assert.equal(new URL(resumed.entry).origin, new URL(entry).origin, 'Preserve origin for sessionStorage');
     await unlink(`${output}/restart-resume.json`);
+    stage = 'restarted-navigation';
+    operationResponses.length = 0;
     await page.goto(resumed.entry, { waitUntil: 'domcontentloaded' });
   } else await page.reload({ waitUntil: 'domcontentloaded' });
   await page.getByText('SkillHub', { exact: true }).click();
   await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+  stage = 'restarted-history';
   const history = installed.getByRole('region', { name: '未关闭的升级结果', exact: true });
+  if (success) {
+    await history.getByText('技能文件升级完成：1.3.0。', { exact: true }).waitFor();
+    await assertDetails(history, 'upgraded', '1.3.0');
+    assert.equal(submissions, 1); assert.equal(recoveries, 0); assert.deepEqual(errors, []);
+    await page.screenshot({ path: `${output}/upgrade-success-restarted.png` });
+    await writeFile(`${output}/upgrade-result.json`, JSON.stringify({ passed: true, operationId, expectedTargets,
+      submissions, recoveries, hostRestartRequested: restart, originalOperationDetailsVerified: true, verifiedDetails, errors }, null, 2));
+  } else {
   await history.getByRole('button', { name: '核验并恢复', exact: true }).waitFor();
+  await assertDetails(history, 'unknown', null);
   await page.route('**/recoverOperation', async route => {
     const response = await route.fetch();
     const result = (await response.json()).result;
@@ -95,6 +141,7 @@ try {
     assert.equal(result.value.recovery, 'restored');
     await route.abort('failed');
   });
+  stage = 'explicit-recovery';
   await history.getByRole('button', { name: '核验并恢复', exact: true }).click();
   if (expectBusy) {
     await history.getByText('恢复结果未确认，请查询原操作并核对完整目标范围。', { exact: true }).waitFor();
@@ -103,25 +150,34 @@ try {
     // The production lock retains its 10s stale window. Retry is a second user action.
     await delay(11000);
     assert.equal(recoveries, 1, 'Waiting for the lease must not auto-submit recovery');
-    await history.getByRole('button', { name: '核验并恢复', exact: true }).click();
+    stage = 'explicit-recovery';
+  await history.getByRole('button', { name: '核验并恢复', exact: true }).click();
   }
   await history.getByText('升级未完成，恢复状态：已恢复旧版本。', { exact: true }).waitFor();
   await installed.getByText('已安装版本 1.2.0', { exact: true }).first().waitFor();
   assert.equal(await installed.getByText('已安装版本 1.2.0', { exact: true }).count(), expectedTargets);
   await history.getByText('恢复结果未确认，请查询原操作并核对完整目标范围。', { exact: true }).waitFor({ state: 'hidden' });
+  await assertDetails(history, 'restored', null);
   await page.screenshot({ path: `${output}/upgrade-restored.png` });
+  stage = 'close-result';
   await history.getByRole('button', { name: '关闭本次结果', exact: true }).click();
   await history.waitFor({ state: 'hidden' });
-  assert(await installed.getByRole('combobox', { name: '筛选安装范围' }).evaluate(element => element === document.activeElement));
+  const focusStarted = Date.now();
+  const focusDeadline = focusStarted + 3000;
+  const scopeFilter = installed.getByRole('combobox', { name: '筛选安装范围' });
+  while (!await scopeFilter.evaluate(element => element === document.activeElement) && Date.now() < focusDeadline) await delay(25);
+  assert(await scopeFilter.evaluate(element => element === document.activeElement), 'Closing the result must restore focus to the scope filter');
   assert.equal(submissions, 1);
   assert.equal(recoveries, expectBusy ? 2 : 1);
   assert.deepEqual(errors, []);
   const result = { passed: true, operationId, submissions, recoveries, expectedTargets, historyAfterReload: true,
     hostRestartRequested: restart, forcedProcessExit: crash, leaseRefusalAndExplicitRetryVerified: expectBusy,
-    recoveryResponseLossVerified: true, oldVersionVisible: true, closeFocusVerified: true, errors };
+    originalOperationDetailsVerified: true, verifiedDetails, recoveryResponseLossVerified: true, oldVersionVisible: true, closeFocusVerified: true, focusWaitMs: Date.now() - focusStarted, errors };
   await writeFile(`${output}/upgrade-result.json`, JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result));
+  }
 } catch (error) {
+  await writeFile(`${output}/upgrade-failure-result.json`, JSON.stringify({ passed: false, stage, operationId, verifiedDetails, errors, activeElement: await page.evaluate(() => ({ tag: document.activeElement?.tagName, label: document.activeElement?.getAttribute('aria-label') })) }, null, 2));
   await page.screenshot({ path: `${output}/upgrade-failure.png` });
   console.log(JSON.stringify({ passed: false, error: error.message.replace(/token=[^\s&]+/g, 'token=[redacted]'), errors }));
   process.exitCode = 1;

@@ -1,0 +1,24 @@
+{
+  "scope": "official-renderer-component-disposal",
+  "dsh": "0.2.0-rc.2",
+  "cordis": "4.0.4",
+  "react": "18.3.1",
+  "reactDom": "18.3.1",
+  "skillhubLoaded": false,
+  "modelCalled": false,
+  "rootRenderedBeforeDisposal": true,
+  "rootEmptyAfterDisposal": true,
+  "pageError": "scope 'session-maybe' rendered without an installed adapter",
+  "pageErrorCount": 3,
+  "scopeRevisionTrace": [
+    {
+      "adapter": false,
+      "uiSession": false,
+      "consumerActive": true
+    }
+  ],
+  "consumerActiveAfterDisposal": false,
+  "conclusion": "The official root requires its session adapter even without SkillHub. Adapter disposal can be observed before dependent consumer cleanup completes.",
+  "limitation": "This component reproduction does not establish the adapter-disposal trigger during a real Host disconnect or restart. The full no-plugin Host restart comparison remains incomplete.",
+  "pluginFixBoundary": "The explicit uiSession dependency prevents premature SkillHub registration and removes its contributions when the service disappears; it does not protect the official outer root provider."
+}

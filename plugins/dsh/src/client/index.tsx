@@ -5,6 +5,7 @@ import type {} from '@deepseek-ai/dsh-api-gateway/client';
 import type {} from '@deepseek-ai/dsh-api-session-controller/client';
 import type { AgentContext } from '@deepseek-ai/dsh-api-session-controller/client';
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client';
+import type {} from '@deepseek-ai/dsh-client-ui-session/client';
 import type {} from '@deepseek-ai/dsh-client-ui-sidebar/client';
 import type { MainPanelId } from '@deepseek-ai/dsh-client-ui-layout/client';
 import type {} from '@deepseek-ai/dsh-client-ui-settings/client';
@@ -43,7 +44,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       name: 'plugins.bundle.config', key: '@astron-team/skillhub-dsh',
     }, () => <ConfigPage form={form} />));
   });
-  const panel = ctx.inject(['remote.skillhub', 'slots', 'sessions'], (ctx) => {
+  const panel = ctx.inject(['remote.skillhub', 'slots', 'sessions', 'uiSession'], (ctx) => {
     const client = new QueryClient();
     ctx.slots.inject('tool.call.toolview', () => availability.enable('conversation'));
     const navigation = createCatalogNavigation();

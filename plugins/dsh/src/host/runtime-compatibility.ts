@@ -26,6 +26,7 @@ export const clientPackageBaseline = [
   '@deepseek-ai/dsh-client-ui-plugin-manager',
   '@deepseek-ai/dsh-client-ui-tool',
   '@deepseek-ai/dsh-api-session-controller',
+  '@deepseek-ai/dsh-client-ui-session',
 ] as const;
 
 interface RuntimeServices {
