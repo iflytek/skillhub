@@ -1,9 +1,12 @@
 import { createHash } from 'node:crypto'
-import { access, mkdir, mkdtemp, readFile, readdir, rm, symlink, utimes, writeFile } from 'node:fs/promises'
+import { access, chmod, mkdir, mkdtemp, readFile, readdir, rm, symlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { zipSync } from 'fflate'
+import type { InstallOptions } from '../../../src/services/install-service'
+import type { Inventory } from '../../../src/stores/inventory-store'
+import { InventoryStore } from '../../../src/stores/inventory-store'
 import { installSkill } from '../../../src/services/install-service'
 import { planSkillUpgrades } from '../../../src/services/upgrade-service'
 import { removeLocalSkill } from '../../../src/services/remove-service'
@@ -84,6 +87,290 @@ async function writeManagedMetadata(
 describe('installSkill', () => {
   afterEach(() => {
     globalThis.fetch = originalFetch
+  })
+
+  test.each(['journal-failure', 'directory-collision'] as const)('staging intent precedes directory creation: %s', async failure => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-staging-intent-'))
+    const rootDir = join(root, 'skills')
+    let temporary = ''
+    globalThis.fetch = installFetch({ 'SKILL.md': '# Demo' })
+    try {
+      await expect(installSkill({ registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+        targets: [{ agent: 'dsh', rootDir, scope: 'project', source: 'explicit' }], force: false, home: join(root, 'home'),
+        transactionObserver: { beforeStaging: async stage => {
+          temporary = stage.stagingDir
+          expect(await exists(temporary)).toBe(false)
+          expect(await exists(rootDir)).toBe(false)
+          if (failure === 'journal-failure') throw new Error('Journal unavailable')
+          await mkdir(temporary, { recursive: true })
+          await writeFile(join(temporary, 'unrelated.txt'), 'Preserve collision')
+        } }
+      })).rejects.toThrow()
+      expect(await exists(join(rootDir, 'demo'))).toBe(false)
+      if (failure === 'journal-failure') expect(await exists(rootDir)).toBe(false)
+      else expect(await readFile(join(temporary, 'unrelated.txt'), 'utf8')).toBe('Preserve collision')
+    } finally { await rm(root, { recursive: true, force: true }) }
+  })
+
+  test.each(['staging', 'replace'] as const)('native policy denial at %s prevents publishing files', async deniedPhase => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-policy-denial-'))
+    const rootDir = join(root, 'skills')
+    const home = join(root, 'home')
+    globalThis.fetch = installFetch({ 'SKILL.md': '# Demo' })
+    const phases: string[] = []
+    try {
+      await expect(installSkill({ registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+        targets: [{ agent: 'dsh', rootDir, scope: 'project', source: 'explicit' }], force: false, home,
+        authorizeTargetMutation: async (paths, phase) => {
+          phases.push(phase)
+          expect(paths.every(path => path === rootDir || path.startsWith(rootDir + sep))).toBe(true)
+          if (phase === deniedPhase) throw new Error('policy denied')
+        }
+      })).rejects.toThrow('policy denied')
+      expect(phases).toContain(deniedPhase)
+      expect(await exists(join(rootDir, 'demo'))).toBe(false)
+      expect((await new InventoryStore(home).read()).items).toEqual([])
+      if (deniedPhase === 'staging') expect(await exists(rootDir)).toBe(false)
+      else expect(await readdir(rootDir)).toEqual([])
+    } finally { await rm(root, { recursive: true, force: true }) }
+  })
+
+  test('policy revocation after replacement retains files when rollback is denied', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-policy-rollback-'))
+    const rootDir = join(root, 'skills')
+    const home = join(root, 'home')
+    const options: InstallOptions = { registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'dsh', rootDir, scope: 'project', source: 'explicit' }], force: false, home }
+    try {
+      globalThis.fetch = installFetch({ 'SKILL.md': '# Old' })
+      await installSkill(options)
+      const before = await new InventoryStore(home).read()
+      globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+      let revoked = false
+      await expect(installSkill({ ...options, force: true,
+        transactionObserver: { beforeInventoryCommit: async () => { revoked = true; throw new Error('revoked') } },
+        authorizeTargetMutation: async () => { if (revoked) throw new Error('policy denied') }
+      })).rejects.toThrow('rollback was incomplete')
+      expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# New')
+      const backup = (await readdir(rootDir)).find(name => name.startsWith('demo.skillhub-backup-'))!
+      expect(await readFile(join(rootDir, backup, 'SKILL.md'), 'utf8')).toBe('# Old')
+      expect(await new InventoryStore(home).read()).toEqual(before)
+    } finally { await rm(root, { recursive: true, force: true }) }
+  })
+
+  test.each(['beforeMove', 'afterMove', 'beforeInventoryCommit'] as const)('observer %s failure restores the old files and inventory', async stage => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-observer-failure-'))
+    const rootDir = join(root, 'skills')
+    const home = join(root, 'home')
+    const options: InstallOptions = { registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }], force: false, home }
+    try {
+      globalThis.fetch = installFetch({ 'SKILL.md': '# Old' })
+      await installSkill(options)
+      const before = await new InventoryStore(home).read()
+      globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+      await expect(installSkill({ ...options, force: true, transactionObserver: {
+        [stage]: async () => { throw new Error('journal unavailable') }
+      } })).rejects.toThrow('journal unavailable')
+      expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# Old')
+      expect(await new InventoryStore(home).read()).toEqual(before)
+      expect(await readdir(rootDir)).toEqual(['demo'])
+    } finally { await rm(root, { recursive: true, force: true }) }
+  })
+
+  test('awaits beforeMove persistence before moving files', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-observer-wait-'))
+    const rootDir = join(root, 'skills')
+    let entered!: () => void
+    let resume!: () => void
+    const reached = new Promise<void>(resolve => { entered = resolve })
+    const release = new Promise<void>(resolve => { resume = resolve })
+    globalThis.fetch = installFetch({ 'SKILL.md': '# Demo' })
+    const pending = installSkill({ registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }], force: false, home: join(root, 'home'),
+      transactionObserver: { beforeMove: async move => {
+        expect(move.phase).toBe('install')
+        expect(await exists(move.from)).toBe(true)
+        entered()
+        await release
+      } }
+    })
+    try {
+      await reached
+      expect(await exists(join(rootDir, 'demo'))).toBe(false)
+      resume()
+      await pending
+      expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# Demo')
+    } finally { resume(); await pending.catch(() => {}); await rm(root, { recursive: true, force: true }) }
+  })
+
+  test('after-commit and cleanup observer failures report warnings without rolling back committed files', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-observer-committed-'))
+    const rootDir = join(root, 'skills')
+    const home = join(root, 'home')
+    const options: InstallOptions = { registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }], force: false, home }
+    try {
+      globalThis.fetch = installFetch({ 'SKILL.md': '# Old' })
+      await installSkill(options)
+      const previous = await new InventoryStore(home).read()
+      globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+      const events: string[] = []
+      const result = await installSkill({ ...options, force: true, transactionObserver: {
+        beforeMove: async move => { events.push(`before:${move.phase}`); expect(await exists(move.from)).toBe(true); expect(await exists(move.to)).toBe(false) },
+        afterMove: async move => { events.push(`after:${move.phase}`); expect(await exists(move.from)).toBe(false); expect(await exists(move.to)).toBe(true) },
+        beforeInventoryCommit: async commit => {
+          events.push('before:commit')
+          expect(commit.before).toEqual(previous)
+          expect(commit.after.items[0]?.fingerprint).toBe(skillFingerprint({ 'SKILL.md': '# New' }))
+          commit.after.items.length = 0 // Observers cannot mutate the actual pending inventory.
+        },
+        afterInventoryCommit: async () => {
+          events.push('after:commit')
+          expect((await new InventoryStore(home).read()).items[0]?.fingerprint).toBe(skillFingerprint({ 'SKILL.md': '# New' }))
+          throw new Error('journal completion failed')
+        },
+        cleanupResult: async cleanup => {
+          events.push('cleanup')
+          expect(cleanup.removed).toBe(true)
+          expect(await exists(cleanup.path)).toBe(false)
+          throw new Error('cleanup journal failed')
+        }
+      } })
+      expect(events).toEqual(['before:backup', 'after:backup', 'before:install', 'after:install', 'before:commit', 'after:commit', 'cleanup'])
+      expect(result.transactionWarnings?.map(warning => warning.stage)).toEqual(['afterInventoryCommit', 'cleanupResult'])
+      expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# New')
+      expect((await new InventoryStore(home).read()).items).toHaveLength(1)
+      expect(await readdir(rootDir)).toEqual(['demo'])
+    } finally { await rm(root, { recursive: true, force: true }) }
+  })
+
+  test.skipIf(process.platform === 'win32' || process.getuid?.() === 0)('failed backup cleanup preserves the committed version and reports the retained path', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-cleanup-failure-'))
+    const rootDir = join(root, 'skills')
+    const home = join(root, 'home')
+    let backup = ''
+    const options: InstallOptions = { registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }], force: false, home }
+    try {
+      globalThis.fetch = installFetch({ 'SKILL.md': '# Old' })
+      await installSkill(options)
+      globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+      const result = await installSkill({ ...options, force: true, transactionObserver: {
+        beforeMove: async move => { if (move.phase === 'backup') backup = move.to },
+        afterInventoryCommit: async () => { await chmod(backup, 0o000) },
+        cleanupResult: async cleanup => {
+          expect(cleanup.path).toBe(backup)
+          expect(cleanup.removed).toBe(false)
+          expect(cleanup.error).toBeDefined()
+        }
+      } })
+      expect(result.transactionWarnings).toHaveLength(1)
+      expect(result.transactionWarnings?.[0]).toMatchObject({ stage: 'backupCleanup', path: backup })
+      expect(await exists(backup)).toBe(true)
+      expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# New')
+      expect((await new InventoryStore(home).read()).items[0]?.fingerprint).toBe(skillFingerprint({ 'SKILL.md': '# New' }))
+    } finally {
+      if (backup) await chmod(backup, 0o700).catch(() => {})
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
+  test.each(['version', 'fingerprint', 'ownership', 'targets', 'source'] as const)('inventory CAS rejects %s drift introduced after moving files', async drift => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-cas-drift-'))
+    const rootDir = join(root, 'skills')
+    const home = join(root, 'home')
+    const store = new InventoryStore(home)
+    const options: InstallOptions = { registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }], force: false, home }
+    let loggedCommit = false
+    try {
+      globalThis.fetch = installFetch({ 'SKILL.md': '# Old' })
+      await installSkill(options)
+      globalThis.fetch = installFetch({ 'SKILL.md': drift === 'targets' ? '# Old' : '# New' })
+      await expect(installSkill({ ...options, force: true, transactionObserver: {
+        afterMove: async move => {
+          if (move.phase !== 'install') return
+          await store.mutateAtomic(inventory => {
+            const item = inventory.items[0]!
+            if (drift === 'version') item.version = '9.0.0'
+            if (drift === 'fingerprint') item.fingerprint = 'changed'
+            if (drift === 'ownership') item.targets[0]!.installedBy = ['suite:other']
+            if (drift === 'targets') item.targets.push({ ...item.targets[0]!, rootDir: join(root, 'other'), installDir: join(root, 'other/demo') })
+            if (drift === 'source') item.namespace = 'another'
+          })
+        },
+        beforeInventoryCommit: async () => { loggedCommit = true }
+      } })).rejects.toThrow('installed skill records changed before commit')
+      expect(loggedCommit).toBe(false)
+      const changed = (await store.read()).items[0]!
+      expect(drift === 'version' ? changed.version : drift === 'fingerprint' ? changed.fingerprint
+        : drift === 'ownership' ? changed.targets[0]!.installedBy?.[0] : drift === 'targets' ? changed.targets.length : changed.namespace)
+        .toBe(drift === 'version' ? '9.0.0' : drift === 'fingerprint' ? 'changed' : drift === 'ownership' ? 'suite:other' : drift === 'targets' ? 2 : 'another')
+      expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# Old')
+    } finally { await rm(root, { recursive: true, force: true }) }
+  })
+
+  test('rejects a stale explicit plan before download but preserves unrelated inventory changes', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-cas-plan-'))
+    const rootDir = join(root, 'skills')
+    const home = join(root, 'home')
+    const store = new InventoryStore(home)
+    const options: InstallOptions = { registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }], force: false, home }
+    try {
+      globalThis.fetch = installFetch({ 'SKILL.md': '# Old' })
+      await installSkill(options)
+      const plan = (await store.read()).items[0]!
+      await store.mutateAtomic(inventory => { inventory.items[0]!.version = '2.0.0' })
+      globalThis.fetch = (() => { throw new Error('must not download') }) as unknown as typeof fetch
+      await expect(installSkill({ ...options, force: true, expectedInventoryItem: plan })).rejects.toThrow('installed skill records changed')
+      const current = (await store.read()).items[0]!
+      globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+      await installSkill({ ...options, force: true, expectedInventoryItem: current, transactionObserver: {
+        afterMove: async move => {
+          if (move.phase !== 'install') return
+          await store.upsertTarget('http://other.test', 'team', 'other', '1.0.0', {
+            agent: 'codex', rootDir: join(root, 'other'), installDir: join(root, 'other/other'), installedAt: 'now'
+          })
+        }
+      } })
+      expect((await store.read()).items.map(item => item.slug).sort()).toEqual(['demo', 'other'])
+      expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# New')
+    } finally { await rm(root, { recursive: true, force: true }) }
+  })
+
+  test.each(['confirmed', 'unknown'] as const)('inventory response loss with %s result never rolls back a possibly committed replacement', async outcome => {
+    class LostResponseStore extends InventoryStore {
+      protected override async writeUnderLock(inventory: Inventory): Promise<void> {
+        await super.writeUnderLock(inventory)
+        if (outcome === 'unknown') await this.write({ items: [{ ...inventory.items[0]!, version: 'unverifiable' }] })
+        throw new Error('response lost after rename')
+      }
+    }
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-commit-outcome-'))
+    const rootDir = join(root, 'skills')
+    const home = join(root, 'home')
+    const options: InstallOptions = { registry: 'http://registry.test', namespace: 'global', slug: 'demo',
+      targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }], force: false, home }
+    try {
+      globalThis.fetch = installFetch({ 'SKILL.md': '# Old' })
+      await installSkill(options)
+      globalThis.fetch = installFetch({ 'SKILL.md': '# New' })
+      const operation = installSkill({ ...options, force: true, inventoryStore: new LostResponseStore(home) })
+      if (outcome === 'confirmed') {
+        const result = await operation
+        expect(result.installed).toHaveLength(1)
+        expect(await readdir(rootDir)).toEqual(['demo'])
+      } else {
+        await expect(operation).rejects.toMatchObject({ details: { reason: 'INSTALL_COMMIT_UNKNOWN', recovery: 'unknown' } })
+        const backups = (await readdir(rootDir)).filter(name => name.includes('.skillhub-backup-'))
+        expect(backups).toHaveLength(1)
+        expect(await readFile(join(rootDir, backups[0]!, 'SKILL.md'), 'utf8')).toBe('# Old')
+        expect((await new InventoryStore(home).read()).items[0]?.version).toBe('unverifiable')
+      }
+      expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# New')
+    } finally { await rm(root, { recursive: true, force: true }) }
   })
 
   test('fails when target skill directory already exists without metadata', async () => {

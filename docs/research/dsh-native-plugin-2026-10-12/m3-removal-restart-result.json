@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "recoveryVerified": true,
+  "recoveryResponseLossVerified": true,
+  "reloadRecoveryVerified": true,
+  "hostRestartVerified": true,
+  "submissions": 1,
+  "recoveries": 1,
+  "operationId": "ff746078-1fab-4e56-84d1-cf16dacceaa7",
+  "errors": []
+}

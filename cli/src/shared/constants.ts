@@ -1,4 +1,4 @@
-import { PKG_NAME, PKG_VERSION } from '../generated/pkg-info'
+import { PKG_NAME, PKG_VERSION } from '../generated/pkg-info.js'
 
 export const DEFAULT_REGISTRY = 'https://skill.xfyun.cn'
 export const CLI_VERSION: string = PKG_VERSION

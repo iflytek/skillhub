@@ -1,7 +1,8 @@
+import { isDeepStrictEqual } from 'node:util'
 import { readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { lock } from 'proper-lockfile'
-import { joinPath, userStateDir, ensureDir, pathExists } from '../platform/paths'
+import { joinPath, userStateDir, ensureDir } from '../platform/paths'
 
 export interface InventoryTarget {
   agent: string
@@ -75,6 +76,13 @@ export class InventoryVersionConflictError extends Error {
   }
 }
 
+export class InventoryCommitUnknownError extends Error {
+  constructor(cause: unknown) {
+    super('inventory commit outcome could not be verified', { cause })
+    this.name = 'InventoryCommitUnknownError'
+  }
+}
+
 export class InventoryStore {
   readonly path: string
 
@@ -83,8 +91,11 @@ export class InventoryStore {
   }
 
   async read(): Promise<Inventory> {
-    if (!(await pathExists(this.path))) return { items: [] }
-    return JSON.parse(await readFile(this.path, 'utf-8')) as Inventory
+    try { return JSON.parse(await readFile(this.path, 'utf-8')) as Inventory }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { items: [] }
+      throw error
+    }
   }
 
   async write(inventory: Inventory): Promise<void> {
@@ -103,21 +114,43 @@ export class InventoryStore {
     }
   }
 
-  async mutateAtomic<T>(mutate: (inventory: Inventory) => T): Promise<T> {
+  /** Hold the inventory lock while a lifecycle reader verifies files and persists its journal result. */
+  async withLockedSnapshot<T>(inspect: (inventory: Inventory) => Promise<T>): Promise<T> {
+    await ensureDir(dirname(this.path))
+    const release = await this.acquireLock()
+    try { return await inspect(await this.read()) }
+    finally { await release() }
+  }
+
+  async mutateAtomic<T>(
+    mutate: (inventory: Inventory) => T,
+    beforeCommit?: (before: Inventory, after: Inventory) => Promise<void>
+  ): Promise<T> {
     await ensureDir(dirname(this.path))
     let release: (() => Promise<void>) | null = null
     try {
       release = await this.acquireLock()
       const inventory = await this.read()
+      const before = structuredClone(inventory)
       const result = mutate(inventory)
-      await this.writeUnderLock(inventory)
+      if (beforeCommit) await beforeCommit(structuredClone(before), structuredClone(inventory))
+      try { await this.writeUnderLock(inventory) }
+      catch (writeError) {
+        let actual: Inventory
+        try { actual = await this.read() }
+        catch (readError) { throw new InventoryCommitUnknownError(new AggregateError([writeError, readError])) }
+        // Still holding the inventory lock: a failed transport response is not proof of failed rename.
+        if (isDeepStrictEqual(actual, inventory)) return result
+        if (!isDeepStrictEqual(actual, before)) throw new InventoryCommitUnknownError(writeError)
+        throw writeError
+      }
       return result
     } finally {
       if (release) await release().catch(() => {})
     }
   }
 
-  private async writeUnderLock(inventory: Inventory): Promise<void> {
+  protected async writeUnderLock(inventory: Inventory): Promise<void> {
     const payload = JSON.stringify(inventory, null, 2)
     JSON.parse(payload)
     const tmpPath = `${this.path}.${process.pid}.${Date.now()}.tmp`
@@ -230,7 +263,8 @@ export class InventoryStore {
     version: string,
     targets: InventoryTarget[],
     fingerprint?: string,
-    replacedInstallDirs: string[] = []
+    replacedInstallDirs: string[] = [],
+    beforeCommit?: (before: Inventory, after: Inventory) => Promise<void>
   ): Promise<void> {
     await this.mutateAtomic(inventory => {
       const installDirs = new Set([
@@ -260,6 +294,6 @@ export class InventoryStore {
       if (fingerprint !== undefined) item.fingerprint = fingerprint
       item.targets.push(...targets.map(target => ({ ...target, installedBy: ['direct'] })))
       refreshItemSources(item)
-    })
+    }, beforeCommit)
   }
 }

@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "staleSelectedItemDoesNotEnableRemoval": true,
+  "restoredDetailEnablesRemoval": true,
+  "invalidDetailHidesUpgrade": true,
+  "failedReadBlocksMutations": true,
+  "writeRequests": 0,
+  "modelInvoked": false
+}

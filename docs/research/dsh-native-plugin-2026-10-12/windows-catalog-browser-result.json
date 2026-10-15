@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "search": true,
+  "fixedVersionDetail": true,
+  "returnRetainsQuery": true,
+  "focusRestored": true,
+  "emptyAndClear": true,
+  "markdownSafe": true,
+  "optionalTabs": true,
+  "errors": [],
+  "platform": "win32",
+  "node": "24.16.0",
+  "browser": "Playwright Chromium headless shell revision 1208",
+  "dsh": "0.2.0-rc.2",
+  "modelInvoked": false
+}

@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "node": "24.2.0",
+  "version": "1.3.0",
+  "upgradedResourceVerified": true,
+  "fingerprintMatches": true,
+  "inventoryTargetCount": 1,
+  "operations": [
+    {
+      "kind": "upgrade",
+      "phase": "completed"
+    },
+    {
+      "kind": "install",
+      "phase": "completed"
+    }
+  ],
+  "backupOrStagingRemaining": false,
+  "modelInvoked": false
+}

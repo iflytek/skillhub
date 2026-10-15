@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "freshReferenceValid": true,
+  "changedSourceRejected": true,
+  "returningSourceStillRejected": true,
+  "modelInvoked": false,
+  "originalSourceRestored": true,
+  "errors": []
+}

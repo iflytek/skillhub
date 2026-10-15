@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "scenario": "unsupported-host-installation-rejection",
+  "dshVersion": "0.2.1-alpha.3",
+  "pluginVersion": "0.0.0-m0",
+  "nodeVersion": "24.2.0",
+  "installerExitCode": 1,
+  "peerMismatchRejected": true,
+  "versionExemptionGranted": false,
+  "automaticRollbackCompleted": false,
+  "manualProfileInstallExitCode": 0,
+  "declaredDependenciesEmpty": true,
+  "pluginPackageAbsentAfterRecovery": true,
+  "skillOperationJournalCreated": false,
+  "modelInvoked": false,
+  "hostUpgradeRoundTripCovered": false
+}

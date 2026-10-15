@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "oldHostExited": true,
+  "newHostStarted": true,
+  "distinctProcesses": true,
+  "samePort": true,
+  "operationId": "f96711b6-77cf-42ba-97b8-b23e9bcafb5f",
+  "inventoryUnchanged": true,
+  "allTargetFileHashesRestored": true,
+  "files": 3,
+  "backupAndStagingRemoved": true
+}

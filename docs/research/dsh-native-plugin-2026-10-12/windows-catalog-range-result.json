@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "total": 55,
+  "returned": 20,
+  "noFakePagination": true,
+  "fixedVersion": "1.2.0",
+  "safeMarkdown": true,
+  "remoteImages": 0,
+  "mobile": {
+    "client": 334,
+    "scroll": 334
+  },
+  "errors": [],
+  "platform": "win32",
+  "dshVersion": "0.2.0-rc.2",
+  "modelInvoked": false
+}

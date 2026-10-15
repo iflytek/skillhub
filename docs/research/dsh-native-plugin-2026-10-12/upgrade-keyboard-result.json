@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "keyboardPrepare": true,
+  "cancelFocused": true,
+  "cancelRestoresTrigger": true,
+  "writeRequests": 0,
+  "modelInvoked": false
+}

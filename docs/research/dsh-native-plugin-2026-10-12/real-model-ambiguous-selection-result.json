@@ -1,0 +1,114 @@
+{
+  "schemaVersion": 1,
+  "provider": "our-free-model",
+  "model": "nvidia/nemotron-3.5-lightning:free",
+  "prompt": "在 SkillHub 搜索 document 相关技能，只展示结果，先不要安装。",
+  "modelInvoked": true,
+  "promptAdmissions": 2,
+  "assistant": [
+    {
+      "seq": 14,
+      "turn": 1,
+      "step": 1,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 8113,
+        "outputTokens": 107,
+        "totalTokens": 8220,
+        "reasoningTokens": 77
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 19,
+      "turn": 1,
+      "step": 2,
+      "text": "以下是 SkillHub 中搜索 \"document\" 关键词返回的 20 个结果，均为 document-helper 类型的技能：\n\n| 序号 | 命名空间 | Slug | 版本 | 简介 |\n|------|----------|------|------|------|\n| 1 | demo-0 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 2 | demo-1 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 3 | demo-2 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 4 | demo-3 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 5 | demo-4 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 6 | demo-5 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 7 | demo-6 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 8 | demo-7 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 9 | demo-8 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 10 | demo-9 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 11 | demo-10 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 12 | demo-11 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 13 | demo-12 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 14 | demo-13 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 15 | demo-14 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 16 | demo-15 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 17 | demo-16 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 18 | demo-17 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 19 | demo-18 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n| 20 | demo-19 | document-helper | 1.2.0 | 整理文档并提取关键结论 |\n\n这些结果已展示完毕，**未进行任何安装操作**。如果您需要进一步了解某个具体技能或进行安装，请告诉我对应的命名空间和 Slug，或通过编号索引说明。",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 3547,
+        "outputTokens": 917,
+        "totalTokens": 10752,
+        "cacheReadTokens": 6288,
+        "reasoningTokens": 125
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 27,
+      "turn": 2,
+      "step": 1,
+      "text": "您好！搜索到了20个名为 `document-helper` 的技能，分布在 `demo-0` 到 `demo-19` 这20个命名空间中。它们的版本和简介都是相同的（1.2.0，整理文档并提取关键结论）。\n\n为了安装正确的技能，请您指定具体是哪一个：\n\n**方式一**：提供命名空间和 Slug，例如 `demo-5/document-helper`  \n**方式二**：提供结果编号（1-20），例如 “安装第 3 个”\n\n请告诉我您想安装的具体编号或命名空间，我会立即为您安装。",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 2261,
+        "outputTokens": 379,
+        "totalTokens": 11024,
+        "cacheReadTokens": 8384,
+        "reasoningTokens": 212
+      },
+      "interrupted": false
+    }
+  ],
+  "toolCalls": [
+    {
+      "seq": 15,
+      "name": "astron_skillhub_search",
+      "arguments": "{\"q\":\"document\"}",
+      "callId": "call-c8569cf3-857a-4270-ba55-1dd465912219"
+    }
+  ],
+  "toolResults": [
+    {
+      "seq": 16,
+      "callId": "call-c8569cf3-857a-4270-ba55-1dd465912219",
+      "source": {
+        "kind": "tool",
+        "callId": "call-c8569cf3-857a-4270-ba55-1dd465912219"
+      },
+      "isError": false,
+      "errorCode": null
+    }
+  ],
+  "deniedTools": [],
+  "attempts": 0,
+  "admission": {
+    "accepted": true
+  },
+  "terminal": {
+    "seq": 29,
+    "kind": "completed",
+    "errorCode": null
+  },
+  "status": "search-completed",
+  "guard": "search-only",
+  "startedAt": 1792037197510,
+  "catalogSelectionVerified": true,
+  "providerLabel": "Our Free Model",
+  "promptSubmitted": true,
+  "followupPrompt": "装那个文档技能。",
+  "elapsedMs": 19995,
+  "sessionFlushed": true,
+  "verification": {
+    "passed": true,
+    "askedForUniqueCandidate": true,
+    "installToolCalls": 0,
+    "noSkillFilesCreated": true,
+    "requestsThisRetest": 3,
+    "requestsIncludingFailure": 6,
+    "modelGuidanceNotHostEnforcement": true
+  }
+}

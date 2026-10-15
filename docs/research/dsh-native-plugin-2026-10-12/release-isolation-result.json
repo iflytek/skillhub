@@ -1,0 +1,76 @@
+{
+  "passed": true,
+  "scope": "Local YAML parsing and actual job-expression evaluation; no GitHub workflow execution",
+  "cases": [
+    {
+      "event": "release",
+      "tag": "dsh-v0.1.0",
+      "images": false,
+      "chart": false
+    },
+    {
+      "event": "release",
+      "tag": "dsh-v0.1.0-rc.1",
+      "images": false,
+      "chart": false
+    },
+    {
+      "event": "release",
+      "tag": "DSH-V0.1.0",
+      "images": false,
+      "chart": false
+    },
+    {
+      "event": "release",
+      "tag": "v0.2.0",
+      "images": true,
+      "chart": true
+    },
+    {
+      "event": "release",
+      "tag": "cli-v0.1.0",
+      "images": true,
+      "chart": false
+    },
+    {
+      "event": "release",
+      "tag": "chart-v0.2.0",
+      "images": true,
+      "chart": true
+    },
+    {
+      "event": "release",
+      "tag": "helm-v0.2.0",
+      "images": true,
+      "chart": true
+    },
+    {
+      "event": "release",
+      "tag": "other-release",
+      "images": true,
+      "chart": false
+    },
+    {
+      "event": "workflow_dispatch",
+      "tag": "main",
+      "images": true,
+      "chart": true
+    },
+    {
+      "event": "workflow_dispatch",
+      "tag": "dsh-v0.1.0",
+      "images": true,
+      "chart": true
+    }
+  ],
+  "cliTagFilterUnchanged": true,
+  "mirrorDependsOnPublish": true,
+  "candidateTagValidation": {
+    "workflowStepExecutedLocally": true,
+    "matchingVersionPassed": true,
+    "wrongVersionRejected": true,
+    "cliPrefixRejected": true,
+    "permissions": "contents:read",
+    "publishingExecuted": false
+  }
+}

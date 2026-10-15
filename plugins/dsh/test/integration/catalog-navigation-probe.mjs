@@ -1,0 +1,75 @@
+import assert from 'node:assert/strict';
+import { writeFile } from 'node:fs/promises';
+import { chromium } from 'playwright';
+const { DSH_PROBE_URL: entry, DSH_PROBE_OUTPUT: output, DSH_SEARCH_FIXTURE_TITLE: title } = process.env;
+if (!entry || !output || !title) throw new Error('Set isolated Host URL, output and session title');
+const browser = await chromium.launch({ headless: true, executablePath: process.env.DSH_PROBE_CHROMIUM });
+const page = await browser.newPage({ viewport: { width: 1440, height: 700 } });
+const errors = [];
+page.on('pageerror', error => errors.push(error.message.replace(/token=[^\s&]+/g, 'token=[redacted]')));
+try {
+  await page.goto(entry, { waitUntil: 'domcontentloaded' });
+  const welcome = page.getByRole('button', { name: /^(Continue|继续)$/ });
+  const later = page.getByRole('button', { name: /^(Configure later|稍后配置)$/ });
+  await welcome.or(later).first().waitFor();
+  if (await welcome.isVisible()) await welcome.click();
+  await later.click();
+  const sessionVisible = await page.getByText(title, { exact: true }).waitFor({ state: 'visible', timeout: 3000 }).then(() => true, () => false);
+  if (!sessionVisible) {
+    const workspace = process.env.DSH_SEARCH_FIXTURE_WORKSPACE;
+    if (!workspace) throw new Error('Set fixture workspace to expand its session');
+    await page.getByText(workspace, { exact: true }).click();
+  }
+  await page.getByText(title, { exact: true }).click();
+  await page.getByText('SkillHub', { exact: true }).click();
+  const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
+  await plaza.getByLabel('搜索技能').fill('document');
+  await plaza.getByRole('button', { name: '搜索', exact: true }).click();
+  const last = plaza.getByRole('button', { name: /@demo-19\/document-helper/ });
+  await last.scrollIntoViewIfNeeded();
+  const scroll = await plaza.evaluate(element => element.scrollTop);
+  assert(scroll > 500, 'Fixture must require real scrolling');
+  const firstTab = plaza.getByRole('button', { name: '已安装', exact: true });
+  await firstTab.evaluate(element => element.focus({ preventScroll: true }));
+  await page.keyboard.press('Enter');
+  await plaza.getByRole('region', { name: '已安装技能', exact: true }).waitFor();
+  await plaza.getByRole('button', { name: '浏览技能', exact: true }).click();
+  await last.waitFor();
+  assert(Math.abs(await plaza.evaluate(element => element.scrollTop) - scroll) <= 1, 'First tab return lost browse scroll');
+  await last.click();
+  await plaza.getByRole('heading', { name: 'Document helper', exact: true }).waitFor();
+  await plaza.getByRole('button', { name: '← 返回技能广场', exact: true }).click();
+  assert(Math.abs(await plaza.evaluate(element => element.scrollTop) - scroll) <= 1, 'Detail return lost scroll');
+  assert(await last.evaluate(element => element === document.activeElement), 'Detail return lost focus');
+  // Use keyboard activation without scrolling the header into view first.
+  const installed = plaza.getByRole('button', { name: '已安装', exact: true });
+  await installed.evaluate(element => element.focus({ preventScroll: true }));
+  await page.keyboard.press('Enter');
+  await plaza.getByRole('region', { name: '已安装技能', exact: true }).waitFor();
+  await plaza.getByRole('button', { name: '浏览技能', exact: true }).click();
+  await last.waitFor();
+  assert(Math.abs(await plaza.evaluate(element => element.scrollTop) - scroll) <= 1, 'Tab return lost browse scroll');
+  assert.equal(await plaza.getByLabel('搜索技能').inputValue(), 'document');
+  const back = plaza.getByRole('button', { name: '返回会话', exact: true });
+  await back.evaluate(element => element.focus({ preventScroll: true }));
+  await page.keyboard.press('Enter');
+  await page.getByText('SkillHub', { exact: true }).click();
+  await last.waitFor();
+  assert(Math.abs(await plaza.evaluate(element => element.scrollTop) - scroll) <= 1, 'Reopening lost browse scroll');
+  assert.equal(await plaza.getByLabel('搜索技能').inputValue(), 'document');
+  await plaza.getByLabel('搜索技能').fill('nothing');
+  await plaza.getByRole('button', { name: '搜索', exact: true }).click();
+  await plaza.getByText('没有找到匹配的技能，请尝试其他关键词。', { exact: true }).waitFor();
+  await plaza.getByRole('button', { name: '清空', exact: true }).click();
+  await last.waitFor();
+  assert.equal(await plaza.evaluate(element => element.scrollTop), 0, 'Clearing must reset browse scroll');
+  assert.deepEqual(errors, []);
+  await page.screenshot({ path: `${output}/catalog-navigation.png` });
+  const result = { passed: true, scroll, detailReturn: true, focusRestored: true, tabReturn: true, reopen: true, clear: true, errors };
+  await writeFile(`${output}/catalog-navigation-result.json`, JSON.stringify(result, null, 2));
+  console.log(JSON.stringify(result));
+} catch (error) {
+  await page.screenshot({ path: `${output}/catalog-navigation-failure.png` });
+  console.log(JSON.stringify({ passed: false, error: error.message.replace(/token=[^\s&]+/g, 'token=[redacted]'), errors }));
+  process.exitCode = 1;
+} finally { await browser.close(); }

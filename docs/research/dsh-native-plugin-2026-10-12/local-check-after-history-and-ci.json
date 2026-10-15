@@ -1,0 +1,14 @@
+{
+  "command": "bun run check",
+  "directory": "plugins/dsh",
+  "build": true,
+  "typecheck": true,
+  "lint": true,
+  "testsPassed": 198,
+  "testsFailed": 0,
+  "assertions": 3101,
+  "testFiles": 51,
+  "platform": "linux",
+  "modelInvoked": false,
+  "remoteCIExecuted": false
+}

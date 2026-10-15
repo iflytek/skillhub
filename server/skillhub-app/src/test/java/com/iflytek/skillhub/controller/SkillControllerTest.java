@@ -20,6 +20,10 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.io.ByteArrayInputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.TimeZone;
@@ -31,6 +35,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -54,6 +60,76 @@ class SkillControllerTest {
 
     @MockBean
     private SkillSuiteAppService skillSuiteAppService;
+
+    @Test
+    void generatedOpenApiDescribesNativeRegistryFileAndDownloadContracts() throws Exception {
+        var response = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/api/v1/skills/{namespace}/{slug}/versions/{version}/file'].get.responses['200'].content['application/octet-stream'].schema.format").value("binary"))
+                .andExpect(jsonPath("$.paths['/api/v1/skills/{namespace}/{slug}/versions/{version}/download'].get.responses['200'].content['application/zip'].schema.format").value("binary"))
+                .andExpect(jsonPath("$.paths['/api/v1/skills/{namespace}/{slug}/versions/{version}/download'].get.responses['302'].headers.Location.schema.format").value("uri"))
+                .andExpect(jsonPath("$.components.schemas.CliResolveResponse.required.length()").value(6))
+                .andExpect(jsonPath("$.components.schemas.SkillVersionResponse.properties.changelog.nullable").value(true))
+                .andReturn().getResponse();
+        Files.writeString(Path.of("target", "registry-openapi.json"), response.getContentAsString());
+    }
+
+    @Test
+    void anonymousVersionDownloadRetainsStreamAndRedirectDelivery() throws Exception {
+        byte[] archive = new byte[] {80, 75, 3, 4};
+        when(skillDownloadService.downloadVersion("team", "demo", "1.0.0", null, Map.of()))
+                .thenReturn(new SkillDownloadService.DownloadResult(() -> new ByteArrayInputStream(archive),
+                        "demo.zip", archive.length, "application/zip", null, false));
+        mockMvc.perform(get("/api/v1/skills/team/demo/versions/1.0.0/download"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/zip"))
+                .andExpect(content().bytes(archive));
+
+        when(skillDownloadService.downloadVersion("team", "demo", "1.0.0", null, Map.of()))
+                .thenReturn(new SkillDownloadService.DownloadResult(() -> { throw new AssertionError("Redirect must not open content"); },
+                        "demo.zip", archive.length, "application/zip", "https://storage.example/demo.zip", false));
+        mockMvc.perform(get("/api/v1/skills/team/demo/versions/1.0.0/download"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "https://storage.example/demo.zip"))
+                .andExpect(content().string(""));
+    }
+
+    @Test
+    void anonymousFixedVersionFileReturnsRawUtf8ForNativeClients() throws Exception {
+        byte[] markdown = "# 技能说明\nRead references/note.md.\n".getBytes(StandardCharsets.UTF_8);
+        when(skillQueryService.getFileContent(
+                "team", "demo", "1.0.0", "SKILL.md", null, Map.of()))
+                .thenReturn(new ByteArrayInputStream(markdown));
+
+        mockMvc.perform(get("/api/v1/skills/team/demo/versions/1.0.0/file")
+                        .param("path", "SKILL.md")
+                        .accept("text/plain"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/octet-stream"))
+                .andExpect(content().bytes(markdown));
+    }
+
+    @Test
+    void anonymousVersionProbePreservesPageSizeAndNullableFields() throws Exception {
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner-1");
+        var pageable = org.springframework.data.domain.PageRequest.of(0, 1);
+        when(skillQueryService.listVersions("team", "demo", null, Map.of(), pageable))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(version), pageable, 3));
+        when(skillQueryService.isDownloadAvailable(version)).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/skills/team/demo/versions").param("page", "0").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(1))
+                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].version").value("1.0.0"))
+                .andExpect(jsonPath("$.data.items[0].downloadAvailable").value(true))
+                .andExpect(jsonPath("$.data.items[0]").value(org.hamcrest.Matchers.hasKey("changelog")))
+                .andExpect(jsonPath("$.data.items[0].changelog").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.data.items[0]").value(org.hamcrest.Matchers.hasKey("publishedAt")))
+                .andExpect(jsonPath("$.data.items[0].publishedAt").value(org.hamcrest.Matchers.nullValue()));
+    }
 
     @Test
     void getVersionDetailShouldReturnMetadataFields() throws Exception {

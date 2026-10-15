@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "nativeSkillHubSearch": true,
+  "scopedConversationDetail": true,
+  "searchFixtureTitle": "SkillHub search fixture 2170d6ad",
+  "trustedSessionCwd": true,
+  "userAndProjectRead": true,
+  "resourceBasePreserved": true,
+  "projectScopeIsolated": true,
+  "globalScopeExcluded": true,
+  "liveAdditionObserved": true,
+  "liveRemovalObserved": true,
+  "nativeToolContextReceived": true
+}

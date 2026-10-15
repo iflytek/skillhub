@@ -1,0 +1,39 @@
+{
+  "scope": "Spring MockMvc with mocked application/domain services; not a deployed Registry or object-storage test",
+  "suites": [
+    {
+      "class": "com.iflytek.skillhub.controller.cli.CliSkillControllerTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.iflytek.skillhub.controller.SkillControllerTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.iflytek.skillhub.controller.SkillReviewControllerTest",
+      "tests": 10,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.iflytek.skillhub.controller.portal.SecurityAuditControllerTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "tests": 42,
+  "passed": true,
+  "addedCoverage": [
+    "Anonymous fixed-version SKILL.md raw UTF-8 response with text/plain Accept and application/octet-stream delivery",
+    "Anonymous size=1 versions page and explicit nullable changelog/publishedAt fields"
+  ]
+}

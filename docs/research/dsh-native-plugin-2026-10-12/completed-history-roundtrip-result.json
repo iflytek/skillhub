@@ -1,0 +1,21 @@
+{
+  "passed": true,
+  "originalSessionResolved": true,
+  "completedOperationsReadable": 2,
+  "installedScopes": [
+    "project",
+    "user"
+  ],
+  "bothPresent": true,
+  "modelInvoked": false,
+  "writesSubmitted": 0,
+  "hostVersions": [
+    "0.2.0-rc.2",
+    "0.2.1-alpha.3",
+    "0.2.0-rc.2"
+  ],
+  "unchangedFileCount": 10,
+  "allSnapshotFilesUnchanged": true,
+  "alphaSkippedPluginBundle": true,
+  "pendingRecoveryCovered": false
+}

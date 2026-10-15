@@ -1,0 +1,7 @@
+{
+  "passed": true,
+  "installedProjectionVerified": true,
+  "scenario": "read-only scoped Gateway: current version and fingerprint; foreign session rejected",
+  "dshVersion": "0.2.0-rc.2",
+  "registry": "loopback fixture"
+}

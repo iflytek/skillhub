@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "node": "24.2.0",
+  "fingerprintMatches": true,
+  "inventoryMatches": true,
+  "files": [
+    "SKILL.md",
+    "references/note.md"
+  ],
+  "operations": [
+    {
+      "kind": "install",
+      "phase": "completed"
+    },
+    {
+      "kind": "uninstall",
+      "phase": "completed"
+    },
+    {
+      "kind": "install",
+      "phase": "completed"
+    }
+  ],
+  "skillUseByModelVerified": false
+}

@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "nativeInstallToolView": true,
+  "hostOutcomeQueried": true,
+  "operationIdCopied": true,
+  "installedNavigationVerified": true,
+  "persistedReplay": true,
+  "stableOperationId": true,
+  "staleSelectionFailure": true,
+  "installedListVerified": true,
+  "updateCheckVerified": true,
+  "updateScenarios": [
+    "newer",
+    "older",
+    "changed",
+    "unknown"
+  ],
+  "upgradeVerified": true,
+  "upgradeSubmissions": 2,
+  "upgradeResponseLossVerified": true,
+  "installedOfflineVerified": false,
+  "installSubmissions": 0,
+  "errors": []
+}

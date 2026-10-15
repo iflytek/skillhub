@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test'
-import { mkdir, utimes } from 'node:fs/promises'
+import { mkdir, rm, utimes, writeFile } from 'node:fs/promises'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
+import type { Inventory } from '../../../src/stores/inventory-store'
 import { InventoryStore } from '../../../src/stores/inventory-store'
 
 function makeTempHome() {
@@ -19,6 +20,32 @@ function makeTarget(slug: string) {
 }
 
 describe('InventoryStore', () => {
+  test.each(['before', 'after', 'other', 'unreadable'] as const)('rechecks %s write failure under the inventory lock', async mode => {
+    class FailingStore extends InventoryStore {
+      protected override async writeUnderLock(inventory: Inventory): Promise<void> {
+        if (mode === 'before') throw new Error('write failed before rename')
+        await super.writeUnderLock(inventory)
+        if (mode === 'other') await this.write({ items: [{ ...inventory.items[0]!, version: 'unverifiable' }] })
+        if (mode === 'unreadable') await writeFile(this.path, '{invalid-json')
+        throw new Error('write response lost')
+      }
+    }
+    const home = await makeTempHome()
+    const store = new FailingStore(home)
+    try {
+      const operation = store.upsertTarget('https://registry.example', 'team', 'writer', '1.0.0', makeTarget('writer'))
+      if (mode === 'after') {
+        await operation
+        expect((await store.read()).items[0]?.version).toBe('1.0.0')
+      } else if (mode === 'before') {
+        await expect(operation).rejects.toThrow('write failed before rename')
+        expect((await store.read()).items).toEqual([])
+      } else {
+        await expect(operation).rejects.toMatchObject({ name: 'InventoryCommitUnknownError' })
+      }
+    } finally { await rm(home, { recursive: true, force: true }) }
+  })
+
   test('5 sequential upsertTarget calls all persist', async () => {
     const home = await makeTempHome()
     const store = new InventoryStore(home)
@@ -60,6 +87,17 @@ describe('InventoryStore', () => {
     const inventory = await store.read()
     expect(inventory.items).toHaveLength(1)
     expect(inventory.items[0]?.slug).toBe('test-skill')
+  })
+
+  test('locked inspection does not persist callback changes and releases its lock after failure', async () => {
+    const store = new InventoryStore(await makeTempHome())
+    await expect(store.withLockedSnapshot(async snapshot => {
+      snapshot.items.push({ registry: 'https://registry.example', namespace: 'team', slug: 'local', version: '1', targets: [] })
+      throw new Error('Inspection interrupted')
+    })).rejects.toThrow('Inspection interrupted')
+    expect(await store.read()).toEqual({ items: [] })
+    await store.mutateAtomic(snapshot => { snapshot.items.push({ registry: 'https://registry.example', namespace: 'team', slug: 'saved', version: '1', targets: [] }) })
+    expect(await store.withLockedSnapshot(async snapshot => snapshot.items[0]?.slug)).toBe('saved')
   })
 
   test('removeTarget returns false when item not found', async () => {

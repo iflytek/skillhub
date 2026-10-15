@@ -1,0 +1,4 @@
+{
+  "passed": false,
+  "error": "{\"sandboxMode\":\"workspace-write\",\"hostMapped\":true}\n+ actual - expected\n\n+ [\n+   'user',\n+   'project'\n+ ]\n- []\n"
+}

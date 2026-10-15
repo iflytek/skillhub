@@ -1,0 +1,48 @@
+{
+  "releaseUrl": "https://github.com/deepseek-ai/deepseek-harness/releases/tag/dsh-v0.2.0-rc.2",
+  "tag": "dsh-v0.2.0-rc.2",
+  "sourceCommit": "639ed015397290b3745d163aafe02ffee4aa3f84",
+  "prerelease": true,
+  "packages": [
+    {
+      "name": "@deepseek-ai/dsh",
+      "version": "0.2.0-rc.2",
+      "metadataUrl": "https://registry.npmjs.org/@deepseek-ai%2fdsh/0.2.0-rc.2",
+      "sourceManifest": "apps/cli/package.json",
+      "sourceNameAndVersionMatch": true,
+      "integrity": "sha512-EAJ3gPNcVt/uv8X19PMm9NkVhWgT7xXNMk0UKCVm+IQ5rpSQOcsMUa0HWlnYYVybKMsccjcRB21vVVsaXQ6IdA==",
+      "integrityVerified": true,
+      "installedFilesCompared": 19,
+      "mismatches": [],
+      "npmGitHead": null,
+      "npmAttestations": null
+    },
+    {
+      "name": "@deepseek-ai/dsh-typert-protocol",
+      "version": "0.2.0-rc.2",
+      "metadataUrl": "https://registry.npmjs.org/@deepseek-ai%2fdsh-typert-protocol/0.2.0-rc.2",
+      "sourceManifest": "packages/typert/protocol/package.json",
+      "sourceNameAndVersionMatch": true,
+      "integrity": "sha512-95RvIDcVac2BWdv1IxN6yKlRV+8eEvkofqSxV+d0r8x1kx2EIWEsbdxz6C+coYIm+8e03MiN+rwOt8J7sLfe7Q==",
+      "integrityVerified": true,
+      "installedFilesCompared": 15,
+      "mismatches": [],
+      "npmGitHead": null,
+      "npmAttestations": null
+    },
+    {
+      "name": "@deepseek-ai/dsh-typert-generator",
+      "version": "0.2.0-rc.2",
+      "metadataUrl": "https://registry.npmjs.org/@deepseek-ai%2fdsh-typert-generator/0.2.0-rc.2",
+      "sourceManifest": "packages/typert/generator/package.json",
+      "sourceNameAndVersionMatch": true,
+      "integrity": "sha512-jOtAtJQ2lzcoA45k19xHavUQw0BphhLytmDKkm7TV1GBjUUw1wzy2V7aPBXxg3PZK2vgLMlbMZsWuDN2cV1kAA==",
+      "integrityVerified": true,
+      "installedFilesCompared": 21,
+      "mismatches": [],
+      "npmGitHead": null,
+      "npmAttestations": null
+    }
+  ],
+  "scope": "Official release tag and source manifest mapping; npm archive integrity and installed file comparison. Not a reproducible upstream build or signed provenance proof."
+}

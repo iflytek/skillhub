@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "nativeToolView": true,
+  "persistedReplay": true,
+  "conversationDetail": true,
+  "scopedAcknowledgment": true,
+  "fixedReferenceAcknowledged": true,
+  "detailModules": true,
+  "escapeAndClose": true,
+  "focusRestored": true,
+  "staleHistoryRejected": false,
+  "installationVerified": true,
+  "reloadInstallationVerified": true,
+  "plazaInstallationVerified": true,
+  "installSubmissions": 1,
+  "errors": []
+}

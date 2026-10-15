@@ -1,0 +1,177 @@
+## ADDED Requirements
+
+### Requirement: Browse and inspect anonymous skills
+The plugin SHALL provide an initial skill list, keyword search, and details with actual coordinates, source, resolved version and available description. It SHALL display truthful result limits and SHALL NOT invent catalog fields or pagination.
+
+#### Scenario: Initial browsing
+- **WHEN** the user opens the plaza without a search query
+- **THEN** the plugin displays a list returned by the Registry or an explicit loading, empty or error state
+
+#### Scenario: Search and detail return
+- **WHEN** the user searches, opens a result, and closes its details
+- **THEN** the search query, results and browsing position are retained
+
+#### Scenario: Limited search response
+- **WHEN** the API only returns a limited result set
+- **THEN** the UI identifies the returned range and does not imply that all skills or invented pages are available
+
+### Requirement: Explicit trusted installation target
+The plugin SHALL install only after an explicit user action, default to user scope, and allow project scope only with trusted Host project context. It SHALL preserve existing Host policies and SHALL NOT accept arbitrary target paths from UI input.
+
+#### Scenario: Remote Host user installation
+- **WHEN** the user chooses the default target in a remote single-user DSH session
+- **THEN** the UI identifies installation on the DSH Host and installs there rather than on the browser computer
+
+#### Scenario: No current project
+- **WHEN** a trusted current project is unavailable
+- **THEN** project installation is unavailable and user scope remains the default
+
+#### Scenario: Host denies action
+- **WHEN** the Host rejects an installation
+- **THEN** the plugin reports the restriction without bypassing policy or creating its own permission workflow
+
+### Requirement: Complete compatible package installation
+The plugin SHALL validate the complete skill archive, fingerprint, filesystem boundaries and DSH format before commit. It SHALL preserve package resources and invocation restrictions, reuse compatible metadata, inventory and locks, and SHALL NOT execute package scripts during installation.
+
+#### Scenario: Resource-bearing package
+- **WHEN** a compatible skill includes resources and scripts
+- **THEN** installation preserves those files without executing them and records the source, version and target
+
+#### Scenario: Invalid archive or incompatible DSH format
+- **WHEN** an archive violates path/size/fingerprint constraints or the skill is incompatible with the supported DSH format
+- **THEN** installation fails with a specific reason before committing the skill and does not rewrite the package to appear compatible
+
+### Requirement: Non-destructive install and honest recovery
+The plugin SHALL revalidate targets under compatible locks, avoid duplicate submissions, and block conflicting existing content. First-time installation SHALL NOT overwrite existing content; upgrade and uninstall SHALL use the separate protected plans defined below.
+
+#### Scenario: Identical installation already exists
+- **WHEN** the same source, version and target are already installed with intact content
+- **THEN** the plugin reports already installed without duplicating or overwriting the installation
+
+#### Scenario: Conflicting target
+- **WHEN** a target has another source, version, local modifications or unmanaged content
+- **THEN** the plugin blocks the installation and leaves the existing content unchanged
+
+#### Scenario: Concurrent CLI mutation
+- **WHEN** the target changes between inspection and installation
+- **THEN** lock-protected revalidation prevents stale installation plans from overwriting the change
+
+#### Scenario: Commit or record failure
+- **WHEN** file or inventory commit fails
+- **THEN** the plugin attempts supported recovery and reports the actual outcome including any incomplete recovery
+
+### Requirement: Separate installation and discovery results
+The plugin SHALL distinguish file installation from DSH discovery and execution, and SHALL NOT restart the Host automatically.
+
+#### Scenario: Installed but discovery unconfirmed
+- **WHEN** installation succeeds without reliable discovery evidence
+- **THEN** the UI reports installed and discovery unconfirmed rather than ready or executed
+
+#### Scenario: Current details changed during installation
+- **WHEN** the user opens another skill while an installation is running
+- **THEN** completion remains associated with the original skill and target and does not replace the new skill's state
+
+### Requirement: Installed projection and scoped actions
+The plugin SHALL provide installed records for the active Registry within trusted user and current-project targets, using existing metadata and inventory. It SHALL distinguish local presence, inconsistent records and incomplete reads without claiming a complete DSH discovery catalog. Upgrade and uninstall actions SHALL bind to verified installed targets.
+
+#### Scenario: Two scopes installed
+- **WHEN** a skill is installed in both user and current-project targets
+- **THEN** each target is visible separately with its installed version and local state
+
+#### Scenario: Missing directory or partial read
+- **WHEN** installation records reference missing files or some allowed targets cannot be read
+- **THEN** the list identifies inconsistency or partial results instead of silently deleting records or showing an empty complete list
+
+#### Scenario: Installed detail while offline
+- **WHEN** an installed skill detail is opened while the Registry is unavailable
+- **THEN** local identity, installed version and target remain visible with unavailable remote content, and the plugin does not substitute the latest version or allow unverified installation
+
+#### Scenario: Lost installation acceptance response
+- **WHEN** a Client loses the startInstall response
+- **THEN** retrying the same request key and parameters recovers the existing operation when available; missing state after Host restart requires reconciliation rather than an automatic duplicate write
+
+### Requirement: Explicit immutable mutation plans
+The plugin SHALL prepare upgrade and uninstall plans on the Host with exact source, identity, target set, versions, baseline, ownership and a five-minute expiry. Only a ready, unexpired plan explicitly confirmed by the user SHALL execute; execution SHALL revalidate the complete before-state under compatible locks.
+
+#### Scenario: Plan context changes
+- **WHEN** source, project, target files, metadata, inventory target set or ownership changes after planning
+- **THEN** execution rejects the stale plan without mutating the target and requires a new plan
+
+#### Scenario: Repeated submission
+- **WHEN** the same request key and parameters are submitted again
+- **THEN** the existing operation is returned, while reusing the key with different parameters is rejected
+
+#### Scenario: Expired or consumed plan
+- **WHEN** an unsubmitted plan is older than five minutes or a consumed plan is submitted as a new operation
+- **THEN** the Host rejects it rather than extending or reusing its authority
+
+### Requirement: Protected explicit upgrade
+The plugin SHALL check for updates only on user request and SHALL upgrade only to a resolved newer exact version with a matching fingerprint. It SHALL preserve invocation restrictions and resources, refuse local drift and shared Suite ownership, and SHALL NOT silently downgrade or replace changed content under the same version.
+
+#### Scenario: No valid newer release
+- **WHEN** the candidate is older, incomparable, or the same version with different content
+- **THEN** upgrade is blocked and local files remain unchanged; an identical current release is reported as unchanged
+
+#### Scenario: All shared targets are manageable
+- **WHEN** one inventory item has multiple targets entirely within trusted user and current-project scope with direct ownership
+- **THEN** the plan lists all affected targets and upgrades them together only after explicit confirmation of that complete set
+
+#### Scenario: Shared target outside scope
+- **WHEN** the item also has another Agent, another project, untrusted or shared-ownership target
+- **THEN** upgrade is blocked without expanding scope or partially changing the shared version
+
+#### Scenario: Local content modified or baseline missing
+- **WHEN** existing content differs from its recorded baseline or has no usable baseline
+- **THEN** upgrade is blocked with a reason and no force option
+
+### Requirement: Exact local uninstall
+The plugin SHALL uninstall only one confirmed trusted target, without remote deletion or changing other targets. It SHALL verify identity, path, baseline and ownership and SHALL isolate files before inventory commit so failure can be reconciled. It SHALL NOT treat arbitrary filesystem errors as absence.
+
+#### Scenario: Two installed scopes
+- **WHEN** the user confirms uninstall of the user-level row while a project-level copy exists
+- **THEN** only the user target and its exact inventory reference are removed, and the project copy remains
+
+#### Scenario: Offline uninstall
+- **WHEN** the Registry is unavailable but local ownership and baseline are verified
+- **THEN** uninstall can proceed without Registry requests or login
+
+#### Scenario: Local changes or shared ownership
+- **WHEN** the target is modified, its ownership is unknown, or it has Suite/shared ownership
+- **THEN** uninstall is blocked and no directory or source reference is deleted
+
+#### Scenario: Missing directory versus access error
+- **WHEN** target inspection returns ENOENT
+- **THEN** only a separately confirmed stale-record cleanup may proceed, whereas access or I/O errors remain failures and do not remove records
+
+### Requirement: Honest recovery and lifecycle results
+All file mutations SHALL record enough local operation state to reconcile interrupted commits, use the same target and inventory lock discipline as the CLI, and report actual recovery and cleanup outcomes. Restart SHALL NOT blindly replay an upgrade or deletion.
+
+#### Scenario: Inventory failure after quarantine
+- **WHEN** uninstall has moved files aside but inventory commit fails
+- **THEN** the Host attempts safe restoration and reports restored failure or recovery-required rather than claiming successful uninstall
+
+#### Scenario: Cleanup failure after commit
+- **WHEN** uninstall inventory commit succeeds but isolated files cannot be cleaned
+- **THEN** logical removal is reported with a residual-file warning and retained recovery information
+
+#### Scenario: Host restarts during mutation
+- **WHEN** the process restarts with a nonterminal operation journal
+- **THEN** the Host reacquires compatible locks, reconciles actual filesystem and inventory state, and blocks conflicting new mutations until the outcome is known
+
+#### Scenario: Another provider still supplies the same name
+- **WHEN** uninstall removes one target but another source or scope still exposes the skill
+- **THEN** the UI reports removal of the selected target without claiming global removal or termination of running tasks
+
+
+#### Scenario: Journal fails after inventory commit
+- **WHEN** inventory commit succeeded but the committed journal write or backup cleanup fails
+- **THEN** the plugin preserves committed files and records and reports a warning, never restoring old files against new inventory; an unknown commit result is reconciled by rereading state before recovery
+
+#### Scenario: CLI and plugin lock ordering
+- **WHEN** CLI and plugin mutations address multiple targets including path aliases
+- **THEN** both use the same canonical lock keys, deduplication and ordering, and the transaction core acquires each lock only once
+
+
+#### Scenario: Accepted retry with expired references
+- **WHEN** an accepted request is retried after restart or context change with the same owner, request key and original parameter digest
+- **THEN** the Host returns the persisted original operation before evaluating new-write token validity, without starting another mutation; mismatched parameters are rejected and missing recovery evidence yields unknown

@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "syntheticOfficialEvents": true,
+  "preparing": true,
+  "start": true,
+  "result": true,
+  "presentationMetadataWithoutBody": true,
+  "browserWrites": 0,
+  "modelInvoked": false,
+  "installationExecuted": false
+}

@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "sourceSwitchRejectedBothPlans": true,
+  "sourceRestoreDoesNotRevivePlans": true,
+  "noOperationAccepted": true,
+  "onlyInitialDownload": true,
+  "sameSessionProjectChangeRejectedByHost": true,
+  "originalProjectPreserved": true,
+  "modelInvoked": false
+}

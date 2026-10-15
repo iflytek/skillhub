@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "targets": [
+    {
+      "scope": "user",
+      "version": "1.2.0",
+      "fingerprintVerified": true,
+      "resourceRestored": true
+    },
+    {
+      "scope": "project",
+      "version": "1.2.0",
+      "fingerprintVerified": true,
+      "resourceRestored": true
+    }
+  ],
+  "inventoryByteIdentical": true,
+  "operationStatus": {
+    "phase": "failed",
+    "files": "failed",
+    "discovery": "unconfirmed",
+    "warnings": [],
+    "recovery": "restored"
+  }
+}

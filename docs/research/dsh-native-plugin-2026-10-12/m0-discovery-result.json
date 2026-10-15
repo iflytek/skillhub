@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "trustedSessionCwd": true,
+  "userAndProjectRead": true,
+  "resourceBasePreserved": true,
+  "projectScopeIsolated": true,
+  "globalScopeExcluded": true,
+  "liveAdditionObserved": true,
+  "liveRemovalObserved": true,
+  "nativeToolContextReceived": true
+}

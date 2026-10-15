@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "cancellationVerified": true,
+  "cancelFocused": true,
+  "responseLossRecovered": false,
+  "staleRecordCleanup": false,
+  "narrowConfirmationVerified": false,
+  "finalFocusVerified": true,
+  "directDetailFocusVerified": true,
+  "offlineLocalDetailVerified": false,
+  "cleanupFailureRecovered": true,
+  "installedRowRemoved": true,
+  "resultClosed": true,
+  "submissions": 1,
+  "operationId": "31ca5169-d4d1-4cec-b004-47fd92bd49e7",
+  "errors": []
+}

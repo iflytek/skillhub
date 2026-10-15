@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "platform": "linux",
+  "checks": [
+    {
+      "cwd": "plugins/dsh",
+      "command": "bun test test/update-check.test.ts test/installation-requests.test.ts test/upgrade-requests.test.ts test/removal-requests.test.ts",
+      "tests": 19,
+      "assertions": 108,
+      "failures": 0
+    },
+    {
+      "cwd": "cli",
+      "command": "bun test test/unit/integrations/update-assessment.test.ts test/unit/integrations/removal-baseline.test.ts",
+      "tests": 2,
+      "assertions": 23,
+      "failures": 0
+    }
+  ],
+  "scope": "lifecycle-design sections 7.1 and 9; see verification scenario matrix",
+  "platformGate": "Task 5.4 remains separate; not a full cross-platform crash matrix."
+}

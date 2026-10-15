@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "loadingNotEmpty": true,
+  "emptyAndClear": true,
+  "transportErrorAndRetry": true,
+  "queryRetained": true,
+  "keyboardNavigation": true,
+  "focusRestored": true,
+  "installedEmpty": true,
+  "mobile": {
+    "client": 334,
+    "scroll": 334
+  },
+  "returnConversation": true,
+  "writes": 0,
+  "errors": [],
+  "platform": "win32",
+  "dshVersion": "0.2.0-rc.2",
+  "hostNavigationAtDesktopWidth": true
+}

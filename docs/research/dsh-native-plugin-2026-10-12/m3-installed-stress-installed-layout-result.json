@@ -1,0 +1,36 @@
+{
+  "passed": true,
+  "localFiltering": true,
+  "filterPreserved": true,
+  "returnFocus": true,
+  "narrow": {
+    "width": 576,
+    "scrollWidth": 576,
+    "rowDisplay": "block"
+  },
+  "mobile": {
+    "width": 286,
+    "scrollWidth": 286
+  },
+  "darkDialog": {
+    "width": 358,
+    "scrollWidth": 356,
+    "clientWidth": 356,
+    "foreground": "rgb(255, 255, 255)",
+    "background": "rgb(18, 18, 18)",
+    "dangerColor": "rgb(255, 180, 171)",
+    "cancelFocused": true,
+    "dangerContrast": 11.033733866068758
+  },
+  "failureRetry": true,
+  "darkPreference": {
+    "foreground": "rgb(249, 250, 251)",
+    "buttonForeground": "rgb(249, 250, 251)",
+    "bodyBackground": "rgb(21, 21, 23)",
+    "rootClass": ""
+  },
+  "rowActionsVerified": true,
+  "checks": 3,
+  "writes": 0,
+  "errors": []
+}

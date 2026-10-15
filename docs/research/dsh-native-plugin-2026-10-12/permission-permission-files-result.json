@@ -1,0 +1,10 @@
+{
+  "realFilesystemWriteDenied": true,
+  "passed": true,
+  "registryConnectionRefusedBeforeAndAfter": true,
+  "targetFilesPreserved": true,
+  "inventoryUnchanged": true,
+  "otherTargetFilesUnchanged": true,
+  "failedBeforeMutation": true,
+  "node": "24.2.0"
+}

@@ -1,0 +1,37 @@
+{
+  "records": [
+    {
+      "kind": "upgrade",
+      "status": {
+        "phase": "completed",
+        "files": "upgraded",
+        "discovery": "unconfirmed",
+        "warnings": [],
+        "recovery": "not-needed"
+      }
+    },
+    {
+      "kind": "install",
+      "status": {
+        "phase": "completed",
+        "files": "installed",
+        "discovery": "unconfirmed",
+        "warnings": [],
+        "recovery": "not-needed"
+      }
+    },
+    {
+      "kind": "uninstall",
+      "status": {
+        "phase": "completed",
+        "files": "removed",
+        "discovery": "unconfirmed",
+        "warnings": [],
+        "recovery": "not-needed"
+      }
+    }
+  ],
+  "passed": true,
+  "modelInvoked": false,
+  "discoveryVerified": false
+}

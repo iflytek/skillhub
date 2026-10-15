@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "installSubmissions": 2,
+  "removals": 1,
+  "distinctRequestKeys": true,
+  "reloadNoResubmit": true,
+  "errors": []
+}

@@ -9,6 +9,17 @@ import { EXIT } from '../shared/constants'
 
 const ACQUISITION_GATE_MAX_POLL_MS = 100
 
+/** All lifecycle callers order and deduplicate using the same canonical identity as acquisition. */
+export async function orderSkillTargetLocks<T extends { rootDir: string }>(targets: T[], slug: string): Promise<T[]> {
+  const keyed = new Map<string, T>()
+  for (const target of targets) {
+    const key = await skillTargetLockPath(target.rootDir, slug)
+    if (!keyed.has(key)) keyed.set(key, target)
+  }
+  return [...keyed].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
+    .map(([, target]) => target)
+}
+
 /** Serializes every local lifecycle mutation for one Skill target directory. */
 export async function acquireSkillTargetLock(rootDir: string, slug: string): Promise<() => Promise<void>> {
   const lockPath = await skillTargetLockPath(rootDir, slug)
@@ -253,6 +264,7 @@ export async function ensurePrivateLockDir(lockDir: string): Promise<void> {
 
 function targetBusyError(rootDir: string, slug: string): CliError {
   return new CliError(`install target is busy: ${join(rootDir, slug)}`, EXIT.filesystem, {
+    reason: 'TARGET_BUSY',
     path: join(rootDir, slug),
     next: 'wait for the other SkillHub CLI process to finish and retry'
   })

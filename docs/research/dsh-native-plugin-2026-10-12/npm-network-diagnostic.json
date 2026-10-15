@@ -1,0 +1,53 @@
+{
+  "date": "2026-10-15",
+  "scope": "Isolated npm cold-install network diagnosis",
+  "configuration": {
+    "registry": "https://registry.npmjs.org",
+    "http_proxy_present": true,
+    "https_proxy_present": true,
+    "registry_bypassed_by_no_proxy": false,
+    "npm_proxy_config": null,
+    "npm_https_proxy_config": null,
+    "maxsockets": 15,
+    "fetch_retries": 2
+  },
+  "curl_downloads": [
+    {
+      "artifact": "dsh-sdk-minimal-0.2.0-rc.2.tgz",
+      "proxy_http_status": 200,
+      "proxy_bytes": 8721,
+      "direct_exit": 28,
+      "direct_timeout_seconds": 8
+    },
+    {
+      "artifact": "resources-2.9.0.tgz",
+      "proxy_http_status": 200,
+      "proxy_bytes": 50286,
+      "direct_exit": 28,
+      "direct_timeout_seconds": 8
+    }
+  ],
+  "npm_ping": [
+    {
+      "mode": "inherited-proxy-first",
+      "exit": 1,
+      "error": "ECONNRESET"
+    },
+    {
+      "mode": "inherited-proxy-repeat",
+      "exit": 0,
+      "milliseconds": 4187
+    },
+    {
+      "mode": "explicit-proxy",
+      "exit": 0,
+      "milliseconds": 2836
+    },
+    {
+      "mode": "direct",
+      "exit": 1,
+      "error": "ETIMEDOUT"
+    }
+  ],
+  "conclusion": "Intermittent reset on the proxied npm path; direct access times out. Proxy server versus upstream cause is not isolated. No global configuration changed; full cold install not rerun."
+}

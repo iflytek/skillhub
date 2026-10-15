@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "listAndDetailUseCleanupLabel": true,
+  "confirmationExplainsNoFileDeletion": true,
+  "cancelFocused": true,
+  "keyboardActionsReachable": true,
+  "escapeCancels": true,
+  "focusRestored": true,
+  "cancelWrites": 0,
+  "confirmedWrites": 1,
+  "backupPreserved": true,
+  "targetStillAbsent": true,
+  "recordNoLongerListed": true,
+  "modelInvoked": false
+}

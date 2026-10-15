@@ -1,0 +1,313 @@
+{
+  "passed": true,
+  "sameProcess": true,
+  "initial": {
+    "passed": true,
+    "node": "24.2.0",
+    "host": [
+      {
+        "name": "@deepseek-ai/dsh",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-app-boot",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/cordis",
+        "resolved": true,
+        "version": "4.0.4"
+      },
+      {
+        "name": "@deepseek-ai/dsh-fs",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-home-paths",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-sandbox",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-sandbox-policy",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-session",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-skill-filesystem",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-tools",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-typert-protocol",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      }
+    ],
+    "client": [
+      {
+        "name": "@deepseek-ai/dsh-api-gateway",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-layout",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-sidebar",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-settings",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-plugin-manager",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-tool",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-api-session-controller",
+        "version": "0.2.0-rc.2",
+        "active": true
+      }
+    ],
+    "pluginCompatibility": {
+      "dependencyBaseline": "matched",
+      "candidateDshVersion": "0.2.0-rc.2",
+      "localWritesAllowed": true
+    }
+  },
+  "blocked": {
+    "passed": true,
+    "node": "24.2.0",
+    "host": [
+      {
+        "name": "@deepseek-ai/dsh",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-app-boot",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/cordis",
+        "resolved": true,
+        "version": "4.0.4"
+      },
+      {
+        "name": "@deepseek-ai/dsh-fs",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-home-paths",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-sandbox",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-sandbox-policy",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-session",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-skill-filesystem",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-tools",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-typert-protocol",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      }
+    ],
+    "client": [
+      {
+        "name": "@deepseek-ai/dsh-api-gateway",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-layout",
+        "active": false
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-sidebar",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-settings",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-plugin-manager",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-tool",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-api-session-controller",
+        "version": "0.2.0-rc.2",
+        "active": true
+      }
+    ],
+    "pluginCompatibility": {
+      "dependencyBaseline": "unverified",
+      "candidateDshVersion": "0.2.0-rc.2",
+      "localWritesAllowed": false
+    },
+    "rejectedBeforePreparation": true
+  },
+  "restored": {
+    "passed": true,
+    "node": "24.2.0",
+    "host": [
+      {
+        "name": "@deepseek-ai/dsh",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-app-boot",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/cordis",
+        "resolved": true,
+        "version": "4.0.4"
+      },
+      {
+        "name": "@deepseek-ai/dsh-fs",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-home-paths",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-sandbox",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-sandbox-policy",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-session",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-skill-filesystem",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-tools",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      },
+      {
+        "name": "@deepseek-ai/dsh-typert-protocol",
+        "resolved": true,
+        "version": "0.2.0-rc.2"
+      }
+    ],
+    "client": [
+      {
+        "name": "@deepseek-ai/dsh-api-gateway",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-layout",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-sidebar",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-settings",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-plugin-manager",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-client-ui-tool",
+        "version": "0.2.0-rc.2",
+        "active": true
+      },
+      {
+        "name": "@deepseek-ai/dsh-api-session-controller",
+        "version": "0.2.0-rc.2",
+        "active": true
+      }
+    ],
+    "pluginCompatibility": {
+      "dependencyBaseline": "matched",
+      "candidateDshVersion": "0.2.0-rc.2",
+      "localWritesAllowed": true
+    }
+  }
+}

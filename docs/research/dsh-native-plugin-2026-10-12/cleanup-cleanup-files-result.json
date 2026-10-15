@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "registryConnectionRefusedBeforeAndAfter": true,
+  "realCleanupPermissionDenied": true,
+  "quarantineMatchedOriginalBeforeRecovery": true,
+  "quarantineRemovedAfterRecovery": true,
+  "warningsCleared": true,
+  "targetRemoved": true,
+  "inventoryOnlySelectedTargetRemoved": true,
+  "otherTargetFilesUnchanged": true,
+  "completedOperation": true,
+  "node": "24.2.0"
+}

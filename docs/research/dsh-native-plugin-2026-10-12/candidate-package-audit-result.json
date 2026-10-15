@@ -1,0 +1,358 @@
+{
+  "passed": true,
+  "packageName": "@astron-team/skillhub-dsh",
+  "version": "0.0.0-m0",
+  "private": true,
+  "artifactSha512": "f72509ce3b7807ce9294f877db4a00ae95601c34fa3684bd5ebab81bac4694eb832d1906a9d0dc275cf85001a9e57e8365790df799377b51ba7b38e06f1ec805",
+  "engines": {
+    "node": ">=24.2.0 <25"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "4.0.4",
+    "@deepseek-ai/dsh-fs": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-home-paths": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-sandbox": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-sandbox-policy": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-session-query": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-skill-filesystem": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.0-rc.2"
+  },
+  "currentRuntimeArtifactsMatch": true,
+  "fileCount": 60,
+  "files": [
+    {
+      "path": "package/LICENSE",
+      "bytes": 11346,
+      "sha256": "3fe70565009e4b7b70e42b0b51a9b63c504658ed5c8a68b2475a02146f8ff9da"
+    },
+    {
+      "path": "package/README.en.md",
+      "bytes": 18731,
+      "sha256": "40de6ca98fd533e20a04140e7fe0dd489384c8a59c22721a9c02d1c6de918c6b"
+    },
+    {
+      "path": "package/README.md",
+      "bytes": 26722,
+      "sha256": "b488982741f6122f53baa62d92404d462f8fcb3b1bb156b6b066e6517b3e49e7"
+    },
+    {
+      "path": "package/cordis.patch.yml",
+      "bytes": 76,
+      "sha256": "68dce040858b95527d4016513134b88a2697a463e0f8c501f21ddd0353937c1a"
+    },
+    {
+      "path": "package/lib/client.js",
+      "bytes": 1056548,
+      "sha256": "fee4a89ef41fb609b08e9430e095f4ec98f22202f8beded9be842cfe846b5613"
+    },
+    {
+      "path": "package/lib/index.js",
+      "bytes": 118667,
+      "sha256": "80a79eb271fb5bb9eb05b8b70ee05af7f9a6f0792906146cd3f17371fd8c367d"
+    },
+    {
+      "path": "package/lib/local-core.js",
+      "bytes": 417814,
+      "sha256": "8f04e4b7cf185cf3b5b20b9033263bfb9332ddc92bdea7493dd43f8c32e0a74b"
+    },
+    {
+      "path": "package/lib/typert.host.d.ts",
+      "bytes": 123,
+      "sha256": "5e2d26ee86d0fe170dac8cd3f5854e67bdea334c57f40a5766ace57b8304c17d"
+    },
+    {
+      "path": "package/lib/typert.host.js",
+      "bytes": 71392,
+      "sha256": "afbbdf4fd79df8e5c069367f94839db696ac6f5a9ac002a3b0a997118c7767d0"
+    },
+    {
+      "path": "package/lib/typert.remote-client.d.ts",
+      "bytes": 4259,
+      "sha256": "fffd565cf9acce03eeab56c1a5a4e4c5e15d1d1f7f81079f9548e1b5c165f6bc"
+    },
+    {
+      "path": "package/lib/typert.remote-client.js",
+      "bytes": 54321,
+      "sha256": "c9d053c057a44ccac6e74339c36da09b724969f66ba92366f4ff49a9148e5003"
+    },
+    {
+      "path": "package/lib/types/client/catalog-error.d.ts",
+      "bytes": 194,
+      "sha256": "12ea12fcf3f54fb7cd10abe190b0358c98f67750c5ca0f1d34a0bdc6f44e199c"
+    },
+    {
+      "path": "package/lib/types/client/catalog-page.d.ts",
+      "bytes": 1376,
+      "sha256": "c42782f8edc2beec18c7029a9dcbddf1396b6457bde6b0119e99231b62c5e531"
+    },
+    {
+      "path": "package/lib/types/client/config-page.d.ts",
+      "bytes": 264,
+      "sha256": "c116a98293cec202bc688ead2d07c00dd52e72ecedf74f49fc3489bf9131ab10"
+    },
+    {
+      "path": "package/lib/types/client/conversation-detail.d.ts",
+      "bytes": 1248,
+      "sha256": "c06c30db4f2092deb16ec0d88360ffbd4fc20722fc6d3e6789d1513d9e9642f8"
+    },
+    {
+      "path": "package/lib/types/client/detail-content.d.ts",
+      "bytes": 453,
+      "sha256": "ce1eaf9b71bccfa12e2239db17d166faf4ad17c86268dfdb7f8dfdffc4642aeb"
+    },
+    {
+      "path": "package/lib/types/client/detail-tabs.d.ts",
+      "bytes": 528,
+      "sha256": "3fc4fba685b9cbde3acd2da12d47406e1f6512afc32ac236662d1ffbab2be363"
+    },
+    {
+      "path": "package/lib/types/client/discovery-status.d.ts",
+      "bytes": 330,
+      "sha256": "115c824f1eecd8df3de40c5bc3e673757670bbfa947a93001f2f29a733608da3"
+    },
+    {
+      "path": "package/lib/types/client/host-compatibility.d.ts",
+      "bytes": 5846,
+      "sha256": "2b62183b12d3cf5fa77ad413cf4be947c23b39831e6bf13745f31a3841b54f50"
+    },
+    {
+      "path": "package/lib/types/client/index.d.ts",
+      "bytes": 418,
+      "sha256": "a934ad7ab2924621249b3671e81f1a7c8f44df30235dd9942fcf7b44e2f0bd32"
+    },
+    {
+      "path": "package/lib/types/client/install-control.d.ts",
+      "bytes": 1148,
+      "sha256": "487d3b29a1baa8b3d43c444c5290807bf00c0dd883b55db27fa150431c161a3e"
+    },
+    {
+      "path": "package/lib/types/client/install-result.d.ts",
+      "bytes": 1547,
+      "sha256": "7ca7840140d9ce0d42f9ec786ac689f946d8c5f1f524ffe0f8a4902fd35908f9"
+    },
+    {
+      "path": "package/lib/types/client/install-tool-view.d.ts",
+      "bytes": 685,
+      "sha256": "dd56d07592b4de3b073812dd087f3b3aa75087d838574884eaae7822c70e014e"
+    },
+    {
+      "path": "package/lib/types/client/installation-requests.d.ts",
+      "bytes": 1044,
+      "sha256": "e8861b3e874b952d5b5a3b8dd5ca78efc5be7e92cfe3a266a78a820fa17c87e3"
+    },
+    {
+      "path": "package/lib/types/client/installed-navigation.d.ts",
+      "bytes": 659,
+      "sha256": "6b484d6f594f16bf8911bbf453bcda53f4d0454da963648c3d1cda7d0d7b6dc8"
+    },
+    {
+      "path": "package/lib/types/client/installed-skills.d.ts",
+      "bytes": 1315,
+      "sha256": "7dd1c21e6fb9beb20486598ca4a628908999ac0f1ba42607871e0724d6fb33e0"
+    },
+    {
+      "path": "package/lib/types/client/installed-styles.d.ts",
+      "bytes": 175,
+      "sha256": "632f0a8ecd2326c4b5b0a7fe786921305f45a35bbed20af458e7b5bdd6c8ff35"
+    },
+    {
+      "path": "package/lib/types/client/installed-update.d.ts",
+      "bytes": 376,
+      "sha256": "dc404a373f7ff5f4ec1ff530224639d5c84f889f257cc0c4606ad8320cead63b"
+    },
+    {
+      "path": "package/lib/types/client/native-control-styles.d.ts",
+      "bytes": 167,
+      "sha256": "b983874b3fe993ffbfab4dcd014541ce5fa8c0c7c83738917d978cd874efee09"
+    },
+    {
+      "path": "package/lib/types/client/removal-control.d.ts",
+      "bytes": 1636,
+      "sha256": "374dea95e8229aac6116d70363a691c5270898c92105771eabffdef9f10bf5f8"
+    },
+    {
+      "path": "package/lib/types/client/search-result.d.ts",
+      "bytes": 62,
+      "sha256": "28a375b065389424e61b211c4afbf35b1b4437079c5433928fc63da601d6e98c"
+    },
+    {
+      "path": "package/lib/types/client/search-tool-view.d.ts",
+      "bytes": 400,
+      "sha256": "db9ad753252ddacc220e67ae42c33986388c4adb097bc074678449c9bc574169"
+    },
+    {
+      "path": "package/lib/types/client/ui-availability.d.ts",
+      "bytes": 694,
+      "sha256": "b100c780af49d4343221973dff20a5140d0f54de2497d418f99fe2574338d379"
+    },
+    {
+      "path": "package/lib/types/client/upgrade-control.d.ts",
+      "bytes": 1675,
+      "sha256": "df9248c492f3b86dc45b0c843eb35ed8310eb6a7472b82b985d6e1a3c2cdfa2e"
+    },
+    {
+      "path": "package/lib/types/client/upgrade-requests.d.ts",
+      "bytes": 2176,
+      "sha256": "40cd3b776db4fafd70965a312566e88ef67cb42c8225128aaaeb78accd707b54"
+    },
+    {
+      "path": "package/lib/types/client/use-installation-operation.d.ts",
+      "bytes": 661,
+      "sha256": "f017e8e2a6c6d19e52eff4c0490fd0422f3742578d3bf6f233b93a1739d4d7c2"
+    },
+    {
+      "path": "package/lib/types/host/compatibility.d.ts",
+      "bytes": 802,
+      "sha256": "c18c7440afdbf7052c564b482627097479bbf2e3135aef16114bcb89144b12d6"
+    },
+    {
+      "path": "package/lib/types/host/config.d.ts",
+      "bytes": 1606,
+      "sha256": "05801c26158adab33f19c7c36d6a33b0e3f7ebb179fb2c554ffbdfb0f591d99b"
+    },
+    {
+      "path": "package/lib/types/host/conversation-history.d.ts",
+      "bytes": 474,
+      "sha256": "4992888202f19455785d73a57a850155c8b7b59c1c76870301957c4aa936956e"
+    },
+    {
+      "path": "package/lib/types/host/conversation-install-request.d.ts",
+      "bytes": 975,
+      "sha256": "f3c1215b9d42933b7d2b90b82b885be13145ebb934f3e4648f582a48a5ce536e"
+    },
+    {
+      "path": "package/lib/types/host/conversation-selections.d.ts",
+      "bytes": 1393,
+      "sha256": "daa43ac421289306a99fb46dfe5899a7821c555e46e3bc19900a0311e1aa7aeb"
+    },
+    {
+      "path": "package/lib/types/host/generated/native-contract.d.ts",
+      "bytes": 7324,
+      "sha256": "3b8e28bc4d6ec90128d6bf06f20eb0b906f7e776ad040bbcbe207b83d50c502c"
+    },
+    {
+      "path": "package/lib/types/host/index.d.ts",
+      "bytes": 8062,
+      "sha256": "d11629098786e94c917c58ec6377486d3b1cc12ad14a87b6b971efff62f45105"
+    },
+    {
+      "path": "package/lib/types/host/install-request.d.ts",
+      "bytes": 644,
+      "sha256": "0b21d862dce05411c99b3024a6da126a20903969dc0d2775235ad184a1607a04"
+    },
+    {
+      "path": "package/lib/types/host/install-tool.d.ts",
+      "bytes": 3887,
+      "sha256": "67860c7134f2fc9f7e7fe9a8a1ce15f001ab2016f051e7ae304e000f62e53387"
+    },
+    {
+      "path": "package/lib/types/host/installation-failure.d.ts",
+      "bytes": 504,
+      "sha256": "be0dc0c4ab28a5bf7a84ef97754bb2eda3f80b25f85eebc2f518ba189a7b9c19"
+    },
+    {
+      "path": "package/lib/types/host/installation-paths.d.ts",
+      "bytes": 1654,
+      "sha256": "186a0958707e03e2afe2fd8dd8cc9f5f7f311139d6537481f8fd6e56eccf40cb"
+    },
+    {
+      "path": "package/lib/types/host/installation-targets.d.ts",
+      "bytes": 900,
+      "sha256": "5bdab88d0ae99b8e1ab824a63e46759acd153570362b76c29d20f3e38323ab20"
+    },
+    {
+      "path": "package/lib/types/host/local-runtime.d.ts",
+      "bytes": 3980,
+      "sha256": "0ab6ca48c65f414001af1c694757083ef5b702052627d8cfa749a7568dd58041"
+    },
+    {
+      "path": "package/lib/types/host/operation-diagnostic.d.ts",
+      "bytes": 395,
+      "sha256": "def19671ff1f047abf639a50d5467f5f4b29ee32f28ba3edbb1723fbed8e7564"
+    },
+    {
+      "path": "package/lib/types/host/registry-adapter.d.ts",
+      "bytes": 2866,
+      "sha256": "d2ea7a4bf11483d230f126dd7f6b53e318e1d1440e4697af42c96f544e3ed4f5"
+    },
+    {
+      "path": "package/lib/types/host/retry-after.d.ts",
+      "bytes": 159,
+      "sha256": "f1788a9eed0fd452f85b292c5a3e338f3281fad3a60ac06c1a8262066f8c01b4"
+    },
+    {
+      "path": "package/lib/types/host/runtime-compatibility.d.ts",
+      "bytes": 1687,
+      "sha256": "6f1a5a93f2dd86912587d6798f4e7514ab8c0bc58071c6b493cb0d4742e8b515"
+    },
+    {
+      "path": "package/lib/types/host/search-result.d.ts",
+      "bytes": 597,
+      "sha256": "0d5bcb89d070e9bace7b6bdbde5a75e5983166ace51d30690f4d99d726fd7cdf"
+    },
+    {
+      "path": "package/lib/types/host/search-tool.d.ts",
+      "bytes": 2971,
+      "sha256": "8552fb2862a9685170dbb5d2699483ebdf4880942be1e1060e802ef72e07e7ff"
+    },
+    {
+      "path": "package/lib/types/host/skill-discovery.d.ts",
+      "bytes": 526,
+      "sha256": "31b5fe2d6ce4d392599b2832aae71459fc5d9a062c28620ea59fb324e9cb8709"
+    },
+    {
+      "path": "package/lib/types/host/skill-format.d.ts",
+      "bytes": 260,
+      "sha256": "956af96cb9e4b6602c031bb49067996dcd5a80bd2d55b516c21ab127e9be8c4c"
+    },
+    {
+      "path": "package/lib/types/host/types.d.ts",
+      "bytes": 4999,
+      "sha256": "945f615854ddd67d491768ccd4aeaf011ec0b96d9313f702ab8f9dbd10f355da"
+    },
+    {
+      "path": "package/lib/types/host/upgrade-plans.d.ts",
+      "bytes": 1251,
+      "sha256": "3463e33e00df171de908841e0da1a4cf8bf9f406552da03f6b518e60cc785a4c"
+    },
+    {
+      "path": "package/package.json",
+      "bytes": 3605,
+      "sha256": "7bfccec7470bbb2c41f48e5537c2ad5fd183fb6afea2856f4615c489f2a1fbfe"
+    }
+  ],
+  "releaseIdentityChecks": [
+    {
+      "publish": false,
+      "tag": "dsh-v0.0.0-m0",
+      "refType": "tag",
+      "accepted": true,
+      "rejectedWritesNoOutput": null
+    },
+    {
+      "publish": true,
+      "tag": "dsh-v0.0.0-m0",
+      "refType": "tag",
+      "accepted": false,
+      "rejectedWritesNoOutput": true
+    },
+    {
+      "publish": false,
+      "tag": "cli-v0.0.0-m0",
+      "refType": "tag",
+      "accepted": false,
+      "rejectedWritesNoOutput": true
+    },
+    {
+      "publish": false,
+      "tag": "dsh-v0.0.0-m0",
+      "refType": "branch",
+      "accepted": false,
+      "rejectedWritesNoOutput": true
+    }
+  ],
+  "published": false,
+  "remoteCiExecuted": false
+}

@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "provider": "our-free-model",
+  "model": "nvidia/nemotron-3.5-lightning:free",
+  "prompt": "使用当前项目刚安装的 document-helper 技能，按它的说明读取 references/note.md，并告诉我文件内容。只读取该技能及其资源，不执行命令。",
+  "modelInvoked": true,
+  "promptAdmissions": 1,
+  "assistant": [
+    {
+      "seq": 15,
+      "turn": 1,
+      "step": 1,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 8147,
+        "outputTokens": 77,
+        "totalTokens": 8224,
+        "reasoningTokens": 50
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 20,
+      "turn": 1,
+      "step": 2,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 2031,
+        "outputTokens": 231,
+        "totalTokens": 8550,
+        "cacheReadTokens": 6288,
+        "reasoningTokens": 139
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 25,
+      "turn": 1,
+      "step": 3,
+      "text": "The file `references/note.md` contains:\n\n```\nNative installation resource\n```\n\nThis is a native installation resource from the document-helper skill, consisting of a single line of text.",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 2239,
+        "outputTokens": 90,
+        "totalTokens": 8617,
+        "cacheReadTokens": 6288,
+        "reasoningTokens": 51
+      },
+      "interrupted": false
+    }
+  ],
+  "toolCalls": [
+    {
+      "seq": 16,
+      "name": "skill",
+      "arguments": "{\"name\":\"document-helper\"}",
+      "callId": "call-d032edcb-0deb-4994-9113-274d1e164c1d"
+    },
+    {
+      "seq": 21,
+      "name": "read",
+      "arguments": "{\"file_path\":\"<isolated-project>/.dsh/skills/document-helper/references/note.md\"}",
+      "callId": "call-b942c6f7-2dc1-4900-9a34-a59ed23d2135"
+    }
+  ],
+  "toolResults": [
+    {
+      "seq": 17,
+      "content": [
+        {
+          "type": "text",
+          "text": "<skill_content name=\"document-helper\">\n<skill_resources>\nBase directory for this skill: <isolated-project>/.dsh/skills/document-helper\nResolve relative paths mentioned by this skill against the base directory before using them. Load referenced resources only as needed.\n</skill_resources>\n\n<skill_instructions>\nRead references/note.md.\n</skill_instructions>\n</skill_content>"
+        }
+      ],
+      "callId": "call-d032edcb-0deb-4994-9113-274d1e164c1d",
+      "source": {
+        "kind": "tool",
+        "callId": "call-d032edcb-0deb-4994-9113-274d1e164c1d"
+      },
+      "isError": false,
+      "errorCode": null
+    },
+    {
+      "seq": 22,
+      "content": [
+        {
+          "type": "text",
+          "text": "<path><isolated-project>/.dsh/skills/document-helper/references/note.md</path>\n<type>file</type>\n<content>\n1: Native installation resource\n\n(End of file - total 1 lines)\n</content>"
+        }
+      ],
+      "callId": "call-b942c6f7-2dc1-4900-9a34-a59ed23d2135",
+      "source": {
+        "kind": "tool",
+        "callId": "call-b942c6f7-2dc1-4900-9a34-a59ed23d2135"
+      },
+      "isError": false,
+      "errorCode": null
+    }
+  ],
+  "deniedTools": [],
+  "attempts": 0,
+  "admission": {
+    "accepted": true
+  },
+  "terminal": {
+    "seq": 27,
+    "kind": "completed",
+    "errorCode": null
+  },
+  "status": "resource-turn-completed",
+  "guard": "fixture-skill-and-resource-read-only",
+  "startedAt": 1792036328324,
+  "catalogSelectionVerified": true,
+  "providerLabel": "Our Free Model",
+  "promptSubmitted": true,
+  "elapsedMs": 6728,
+  "sessionFlushed": true,
+  "verification": {
+    "skillLoadedByModel": true,
+    "resourceReadByModel": true,
+    "answerMatchesInstalledFile": true,
+    "requestsThisScenario": 3,
+    "requestsThisAdditionalBatch": 5,
+    "fixtureOnly": true
+  }
+}

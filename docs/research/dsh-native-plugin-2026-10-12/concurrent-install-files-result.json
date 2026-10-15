@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "node": "24.2.0",
+  "exactlyOneInstalledTarget": true,
+  "fingerprintMatchesMetadataAndInventory": true,
+  "resourceReadable": true,
+  "loserHasNoTargetMoves": true,
+  "noPendingRecovery": true,
+  "noStagingRemains": true,
+  "modelInvoked": false
+}

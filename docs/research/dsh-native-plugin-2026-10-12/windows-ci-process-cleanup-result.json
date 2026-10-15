@@ -1,0 +1,12 @@
+{
+  "platform": "win32",
+  "node": "24.16.0",
+  "cases": [
+    "structured-argv",
+    "successful-parent-descendants-cleaned",
+    "timeout-descendants-cleaned",
+    "failed-terminator-bounded-and-job-closed"
+  ],
+  "passed": true,
+  "scope": "Windows process runner fixtures only; not DSH initialization or remote CI"
+}

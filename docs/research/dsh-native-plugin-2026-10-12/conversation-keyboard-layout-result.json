@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "nativeToolView": true,
+  "persistedReplay": true,
+  "conversationDetail": true,
+  "scopedAcknowledgment": true,
+  "fixedReferenceAcknowledged": true,
+  "detailModules": true,
+  "initialFocus": true,
+  "backgroundInert": true,
+  "keyboardTabs": true,
+  "cardControl": {
+    "font": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", \"Helvetica Neue\", Helvetica, Arial, sans-serif",
+    "buttonFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", \"Helvetica Neue\", Helvetica, Arial, sans-serif",
+    "buttonHeight": 40
+  },
+  "tabAssociations": true,
+  "mobile": {
+    "width": 390,
+    "contentWidth": 388,
+    "scrollWidth": 388
+  },
+  "darkControls": {
+    "colorScheme": "dark",
+    "foreground": "rgb(255, 255, 255)",
+    "background": "rgb(18, 18, 18)",
+    "font": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", \"Helvetica Neue\", Helvetica, Arial, sans-serif",
+    "buttonFont": "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", \"Helvetica Neue\", Helvetica, Arial, sans-serif",
+    "buttonColor": "rgb(255, 255, 255)",
+    "buttonHeight": 43.59375,
+    "width": 388,
+    "scrollWidth": 388
+  },
+  "escapeAndClose": true,
+  "focusRestored": true,
+  "staleHistoryRejected": false,
+  "installationVerified": false,
+  "closedDuringInstallation": false,
+  "reloadInstallationVerified": false,
+  "plazaInstallationVerified": false,
+  "installSubmissions": 0,
+  "errors": []
+}

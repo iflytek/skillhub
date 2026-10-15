@@ -1,0 +1,71 @@
+{
+  "checkedAt": "2026-10-14T21:34:37.705241+00:00",
+  "platform": "win32",
+  "node": "24.16.0",
+  "dshCandidate": "0.2.0-rc.2",
+  "dependencyInstallation": {
+    "state": "stopped-after-proxy-diagnosis",
+    "sessionId": 76981,
+    "lastOutput": "Resolving dependencies",
+    "restarted": true,
+    "exitCode": 255,
+    "restartReason": "Native Windows process did not inherit existing WSL proxy configuration; proxied metadata probe returned HTTP 200."
+  },
+  "probes": {
+    "nativeFetchMetadata": {
+      "passed": false,
+      "error": "TimeoutError",
+      "timeoutMs": 10000
+    },
+    "dns": {
+      "passed": true,
+      "addressFamily": 4
+    },
+    "httpsIpv4Metadata": {
+      "passed": false,
+      "error": "deadline",
+      "deadlineMs": 15000
+    },
+    "httpsIpv4Archive": {
+      "passed": false,
+      "error": "deadline",
+      "deadlineMs": 15000
+    },
+    "nativeFetchWithInheritedProxy": {
+      "passed": true,
+      "registryStatus": 200,
+      "systemProxyChanged": false
+    }
+  },
+  "interpretation": "Proxy inheritance restored npm connectivity. Bun failed extracting the optional Windows LibreOffice package. npm repaired the same isolated dependency tree successfully with that package present; DSH Host acceptance remains pending.",
+  "windowsDshHostVerified": true,
+  "windowsDshBrowserVerified": false,
+  "retry": {
+    "sessionId": 39049,
+    "state": "failed",
+    "cacheEntries": 925,
+    "nodeModulesPresent": true,
+    "reportedError": "Fail extracting tarball for @deepseek-ai/libreoffice-kit-win32-x64",
+    "installedDshVersion": "0.2.0-rc.2",
+    "installedPnpmVersion": "10.33.0",
+    "optionalPackageInstalled": false,
+    "exitCode": 1
+  },
+  "npmRepair": {
+    "sessionId": 87430,
+    "state": "completed",
+    "ignoreScripts": true,
+    "optionalDependenciesOmitted": false,
+    "projectLockfilesChanged": false,
+    "exitCode": 0,
+    "optionalPackagePresent": true,
+    "optionalPackageVersion": "0.1.5"
+  },
+  "optionalPackageMetadata": {
+    "name": "@deepseek-ai/libreoffice-kit-win32-x64",
+    "version": "0.1.5",
+    "unpackedSize": 190868740,
+    "fileCount": 735
+  },
+  "hostVerificationScope": "Candidate dependency graph, Client module unload/reload and local write gate only; no browser or skill lifecycle acceptance."
+}

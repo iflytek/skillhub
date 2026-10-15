@@ -1,0 +1,10 @@
+{
+  "reproduced": true,
+  "node": "24.2.0",
+  "persistedPhase": "revalidating",
+  "persistedRecovery": "not-needed",
+  "crashBoundaryObserved": true,
+  "newHostStarted": true,
+  "browserRecoveryButtonUnavailable": true,
+  "cause": "Unfinished startup journal was projected as an actively running operation"
+}

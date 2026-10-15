@@ -1,0 +1,53 @@
+{
+  "passed": true,
+  "cycles": [
+    {
+      "cycle": 0,
+      "baseline": 0,
+      "mounted": 2,
+      "disabled": 0
+    },
+    {
+      "cycle": 1,
+      "baseline": 0,
+      "mounted": 2,
+      "disabled": 0
+    },
+    {
+      "cycle": 2,
+      "baseline": 0,
+      "mounted": 2,
+      "disabled": 0
+    }
+  ],
+  "operationResponses": [
+    {
+      "status": 200,
+      "ok": true,
+      "phase": "completed"
+    },
+    {
+      "status": 200,
+      "ok": false,
+      "code": "skillhub/installation-unavailable"
+    },
+    {
+      "status": 200,
+      "ok": true,
+      "phase": "completed"
+    },
+    {
+      "status": 200,
+      "ok": false,
+      "code": "skillhub/installation-unavailable"
+    },
+    {
+      "status": 200,
+      "ok": true,
+      "phase": "completed"
+    }
+  ],
+  "noPollingAfterUnmount": true,
+  "oneRestoredEntry": true,
+  "errors": []
+}

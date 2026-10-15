@@ -27,6 +27,10 @@ import com.iflytek.skillhub.ratelimit.RateLimit;
 import com.iflytek.skillhub.service.SkillLabelAppService;
 import com.iflytek.skillhub.service.ComplianceSnapshotProjectionService;
 import com.iflytek.skillhub.service.SkillSuiteAppService;
+import io.swagger.v3.oas.annotations.headers.Header;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -312,6 +316,10 @@ public class SkillController extends BaseApiController {
      * application API.
      */
     @GetMapping("/{namespace}/{slug}/versions/{version}/file")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200",
+            description = "Raw packaged file content; SKILL.md is UTF-8, without a JSON envelope",
+            content = @Content(mediaType = MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                    schema = @Schema(type = "string", format = "binary")))
     public ResponseEntity<InputStreamResource> getFileContent(
             @PathVariable String namespace,
             @PathVariable String slug,
@@ -411,6 +419,16 @@ public class SkillController extends BaseApiController {
     }
 
     @GetMapping("/{namespace}/{slug}/versions/{version}/download")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200",
+                    description = "Complete skill archive",
+                    content = @Content(mediaType = "application/zip",
+                            schema = @Schema(type = "string", format = "binary"))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "302",
+                    description = "Download from the object-storage URL in Location",
+                    headers = @Header(name = HttpHeaders.LOCATION, required = true,
+                            schema = @Schema(type = "string", format = "uri")), content = @Content)
+    })
     @RateLimit(category = "download", authenticated = 120, anonymous = 30)
     public ResponseEntity<InputStreamResource> downloadVersion(
             @PathVariable String namespace,

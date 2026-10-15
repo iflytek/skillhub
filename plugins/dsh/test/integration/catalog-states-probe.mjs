@@ -1,0 +1,68 @@
+import assert from 'node:assert/strict';
+import { writeFile } from 'node:fs/promises';
+import { chromium } from 'playwright';
+const { DSH_PROBE_URL: entry, DSH_PROBE_OUTPUT: output, DSH_SEARCH_FIXTURE_TITLE: title } = process.env;
+if (!entry || !output || !title) throw new Error('Set isolated Host URL, output and fixture session');
+const browser = await chromium.launch({ headless: true, executablePath: process.env.DSH_PROBE_CHROMIUM });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const errors = [];
+let writes = 0;
+let release;
+page.on('pageerror', error => errors.push(error.message.replace(/token=[^\s&]+/g, 'token=[redacted]')));
+page.on('request', request => { if (/\/(startInstall|executePlan)$/.test(new URL(request.url()).pathname)) writes++; });
+try {
+  await page.goto(entry, { waitUntil: 'domcontentloaded' });
+  const welcome = page.getByRole('button', { name: /^(Continue|继续)$/ });
+  const later = page.getByRole('button', { name: /^(Configure later|稍后配置)$/ });
+  await welcome.or(later).first().waitFor();
+  if (await welcome.isVisible()) await welcome.click();
+  await later.click();
+  await page.getByText(title, { exact: true }).click();
+  await page.getByText('SkillHub', { exact: true }).click();
+  const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
+  const search = plaza.getByLabel('搜索技能');
+  await plaza.getByRole('button', { name: /document-helper/ }).waitFor();
+  await page.setViewportSize({ width: 390, height: 844 });
+  const reached = Promise.withResolvers();
+  const gate = Promise.withResolvers(); release = gate.resolve;
+  await page.route('**/listSkills', async route => { reached.resolve(); await gate.promise; await route.continue(); });
+  await search.fill('loading-case');
+  await search.press('Enter');
+  await reached.promise;
+  await plaza.getByText('正在加载技能…', { exact: true }).waitFor();
+  assert.equal(await plaza.getByText('没有找到匹配的技能，请尝试其他关键词。', { exact: true }).count(), 0);
+  await page.screenshot({ path: `${output}/catalog-loading-mobile.png` });
+  release();
+  await plaza.getByRole('button', { name: /document-helper/ }).waitFor();
+  await page.unroute('**/listSkills');
+  await search.fill('nothing'); await search.press('Enter');
+  await plaza.getByText('没有找到匹配的技能，请尝试其他关键词。', { exact: true }).waitFor();
+  await plaza.getByRole('button', { name: '清空', exact: true }).focus(); await page.keyboard.press('Enter');
+  await plaza.getByRole('button', { name: /document-helper/ }).waitFor();
+  await page.route('**/listSkills', route => route.abort('failed'));
+  await search.fill('network-case'); await search.press('Enter');
+  await plaza.getByRole('alert').waitFor();
+  assert.equal(await plaza.getByText('没有找到匹配的技能，请尝试其他关键词。', { exact: true }).count(), 0);
+  await page.unroute('**/listSkills');
+  await plaza.getByRole('button', { name: '重试', exact: true }).focus(); await page.keyboard.press('Enter');
+  const card = plaza.getByRole('button', { name: /document-helper/ }); await card.waitFor();
+  assert.equal(await search.inputValue(), 'network-case');
+  await card.focus(); await page.keyboard.press('Enter');
+  await plaza.getByRole('heading', { name: 'Document helper', exact: true }).waitFor();
+  await plaza.getByRole('button', { name: '← 返回技能广场', exact: true }).focus(); await page.keyboard.press('Enter');
+  assert(await card.evaluate(element => element === document.activeElement));
+  await plaza.getByRole('button', { name: '已安装', exact: true }).focus(); await page.keyboard.press('Enter');
+  await plaza.getByText('当前范围没有该来源的安装记录。', { exact: true }).waitFor();
+  const width = await plaza.evaluate(element => ({ client: element.clientWidth, scroll: element.scrollWidth }));
+  assert(width.client > 0 && width.scroll <= width.client + 1, JSON.stringify(width));
+  await page.screenshot({ path: `${output}/installed-empty-mobile.png` });
+  await plaza.getByRole('button', { name: '返回会话', exact: true }).focus(); await page.keyboard.press('Enter');
+  await plaza.waitFor({ state: 'hidden' });
+  assert.equal(writes, 0); assert.deepEqual(errors, []);
+  await writeFile(`${output}/catalog-states-result.json`, JSON.stringify({ passed: true, loadingNotEmpty: true, emptyAndClear: true,
+    transportErrorAndRetry: true, queryRetained: true, keyboardNavigation: true, focusRestored: true, installedEmpty: true,
+    mobile: width, returnConversation: true, writes, errors }, null, 2));
+} catch (error) {
+  await page.screenshot({ path: `${output}/catalog-states-failure.png` });
+  throw error;
+} finally { release?.(); await browser.close(); }

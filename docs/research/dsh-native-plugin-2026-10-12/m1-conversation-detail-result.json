@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "nativeToolView": true,
+  "persistedReplay": true,
+  "conversationDetail": true,
+  "scopedAcknowledgment": true,
+  "detailModules": true,
+  "escapeAndClose": true,
+  "focusRestored": true,
+  "staleHistoryRejected": true,
+  "errors": []
+}

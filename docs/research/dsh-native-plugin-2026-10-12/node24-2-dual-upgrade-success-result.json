@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "installs": 2,
+  "upgrades": 1,
+  "planBeforeExecution": true,
+  "projectTargets": 1,
+  "userTargets": 1,
+  "currentVersion": "1.2.0",
+  "finalVersion": "1.3.0",
+  "reloadNoResubmit": true,
+  "errors": []
+}

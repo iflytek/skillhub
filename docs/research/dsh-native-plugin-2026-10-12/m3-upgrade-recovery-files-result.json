@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "operationId": "081bca4b-ff83-4e38-9384-8a788b3d6917",
+  "fullInventoryUnchanged": true,
+  "oldVersionRestored": "1.2.0",
+  "allMetadataFileHashesMatch": true,
+  "backupAndStagingAbsent": true,
+  "restorationPersisted": true
+}

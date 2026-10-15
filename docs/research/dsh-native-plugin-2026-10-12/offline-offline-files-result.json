@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "registryConnectionRefusedBeforeAndAfter": true,
+  "targetRemoved": true,
+  "inventoryOnlySelectedTargetRemoved": true,
+  "otherTargetFilesUnchanged": true,
+  "completedOperation": true,
+  "node": "24.2.0"
+}

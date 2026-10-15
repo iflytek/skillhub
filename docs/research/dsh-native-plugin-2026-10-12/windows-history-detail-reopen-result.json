@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "platform": "win32",
+  "node": "24.16.0",
+  "modelInvoked": false,
+  "syntheticPersistedToolEvents": true,
+  "hostRestarted": true,
+  "installedPackageVersion": "0.0.0-m0",
+  "currentClientSha256": "7c2e5806eb00fb4b7687802354c2518ae5947294cb663f5348871a06152e3b64",
+  "browser": {
+    "explicitReopen": true,
+    "staleHasNoRetry": true,
+    "newReferenceAcknowledged": true,
+    "originalCardPreserved": true,
+    "sourceAndVersionShown": true,
+    "installControlAvailable": true,
+    "focusRestored": true,
+    "noInstallationSubmission": true,
+    "pageErrors": []
+  },
+  "protectedFilesUnchanged": true,
+  "protectedFileCount": 1,
+  "dshVersion": "0.2.0-rc.2",
+  "candidateSha256": "8fc651c33b73378648c0aed4bdfa356167aefc74e4bae517ed5b58e3d52656d8",
+  "currentClientMatchesWorkspace": true,
+  "installationMethod": "official dsh plugin add --offline --ignore-scripts with existing native Windows store and copied public metadata cache",
+  "remainingProcessIds": []
+}

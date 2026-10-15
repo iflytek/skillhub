@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "installedClientVerified": true,
+  "preCancelledNoAcceptance": true,
+  "inFlightCancelledNoAcceptance": true,
+  "acceptedWorkSurvivesCancellation": true,
+  "replayUsesSameOperation": true,
+  "oneNewOperation": true,
+  "resourceVerified": true,
+  "modelInvoked": false,
+  "registryRequestCounts": {
+    "/resolve": 4,
+    "/download": 1
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "passed": true,
+  "dsh": "0.2.0-rc.2",
+  "platform": "linux",
+  "fixtureDownloadDelayMs": 30000,
+  "browser": {
+    "passed": true,
+    "operationId": "54c073c9-2a49-4308-85fa-00bd9c09f83e",
+    "disconnectedAt": 1792038601618,
+    "browserProcessClosed": true,
+    "newBrowserProcess": true,
+    "sameOperationAfterReconnect": true,
+    "originalOperationCompleted": true,
+    "filesPresent": true,
+    "cancelRequests": 0,
+    "browserInstallRequests": 0,
+    "pageErrors": []
+  },
+  "disconnect": {
+    "operationId": "54c073c9-2a49-4308-85fa-00bd9c09f83e",
+    "disconnectedAt": 1792038601618,
+    "filesAbsentAtDisconnect": true
+  },
+  "model": {
+    "name": "nvidia/nemotron-3.5-lightning:free",
+    "requestCount": 2,
+    "maxTokens": 2048,
+    "toolCalls": [
+      {
+        "observedAt": 1792038601440,
+        "seq": 15,
+        "name": "astron_skillhub_install",
+        "callId": "call-bd4022e0-6b06-4a33-bed7-8324c87ae8ef"
+      }
+    ],
+    "terminal": {
+      "seq": 21,
+      "kind": "completed",
+      "errorCode": null
+    },
+    "deniedTools": []
+  },
+  "operationCount": 1,
+  "operationStatus": {
+    "phase": "completed",
+    "files": "installed",
+    "discovery": "unconfirmed",
+    "warnings": [],
+    "recovery": "not-needed"
+  },
+  "inventoryItems": 1,
+  "inventoryTargets": 1,
+  "projectFiles": {
+    ".dsh/skills/document-helper/SKILL.md": "fe311233e34e52402542ad88c8e2a5af0af3344194352c084a6e0e037f809362",
+    ".dsh/skills/document-helper/.skillhub/metadata.json": "c0a9f89c9b8c0610e8c913fceac26fc71634a853f1273dec2e3e177557ce55cc",
+    ".dsh/skills/document-helper/references/note.md": "dfca51c585e7cfc1b85ff660ceb2dabe8a29dbc77f100c596bc357cb7824a0d8"
+  },
+  "userSkillDirectoryCreated": false,
+  "cleanup": {
+    "allProcessesExited": true
+  },
+  "limitation": "Browser process disconnect and reconnect with Host kept running; not a Host crash or remote-host test."
+}

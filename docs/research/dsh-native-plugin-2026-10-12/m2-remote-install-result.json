@@ -1,0 +1,18 @@
+{
+  "passed": true,
+  "nativeSkillHubSearch": true,
+  "scopedConversationDetail": true,
+  "installationTargetsQueried": true,
+  "installationTargetsRevalidated": true,
+  "nativeInstallationCompleted": true,
+  "nativeRecoveryCompleted": true,
+  "searchFixtureTitle": "SkillHub search fixture 991824b5",
+  "trustedSessionCwd": true,
+  "userAndProjectRead": true,
+  "resourceBasePreserved": true,
+  "projectScopeIsolated": true,
+  "globalScopeExcluded": true,
+  "liveAdditionObserved": true,
+  "liveRemovalObserved": true,
+  "nativeToolContextReceived": true
+}

@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import { readFile, writeFile } from 'node:fs/promises';
+import { chromium } from 'playwright';
+const { DSH_PROBE_URL: entry, DSH_PROBE_OUTPUT: output, DSH_FIXTURE_REQUEST_LOG: log } = process.env;
+if (!entry || !output || !log) throw new Error('Set isolated Host URL, output and Registry request log');
+const browser = await chromium.launch({ headless: true, executablePath: process.env.DSH_PROBE_CHROMIUM });
+const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+const errors = [];
+let remoteImages = 0;
+page.on('pageerror', error => errors.push(error.message.replace(/token=[^\s&]+/g, 'token=[redacted]')));
+page.on('request', request => { if (request.url().includes('example.invalid')) remoteImages++; });
+try {
+  await page.goto(entry, { waitUntil: 'domcontentloaded' });
+  const welcome = page.getByRole('button', { name: /^(Continue|继续)$/ });
+  const later = page.getByRole('button', { name: /^(Configure later|稍后配置)$/ });
+  await welcome.or(later).first().waitFor();
+  if (await welcome.isVisible()) await welcome.click();
+  await later.click();
+  await page.getByText('SkillHub', { exact: true }).click();
+  const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
+  await plaza.getByText('共匹配 55 项，当前显示 20 项；可输入更具体的关键词缩小范围。', { exact: true }).waitFor();
+  assert.equal(await plaza.getByRole('button', { name: /document-helper/ }).count(), 20);
+  assert.equal(await plaza.getByRole('button', { name: /加载更多|下一页|上一页/ }).count(), 0);
+  await plaza.getByRole('button', { name: /@demo-0\/document-helper/ }).click();
+  await plaza.getByRole('heading', { name: 'Document helper', exact: true }).waitFor();
+  const article = plaza.getByRole('article', { name: '技能说明' });
+  await article.getByText('提取摘要 & 关键结论。', { exact: true }).waitFor();
+  assert.equal(await article.locator('script, img, a[href^="javascript:"]').count(), 0);
+  assert.equal(await page.evaluate(() => window.fixtureUnsafe === true), false);
+  const requests = (await readFile(log, 'utf8')).trim().split('\n').map(line => JSON.parse(line));
+  const resolves = requests.filter(item => item.path === '/api/cli/v1/skills/demo-0/document-helper/resolve');
+  assert(resolves.length > 0);
+  assert(resolves.every(item => item.version === '1.2.0'));
+  assert(requests.some(item => item.path === '/api/v1/skills/demo-0/document-helper/versions/1.2.0/file'));
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: `${output}/catalog-range-mobile.png` });
+  const width = await plaza.evaluate(element => ({ client: element.clientWidth, scroll: element.scrollWidth }));
+  assert(width.client > 0 && width.scroll <= width.client + 1, JSON.stringify(width));
+  assert.equal(remoteImages, 0); assert.deepEqual(errors, []);
+  await writeFile(`${output}/catalog-range-result.json`, JSON.stringify({ passed: true, total: 55, returned: 20,
+    noFakePagination: true, fixedVersion: '1.2.0', safeMarkdown: true, remoteImages, mobile: width, errors }, null, 2));
+} finally { await browser.close(); }

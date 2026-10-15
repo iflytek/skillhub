@@ -1,0 +1,230 @@
+{
+  "passed": true,
+  "cycles": 2,
+  "referenceViewsUnchanged": 4,
+  "registrations": {
+    "main": [
+      {
+        "key": "plugins"
+      },
+      {
+        "key": "skillhub"
+      },
+      {
+        "key": "conversation"
+      }
+    ],
+    "sidebar.panellist": [
+      {
+        "id": "plugins"
+      },
+      {
+        "id": "skillhub"
+      }
+    ],
+    "sidebar.footer.action": [
+      {
+        "id": "cordis-panel"
+      },
+      {
+        "key": "skillhub-plaza",
+        "id": "skillhub-plaza"
+      }
+    ],
+    "tool.call.toolview": [
+      {
+        "key": "bash"
+      },
+      {
+        "key": "read"
+      },
+      {
+        "key": "read_image"
+      },
+      {
+        "key": "edit"
+      },
+      {
+        "key": "write"
+      },
+      {
+        "key": "grep"
+      },
+      {
+        "key": "glob"
+      },
+      {
+        "key": "web_search"
+      },
+      {
+        "key": "web_fetch"
+      },
+      {
+        "key": "create_goal"
+      },
+      {
+        "key": "get_goal"
+      },
+      {
+        "key": "update_goal"
+      },
+      {
+        "key": "schedule_create"
+      },
+      {
+        "key": "schedule_list"
+      },
+      {
+        "key": "schedule_delete"
+      },
+      {
+        "key": "schedule_update"
+      },
+      {
+        "key": "cordis_inspect_list"
+      },
+      {
+        "key": "cordis_inspect_query"
+      },
+      {
+        "key": "cordis_inspect_self"
+      },
+      {
+        "key": "workflow"
+      },
+      {
+        "key": "ralph"
+      },
+      {
+        "key": "session_event_read"
+      },
+      {
+        "key": "session_event_search"
+      },
+      {
+        "key": "session_event_trace"
+      },
+      {
+        "key": "session_search"
+      },
+      {
+        "key": "session_trace"
+      },
+      {
+        "key": "list_subagent_models"
+      },
+      {
+        "key": "subagent"
+      },
+      {
+        "key": "list_agents"
+      },
+      {
+        "key": "send_message"
+      },
+      {
+        "key": "interrupt_agent"
+      },
+      {
+        "key": "job_list"
+      },
+      {
+        "key": "job_output"
+      },
+      {
+        "key": "job_kill"
+      },
+      {
+        "key": "terminal_open"
+      },
+      {
+        "key": "terminal_read"
+      },
+      {
+        "key": "terminal_list"
+      },
+      {
+        "key": "terminal_signal"
+      },
+      {
+        "key": "terminal_close"
+      },
+      {
+        "key": "lsp"
+      },
+      {
+        "key": "spawn_teammate"
+      },
+      {
+        "key": "team_task_create"
+      },
+      {
+        "key": "team_task_get"
+      },
+      {
+        "key": "team_task_update"
+      },
+      {
+        "key": "team_task_list"
+      },
+      {
+        "key": "wait_agent"
+      },
+      {
+        "key": "ask_user_question"
+      },
+      {
+        "key": "cordis_define"
+      },
+      {
+        "key": "cordis_run"
+      },
+      {
+        "key": "cordis_stop"
+      },
+      {
+        "key": "cordis_undefine"
+      },
+      {
+        "key": "skillhub_search",
+        "id": "skillhub_search"
+      },
+      {
+        "key": "skillhub_list",
+        "id": "skillhub_list"
+      },
+      {
+        "key": "skillhub_plugin_search",
+        "id": "skillhub_plugin_search"
+      },
+      {
+        "key": "astron_skillhub_install"
+      },
+      {
+        "key": "astron_skillhub_search"
+      },
+      {
+        "key": "skill"
+      },
+      {
+        "key": "todo_write"
+      },
+      {
+        "key": "present"
+      }
+    ],
+    "plugins.bundle.config": [
+      {
+        "key": "@astron-team/skillhub-dsh"
+      }
+    ],
+    "settings.plugin.item": []
+  },
+  "errors": [],
+  "modelInvoked": false,
+  "referenceMarketUsed": false,
+  "dshVersion": "0.2.0-rc.2",
+  "referenceVersion": "0.2.16",
+  "node": "24.17.0",
+  "platform": "Linux"
+}

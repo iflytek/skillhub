@@ -1,0 +1,112 @@
+name: Release DSH Plugin
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Publish the verified tag to npm (requires release approval)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-dsh-plugin-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.policy.outputs.version }}
+      package_name: ${{ steps.policy.outputs.package_name }}
+      dist_tag: ${{ steps.policy.outputs.dist_tag }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.2.0'
+      - name: Validate release identity
+        id: policy
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          PUBLISH: ${{ inputs.publish }}
+        run: node plugins/dsh/scripts/release-policy.ts
+
+  check:
+    needs: validate
+    uses: ./.github/workflows/check-dsh-plugin.yml
+
+  package:
+    needs: [validate, check]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.2.0'
+      - uses: actions/download-artifact@v4
+        with:
+          name: skillhub-dsh-development-package-ubuntu-latest-node-24.2.0
+          path: candidate
+      - name: Validate packed manifest
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          packages=(candidate/*.tgz)
+          test "${#packages[@]}" -eq 1
+          tar -xOf "${packages[0]}" package/package.json > "$RUNNER_TEMP/dsh-manifest.json"
+          node plugins/dsh/scripts/release-policy.ts "$RUNNER_TEMP/dsh-manifest.json"
+      - name: Record candidate checksum
+        working-directory: candidate
+        run: sha512sum *.tgz > SHA512SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skillhub-dsh-release-candidate
+          path: candidate/
+          if-no-files-found: error
+
+  publish:
+    needs: [validate, package]
+    if: inputs.publish
+    runs-on: ubuntu-latest
+    environment: dsh-npm
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.2.0'
+          registry-url: 'https://registry.npmjs.org'
+      - uses: actions/download-artifact@v4
+        with:
+          name: skillhub-dsh-release-candidate
+          path: candidate
+      - name: Publish the tested tarball
+        working-directory: candidate
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          DIST_TAG: ${{ needs.validate.outputs.dist_tag }}
+        run: |
+          test -n "$NODE_AUTH_TOKEN"
+          sha512sum --check SHA512SUMS
+          packages=(*.tgz)
+          test "${#packages[@]}" -eq 1
+          npm publish "${packages[0]}" --access public --tag "$DIST_TAG" --ignore-scripts
+      - name: Verify published bytes
+        working-directory: candidate
+        env:
+          PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
+          VERSION: ${{ needs.validate.outputs.version }}
+        run: |
+          npm view "$PACKAGE_NAME@$VERSION" dist.integrity --json > published-integrity.json
+          node --input-type=module <<'NODE'
+          import { readFileSync, readdirSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          const files = readdirSync('.').filter(name => name.endsWith('.tgz'));
+          if (files.length !== 1) throw new Error('Expected one release package');
+          const actual = 'sha512-' + createHash('sha512').update(readFileSync(files[0])).digest('base64');
+          if (JSON.parse(readFileSync('published-integrity.json', 'utf8')) !== actual) {
+            throw new Error('Published integrity differs from the tested candidate');
+          }
+          NODE

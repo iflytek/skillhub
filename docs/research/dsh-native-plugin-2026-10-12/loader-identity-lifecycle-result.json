@@ -1,0 +1,54 @@
+{
+  "passed": true,
+  "loaderId": "astron-skillhub",
+  "mode": "bundle",
+  "node": "24.17.0",
+  "cycles": 2,
+  "installedClientVerified": true,
+  "snapshots": [
+    {
+      "cycle": 0,
+      "disabled": true,
+      "hostRemoved": true,
+      "toolsRemoved": true,
+      "staleServiceRejected": true,
+      "clientModulePresent": false,
+      "clientGraphEntryPresent": false,
+      "remainingLoaderSources": []
+    },
+    {
+      "cycle": 0,
+      "disabled": false,
+      "newHostInstance": true,
+      "newSourceRevision": true,
+      "toolsRestored": true,
+      "registryReadable": true,
+      "dependencyBaseline": "matched"
+    },
+    {
+      "cycle": 1,
+      "disabled": true,
+      "hostRemoved": true,
+      "toolsRemoved": true,
+      "staleServiceRejected": true,
+      "clientModulePresent": false,
+      "clientGraphEntryPresent": false,
+      "remainingLoaderSources": []
+    },
+    {
+      "cycle": 1,
+      "disabled": false,
+      "newHostInstance": true,
+      "newSourceRevision": true,
+      "toolsRestored": true,
+      "registryReadable": true,
+      "dependencyBaseline": "matched"
+    }
+  ],
+  "events": [],
+  "modelInvoked": false,
+  "dshVersion": "0.2.0-rc.2",
+  "packageSha256": "7d5d14d17d43dc781a4be5e0719ebc07aa8ef1c9f79c83b514b8a2503c2316cd",
+  "profile": "fresh web profile",
+  "referencePluginInstalled": false
+}

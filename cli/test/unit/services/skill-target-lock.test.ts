@@ -1,4 +1,4 @@
-import { access, chmod, lstat, mkdir, mkdtemp, readdir, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
+import { access, chmod, lstat, mkdir, mkdtemp, readdir, rm, symlink, unlink, utimes, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -7,7 +7,8 @@ import {
   acquireSkillTargetLock,
   assertPrivateLockDir,
   ensurePrivateLockDir,
-  skillTargetLockPath
+  skillTargetLockPath,
+  orderSkillTargetLocks
 } from '../../../src/services/skill-target-lock'
 
 async function exists(path: string): Promise<boolean> {
@@ -43,6 +44,26 @@ async function waitForExitCount(
 }
 
 describe('skill target lifecycle lock', () => {
+  test('orders canonical targets identically through aliases and deduplicates the same lock', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'skillhub-lock-order-'))
+    try {
+      const first = join(root, 'first')
+      const second = join(root, 'second')
+      const alias = join(root, 'alias')
+      await mkdir(first)
+      await mkdir(second)
+      await symlink(first, alias, 'dir')
+      const original = await orderSkillTargetLocks([{ rootDir: second }, { rootDir: first }], 'writer')
+      const reversedAliases = await orderSkillTargetLocks([{ rootDir: alias }, { rootDir: second }, { rootDir: first }], 'writer')
+      expect(reversedAliases).toHaveLength(2)
+      const keys = (targets: Array<{ rootDir: string }>) => Promise.all(targets.map(target => skillTargetLockPath(target.rootDir, 'writer')))
+      expect(await keys(reversedAliases)).toEqual(await keys(original))
+      expect(await keys(original)).toEqual((await keys(original)).sort())
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   test('creates or repairs a private lock root and rejects unsafe roots', async () => {
     const parent = await mkdtemp(join(tmpdir(), 'skillhub-lock-root-'))
     const privateRoot = join(parent, 'private')

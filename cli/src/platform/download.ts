@@ -1,5 +1,5 @@
-import { EXIT } from '../shared/constants'
-import { CliError } from '../shared/errors'
+import { EXIT } from '../shared/constants.js'
+import { CliError } from '../shared/errors.js'
 
 export const MAX_PACKAGE_BYTES = 100 * 1024 * 1024
 

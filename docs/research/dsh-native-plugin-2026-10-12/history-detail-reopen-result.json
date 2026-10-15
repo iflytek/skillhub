@@ -1,0 +1,23 @@
+{
+  "explicitReopen": true,
+  "staleHasNoRetry": true,
+  "newReferenceAcknowledged": true,
+  "originalCardPreserved": true,
+  "sourceAndVersionShown": true,
+  "installControlAvailable": true,
+  "focusRestored": true,
+  "noInstallationSubmission": true,
+  "pageErrors": [],
+  "installedArtifactMatches": true,
+  "artifactSha256": "1c3cd8089e19bc61aab139836f2985235146731f9762d00aefbbff8c4b5fa03f",
+  "environment": {
+    "dsh": "0.2.0-rc.2",
+    "node": "24.17.0",
+    "platform": "linux"
+  },
+  "modelInvokedThisRun": false,
+  "postRunState": {
+    "inventoryExists": false,
+    "operationFilesExcludingIdentity": []
+  }
+}

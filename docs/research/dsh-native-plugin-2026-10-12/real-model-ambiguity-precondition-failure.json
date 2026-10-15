@@ -1,0 +1,390 @@
+{
+  "schemaVersion": 1,
+  "provider": "our-free-model",
+  "model": "nvidia/nemotron-3.5-lightning:free",
+  "prompt": "在 SkillHub 搜索 document 相关技能，只展示结果，先不要安装。",
+  "modelInvoked": true,
+  "promptAdmissions": 1,
+  "assistant": [
+    {
+      "seq": 14,
+      "turn": 1,
+      "step": 1,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 7962,
+        "outputTokens": 146,
+        "totalTokens": 8108,
+        "reasoningTokens": 117
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 19,
+      "turn": 1,
+      "step": 2,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 1729,
+        "outputTokens": 59,
+        "totalTokens": 8076,
+        "cacheReadTokens": 6288,
+        "reasoningTokens": 30
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 24,
+      "turn": 1,
+      "step": 3,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 1784,
+        "outputTokens": 53,
+        "totalTokens": 8125,
+        "cacheReadTokens": 6288,
+        "reasoningTokens": 23
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 29,
+      "turn": 1,
+      "step": 4,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 1840,
+        "outputTokens": 68,
+        "totalTokens": 8196,
+        "cacheReadTokens": 6288,
+        "reasoningTokens": 41
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 34,
+      "turn": 1,
+      "step": 5,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 1893,
+        "outputTokens": 144,
+        "totalTokens": 8325,
+        "cacheReadTokens": 6288,
+        "reasoningTokens": 48
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 39,
+      "turn": 1,
+      "step": 6,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 2015,
+        "outputTokens": 152,
+        "totalTokens": 8455,
+        "cacheReadTokens": 6288,
+        "reasoningTokens": 46
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 44,
+      "turn": 1,
+      "step": 7,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 2146,
+        "outputTokens": 54,
+        "totalTokens": 8488,
+        "cacheReadTokens": 6288,
+        "reasoningTokens": 16
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 49,
+      "turn": 1,
+      "step": 8,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 114,
+        "outputTokens": 126,
+        "totalTokens": 8624,
+        "cacheReadTokens": 8384,
+        "reasoningTokens": 86
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 54,
+      "turn": 1,
+      "step": 9,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 180,
+        "outputTokens": 173,
+        "totalTokens": 8737,
+        "cacheReadTokens": 8384,
+        "reasoningTokens": 130
+      },
+      "interrupted": false
+    },
+    {
+      "seq": 59,
+      "turn": 1,
+      "step": 10,
+      "text": "",
+      "source": {
+        "kind": "model",
+        "provider": "our-free-model",
+        "model": "nvidia/nemotron-3.5-lightning:free"
+      },
+      "usage": {
+        "inputTokens": 249,
+        "outputTokens": 193,
+        "totalTokens": 8826,
+        "cacheReadTokens": 8384,
+        "reasoningTokens": 142
+      },
+      "interrupted": false
+    }
+  ],
+  "toolCalls": [
+    {
+      "seq": 15,
+      "name": "astron_ability_search",
+      "callId": "call-30c2173e-926b-4b91-99d2-ef332bf2a502"
+    },
+    {
+      "seq": 20,
+      "name": "astron_ability_search",
+      "callId": "call-09b4c73a-b45d-4719-a911-b3c8ee6b52ad"
+    },
+    {
+      "seq": 25,
+      "name": "astron_ability_search",
+      "callId": "call-f2c8f45a-f27e-45b7-996e-5b52df58cbe7"
+    },
+    {
+      "seq": 30,
+      "name": "astron_ability_search",
+      "callId": "call-45517dce-7f97-466b-abcf-6874a4c0cd10"
+    },
+    {
+      "seq": 35,
+      "name": "bash",
+      "callId": "call-a720ce7c-51cb-42ab-95be-5430f09a455c"
+    },
+    {
+      "seq": 40,
+      "name": "bash",
+      "callId": "call-cb995db3-d53b-4130-a6de-0aa5386e5d3b"
+    },
+    {
+      "seq": 45,
+      "name": "bash",
+      "callId": "call-3bb55b95-da00-40e3-8760-20eb5f9c1172"
+    },
+    {
+      "seq": 50,
+      "name": "bash",
+      "callId": "call-41f7dbd1-180a-44a9-a909-24b8be7b7068"
+    },
+    {
+      "seq": 55,
+      "name": "bash",
+      "callId": "call-7dfcdf2b-40de-4aaa-8ff1-d381c0a365d9"
+    },
+    {
+      "seq": 60,
+      "name": "bash",
+      "callId": "call-f8cce14b-afa9-4574-900f-27c8524286b8"
+    }
+  ],
+  "toolResults": [
+    {
+      "seq": 16,
+      "callId": "call-30c2173e-926b-4b91-99d2-ef332bf2a502",
+      "source": {
+        "kind": "tool",
+        "callId": "call-30c2173e-926b-4b91-99d2-ef332bf2a502"
+      },
+      "isError": true,
+      "errorCode": null
+    },
+    {
+      "seq": 21,
+      "callId": "call-09b4c73a-b45d-4719-a911-b3c8ee6b52ad",
+      "source": {
+        "kind": "tool",
+        "callId": "call-09b4c73a-b45d-4719-a911-b3c8ee6b52ad"
+      },
+      "isError": true,
+      "errorCode": null
+    },
+    {
+      "seq": 26,
+      "callId": "call-f2c8f45a-f27e-45b7-996e-5b52df58cbe7",
+      "source": {
+        "kind": "tool",
+        "callId": "call-f2c8f45a-f27e-45b7-996e-5b52df58cbe7"
+      },
+      "isError": true,
+      "errorCode": null
+    },
+    {
+      "seq": 31,
+      "callId": "call-45517dce-7f97-466b-abcf-6874a4c0cd10",
+      "source": {
+        "kind": "tool",
+        "callId": "call-45517dce-7f97-466b-abcf-6874a4c0cd10"
+      },
+      "isError": true,
+      "errorCode": null
+    },
+    {
+      "seq": 36,
+      "callId": "call-a720ce7c-51cb-42ab-95be-5430f09a455c",
+      "source": {
+        "kind": "tool",
+        "callId": "call-a720ce7c-51cb-42ab-95be-5430f09a455c"
+      },
+      "isError": true,
+      "errorCode": null
+    },
+    {
+      "seq": 41,
+      "callId": "call-cb995db3-d53b-4130-a6de-0aa5386e5d3b",
+      "source": {
+        "kind": "tool",
+        "callId": "call-cb995db3-d53b-4130-a6de-0aa5386e5d3b"
+      },
+      "isError": true,
+      "errorCode": null
+    },
+    {
+      "seq": 46,
+      "callId": "call-3bb55b95-da00-40e3-8760-20eb5f9c1172",
+      "source": {
+        "kind": "tool",
+        "callId": "call-3bb55b95-da00-40e3-8760-20eb5f9c1172"
+      },
+      "isError": true,
+      "errorCode": null
+    },
+    {
+      "seq": 51,
+      "callId": "call-41f7dbd1-180a-44a9-a909-24b8be7b7068",
+      "source": {
+        "kind": "tool",
+        "callId": "call-41f7dbd1-180a-44a9-a909-24b8be7b7068"
+      },
+      "isError": true,
+      "errorCode": null
+    },
+    {
+      "seq": 56,
+      "callId": "call-7dfcdf2b-40de-4aaa-8ff1-d381c0a365d9",
+      "source": {
+        "kind": "tool",
+        "callId": "call-7dfcdf2b-40de-4aaa-8ff1-d381c0a365d9"
+      },
+      "isError": true,
+      "errorCode": null
+    },
+    {
+      "seq": 61,
+      "callId": "call-f8cce14b-afa9-4574-900f-27c8524286b8",
+      "source": {
+        "kind": "tool",
+        "callId": "call-f8cce14b-afa9-4574-900f-27c8524286b8"
+      },
+      "isError": true,
+      "errorCode": null
+    }
+  ],
+  "deniedTools": [
+    "astron_ability_search",
+    "astron_ability_search",
+    "astron_ability_search",
+    "astron_ability_search",
+    "bash",
+    "bash",
+    "bash",
+    "bash",
+    "bash",
+    "bash"
+  ],
+  "attempts": 3,
+  "admission": {
+    "accepted": true
+  },
+  "terminal": {
+    "seq": 72,
+    "kind": "error",
+    "errorCode": "TRANSPORT"
+  },
+  "status": "turn-did-not-satisfy-search",
+  "guard": "search-only",
+  "startedAt": 1792033964260,
+  "catalogSelectionVerified": true,
+  "providerLabel": "Our Free Model",
+  "promptSubmitted": true,
+  "elapsedMs": 30638,
+  "sessionFlushed": true,
+  "checks": {
+    "followupNeverSubmitted": true,
+    "noSkillFilesCreated": true,
+    "sharedBatchRequests": 12,
+    "thisScenarioRequests": 10,
+    "authorizedBatchLimit": 12,
+    "passed": false
+  }
+}

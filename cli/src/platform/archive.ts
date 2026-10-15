@@ -1,7 +1,7 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { zipSync, unzipSync } from 'fflate'
-import { MAX_PACKAGE_BYTES } from './download'
+import { MAX_PACKAGE_BYTES } from './download.js'
 
 const MAX_ZIP_ENTRIES = 500
 const MAX_SINGLE_FILE_BYTES = 10 * 1024 * 1024

@@ -1,0 +1,31 @@
+{
+  "passed": true,
+  "scope": "Spring test profile with H2 and mocked business services; actual /v3/api-docs, not deployed storage or SaaS",
+  "suites": [
+    {
+      "class": "com.iflytek.skillhub.controller.SkillControllerTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.iflytek.skillhub.controller.cli.CliSkillControllerTest",
+      "tests": 12,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    {
+      "class": "com.iflytek.skillhub.dto.RegistryOpenApiSchemaTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  ],
+  "tests": 27,
+  "generatedSchemaSha256": "548f8909be70eb7cd4f346fe5f0d696d88543881ceb93a7e4a4cd52296a570c5",
+  "generator": "openapi-typescript 7.13.0",
+  "frontendTypecheckPassed": true
+}

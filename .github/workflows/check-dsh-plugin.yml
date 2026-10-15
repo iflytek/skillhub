@@ -1,0 +1,100 @@
+name: Check DSH Plugin
+
+on:
+  workflow_call:
+  push:
+    tags:
+      - 'dsh-v*'
+  pull_request:
+    paths:
+      - 'plugins/dsh/**'
+      - 'cli/**'
+      - '.github/workflows/check-dsh-plugin.yml'
+      - '.github/workflows/release-dsh-plugin.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-dsh-plugin-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check DSH plugin (${{ matrix.os }}, Node ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node: ['24.2.0', '24']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Validate plugin release tag
+        if: github.event_name == 'push'
+        working-directory: plugins/dsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs';
+          const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
+          if (process.env.RELEASE_TAG !== `dsh-v${version}`) {
+            throw new Error('DSH release tag must match plugins/dsh/package.json version');
+          }
+          NODE
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Install shared core development dependencies
+        working-directory: cli
+        run: bun install --frozen-lockfile
+      - name: Install plugin development dependencies
+        working-directory: plugins/dsh
+        run: bun install --frozen-lockfile
+      - name: Check shared CLI
+        working-directory: cli
+        run: |
+          bun run typecheck
+          bun run lint
+          # Native Windows process-based CLI tests can exceed Bun's default 5s.
+          # Keep all assertions and a bounded timeout; POSIX crash tests set their own limits.
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            bun test --timeout=15000
+          else
+            bun test
+          fi
+          bun run build
+      - name: Check plugin and isolated Node tarball
+        working-directory: plugins/dsh
+        run: bun run check
+      - name: Package development artifact
+        working-directory: plugins/dsh
+        run: |
+          mkdir -p artifacts
+          npm pack --ignore-scripts --pack-destination artifacts
+      - name: Verify native DSH Host in an isolated Web Profile
+        working-directory: plugins/dsh
+        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-smoke-summary.json
+      - name: Upload sanitized Host smoke summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillhub-dsh-host-smoke-${{ matrix.os }}-node-${{ matrix.node }}
+          path: plugins/dsh/host-smoke-summary.json
+          if-no-files-found: warn
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skillhub-dsh-development-package-${{ matrix.os }}-node-${{ matrix.node }}
+          path: plugins/dsh/artifacts/*.tgz
+          if-no-files-found: error
+          retention-days: 7

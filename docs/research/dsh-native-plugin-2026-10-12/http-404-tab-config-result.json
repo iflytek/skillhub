@@ -1,0 +1,28 @@
+{
+  "passed": true,
+  "moduleStatus": 404,
+  "results": [
+    {
+      "mode": "show",
+      "persistedAfterReload": false,
+      "appliedWithoutReload": true,
+      "probeRequests": 0,
+      "passed": true
+    },
+    {
+      "mode": "hide",
+      "persistedAfterReload": false,
+      "appliedWithoutReload": true,
+      "probeRequests": 0,
+      "passed": true
+    },
+    {
+      "mode": "auto",
+      "persistedAfterReload": false,
+      "appliedWithoutReload": true,
+      "probeRequests": 2,
+      "passed": true
+    }
+  ],
+  "errors": []
+}

@@ -1,7 +1,10 @@
-import { mkdir, mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
+import { captureInstallInventory } from './inventory-cas'
+import { randomUUID } from 'node:crypto'
+import type { InstallMove, InstallTransactionObserver, InstallTransactionWarning } from './install-transaction'
+import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { SkillHubClient } from '../clients/skillhub-client'
-import { InventoryStore, InventoryVersionConflictError } from '../stores/inventory-store'
+import { InventoryStore, InventoryVersionConflictError, InventoryCommitUnknownError } from '../stores/inventory-store'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 import { extractZip } from '../platform/archive'
@@ -15,8 +18,8 @@ import {
 } from './installed-skill-metadata'
 import type { AgentCandidate } from '../agents/types'
 import type { ResolveResponse } from '../clients/skillhub-client'
-import type { Inventory } from '../stores/inventory-store'
-import { acquireSkillTargetLock } from './skill-target-lock'
+import type { Inventory, InventoryItem } from '../stores/inventory-store'
+import { acquireSkillTargetLock, orderSkillTargetLocks } from './skill-target-lock'
 
 export interface InstallOptions {
   registry: string
@@ -34,11 +37,21 @@ export interface InstallOptions {
   client?: SkillHubClient | undefined
   /** Internal test seam for lock lifecycle failures; production uses acquireSkillTargetLock. */
   acquireTargetLock?: typeof acquireSkillTargetLock
+  transactionObserver?: InstallTransactionObserver
+  /** Internal adapter/test seam; the caller owns the trusted state directory. */
+  inventoryStore?: InventoryStore
+  /** Explicit plan baseline; null requires that the source coordinate is not installed. */
+  expectedInventoryItem?: InventoryItem | null
+  /** Native Host policy guard. Re-read effective policy; rejection must prevent the indicated mutation. */
+  authorizeTargetMutation?: (paths: readonly string[], phase: 'staging' | 'replace' | 'cleanup' | 'rollback') => Promise<void>
+  /** Host format validation after archive/fingerprint checks and before publication. */
+  validateStagedSkill?: (directory: string) => Promise<void>
 }
 
 export interface InstallResult {
   installed: Array<{ agent: string; dir: string }>
   warnings?: string[]
+  transactionWarnings?: InstallTransactionWarning[]
 }
 
 interface StagedInstall {
@@ -93,13 +106,26 @@ async function preflightInstallTargets(
 }
 
 export async function installSkill(options: InstallOptions): Promise<InstallResult> {
-  const store = new InventoryStore(options.home)
+  const store = options.inventoryStore ?? new InventoryStore(options.home)
+  const expectedItem = options.expectedInventoryItem === undefined ? undefined : structuredClone(options.expectedInventoryItem)
   const inventory = await store.read()
+  const identity = { registry: options.registry, namespace: options.namespace, slug: options.slug }
+  if (expectedItem !== undefined) {
+    if (expectedItem && !sameInstalledSkillSource(expectedItem, identity)) throw inventoryChangedError()
+    const expected = await captureInstallInventory({ items: expectedItem ? [expectedItem] : [] }, identity, new Set())
+    if (await captureInstallInventory(inventory, identity, new Set()) !== expected) throw inventoryChangedError()
+  }
   const preparedTargets = await preflightInstallTargets(options.targets, {
     registry: options.registry,
     namespace: options.namespace,
     slug: options.slug
   }, options.force, inventory)
+  const canonicalDirs = new Set(preparedTargets.map(target => target.canonicalSkillDir))
+  const baseline = await captureInstallInventory(inventory, identity, canonicalDirs)
+  const assertInventoryCurrent = async (current: Inventory) => {
+    if (await captureInstallInventory(current, identity, canonicalDirs) !== baseline) throw inventoryChangedError()
+  }
+  await options.transactionObserver?.beforeTargetMutation?.([...canonicalDirs])
   const client = options.client ?? new SkillHubClient(options.registry, options.token)
   const resolved = options.resolved ?? await client.resolve(options.namespace, options.slug, options.version)
   const response = resolved.downloadUrl
@@ -108,11 +134,17 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
   const buffer = await readBoundedResponseBody(response)
 
   const staged: StagedInstall[] = []
+  let preserveStaging = false
   try {
     for (const { target, skillDir, canonicalSkillDir } of preparedTargets) {
+      await options.authorizeTargetMutation?.([target.rootDir], 'staging')
+      const tempDir = join(target.rootDir, `.${options.slug}.install-${randomUUID()}`)
+      await options.transactionObserver?.beforeStaging?.({ canonicalSkillDir, rootDir: target.rootDir, stagingDir: tempDir })
       await mkdir(target.rootDir, { recursive: true })
-      const tempDir = await mkdtemp(join(target.rootDir, `.${options.slug}.install-`))
+      // Non-recursive creation rejects collisions instead of adopting an existing directory.
+      await mkdir(tempDir, { mode: 0o700 })
       try {
+        await options.authorizeTargetMutation?.([tempDir], 'staging')
         await extractZip(buffer, tempDir)
 
         const installedAt = new Date().toISOString()
@@ -125,7 +157,9 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
             next: 'retry the install after the registry release has been verified'
           })
         }
+        await options.validateStagedSkill?.(tempDir)
         const metaDir = join(tempDir, '.skillhub')
+        await options.authorizeTargetMutation?.([metaDir], 'staging')
         await mkdir(metaDir, { recursive: true })
         await writeFile(join(metaDir, 'metadata.json'), JSON.stringify({
           schemaVersion: 1,
@@ -142,27 +176,61 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
         }, null, 2))
         staged.push({ target, skillDir, canonicalSkillDir, tempDir, installedAt, backupDir: null, movedIntoPlace: false })
       } catch (error) {
-        await rm(tempDir, { recursive: true, force: true }).catch(() => {})
+        try {
+          await options.authorizeTargetMutation?.([tempDir], 'cleanup')
+          await rm(tempDir, { recursive: true, force: true })
+        } catch { /* Retain staging if cleanup is denied or fails. */ }
         throw error
       }
     }
 
     const releases: Array<() => Promise<void>> = []
     const warnings: string[] = []
+    const transactionWarnings: InstallTransactionWarning[] = []
+    const observer = options.transactionObserver
+    const warn = (warning: InstallTransactionWarning) => {
+      transactionWarnings.push(warning)
+      warnings.push(`${warning.stage}${warning.path ? ` at ${warning.path}` : ''}: ${warning.message}`)
+    }
+    let inventoryCommitted = false
     const acquireTargetLock = options.acquireTargetLock ?? acquireSkillTargetLock
     try {
-      for (const item of [...staged].sort((left, right) => left.skillDir.localeCompare(right.skillDir))) {
-        releases.push(await acquireTargetLock(item.target.rootDir, options.slug))
+      for (const target of await orderSkillTargetLocks(staged.map(item => item.target), options.slug)) {
+        releases.push(await acquireTargetLock(target.rootDir, options.slug))
       }
 
+      await observer?.beforeTargetMutation?.(staged.map(item => item.canonicalSkillDir))
       const lockedInventory = await store.read()
+      // Preserve the existing first-install conflict result when another installer won the race.
+      if (!options.force) {
+        for (const item of staged) {
+          if (await pathExists(item.skillDir)) {
+            throw new CliError(`skill already installed at ${item.skillDir}`, EXIT.filesystem, {
+              path: item.skillDir,
+              next: 'pass --force to overwrite'
+            })
+          }
+        }
+      }
+      await assertInventoryCurrent(lockedInventory)
       await assertNoPartialVersionChange(lockedInventory, staged, {
         registry: options.registry,
         namespace: options.namespace,
         slug: options.slug
       }, resolved)
 
-      for (const item of staged) {
+      if (observer?.beforePreparation) {
+        await store.withLockedSnapshot(async current => {
+          await assertInventoryCurrent(current)
+          await observer.beforePreparation!({ before: structuredClone(current),
+            release: { registry: options.registry, namespace: options.namespace, slug: options.slug,
+              version: resolved.version, fingerprint: resolved.fingerprint },
+            targets: staged.map(item => ({ agent: item.target.agent, canonicalSkillDir: item.canonicalSkillDir,
+              skillDir: item.skillDir, stagingDir: item.tempDir, installedAt: item.installedAt })) })
+        })
+      }
+
+      for (const [index, item] of staged.entries()) {
         const targetExists = await pathExists(item.skillDir)
         if (!targetExists && options.requireExistingTargets) {
           throw new CliError(`installed target disappeared before upgrade commit: ${item.skillDir}`, EXIT.validation, {
@@ -177,9 +245,14 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
               next: 'pass --force to overwrite'
             })
           }
-          const backupDir = `${item.skillDir}.skillhub-backup-${process.pid}-${Date.now()}`
+          const backupDir = `${item.skillDir}.skillhub-backup-${randomUUID()}`
+          const move: InstallMove = { phase: 'backup', index, agent: item.target.agent,
+            canonicalSkillDir: item.canonicalSkillDir, stagingDir: item.tempDir, backupDir, from: item.skillDir, to: backupDir }
+          await observer?.beforeMove?.({ ...move })
+          await options.authorizeTargetMutation?.([move.from, move.to], 'replace')
           await rename(item.skillDir, backupDir)
           item.backupDir = backupDir
+          await observer?.afterMove?.({ ...move })
           await assertReplaceableInstallation(item.backupDir, item.skillDir, item.canonicalSkillDir, {
             registry: options.registry,
             namespace: options.namespace,
@@ -198,8 +271,13 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
             }
           }
         }
+        const move: InstallMove = { phase: 'install', index, agent: item.target.agent,
+          canonicalSkillDir: item.canonicalSkillDir, stagingDir: item.tempDir, backupDir: item.backupDir, from: item.tempDir, to: item.skillDir }
+        await observer?.beforeMove?.({ ...move })
+        await options.authorizeTargetMutation?.([move.from, move.to], 'replace')
         await rename(item.tempDir, item.skillDir)
         item.movedIntoPlace = true
+        await observer?.afterMove?.({ ...move })
       }
 
       try {
@@ -219,8 +297,13 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
             installedAt: item.installedAt
           })),
           resolved.fingerprint,
-          replacedInstallDirs
+          replacedInstallDirs,
+          async (before, after) => {
+            await assertInventoryCurrent(before)
+            await observer?.beforeInventoryCommit?.({ before, after })
+          }
         )
+        inventoryCommitted = true
       } catch (error) {
         if (error instanceof InventoryVersionConflictError) {
           throw new CliError(error.message, EXIT.validation, {
@@ -232,47 +315,79 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
         throw error
       }
 
+      try { await observer?.afterInventoryCommit?.() }
+      catch (error) { warn({ stage: 'afterInventoryCommit', message: describeError(error) }) }
       for (const item of staged) {
-        if (item.backupDir) await rm(item.backupDir, { recursive: true, force: true }).catch(() => {})
+        if (!item.backupDir) continue
+        const path = item.backupDir
+        let cleanupError: string | undefined
+        try {
+          await options.authorizeTargetMutation?.([path], 'cleanup')
+          await rm(path, { recursive: true, force: true })
+          item.backupDir = null
+        } catch (error) {
+          cleanupError = describeError(error)
+          warn({ stage: 'backupCleanup', path, message: cleanupError })
+        }
+        try {
+          await observer?.cleanupResult?.({ path, removed: cleanupError === undefined,
+            ...(cleanupError === undefined ? {} : { error: cleanupError }) })
+        } catch (error) { warn({ stage: 'cleanupResult', path, message: describeError(error) }) }
       }
     } catch (error) {
-      const rollbackFailures: Array<{ operation: string; path: string; error: string }> = []
-      for (const item of [...staged].reverse()) {
-        if (item.movedIntoPlace) {
-          try {
-            await rm(item.skillDir, { recursive: true, force: true })
-            item.movedIntoPlace = false
-          } catch (rollbackError) {
-            rollbackFailures.push({
-              operation: 'remove replacement',
-              path: item.skillDir,
-              error: describeError(rollbackError)
-            })
-          }
-        }
-        if (item.backupDir) {
-          const backupDir = item.backupDir
-          try {
-            await rename(backupDir, item.skillDir)
-            item.backupDir = null
-          } catch (rollbackError) {
-            rollbackFailures.push({
-              operation: 'restore backup',
-              path: backupDir,
-              error: describeError(rollbackError)
-            })
-          }
-        }
-      }
-      if (rollbackFailures.length > 0) {
-        throw new CliError('installation failed and rollback was incomplete', EXIT.filesystem, {
-          originalError: describeError(error),
-          rollbackFailures,
+      if (error instanceof InventoryCommitUnknownError) {
+        preserveStaging = true
+        throw new CliError('installation commit outcome is unknown; files retained for recovery', EXIT.filesystem, {
+          reason: 'INSTALL_COMMIT_UNKNOWN', recovery: 'unknown',
+          targets: staged.map(item => item.skillDir),
           retainedBackups: staged.flatMap(item => item.backupDir ? [item.backupDir] : []),
-          next: 'restore the retained backup directories before retrying'
+          stagingPaths: staged.map(item => item.tempDir),
+          next: 'verify the inventory and retained directories before retrying'
         })
       }
-      throw error
+      if (inventoryCommitted) {
+        warn({ stage: 'afterInventoryCommit', message: describeError(error) })
+      } else {
+        const rollbackFailures: Array<{ operation: string; path: string; error: string }> = []
+        for (const item of [...staged].reverse()) {
+          if (item.movedIntoPlace) {
+            try {
+              await options.authorizeTargetMutation?.([item.skillDir], 'rollback')
+              await rm(item.skillDir, { recursive: true, force: true })
+              item.movedIntoPlace = false
+            } catch (rollbackError) {
+              rollbackFailures.push({
+                operation: 'remove replacement',
+                path: item.skillDir,
+                error: describeError(rollbackError)
+              })
+            }
+          }
+          if (item.backupDir) {
+            const backupDir = item.backupDir
+            try {
+              await options.authorizeTargetMutation?.([backupDir, item.skillDir], 'rollback')
+              await rename(backupDir, item.skillDir)
+              item.backupDir = null
+            } catch (rollbackError) {
+              rollbackFailures.push({
+                operation: 'restore backup',
+                path: backupDir,
+                error: describeError(rollbackError)
+              })
+            }
+          }
+        }
+        if (rollbackFailures.length > 0) {
+          throw new CliError('installation failed and rollback was incomplete', EXIT.filesystem, {
+            originalError: describeError(error),
+            rollbackFailures,
+            retainedBackups: staged.flatMap(item => item.backupDir ? [item.backupDir] : []),
+            next: 'restore the retained backup directories before retrying'
+          })
+        }
+        throw error
+      }
     } finally {
       for (const release of releases.reverse()) {
         try {
@@ -285,13 +400,25 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
 
     return {
       installed: staged.map(item => ({ agent: item.target.agent, dir: item.skillDir })),
-      warnings
+      warnings,
+      transactionWarnings
     }
   } finally {
     for (const item of staged) {
-      if (!item.movedIntoPlace) await rm(item.tempDir, { recursive: true, force: true }).catch(() => {})
+      if (!preserveStaging && !item.movedIntoPlace) {
+        try {
+          await options.authorizeTargetMutation?.([item.tempDir], 'cleanup')
+          await rm(item.tempDir, { recursive: true, force: true })
+        } catch { /* Recovery must retain paths that policy no longer permits removing. */ }
+      }
     }
   }
+}
+
+function inventoryChangedError(): CliError {
+  return new CliError('installed skill records changed before commit', EXIT.validation, {
+    next: 'reload the installed skill and create a new plan before retrying'
+  })
 }
 
 function describeError(error: unknown): string {

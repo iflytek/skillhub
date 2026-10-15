@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "operationId": "2c9f23be-b87d-46e4-9300-ba43bdde1bc5",
+  "targetCount": 2,
+  "firstTargetHadNewVersionBeforeInterruption": true,
+  "bothTargetsHadBackups": true,
+  "fullInventoryUnchanged": true,
+  "bothOldVersionsRestored": "1.2.0",
+  "allMetadataFileHashesMatch": true,
+  "backupAndStagingAbsent": true,
+  "restorationPersisted": true
+}

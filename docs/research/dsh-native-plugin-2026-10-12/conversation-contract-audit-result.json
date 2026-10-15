@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "platform": "linux",
+  "command": "bun test test/install-tool.test.ts test/search-tool.test.ts test/conversation-install-host.test.ts test/conversation-install-request.test.ts test/install-result.test.ts test/search-result.test.ts test/conversation-selections.test.ts",
+  "cwd": "plugins/dsh",
+  "tests": 26,
+  "assertions": 123,
+  "failures": 0,
+  "supportingEvidence": [
+    "windows-install-card-result.json",
+    "windows-search-card-result.json",
+    "clean-source-reference-result.json",
+    "concurrent-browser-result.json",
+    "concurrent-install-files-result.json"
+  ],
+  "modelInvoked": false
+}

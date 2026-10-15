@@ -1,0 +1,17 @@
+{
+  "passed": true,
+  "installedClientScopedLayoutIsolation": true,
+  "operationReadableWithoutLayout": true,
+  "missingLayoutMessage": true,
+  "restoredNavigationCycles": 2,
+  "browserWrites": 0,
+  "modelInvoked": false,
+  "artifactsMatchWindowsBuild": true,
+  "sha256": {
+    "index.js": "aa4dbe13dbf8abda5fa46c0647d9aac2de38f9c334339fc1cdef9bfa1d51d3e0",
+    "client.js": "bde0b289d3fd0b4c9470558e77855d3d55c022d20a6c2c63cded07f07c7e49a0",
+    "local-core.js": "8f04e4b7cf185cf3b5b20b9033263bfb9332ddc92bdea7493dd43f8c32e0a74b",
+    "typert.host.js": "a9afafb3ad6d09ae1c577c83df74bf1070d3acb6669f96d5657482ab38b0da1e",
+    "typert.remote-client.js": "6e682074796c48167a44a2f364c55f3388058434a21a2e6be2325ddb51dbee90"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "mode": "hide",
+      "persistedAfterReload": true,
+      "probeRequests": 0,
+      "passed": true
+    },
+    {
+      "mode": "show",
+      "persistedAfterReload": true,
+      "probeRequests": 0,
+      "passed": true
+    },
+    {
+      "mode": "auto",
+      "persistedAfterReload": true,
+      "probeRequests": 2,
+      "passed": true
+    }
+  ],
+  "errors": []
+}

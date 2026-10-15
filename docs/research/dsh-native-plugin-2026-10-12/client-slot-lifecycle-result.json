@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "tests": 2,
+  "assertions": 32,
+  "officialSlotRegistry": true,
+  "toolDeclarationCycles": 2,
+  "catalogComponentPreserved": true,
+  "configServiceRemoval": true,
+  "pendingInjectionDisposed": true,
+  "domMounted": false,
+  "modelInvoked": false
+}

@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "visibleConsumers": 2,
+  "requests": 3,
+  "maximumInFlight": 1,
+  "sharedOperation": true,
+  "bothObservedPendingAndCompleted": true,
+  "terminalPollingStopped": true,
+  "browserWrites": 0,
+  "pendingProjectionInjected": true,
+  "modelInvoked": false
+}

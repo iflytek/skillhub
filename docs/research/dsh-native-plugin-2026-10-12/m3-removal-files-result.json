@@ -1,0 +1,12 @@
+{
+  "operationId": "46bcab04-143f-4a15-afc4-2132c4688512",
+  "kind": "uninstall",
+  "phase": "completed",
+  "files": "removed",
+  "targetAbsent": true,
+  "quarantineAbsent": true,
+  "remainingTargetsAtPath": 0,
+  "matchingOperationCount": 1,
+  "inventoryCommitted": true,
+  "cleanupRemoved": true
+}

@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "search": true,
+  "fixedVersionDetail": true,
+  "returnRetainsQuery": true,
+  "focusRestored": true,
+  "emptyAndClear": true,
+  "markdownSafe": true,
+  "optionalTabs": true,
+  "errors": []
+}

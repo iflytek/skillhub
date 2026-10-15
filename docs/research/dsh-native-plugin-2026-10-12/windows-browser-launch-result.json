@@ -1,0 +1,34 @@
+{
+  "platform": "win32",
+  "node": "24.16.0",
+  "dsh": "0.2.0-rc.2",
+  "hostStarted": true,
+  "attempts": [
+    {
+      "browser": "installed Chrome",
+      "passed": false,
+      "stage": "browser launch"
+    },
+    {
+      "browser": "installed Edge",
+      "passed": false,
+      "stage": "browser launch"
+    }
+  ],
+  "reportedError": "DevTools remote debugging requires a non-default data directory. Specify this using --user-data-dir.",
+  "temporaryUserDataArgumentPresent": true,
+  "systemBrowserPolicyChanged": false,
+  "catalogUiVerified": true,
+  "rootCauseEstablished": false,
+  "isolatedBrowserArchive": {
+    "playwrightRevision": "1208",
+    "entries": 290,
+    "crcCheckPassed": true,
+    "separateExtractionPassed": true,
+    "executableBytes": 192078336,
+    "originalInstallerState": "stopped-after-verified-independent-extraction",
+    "browserAcceptance": "catalog passed using independently extracted official archive",
+    "originalInstallerExitCode": 255
+  },
+  "followupEvidence": "windows-catalog-browser-result.json"
+}

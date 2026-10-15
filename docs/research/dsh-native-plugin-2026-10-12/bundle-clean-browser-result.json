@@ -1,0 +1,15 @@
+{
+  "passed": true,
+  "cycles": 2,
+  "nativeBundleToggle": true,
+  "sidebarRemoved": true,
+  "oneSidebarAfterEnable": true,
+  "searchAfterEnable": true,
+  "changes": [
+    200,
+    200,
+    200,
+    200
+  ],
+  "errors": []
+}

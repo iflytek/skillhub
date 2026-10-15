@@ -1,0 +1,63 @@
+{
+  "browser": {
+    "passed": true,
+    "operationId": "09b5973a-e32b-4568-8b91-9968afe544c5",
+    "submissions": 1,
+    "recoveries": 2,
+    "expectedTargets": 2,
+    "historyAfterReload": true,
+    "hostRestartRequested": true,
+    "forcedProcessExit": true,
+    "leaseRefusalAndExplicitRetryVerified": true,
+    "recoveryResponseLossVerified": true,
+    "oldVersionVisible": true,
+    "closeFocusVerified": true,
+    "errors": [],
+    "platform": "win32",
+    "node": "24.16.0",
+    "dsh": "0.2.0-rc.2",
+    "modelInvoked": false
+  },
+  "process": {
+    "boundary": "second-target-backed-up",
+    "oldPid": 104916,
+    "newPid": 107736,
+    "oldExited": true,
+    "oldExitCode": null,
+    "signalRequested": "SIGKILL",
+    "originPreserved": true
+  },
+  "disk": {
+    "passed": true,
+    "targets": [
+      {
+        "scope": "user",
+        "version": "1.2.0",
+        "fingerprintVerified": true,
+        "resourceRestored": true
+      },
+      {
+        "scope": "project",
+        "version": "1.2.0",
+        "fingerprintVerified": true,
+        "resourceRestored": true
+      }
+    ],
+    "inventoryByteIdentical": true,
+    "operationStatus": {
+      "phase": "failed",
+      "files": "failed",
+      "discovery": "unconfirmed",
+      "warnings": [],
+      "recovery": "restored"
+    }
+  },
+  "firstRecoveryDiagnostic": {
+    "runtime": {
+      "state": "ready",
+      "hostInstanceId": "2c503bba-c3a6-4af9-ba41-7d9927f8f1d7",
+      "pendingOperations": 1
+    },
+    "error": "install target is busy: C:\\Users\\admin\\AppData\\Local\\Temp\\skillhub-windows219\\home\\skillhub\\operations\\execution-09b5973a-e32b-4568-8b91-9968afe544c5"
+  }
+}

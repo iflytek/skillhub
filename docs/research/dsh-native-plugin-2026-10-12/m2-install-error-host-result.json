@@ -1,0 +1,22 @@
+{
+  "passed": true,
+  "nativeSkillHubSearch": true,
+  "scopedConversationDetail": true,
+  "installationTargetsQueried": true,
+  "installationTargetsRevalidated": true,
+  "nativeInstallationCompleted": true,
+  "nativeRecoveryCompleted": true,
+  "nativeInstallToolCompleted": true,
+  "searchFixtureTitle": "SkillHub search fixture 31be36ff",
+  "installFixtureTitle": "SkillHub install fixture 3b3a24ce",
+  "installFixtureWorkspace": "tool-install-11659464-aaba-4818-be33-e22457e3cbdc",
+  "installFailureFixtureTitle": "SkillHub failed install fixture 31babc08",
+  "trustedSessionCwd": true,
+  "userAndProjectRead": true,
+  "resourceBasePreserved": true,
+  "projectScopeIsolated": true,
+  "globalScopeExcluded": true,
+  "liveAdditionObserved": true,
+  "liveRemovalObserved": true,
+  "nativeToolContextReceived": true
+}

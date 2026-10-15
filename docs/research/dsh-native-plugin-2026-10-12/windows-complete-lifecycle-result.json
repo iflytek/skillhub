@@ -1,0 +1,35 @@
+{
+  "passed": true,
+  "completeLifecycle": true,
+  "discoveryRefreshVerified": false,
+  "uninstalled": true,
+  "diskStages": [
+    {
+      "version": "1.2.0",
+      "resourceVerified": true,
+      "fingerprintVerified": true,
+      "oneProjectTarget": true
+    },
+    {
+      "version": "1.3.0",
+      "resourceVerified": true,
+      "fingerprintVerified": true,
+      "oneProjectTarget": true
+    }
+  ],
+  "inventoryRestored": true,
+  "installs": 1,
+  "upgrades": 2,
+  "planBeforeExecution": true,
+  "projectTargets": 1,
+  "userTargets": 0,
+  "currentVersion": "1.2.0",
+  "finalVersion": "1.3.0",
+  "reloadNoResubmit": true,
+  "errors": [],
+  "platform": "win32",
+  "node": "24.16.0",
+  "dsh": "0.2.0-rc.2",
+  "browser": "Chromium headless shell revision 1208",
+  "modelInvoked": false
+}

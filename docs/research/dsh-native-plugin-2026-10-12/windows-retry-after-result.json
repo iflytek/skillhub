@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "realRegistry429": true,
+  "waitSeconds": 8,
+  "earlyRetryBlocked": true,
+  "noAutomaticRetry": true,
+  "manualRetryRecovered": true,
+  "queryRetained": true,
+  "registryRequests": 2,
+  "writes": 0,
+  "errors": [],
+  "platform": "win32",
+  "dshVersion": "0.2.0-rc.2",
+  "nodeVersion": "24.16.0",
+  "bunVersion": "1.3.14",
+  "checks": {
+    "passed": 179,
+    "failed": 0,
+    "assertions": 2578
+  },
+  "installedArtifacts": {
+    "lib/client.js": "6c0c35c1e29df6b5243fe8c319666d4296e29485ff7e28da09cc8ba3529a9cc8",
+    "lib/index.js": "aa4dbe13dbf8abda5fa46c0647d9aac2de38f9c334339fc1cdef9bfa1d51d3e0",
+    "lib/typert.host.js": "a9afafb3ad6d09ae1c577c83df74bf1070d3acb6669f96d5657482ab38b0da1e",
+    "lib/typert.remote-client.js": "6e682074796c48167a44a2f364c55f3388058434a21a2e6be2325ddb51dbee90"
+  }
+}

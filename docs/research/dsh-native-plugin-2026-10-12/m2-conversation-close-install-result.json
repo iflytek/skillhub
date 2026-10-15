@@ -1,0 +1,27 @@
+{
+  "passed": true,
+  "nativeToolView": true,
+  "persistedReplay": true,
+  "conversationDetail": true,
+  "scopedAcknowledgment": true,
+  "fixedReferenceAcknowledged": true,
+  "detailModules": true,
+  "initialFocus": true,
+  "backgroundInert": true,
+  "keyboardTabs": true,
+  "tabAssociations": true,
+  "mobile": {
+    "width": 390,
+    "contentWidth": 388,
+    "scrollWidth": 388
+  },
+  "escapeAndClose": true,
+  "focusRestored": true,
+  "staleHistoryRejected": false,
+  "installationVerified": true,
+  "closedDuringInstallation": true,
+  "reloadInstallationVerified": true,
+  "plazaInstallationVerified": false,
+  "installSubmissions": 1,
+  "errors": []
+}

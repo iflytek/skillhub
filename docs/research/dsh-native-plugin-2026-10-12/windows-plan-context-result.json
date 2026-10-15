@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "checks": [
+    {
+      "method": "prepareUpgrade",
+      "foreignSessionRejected": true,
+      "exactExpiryRejected": true,
+      "noOperationAccepted": true
+    },
+    {
+      "method": "prepareUninstall",
+      "foreignSessionRejected": true,
+      "exactExpiryRejected": true,
+      "noOperationAccepted": true
+    }
+  ],
+  "acceptedRetryAfterExpirySameOperation": true,
+  "newKeyAfterExpiryRejected": true,
+  "upgradeCompleted": true,
+  "downloadCount": 2,
+  "clockInjection": "confirmation-store-only",
+  "modelInvoked": false,
+  "platform": "win32",
+  "node": "24.16.0"
+}

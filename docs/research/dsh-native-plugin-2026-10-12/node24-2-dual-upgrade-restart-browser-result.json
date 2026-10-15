@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "operationId": "1dda8199-f3f2-4a14-8b8f-86e504400f41",
+  "submissions": 1,
+  "recoveries": 1,
+  "expectedTargets": 2,
+  "historyAfterReload": true,
+  "hostRestartRequested": true,
+  "recoveryResponseLossVerified": true,
+  "oldVersionVisible": true,
+  "closeFocusVerified": true,
+  "errors": []
+}

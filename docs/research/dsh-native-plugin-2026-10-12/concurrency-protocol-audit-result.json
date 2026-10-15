@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "platform": "linux",
+  "command": "bun test test/unit/integrations/operation-store.test.ts test/unit/services/skill-target-lock.test.ts test/unit/stores/inventory-store.test.ts",
+  "cwd": "cli",
+  "tests": 24,
+  "assertions": 74,
+  "failures": 0,
+  "supportingEvidence": [
+    "install-core-audit-result.json",
+    "concurrent-browser-result.json",
+    "concurrent-install-files-result.json",
+    "windows-plan-context-result.json"
+  ],
+  "limitations": [
+    "Not the full crash recovery matrix.",
+    "Model intent recognition and macOS are not verified by this audit."
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "coldInstall": {
+    "passed": false,
+    "platform": "linux",
+    "node": "24.17.0",
+    "dsh": "0.2.0-rc.2",
+    "pnpm": "10.33.0",
+    "artifactSha256": "cf509970042cdc66f42a4d702a002dc256df10d6c0c24d4d694c4e1f9666c9a5",
+    "modelCalled": false,
+    "probes": [],
+    "stage": "install-host"
+  },
+  "sameIsolatedRootResume": {
+    "passed": false,
+    "resumedAfterNpmNetworkReset": true,
+    "stage": "install-host",
+    "probes": [],
+    "modelCalled": false,
+    "failure": "PROCESS_FAILED"
+  },
+  "hostProbesExecuted": false,
+  "status": "not-passed"
+}

@@ -6858,13 +6858,13 @@ export interface components {
             id?: number;
             version?: string;
             status?: string;
-            changelog?: string;
+            changelog?: string | null;
             /** Format: int32 */
             fileCount?: number;
             /** Format: int64 */
             totalSize?: number;
             /** Format: date-time */
-            publishedAt?: string;
+            publishedAt?: string | null;
             downloadAvailable?: boolean;
             complianceSnapshot?: components["schemas"]["ComplianceSnapshotResponse"];
         };
@@ -8079,13 +8079,13 @@ export interface components {
             requestId?: string;
         };
         CliResolveResponse: {
-            namespace?: string;
-            slug?: string;
-            version?: string;
+            namespace: string;
+            slug: string;
+            version: string;
             /** Format: int64 */
-            versionId?: number;
-            fingerprint?: string;
-            downloadUrl?: string;
+            versionId: number;
+            fingerprint: string;
+            downloadUrl: string;
         };
         ApiResponseCliSearchResponse: {
             /** Format: int32 */
@@ -13942,13 +13942,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Raw packaged file content; SKILL.md is UTF-8, without a JSON envelope */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string;
+                    "application/octet-stream": string;
                 };
             };
         };
@@ -13968,13 +13968,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Raw packaged file content; SKILL.md is UTF-8, without a JSON envelope */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string;
+                    "application/octet-stream": string;
                 };
             };
         };
@@ -13992,14 +13992,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Complete skill archive */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string;
+                    "application/zip": string;
                 };
+            };
+            /** @description Download from the object-storage URL in Location */
+            302: {
+                headers: {
+                    Location: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -14016,14 +14024,22 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description OK */
+            /** @description Complete skill archive */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": string;
+                    "application/zip": string;
                 };
+            };
+            /** @description Download from the object-storage URL in Location */
+            302: {
+                headers: {
+                    Location: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

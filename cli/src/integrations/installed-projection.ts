@@ -1,0 +1,83 @@
+import { lstat, realpath } from 'node:fs/promises'
+import { isAbsolute, join, resolve } from 'node:path'
+import { z } from 'zod'
+import type { InventoryStore } from '../stores/inventory-store'
+import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
+
+import type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget } from './native-contract'
+export type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget } from './native-contract'
+
+const text = z.string().min(1)
+const itemSchema = z.object({ registry: text, namespace: text, slug: text, version: text,
+  fingerprint: z.string().optional(), targets: z.array(z.object({
+    agent: text, rootDir: text, installDir: text, installedAt: text,
+  })) })
+
+/** Read only the selected Registry's DSH records in Host-approved roots; never repair or hash all files. */
+export async function readInstalledProjection(inventory: Pick<InventoryStore, 'read'>, registry: string,
+  targets: readonly InstalledProjectionTarget[]): Promise<InstalledProjection> {
+  const result: InstalledProjection = { items: [], complete: true, issues: [] }
+  const issue = (code: InstalledProjection['issues'][number]) => {
+    result.complete = false
+    if (!result.issues.includes(code)) result.issues.push(code)
+  }
+  let records: unknown[]
+  try {
+    const raw: unknown = await inventory.read()
+    const parsed = z.object({ items: z.array(z.unknown()) }).parse(raw)
+    records = parsed.items
+  } catch { issue('inventory-unreadable'); return result }
+  const roots = targets.map(target => {
+    if (!isAbsolute(target.root)) throw new Error('Installed projection requires absolute Host roots')
+    return { ...target, root: resolve(target.root) }
+  })
+  const seen = new Map<string, InstalledProjectionItem>()
+  for (const record of records) {
+    const parsed = itemSchema.safeParse(record)
+    if (!parsed.success) { issue('invalid-record'); continue }
+    const item = parsed.data
+    if (!sameInstalledSkillSource(item, { registry, namespace: item.namespace, slug: item.slug })) continue
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(item.slug)) { issue('invalid-record'); continue }
+    for (const entry of item.targets) {
+      if (entry.agent !== 'dsh' || !isAbsolute(entry.rootDir)) continue
+      for (const target of roots.filter(target => target.root === resolve(entry.rootDir))) {
+        const path = join(target.root, item.slug)
+        const projected: InstalledProjectionItem = { scope: target.scope, namespace: item.namespace,
+          slug: item.slug, version: item.version, ...(item.fingerprint ? { fingerprint: item.fingerprint } : {}), targetPath: path, state: 'present' }
+        const key = JSON.stringify([target.scope, path, item.namespace, item.slug])
+        const previous = seen.get(key)
+        if (previous) { previous.state = 'mismatch'; issue('invalid-record'); continue }
+        seen.set(key, projected)
+        result.items.push(projected)
+        if (!isAbsolute(entry.installDir) || resolve(entry.installDir) !== path) {
+          projected.state = 'mismatch'; issue('invalid-record'); continue
+        }
+        try {
+          if (await realpath(target.root) !== target.root) throw new Error('Root changed')
+          let directory
+          try { directory = await lstat(path) }
+          catch (error) {
+            if ((error as NodeJS.ErrnoException).code === 'ENOENT') { projected.state = 'missing'; continue }
+            throw error
+          }
+          if (!directory.isDirectory() || await realpath(path) !== path) {
+            projected.state = 'mismatch'; issue('invalid-record'); continue
+          }
+          for (const [file, kind] of [[join(path, '.skillhub'), 'directory'], [join(path, '.skillhub/metadata.json'), 'file'], [join(path, 'SKILL.md'), 'file']] as const) {
+            const stat = await lstat(file)
+            if (kind === 'directory' ? !stat.isDirectory() : !stat.isFile()) throw new Error('Unexpected local file type')
+          }
+          const metadata = await readInstalledSkillMetadata(path)
+          if (metadata.status !== 'valid') { projected.state = 'metadata-invalid'; issue('target-unreadable'); continue }
+          const local = metadata.metadata
+          if (!sameInstalledSkillSource(local, item) || local.version !== item.version || local.agent !== 'dsh'
+            || local.installedAt !== entry.installedAt || local.fingerprint !== item.fingerprint) {
+            projected.state = 'mismatch'; issue('invalid-record')
+          }
+          if (await realpath(path) !== path) throw new Error('Target changed')
+        } catch { projected.state = 'unreadable'; issue('target-unreadable') }
+      }
+    }
+  }
+  return result
+}

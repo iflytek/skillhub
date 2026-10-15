@@ -264,7 +264,8 @@ export async function executeSkillUpgradePlan(
         home: options.home,
         expectedTargetFiles: item.expectedTargetFiles,
         allowTargetDrift: item.allowTargetDrift,
-        requireExistingTargets: true
+        requireExistingTargets: true,
+        expectedInventoryItem: item.inventoryItem
       })
       items.push({
         coordinate: item.coordinate,

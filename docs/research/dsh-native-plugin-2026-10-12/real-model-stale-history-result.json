@@ -1,0 +1,32 @@
+{
+  "passed": true,
+  "realModelHistory": true,
+  "sameOriginalOperation": true,
+  "historicalCompletionPreserved": true,
+  "missingDirectoryDisplayed": true,
+  "cancelWrites": 0,
+  "confirmedCleanupWrites": 1,
+  "installSubmissions": 0,
+  "pageErrors": [],
+  "replayOnly": true,
+  "modelRequestsThisRun": 0,
+  "backupHashesUnchanged": true,
+  "backupFiles": {
+    ".dsh/skills/document-helper/SKILL.md": "fe311233e34e52402542ad88c8e2a5af0af3344194352c084a6e0e037f809362",
+    ".dsh/skills/document-helper/.skillhub/metadata.json": "6f273012901a0b28f3854ccc4b755d80ae9f67e0dd18cf8d15350b9b1c45897b",
+    ".dsh/skills/document-helper/references/note.md": "dfca51c585e7cfc1b85ff660ceb2dabe8a29dbc77f100c596bc357cb7824a0d8"
+  },
+  "inventoryItemsAfterCleanup": 0,
+  "operationCount": 2,
+  "originalInstallOperationId": "50ac6da9-974e-406d-8c7c-3daf99378d70",
+  "cleanupOperationId": "a3d3a494-56d4-4c61-ba65-3b15d82a2ab0",
+  "cleanupStatus": {
+    "phase": "completed",
+    "files": "stale-record-removed",
+    "discovery": "unconfirmed",
+    "warnings": [],
+    "recovery": "not-needed"
+  },
+  "quarantineCreated": false,
+  "limitation": "Host restart changes source revision: original card preserves the receipt but does not verify current inventory; current absence and cleanup were verified through the installed panel."
+}
