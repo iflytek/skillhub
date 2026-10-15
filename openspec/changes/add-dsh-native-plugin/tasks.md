@@ -43,7 +43,7 @@
 - [x] 5.1 运行插件 typecheck/lint/tests/build；共享 CLI 改动运行 make test-cli、make typecheck-cli、make lint-cli、make build-cli。
 - [x] 5.2 完成生命周期分册的并发、故障注入、恢复、响应丢失和完整性验收矩阵。（§7.1 提交边界及 §9 业务场景逐项关联源码测试/实机证据，见 verification.md“生命周期验收场景总表”；平台支持仍单独受 5.4 限制，不声明所有平台全故障组合通过。）
 - [x] 5.3 实际 DSH 浏览器验证导航、Tab 配置、安装、更新检查、升级和卸载；通过插件在测试目录安装并使用至少一个带资源技能。（逐项证据及独立审计见 verification.md“产品浏览器与带资源技能验收”；真实 Registry 模型使用、其他平台/远程与剩余对话验收仍分别保留。）
-- [ ] 5.4 干净 tarball 在 Linux/Windows DSH Web 验证，远程单用户明确在 Host 落盘。macOS 按用户决定延后验证，不阻塞本轮验收，也不计为已支持平台。（当前候选的 Linux/Windows 搜索条目与窄屏实包回归通过；独立远程 Host 等出口仍待验证，见 verification.md。）
+- [ ] 5.4 干净 tarball 在 Linux/Windows DSH Web 验证，远程单用户明确在 Host 落盘。macOS 按用户决定延后验证，不阻塞本轮验收，也不计为已支持平台。（历史 Linux/Windows 搜索条目与窄屏实包回归通过；最终候选 6b998d95 已在独立 Rocky Linux Host 经本机浏览器真实完成用户/项目两范围安装，文件与本机不落盘观测见 remote-host-acceptance-result.json。尚需最终候选 Windows Web 对新增会话依赖及操作详情的针对性回归；Host CI 不代替该浏览器出口。）
 - [x] 5.5 如增补后端接口则完成 API/后端对应检查；不擅自放开匿名审核。（已有路由的 OpenAPI 补齐、27 项后端测试和生成类型核对见 verification.md“后端接口检查任务收口”；无权限策略变更，不替代部署或 SaaS 验收。）
 - [x] 5.6 更新中英文指南、限制/恢复说明、包与平台证据；review 后回写 verification.md。（见 verification.md“双语指南与交付边界审查”；环境及发布门禁继续由 5.4、7.4、9.5、10.x 验收。）
 

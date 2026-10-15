@@ -1,0 +1,278 @@
+{
+  "passed": true,
+  "scope": "A04 remote single-user Host user/project installation",
+  "host": "remote-host-1",
+  "runtime": {
+    "platform": "Linux",
+    "distribution": "Rocky Linux",
+    "node": "24.2.0",
+    "dsh": "0.2.0-rc.2"
+  },
+  "candidate": {
+    "artifactSha256": "6b998d95d4c4022e442a4f063c0fff6db856081c6ff324e8c424a61d53ad9174",
+    "installedFilesMatched": 61,
+    "identityEvidence": "candidate-9d6c91205-result.json"
+  },
+  "browser": {
+    "stage": "complete",
+    "fixture": "document-helper@1.2.0",
+    "browserClicks": true,
+    "installs": 2,
+    "receipts": [
+      {
+        "ok": true,
+        "operationId": "6ce92e31-a49d-4e40-977b-88fcc41b3e01"
+      },
+      {
+        "ok": true,
+        "operationId": "9cf15754-e288-42bd-8569-434e52287778"
+      }
+    ],
+    "observedOperations": [
+      {
+        "operationId": "6ce92e31-a49d-4e40-977b-88fcc41b3e01",
+        "phase": "completed"
+      },
+      {
+        "operationId": "9cf15754-e288-42bd-8569-434e52287778",
+        "phase": "completed"
+      }
+    ],
+    "unexpectedWrites": 0,
+    "downloads": 0,
+    "errors": []
+  },
+  "localFilesystem": {
+    "checks": [
+      {
+        "label": "isolated-user-skills",
+        "before": {
+          "state": "absent"
+        },
+        "after": {
+          "state": "absent"
+        },
+        "path": "<local-test-root>/home/.dsh/skills",
+        "filesystemUnchangedVerified": true
+      },
+      {
+        "label": "isolated-project-skills",
+        "before": {
+          "state": "absent"
+        },
+        "after": {
+          "state": "absent"
+        },
+        "path": "<local-test-root>/workspace/.dsh/skills",
+        "filesystemUnchangedVerified": true
+      },
+      {
+        "label": "isolated-inventory",
+        "before": {
+          "state": "absent"
+        },
+        "after": {
+          "state": "absent"
+        },
+        "path": "<local-test-root>/home/.skillhub/inventory.json",
+        "filesystemUnchangedVerified": true
+      },
+      {
+        "label": "remote-user-path-on-client",
+        "before": {
+          "state": "not-observable",
+          "code": "EACCES"
+        },
+        "after": {
+          "state": "not-observable",
+          "code": "EACCES"
+        },
+        "path": "<remote-test-root>/home/skills/document-helper",
+        "observationStateUnchanged": true,
+        "filesystemUnchangedVerified": false
+      },
+      {
+        "label": "remote-project-path-on-client",
+        "before": {
+          "state": "not-observable",
+          "code": "EACCES"
+        },
+        "after": {
+          "state": "not-observable",
+          "code": "EACCES"
+        },
+        "path": "<remote-test-root>/remote-browser-project/.dsh/skills/document-helper",
+        "observationStateUnchanged": true,
+        "filesystemUnchangedVerified": false
+      },
+      {
+        "label": "actual-user-skill",
+        "before": {
+          "state": "absent"
+        },
+        "after": {
+          "state": "absent"
+        },
+        "path": "<local-user>/.dsh/skills/document-helper",
+        "filesystemUnchangedVerified": true
+      },
+      {
+        "label": "actual-user-inventory",
+        "before": {
+          "state": "file",
+          "sha256": "01e85ba1552dfd11cd3787bf8894288cee277c997de7160bac25f912db8942e4"
+        },
+        "after": {
+          "state": "file",
+          "sha256": "01e85ba1552dfd11cd3787bf8894288cee277c997de7160bac25f912db8942e4"
+        },
+        "path": "<local-user>/.skillhub/inventory.json",
+        "filesystemUnchangedVerified": true
+      },
+      {
+        "label": "actual-project-skill",
+        "before": {
+          "state": "absent"
+        },
+        "after": {
+          "state": "absent"
+        },
+        "path": "<local-project>/.dsh/skills/document-helper",
+        "filesystemUnchangedVerified": true
+      }
+    ],
+    "localMirrorPathsFullyObservable": false,
+    "boundary": "Only listed paths were observed. Privileged same-name remote path mirrors on the client returned EACCES before and after; this proves neither absence nor unchanged contents. Browser cache/profile/output writes were permitted."
+  },
+  "remoteFilesystem": {
+    "verificationMethod": "Independent SSH filesystem inspection after local browser installs; no model or mutation calls",
+    "hostInstanceId": "792d7d0c-5ad7-456f-961e-2408e3c27d8e",
+    "hostIdentityFileSha256": "cd4becc78791524d56abdc2ac89b155c9b8f3ba09bd14b2c85a0b2bb90a9fd60",
+    "hostIdentityUnchangedFromBeforeBrowser": true,
+    "targetCount": 2,
+    "targets": [
+      {
+        "scope": "user",
+        "fullFileCount": 3,
+        "files": [
+          {
+            "path": ".skillhub/metadata.json",
+            "sha256": "5c378eaf7ff794a885d3e31eebbe2fc75fd7f0bd635a2bdb2590fe9ca1ad5a0f",
+            "bytes": 530
+          },
+          {
+            "path": "SKILL.md",
+            "sha256": "fe311233e34e52402542ad88c8e2a5af0af3344194352c084a6e0e037f809362",
+            "bytes": 105
+          },
+          {
+            "path": "references/note.md",
+            "sha256": "dfca51c585e7cfc1b85ff660ceb2dabe8a29dbc77f100c596bc357cb7824a0d8",
+            "bytes": 28
+          }
+        ],
+        "metadataVerified": true,
+        "fingerprintVerified": true,
+        "fingerprint": "sha256:69edbb1c1f9deb4c2861149ffddf2d6116bde07d044673557a438ac2b019a4af",
+        "symlinkFree": true,
+        "path": "<remote-test-root>/home/skills/document-helper"
+      },
+      {
+        "scope": "project",
+        "fullFileCount": 3,
+        "files": [
+          {
+            "path": ".skillhub/metadata.json",
+            "sha256": "fbea6a038dd38b3f7c267925438a605c7aa94b3064d954e47a33664d97af745d",
+            "bytes": 530
+          },
+          {
+            "path": "SKILL.md",
+            "sha256": "fe311233e34e52402542ad88c8e2a5af0af3344194352c084a6e0e037f809362",
+            "bytes": 105
+          },
+          {
+            "path": "references/note.md",
+            "sha256": "dfca51c585e7cfc1b85ff660ceb2dabe8a29dbc77f100c596bc357cb7824a0d8",
+            "bytes": 28
+          }
+        ],
+        "metadataVerified": true,
+        "fingerprintVerified": true,
+        "fingerprint": "sha256:69edbb1c1f9deb4c2861149ffddf2d6116bde07d044673557a438ac2b019a4af",
+        "symlinkFree": true,
+        "path": "<remote-test-root>/remote-browser-project/.dsh/skills/document-helper"
+      }
+    ],
+    "inventoryItems": 1,
+    "inventoryTargets": 2,
+    "inventorySha256": "2fdf6feb9b92a0c413cce5df6bdfbb9f51a8c81de071ab30b014a28de739e197",
+    "operations": [
+      {
+        "operationId": "6ce92e31-a49d-4e40-977b-88fcc41b3e01",
+        "scope": "user",
+        "ownerMatchesFixture": true,
+        "hostIdentityMatches": true,
+        "sourceMatchesFixtureRegistry": true,
+        "initiatedFrom": "plaza",
+        "phase": "completed",
+        "files": "installed",
+        "discovery": "unconfirmed",
+        "warnings": [],
+        "journalSha256": "b9694276c6e3e7aeb3fd4c769ec72b27560dd81f90720200fcbf59bbece75d28"
+      },
+      {
+        "operationId": "9cf15754-e288-42bd-8569-434e52287778",
+        "scope": "project",
+        "ownerMatchesFixture": true,
+        "hostIdentityMatches": true,
+        "sourceMatchesFixtureRegistry": true,
+        "initiatedFrom": "plaza",
+        "phase": "completed",
+        "files": "installed",
+        "discovery": "unconfirmed",
+        "warnings": [],
+        "journalSha256": "3ea94eb75090a7aaee94a2e348dc389f9adb63dedd15e709ad8566b953d3e59f"
+      }
+    ],
+    "operationIdsMatchBrowserReceipts": true,
+    "onlyExpectedOperationJournals": true,
+    "transactionStagingAndBackupPathsChecked": 2,
+    "stagingAndBackupResidueAbsent": true
+  },
+  "screenshots": {
+    "initialAttempt": "Isolated browser HOME lacked Chinese fonts; original screenshots retained outside repository.",
+    "correction": "Read-only revisit using existing local Chinese fonts; zero mutations, zero downloads, no page errors.",
+    "records": [
+      "remote-host-user-detail.png",
+      "remote-host-project-detail.png"
+    ],
+    "visualReview": "Parent session verified both corrected screenshots readable and free of credentials or sensitive paths."
+  },
+  "modelCalled": false,
+  "acceptanceBoundary": [
+    "Remote landing portion of A04 and task 5.4 is verified for this candidate and fixture in both scopes.",
+    "Discovery remains unconfirmed; successful file installation is not model use or discovery confirmation.",
+    "Historical Windows Web evidence uses a different Client and tarball. Six latest CI jobs validate source-commit Host baselines/lifecycle, not final-candidate Windows browser behavior.",
+    "Task 5.4 remains open pending final-candidate Windows Web delta regression; macOS product acceptance remains deferred.",
+    "No publication, SaaS deployment, broad filesystem non-mutation, or seamless automatic Host reconnection guarantee is inferred."
+  ],
+  "remoteCleanup": {
+    "passed": true,
+    "ownershipVerifiedBeforeSignal": true,
+    "signal": "SIGTERM",
+    "ownedHostExited": true,
+    "ownedRegistryExited": true,
+    "ownedPortsNoLongerListening": true,
+    "unrelatedTcpListenersBefore": 26,
+    "unrelatedTcpListenersAfter": 26,
+    "unrelatedTcpListenersMissing": 0,
+    "listenerBaselineScope": "Immediately before cleanup, not before environment preparation",
+    "testDirectoryRetained": true,
+    "runtimeRetained": true,
+    "installedSkillTargetsRetained": true,
+    "diskFreeBytes": 2998743040,
+    "otherProcessesSignaled": false,
+    "evidenceRetained": true
+  }
+}

@@ -4,7 +4,7 @@
 
 当前候选为 `@astron-team/skillhub-dsh@0.0.0-m0`，保持 `private: true`，未发布到 npm。本文描述可供验收的开发版本，不代表已获发布批准。
 
-研发和验收固定 DSH `0.2.0-rc.2`、Cordis `4.0.4`，Node 范围为 `>=24.2.0 <25`。DSH 官方依赖使用精确版本，不声明兼容其他 RC、Alpha 或未来发行版。Linux 和 Windows 已有分项实机证据；最终代码提交 9d6c91205 的六项平台 CI 已通过，报告见[跨平台矩阵](../../../docs/research/dsh-native-plugin-2026-10-12/ci-9d6c91205-result.json)。macOS 产品验证延后，独立远程 Host 尚未验证。
+研发和验收固定 DSH `0.2.0-rc.2`、Cordis `4.0.4`，Node 范围为 `>=24.2.0 <25`。DSH 官方依赖使用精确版本，不声明兼容其他 RC、Alpha 或未来发行版。Linux 和 Windows 已有分项实机证据；最终代码提交 9d6c91205 的六项平台 CI 已通过，报告见[跨平台矩阵](../../../docs/research/dsh-native-plugin-2026-10-12/ci-9d6c91205-result.json)。macOS 产品验证延后，最终候选已通过独立 Rocky Linux 远程 Host 的双范围浏览器安装验证；最新候选 Windows Web 的变化项回归仍待完成。
 
 ## 本次交付
 
@@ -45,7 +45,7 @@
 
 以下事项仍是独立门禁，不因本说明已编写而视为通过：
 
-1. 完成剩余 Linux/Windows 平台与独立远程单用户 Host 验收，核验最终候选的文件落点和上下文归属。
+1. 完成最终候选 Windows Web 的变化项回归；Linux 和独立远程单用户 Host 的双范围安装已通过，证据范围见 acceptance.md。
 2. 基于已通过的最终代码 CI、候选审计和禁用保留数据验证，确定正式支持范围并处置已知宿主限制；未来已有正式前版时再验收跨版本回退和日志兼容。
 3. 确认正式版本和可发布 manifest，核验发布环境及审批规则；创建 tag、推送和 npm 发布均需另行授权。
 4. 发布获批后，从 npm 下载实际包，核对完整性并在干净 DSH 环境完成安装、浏览和技能安装验收。

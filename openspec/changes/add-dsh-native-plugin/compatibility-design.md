@@ -57,7 +57,7 @@ M0 必需能力已有上述分项证据；任务 10.1/10.5 的最终结论仍须
 
 - 最终提交的 Linux/Windows 平台 CI 完成并保留产物；macOS 产品验收继续后置，不因 CI 通过自动声明支持。
 - 对历史 Linux 基线偶发断言和 Windows 间歇安装失败形成明确处置记录：补充可核验归因与修复证据，或明确影响范围、剩余风险及发布决策。后续成功不作为问题已解决的证明。原记录见 verification.md 的“已安装 Profile 的真实宿主版本往返”和“兼容性实现任务统一审计”。
-- 独立远程 Host、当前服务端部署及实际发布包的缺口继续按 [验收门禁](acceptance.md) 跟踪，不由本表豁免。
+- 独立远程 Host 的双范围浏览器安装已通过（[远程验收](../../../docs/research/dsh-native-plugin-2026-10-12/remote-host-acceptance-result.json)）；最终候选 Windows Web、当前服务端部署及实际发布包的缺口继续按 [验收门禁](acceptance.md) 跟踪，不由本表豁免。
 
 ### 1.5 历史失败处置状态
 
