@@ -1,0 +1,53 @@
+{
+  "commit": "957c4737b8b237c4acbebb500433ff96b91518e1",
+  "workflow": "https://github.com/iflytek/skillhub/actions/runs/38691150641",
+  "scope": "Linux completed jobs only; not an overall matrix result",
+  "reports": [
+    {
+      "artifact": "skillhub-dsh-host-smoke-ubuntu-latest-node-24",
+      "summary": {
+        "passed": true,
+        "platform": "linux",
+        "node": "24.21.0",
+        "dsh": "0.2.0-rc.2",
+        "pnpm": "10.33.0",
+        "artifactSha256": "c2ffb00ba8aa66466fdb33b81c8e5cb35c0a0bc7c1398a60296583ca658d8dbd",
+        "modelCalled": false,
+        "probes": [
+          {
+            "name": "runtime-baseline",
+            "passed": true
+          },
+          {
+            "name": "plugin-lifecycle",
+            "passed": true
+          }
+        ],
+        "stage": "complete"
+      }
+    },
+    {
+      "artifact": "skillhub-dsh-host-smoke-ubuntu-latest-node-24.2.0",
+      "summary": {
+        "passed": true,
+        "platform": "linux",
+        "node": "24.2.0",
+        "dsh": "0.2.0-rc.2",
+        "pnpm": "10.33.0",
+        "artifactSha256": "c2ffb00ba8aa66466fdb33b81c8e5cb35c0a0bc7c1398a60296583ca658d8dbd",
+        "modelCalled": false,
+        "probes": [
+          {
+            "name": "runtime-baseline",
+            "passed": true
+          },
+          {
+            "name": "plugin-lifecycle",
+            "passed": true
+          }
+        ],
+        "stage": "complete"
+      }
+    }
+  ]
+}

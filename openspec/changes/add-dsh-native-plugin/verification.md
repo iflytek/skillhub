@@ -2464,3 +2464,5 @@ compatibility-design.md §1.4 将发行/生成器、Bundle、Client/Remote、工
 提交 957c4737b 的 DCO 检查通过；[三平台 CLI 工作流](https://github.com/iflytek/skillhub/actions/runs/38691150529)全部通过。[DSH 工作流](https://github.com/iflytek/skillhub/actions/runs/38691150641)的 Linux 两个 Node 版本均通过，包含隔离 Web Profile 的真实 Host 冒烟；Windows 仍在执行。macOS 共享 CLI 通过，但插件构建的官方生成器将临时根解析成 /private/var，源文件仍使用 /var，触发 TS6059。
 
 在 Linux 将 TMPDIR 指向符号链接目录，修复前稳定复现同一错误；build.ts 将 mkdtemp 返回的 staging 根目录经 realpath 规范化，编译选项和类型检查不变。相同输入下完整 check 通过：构建、typecheck、lint、198 项测试及 3110 次断言。真实 macOS 的修复提交仍待远端确认，不据本机模拟宣布平台支持。
+
+已下载上述 Linux 两个任务的 sanitized Host 报告并归档为 [CI Linux 结果](../../../docs/research/dsh-native-plugin-2026-10-12/ci-linux-957c4737b-result.json)：Node 24.2.0 与 24.21.0 均完成 runtime-baseline/plugin-lifecycle，未调用模型，包摘要一致。报告仅代表提交 957c4737b 的两个 Linux 任务，不代表整个矩阵或后续构建修复提交。
