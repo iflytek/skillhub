@@ -112,7 +112,12 @@ export function apply(ctx) {
 const referencePatch = values.probe === 'plugin-coexistence'
   ? '- id: skillhub\n  config:\n    apiBase: http://127.0.0.1:43219\n    webBase: http://127.0.0.1:43219\n    timeoutMs: 1000\n' : '';
 await writeFile(patch, `${diagnosticPatch}${referencePatch}- id: m0-observer\n  disabled: true\n- id: skillhub-local-runtime-probe\n  disabled: true\n- id: ${installedLoaderId}\n  config:\n    registryUrl: http://127.0.0.1:43219\n- insert:\n    - id: skillhub-probe-${id}\n      name: ${JSON.stringify(observer)}\n      config: ${JSON.stringify(config)}\n`);
-const env = { ...process.env, HOME: join(root, 'native-install-home'), USERPROFILE: join(root, 'native-install-home'),
+// Pin every spelling used by Node to the parent-validated temporary directory.
+// Windows process.env is case-insensitive in the main thread, but not in Workers.
+const inherited = Object.fromEntries(Object.entries(process.env)
+  .filter(([key]) => !['TEMP', 'TMP', 'TMPDIR'].includes(key.toUpperCase())));
+const env = { ...inherited, TEMP: temporary, TMP: temporary, TMPDIR: temporary,
+  HOME: join(root, 'native-install-home'), USERPROFILE: join(root, 'native-install-home'),
   DSH_HOME: join(root, 'home'), DSH_AGENTS_HOME: join(root, 'agents'), DSH_TELEMETRY_DISABLED: '1', DSH_PROBE_SKIP_DISCOVERY: '1',
   DSH_RUNTIME_PROBE_STATUS: observerStatusFile,
   DSH_FIXTURE_NAMESPACE: `probe-${id}`, DSH_FIXTURE_CATALOG_SCROLL: '0', DSH_FIXTURE_UPDATE_STATE: state,

@@ -1,0 +1,55 @@
+{
+  "commit": "2183b8d7725a93eabd9a0176c366dd981d3205c4",
+  "run": "https://github.com/iflytek/skillhub/actions/runs/38703286796",
+  "windowsReports": [
+    {
+      "passed": false,
+      "platform": "win32",
+      "node": "24.21.0",
+      "dsh": "0.2.0-rc.2",
+      "pnpm": "10.33.0",
+      "artifactSha256": "213d52d32b8b18d1bcd16454c9965e3da455ee12ddb5f6013b02a3bff616919b",
+      "modelCalled": false,
+      "probes": [],
+      "stage": "runtime-baseline",
+      "failure": "PROCESS_FAILED",
+      "probeFailure": {
+        "stage": "host-assertion",
+        "code": "HOST_ASSERTION_FAILED",
+        "observer": "validation-failed",
+        "validation": "temporary-containment",
+        "dependencies": {
+          "loader": true,
+          "pluginPackages": true,
+          "clientModules": false,
+          "skillhub": false
+        }
+      }
+    },
+    {
+      "passed": false,
+      "platform": "win32",
+      "node": "24.2.0",
+      "dsh": "0.2.0-rc.2",
+      "pnpm": "10.33.0",
+      "artifactSha256": "213d52d32b8b18d1bcd16454c9965e3da455ee12ddb5f6013b02a3bff616919b",
+      "modelCalled": false,
+      "probes": [],
+      "stage": "runtime-baseline",
+      "failure": "PROCESS_FAILED",
+      "probeFailure": {
+        "stage": "host-assertion",
+        "code": "HOST_ASSERTION_FAILED",
+        "observer": "validation-failed",
+        "validation": "temporary-containment",
+        "dependencies": {
+          "loader": true,
+          "pluginPackages": true,
+          "clientModules": true,
+          "skillhub": true
+        }
+      }
+    }
+  ],
+  "conclusion": "Both Windows jobs failed observer temporary-containment validation. Runtime cause remains unconfirmed."
+}
