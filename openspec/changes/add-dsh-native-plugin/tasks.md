@@ -66,6 +66,7 @@
 - [x] 7.2 实现 openConversationDetail/acknowledgeConversationDetail 与原搜索引用到已查看固定版本的关联；多版本歧义阻断，不静默解析 latest。（实现及定向测试已补齐早期验证记录中的缺口，见“交付缺口核对”。）
 - [x] 7.3 安装工具仅返回 accepted；结果卡片从共享 OperationStore/getOperation 展示终态，历史来源、主机、时间来自原快照。（接受成功仅为 accepted；拒绝为 not-confirmed，见“交付缺口核对”。）
 - [ ] 7.4 按 acceptance.md 逐组留证；阶段顺序以 implementation-design.md 第 9 节为准，日志恢复不后置到写入口上线以后。
+- [ ] 7.5 补齐 lifecycle-design.md §9 与 interface-design.md §5.2 的操作结果展示：核验并提供受影响目标、旧新版本及安全告警信息，覆盖双目标升级与重启后的历史查询。当前 NativeOperation 只有汇总 targetLabel、version 和 warningCount，不能据此认定逐目标结果已完成；不得透传事务内部路径或原始异常，也不得将当前清单状态冒充原操作结果。
 
 
 ## 8. 原生机制落地检查
