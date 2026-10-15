@@ -2473,3 +2473,14 @@ compatibility-design.md §1.4 将发行/生成器、Bundle、Client/Remote、工
 上述 Windows 两个 CI 任务持续停留在 Registry adapter 测试。使用官方 npm 分发并核验 integrity 的 Bun 1.3.13，在 Windows 隔离环境复现：请求超时、NETWORK_ERROR 及稍后重试均通过，finally 中 server.stop(true) 等待未完成的测试响应而不返回。局部诊断显式释放该响应后通过。取消已确认停滞的远端运行，取得日志确认同一位置；不是因观察超时直接重启任务。
 
 测试夹具仅在 finally 显式释放 headers 阶段悬挂响应后再关闭服务，保留超时、重试与用户取消断言。未更改 RegistryAdapter 或升级 CI Bun。精确 Windows Bun 1.3.13 定向检查 22 项通过、40 次断言；修复版完整 check 的 build/typecheck/lint 及 198 项测试、3110 次断言全部通过，整轮约 61 秒。macOS 的构建路径修复与此测试收尾修复将一并推送后重跑矩阵。
+
+
+## CI 解包、进程就绪与真实 Host 临时目录修正
+
+提交 836ef7b2f 的 [DSH 工作流](https://github.com/iflytek/skillhub/actions/runs/38694353272)中，Linux 两个 Node 组合通过；macOS 构建和插件测试通过，原 TS6059 已消除；Windows Registry 测试正常结束，原 Bun 1.3.13 关闭停滞已消除。新失败分别为 GNU tar 将 Windows 盘符当作远端地址、测试在 PowerShell 冷启动完成前到达两秒限时，以及真实 Host 探针将 canonical root 与别名 tmpdir 比较。
+
+包外核心测试改在临时目录内以相对 tarball 文件名解包，仍核对实际包内容和执行行为；进程树测试等待孙进程 ready 后取消，继续验证私有输出和孙进程不会遗留，原独立 cleanup deadline 测试保留。Host 基线和生命周期 fixture 对 root/tmpdir 统一 realpath，包含与 DSH_HOME 安全断言不变。
+
+真实 Linux Host 以符号链接 TMPDIR 复现原包含断言失败；修复后相同环境的 runtime-baseline 及两轮 plugin-lifecycle 通过，未调用模型。两 fixture lint 和差异检查通过。该模拟不能替代修复提交的真实 macOS CI，且不改变 macOS 产品验收后置决定。
+
+Windows 使用精确 Bun 1.3.13、Git Bash GNU tar 前置 PATH 运行两个受影响测试文件：7 项通过、162 次断言；Linux 相同范围及 typecheck/lint 通过。保持断言，不以平台跳过或工具版本升级替代修复。

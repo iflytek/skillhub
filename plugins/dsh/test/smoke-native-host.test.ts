@@ -44,23 +44,41 @@ test('accepts exactly one candidate and rejects ambiguous directories', async ()
   await expect(selectTarball(join(directory, 'plain.txt'))).rejects.toThrow('.tgz');
 });
 
-test('bounded process runner keeps raw output private and terminates an unresponsive child', async () => {
+test('bounded process runner keeps raw output private and cancels a running process tree', async () => {
   const directory = await root();
   const script = join(directory, 'child.mjs');
   const log = join(directory, 'private.log');
+  const ready = join(directory, 'grandchild-ready');
   const orphanMarker = join(directory, 'orphan-survived');
   const grandchild = join(directory, 'grandchild.mjs');
   await writeFile(grandchild, `import { writeFileSync } from 'node:fs';
+    writeFileSync(${JSON.stringify(ready)}, 'ready');
     setTimeout(() => writeFileSync(${JSON.stringify(orphanMarker)}, 'unexpected'), 3000);`);
   await writeFile(script, `import { spawn } from 'node:child_process';
+    console.log('private-output');
     spawn(process.execPath, [${JSON.stringify(grandchild)}], { stdio: 'ignore' });
-    console.log('private-output'); setInterval(() => {}, 1000);`);
-  await expect(runBounded([script], { cwd: directory, env: process.env, log, timeoutMs: 2000 }))
-    .rejects.toThrow('deadline');
-  expect(await readFile(log, 'utf8')).toContain('private-output');
-  await new Promise(resolve => setTimeout(resolve, 2000));
-  await expect(access(orphanMarker)).rejects.toThrow();
-}, 10000);
+    setInterval(() => {}, 1000);`);
+  const controller = new AbortController();
+  const result = runBounded([script], { cwd: directory, env: process.env, log,
+    timeoutMs: 15000, signal: controller.signal }).then(() => undefined, (error: unknown) => error);
+  try {
+    const deadline = Date.now() + 10000;
+    let started = false;
+    while (Date.now() < deadline) {
+      try { await access(ready); started = true; break; }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    expect(started).toBe(true);
+    controller.abort();
+    const error = await result;
+    if (!(error instanceof Error)) throw new Error('Expected process cancellation to reject');
+    expect(error.message).toContain('deadline');
+    expect(await readFile(log, 'utf8')).toContain('private-output');
+    await new Promise(resolve => setTimeout(resolve, 3500));
+    await expect(access(orphanMarker)).rejects.toThrow();
+  } finally { controller.abort(); await result; }
+}, 30000);
 
 test('failed tree termination cannot make the runner wait indefinitely for child exit', async () => {
   const directory = await root();

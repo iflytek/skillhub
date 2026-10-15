@@ -42,7 +42,7 @@ test('published tarball core installs and reconciles under Node outside the repo
     expect(manifest[0]!.files.some(file => file.path === 'lib/local-core.js')).toBe(true);
     expect(manifest[0]!.files.some(file => file.path === 'README.en.md')).toBe(true);
     expect(manifest[0]!.files.some(file => file.path.startsWith('node_modules/') || file.path.startsWith('cli/'))).toBe(false);
-    const extract = Bun.spawn(['tar', '-xzf', join(root, manifest[0]!.filename), '-C', root], { stdout: 'pipe', stderr: 'pipe' });
+    const extract = Bun.spawn(['tar', '-xzf', manifest[0]!.filename, '-C', '.'], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
     expect(await extract.exited, await new Response(extract.stderr).text()).toBe(0);
     await writeFile(join(root, 'fixture.json'), JSON.stringify({ fingerprint: `sha256:${aggregate.digest('hex')}`,
       zip: Buffer.from(zipSync(Object.fromEntries(Object.entries(files).map(([path, content]) => [path, new TextEncoder().encode(content)])))).toString('base64') }));

@@ -1,6 +1,7 @@
 // Temporary Host observer; never included in the published plugin.
 // Copy outside the package before loading: DSH associates local modules with their owning manifest.
 import assert from 'node:assert/strict';
+import { realpathSync } from 'node:fs';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
@@ -10,8 +11,8 @@ import { pathToFileURL } from 'node:url';
 export const inject = ['loader', 'pluginPackages', 'clientModules', 'skillhub'];
 
 export function apply(ctx, config) {
-  const root = resolve(config.root);
-  const rel = relative(resolve(tmpdir()), root);
+  const root = realpathSync(resolve(config.root));
+  const rel = relative(realpathSync(tmpdir()), root);
   assert(rel && !rel.startsWith('..') && !isAbsolute(rel));
   assert.equal(process.env.DSH_HOME, join(root, 'home'));
   const timer = setTimeout(() => {

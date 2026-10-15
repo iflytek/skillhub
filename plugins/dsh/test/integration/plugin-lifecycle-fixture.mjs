@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { realpathSync } from 'node:fs';
 import { realpath, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, relative, isAbsolute } from 'node:path';
@@ -7,8 +8,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 // Do not inject skillhub: this observer must survive its disposal.
 export const inject = ['loader', 'tools', 'clientModules', 'pluginManager'];
 export function apply(ctx, config) {
-  const root = resolve(config.root);
-  const rel = relative(resolve(tmpdir()), root);
+  const root = realpathSync(resolve(config.root));
+  const rel = relative(realpathSync(tmpdir()), root);
   assert(rel && !rel.startsWith('..') && !isAbsolute(rel));
   assert.equal(process.env.DSH_HOME, join(root, 'home'));
   const events = [];
