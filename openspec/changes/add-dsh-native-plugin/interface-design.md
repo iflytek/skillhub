@@ -86,9 +86,9 @@ interface SkillHubPluginConfig {
 | 方法 | 输入 | 输出 | 约束 |
 | --- | --- | --- | --- |
 | `getCompatibility` | 无 | dependencyBaseline、candidateDshVersion、localWritesAllowed | 只读检查 Host 实际解析的依赖包与固定 peers 是否一致；matched 不代表完整平台/宿主验收通过，localWritesAllowed 仅表示通过该依赖门禁 |
-| `getContext` | 无 | sourceRevision、来源标签、可用目标、Tab 展示规则 | 路径由 Host 持有，Client 只得 label/token |
+| `getContext` | 无 | sourceRevision、registryUrl、configured、detailTabs | 返回已规范化的来源与配置；安装目标另由 listInstallTargets 查询 |
 | `listSkills` | sourceRevision,q | items,total,returned,limit | limit 首版固定 20，不接任意 Registry URL |
-| `getSkillDetail` | sourceRevision,namespace,slug,version | detailToken,skillId,精确版本,说明状态,各模块状态 | 使用列表选定的精确版本重新读取，不静默切换 latest |
+| `getSkillDetail` | sourceRevision,namespace,slug,version | SkillDetail（含 detailToken、versionId、精确版本、说明及模块状态） | 使用列表选定的精确版本重新读取，不静默切换 latest |
 | `openConversationDetail` | selectionRef | detailToken、固定版本 selectionRef、DetailSnapshot | 校验原搜索上下文；不写技能文件 |
 | `acknowledgeConversationDetail` | 固定版本 selectionRef、detailToken | 展示关联确认 | 仅同会话 Client 可确认；关联原搜索引用，不代表安装授权 |
 | `getInstalledDetail` | sourceRevision,itemKey | 本地身份/版本/目标，远端可用时补精确版本详情 | Host 解析记录；离线返回 local-only，不切到最新版 |
@@ -111,51 +111,64 @@ interface SkillHubPluginConfig {
 
 安装请求 mode 为 new/retry，initiatedFrom 为 plaza/conversation。requestKey、hostInstanceId、operationId 使用 UUID；详情和目标引用非空且最长 2048 字符，不允许额外字段。Host 校验原始请求，避免生成器的对象解码丢弃多余字段后绕过检查。参数冲突返回 skillhub/request-conflict，Host 身份变化返回 skillhub/context-stale，非法输入返回 skillhub/invalid-installation-request；底层文件路径和原始异常不透传。NativeOperation 只包含公开状态及原始上下文，不包含 ownerId、目标路径、请求摘要或事务快照。
 
-## 5. 核心数据模型（拟议）
+## 5. 核心数据模型
+
+### 5.1 详情与已安装列表
+
+以下字段对应 `plugins/dsh/src/host/types.ts`；展示状态由 Client 根据这些响应推导，不增加未实际返回的 origin、installable 或 completeness 字段。
 
 ```ts
-type SkillIdentity = {
-  sourceRevision: string
-  namespace: string
-  slug: string
-}
+type ModuleAvailability = 'hidden' | 'available' | 'anonymous-denied' | 'unknown'
 
-type ModuleResult<T> =
-  | { state: 'ready'; data: T }
-  | { state: 'empty' }
-  | { state: 'hidden' }
-  | { state: 'unavailable'; reason: 'unsupported' | 'anonymous-denied' | 'unknown' }
-  | { state: 'error'; error: PluginError }
-
-type DetailSnapshot = SkillIdentity & {
+interface SkillDetail {
   detailToken: string
-  version: string
-  versionId?: number // local-only 时无远端 ID
-  origin: 'remote' | 'local-only'
-  installable: boolean // local-only 为 false，远端重新核验后才可安装
-  skillId?: number
   title: string
   summary: string
-  documentation: ModuleResult<string>
-}
-
-type InstalledItem = {
-  itemKey: string
   namespace: string
   slug: string
   version: string
-  scope: 'user' | 'project'
-  targetLabel: string
-  localState: 'present' | 'missing' | 'inconsistent' | 'unverified'
-  discovery: 'confirmed' | 'unconfirmed' | 'failed'
+  versionId: number
+  tabs: {
+    versions: ModuleAvailability
+    securityAudit: ModuleAvailability
+    reviews: ModuleAvailability
+  }
+  documentation:
+    | { state: 'ready'; content: string }
+    | { state: 'error'; reason: string; retryable: boolean }
 }
 
-type InstalledList = {
-  items: InstalledItem[]
-  completeness: 'complete' | 'partial'
-  issues: PluginError[]
+interface InstalledSkillList {
+  items: Array<{
+    itemKey: string
+    namespace: string
+    slug: string
+    version: string
+    scope: 'user' | 'project'
+    state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'
+  }>
+  complete: boolean
+  issues: string[]
+  unavailable: Array<'user' | 'project'>
 }
 
+interface InstalledSkillDetail {
+  item: InstalledSkillList['items'][number]
+  content:
+    | { state: 'ready'; detail: SkillDetail }
+    | { state: 'local-only'; reason: string }
+}
+```
+
+`complete=false` 或 unavailable 非空表示清单读取不完整，不能据此推断技能不存在并允许重新安装。metadata-invalid、mismatch、unreadable 分别表示元数据无效、记录不一致、读取失败，UI 不将它们折叠为未安装。已安装列表不携带发现结论；发现结果从原操作的只读核验取得。
+
+local-only 返回本地条目与原因，不签发安装 detailToken；取得可安装详情必须重新完成远端精确版本解析。
+
+### 5.2 操作状态设计
+
+下列为操作状态的设计模型；实际 Remote 返回为 §9 所述 NativeOperation。逐目标结果、版本前后值及告警详情不能仅凭下面的设计字段认定已实现，须与共享契约和验收证据核对。
+
+```ts
 type PluginError = {
   code: string
   message: string
@@ -194,7 +207,7 @@ type MutationOperation = {
 }
 ```
 
-local-only 详情的 detailToken 只供只读关联；startInstall 必须拒绝其提交，待远端 resolve 核验后签发可安装快照。
+local-only 详情不能提交 startInstall；只有远端 resolve 核验后签发的 detailToken 才可进入安装预检。
 
 detailToken 是 Host 保存的快照引用，绑定来源、身份、精确版本、fingerprint；targetToken 绑定规范化安装目标及必要项目上下文。本地只读快照无 fingerprint 时不得创建安装计划。均不是身份凭证。Host 必须校验 token 归属与生命周期，拒绝前端修改的版本、路径和 URL；不把服务器下载链接暴露给 Client。
 
