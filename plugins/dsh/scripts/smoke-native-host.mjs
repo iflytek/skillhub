@@ -103,6 +103,10 @@ export function safeProbeFailure(log, probe) {
         const observer = result.diagnostics.observer?.stage;
         const states = ['imported', 'applied', 'validation-failed', 'validated', 'running', 'completed', 'assertion-failed'];
         safe.observer = states.includes(observer) ? observer : 'not-observed';
+        const validation = result.diagnostics.observer?.validation;
+        if (['root-realpath', 'temporary-realpath', 'temporary-containment', 'home-identity'].includes(validation)) {
+          safe.validation = validation;
+        }
         safe.dependencies = {};
         for (const name of ['loader', 'pluginPackages', 'clientModules', 'skillhub']) {
           const present = result.diagnostics.dependencies?.[name];

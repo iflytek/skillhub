@@ -155,6 +155,15 @@ try {
   while (!abort.signal.aborted) {
     abort.signal.throwIfAborted();
     if (children.some(child => child.ended)) fail('CHILD_EXITED', 'Probe process exited before completion; inspect private run logs.');
+    if (runtimeProbe) {
+      let marker;
+      try { marker = JSON.parse(await readFile(observerStatusFile, 'utf8')); }
+      catch (error) { if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error; }
+      if (marker?.stage === 'validation-failed') {
+        stage = 'host-assertion';
+        fail('HOST_ASSERTION_FAILED', 'Host observer rejected the fixture; inspect private run logs.');
+      }
+    }
     let report;
     try { report = JSON.parse(await readFile(resultFile, 'utf8')); }
     catch (error) { if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error; }

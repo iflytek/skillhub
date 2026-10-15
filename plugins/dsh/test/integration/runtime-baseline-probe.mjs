@@ -8,9 +8,9 @@ import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-function mark(stage) {
+function mark(stage, validation) {
   if (!process.env.DSH_RUNTIME_PROBE_STATUS) return;
-  try { writeFileSync(process.env.DSH_RUNTIME_PROBE_STATUS, JSON.stringify({ stage })); }
+  try { writeFileSync(process.env.DSH_RUNTIME_PROBE_STATUS, JSON.stringify({ stage, validation })); }
   catch { /* Diagnostics must not replace the actual probe result. */ }
 }
 mark('imported');
@@ -20,12 +20,16 @@ export const inject = ['loader', 'pluginPackages', 'clientModules', 'skillhub'];
 export function apply(ctx, config) {
   mark('applied');
   let root;
+  let validation = 'root-realpath';
   try {
     root = realpathSync(resolve(config.root));
+    validation = 'temporary-realpath';
     const rel = relative(realpathSync(tmpdir()), root);
+    validation = 'temporary-containment';
     assert(rel && !rel.startsWith('..') && !isAbsolute(rel));
+    validation = 'home-identity';
     assert.equal(process.env.DSH_HOME, join(root, 'home'));
-  } catch (error) { mark('validation-failed'); throw error; }
+  } catch (error) { mark('validation-failed', validation); throw error; }
   mark('validated');
   const timer = setTimeout(() => {
     mark('running');

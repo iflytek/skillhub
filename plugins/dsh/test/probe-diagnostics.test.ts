@@ -21,10 +21,10 @@ test('probe diagnostics expose only fixed stage and code from the requested prob
 
 test('observer diagnostics whitelist states and exact dependency booleans', () => {
   const base = { passed: false, probe: 'runtime-baseline', stage: 'host-result', failureCode: 'HOST_RESULT_TIMEOUT' };
-  expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { observer: { stage: 'validation-failed', path: 'secret' },
+  expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { observer: { stage: 'validation-failed', validation: 'home-identity', path: 'secret' },
     dependencies: { loader: true, pluginPackages: false, clientModules: true, skillhub: false, secret: 'private' } } }), 'runtime-baseline'))
-    .toEqual({ stage: 'host-result', code: 'HOST_RESULT_TIMEOUT', observer: 'validation-failed',
+    .toEqual({ stage: 'host-result', code: 'HOST_RESULT_TIMEOUT', observer: 'validation-failed', validation: 'home-identity',
       dependencies: { loader: true, pluginPackages: false, clientModules: true, skillhub: false } });
-  expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { observer: { stage: 'private' }, dependencies: { skillhub: 'secret' } } }), 'runtime-baseline'))
+  expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { observer: { stage: 'private', validation: 'private-path' }, dependencies: { skillhub: 'secret' } } }), 'runtime-baseline'))
     .toEqual({ stage: 'host-result', code: 'HOST_RESULT_TIMEOUT', observer: 'not-observed', dependencies: {} });
 });
