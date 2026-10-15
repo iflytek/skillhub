@@ -21,12 +21,19 @@ const probes = {
   'plan-context': 'plan-context-result.json',
   'plan-source': 'plan-source-result.json',
 };
+let stage = 'setup';
+let selectedProbe;
+let failureCode = 'PROBE_FAILED';
+function fail(code, message) { failureCode = code; throw new Error(message); }
+async function main() {
 const { values } = parseArgs({ options: { root: { type: 'string' }, probe: { type: 'string' }, help: { type: 'boolean' } } });
 if (values.help) {
   console.log(`node scripts/probe-host.mjs --root <prepared temporary DSH root> --probe <${Object.keys(probes).join('|')}>`);
   process.exit(0);
 }
 if (!values.root || !Object.hasOwn(probes, values.probe ?? '')) throw new Error('Specify --root and a supported --probe; see --help.');
+selectedProbe = values.probe;
+stage = 'validate-root';
 const root = await realpath(resolve(values.root));
 const temporary = await realpath(tmpdir());
 const rel = relative(temporary, root);
@@ -35,6 +42,7 @@ for (const directory of ['home', 'native-install-home', 'agents']) {
   const actual = await realpath(join(root, directory));
   if (!actual.startsWith(root + sep)) throw new Error('State directories must remain inside the temporary root.');
 }
+stage = 'prepare-fixture';
 const pluginRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const fixtureRoot = join(pluginRoot, 'test/integration');
 const dshBin = join(root, 'node_modules/@deepseek-ai/dsh/lib/bin.js');
@@ -50,6 +58,7 @@ if (values.probe === 'plugin-coexistence' && installedLoaderId === 'skillhub') {
   throw new Error('Retained Loader ID conflicts with the reference package; use the current package for coexistence');
 }
 
+stage = 'fixture-ports';
 for (const port of [43219, 43220]) {
   await new Promise((resolvePort, reject) => {
     const server = createServer();
@@ -106,39 +115,41 @@ function launch(args, log, overrides = {}) {
   } finally { closeSync(fd); }
 }
 try {
+  stage = 'registry-ready';
   launch([join(fixtureRoot, 'catalog-fixture.mjs')], 'registry.log', { DSH_FIXTURE_PORT: '43219' });
   launch([join(fixtureRoot, 'catalog-fixture.mjs')], 'registry-second.log', { DSH_FIXTURE_PORT: '43220', DSH_FIXTURE_REQUEST_LOG: join(run, 'second-requests.jsonl') });
   // Await this fixture's successful HTTP response before starting the Host.
   const readyDeadline = Date.now() + 10000;
   while (!abort.signal.aborted) {
     abort.signal.throwIfAborted();
-    if (children.some(child => child.ended)) throw new Error('Registry process exited; inspect private run logs.');
+    if (children.some(child => child.ended)) fail('REGISTRY_EXITED', 'Registry process exited; inspect private run logs.');
     const ready = await fetch('http://127.0.0.1:43219/api/v1/search', { signal: AbortSignal.timeout(1000) }).then(r => r.ok, () => false);
     if (ready) break;
-    if (Date.now() >= readyDeadline) throw new Error('Registry did not become ready.');
+    if (Date.now() >= readyDeadline) fail('REGISTRY_TIMEOUT', 'Registry did not become ready.');
     await delay(100, undefined, { signal: abort.signal });
   }
   abort.signal.throwIfAborted();
+  stage = 'host-result';
   launch([dshBin, '--profile', 'skillhub-m0', '--patch', patch, '--host', '127.0.0.1', '--port', '0', '--no-open'], 'host.log');
   const deadline = Date.now() + 90000;
   while (!abort.signal.aborted) {
     abort.signal.throwIfAborted();
-    if (children.some(child => child.ended)) throw new Error('Probe process exited before completion; inspect private run logs.');
+    if (children.some(child => child.ended)) fail('CHILD_EXITED', 'Probe process exited before completion; inspect private run logs.');
     let report;
     try { report = JSON.parse(await readFile(resultFile, 'utf8')); }
     catch (error) { if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error; }
     if (report) {
-      if (report.passed !== true) throw new Error('Host probe failed; inspect its result file.');
+      if (report.passed !== true) {
+        stage = 'host-assertion';
+        fail('HOST_ASSERTION_FAILED', 'Host probe failed; inspect its result file.');
+      }
       console.log(JSON.stringify({ passed: true, probe: values.probe, report: resultFile, runDirectory: run }));
       break;
     }
-    if (Date.now() >= deadline) throw new Error('Probe exceeded its 90-second execution deadline.');
+    if (Date.now() >= deadline) fail('HOST_RESULT_TIMEOUT', 'Probe exceeded its 90-second execution deadline.');
     await delay(200, undefined, { signal: abort.signal });
   }
   abort.signal.throwIfAborted();
-} catch (error) {
-  console.error(JSON.stringify({ passed: false, error: error.message, report: resultFile, runDirectory: run }));
-  process.exitCode = 1;
 } finally {
   for (const state of children.reverse()) {
     if (!state.ended) {
@@ -151,3 +162,10 @@ try {
   process.removeListener('SIGINT', stop);
   process.removeListener('SIGTERM', stop);
 }
+
+}
+main().catch(() => {
+  // Fixed fields only: never copy Host errors, paths or tokens into CI diagnostics.
+  console.error(JSON.stringify({ passed: false, probe: selectedProbe, stage, failureCode }));
+  process.exitCode = 1;
+});

@@ -90,6 +90,18 @@ export async function selectTarball(input) {
   return target;
 }
 
+export function safeProbeFailure(log, probe) {
+  const stages = ['setup', 'validate-root', 'prepare-fixture', 'fixture-ports', 'registry-ready', 'host-result', 'host-assertion'];
+  const codes = ['PROBE_FAILED', 'REGISTRY_EXITED', 'REGISTRY_TIMEOUT', 'CHILD_EXITED', 'HOST_ASSERTION_FAILED', 'HOST_RESULT_TIMEOUT'];
+  for (const line of log.trim().split('\n').reverse()) {
+    let result;
+    try { result = JSON.parse(line); } catch { continue; }
+    if (result?.passed === false && result.probe === probe && stages.includes(result.stage)
+      && codes.includes(result.failureCode)) return { stage: result.stage, code: result.failureCode };
+  }
+  return undefined;
+}
+
 export function isolatedEnvironment(root, inherited = process.env) {
   // In particular, do not inherit model credentials, DSH overrides or Node preload hooks.
   const allowed = /^(PATH|SystemRoot|WINDIR|COMSPEC|PATHEXT|TEMP|TMP|TMPDIR|LANG|LC_ALL|HTTPS?_PROXY|ALL_PROXY|NO_PROXY|CI)$/i;
@@ -169,6 +181,10 @@ async function main() {
   } catch (error) {
     summary.failure = ['SPAWN_FAILED', 'DEADLINE_OR_CANCELLED', 'PROCESS_FAILED', 'CLEANUP_DEADLINE'].includes(error.code)
       ? error.code : 'INVALID_RESULT';
+    if (['runtime-baseline', 'plugin-lifecycle'].includes(summary.stage)) {
+      const log = await readFile(join(root, 'logs', summary.stage + '.log'), 'utf8').catch(() => '');
+      summary.probeFailure = safeProbeFailure(log, summary.stage);
+    }
     process.exitCode = 1;
   } finally {
     process.removeListener('SIGINT', stop);
