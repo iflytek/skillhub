@@ -1,0 +1,208 @@
+{
+  "dsh": "0.2.0-rc.2",
+  "node": "24.2.0",
+  "pluginInstalled": false,
+  "observerLoaded": false,
+  "modelCalled": false,
+  "emptySessionRequired": false,
+  "stages": [
+    {
+      "stage": "stop-1",
+      "ms": 8490
+    },
+    {
+      "stage": "restart-1",
+      "ms": 12008
+    }
+  ],
+  "errors": [
+    {
+      "stage": "restart-1",
+      "ms": 15148,
+      "message": "scope 'session-maybe' rendered without an installed adapter"
+    }
+  ],
+  "reproduced": true,
+  "rounds": 1,
+  "profileDependenciesEmpty": true,
+  "officialModulesOnly": true,
+  "officialModuleCount": 65,
+  "bootGraph": {
+    "type": "boot",
+    "ms": 8307,
+    "revision": "c8506351ac19",
+    "entryCount": 65,
+    "watched": {
+      "@deepseek-ai/dsh-client-ui-session": {
+        "present": true,
+        "revision": "5bcef4ae7c68"
+      },
+      "@deepseek-ai/dsh-api-session-controller": {
+        "present": true,
+        "revision": "dd503f1ab748"
+      },
+      "@deepseek-ai/dsh-api-remotes": {
+        "present": true,
+        "revision": "b24bad44ca2f"
+      },
+      "@deepseek-ai/dsh-api-gateway": {
+        "present": true,
+        "revision": "65445d6930ad"
+      }
+    }
+  },
+  "graphEvents": [
+    {
+      "type": "open",
+      "ms": 7676
+    },
+    {
+      "type": "graph",
+      "ms": 7677,
+      "revision": "c8506351ac19",
+      "entryCount": 65,
+      "watched": {
+        "@deepseek-ai/dsh-client-ui-session": {
+          "present": true,
+          "revision": "5bcef4ae7c68"
+        },
+        "@deepseek-ai/dsh-api-session-controller": {
+          "present": true,
+          "revision": "dd503f1ab748"
+        },
+        "@deepseek-ai/dsh-api-remotes": {
+          "present": true,
+          "revision": "b24bad44ca2f"
+        },
+        "@deepseek-ai/dsh-api-gateway": {
+          "present": true,
+          "revision": "65445d6930ad"
+        }
+      }
+    },
+    {
+      "type": "error",
+      "ms": 8576
+    },
+    {
+      "type": "error",
+      "ms": 11583
+    },
+    {
+      "type": "open",
+      "ms": 14856
+    },
+    {
+      "type": "graph",
+      "ms": 14857,
+      "revision": "799f8a4fd7e9",
+      "entryCount": 59,
+      "watched": {
+        "@deepseek-ai/dsh-client-ui-session": {
+          "present": true,
+          "revision": "5bcef4ae7c68"
+        },
+        "@deepseek-ai/dsh-api-session-controller": {
+          "present": false,
+          "revision": null
+        },
+        "@deepseek-ai/dsh-api-remotes": {
+          "present": true,
+          "revision": "b24bad44ca2f"
+        },
+        "@deepseek-ai/dsh-api-gateway": {
+          "present": false,
+          "revision": null
+        }
+      }
+    },
+    {
+      "type": "graph",
+      "ms": 15990,
+      "revision": "389ab820c810",
+      "entryCount": 60,
+      "watched": {
+        "@deepseek-ai/dsh-client-ui-session": {
+          "present": true,
+          "revision": "5bcef4ae7c68"
+        },
+        "@deepseek-ai/dsh-api-session-controller": {
+          "present": false,
+          "revision": null
+        },
+        "@deepseek-ai/dsh-api-remotes": {
+          "present": true,
+          "revision": "b24bad44ca2f"
+        },
+        "@deepseek-ai/dsh-api-gateway": {
+          "present": false,
+          "revision": null
+        }
+      }
+    },
+    {
+      "type": "graph",
+      "ms": 16830,
+      "revision": "3090eda88e9a",
+      "entryCount": 64,
+      "watched": {
+        "@deepseek-ai/dsh-client-ui-session": {
+          "present": true,
+          "revision": "5bcef4ae7c68"
+        },
+        "@deepseek-ai/dsh-api-session-controller": {
+          "present": true,
+          "revision": "dd503f1ab748"
+        },
+        "@deepseek-ai/dsh-api-remotes": {
+          "present": true,
+          "revision": "b24bad44ca2f"
+        },
+        "@deepseek-ai/dsh-api-gateway": {
+          "present": false,
+          "revision": null
+        }
+      }
+    },
+    {
+      "type": "graph",
+      "ms": 16833,
+      "revision": "dcc5834aa002",
+      "entryCount": 65,
+      "watched": {
+        "@deepseek-ai/dsh-client-ui-session": {
+          "present": true,
+          "revision": "5bcef4ae7c68"
+        },
+        "@deepseek-ai/dsh-api-session-controller": {
+          "present": true,
+          "revision": "dd503f1ab748"
+        },
+        "@deepseek-ai/dsh-api-remotes": {
+          "present": true,
+          "revision": "b24bad44ca2f"
+        },
+        "@deepseek-ai/dsh-api-gateway": {
+          "present": true,
+          "revision": "65445d6930ad"
+        }
+      }
+    }
+  ],
+  "domObservations": [
+    {
+      "stage": "stop-1",
+      "ms": 11836,
+      "empty": false,
+      "reconnectingVisible": true
+    },
+    {
+      "stage": "restart-1",
+      "ms": 27970,
+      "empty": true,
+      "reconnectingVisible": false
+    }
+  ],
+  "controlScriptSha256": "5fe5078c31a74ab8a26318ba7427fd3723ac9e3d6967b42ff6d9c16910371627",
+  "conclusion": "The same session-maybe adapter error and blank page occurred in an official RC.2 default Web Profile without SkillHub while restarting the Host on the same port. This establishes an independent upstream reproduction, not an exemption from plugin acceptance or evidence about other DSH versions."
+}

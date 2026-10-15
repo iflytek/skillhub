@@ -2,6 +2,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { lock } from 'proper-lockfile'
+import { acquireAcquisitionGate } from '../services/skill-target-lock'
 import { joinPath, userStateDir, ensureDir } from '../platform/paths'
 
 export interface InventoryTarget {
@@ -163,20 +164,41 @@ export class InventoryStore {
     }
   }
 
-  private acquireLock(): Promise<() => Promise<void>> {
-    return lock(this.path, {
-      lockfilePath: `${this.path}.lock`,
-      realpath: false,
-      stale: 30_000,
-      update: 10_000,
-      retries: {
-        retries: 10,
-        factor: 2,
-        minTimeout: 100,
-        maxTimeout: 1_000,
-        randomize: true
-      }
-    })
+  private async acquireLock(): Promise<() => Promise<void>> {
+    // proper-lockfile stale stat/remove is not atomic: serialize acquisition so a delayed
+    // recoverer cannot remove another process's newly acquired inventory lock.
+    const deadline = Date.now() + 10_000
+    const releaseGate = await acquireAcquisitionGate(`${this.path}.lock.acquire`, 10_000)
+    let release: () => Promise<void>
+    try {
+      const remaining = deadline - Date.now()
+      if (remaining <= 0) throw Object.assign(new Error('Inventory lock acquisition timed out'), { code: 'ELOCKED' })
+      release = await lock(this.path, {
+        lockfilePath: `${this.path}.lock`,
+        realpath: false,
+        stale: 30_000,
+        update: 10_000,
+        retries: {
+          retries: 10,
+          maxRetryTime: remaining,
+          factor: 2,
+          minTimeout: 100,
+          maxTimeout: 1_000,
+          randomize: true
+        }
+      })
+    } catch (operationError) {
+      try { await releaseGate() }
+      catch (cleanupError) { throw new AggregateError([operationError, cleanupError], 'inventory acquisition and gate cleanup both failed') }
+      throw operationError
+    }
+    try { await releaseGate() }
+    catch (gateError) {
+      try { await release() }
+      catch (cleanupError) { throw new AggregateError([gateError, cleanupError], 'inventory and gate cleanup both failed') }
+      throw gateError
+    }
+    return release
   }
 
   async upsertTarget(

@@ -23,7 +23,7 @@
 ## 3. 安装核心与操作协议
 
 - [x] 3.1 实现可信目标、完整包下载、归档/指纹/DSH 格式校验，首次安装不覆盖。（目标/策略/格式、归档和原生安装定向检查 76 tests / 322 assertions 通过；结合真实 Host 用户/项目安装及完整资源核验，见 verification.md“安装核心边界验收”。恢复全矩阵仍归 3.4/5.2。）
-- [x] 3.2 下载前锁内幂等检查、提交前重校验、锁顺序与 inventory CAS；同 key 恢复 operation。（操作存储/锁/清单定向回归及已有原生并发实机文件证据通过，见 verification.md“并发与重复请求协议验收”；不替代 3.4/5.2 全故障矩阵。）
+- [ ] 3.2 下载前锁内幂等检查、提交前重校验、锁顺序与 inventory CAS；同 key 恢复 operation。（操作存储/锁/清单定向回归及已有原生并发实机文件证据通过，见 verification.md“并发与重复请求协议验收”；不替代 3.4/5.2 全故障矩阵。ce310918b 跨平台 CI 新发现两个进程恢复同一过期清单锁时丢记录；已确定性复现并修复临界区重叠，新增有界等待；最终共享 CLI 703 项回归通过（inventory-stale-lock-result.json），待修复提交的跨平台 CI 通过后关闭。）
 - [x] 3.3 实现升级/卸载 prepare-execute、5 分钟 plan TTL、来源/项目/记录变化失效和参数重放检查。（计划与完整目标升级定向回归及实际 Host 双目标升级/恢复证据通过，见 verification.md“确认计划与完整目标升级验收”；不替代 5.2 全故障矩阵。）
 - [x] 3.4a 共享核心加入可等待事务观察器、确定 backup/staging 路径和提交后告警；统一 CLI/插件 canonical lock helper，避免双重取锁。
 - [x] 3.4 实现本地原子操作日志、正常关闭和崩溃恢复核验，未解决恢复状态阻止新写。（当前 Linux 真实强杀/恢复矩阵、日志及关闭排空 65 tests / 805 assertions 通过；结合 Windows 实际 Host 强杀恢复，见 verification.md“日志与恢复机制验收”。5.2 场景清单及平台门禁仍分别验收。）
@@ -66,7 +66,7 @@
 - [x] 7.2 实现 openConversationDetail/acknowledgeConversationDetail 与原搜索引用到已查看固定版本的关联；多版本歧义阻断，不静默解析 latest。（实现及定向测试已补齐早期验证记录中的缺口，见“交付缺口核对”。）
 - [x] 7.3 安装工具仅返回 accepted；结果卡片从共享 OperationStore/getOperation 展示终态，历史来源、主机、时间来自原快照。（接受成功仅为 accepted；拒绝为 not-confirmed，见“交付缺口核对”。）
 - [ ] 7.4 按 acceptance.md 逐组留证；阶段顺序以 implementation-design.md 第 9 节为准，日志恢复不后置到写入口上线以后。
-- [ ] 7.5 补齐 lifecycle-design.md §9 与 interface-design.md §5.2 的操作结果展示：核验并提供受影响目标、旧新版本及安全告警信息，覆盖双目标升级与重启后的历史查询。已补 resultDetails 原日志投影、跨目标旧版本保护和四个入口的展示；核心定向回归、真实组件浏览器、双目标真实 Host 升级成功及中断恢复后的历史查询已取得证据（operation-details-host-result.json）。已补齐 uiSession 依赖并通过 201 项插件测试；修复后完整恢复链路通过，但成功升级的 Host 重启断线窗口仍出现 session-maybe 适配器缺失。官方组件卸载可独立复现同类错误，完整无插件 Host 对照尚未完成，不能据此归因。待断线问题定位与回归后关闭。不得透传事务内部路径或原始异常，也不得将当前清单状态冒充原操作结果。
+- [x] 7.5 补齐 lifecycle-design.md §9 与 interface-design.md §5.2 的操作结果展示：原日志投影受影响目标、旧新版本及安全告警，四个入口复用安全详情。最终候选 6b998d95 的双目标升级成功与中断恢复两条真实 Host 链路通过，包含重启后原 operationId 查询、UI 新版/未知版本文案、完整文件和清单核验；插件 201 项测试通过，见 operation-details-host-result.json。验证使用原标签页、同 origin 的有效入口显式重新进入，不代表自动重连；官方 RC.2 无插件同端口重启的空白页问题保留至 10.1/10.5 兼容出口。不得透传事务内部路径或原始异常，不以当前清单状态冒充原操作结果。
 
 
 ## 8. 原生机制落地检查

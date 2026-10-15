@@ -1,0 +1,70 @@
+{
+  "originalCi": {
+    "workflow": "https://github.com/iflytek/skillhub/actions/runs/38717624467",
+    "commit": "ce310918bd658120f96a43f23bf731bbb0724e24",
+    "platform": "macos-latest",
+    "node": "24.2.0",
+    "test": "two parallel installs recover the same stale lock and preserve both inventory items",
+    "failure": "Both processes exited successfully but inventory omitted the second item.",
+    "passed": 698,
+    "failed": 1
+  },
+  "diagnosis": {
+    "cause": "Inventory acquisition called proper-lockfile without serializing stale recovery. Two stale stat snapshots allow the later rmdir to delete the first contender replacement lock.",
+    "deterministicMethod": "Two real subprocesses pause callbacks after reading the same stale lock stat. The first enters inventory mutation and waits before commit; the second resumes its stale callback while the first remains inside. Filesystem reads, deletion, lock creation and inventory commits are real.",
+    "beforeFix": "The second process entered the critical section before the first released its lock.",
+    "afterFix": "The second contender waits outside stale recovery, observes the fresh replacement lock, enters only after release, and both inventory items persist."
+  },
+  "change": {
+    "mechanism": "Reuse the existing PID and nonce acquisition gate for inventory lock acquisition only.",
+    "inventoryAcquisitionBudgetMs": 10000,
+    "retryBoundary": "The remaining budget is passed to proper-lockfile maxRetryTime; an already scheduled retry can add up to the existing 1000 ms maximum polling interval, excluding filesystem scheduling delays.",
+    "gateTimeoutCode": "ELOCKED",
+    "timeoutCleanup": "Remove only the current contender files, retain the live owner, and permit normal acquisition after the owner disappears.",
+    "targetGateDefault": "Unchanged; optional timeout is supplied only by inventory.",
+    "unchanged": [
+      "inventory schema",
+      "30000 ms stale threshold",
+      "10000 ms heartbeat interval",
+      "target-before-inventory lock order",
+      "inventory critical section and commit checks"
+    ]
+  },
+  "verification": {
+    "testedState": "Working-tree fix based on the original CI commit; not a remote macOS result.",
+    "platform": "linux",
+    "bun": "1.3.14",
+    "fullCli": {
+      "command": "make test-cli",
+      "passed": 703,
+      "failed": 0,
+      "assertions": 3028,
+      "files": 68,
+      "durationSeconds": 234.25
+    },
+    "boundedGateAndDeterministicRace": {
+      "passed": 4,
+      "failed": 0,
+      "assertions": 16
+    },
+    "existingGateOwnerRecovery": {
+      "passed": 3,
+      "failed": 0,
+      "assertions": 7
+    },
+    "typecheck": {
+      "command": "cd cli && bun run typecheck",
+      "passed": true
+    },
+    "lint": {
+      "command": "cd cli && bun run lint",
+      "passed": true
+    }
+  },
+  "limits": [
+    "The corrected candidate still requires remote macOS CI verification.",
+    "The plugin must be rebuilt to embed the corrected shared core.",
+    "An older CLI that does not participate in the acquisition gate can still perform unsafe concurrent stale recovery; mixed old and corrected processes are not covered.",
+    "This evidence does not resolve the independent DSH root session-adapter restart defect."
+  ]
+}

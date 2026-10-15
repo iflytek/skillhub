@@ -133,7 +133,9 @@ After a Host restart, unfinished startup operations are shown as uncertain so th
 
 For a pending recovery or cleanup warning, use **核验并恢复**. The Host validates the original operation and current target ownership before changing files: restore pre-commit files, or clean up residues after a committed operation. It does not repeat the installation/removal. Unresolved results cannot simply be dismissed. Retain the operation ID when reporting a failure; do not delete journals or unknown directories to bypass recovery checks.
 
-The runtime guard checks DSH, app-boot and Host peers through the Host package resolver, plus owning manifests of the seven declared Client modules in the active graph. Missing services, inactive modules or version mismatches block new writes and recovery writes. Reading existing operation results remains available. Matching dependencies is only one compatibility check and does not establish support for every DSH/Client/Node/platform combination.
+The runtime guard checks DSH, app-boot and Host peers through the Host package resolver, plus owning manifests of the declared Client modules, including the session UI module, in the active graph. Missing services, inactive modules or version mismatches block new writes and recovery writes. Reading existing operation results remains available. Matching dependencies is only one compatibility check and does not establish support for every DSH/Client/Node/platform combination.
+
+Known Host limitation: official RC.2 can show a blank page when the Host restarts on the same port while the browser stays open. This has also been reproduced without SkillHub and still affects plugin use. Automatic reconnection is not guaranteed. Keep the original tab and operation records; do not resubmit an installation or upgrade. See the [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) for the separate re-entry recovery acceptance boundary.
 
 ## Plugin maintenance
 

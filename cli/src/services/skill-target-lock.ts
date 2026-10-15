@@ -71,7 +71,10 @@ function acquireTargetLock(lockPath: string): Promise<() => Promise<void>> {
   })
 }
 
-async function acquireAcquisitionGate(gatePath: string): Promise<() => Promise<void>> {
+/** Serialize stale-lock recovery attempts without replacing a live contender. */
+export async function acquireAcquisitionGate(gatePath: string, timeoutMs = Infinity): Promise<() => Promise<void>> {
+  if (!(timeoutMs >= 0)) throw new Error('Invalid acquisition gate timeout')
+  const deadline = Date.now() + timeoutMs
   await ensureAcquisitionGateDirectory(gatePath)
   // A per-target Lamport bakery queue avoids deleting a shared stale gate. Every removable path
   // contains a nonce and is owned by one PID, so crash recovery cannot unlink a replacement owner.
@@ -87,7 +90,7 @@ async function acquireAcquisitionGate(gatePath: string): Promise<() => Promise<v
     ticketPath = join(gatePath, `ticket.${ticket}.${contenderId}`)
     await rename(choosingPath, ticketPath)
 
-    await waitForAcquisitionTurn(gatePath, { id: contenderId, ticket })
+    await waitForAcquisitionTurn(gatePath, { id: contenderId, ticket }, deadline)
   } catch (operationError) {
     const cleanupErrors = await removeContenderFiles(choosingPath, ...(ticketPath === null ? [] : [ticketPath]))
     if (cleanupErrors.length > 0) {
@@ -160,14 +163,17 @@ async function readGateState(gatePath: string, contenderId: string): Promise<Acq
 
 async function waitForAcquisitionTurn(
   gatePath: string,
-  contender: AcquisitionContender
+  contender: AcquisitionContender,
+  deadline: number
 ): Promise<void> {
   let delayMs = 5
   for (;;) {
     const state = await readGateState(gatePath, contender.id)
     const hasEarlierTicket = state.tickets.some(candidate => compareContenders(candidate, contender) < 0)
     if (!state.hasLiveChoosing && !hasEarlierTicket) return
-    await new Promise(resolve => setTimeout(resolve, delayMs))
+    const remaining = deadline - Date.now()
+    if (remaining <= 0) throw Object.assign(new Error('Lock acquisition gate is already being held'), { code: 'ELOCKED' })
+    await new Promise(resolve => setTimeout(resolve, Math.min(delayMs, remaining)))
     delayMs = Math.min(delayMs * 2, ACQUISITION_GATE_MAX_POLL_MS)
   }
 }
