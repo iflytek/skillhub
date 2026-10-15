@@ -12,7 +12,19 @@ async function root() {
   roots.push(path);
   return path;
 }
-afterEach(async () => { await Promise.all(roots.splice(0).map(path => rm(path, { recursive: true, force: true }))); });
+async function removeFixture(path: string) {
+  const deadline = Date.now() + 2000;
+  for (;;) {
+    try { await rm(path, { recursive: true, force: true }); return; }
+    catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if ((code !== 'EBUSY' && code !== 'EPERM') || Date.now() >= deadline) throw error;
+      // A killed Windows Job can release its cwd handles shortly after the wrapper emits exit.
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+  }
+}
+afterEach(async () => { await Promise.all(roots.splice(0).map(removeFixture)); });
 
 test('isolates user configuration and strips model credentials and Node preload hooks', () => {
   const directory = join(tmpdir(), 'skillhub-environment');
@@ -93,7 +105,7 @@ test('failed tree termination cannot make the runner wait indefinitely for child
     },
   })).rejects.toThrow('cleanup deadline');
   expect(Date.now() - started).toBeLessThan(3000);
-  // The deadline rejects before the forced kill emits exit; release Windows cwd handles before fixture cleanup.
+  // The deadline rejects before the forced kill emits exit; fixture cleanup also bounds delayed handle release.
   await exited;
 }, 5000);
 

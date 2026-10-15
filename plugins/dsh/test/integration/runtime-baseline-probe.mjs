@@ -1,24 +1,37 @@
 // Temporary Host observer; never included in the published plugin.
 // Copy outside the package before loading: DSH associates local modules with their owning manifest.
 import assert from 'node:assert/strict';
-import { realpathSync } from 'node:fs';
+import { realpathSync, writeFileSync } from 'node:fs';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
+function mark(stage) {
+  if (!process.env.DSH_RUNTIME_PROBE_STATUS) return;
+  try { writeFileSync(process.env.DSH_RUNTIME_PROBE_STATUS, JSON.stringify({ stage })); }
+  catch { /* Diagnostics must not replace the actual probe result. */ }
+}
+mark('imported');
+
 export const inject = ['loader', 'pluginPackages', 'clientModules', 'skillhub'];
 
 export function apply(ctx, config) {
-  const root = realpathSync(resolve(config.root));
-  const rel = relative(realpathSync(tmpdir()), root);
-  assert(rel && !rel.startsWith('..') && !isAbsolute(rel));
-  assert.equal(process.env.DSH_HOME, join(root, 'home'));
+  mark('applied');
+  let root;
+  try {
+    root = realpathSync(resolve(config.root));
+    const rel = relative(realpathSync(tmpdir()), root);
+    assert(rel && !rel.startsWith('..') && !isAbsolute(rel));
+    assert.equal(process.env.DSH_HOME, join(root, 'home'));
+  } catch (error) { mark('validation-failed'); throw error; }
+  mark('validated');
   const timer = setTimeout(() => {
+    mark('running');
     run(ctx, config).then(
-      result => writeFile(join(root, config.output), JSON.stringify(result, null, 2)),
-      error => writeFile(join(root, config.output), JSON.stringify({ passed: false, error: error.message })),
+      result => { mark('completed'); return writeFile(join(root, config.output), JSON.stringify(result, null, 2)); },
+      error => { mark('assertion-failed'); return writeFile(join(root, config.output), JSON.stringify({ passed: false, error: error.message })); },
     ).catch(() => undefined);
   }, 1000);
   return () => clearTimeout(timer);

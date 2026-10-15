@@ -17,3 +17,14 @@ test('probe diagnostics expose only fixed stage and code from the requested prob
     expect(safeProbeFailure(input, 'runtime-baseline')).toBeUndefined();
   }
 });
+
+
+test('observer diagnostics whitelist states and exact dependency booleans', () => {
+  const base = { passed: false, probe: 'runtime-baseline', stage: 'host-result', failureCode: 'HOST_RESULT_TIMEOUT' };
+  expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { observer: { stage: 'validation-failed', path: 'secret' },
+    dependencies: { loader: true, pluginPackages: false, clientModules: true, skillhub: false, secret: 'private' } } }), 'runtime-baseline'))
+    .toEqual({ stage: 'host-result', code: 'HOST_RESULT_TIMEOUT', observer: 'validation-failed',
+      dependencies: { loader: true, pluginPackages: false, clientModules: true, skillhub: false } });
+  expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { observer: { stage: 'private' }, dependencies: { skillhub: 'secret' } } }), 'runtime-baseline'))
+    .toEqual({ stage: 'host-result', code: 'HOST_RESULT_TIMEOUT', observer: 'not-observed', dependencies: {} });
+});

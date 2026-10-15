@@ -23,6 +23,8 @@ const probes = {
 };
 let stage = 'setup';
 let selectedProbe;
+let observerStatusFile;
+let dependencyStatusFile;
 let failureCode = 'PROBE_FAILED';
 function fail(code, message) { failureCode = code; throw new Error(message); }
 async function main() {
@@ -72,6 +74,8 @@ await mkdir(run, { mode: 0o700 });
 const resultName = `probe-${id}-result.json`;
 const resultFile = join(root, resultName);
 const observer = join(run, 'observer.mjs');
+observerStatusFile = join(run, 'observer-status.json');
+dependencyStatusFile = join(run, 'dependency-status.json');
 const runtimeProbe = values.probe === 'runtime-baseline' || values.probe === 'runtime-unsupported';
 const source = await readFile(join(fixtureRoot, runtimeProbe ? 'runtime-baseline-probe.mjs' : values.probe === 'plugin-coexistence' ? 'plugin-lifecycle-fixture.mjs' : `${values.probe}-fixture.mjs`), 'utf8');
 await writeFile(observer, source.replaceAll(probes[values.probe], resultName), { flag: 'wx', mode: 0o600 });
@@ -90,11 +94,27 @@ if (runtimeProbe) {
     clientPackages: manifest.dsh.client.inject,
     ...(values.probe === 'runtime-unsupported' ? { expectBlocked: true } : { reloadClient: '@deepseek-ai/dsh-client-ui-layout' }) });
 }
+let diagnosticPatch = '';
+if (runtimeProbe) {
+  const watcher = join(run, 'dependency-observer.mjs');
+  await writeFile(watcher, `import { writeFileSync } from 'node:fs';
+export function apply(ctx) {
+  const report = () => {
+    const services = Object.fromEntries(['loader', 'pluginPackages', 'clientModules', 'skillhub'].map(name => [name, !!ctx.get(name)]));
+    try { writeFileSync(${JSON.stringify(dependencyStatusFile)}, JSON.stringify(services)); } catch {}
+  };
+  report(); const timer = setInterval(report, 500);
+  return () => clearInterval(timer);
+}
+`);
+  diagnosticPatch = `- insert:\n    - id: skillhub-dependency-observer-${id}\n      name: ${JSON.stringify(watcher)}\n`;
+}
 const referencePatch = values.probe === 'plugin-coexistence'
   ? '- id: skillhub\n  config:\n    apiBase: http://127.0.0.1:43219\n    webBase: http://127.0.0.1:43219\n    timeoutMs: 1000\n' : '';
-await writeFile(patch, `${referencePatch}- id: m0-observer\n  disabled: true\n- id: skillhub-local-runtime-probe\n  disabled: true\n- id: ${installedLoaderId}\n  config:\n    registryUrl: http://127.0.0.1:43219\n- insert:\n    - id: skillhub-probe-${id}\n      name: ${JSON.stringify(observer)}\n      config: ${JSON.stringify(config)}\n`);
+await writeFile(patch, `${diagnosticPatch}${referencePatch}- id: m0-observer\n  disabled: true\n- id: skillhub-local-runtime-probe\n  disabled: true\n- id: ${installedLoaderId}\n  config:\n    registryUrl: http://127.0.0.1:43219\n- insert:\n    - id: skillhub-probe-${id}\n      name: ${JSON.stringify(observer)}\n      config: ${JSON.stringify(config)}\n`);
 const env = { ...process.env, HOME: join(root, 'native-install-home'), USERPROFILE: join(root, 'native-install-home'),
   DSH_HOME: join(root, 'home'), DSH_AGENTS_HOME: join(root, 'agents'), DSH_TELEMETRY_DISABLED: '1', DSH_PROBE_SKIP_DISCOVERY: '1',
+  DSH_RUNTIME_PROBE_STATUS: observerStatusFile,
   DSH_FIXTURE_NAMESPACE: `probe-${id}`, DSH_FIXTURE_CATALOG_SCROLL: '0', DSH_FIXTURE_UPDATE_STATE: state,
   DSH_FIXTURE_DOWNLOAD_STATE: downloads, DSH_FIXTURE_REQUEST_LOG: join(run, 'requests.jsonl') };
 const children = [];
@@ -164,8 +184,13 @@ try {
 }
 
 }
-main().catch(() => {
+main().catch(async () => {
+  const diagnostics = {};
+  for (const [key, file] of [['observer', observerStatusFile], ['dependencies', dependencyStatusFile]]) {
+    if (!file) continue;
+    try { diagnostics[key] = JSON.parse(await readFile(file, 'utf8')); } catch { /* Missing marker is itself diagnostic. */ }
+  }
   // Fixed fields only: never copy Host errors, paths or tokens into CI diagnostics.
-  console.error(JSON.stringify({ passed: false, probe: selectedProbe, stage, failureCode }));
+  console.error(JSON.stringify({ passed: false, probe: selectedProbe, stage, failureCode, diagnostics }));
   process.exitCode = 1;
 });

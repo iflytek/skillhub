@@ -97,7 +97,20 @@ export function safeProbeFailure(log, probe) {
     let result;
     try { result = JSON.parse(line); } catch { continue; }
     if (result?.passed === false && result.probe === probe && stages.includes(result.stage)
-      && codes.includes(result.failureCode)) return { stage: result.stage, code: result.failureCode };
+      && codes.includes(result.failureCode)) {
+      const safe = { stage: result.stage, code: result.failureCode };
+      if (result.diagnostics) {
+        const observer = result.diagnostics.observer?.stage;
+        const states = ['imported', 'applied', 'validation-failed', 'validated', 'running', 'completed', 'assertion-failed'];
+        safe.observer = states.includes(observer) ? observer : 'not-observed';
+        safe.dependencies = {};
+        for (const name of ['loader', 'pluginPackages', 'clientModules', 'skillhub']) {
+          const present = result.diagnostics.dependencies?.[name];
+          if (typeof present === 'boolean') safe.dependencies[name] = present;
+        }
+      }
+      return safe;
+    }
   }
   return undefined;
 }
