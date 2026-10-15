@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "scope": "actual React component with synthetic responses; no Host or API verification",
+  "reactDom": "18.3.1",
+  "viewport": 390,
+  "checks": [
+    "legacy response without resultDetails renders no fabricated history",
+    "dual-target upgrade and versions; keyboard expand",
+    "unknown recovery not reported successful; three safe warning categories; 390px fit",
+    "missing historical targets remain explicitly unknown",
+    "restored target is distinct from completed upgrade",
+    "HTML-shaped label remains text and long version wraps",
+    "desktop render and keyboard collapse"
+  ],
+  "dimensions": {
+    "client": 374,
+    "scroll": 374
+  },
+  "errors": []
+}

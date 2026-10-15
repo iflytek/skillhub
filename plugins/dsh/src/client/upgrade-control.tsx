@@ -1,3 +1,4 @@
+import { OperationDetails } from './operation-details.js';
 import { DiscoveryStatus } from './discovery-status.js';
 import { HostWriteStatus, useWritableHost, type CompatibilityServices } from './host-compatibility.js';
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
@@ -118,6 +119,7 @@ export function UpgradeControl({ services, sourceRevision, source, item, eligibl
             : result && ['recovery-required', 'unknown'].includes(result.phase) ? <p role="alert">升级需要恢复核验，请勿重复提交。</p>
               : <p role="status">正在升级，请稍候…</p>}
       <p>操作 ID：{attempt.operationId}</p>
+      {!operation.isError && operation.data && <OperationDetails operation={operation.data} />}
       {!operation.isError && operation.data && (['recovery-required', 'unknown'].includes(operation.data.phase)
         || (operation.data.phase === 'completed' && operation.data.warningCount > 0)) && <div>
         <p>核验原升级的全部目标：提交前恢复旧版本，已提交则只清理残留，不重复升级。</p>

@@ -114,6 +114,13 @@ export interface NativeOperation {
   discovery: 'unconfirmed' | 'confirmed' | 'failed'
   recovery: 'not-needed' | 'restored' | 'incomplete' | 'unknown'
   warningCount: number
+  /** Optional for responses retained from older development packages. No filesystem paths. */
+  resultDetails?: {
+    beforeVersion: string | null
+    afterVersion: string | null
+    targets: { label: string; outcome: 'installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'restored' | 'unknown' }[]
+    warnings: ('backup-cleanup' | 'removal-cleanup' | 'verification-required')[]
+  }
 }
 
 /** Internal Host input; never a Remote/tool argument schema. */

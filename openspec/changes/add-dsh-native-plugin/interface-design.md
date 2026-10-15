@@ -164,48 +164,36 @@ interface InstalledSkillDetail {
 
 local-only 返回本地条目与原因，不签发安装 detailToken；取得可安装详情必须重新完成远端精确版本解析。
 
-### 5.2 操作状态设计
+### 5.2 操作状态与原操作结果
 
-下列为操作状态的设计模型；实际 Remote 返回为 §9 所述 NativeOperation。逐目标结果、版本前后值及告警详情不能仅凭下面的设计字段认定已实现，须与共享契约和验收证据核对。
+Remote 返回 `NativeOperation`，契约位于 `cli/src/integrations/native-contract.d.ts`，由构建脚本同步到插件；不复制完整内部事务模型。
+
+| 字段 | 含义 |
+| --- | --- |
+| operationId、revision、kind | 原操作标识、日志修订号及安装/升级/卸载/失效记录清理类型 |
+| namespace、slug、version、targetLabel | 原操作绑定的技能、版本及目标汇总标签 |
+| context | 持久 Host 身份、来源身份/标签/修订、入口及创建/更新时间 |
+| phase、files、discovery、recovery | 分别表示执行阶段、文件结果、宿主发现和恢复结果，不能相互替代 |
+| warningCount | 原日志告警数量；不返回原始异常文本 |
+| resultDetails | 原日志派生的可选结果详情；旧开发版本响应缺失此字段时不猜测内容 |
 
 ```ts
-type PluginError = {
-  code: string
-  message: string
-  retryable: boolean
-  requestId?: string
-}
-
-type OperationContext = {
-  hostInstanceId: string // 插件状态目录持久身份，不是每次进程启动随机值
-  hostLabel: string
-  sourceIdentity: string // 规范化 Registry 身份；无凭证或下载链接
-  sourceLabel: string
-  sourceRevision: string
-  initiatedFrom: 'plaza' | 'conversation'
-  createdAt: string // Host 产生的 ISO 8601 UTC 时间
-  updatedAt: string
-}
-
-type MutationOperation = {
-  context: OperationContext
-  kind: 'install' | 'upgrade' | 'uninstall' | 'remove-stale-record'
-  operationId: string
-  phase: 'accepted' | 'staging' | 'revalidating' | 'committing' | 'recovering' | 'completed' | 'failed' | 'recovery-required' | 'unknown'
-  namespace: string
-  slug: string
-  version: string
-  targetLabel: string
-  files: 'pending' | 'installed' | 'already-installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'failed' | 'unknown'
-  discovery: 'unconfirmed' | 'confirmed' | 'failed'
-  beforeVersion?: string
-  afterVersion?: string
-  targets: Array<{ label: string; outcome: string }>
-  warnings: string[]
-  recovery?: 'not-needed' | 'restored' | 'incomplete' | 'unknown'
-  error?: PluginError
+type OperationResultDetails = {
+  beforeVersion: string | null
+  afterVersion: string | null
+  targets: Array<{
+    label: string
+    outcome: 'installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'restored' | 'unknown'
+  }>
+  warnings: Array<'backup-cleanup' | 'removal-cleanup' | 'verification-required'>
 }
 ```
+
+结果详情只读取原操作日志，不读取当前 inventory 来补写历史。beforeVersion 的快照须覆盖该操作的全部目标；其他范围已安装的同坐标版本不能作为本次操作旧版本。已经核验的 already-installed 返回相同旧新版本。afterVersion 仅在安装或升级完成时返回实际完成版本，其他情况为 null；UI 明示未确认或不适用。
+
+单目标沿用原范围标签，多目标按原确认计划顺序编号，不暴露事务目录。完整目标集合核验完成后才能显示各目标成功；失败且完整恢复已经确认才显示 restored；执行中、崩溃待恢复或结果不确定均显示 unknown。旧日志没有目标明细时返回空数组并说明未记录，不推断目标。
+
+告警以固定类别展示：backup-cleanup 表示备份清理需核验，removal-cleanup 表示卸载隔离文件清理需核验，其他原日志告警统一为 verification-required。原始路径、异常、ownerId、请求摘要及事务快照不得透传。结果卡片展示原操作结果，并明确引导用户通过已安装列表核验当前状态。
 
 local-only 详情不能提交 startInstall；只有远端 resolve 核验后签发的 detailToken 才可进入安装预检。
 
@@ -285,7 +273,7 @@ interface HostExecutePlanRequest {
 
 操作日志保存 requestKey、参数摘要、调用上下文绑定、operationId 与执行阶段（不存凭证）；同 key 同参数可以找回，同 key 不同参数返回冲突。prepare 不修改文件，execute 返回接受状态不等于完成。
 
-卸载不新增 Registry REST 接口，不调用 skill DELETE。升级复用匿名 resolve 和精确版本 download。升级使用多目标时 MutationOperation.targets 分别列结果，version 字段表示当前操作关联版本，不单凭该字段判断所有目标提交成功；以 files/targets/recovery 为准。
+卸载不新增 Registry REST 接口，不调用 skill DELETE。升级复用匿名 resolve 和精确版本 download。升级使用多目标时 resultDetails.targets 分别列结果，version 字段表示当前操作关联版本，不单凭该字段判断所有目标提交成功；以 files/resultDetails.targets/recovery 为准。
 
 local-only 详情不能发起远端安装或升级，但可通过独立 prepareUninstall 在本地身份、基线与目标检查通过后离线卸载。其他规则、示例和恢复决策统一见 [lifecycle-design.md](lifecycle-design.md)。
 

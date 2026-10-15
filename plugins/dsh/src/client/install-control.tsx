@@ -1,3 +1,4 @@
+import { OperationDetails } from './operation-details.js';
 import { DiscoveryStatus } from './discovery-status.js';
 import { HostWriteStatus, useWritableHost, type CompatibilityServices } from './host-compatibility.js';
 import { useState, useSyncExternalStore } from 'react';
@@ -70,6 +71,7 @@ export function InstallControl({ detail, sourceRevision, services, initiatedFrom
             : result && ['recovery-required', 'unknown'].includes(result.phase) ? <p role="alert">操作需要恢复核验，请勿重复安装。</p>
               : <p role="status">正在安装，请稍候…</p>}
       {result && <p style={{ overflowWrap: 'anywhere', opacity: .7 }}>{result.context.sourceLabel} · {result.targetLabel} · {result.version}</p>}
+      {!operation.isError && operation.data && <OperationDetails operation={operation.data} />}
       {operation.data?.phase === 'completed' && <div>
         <p>以上为原安装操作结果。</p>
         {local.isPending || local.isFetching ? <p role="status">正在核验当前安装记录…</p>

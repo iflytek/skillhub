@@ -5,8 +5,9 @@ import { inspectUpgradeBaseline } from './upgrade-baseline'
 import { inspectRemovalBaseline } from './removal-baseline'
 import { InventoryStore } from '../stores/inventory-store'
 import { recoverInstallation } from './install-recovery'
-import { OperationStore, OperationStoreError, operationRequestDigest, type OperationRecord } from './operation-store'
-import type { NativeRuntime, NativeOperation } from './native-contract'
+import { OperationStore, OperationStoreError, operationRequestDigest } from './operation-store'
+import { projectOperation } from './operation-projection'
+import type { NativeRuntime } from './native-contract'
 import { executeNativeInstall } from './native-install'
 import { executeNativeUpgrade } from './native-upgrade'
 import { executeNativeRemoval } from './native-removal'
@@ -121,12 +122,4 @@ async function withOperationLease<T>(operations: OperationStore, operationId: st
   }
   await release()
   return result
-}
-
-function projectOperation(record: OperationRecord): NativeOperation {
-  const { operation } = record
-  return { operationId: record.operationId, revision: record.revision, kind: operation.kind,
-    namespace: operation.namespace, slug: operation.slug, version: operation.version, targetLabel: operation.targetLabel,
-    context: { ...operation.context }, phase: operation.status.phase, files: operation.status.files,
-    discovery: operation.status.discovery, recovery: operation.status.recovery, warningCount: operation.status.warnings.length }
 }

@@ -1,3 +1,4 @@
+import { OperationDetails } from './operation-details.js';
 import { NativeControlStyles } from './native-control-styles.js';
 import { DiscoveryStatus } from './discovery-status.js';
 import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client';
@@ -121,6 +122,7 @@ function InstallationResult({ result, services, openInstalled }: {
         : '会话或来源已变化，请从 SkillHub 入口打开当前已安装列表。'))
         .finally(() => setOpening(false));
     }}>在已安装中查看</button>}
+    {!query.isError && !mismatch && operation && <OperationDetails operation={operation} />}
     <details><summary>操作信息</summary><p>操作 ID：<code>{result.operationId}</code></p>
       <button onClick={() => {
         if (!navigator.clipboard?.writeText) { setActionStatus('无法访问剪贴板，请手动选择操作 ID 复制。'); return; }

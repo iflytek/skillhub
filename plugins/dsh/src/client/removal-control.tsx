@@ -1,3 +1,4 @@
+import { OperationDetails } from './operation-details.js';
 import { HostWriteStatus, useWritableHost, type CompatibilityServices } from './host-compatibility.js';
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { useMutation } from '@tanstack/react-query';
@@ -130,6 +131,7 @@ export function RemovalControl({ services, sourceRevision, source, item, eligibl
             : result && ['recovery-required', 'unknown'].includes(result.phase) ? <p role="alert">此操作需要恢复核验，请勿重复提交。</p>
               : <p role="status">正在处理卸载…</p>}
       <p>操作 ID：{attempt.operationId}</p>
+      {!operation.isError && operation.data && <OperationDetails operation={operation.data} />}
       {!operation.isError && operation.data && (['recovery-required', 'unknown'].includes(operation.data.phase)
         || (operation.data.phase === 'completed' && operation.data.warningCount > 0)) && <div>
         <p>核验原操作：提交前恢复原文件，已提交则只清理残留，不重复卸载。</p>
