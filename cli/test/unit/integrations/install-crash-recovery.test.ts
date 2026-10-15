@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
+import { realpath, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -19,7 +19,7 @@ test.skipIf(process.platform === 'win32')('real killed installers recover all pr
   const roots: string[] = []
   try {
     const fixtures = await Promise.all(cases.map(async scenario => {
-      const root = await mkdtemp(join(tmpdir(), 'skillhub-killed-install-'))
+      const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-killed-install-')))
       roots.push(root)
       const child = Bun.spawn([process.execPath, fileURLToPath(new URL('../../fixtures/install-crash-child.ts', import.meta.url)),
         root, scenario.boundary, scenario.first ? 'first' : 'replacement'], { stdout: 'pipe', stderr: 'pipe' })

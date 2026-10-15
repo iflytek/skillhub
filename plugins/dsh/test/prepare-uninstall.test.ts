@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { realpath, mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import SkillHubService from '@astron-team/skillhub-dsh';
@@ -7,7 +7,7 @@ import { RemovalPlans } from '../src/host/upgrade-plans.js';
 import type { RemovalBaseline } from '../src/host/generated/native-contract.js';
 
 test('uninstall preparation remains local and distinguishes removal from stale-record cleanup', async () => {
-  const cwd = await mkdtemp(join(tmpdir(), 'skillhub-prepare-uninstall-'));
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-prepare-uninstall-')));
   try {
     await mkdir(join(cwd, '.git'));
     const root = join(cwd, '.dsh/skills');

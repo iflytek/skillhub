@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
-import { mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { realpath, mkdir, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openNativeRuntime } from '../../../src/integrations/native-runtime'
@@ -8,7 +8,7 @@ import type { NativeInstallAcceptance, NativeOperationRequest } from '../../../s
 import { InventoryStore } from '../../../src/stores/inventory-store'
 
 test('native acceptance survives restart, resolves retries before stale references, and scopes status to owner', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-native-accept-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-native-accept-')))
   try {
     const options = { stateDirectory: join(root, 'operations'), inventoryHome: join(root, 'home') }
     const first = await openNativeRuntime(options)
@@ -41,7 +41,7 @@ test('native acceptance survives restart, resolves retries before stale referenc
 })
 
 test('source changes after restart preserve original acceptance but apply to a new request', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-native-source-replay-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-native-source-replay-')))
   try {
     const options = { stateDirectory: join(root, 'operations'), inventoryHome: join(root, 'home') }
     const first = await openNativeRuntime(options)
@@ -73,7 +73,7 @@ test('source changes after restart preserve original acceptance but apply to a n
 })
 
 test('failed new-request validation does not leave an accepted operation', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-native-accept-reject-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-native-accept-reject-')))
   try {
     const runtime = await openNativeRuntime({ stateDirectory: join(root, 'operations'), inventoryHome: join(root, 'home') })
     await expect(runtime.acceptInstall({ hostInstanceId: runtime.hostInstanceId, ownerId: 'session', requestKey: randomUUID(),
@@ -83,7 +83,7 @@ test('failed new-request validation does not leave an accepted operation', async
 })
 
 test('native removal replay survives restart and dispatches recovery without installation', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-native-removal-runtime-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-native-removal-runtime-')))
   try {
     const options = { stateDirectory: join(root, 'operations'), inventoryHome: join(root, 'home') }
     const target = { scope: 'user' as const, root: join(root, 'skills') }
@@ -111,7 +111,7 @@ test('native removal replay survives restart and dispatches recovery without ins
 })
 
 test.each(['upgrade', 'uninstall', 'remove-stale-record'] as const)('plan lookup recovers %s without reading a pending plan', async kind => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-plan-lookup-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-plan-lookup-')))
   try {
     const options = { stateDirectory: join(root, 'operations'), inventoryHome: join(root, 'home') }
     const first = await openNativeRuntime(options)

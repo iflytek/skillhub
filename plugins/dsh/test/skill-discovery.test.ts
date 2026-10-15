@@ -1,13 +1,13 @@
 import { expect, test } from 'bun:test';
 import { Context } from '@deepseek-ai/cordis';
 import { FileSystemSkillProvider } from '@deepseek-ai/dsh-skill-filesystem';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { realpath, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { observeDshInstallation } from '../src/host/skill-discovery.js';
 
 test('scoped discovery requires the exact directory, body and parsed invocation metadata', async () => {
-  const directory = await mkdtemp(join(tmpdir(), 'skillhub-discovery-'));
+  const directory = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-discovery-')));
   const ctx = new Context();
   const signal = new AbortController().signal;
   const provider = new FileSystemSkillProvider(ctx, { signal, invalidate: () => {} }, {

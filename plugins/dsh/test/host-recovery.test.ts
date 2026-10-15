@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
 import { runtimePackageBaseline } from '../src/host/runtime-compatibility.js';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { realpath, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 test('compiled Host recovery binds historical targets to the current session and policy', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-host-recovery-'));
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-host-recovery-')));
   try {
     const child = Bun.spawn(['node', '--input-type=module', '-e', `
 import assert from 'node:assert/strict';

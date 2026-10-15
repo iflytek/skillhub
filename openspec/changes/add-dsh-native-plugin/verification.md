@@ -2439,3 +2439,14 @@ Stop 按钮验收新增 conversation-stop-probe.mjs，语法及 lint 已通过�
 当前包清单、Linux 和 Windows 的最近改动实包报告已关联；macOS 后置、远程 Host、远端 CI、SaaS 和发布后验证保持未完成，没有将它们写成支持声明。四份交付文档的本地链接和代码围栏检查通过；manifest 仍为 private，engines 与指南一致。关闭 5.6 的指南更新与审查交付，不关闭其余环境和发布门禁。
 
 当前 Git 状态确认 check-dsh-plugin.yml、release-dsh-plugin.yml 与 plugins/dsh 仍为本地未跟踪内容，不能直接调度远端工作流来验证本工作树。未执行提交、推送、创建 tag 或发布。独立远程 Host 连接信息仍待用户提供。剩余条件统一列在 acceptance.md“剩余交付门禁”，不通过重复已经通过的本地测试代替。
+
+
+## Draft PR 首轮 CI 与跨平台测试夹具修正
+
+已获授权提交并推送功能分支，创建 [Draft PR #956](https://github.com/iflytek/skillhub/pull/956)。[首轮 DSH 工作流](https://github.com/iflytek/skillhub/actions/runs/38688617510) 未通过：Linux 唯一失败为测试依赖 readdir 的未保证顺序；Windows、macOS 共享核心测试以未经 realpath 规范化的临时目录调用要求 canonical 根目录的原生接口，触发 target-root-changed / target-alias。修正测试根目录创建，并排序目录枚举断言；生产路径安全检查和别名拒绝断言不变。
+
+本地 Linux 共享核心 integration 测试 107 项通过、1116 次断言；插件完整 check 198 项通过、3110 次断言。Windows 隔离环境使用刻意改变大小写的 TEMP/TMP 别名复测，共享核心 integration 101 项通过、6 项既有进程中断用例跳过、735 次断言；同环境还原修正前的 removal-baseline 测试可复现失败，修正后通过。该结果不替代远端修复提交的完整工作流。
+
+首轮后端工作流通过，Linux CLI、脚本回归与 RISC-V 构建通过；Draft PR 自动跳过的检查不记为通过。DCO 提示两个提交缺少 Signed-off-by，用户已授权使用当前 Git 作者身份补签并仅重写这两个提交、以 force-with-lease 更新本功能分支。未创建 tag、部署或发布 npm 包。
+
+补充插件测试夹具的相同路径规范化，并修正模拟清理超时用例的测试收尾：先保留原有小于 3 秒的拒绝断言，再等待被强制终止的子进程发出 exit，避免 Windows cwd 句柄尚未释放时删除目录。最终 Windows 插件 build/typecheck/lint 通过，完整测试 198 项通过、3110 次断言；Linux 受影响插件测试及 lint/typecheck 通过。Windows 本机 Bun 为 1.3.14，CI 固定为 1.3.13，最终远端结果仍须单独核验。

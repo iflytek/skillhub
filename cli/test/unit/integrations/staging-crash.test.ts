@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises'
+import { realpath, mkdtemp, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,7 +8,7 @@ import { recoverInstallation } from '../../../src/integrations/install-recovery'
 import { InventoryStore } from '../../../src/stores/inventory-store'
 
 test.skipIf(process.platform === 'win32').each(['before-staging', 'staged-content'])('SIGKILL at %s preserves the staging intent before full preparation', async boundary => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-staging-crash-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-staging-crash-')))
   try {
     const child = Bun.spawn([process.execPath, fileURLToPath(new URL('../../fixtures/install-crash-child.ts', import.meta.url)),
       root, boundary, 'first'], { stdout: 'pipe', stderr: 'pipe' })

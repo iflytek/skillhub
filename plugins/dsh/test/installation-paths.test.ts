@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { FsTargetKey } from '@deepseek-ai/dsh-fs';
-import { mkdtemp, mkdir, rm, symlink, writeFile, readdir } from 'node:fs/promises';
+import { realpath, mkdtemp, mkdir, rm, symlink, writeFile, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { assertInstallationMutation, assertInstallationPolicy, assertRemovalMutation, resolveInstallationPath, resolveInstalledPath } from '../src/host/installation-paths.js';
@@ -14,7 +14,7 @@ const local = {
 };
 
 test('removal authorizes only the confirmed target and operation quarantine under current policy', async () => {
-  const home = await mkdtemp(join(tmpdir(), 'skillhub-removal-paths-'));
+  const home = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-removal-paths-')));
   try {
     const root = join(home, 'skills');
     const trash = join(home, '.skillhub-trash');
@@ -36,7 +36,7 @@ test('removal authorizes only the confirmed target and operation quarantine unde
 });
 
 test('default roots use custom DSH home and nearest Git worktree without creating skill directories', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-targets-'));
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-targets-')));
   const previous = process.env.DSH_HOME;
   try {
     process.env.DSH_HOME = join(root, 'custom');
@@ -53,7 +53,7 @@ test('default roots use custom DSH home and nearest Git worktree without creatin
     expect((await resolveInstalledPath({ ...options, scope: 'project', fs: { ...local, sandboxMode: 'read-only' } })).root)
       .toBe(join(root, 'project', '.dsh', 'skills'));
     expect(await readdir(root)).toEqual(['project']);
-    expect(await readdir(join(root, 'project'))).toEqual(['.git', 'nested']);
+    expect((await readdir(join(root, 'project'))).sort()).toEqual(['.git', 'nested']);
     await rm(join(root, 'project', '.git'));
     expect((await resolveInstallationPath({ ...options, scope: 'project' })).root).toBe(join(cwd, '.dsh', 'skills'));
   } finally {
@@ -73,7 +73,7 @@ test('effective policy denies read-only and sibling prefixes, permits workspace 
 });
 
 test('mutation guard rejects paths outside the accepted root and child symlink redirects', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-mutation-'));
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-mutation-')));
   try {
     await mkdir(join(root, 'skills'));
     await mkdir(join(root, 'elsewhere'));
@@ -87,7 +87,7 @@ test('mutation guard rejects paths outside the accepted root and child symlink r
 });
 
 test('redirected roots, non-host mappings, cancelled and relative contexts are rejected', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-targets-'));
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-targets-')));
   const previous = process.env.DSH_HOME;
   try {
     process.env.DSH_HOME = join(root, 'home');

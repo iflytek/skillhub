@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
+import { realpath, mkdtemp, readFile, readdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { zipSync } from 'fflate'
@@ -20,7 +20,7 @@ const fingerprint = 'sha256:' + createHash('sha256').update('SKILL.md:' + create
 const identity = { registry: 'https://registry.example', namespace: 'team', slug: 'writer' }
 
 async function setup(targetRoots = ['skills']) {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-transaction-journal-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-transaction-journal-')))
   const store = await OperationStore.open(join(root, 'operations'))
   const ownerId = 'session'
   const operation = (await store.accept({ ownerId, hostInstanceId: store.hostInstanceId, mode: 'new', requestKey: randomUUID(), requestDigest: operationRequestDigest({ scope: 'project' }) }, async () => ({

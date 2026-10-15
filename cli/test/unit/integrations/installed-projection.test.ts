@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
+import { realpath, mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { readInstalledProjection } from '../../../src/integrations/installed-projection'
@@ -7,7 +7,7 @@ import type { InventoryItem } from '../../../src/stores/inventory-store'
 
 const registry = 'https://registry.example'
 test('installed projection preserves both scopes and fixed versions without scanning other targets', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-projection-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-projection-')))
   try {
     const user = join(root, 'user')
     const project = join(root, 'project')

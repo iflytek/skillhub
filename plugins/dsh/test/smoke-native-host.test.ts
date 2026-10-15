@@ -1,5 +1,5 @@
 import { afterEach, expect, test } from 'bun:test';
-import { access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { realpath, access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Node-only CI entry; keep its helpers importable without starting a Host or downloading dependencies.
@@ -8,7 +8,7 @@ import { isolatedEnvironment, runBounded, selectTarball } from '../scripts/smoke
 
 const roots: string[] = [];
 async function root() {
-  const path = await mkdtemp(join(tmpdir(), 'skillhub-smoke-test-'));
+  const path = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-smoke-test-')));
   roots.push(path);
   return path;
 }
@@ -66,12 +66,17 @@ test('failed tree termination cannot make the runner wait indefinitely for child
   const directory = await root();
   const script = join(directory, 'unresponsive.mjs');
   await writeFile(script, 'setInterval(() => {}, 1000);');
+  let exited: Promise<void> | undefined;
   const started = Date.now();
   await expect(runBounded([script], { cwd: directory, env: process.env,
     log: join(directory, 'cleanup.log'), timeoutMs: 100, cleanupTimeoutMs: 100,
-    terminateProcess: () => undefined,
+    terminateProcess: (child: import('node:child_process').ChildProcess) => {
+      exited = new Promise(resolve => child.once('exit', () => resolve()));
+    },
   })).rejects.toThrow('cleanup deadline');
   expect(Date.now() - started).toBeLessThan(3000);
+  // The deadline rejects before the forced kill emits exit; release Windows cwd handles before fixture cleanup.
+  await exited;
 }, 5000);
 
 test('successful parent exit still cleans remaining descendants', async () => {

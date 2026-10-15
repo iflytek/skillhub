@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, mkdir, readFile, rm, symlink, unlink, writeFile } from 'node:fs/promises'
+import { realpath, mkdtemp, mkdir, readFile, rm, symlink, unlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspectRemovalBaseline } from '../../../src/integrations/removal-baseline'
@@ -7,7 +7,7 @@ import { snapshotSkillDirectory } from '../../../src/services/skill-fingerprint'
 import type { Inventory, InventoryItem } from '../../../src/stores/inventory-store'
 
 test('removal inspects one exact target while retaining all other targets in its baseline', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-removal-baseline-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-removal-baseline-')))
   try {
     const target = { scope: 'project' as const, root: join(root, 'project/skills') }
     const path = join(target.root, 'writer')

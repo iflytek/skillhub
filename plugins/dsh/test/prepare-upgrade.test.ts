@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { realpath, mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import SkillHubService from '@astron-team/skillhub-dsh';
@@ -7,7 +7,7 @@ import { UpgradePlans } from '../src/host/upgrade-plans.js';
 import type { UpgradeBaseline } from '../src/host/generated/native-contract.js';
 
 test('prepare upgrade stores a bounded plan only after baseline and version checks', async () => {
-  const cwd = await mkdtemp(join(tmpdir(), 'skillhub-prepare-upgrade-'));
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-prepare-upgrade-')));
   try {
     await mkdir(join(cwd, '.git'));
     const root = join(cwd, '.dsh', 'skills');

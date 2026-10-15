@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { realpath, mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import SkillHubService from '@astron-team/skillhub-dsh';
@@ -8,7 +8,7 @@ import { UpgradePlans, RemovalPlans } from '../src/host/upgrade-plans.js';
 import type { PreparedNativeUpgrade } from '../src/host/local-runtime.js';
 
 test('executePlan accepts only a bound plan and guards every mutation against current Host policy', async () => {
-  const cwd = await mkdtemp(join(tmpdir(), 'skillhub-execute-plan-'));
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-execute-plan-')));
   try {
     await mkdir(join(cwd, '.git'));
     const root = join(cwd, '.dsh/skills');

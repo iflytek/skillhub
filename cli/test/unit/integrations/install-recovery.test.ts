@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { createHash, randomUUID } from 'node:crypto'
-import { chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { realpath, chmod, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { zipSync } from 'fflate'
@@ -23,7 +23,7 @@ class LocalClient extends SkillHubClient {
 }
 
 async function fixture(lostCommitAcknowledgment = false, replacement = false, retainBackups = false) {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-recovery-inspection-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-recovery-inspection-')))
   try {
     const operations = await OperationStore.open(join(root, 'operations'))
     const inventory = new InventoryStore(join(root, 'home'))

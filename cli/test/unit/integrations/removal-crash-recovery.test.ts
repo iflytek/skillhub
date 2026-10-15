@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { realpath, mkdtemp, readFile, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -26,7 +26,7 @@ test.skipIf(process.platform === 'win32')('killed removal and recovery processes
   }
   try {
     const fixtures = await Promise.all(cases.map(async scenario => {
-      const root = await mkdtemp(join(tmpdir(), 'skillhub-killed-removal-'))
+      const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-killed-removal-')))
       roots.push(root)
       await run(root, scenario.boundary, scenario.mode)
       return { ...scenario, root, fixture: JSON.parse(await readFile(join(root, 'fixture.json'), 'utf8')) as Fixture }

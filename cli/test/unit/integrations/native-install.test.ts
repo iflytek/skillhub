@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdtemp, readFile, rm, writeFile, symlink } from 'node:fs/promises'
+import { realpath, mkdtemp, readFile, rm, writeFile, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -10,7 +10,7 @@ import { OperationStore, operationRequestDigest } from '../../../src/integration
 import type { NativeInstallExecution } from '../../../src/integrations/native-contract'
 
 async function fixture(downloadFailure = false) {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-native-execution-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-native-execution-')))
   const content = '# Native fixture'
   const fingerprint = 'sha256:' + createHash('sha256').update('SKILL.md:' + createHash('sha256').update(content).digest('hex') + '\n').digest('hex')
   let downloads = 0

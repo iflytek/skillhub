@@ -1,12 +1,12 @@
 import { expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { realpath, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import SkillHubService from '@astron-team/skillhub-dsh';
 
 test('upgrade recovery requires every historical target and revalidates all roots before each mutation', async () => {
-  const home = await mkdtemp(join(tmpdir(), 'skillhub-upgrade-recovery-host-'));
+  const home = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-upgrade-recovery-host-')));
   const previous = process.env.DSH_HOME;
   try {
     process.env.DSH_HOME = join(home, 'dsh');

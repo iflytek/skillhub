@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { createHash, randomUUID } from 'node:crypto'
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { realpath, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { zipSync } from 'fflate'
@@ -10,7 +10,7 @@ import { openNativeRuntime } from '../../../src/integrations/native-runtime'
 import type { NativeUpgradeExecution } from '../../../src/integrations/native-contract'
 
 async function fixture(downloadFailure = false) {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-native-upgrade-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-native-upgrade-')))
   const versions = ['1.0.0', '2.0.0'].map((version, index) => {
     const content = `# Version ${version}`
     const fingerprint = 'sha256:' + createHash('sha256').update('SKILL.md:' + createHash('sha256').update(content).digest('hex') + '\n').digest('hex')

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { realpath, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import SkillHubService from '@astron-team/skillhub-dsh';
@@ -9,7 +9,7 @@ import type { PreparedNativeRemoval } from '../src/host/local-runtime.js';
 import type { NativeOperation, RemovalBaseline } from '../src/host/generated/native-contract.js';
 
 test.each(['uninstall', 'remove-stale-record'] as const)('executePlan routes %s and restricts every mutation to its accepted identity', async kind => {
-  const cwd = await mkdtemp(join(tmpdir(), 'skillhub-execute-uninstall-'));
+  const cwd = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-execute-uninstall-')));
   try {
     await mkdir(join(cwd, '.git'));
     const root = join(cwd, '.dsh/skills');

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { realpath, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { executeNativeRemoval } from '../../../src/integrations/native-removal'
@@ -12,7 +12,7 @@ import { snapshotSkillDirectory } from '../../../src/services/skill-fingerprint'
 
 test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-denied', 'cleanup-denied', 'commit-ack-lost', 'commit-log-failed', 'inventory-response-lost'] as const)(
   'native removal isolates one exact target: %s', async scenario => {
-    const home = await mkdtemp(join(tmpdir(), 'skillhub-native-removal-'))
+    const home = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-native-removal-')))
     try {
       const target = { scope: 'project' as const, root: join(home, '.dsh/skills') }
       const path = join(target.root, 'writer')

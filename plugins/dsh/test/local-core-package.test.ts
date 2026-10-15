@@ -1,13 +1,13 @@
 import { expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { realpath, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 test('published tarball core installs and reconciles under Node outside the repository', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-dsh-packed-core-'));
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-dsh-packed-core-')));
   const packageRoot = fileURLToPath(new URL('..', import.meta.url));
   const cliRequire = createRequire(new URL('../../../cli/package.json', import.meta.url));
   const zipSync = cliRequire('fflate').zipSync as (files: Record<string, Uint8Array>) => Uint8Array;

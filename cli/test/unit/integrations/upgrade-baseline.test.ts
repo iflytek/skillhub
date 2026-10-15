@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { mkdtemp, mkdir, rm, writeFile, symlink } from 'node:fs/promises'
+import { realpath, mkdtemp, mkdir, rm, writeFile, symlink } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { inspectUpgradeBaseline } from '../../../src/integrations/upgrade-baseline'
@@ -7,7 +7,7 @@ import { snapshotSkillDirectory } from '../../../src/services/skill-fingerprint'
 import type { Inventory, InventoryItem } from '../../../src/stores/inventory-store'
 
 test('upgrade baseline includes both approved targets and blocks drift, sharing, aliases and foreign targets', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-upgrade-baseline-'))
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-upgrade-baseline-')))
   try {
     const roots = [{ scope: 'user' as const, root: join(root, 'user') }, { scope: 'project' as const, root: join(root, 'project') }]
     const item: InventoryItem = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1.0.0',
