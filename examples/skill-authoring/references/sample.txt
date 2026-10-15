@@ -1,0 +1,2 @@
+SkillHub makes agent skills discoverable, versioned, and trustworthy.
+Every skill ships a validation spec so behavior is verified, not assumed.
