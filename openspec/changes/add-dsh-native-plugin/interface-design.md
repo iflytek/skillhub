@@ -22,7 +22,7 @@ sequenceDiagram
   H-->>C: 内容 / 空数据 / 不可访问 / 错误
 ```
 
-Client 不直接请求 Registry、不接触文件路径、不持有 Token。Host 通过 DSH 已有 Client/Host 通道暴露插件服务；选用官方 TypertRemoteService + @Remote + 生成产物 + Client 显式挂载；调用包装为 RemoteResult。具体外部包挂载在 M0 验证，见 [DSH 接入设计](dsh-integration-design.md)，不新开监听端口。
+Client 不直接请求 Registry、不持有认证 Token，也不提交任意文件路径；升级与卸载计划中的路径仅用于只读展示影响范围。Host 通过 DSH 已有 Client/Host 通道暴露插件服务；选用官方 TypertRemoteService + @Remote + 生成产物 + Client 显式挂载；调用包装为 RemoteResult。具体外部包挂载在 M0 验证，见 [DSH 接入设计](dsh-integration-design.md)，不新开监听端口。
 
 ## 2. 已有 Registry REST 接口
 
@@ -44,7 +44,7 @@ Client 不直接请求 Registry、不接触文件路径、不持有 Token。Host
 
 不调用评论 PUT/DELETE、安全扫描 retry、发布或删除接口。不改安全审核现有访问规则。若后续要求匿名展示审核摘要，应单独设计经过脱敏的公开投影，本期只保留读取适配与可选 UI。
 
-## 3. 可选 Tab 配置（拟议）
+## 3. 可选 Tab 配置
 
 ```ts
 interface SkillHubPluginConfig {
@@ -67,7 +67,7 @@ interface SkillHubPluginConfig {
 - 网络错误/5xx 不能改变实例能力为 unsupported；已展示 Tab 保留错误和重试。切换来源重置判定与请求缓存。
 - Tab 开关来自原生插件配置，在同一实例连接中生效。修改配置不是账号权限管理。
 
-### 配置示例（仅插件拟议字段）
+### 插件配置示例
 
 ```json
 {
@@ -79,9 +79,9 @@ interface SkillHubPluginConfig {
 }
 ```
 
-该示例适合未上线评论的实例；版本和安全审核仍按匿名能力判断。开源实例想展示评论可把 reviews 改为 auto，不需要更换插件包。若必须让用户看到某模块不可访问的原因，可选 show，但不获得额外权限。registryUrl 需配置为实际实例地址，
+该示例适合未上线评论的实例；版本和安全审核仍按匿名能力判断。开源实例想展示评论可把 reviews 改为 auto，不需要更换插件包。若必须让用户看到某模块不可访问的原因，可选 show，但不获得额外权限。registryUrl 需配置为实际实例地址。
 
-## 4. 插件 Client ↔ Host 服务（拟议）
+## 4. 插件 Client ↔ Host 服务
 
 | 方法 | 输入 | 输出 | 约束 |
 | --- | --- | --- | --- |
@@ -99,9 +99,9 @@ interface SkillHubPluginConfig {
 | `startInstall` | input：detailToken,targetToken,requestKey,hostInstanceId,mode,initiatedFrom；可信 agent scope | NativeOperation 或 null | 持久接受后返回操作快照，同 key 同参数返回原操作；retry 未找到记录返回 null，不创建操作 |
 | `listInstallTargets` | detailToken，可信 agent scope | hostInstanceId、targets（targetToken、scope）、unavailable（范围列表） | 只读；从 Agent 文件系统解析，来源/项目/详情变化时拒绝；不返回路径，不代表已授权写入 |
 | `checkUpdate` | sourceRevision,itemKey | 更新状态、当前/候选版本、checkedAt | 只读，不下载完整包 |
-| `prepareUpgrade` | sourceRevision,itemKey | MutationPlan | 解析全部共享目标，仅允许当前用户/项目范围 |
-| `prepareUninstall` | sourceRevision,itemKey | MutationPlan | 只解析一个目标；离线可用 |
-| `executePlan` | planId,requestKey | operationId | 校验计划和精确 before，提交后不能复用 |
+| `prepareUpgrade` | sourceRevision,itemKey | UpgradePlanView | 解析全部共享目标，仅允许当前用户/项目范围 |
+| `prepareUninstall` | sourceRevision,itemKey | UninstallPlanView | 只解析一个目标；离线可用 |
+| `executePlan` | input：planId,requestKey；可信 agent scope | NativeOperation 或 null | 校验计划和精确 before，提交后不能复用 |
 | `getOperation` | operationId,hostInstanceId；可信 agent scope | NativeOperation 或 null | 只返回当前会话在指定 Host 上可见的操作；不存在或不属于该会话返回 null，Client 显示未知，不能视为成功 |
 | `recoverOperation` | input：operationId,hostInstanceId；可信 agent scope | 核验后的 NativeOperation 或 null | 只核验原操作，不生成新请求或重新下载安装包；不存在或不属于当前会话返回 null；重新验证当前可信根与写入策略；原始输入不接受额外字段 |
 
@@ -231,32 +231,44 @@ Registry 读取收到 429 且 Retry-After 有效时，Host 按秒数或 HTTP-dat
 逐一验证匿名列表、详情、版本、SKILL.md、评论、下载及拒绝响应。安全审核须覆盖匿名访问拒绝场景。实例开关和能力组合应覆盖 hide、auto 支持/未知、show 被拒、网络错误、空数据和来源切换。
 
 
-## 9. 升级与卸载接口补充（拟议）
+## 9. 升级与卸载接口
+
+升级与卸载使用不同的只读计划视图；字段对应 `plugins/dsh/src/host/types.ts`。完整文件基线与清单快照仅保存在 Host，不传到 Client。
 
 ```ts
-type MutationPlan = {
-  planId: string
-  kind: 'upgrade' | 'uninstall' | 'remove-stale-record'
+interface UpgradePlanView {
+  hostInstanceId: string
   status: 'ready' | 'unchanged' | 'blocked'
-  sourceRevision: string
-  namespace: string
-  slug: string
+  reason: string
+  planId: string | null
+  expiresAt: string | null
   currentVersion: string
-  targetVersion?: string
-  targets: Array<{
-    targetToken: string
-    scope: 'user' | 'project'
-    label: string
-    displayPath: string // 只读告知影响，不能在提交参数中覆盖
-  }>
-  expiresAt: string
-  blockers: Array<{ code: string; message: string }>
+  candidateVersion: string | null
+  targets: Array<{ scope: 'user' | 'project'; path: string }>
+}
+
+interface UninstallPlanView {
+  hostInstanceId: string
+  status: 'ready' | 'blocked'
+  reason: string
+  kind: 'uninstall' | 'remove-stale-record' | null
+  planId: string | null
+  expiresAt: string | null
+  currentVersion: string
+  target: { scope: 'user' | 'project'; path: string } | null
+}
+
+interface HostExecutePlanRequest {
+  planId: string
+  requestKey: string
 }
 ```
 
-prepare 返回 plan，即使 blocked 也正常返回原因，非 500。execute 只接受 ready 且未过期计划；计划到期返回 PLAN_EXPIRED；来源、项目或本地快照变化返回 CONTEXT_STALE。服务端保存的 before 包含完整文件基线、所有权和 inventory 全目标集合，不发完整文件 hash 映射到浏览器。
+`path` 只读展示实际影响位置，提交参数不能携带或覆盖路径。`ready` 才提供可执行的计划；`blocked` 用 reason 说明阻断原因，升级无新版时可返回 unchanged。上述状态属于正常业务返回，不作为 HTTP 500 处理。
 
-新增错误语义：LOCAL_MODIFIED、BASELINE_MISSING、SHARED_OWNERSHIP、MULTI_TARGET_SCOPE_CONFLICT、VERSION_ORDER_UNKNOWN、REMOTE_CONTENT_CHANGED、PLAN_EXPIRED、REQUEST_KEY_CONFLICT、RECOVERY_REQUIRED。Remote 层映射为 `skillhub/<lower-kebab-reason>`；blocked 的逐项原因仍作为业务数据返回。
+`executePlan` 先按当前会话、requestKey 和 planId 查找已接受操作；存在时返回原操作快照，不因计划已过期而重新执行。首次提交须核验未过期计划、来源、会话、项目和本地基线。计划缺失、过期或上下文变化返回 `skillhub/context-stale`，提示重新准备；不同请求键争用同一计划、同键参数冲突返回 `skillhub/request-conflict`；请求格式非法返回 `skillhub/invalid-installation-request`。其他无法受理的执行异常映射为 `skillhub/installation-unavailable`，不将底层路径或原始异常透传。Remote 错误不采用统一的“大写业务原因转小写”规则。
+
+`executePlan` 返回 `NativeOperation | null`，不是单独的 operationId。Client 从快照取得 operationId，再查询原操作；null 不能解释为成功。完整操作字段以共享核心生成的 `plugins/dsh/src/host/generated/native-contract.d.ts` 为准。
 
 操作日志保存 requestKey、参数摘要、调用上下文绑定、operationId 与执行阶段（不存凭证）；同 key 同参数可以找回，同 key 不同参数返回冲突。prepare 不修改文件，execute 返回接受状态不等于完成。
 
@@ -266,7 +278,7 @@ local-only 详情不能发起远端安装或升级，但可通过独立 prepareU
 
 ## 对话工具接口
 
-首期增加拟议 astron_skillhub_search 与 astron_skillhub_install。模型仅提供关键词或技能坐标/范围；来源、可信目标、幂等键由 Host 适配层派生。具体输入、结果 envelope、历史操作绑定与错误语义见 [对话设计第 6 节](conversation-design.md#6-工具与服务契约拟议)。页面与工具均复用本文 startInstall/getOperation，工具不接受任意文件路径或下载地址。
+首期提供 astron_skillhub_search 与 astron_skillhub_install。模型仅提供关键词或技能坐标/范围；来源、可信目标、幂等键由 Host 适配层派生。具体输入、结果 envelope、历史操作绑定与错误语义见 [对话设计第 6 节](conversation-design.md#6-工具与服务契约)。页面与工具均复用本文 startInstall/getOperation，工具不接受任意文件路径或下载地址。
 
 
 ## 10. 已接受操作的查重顺序与历史快照
