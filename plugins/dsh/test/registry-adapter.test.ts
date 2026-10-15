@@ -14,9 +14,12 @@ const resolved = {
 describe('anonymous Registry adapter', () => {
   test.each(['headers', 'body'] as const)('times out stalled %s and permits a later retry', async phase => {
     let stalled = true;
+    let finishHeaders: (() => void) | undefined;
     const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch() {
       if (!stalled) return Response.json({ data: { items: [], total: 0, limit: 20 } });
-      if (phase === 'headers') return new Promise<Response>(() => {});
+      if (phase === 'headers') return new Promise<Response>(resolve => {
+        finishHeaders = () => resolve(new Response());
+      });
       return new Response(new ReadableStream({ start(controller) {
         controller.enqueue(new TextEncoder().encode('{"data":'));
       } }));
@@ -26,7 +29,11 @@ describe('anonymous Registry adapter', () => {
       await expect(client.search()).rejects.toMatchObject({ code: 'NETWORK_ERROR', retryable: true });
       stalled = false;
       expect(await client.search()).toEqual({ items: [], total: 0, limit: 20 });
-    } finally { await server.stop(true); }
+    } finally {
+      // Release the fixture handler before shutdown; Bun 1.3.13 on Windows waits for pending responses.
+      finishHeaders?.();
+      await server.stop(true);
+    }
   });
 
   test('caller cancellation interrupts an in-flight body before the deadline', async () => {

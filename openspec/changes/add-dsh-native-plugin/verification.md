@@ -2466,3 +2466,10 @@ compatibility-design.md §1.4 将发行/生成器、Bundle、Client/Remote、工
 在 Linux 将 TMPDIR 指向符号链接目录，修复前稳定复现同一错误；build.ts 将 mkdtemp 返回的 staging 根目录经 realpath 规范化，编译选项和类型检查不变。相同输入下完整 check 通过：构建、typecheck、lint、198 项测试及 3110 次断言。真实 macOS 的修复提交仍待远端确认，不据本机模拟宣布平台支持。
 
 已下载上述 Linux 两个任务的 sanitized Host 报告并归档为 [CI Linux 结果](../../../docs/research/dsh-native-plugin-2026-10-12/ci-linux-957c4737b-result.json)：Node 24.2.0 与 24.21.0 均完成 runtime-baseline/plugin-lifecycle，未调用模型，包摘要一致。报告仅代表提交 957c4737b 的两个 Linux 任务，不代表整个矩阵或后续构建修复提交。
+
+
+## Windows Bun 1.3.13 测试服务关闭停滞
+
+上述 Windows 两个 CI 任务持续停留在 Registry adapter 测试。使用官方 npm 分发并核验 integrity 的 Bun 1.3.13，在 Windows 隔离环境复现：请求超时、NETWORK_ERROR 及稍后重试均通过，finally 中 server.stop(true) 等待未完成的测试响应而不返回。局部诊断显式释放该响应后通过。取消已确认停滞的远端运行，取得日志确认同一位置；不是因观察超时直接重启任务。
+
+测试夹具仅在 finally 显式释放 headers 阶段悬挂响应后再关闭服务，保留超时、重试与用户取消断言。未更改 RegistryAdapter 或升级 CI Bun。精确 Windows Bun 1.3.13 定向检查 22 项通过、40 次断言；修复版完整 check 的 build/typecheck/lint 及 198 项测试、3110 次断言全部通过，整轮约 61 秒。macOS 的构建路径修复与此测试收尾修复将一并推送后重跑矩阵。
