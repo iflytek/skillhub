@@ -40,6 +40,25 @@ M0 验证 Bundle 加载、Client 页面、Remote 生成和挂载、对话工具�
 
 新增宿主版本支持单独进行需求评估和回归；首版交付不以第二个版本通过为前提。不因版本号更高而自动兼容，发布声明和 peers 不使用 `*` 或未经验证的宽范围。
 
+### 1.4 M0 能力与已有证据
+
+下表汇总固定 RC.2 组合的能力验证，不将不同阶段的开发包报告视作同一最终候选的完整验收，也不改变当前支持状态。完整过程和环境边界以 [verification.md](verification.md) 为准。
+
+| M0 能力 | 已验证结果 | 证据 |
+| --- | --- | --- |
+| 发行依赖与生成器 | RC.2 源码清单、发行包及本地依赖对应；官方生成器生成独立 Host/Remote 产物 | [发行对应](../../../docs/research/dsh-native-plugin-2026-10-12/rc2-release-mapping-result.json)、[生成器验证](../../../docs/research/dsh-native-plugin-2026-10-12/m0-release-probe.md) |
+| Bundle 与 Host/Client 生命周期 | 干净 Web Profile 使用实际安装的 Client；两轮禁用/启用移除并恢复服务、工具和 Client 图 | [Bundle 生命周期](../../../docs/research/dsh-native-plugin-2026-10-12/loader-identity-lifecycle-result.json) |
+| Client 页面与 Remote 挂载 | 浏览器原生页面收到 Host 连接结果，后续对话详情通过 scoped 调用读取 | [M0 页面](../../../docs/research/dsh-native-plugin-2026-10-12/m0-browser-result.json)、[上下文调用](../../../docs/research/dsh-native-plugin-2026-10-12/m2-target-policy-result.json) |
+| 工具与结果卡片 | 真实模型只搜索不写入及明确安装通过；官方流事件夹具覆盖 preparing/start/result 和纯展示元数据 | [只读搜索](../../../docs/research/dsh-native-plugin-2026-10-12/real-model-readonly-search-result.json)、[明确安装](../../../docs/research/dsh-native-plugin-2026-10-12/real-model-explicit-install-result.json)、[卡片阶段](../../../docs/research/dsh-native-plugin-2026-10-12/windows-tool-phases-result.json) |
+| 可信用户/项目上下文 | 官方工具传入可信会话 cwd；用户/项目读取和项目隔离通过 | [目标上下文](../../../docs/research/dsh-native-plugin-2026-10-12/m2-target-policy-result.json) |
+| 匿名下载、完整资源与发现观察 | 真实 Registry 技能安装及文件核验；干净包同会话发现和资源读取通过，操作展示仍可保持 unconfirmed | [真实包安装](../../../docs/research/dsh-native-plugin-2026-10-12/registry-resource-install-result.json)、[同会话发现](../../../docs/research/dsh-native-plugin-2026-10-12/clean-installed-discovery-result.json) |
+
+M0 必需能力已有上述分项证据；任务 10.1/10.5 的最终结论仍须结合平台 CI、宿主与回退结果确认。发布前保留以下处置门禁：
+
+- 最终提交的 Linux/Windows 平台 CI 完成并保留产物；macOS 产品验收继续后置，不因 CI 通过自动声明支持。
+- 对历史 Linux 基线偶发断言和 Windows 间歇安装失败形成明确处置记录：补充可核验归因与修复证据，或明确影响范围、剩余风险及发布决策。后续成功不作为问题已解决的证明。原记录见 verification.md 的“已安装 Profile 的真实宿主版本往返”和“兼容性实现任务统一审计”。
+- 独立远程 Host、当前服务端部署及实际发布包的缺口继续按 [验收门禁](acceptance.md) 跟踪，不由本表豁免。
+
 ## 2. 兼容对象
 
 | 层次 | 验证内容 | 风险处理 |
@@ -108,6 +127,17 @@ CI 使用单一 DSH 基线与受支持平台的矩阵作为发布门禁。新发
 3. 适配新宿主先完成候选验证，再更新 peers、支持清单和文档；不直接修改现有发布包。
 4. 插件包内 Host/Client/Remote 成套发布。插件版本回退先核验操作日志及安装记录兼容性。
 5. 安装器与加载器可以在插件运行前拒绝不兼容依赖，此时由安装文档提供可选的受支持版本。
+
+### 6.1 首版回退决策
+
+首版没有可承诺兼容的旧正式插件版本时，故障处置采用**禁用插件并保留数据**，不默认退到开发包，也不为验证回退而另行发布第二个版本。
+
+1. 停止新写入；存在已接受操作时先核验原操作及待恢复状态，按已验证的关闭/恢复流程处理，不把禁用视为取消或回滚。
+2. 通过 DSH Plugins 开关禁用插件，保留已安装技能、inventory、操作日志及宿主身份。后续只在兼容版本恢复启用或进行明确的修复操作。
+3. 指定开发包的替换/回退仅用于隔离测试。已有[完成历史往返](../../../docs/research/dsh-native-plugin-2026-10-12/plugin-artifact-roundtrip-result.json)和[待恢复事务回退](../../../docs/research/dsh-native-plugin-2026-10-12/pending-plugin-artifact-rollback-result.json)验证字节身份与数据保留，但两包版本均为 `0.0.0-m0`，不构成不同正式版本的兼容承诺。
+4. 后续出现旧正式版本时，在将其列为回退目标前验证对应日志和安装记录兼容性；不识别的日志阻止新写和恢复写入，保留原数据，使用兼容修复版本。已有[包外核心测试](../../../plugins/dsh/test/local-core-package.test.ts)验证未知 schema 的拒绝与数据不变，不替代具体正式版本之间的演练。
+
+真实宿主升级后的拒绝与回退另有[完成历史](../../../docs/research/dsh-native-plugin-2026-10-12/completed-history-roundtrip-result.json)和[待恢复升级](../../../docs/research/dsh-native-plugin-2026-10-12/pending-upgrade-host-roundtrip-result.json)证据。上述策略不改变精确 peers/engines，不绕过官方加载器，也不关闭任务 9.5/10.5。
 
 ## 7. 开发交付项
 

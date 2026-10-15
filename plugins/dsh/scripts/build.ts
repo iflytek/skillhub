@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -8,7 +8,9 @@ import { buildLocalCore } from './build-core.js';
 
 const root = resolve(import.meta.dir, '..');
 const manifest = await Bun.file(join(root, 'package.json')).json();
-const staging = await mkdtemp(join(tmpdir(), 'skillhub-dsh-build-'));
+// The generator canonicalizes rootDir; source paths must use the same spelling
+// when the temporary directory is a symlink (for example /var on macOS).
+const staging = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-dsh-build-')));
 try {
   await buildLocalCore(root);
   const workspace = join(staging, 'packages');

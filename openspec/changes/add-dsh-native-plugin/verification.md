@@ -2450,3 +2450,17 @@ Stop 按钮验收新增 conversation-stop-probe.mjs，语法及 lint 已通过�
 首轮后端工作流通过，Linux CLI、脚本回归与 RISC-V 构建通过；Draft PR 自动跳过的检查不记为通过。DCO 提示两个提交缺少 Signed-off-by，用户已授权使用当前 Git 作者身份补签并仅重写这两个提交、以 force-with-lease 更新本功能分支。未创建 tag、部署或发布 npm 包。
 
 补充插件测试夹具的相同路径规范化，并修正模拟清理超时用例的测试收尾：先保留原有小于 3 秒的拒绝断言，再等待被强制终止的子进程发出 exit，避免 Windows cwd 句柄尚未释放时删除目录。最终 Windows 插件 build/typecheck/lint 通过，完整测试 198 项通过、3110 次断言；Linux 受影响插件测试及 lint/typecheck 通过。Windows 本机 Bun 为 1.3.14，CI 固定为 1.3.13，最终远端结果仍须单独核验。
+
+
+## M0 能力汇总与首版回退决策
+
+compatibility-design.md §1.4 将发行/生成器、Bundle、Client/Remote、工具卡片、可信上下文及匿名资源发现映射到已有报告；没有追加模型或宿主测试，也不将不同阶段产物视为当前候选全量验收。§6.1 明确首版没有旧正式版本时禁用并保留技能、inventory 和日志；指定开发包只用于隔离回退演练，未来正式回退目标须另验具体记录兼容性，不要求人为发布第二版。
+
+本次核验该文档全部本地链接存在、引用 JSON 可解析，差异检查通过。未修改 tasks 或支持声明；平台 CI 尚未闭合，历史 Linux 基线偶发断言及 Windows 间歇安装失败仍要求发布前明确处置，不用后续成功替代归因。独立远程 Host、部署和实际发布包验收继续保留。
+
+
+## 修复提交的 CI 结果与构建目录别名修正
+
+提交 957c4737b 的 DCO 检查通过；[三平台 CLI 工作流](https://github.com/iflytek/skillhub/actions/runs/38691150529)全部通过。[DSH 工作流](https://github.com/iflytek/skillhub/actions/runs/38691150641)的 Linux 两个 Node 版本均通过，包含隔离 Web Profile 的真实 Host 冒烟；Windows 仍在执行。macOS 共享 CLI 通过，但插件构建的官方生成器将临时根解析成 /private/var，源文件仍使用 /var，触发 TS6059。
+
+在 Linux 将 TMPDIR 指向符号链接目录，修复前稳定复现同一错误；build.ts 将 mkdtemp 返回的 staging 根目录经 realpath 规范化，编译选项和类型检查不变。相同输入下完整 check 通过：构建、typecheck、lint、198 项测试及 3110 次断言。真实 macOS 的修复提交仍待远端确认，不据本机模拟宣布平台支持。
