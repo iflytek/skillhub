@@ -367,4 +367,3 @@ stateDiagram-v2
 - [接口设计](interface-design.md)
 - [详细实现方案](engineering-blueprint.md)
 - [安装、升级与卸载](lifecycle-design.md)
-

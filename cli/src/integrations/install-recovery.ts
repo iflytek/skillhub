@@ -265,4 +265,3 @@ async function releaseLocks(releases: Array<() => Promise<void>>, operationError
   }
   if (failures.length) throw new AggregateError(operationError ? [operationError, ...failures] : failures, 'Recovery inspection lock release failed')
 }
-
