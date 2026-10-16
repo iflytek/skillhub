@@ -1,3 +1,5 @@
+import { revealReceipt } from './receipt-disclosure.mjs';
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -28,11 +30,11 @@ try {
   await page.getByRole('button', { name: 'Configure later', exact: true }).click();
   if (!await page.getByText(title, { exact: true }).isVisible()) await page.getByText(workspace, { exact: true }).click();
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
   const installed = plaza.getByRole('region', { name: '已安装技能' });
-  await installed.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+  await selectValue(installed.getByRole('combobox', { name: '筛选安装范围' }), 'project');
   await installed.getByRole('button', { name: '查看已安装详情', exact: true }).click();
   const detail = plaza.getByRole('region', { name: '已安装技能详情' });
   if (offline) {
@@ -112,8 +114,8 @@ try {
       assert(resumed?.entry, 'Host restart did not complete');
       assert.equal(new URL(resumed.entry).origin, new URL(entry).origin, 'Preserve origin for sessionStorage');
       await page.goto(resumed.entry, { waitUntil: 'domcontentloaded' });
-      await page.getByText('SkillHub', { exact: true }).click();
-      await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+      await page.getByText('技能中心', { exact: true }).click();
+      await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
       recoveryRegion = installed.getByRole('region', { name: '未关闭的卸载结果', exact: true });
       await recoveryRegion.getByRole('button', { name: '核验并恢复', exact: true }).waitFor();
     }
@@ -131,8 +133,8 @@ try {
     await recoveryRegion.getByRole('button', { name: '核验并恢复', exact: true }).click();
     await recoveryRegion.getByText('卸载未完成。原文件已恢复。', { exact: true }).waitFor();
     await page.reload({ waitUntil: 'domcontentloaded' });
-    await page.getByText('SkillHub', { exact: true }).click();
-    await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+    await page.getByText('技能中心', { exact: true }).click();
+    await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
     const history = installed.getByRole('region', { name: '未关闭的卸载结果', exact: true });
     await history.getByText('卸载未完成。原文件已恢复。', { exact: true }).waitFor();
     assert.equal(submissions, 1);
@@ -149,12 +151,12 @@ try {
     await page.reload({ waitUntil: 'domcontentloaded' });
     const later = page.getByRole('button', { name: 'Configure later', exact: true });
     if (await later.isVisible()) await later.click();
-    await page.getByText('SkillHub', { exact: true }).click();
-    await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+    await page.getByText('技能中心', { exact: true }).click();
+    await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
     const history = installed.getByRole('region', { name: '未关闭的卸载结果', exact: true });
     await history.getByRole('button', { name: '查询原卸载请求', exact: true }).click();
-    await history.getByText(success, { exact: true }).waitFor();
-    await installed.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+    await revealReceipt(history.getByText(success, { exact: true }));
+    await selectValue(installed.getByRole('combobox', { name: '筛选安装范围' }), 'project');
     await installed.getByText('当前显示 0 项安装记录。', { exact: true }).waitFor();
     await page.screenshot({ path: `${output}/removal-recovered.png` });
     await history.getByRole('button', { name: '关闭本次卸载结果', exact: true }).click();

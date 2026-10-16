@@ -51,3 +51,18 @@ Registry API changes SHALL preserve supported clients or provide an explicit ver
 #### Scenario: Temporary failure is not capability absence
 - **WHEN** an optional request fails due to network errors or server failure
 - **THEN** the plugin retains error and retry behavior without permanently declaring the capability unsupported or presenting an empty successful response
+
+### Requirement: Test a draft source without saving
+The plugin SHALL provide an explicit connection test for the draft Registry address. The Host SHALL validate the address and anonymously read the public catalog, using the supported basic-search fallback when necessary, within a ten-second total deadline. Testing SHALL NOT change the active source, source revision, configuration, or installed skills.
+
+#### Scenario: Draft source is reachable
+- **WHEN** the user tests a valid draft address and the public read succeeds
+- **THEN** the configuration page reports the available catalog or basic-search capability and elapsed time without claiming the address was saved or installation was verified
+
+#### Scenario: Draft changes during a test
+- **WHEN** the address changes, the user resets edits, or the configuration page unmounts during a test
+- **THEN** the pending request is cancelled and its result cannot overwrite the current draft's state
+
+#### Scenario: Invalid or unavailable source
+- **WHEN** the address is invalid, public access is denied, the response is incompatible, or the deadline expires
+- **THEN** the page shows an appropriate safe error without exposing response contents, credentials, or a false successful connection

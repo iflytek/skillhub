@@ -43,7 +43,7 @@ The plugin SHALL keep the details tab available and SHALL support per-Registry a
 
 #### Scenario: Version context and review scope
 - **WHEN** optional detail modules are displayed
-- **THEN** documentation and audit data match the fixed detail version, reviews are identified as skill-level, and read-only version history does not silently change the install version
+- **THEN** documentation and audit data match the fixed detail version, reviews are identified as skill-level, and viewing version history does not silently change the install version; an explicit selection loads a new exact-version detail token
 
 #### Scenario: Detail subpage return
 - **WHEN** the user opens a skill from either catalog tab and uses the top-left return action
@@ -107,6 +107,22 @@ The plugin SHALL provide an installation tool and a custom operation result card
 - **WHEN** installation refers to a search card, detail or ordinal selection
 - **THEN** the request carries a Host-issued selection reference binding the original context, and a missing or stale reference cannot be converted to a fresh coordinate-only installation
 
+
+#### Scenario: Install a search candidate without opening details
+- **WHEN** the user explicitly requests installation of a uniquely selected search candidate without opening its detail drawer
+- **THEN** the Host validates the original reference and resolves the search-time exact version into an installation snapshot without invoking Client display acknowledgment, then uses the existing trusted installation transaction
+
+#### Scenario: Search-time version is no longer latest
+- **WHEN** a newer version is published after the search but before an unviewed candidate is installed
+- **THEN** the Host installs only the exact version recorded by the search, or rejects an unavailable version; it never silently substitutes latest
+
+#### Scenario: Context or displayed snapshot changes during verification
+- **WHEN** source, session, project, reference validity or acknowledged snapshot changes while an unviewed candidate is being verified
+- **THEN** the Host revalidates context and prioritizes a valid acknowledged snapshot, rejecting stale or ambiguous associations without falling back to coordinates
+
+#### Scenario: Concurrent verification or failed verification
+- **WHEN** requests verify the same unviewed candidate concurrently or a previous verification failed
+- **THEN** concurrent verification is shared, failed verification does not authorize installation or mark the candidate viewed, and a subsequent valid request may retry verification
 
 #### Scenario: Install after reading a detail drawer
 - **WHEN** the user has viewed a fixed version in the drawer and subsequently requests installation using the original search reference
@@ -184,3 +200,68 @@ Host-specific differences SHALL be confined to Host context, Remote and Client i
 #### Scenario: Moving distribution tag
 - **WHEN** the npm latest tag changes after the baseline is locked
 - **THEN** builds and acceptance continue to use the locked exact release until an explicit baseline change is validated
+
+### Requirement: Scoped modern components and explicit confirmation
+The plugin SHALL adapt shadcn/Radix component source to DSH theme variables, use the Host React and React DOM runtime, and keep styles within its own namespace. Installation controls SHALL require confirmation of the skill, exact version and scope before submitting a new installation request.
+
+#### Scenario: Host and another plugin share the page
+- **WHEN** the SkillHub panel opens or closes alongside another plugin
+- **THEN** its component selectors and reset rules do not alter the Host or the other plugin's typography, colors or layout
+
+#### Scenario: Cancel an installation confirmation
+- **WHEN** the user cancels or dismisses the confirmation dialog
+- **THEN** no new installation request is sent and focus returns to the initiating control
+
+#### Scenario: Confirm from conversation details
+- **WHEN** the confirmation opens inside a conversation detail drawer
+- **THEN** the dialog remains visible and keyboard accessible; dismissing it preserves the parent detail drawer and does not install a skill
+
+
+### Requirement: Compact navigation and themed selection controls
+The plugin SHALL use a compact toolbar with an accessible close action and discoverable current-source information. Dropdown controls SHALL use scoped shadcn/Radix Select components without changing trusted target, sorting or filtering semantics.
+
+#### Scenario: Close the plaza
+- **WHEN** the user activates the toolbar close action while a conversation is available
+- **THEN** the plugin returns to that conversation through the Host layout mechanism without cancelling accepted operations or confusing the action with returning from details to the catalog
+
+#### Scenario: Select a target inside conversation details
+- **WHEN** the user opens the installation-scope dropdown inside a conversation detail drawer
+- **THEN** options remain visible and keyboard accessible in the current theme, disabled targets cannot be selected, and dismissing the dropdown preserves the drawer and does not submit a write
+
+### Requirement: Complete detail content cards
+The detail tabs SHALL share a themed content card with a desktop content minimum height of 440 CSS pixels and a responsive narrow-screen layout. Loading, empty, denied and error states SHALL remain inside this structure. Version and review pagination SHALL sit below the content, and changing tabs SHALL update both content and active styling.
+
+#### Scenario: A single review is available
+- **WHEN** the source returns one review
+- **THEN** the card displays its public author, rating, readable date and text without collapsing the content area, fabricating a version association or inventing an aggregate score
+
+#### Scenario: Review data cannot be displayed
+- **WHEN** reviews are empty, denied or fail to load
+- **THEN** the card distinguishes those states and offers retry only where applicable; missing or invalid dates are labelled unknown rather than shown as invented timestamps
+
+#### Scenario: Optional content becomes hidden
+- **WHEN** a selected optional tab is hidden by source capability or configuration
+- **THEN** selection returns to details and the hidden module is not requested
+
+
+### Requirement: Explicit version selection without weakening target protection
+The plaza SHALL allow users to select a downloadable version from version history, reload its exact detail and installation token, and confirm that version before installation. Existing target conflict and upgrade-plan protections SHALL remain effective.
+
+#### Scenario: Select another published version
+- **WHEN** a user explicitly selects a downloadable version
+- **THEN** the detail and documentation are reloaded for that version and the previous installation control is unavailable while loading or after failure
+
+#### Scenario: Select from a conversation detail
+- **WHEN** the user wants a different version from a conversation-bound detail
+- **THEN** the UI routes the user to the plaza through the existing validated navigation path rather than reusing the old conversation reference for the new version
+
+### Requirement: Product-focused installation status and recoverable history
+The UI SHALL distinguish current inventory from historical operations. Completed diagnostic details MAY be collapsed, but incomplete, failed, unknown, recovery-required or warning-bearing operations SHALL remain clearly visible and actionable.
+
+#### Scenario: Historical success with changed inventory
+- **WHEN** an old installation succeeded but current inventory is missing, different or unreadable
+- **THEN** the primary status reflects the current inventory evidence or uncertainty, while the historical result remains accessible separately
+
+#### Scenario: Completed clean upgrade history
+- **WHEN** an upgrade is confirmed completed without warnings
+- **THEN** the installed list remains the primary management view and the old operation is available in a collapsed history section without losing its stored result

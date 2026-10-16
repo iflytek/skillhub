@@ -38,7 +38,7 @@ try {
     await form.getByRole('textbox', { name: 'Registry 地址' }).fill(address);
     await form.getByRole('button', { name: '保存配置', exact: true }).click();
     await form.getByText('配置已保存。', { exact: true }).waitFor();
-    await page.getByText('SkillHub', { exact: true }).click();
+    await page.getByText('技能中心', { exact: true }).click();
     const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
     await plaza.getByText(address, { exact: true }).waitFor();
     await plaza.getByRole('button', { name: '返回会话', exact: true }).click();

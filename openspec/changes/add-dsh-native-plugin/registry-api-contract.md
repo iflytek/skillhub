@@ -25,7 +25,8 @@
 
 | 能力 | 接口基线 | 兼容要求 |
 | --- | --- | --- |
-| 浏览 / 搜索 | GET `/api/cli/v1/skills/search` | q 可选；返回真实 items/total/limit；不假设有翻页参数 |
+| 广场分页浏览 / 搜索 | GET `/api/web/skills` | q/page/size/sort；items/total/page/size；每批 12 项、真实排序和可选统计，详见接口设计 |
+| 对话搜索 / 旧来源回退 | GET `/api/cli/v1/skills/search` | q 可选；返回真实 items/total/limit；不假设有翻页参数 |
 | 解析安装版本 | GET `/api/cli/v1/skills/{namespace}/{slug}/resolve` | 版本和 fingerprint 固定；不能在下载时静默换版本 |
 | 读取元信息 | GET `/api/v1/skills/{namespace}/{slug}` | 坐标与 skillId 语义一致，保留可匿名读取范围 |
 | 读取说明 | GET `/api/v1/skills/{namespace}/{slug}/versions/{version}/file?path=SKILL.md` | 原始内容流，不包装成 JSON data |
@@ -42,6 +43,7 @@
 
 | 能力 | 开源实现入口 | 插件消费约束 |
 | --- | --- | --- |
+| 广场目录 | `SkillSearchController.search`、`SkillSummaryResponse` | page/size 回显，publishedVersion.version 为发布版本；displayName、downloadCount、starCount、ratingAvg、ratingCount 可选；无技能头像字段；首批404/405才回退受限搜索 |
 | 搜索 | `CliSkillController.search`、`CliSkillAppService.search` | `data.items` 中的 namespace、slug、latestVersion、summary；limit 为实际上限，total 不能伪造；空结果仍返回数组 |
 | 解析 | `CliSkillController.resolve`、`CliResolveResponse` | namespace、slug、version、versionId、fingerprint、downloadUrl；请求精确版本时响应必须一致 |
 | 元信息 | `SkillController.getSkillDetail`、`SkillDetailResponse` | id、namespace、slug、displayName、summary；不向插件透传管理权限作为业务授权 |
@@ -73,6 +75,7 @@
 | 能力 | 开源本地预览实例 | SaaS 测试实例 |
 | --- | --- | --- |
 | 匿名搜索、精确版本解析、元数据 | 通过 | 未验证 |
+| 新增消费的广场分页、排序、统计 | 现有开源 Controller/DTO/匿名策略已核对；本轮插件适配与宿主夹具验证独立记录 | 未验证；缺失分页路由可使用受限搜索 |
 | 固定版本 SKILL.md 原始内容 | 通过 | 未验证 |
 | 完整归档与 fingerprint | 通过 | 未验证 |
 | 版本历史 | 通过 | 未验证 |
@@ -81,7 +84,7 @@
 | DSH 安装带资源技能 | 已有项目级安装及资源核验记录 | 未验证 |
 | 模型实际使用技能 | 未完成验收 | 未验证 |
 
-开源接口证据：[匿名契约报告](../../../docs/research/dsh-native-plugin-2026-10-12/registry-local-preview-contract-result.json)。资源技能安装证据：[安装结果](../../../docs/research/dsh-native-plugin-2026-10-12/registry-resource-install-result.json)、[文件核验](../../../docs/research/dsh-native-plugin-2026-10-12/registry-resource-install-files-result.json)。服务端模拟测试证据：[Controller 契约报告](../../../docs/research/dsh-native-plugin-2026-10-12/registry-backend-contract-result.json)，不得代替目标实例验收。
+开源接口证据：[匿名契约报告](verification.md)。资源技能安装证据：[安装结果](verification.md)、[文件核验](verification.md)。服务端模拟测试证据：[Controller 契约报告](verification.md)，不得代替目标实例验收。
 
 ### 3.4 SaaS 同步执行与交接
 
@@ -167,3 +170,8 @@ sequenceDiagram
 新增可选字段应保持旧客户端可读；删除字段、改变类型、改变版本解析或访问语义属于兼容性变更，需新版本契约或明确迁移期。插件以能力和契约验证判定兼容，不要求开源与 SaaS 的产品版本号完全一致。
 
 插件内部 Remote 版本与 Registry HTTP 版本独立演进。插件包内 Host/Client 应成套发布，防止只更新其中一端造成 DTO 不匹配。
+
+
+### 可选公开标签能力
+
+插件标签筛选复用开源已有 `/api/web/labels` 和 `/api/web/skills` 的 `label` 查询参数，无新增后端路由。SaaS 同步时应核对公开标签投影、匿名策略及筛选实际生效；未通过不能声明具备标签筛选。标签目录 404/405 时普通浏览继续可用；标签过滤请求失败必须明确提示，不得静默退回全部结果。

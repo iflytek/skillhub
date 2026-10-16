@@ -16,7 +16,7 @@ try {
   await writeFile(state, 'unavailable');
   await page.goto(entry, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Configure later', exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   await plaza.getByRole('button', { name: /document-helper/ }).click();
   await plaza.getByText('评论是否可读取尚未确认，不代表没有内容。', { exact: true }).waitFor();

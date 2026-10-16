@@ -73,6 +73,33 @@ describe('native catalog service', () => {
     } finally { release.resolve(); await fiber.dispose(); await server.stop(true); }
   });
 
+  test.each(['catalog', 'labels', 'filtered'] as const)('%s preserves source revision protection for late responses', async method => {
+    const reached = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
+      const url = new URL(request.url);
+      expect(url.pathname).toBe(method === 'labels' ? '/api/web/labels' : '/api/web/skills');
+      if (method === 'filtered') expect(url.searchParams.get('label')).toBe('writing');
+      reached.resolve(); await release.promise;
+      return Response.json({ data: method === 'labels' ? [] : { items: [], total: 0, page: 0, size: 12 } });
+    } });
+    const ctx = new Context();
+    let source = server.url.href;
+    const fiber = ctx.plugin(ctx => { new SkillHubService(ctx, { get: () => ({ registryUrl: source,
+      detailTabs: { versions: 'auto', securityAudit: 'auto', reviews: 'auto' } }) }); });
+    await fiber;
+    try {
+      const revision = ctx.skillhub.getContext().sourceRevision;
+      const signal = new AbortController().signal;
+      const pending = method === 'labels' ? ctx.skillhub.listLabels(revision, signal)
+        : method === 'filtered' ? ctx.skillhub.listCatalogByLabel(revision, '', 0, 'newest', 'writing', signal)
+        : ctx.skillhub.listCatalog(revision, '', 0, 'newest', signal);
+      const result = pending.then(() => null, (error: unknown) => error);
+      await reached.promise; source = ''; release.resolve();
+      expect(await result).toMatchObject({ code: 'skillhub/context-stale' });
+    } finally { release.resolve(); await fiber.dispose(); await server.stop(true); }
+  });
+
   test('live configuration changes refresh the source but tab changes preserve its revision', async () => {
     let current = { registryUrl: '', detailTabs: {
       versions: 'auto' as TabMode, securityAudit: 'auto' as TabMode, reviews: 'auto' as TabMode,

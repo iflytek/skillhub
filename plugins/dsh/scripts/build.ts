@@ -75,7 +75,7 @@ try {
   });
   if (!host.success) throw new AggregateError(host.logs, 'Host build failed');
   await writeFile(join(root, 'lib/index.js'), await host.outputs[0]!.text());
-  const client = await Bun.build({ entrypoints: [join(root, 'src/client/index.tsx')], target: 'browser', format: 'cjs', external: ['react', 'react/jsx-runtime'], define: { 'process.env.NODE_ENV': JSON.stringify('production') } });
+  const client = await Bun.build({ entrypoints: [join(root, 'src/client/index.tsx')], target: 'browser', format: 'cjs', external: ['react', 'react/jsx-runtime', 'react-dom'], define: { 'process.env.NODE_ENV': JSON.stringify('production') } });
   if (!client.success) throw new AggregateError(client.logs, 'Client build failed');
   await writeFile(join(root, 'lib/client.js'), `window.__ModuleLoader__.load({id:${JSON.stringify(manifest.name)},factory:(require)=>{var module={exports:{}};var exports=module.exports;\n${await client.outputs[0]!.text()}\nreturn module.exports;}});\n`);
   const declarations = Bun.spawn(['bun', 'x', '--no-install', 'tsc', '--project', 'tsconfig.build.json', '--noEmit', 'false', '--declaration', '--emitDeclarationOnly', '--outDir', 'lib/types', '--rootDir', 'src'], { cwd: root, stdout: 'inherit', stderr: 'inherit' });

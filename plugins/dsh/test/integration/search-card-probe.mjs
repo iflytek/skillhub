@@ -1,3 +1,5 @@
+import { revealReceipt } from './receipt-disclosure.mjs';
+import { selectValue, selectedValue } from './select-field.mjs';
 import { chromium } from 'playwright';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
@@ -36,20 +38,23 @@ try {
  const cardControl = await card.evaluate(element => {
   const button = element.querySelector('button');
   return { font: getComputedStyle(element).fontFamily, buttonFont: getComputedStyle(button).fontFamily,
-   buttonHeight: button.getBoundingClientRect().height };
+   buttonHeight: button.getBoundingClientRect().height,
+   cardHeight: button.closest('.astron-sh-conversation-skill').getBoundingClientRect().height };
  });
  assert.equal(cardControl.font, cardControl.buttonFont);
  assert.ok(cardControl.buttonHeight >= 40);
+ assert.ok(cardControl.cardHeight >= 100 && cardControl.cardHeight <= 132);
 
  if(!(await card.innerText()).includes('document-helper')) throw new Error('Missing search item');
  if (process.env.DSH_PLAZA_INSTALL_PROBE === '1') {
   if (process.env.DSH_INSTALL_PROBE !== '1') throw new Error('Plaza probe requires installation probe mode');
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   await plaza.getByRole('button', { name: /document-helper/ }).click();
-  await plaza.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+  await selectValue(plaza.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
   await plaza.getByRole('button', { name: '安装到当前项目', exact: true }).click();
-  await plaza.getByText(/技能文件安装完成。|此版本已安装。/).waitFor();
+  await page.getByRole('dialog', { name: '确认安装技能？', exact: true }).getByRole('button', { name: '确认安装', exact: true }).click();
+  await revealReceipt(plaza.getByText(/技能文件安装完成。|此版本已安装。/));
   if (installSubmissions !== 1) throw new Error('Expected one plaza installation submission');
   await page.screenshot({ path: `${output}/plaza-install.png` });
   await plaza.getByRole('button', { name: '返回会话', exact: true }).click();
@@ -64,8 +69,8 @@ try {
  await details.click();
  const drawer=page.getByRole('dialog',{name:'技能详情',exact:true});
  await drawer.getByRole('heading',{name:'Document helper',exact:true}).waitFor();
- assert.equal(await drawer.getByRole('combobox', { name: '安装范围', exact: true }).inputValue(), 'user');
- await drawer.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+ assert.equal(await selectedValue(drawer.getByRole('combobox', { name: '安装范围', exact: true })), 'user');
+ await selectValue(drawer.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
  const closeButton = drawer.getByRole('button', { name: '关闭技能详情', exact: true });
  assert.equal(await closeButton.evaluate(element => element === document.activeElement), true, 'Opening must focus Close');
  await details.evaluate(element => element.focus());
@@ -124,20 +129,23 @@ try {
  await page.setViewportSize({ width: 1440, height: 1000 });
  assert.equal(installSubmissions, plazaInstallationVerified ? 1 : 0, 'Browsing search results and detail must not submit installation');
  if (process.env.DSH_INSTALL_PROBE === '1') {
-  if (!plazaInstallationVerified) await drawer.getByRole('button', { name: '安装到当前项目', exact: true }).click();
+  if (!plazaInstallationVerified) {
+   await drawer.getByRole('button', { name: '安装到当前项目', exact: true }).click();
+   await page.getByRole('dialog', { name: '确认安装技能？', exact: true }).getByRole('button', { name: '确认安装', exact: true }).click();
+  }
   if (process.env.DSH_CLOSE_DURING_INSTALL === '1') {
    await drawer.getByText('正在安装，请稍候…', { exact: true }).waitFor();
    await closeButton.click();
    await drawer.waitFor({ state: 'detached' });
    assert.equal(await details.evaluate(element => element === document.activeElement), true);
    await details.click();
-   await drawer.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+   await selectValue(drawer.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
    await drawer.getByText('正在安装，请稍候…', { exact: true }).waitFor();
    assert.equal(installSubmissions, 1, 'Reopening an active installation must not resubmit');
    await page.screenshot({ path: `${output}/conversation-install-reopened-pending.png` });
    closedDuringInstallation = true;
   }
-  await drawer.getByText(/技能文件安装完成。|此版本已安装。/).waitFor();
+  await revealReceipt(drawer.getByText(/技能文件安装完成。|此版本已安装。/));
   await drawer.getByText(/^(上次核验时，DSH 已发现|尚未确认 DSH 发现)此操作对应的技能内容。$/).waitFor();
   if (installSubmissions !== 1) throw new Error('Expected one explicit installation submission');
   installationVerified = true;
@@ -148,10 +156,10 @@ try {
  if(!await details.evaluate(element=>element===document.activeElement)) throw new Error('Drawer did not restore card focus');
  await details.click();
  await drawer.getByRole('heading',{name:'Document helper',exact:true}).waitFor();
- assert.equal(await drawer.getByRole('combobox', { name: '安装范围', exact: true }).inputValue(), 'user');
- await drawer.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+ assert.equal(await selectedValue(drawer.getByRole('combobox', { name: '安装范围', exact: true })), 'user');
+ await selectValue(drawer.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
  if (installationVerified) {
-  await drawer.getByText(/技能文件安装完成。|此版本已安装。/).waitFor();
+  await revealReceipt(drawer.getByText(/技能文件安装完成。|此版本已安装。/));
   if (installSubmissions !== 1) throw new Error('Reopening detail replayed installation');
  }
  await drawer.getByRole('button',{name:'关闭技能详情',exact:true}).click();
@@ -166,9 +174,9 @@ try {
  if (installationVerified) {
   const refreshed = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/getOperation'));
   await card.getByRole('button', { name: '查看技能详情', exact: true }).click();
-  await drawer.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+  await selectValue(drawer.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
   await refreshed;
-  await drawer.getByText(/技能文件安装完成。|此版本已安装。/).waitFor();
+  await revealReceipt(drawer.getByText(/技能文件安装完成。|此版本已安装。/));
   if (installSubmissions !== 1) throw new Error('Browser reload replayed installation');
   await page.screenshot({ path: `${output}/conversation-install-reloaded.png` });
   await drawer.getByRole('button', { name: '关闭技能详情', exact: true }).click();

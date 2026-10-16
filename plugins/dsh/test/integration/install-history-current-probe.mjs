@@ -1,3 +1,5 @@
+import { expandInstallRecord } from './receipt-disclosure.mjs';
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -23,7 +25,9 @@ async function expand() {
     if (await process.getAttribute('aria-expanded') === 'false') await process.click();
   }
   if (!await card.isVisible()) await page.getByText('Called tools', { exact: true }).click();
-  await card.getByText('以上结果属于原操作，不代表当前仍安装此版本。', { exact: true }).waitFor();
+  await card.getByText(/^(技能文件安装完成。|历史安装完成。)$/).waitFor();
+  await expandInstallRecord(card);
+  await card.getByText('原操作回执不代表当前仍安装此版本，当前状态以下方核验为准。', { exact: true }).waitFor();
 }
 try {
   await page.goto(entry, { waitUntil: 'domcontentloaded' });
@@ -33,14 +37,14 @@ try {
   await current.getByText('当前项目 · 1.2.0 · 文件存在', { exact: true }).waitFor();
   await card.getByRole('button', { name: '在已安装中查看', exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
-  await plaza.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+  await selectValue(plaza.getByRole('combobox', { name: '筛选安装范围' }), 'project');
   await plaza.getByRole('button', { name: '查看已安装详情', exact: true }).click();
   await plaza.getByRole('button', { name: '卸载此安装位置', exact: true }).click();
   await page.getByRole('dialog', { name: '确认卸载技能', exact: true }).getByRole('button', { name: '确认卸载', exact: true }).click();
   await plaza.getByText('此安装位置已卸载。', { exact: true }).waitFor();
   await plaza.getByRole('button', { name: '返回会话', exact: true }).click(); await expand();
   await current.getByText('当前会话可见范围内已无此技能的安装记录。', { exact: true }).waitFor();
-  await card.getByText('技能文件安装完成。', { exact: true }).waitFor();
+  await card.getByText(/^(技能文件安装完成。|历史安装完成。)$/).waitFor();
   if (restartBrowser) {
     await browser.close();
     browser = await chromium.launch({ headless: true, executablePath: process.env.DSH_PROBE_CHROMIUM });
@@ -54,7 +58,7 @@ try {
     await page.getByText(title, { exact: true }).click();
     await expand();
   } else { await page.reload({ waitUntil: 'domcontentloaded' }); await expand(); }
-  await card.getByText('技能文件安装完成。', { exact: true }).waitFor();
+  await card.getByText(/^(技能文件安装完成。|历史安装完成。)$/).waitFor();
   await current.getByText('当前会话可见范围内已无此技能的安装记录。', { exact: true }).waitFor();
   await current.scrollIntoViewIfNeeded();
   await page.screenshot({ path: `${output}/history-after-removal.png` });

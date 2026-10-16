@@ -35,12 +35,14 @@ Host 对指定 SkillHub 发起无 Token、无 Cookie 的请求；不读取或复
 | --- | --- | --- |
 | cli/src/clients/skillhub-client.ts | search 的 q/limit、坐标/版本/摘要；resolve、下载 | 无完整分页、标签与浏览卡片所需的全部字段 |
 | server/.../controller/cli/CliSkillController.java | q 可省略、搜索/解析/下载端点 | 空 q 返回及匿名下载仍须实测 |
-| server/.../controller/portal/SkillSearchController.java | Web 搜索支持命名空间、标签、分页、排序 | 当前路由是 /api/web/skills，不能假定是插件匿名契约 |
+| server/.../controller/portal/SkillSearchController.java | Web 搜索支持命名空间、标签、分页、排序 | 已核对 /api/web/skills 的匿名读取策略；使用发布版本和公开统计，SaaS 部署仍须单独验证 |
 | web/src/shared/hooks/use-skill-queries.ts | 详情、版本、资源读取 | 网站会话请求不直接复制到插件 |
 | web/src/features/skill/skill-card.tsx | 命名空间、说明、版本、统计展示 | 插件只显示实际接口提供且有含义的字段 |
 
-首版必需字段为完整坐标、说明、可安装版本；名称缺失时以 slug 呈现。详情只展示可匿名读取的信息，标签、评分和榜单不在首期范围。
-浏览初始页面目标是展示服务端可匿名返回的技能；接口不支持时 M0 记录缺口并补最小浏览契约，不能假装全量。未验证分页前展示“当前返回 N 项”，不做无限滚动假分页。
+首版必需字段为完整坐标、说明、可安装版本；名称缺失时以 slug 呈现。详情只展示可匿名读取的信息；卡片可展示服务端提供的下载量、收藏数、评分，并按服务端支持的维度排序。不提供评分写操作、独立榜单或无真实契约的分类。
+广场使用匿名目录接口每页 12 项，点击“加载更多”读取下一页，保留查询、排序与详情返回位置。若首批目录路由返回 404/405，回退旧 CLI 首批搜索并明确范围限制；其余错误正常呈现，不伪造全量目录或无限滚动。
+
+展示层使用 shadcn/ui Radix 组件源码与插件独有 CSS 前缀，映射 DSH 主题变量；React/React DOM 保留宿主 external，不向宿主注入全局 reset。界面改造复用既有 Host 生命周期协议。
 
 ### 4. 同仓库独立包与内部复用
 
@@ -101,7 +103,7 @@ M0 验证 DSH 版本、页面挂载、匿名接口及隔离临时目录中的技
 
 ## References
 
-宿主源码与素材依据继续使用 [host-reference/README.md](assets/host-reference/README.md)。原生入口和构建要求均需固定实际版本；发行兼容性通过集成验收确认。
+宿主源码与素材依据继续使用 [DSH 接入设计](dsh-integration-design.md)。原生入口和构建要求均需固定实际版本；发行兼容性通过集成验收确认。
 
 ## Detailed Architecture
 
@@ -172,7 +174,7 @@ flowchart TB
 
 ### C. 版本、安全审核与评论边界
 
-版本列表是历史信息，不等于更新中心；升级走已安装目标计划；不加入降级或批量跨技能同步。当前安全审核服务拒绝匿名用户，因而首版当前实例的 auto 模式隐藏审核 Tab；不能通过 Host 代填管理员凭证。评论只读公开投影，不提供发表或管理功能。
+版本列表可显式选择可下载版本并重新获取精确详情凭据；升级仍走已安装目标计划，既有目标不被直接覆盖，不加入降级或批量跨技能同步。当前安全审核服务拒绝匿名用户，因而首版当前实例的 auto 模式隐藏审核 Tab；不能通过 Host 代填管理员凭证。评论只读公开投影，不提供发表或管理功能。
 
 展示开关是 UI 产品配置，不授予数据访问权。show 可显示不可访问原因，hide 不请求模块；网络失败不能冒充模块不存在。完整配置优先级与错误语义在 interface-design.md 中唯一维护。
 

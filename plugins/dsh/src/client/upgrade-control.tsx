@@ -1,3 +1,4 @@
+import { canCollapseHistory } from './operation-presentation.js';
 import { OperationDetails } from './operation-details.js';
 import { DiscoveryStatus } from './discovery-status.js';
 import { HostWriteStatus, useWritableHost, type CompatibilityServices } from './host-compatibility.js';
@@ -27,8 +28,8 @@ const blockers: Record<string, string> = {
   'recovery-required': '有未完成的操作需要恢复核验，暂不能升级。',
 };
 
-export function UpgradeControl({ services, sourceRevision, source, item, eligible = false, onCompleted, onClosed }: {
-  services: UpgradeServices; sourceRevision: string; source: string; eligible?: boolean;
+export function UpgradeControl({ services, sourceRevision, source, item, eligible = false, onCompleted, onClosed, history = false }: {
+  services: UpgradeServices; sourceRevision: string; source: string; eligible?: boolean; history?: boolean;
   item: { itemKey?: string; namespace: string; slug: string; version?: string; scope: string };
   onCompleted?(version: string): void; onClosed?(): void;
 }) {
@@ -88,7 +89,7 @@ export function UpgradeControl({ services, sourceRevision, source, item, eligibl
     }).catch(error => setError(error instanceof Error ? error.message : '升级请求未提交。'));
   };
   if (!eligible && !attempt) return null;
-  return <section aria-label="升级技能" style={{ border: '1px solid #8885', borderRadius: 12, padding: 16, marginBlock: 16 }}>
+  const content = <section aria-label="升级技能" style={{ border: '1px solid #8885', borderRadius: 12, padding: 16, marginBlock: 16 }}>
     <h3>升级 @{item.namespace}/{item.slug}</h3>
     <HostWriteStatus state={writableHost} />
     {!attempt && <>
@@ -118,6 +119,7 @@ export function UpgradeControl({ services, sourceRevision, source, item, eligibl
           : result?.phase === 'failed' ? <p role="alert">升级未完成，恢复状态：{result.recovery === 'restored' ? '已恢复旧版本' : '请核对操作记录'}。</p>
             : result && ['recovery-required', 'unknown'].includes(result.phase) ? <p role="alert">升级需要恢复核验，请勿重复提交。</p>
               : <p role="status">正在升级，请稍候…</p>}
+      {result && result.warningCount > 0 && <p role="alert">此操作存在需核验告警，请查看原操作结果详情并核验恢复状态。</p>}
       <p>操作 ID：{attempt.operationId}</p>
       {!operation.isError && operation.data && <OperationDetails operation={operation.data} />}
       {!operation.isError && operation.data && (['recovery-required', 'unknown'].includes(operation.data.phase)
@@ -133,6 +135,13 @@ export function UpgradeControl({ services, sourceRevision, source, item, eligibl
         }}>关闭本次结果</button>}
     </div>}
   </section>;
+  if (!history) return content;
+  const foldable = canCollapseHistory(operation.data, operation.isError);
+  return <details className="astron-sh-history-entry" open={foldable ? undefined : true}
+    onToggle={event => { if (!foldable && !event.currentTarget.open) event.currentTarget.open = true; }}>
+    <summary><strong>{item.slug}</strong><span>升级 · {item.scope === 'user' ? '当前用户' : '当前项目'}</span><span>{foldable ? '已完成 · 查看记录' : operation.isError || operation.data === null ? '状态暂未确认' : result?.phase === 'failed' ? '操作失败' : result?.phase === 'recovery-required' ? '需要恢复' : result?.phase === 'unknown' ? '结果未知' : result?.phase === 'completed' ? '已完成 · 需核验告警' : attempt?.state === 'unresolved' ? '请求待确认' : '处理中'}</span></summary>
+    {content}
+  </details>;
 }
 
 /** Results remain reachable when inventory changes or temporarily cannot be read. */
@@ -144,8 +153,7 @@ export function UpgradeHistory({ services, sourceRevision, source, onClosed }: {
   try { entries = services.upgradeRequests.list(services.sessionId, source); }
   catch { return <p role="alert">无法读取已保存的升级请求，请恢复浏览器存储后重试。</p>; }
   if (!entries.length) return null;
-  return <section aria-label="未关闭的升级结果"><h3>升级操作</h3>
-    <p>安装记录变化后，仍可在这里查询原请求并核对结果。</p>
-    {entries.map(item => <UpgradeControl key={item.key} services={services} sourceRevision={sourceRevision} source={source} item={item} onClosed={onClosed} />)}
+  return <section className="astron-sh-history" aria-label="未关闭的升级结果"><h3>升级操作记录</h3>
+    {entries.map(item => <UpgradeControl key={item.key} services={services} sourceRevision={sourceRevision} source={source} item={item} onClosed={onClosed} history />)}
   </section>;
 }

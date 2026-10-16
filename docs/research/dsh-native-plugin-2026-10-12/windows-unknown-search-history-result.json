@@ -1,8 +1,0 @@
-{
-  "passed": true,
-  "unknownSchemaRejected": true,
-  "validBodyNotUsedAsMetadata": true,
-  "persistedReload": true,
-  "actions": [],
-  "modelInvoked": false
-}

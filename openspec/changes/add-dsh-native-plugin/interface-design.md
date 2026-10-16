@@ -9,9 +9,13 @@ sequenceDiagram
   participant C as 插件 Client
   participant H as 插件 Host
   participant R as SkillHub Registry
-  C->>H: getContext / listSkills
-  H->>R: GET CLI search（匿名）
-  R-->>H: data.items / total / limit
+  C->>H: getContext / listCatalog
+  H->>R: GET /api/web/skills（匿名，page/size/sort）
+  R-->>H: data.items / total / page / size
+  opt 首批分页路由返回 404/405
+    H->>R: GET CLI search（匿名，limit=20）
+    R-->>H: data.items / total / limit
+  end
   H-->>C: 规范化列表与范围
   C->>H: getSkillDetail（坐标）
   H->>R: resolve 精确版本与读取元信息
@@ -30,10 +34,11 @@ Client 不直接请求 Registry、不持有认证 Token，也不提交任意文�
 
 | 用途 | 已有方法与路径 | 参数/业务体 | 当前限制 |
 | --- | --- | --- | --- |
-| 初始列表/搜索 | GET `/api/cli/v1/skills/search` | `q` 可选，`limit` 默认 20；返回 items,total,limit | 服务实际固定 newest、第 0 页；无分页参数 |
+| 广场列表/搜索 | GET `/api/web/skills` | q,page,size=12,sort；返回 items,total,page,size | sort 为 newest/downloads/rating，匿名访问；发布版本、显示名和真实统计字段映射到卡片 |
+| 对话搜索/旧来源回退 | GET `/api/cli/v1/skills/search` | q,limit=20；返回 items,total,limit | 保留原有有界工具结果；广场仅在分页首批返回 404/405 时回退 |
 | 固定安装版本 | GET `/api/cli/v1/skills/{namespace}/{slug}/resolve` | `version` 可选；返回 namespace,slug,version,versionId,fingerprint,downloadUrl | 不携带完整说明 |
 | 元信息/skillId | GET `/api/v1/skills/{namespace}/{slug}` | skillId 对应响应 `id`；含 displayName,summary,版本投影等 | 只取消费字段，不直接传管理权限字段到 UI |
-| 版本列表 | GET `/api/v1/skills/{namespace}/{slug}/versions` | page=0,size=20；版本、changelog、publishedAt、downloadAvailable 等 | 可见不一定可安装；显示为只读历史 |
+| 版本列表 | GET `/api/v1/skills/{namespace}/{slug}/versions` | page=0,size=20；版本、changelog、publishedAt、downloadAvailable 等 | 可见不一定可安装；选择可下载版本后重新读取精确详情 |
 | 指定版本元信息 | GET `/api/v1/skills/{namespace}/{slug}/versions/{version}` | id,version,status,changelog 等 | 用于保持版本上下文一致 |
 | 技能说明 | GET `/api/v1/skills/{namespace}/{slug}/versions/{version}/file?path=SKILL.md` | 原始字节流；不是 JSON data | 只请求固定说明路径，限制大小并安全渲染 |
 | 固定版本下载 | GET `/api/cli/v1/skills/{namespace}/{slug}/versions/{version}/download` | ZIP 流或对象存储 302 | 也可使用 resolve 的 downloadUrl；仅 Host 消费 |
@@ -87,14 +92,15 @@ interface SkillHubPluginConfig {
 | --- | --- | --- | --- |
 | `getCompatibility` | 无 | dependencyBaseline、candidateDshVersion、localWritesAllowed | 只读检查 Host 实际解析的依赖包与固定 peers 是否一致；matched 不代表完整平台/宿主验收通过，localWritesAllowed 仅表示通过该依赖门禁 |
 | `getContext` | 无 | sourceRevision、registryUrl、configured、detailTabs | 返回已规范化的来源与配置；安装目标另由 listInstallTargets 查询 |
-| `listSkills` | sourceRevision,q | items,total,returned,limit | limit 首版固定 20，不接任意 Registry URL |
+| `testRegistryConnection` | inputUrl、signal | reachable=true、mode、elapsedMs | 测试草稿地址的公开目录或基础搜索能力，不保存配置；失败沿用安全Registry错误 |
+| `listCatalog` | sourceRevision,q,page,sort | items,total,page,size,hasMore,mode | page 从 0 开始、size 固定 12；mode=paged/limited；不接任意 Registry URL |
+| `listSkills` | sourceRevision,q | items,total,returned,limit | 对话搜索及既有调用保持 limit=20 |
 | `getSkillDetail` | sourceRevision,namespace,slug,version | SkillDetail（含 detailToken、versionId、精确版本、说明及模块状态） | 使用列表选定的精确版本重新读取，不静默切换 latest |
 | `openConversationDetail` | selectionRef | detailToken、固定版本 selectionRef、DetailSnapshot | 校验原搜索上下文；不写技能文件 |
 | `acknowledgeConversationDetail` | 固定版本 selectionRef、detailToken | 展示关联确认 | 仅同会话 Client 可确认；关联原搜索引用，不代表安装授权 |
 | `getInstalledDetail` | sourceRevision,itemKey | 本地身份/版本/目标，远端可用时补精确版本详情 | Host 解析记录；离线返回 local-only，不切到最新版 |
-| `listVersions` | detailToken,page | 规范化版本页 | 正文延迟到 Tab 激活请求，能力探测例外；首版只读历史 |
+| `listVersions` | detailToken,page | 规范化版本页 | 正文延迟到 Tab 激活请求，能力探测例外；选择版本使用现有 getSkillDetail 重新绑定 |
 | `listReviews` | detailToken,page | 公开评论页 | 使用 skillId，不误传 versionId；不绑定成版本评价 |
-| `getSecurityAudit` | detailToken | 所选版本的报告或不可访问状态 | 不把其他版本审核移用到当前版本 |
 | `listInstalled` | sourceRevision | 当前来源在用户/当前项目目标中的安装条目与完整性 | 只读，本地可用即使 Registry 离线 |
 | `startInstall` | input：detailToken,targetToken,requestKey,hostInstanceId,mode,initiatedFrom；可信 agent scope | NativeOperation 或 null | 持久接受后返回操作快照，同 key 同参数返回原操作；retry 未找到记录返回 null，不创建操作 |
 | `listInstallTargets` | detailToken，可信 agent scope | hostInstanceId、targets（targetToken、scope）、unavailable（范围列表） | 只读；从 Agent 文件系统解析，来源/项目/详情变化时拒绝；不返回路径，不代表已授权写入 |
@@ -160,9 +166,13 @@ interface InstalledSkillDetail {
 }
 ```
 
-`complete=false` 或 unavailable 非空表示清单读取不完整，不能据此推断技能不存在并允许重新安装。metadata-invalid、mismatch、unreadable 分别表示元数据无效、记录不一致、读取失败，UI 不将它们折叠为未安装。已安装列表不携带发现结论；发现结果从原操作的只读核验取得。
+`complete` 表示已解析范围的安装投影是否完整，包含共享清单读取与条目核验，`unavailable` 单独列出无法核验的目标范围。共享清单不完整时所有范围均不能推断未安装；清单完整且所选范围不在 `unavailable` 中时，可以在该范围独立判断是否存在安装记录。另一个范围不可用不阻止当前健康范围安装或核验。metadata-invalid、mismatch、unreadable 分别表示元数据无效、记录不一致、读取失败，UI 不将它们折叠为未安装。已安装列表不携带发现结论；发现结果从原操作的只读核验取得。
+
+`itemKey` 是 Host 生命周期内签发的 HMAC 不透明摘要，绑定会话、cwd、来源修订及条目范围、坐标、版本、指纹、状态和目标。Host 不按条目缓存引用；读取时在当前可信根重新投影并匹配摘要，再验证原目标。列表大小和其他会话刷新不会淘汰已返回引用；来源、会话、Host 或记录变化后旧引用失效。摘要不包含可解码的路径，也不替代执行前完整性与归属核验。
 
 local-only 返回本地条目与原因，不签发安装 detailToken；取得可安装详情必须重新完成远端精确版本解析。
+
+本期安全审核状态随 `getSkillDetail.tabs.securityAudit` 返回；匿名不可访问时展示说明，不提供独立的 `getSecurityAudit` Remote 方法，也不移用其他版本的审核结果。
 
 ### 5.2 操作状态与原操作结果
 
@@ -295,3 +305,29 @@ local-only 详情不能发起远端安装或升级，但可通过独立 prepareU
 accepted 不表示安装完成。工具立即返回 accepted 及 operationId，卡片查询终态；具体交互见对话分册第 9 节。getOperation 返回保存的 OperationContext，不从当前配置补填历史来源/Host 标签。历史 envelope 保存工具返回时的 accepted、同一 context 与 operationId；后续终态从 Host 操作记录读取，不回写原始工具结果；时间来自 Host，不能以卡片重新打开的时间冒充操作时间。
 
 状态与结果用词沿用 MutationOperation；context 字段是附加归属信息，不建立第二套状态枚举。宿主确认后才可能报告发现成功，记录缺失不报告“已卸载”或“从未安装”。
+
+### 广场目录投影
+
+`listCatalog` 只返回坐标、发布版本、摘要、可选 displayName/downloadCount/starCount/ratingAvg/ratingCount；不透传 ownerId、草稿、下载地址等字段。指标缺失不影响旧条目展示，非有限数值、负数计数、范围外评分隐藏；ratingCount=0 时隐藏评分。详情沿用同名可选统计字段。当前接口没有技能头像，展示首字母回退。
+
+分页响应须匹配请求 page/size。hasMore 使用服务端页位置与 total 计算；空的服务端页停止加载。过滤无 publishedVersion 的条目不把 headlineVersion 当作可安装版本，也不重写来源 total。404/405 仅允许第 0 页回退旧 CLI 搜索，回退 mode=limited、hasMore=false。来源校验、取消、体积上限、超时和匿名请求策略复用 RegistryAdapter。
+
+
+### 公开标签筛选
+
+- `GET /api/web/labels`：匿名返回 `data: [{slug,type,displayName}]`，仅含可筛选标签；`type` 为 RECOMMENDED/PRIVILEGED，不表示分类层级。
+- `GET /api/web/skills?label=<slug>&q=...&page=...&size=12&sort=...`：标签与原查询共同过滤，仍由服务器分页。本版单选；现有后端多标签语义为 OR。
+- Remote `listLabels(sourceRevision,signal)` 返回 `{available,items}`；404/405 返回不可用，其余错误独立报告。
+- Remote `listCatalogByLabel(sourceRevision,q,page,sort,label,signal)` 保留原 `listCatalog` 入口；空标签等价于普通目录，非空标签禁止 CLI 无过滤降级。
+- 标签 slug 按后端规范验证（1–64 个字符、小写字母/数字、内部单连字符），请求使用标准 URL 参数编码；来源修订和取消保护沿用现有只读传输。
+
+
+### 对话安装内部快照解析
+
+模型工具参数及公开 Remote 保持不变。Host 内部安装解析允许有效但未展示的搜索引用按搜索时精确版本核验，形成独立安装快照；已展示引用继续使用原固定快照。后台核验不调用 `acknowledgeConversationDetail`，不改变 Client 展示状态。核验前后检查来源、会话、项目和引用有效性，已展示内容的优先级及歧义拒绝规则见 [对话设计 §16](conversation-design.md#16-无需打开详情的对话安装)。
+
+### 来源连接测试约束
+
+`testRegistryConnection(inputUrl, signal)`仅供配置页显式测试，不注册Agent工具。Host创建独立RegistryAdapter并验证HTTP(S)地址，不接受凭证、查询参数或片段；匿名GET、不跟随重定向、响应体仍使用既有大小限制。探测目录第一页，接口缺失时沿用基础搜索回退，整个测试最多10秒。请求失败返回既有`skillhub/registry-error`安全原因，不暴露响应正文或凭证。
+
+测试不使用当前来源写路径，不改变配置、sourceRevision、目录缓存或本地文件；不尝试下载或安装。Client取消旧请求并以请求代次隔离结果，防止地址变更后显示旧地址成功信息。mode为paged仅说明分页目录可读，limited仅说明基础搜索可读，二者均不证明写入或可选Tab能力。

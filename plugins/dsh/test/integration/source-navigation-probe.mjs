@@ -1,3 +1,4 @@
+import { selectValue, selectedValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -17,12 +18,12 @@ try {
     await page.getByText(workspace, { exact: true }).click();
   }
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
   const scope = plaza.getByRole('combobox', { name: '筛选安装范围' });
   const keyword = plaza.getByRole('searchbox', { name: '过滤已安装技能' });
-  await scope.selectOption('project');
+  await selectValue(scope, 'project');
   await keyword.fill('document-helper');
   await plaza.getByRole('button', { name: '查看已安装详情', exact: true }).click();
   await plaza.getByRole('region', { name: '已安装技能详情', exact: true }).waitFor();
@@ -35,27 +36,27 @@ try {
     await form.getByRole('textbox', { name: 'Registry 地址' }).fill(address);
     await form.getByRole('button', { name: '保存配置', exact: true }).click();
     await form.getByText('配置已保存。', { exact: true }).waitFor();
-    await page.getByText('SkillHub', { exact: true }).click();
+    await page.getByText('技能中心', { exact: true }).click();
     await plaza.getByText(address, { exact: true }).waitFor();
   };
   await source(otherSource);
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
   await scope.waitFor();
-  assert.equal(await scope.inputValue(), 'all');
+  assert.equal(await selectedValue(scope), 'all');
   assert.equal(await keyword.inputValue(), '');
   await plaza.getByText('当前显示 0 项安装记录。', { exact: true }).waitFor();
   assert.equal(await plaza.getByRole('region', { name: '已安装技能详情', exact: true }).count(), 0);
-  await plaza.getByRole('button', { name: '浏览技能', exact: true }).click();
+  await plaza.getByRole('tab', { name: '浏览技能', exact: true }).click();
   await plaza.getByRole('button', { name: /document-helper/ }).click();
   await plaza.getByRole('heading', { name: '文档助手', exact: true }).waitFor();
   await source(originalSource);
   // Old detail must not silently become a detail from the new source.
   const stale = plaza.getByText('来源已变化，请返回技能广场重新选择。', { exact: true });
-  const browse = plaza.getByRole('button', { name: '浏览技能', exact: true });
+  const browse = plaza.getByRole('tab', { name: '浏览技能', exact: true });
   await stale.or(browse).first().waitFor();
   if (await stale.isVisible()) await plaza.getByRole('button', { name: '← 返回技能广场', exact: true }).click();
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
-  await scope.selectOption('project');
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
+  await selectValue(scope, 'project');
   await plaza.getByText('当前显示 1 项安装记录。', { exact: true }).waitFor();
   assert.deepEqual(errors, []);
   await page.screenshot({ path: `${output}/source-navigation.png` });

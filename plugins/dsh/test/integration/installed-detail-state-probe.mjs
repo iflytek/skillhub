@@ -1,3 +1,4 @@
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
@@ -20,11 +21,11 @@ try {
     await page.getByText(workspace, { exact: true }).click();
   }
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
   const installed = plaza.getByRole('region', { name: '已安装技能', exact: true });
-  await installed.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+  await selectValue(installed.getByRole('combobox', { name: '筛选安装范围' }), 'project');
   await installed.getByRole('button', { name: '查看已安装详情', exact: true }).click();
   const detail = plaza.getByRole('region', { name: '已安装技能详情' });
   const remove = detail.getByRole('button', { name: '卸载此安装位置', exact: true });

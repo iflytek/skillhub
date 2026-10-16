@@ -61,8 +61,12 @@ async function inspectInstallation(options: InstallRecoveryOptions, mode: 'inspe
   const result = (outcome: InstallRecoveryInspection['outcome'], reason: string, revision = initial.revision): InstallRecoveryInspection =>
     ({ operationId, revision, outcome, reason })
   const bound = initial.operation.targetPaths
-  // Only the live executor can certify it has stopped before the first staging intent.
-  const earlyStaging = isEarlyStaging(initial) || (mode === 'settle-failure' && !initial.transaction)
+  // Native recovery owns the execution lease: no staging intent means content writes never began.
+  const unstarted = !initial.transaction && !initial.existingInstallation && !initial.removal
+    && ['accepted', 'staging'].includes(initial.operation.status.phase)
+    && initial.operation.status.files === 'pending' && initial.operation.status.recovery === 'not-needed'
+  const earlyStaging = isEarlyStaging(initial) || (mode === 'recover' && unstarted)
+    || (mode === 'settle-failure' && !initial.transaction)
   if (mode === 'settle-failure' && (!earlyStaging
     || !['staging', 'revalidating'].includes(initial.operation.status.phase))) return result('unknown', 'not-unprepared-failure')
   if (!bound?.length || new Set(bound).size !== bound.length || bound.length !== trustedTargetPaths.length
@@ -81,6 +85,11 @@ async function inspectInstallation(options: InstallRecoveryOptions, mode: 'inspe
     }
     const current = await operations.get(operationId, ownerId)
     if (!current || current.revision !== initial.revision) return result('unknown', 'operation-changed')
+    if (mode === 'recover' && unstarted) {
+      const saved = await operations.update(operationId, ownerId, current.revision,
+        { ...current.operation.status, phase: 'failed', files: 'failed', recovery: 'not-needed' })
+      return result('restored', 'installation-not-started', saved.revision)
+    }
     const commit = current.transaction?.inventoryCommit
     const preparation = current.transaction?.preparation
     if (earlyStaging && (mode === 'recover' || mode === 'settle-failure')) return recoverEmptyStaging(options, current, mode === 'settle-failure')

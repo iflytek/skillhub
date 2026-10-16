@@ -1,9 +1,0 @@
-{
-  "passed": true,
-  "unavailableNotEmpty": true,
-  "unknownAutoTabHidden": true,
-  "explicitRetryRecovered": true,
-  "commentsLoadedAfterActivation": true,
-  "writes": 0,
-  "errors": []
-}

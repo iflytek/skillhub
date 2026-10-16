@@ -34,7 +34,7 @@
 | [release-guide.md](release-guide.md) | 验证、环境部署、插件发布与回退 |
 | [release-notes.md](release-notes.md) | 当前开发候选的功能变化、使用限制及发布前缺口 |
 | [registry-api-contract.md](registry-api-contract.md) | Registry 公共契约与开源/SaaS 同步 |
-| [tasks.md](tasks.md)、[verification.md](verification.md) | 待执行工作、按日期追加的检查证据 |
+| [tasks.md](tasks.md)、[verification.md](verification.md) | 任务进度、当前验证结果与发布缺口 |
 
 ## 文档使用规则
 
@@ -49,4 +49,4 @@
 - 开发实施：详细实现方案 → 接口设计 → 生命周期设计 → 任务清单。
 - API 同步与交付：Registry 契约 → 验证、部署与发布方案。
 
-首期功能范围以本目录规范为准；DSH 首选候选为 0.2.0-rc.2，通过 M0 后确认为唯一支持基线。包名、工具命名冲突和发行依赖在 M0 技术验证中确定。实现进度与验证结果单独记录，不改变未完成任务的验收要求。
+首期功能范围以本目录规范为准。当前研发基线为 DSH 0.2.0-rc.2，包名为 `@astron-team/skillhub-dsh`；正式平台支持与发布决定按验收门禁执行。过程日志、截图批次和临时研究材料在仓库外留档，仓库仅保留正式规格、验证摘要及可复用测试。

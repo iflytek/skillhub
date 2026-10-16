@@ -47,9 +47,21 @@ make generate-api
 
 `make generate-api` 后检查生成文件差异。完整接口漂移检查使用 `./scripts/check-openapi-generated.sh`，该脚本启动本地依赖及后端，应在独立开发或 CI 环境执行。
 
-插件自身需提供 typecheck、lint、test、build 和包内容校验入口，统一在 `plugins/dsh/package.json` 声明。脚本名称、运行环境与命令在开发实现时补入插件 README，发布检查不得只运行 CLI 测试。
+插件检查入口已在 `plugins/dsh/package.json` 定义。首次从仓库根目录安装两组锁定依赖，再执行：
 
-`check-dsh-plugin.yml` 使用 Linux、macOS、Windows 三平台矩阵，Node 24.2.0 与当前 Node 24 双版本、Bun 1.3.13，分别运行共享 CLI 检查与插件 `bun run check`，并保存带平台名的 tarball。步骤显式使用 Bash，避免 Windows 默认 shell 对脚本的不同解释；平台失败不取消其他平台任务。矩阵通过只证明该次构建与自动化测试结果，真实 DSH Profile 安装、页面和对话验收仍须单独完成。平台测试中的跳过项必须记录，不能算作通过。
+```sh
+cd cli
+bun install --frozen-lockfile
+cd ../plugins/dsh
+bun install --frozen-lockfile
+bun run check
+npm pack --dry-run --ignore-scripts
+npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
+```
+
+候选输出目录须事先创建并位于仓库外，每轮使用独立目录。`check` 包含 build、typecheck、lint、test；仅 CLI 检查通过不能替代插件检查。记录实际 tarball 校验值、源码版本和验收环境，不能用文件名或相同开发版本号判断两个包相同。
+
+`check-dsh-plugin.yml` 使用 Linux、macOS、Windows 三平台矩阵，Node 24.2.0 与当前 Node 24 双版本、Bun 1.3.13，分别运行共享 CLI 检查、插件 `bun run check` 和隔离 Web Profile 的 Host 安装冒烟，并保存带平台名的 tarball 与脱敏摘要。步骤显式使用 Bash，避免 Windows 默认 shell 对脚本的不同解释；平台失败不取消其他平台任务。矩阵通过只证明该次构建与自动化测试结果，真实 DSH Profile 安装、页面和对话验收仍须单独完成。平台测试中的跳过项必须记录，不能算作通过。
 
 ### 2.2 插件包检查
 
@@ -61,7 +73,25 @@ make generate-api
 
 ### 2.3 隔离环境验证
 
-使用专用 DSH Profile、测试工作区与测试技能目录，连接测试 Registry。安装命令采用目标发行版支持的插件安装入口，并在 M0 验证后写入插件 README；包名和兼容发行版确定前不提供通用安装命令模板。
+当前候选固定 DSH `0.2.0-rc.2`、Cordis `4.0.4`、Node `>=24.2.0 <25`。在独立测试账户或容器中准备 Web Profile、工作区和测试技能，连接测试 Registry。仅隔离 Profile/DSH home 不足以隔离共享 inventory。
+
+首次创建测试 Web Profile，然后安装本地候选包：
+
+```sh
+dsh --profile skillhub-test --from-default-profile web --dump-config
+dsh plugin --profile skillhub-test add /absolute/path/to/candidate.tgz --ignore-scripts
+dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
+```
+
+已有 Web Profile 跳过创建步骤。包替换前停止该 Profile 的 Host；安装与启动保持相同 DSH home。入口 URL 可能含访问凭证，只用于本机访问，不写入发布记录。
+
+也可在插件源码目录执行自动隔离冒烟：
+
+```sh
+node scripts/smoke-native-host.mjs --artifact /absolute/path/to/candidate.tgz --report /absolute/path/to/host-smoke-summary.json
+```
+
+该脚本验证包安装与 Host 加载，不调用模型，不能替代浏览器和技能写入验收。
 
 按 [验收矩阵](acceptance.md) 完成以下主路径：
 
@@ -74,9 +104,30 @@ make generate-api
 
 Linux、macOS、Windows 分别记录 DSH 发行版、插件版本、Registry 契约版本及结果。未覆盖组合标为“未验证”，不列入支持列表。
 
-本轮按用户决定优先验收 Linux/Windows，macOS 实机验证延后，不阻塞本轮工作。保留 macOS CI 配置不代表该平台已验证；发布支持范围仍以实际通过记录为准。
+当前已有 Linux Host、真实浏览器交互及 Windows 浏览器访问 Host 的验收，界面已完成人工 review。Windows 浏览器验收不等于 Windows 原生 Host 全部文件事务验收。macOS 真实 Host/客户端仍待验证；其他 DSH 发行版及 SaaS 不列为已验证。CI 配置、已有版本的历史报告和当前候选人工验收分别记录，不能互相替代。
+
+### 2.4 配置与人工验收
+
+进入 DSH“Plugins/插件 → @astron-team/skillhub-dsh → SkillHub 设置”，填写 Registry 基础地址，可先点击“测试连接”验证当前草稿：不保存配置，显示公开目录或基础搜索可读性及耗时，最长等待 10 秒。改地址清除旧结果；失败或超时可重试。测试成功仅证明该读取路径可用，不代表下载或全部模块可用。确认后保存。配置页“已配置”仅反映保存状态；“重置修改”清除未保存草稿，不是网络重载。只读状态下输入、选择器和保存均应禁用。来源地址不允许凭证、查询参数或片段。
+
+在侧栏“技能中心”按顺序核验：
+
+| 范围 | 可观察结果 |
+| --- | --- |
+| 配置 | 草稿连接测试不保存、显示能力和耗时、10 秒超时与改地址清结果；地址与三个模块策略保存；冲突不覆盖新 revision；重置不发送保存请求 |
+| 初次加载 | 顶部布局保留，六张 Skeleton 卡；请求结束展示真实数据，失败可重试；后台刷新保留已有列表 |
+| 目录 | 关键词、排序、标签作用于真实结果；加载更多追加且去重；详情返回保留位置 |
+| 详情 | 文档、版本和可选 Tab 正确；切换版本重新取得固定版本凭据；原来源信息默认收起 |
+| 安装与管理 | 用户/项目目标明确，确认后写入；升级核验完整目标集合，卸载只影响选定位置；资源和清单一致 |
+| 对话 | 搜索不自动安装；用户明确请求后才安装；历史结果与当前库存不同能正确说明 |
+| 异常 | 401/403、429、网络错误、来源切换、响应丢失、恢复状态不被当成空数据或成功 |
+| 外观与输入 | DSH 深浅主题、390px 窄屏、键盘焦点、Select/确认弹窗、减少动画设置 |
+
+搜索和技能安装的模型行为需单独验证，记录使用模型和授权调用范围；无模型的页面或夹具测试不算模型验收。
 
 ## 3. 服务端部署
+
+插件使用 `/api/web/skills` 的分页/排序及 `label` 筛选、`/api/web/labels` 的实际可见标签，以及既有搜索、resolve、元信息、固定版本文档/下载、版本及评论接口。标签不是版本 tags；标签筛选失败不能退回未过滤搜索。服务端契约与可选模块访问限制见 [Registry 同步方案](registry-api-contract.md)。
 
 未修改服务端接口时，无需因插件发布重新部署 SkillHub。新增接口采用向后兼容发布：先部署服务端，再发布依赖新接口的插件；已部署旧插件应继续工作。
 
@@ -100,7 +151,7 @@ SaaS 使用其现有流水线部署；公共接口契约、测试数据规则与
 
 ### 4.1 独立发布流程
 
-插件使用独立版本，tag 前缀固定为 `dsh-v`（例如 `dsh-v0.1.0`），不复用 CLI 的 `cli-v*` 发布流程。专用工作流为 `.github/workflows/release-dsh-plugin.yml`；发布前仍须确认 npm 包名、兼容基线及候选包验收，不直接发布当前 private 开发包。
+插件使用独立版本，tag 前缀固定为 `dsh-v`（例如 `dsh-v0.1.0`），不复用 CLI 的 `cli-v*` 发布流程。专用工作流为 `.github/workflows/release-dsh-plugin.yml`；发布前仍须确认 npm 包名、兼容基线及候选包验收，当前候选为 `0.1.0`，manifest 已显式设为 `private: false`；默认 Registry 为空。正式发布仍以最终提交、候选验收和审批结果为准。
 
 发布流程依次完成：校验版本 → 测试与构建 → 生成并检查 tarball → 隔离 DSH 候选验收 → 发布审批 → 发布 npm → 校验已发布包。当前工作流自动执行版本校验、测试与构建、包检查、上传及完整性校验；隔离 DSH 的 UI、真实模型和平台验收需在发布审批前另行完成，CI 矩阵成功不等同于这些验收通过。通过受保护 CI 环境使用发布凭证，源码及 npm 包不包含凭证。
 
@@ -137,7 +188,19 @@ SaaS 使用其现有流水线部署；公共接口契约、测试数据规则与
 
 从 npm 下载实际发布包，在干净环境重复安装检查；确认其内容与候选 tarball 一致。验证宿主能加载 Host/Client、打开广场、执行搜索工具并安装一个测试技能。发布成功不以 npm 接受上传作为唯一判定。
 
-## 5. 回退与故障处理
+## 5. 更新、回退与故障处理
+
+更新前保存原候选 tarball 和校验值，停止新操作并完成待恢复事务。停止当前 Profile 的 Host，执行：
+
+```sh
+dsh plugin --profile skillhub-test add /absolute/path/to/target-candidate.tgz --ignore-scripts
+dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
+```
+
+保持原 Profile、来源、会话和模型配置。回退时目标为已留存且与日志格式兼容的包。当前日志支持可选 `existingInstallation` 只读基线，新构建可读取不含该字段的旧日志，但旧构建的严格解析器可能拒绝新增字段；完成过幂等安装后，不得直接回退到不识别该字段的包，也不能删除字段或日志来绕过检查。重新连接后检查侧栏、配置、已安装记录和原操作查询；不要把删除数据目录作为升级或回退步骤。
+
+浏览器仍显示旧页面时，使用有效入口重新进入并强制刷新（Windows：Ctrl+Shift+R）。这只刷新浏览器资源；Host 依赖变化必须完整重启进程，不能只开关插件。官方 RC.2 存在同端口 Host 重启后原标签页空白的已知限制；保留原操作记录，重新进入，不以重复安装修复页面。详细边界见 [兼容设计](compatibility-design.md)。
+
 
 | 情况 | 处理方式 | 数据保护 |
 | --- | --- | --- |

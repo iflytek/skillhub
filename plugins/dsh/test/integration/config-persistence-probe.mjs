@@ -1,3 +1,4 @@
+import { selectValue, selectedValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -22,14 +23,14 @@ try {
   const form = page.getByRole('form', { name: 'SkillHub 配置' });
   await form.waitFor();
   if (phase === 'save') {
-    for (let index = 0; index < modes.length; index++) await form.getByRole('combobox').nth(index).selectOption(modes[index]);
+    for (let index = 0; index < modes.length; index++) await selectValue(form.getByRole('combobox').nth(index), modes[index]);
     await form.getByRole('button', { name: '保存配置', exact: true }).click();
     await form.getByText('配置已保存。', { exact: true }).waitFor();
   }
-  for (let index = 0; index < modes.length; index++) assert.equal(await form.getByRole('combobox').nth(index).inputValue(), modes[index]);
+  for (let index = 0; index < modes.length; index++) assert.equal(await selectedValue(form.getByRole('combobox').nth(index)), modes[index]);
   if (phase === 'verify') {
     const before = (await requests()).length;
-    await page.getByText('SkillHub', { exact: true }).click();
+    await page.getByText('技能中心', { exact: true }).click();
     const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
     await plaza.getByRole('button', { name: /document-helper/ }).click();
     await plaza.getByRole('tab', { name: '详情', exact: true }).waitFor();

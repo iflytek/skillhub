@@ -1,3 +1,4 @@
+import { selectValue } from './select-field.mjs';
 import { chromium } from 'playwright';
 import { writeFile } from 'node:fs/promises';
 const entry = process.env.DSH_PROBE_URL;
@@ -22,12 +23,12 @@ try {
  await page.getByText(/^(Plugins|插件)$/).click();
  await page.getByText('@astron-team/skillhub-dsh',{exact:true}).first().click();
  await page.getByRole('form',{name:'SkillHub 配置'}).waitFor();
- await page.getByRole('combobox').nth(0).selectOption('auto');
- await page.getByRole('combobox').nth(1).selectOption('show');
- await page.getByRole('combobox').nth(2).selectOption('auto');
+ await selectValue(page.getByRole('combobox').nth(0), 'auto');
+ await selectValue(page.getByRole('combobox').nth(1), 'show');
+ await selectValue(page.getByRole('combobox').nth(2), 'auto');
  await page.getByRole('button',{name:'保存配置',exact:true}).click();
  await page.getByText('配置已保存。',{exact:true}).waitFor();
- await page.getByText('SkillHub',{exact:true}).click();
+ await page.getByText('技能中心',{exact:true}).click();
  await page.getByRole('button',{name:/document-helper/}).waitFor();
  await page.getByLabel('搜索技能').fill('document');
  await page.getByRole('button',{name:'搜索',exact:true}).click();

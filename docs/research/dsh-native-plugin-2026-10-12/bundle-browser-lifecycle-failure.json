@@ -1,8 +1,0 @@
-{
-  "passed": false,
-  "error": "locator.waitFor: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for getByText('SkillHub', { exact: true }) to be hidden\u001b[22m\n\u001b[2m    64 × locator resolved to visible <span class=\"hHd-Xa_panelTitle hHd-Xa_wide\">SkillHub</span>\u001b[22m\n",
-  "changes": [
-    200
-  ],
-  "errors": []
-}

@@ -75,11 +75,11 @@ try {
   assert.equal(await drawer.getByRole('button', { name: /安装到/ }).count(), 0);
   await page.screenshot({ path: `${output}/source-race-detail.png` });
   await drawer.getByRole('button', { name: '关闭技能详情', exact: true }).click();
-  const oldList = await hold('listSkills');
-  await page.getByText('SkillHub', { exact: true }).click();
+  const oldList = await hold('listCatalog');
+  await page.getByText('技能中心', { exact: true }).click();
   await oldList.reached;
   await source(original);
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   await plaza.getByText(original, { exact: true }).waitFor();
   const current = plaza.getByRole('button', { name: /document-helper/ });

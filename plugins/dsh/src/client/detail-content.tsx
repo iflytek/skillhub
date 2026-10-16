@@ -5,9 +5,9 @@ import type { SkillDetail, SkillHubConfig } from '../host/types.js';
 import { DetailTabs } from './detail-tabs.js';
 import '../../lib/typert.remote-client.js';
 
-export function DetailContent({ detail, modes, remote, retry }: {
+export function DetailContent({ detail, modes, remote, retry, onSelectVersion, versionActionLabel }: {
   detail: SkillDetail; modes: SkillHubConfig['detailTabs'];
-  remote: TypertRemoteNamespaceMap['skillhub']; retry: () => void;
+  remote: TypertRemoteNamespaceMap['skillhub']; retry: () => void; onSelectVersion?(version: string): void; versionActionLabel?: string;
 }) {
   const pendingModules = (['versions', 'securityAudit', 'reviews'] as const)
     .filter(module => modes[module] === 'auto' && detail.tabs[module] === 'unknown')
@@ -17,7 +17,7 @@ export function DetailContent({ detail, modes, remote, retry }: {
       <p>{pendingModules.join('、')}是否可读取尚未确认，不代表没有内容。</p>
       <button onClick={retry}>重新检查可选内容</button>
     </div>}
-    <DetailTabs key={detail.detailToken} detail={detail} modes={modes} remote={remote}>
+    <DetailTabs key={detail.detailToken} detail={detail} modes={modes} remote={remote} onSelectVersion={onSelectVersion} versionActionLabel={versionActionLabel}>
     {detail.documentation.state === 'error' ? <div role="alert"><p>当前版本的说明暂时不可读取。</p><button onClick={retry}>重试</button></div>
       : <ReactMarkdown rehypePlugins={[rehypeSanitize]} skipHtml components={{
         img: ({ alt }) => <span>{alt ? `[图片：${alt}]` : '[图片]'}</span>,

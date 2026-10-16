@@ -54,7 +54,7 @@ describe('native M0 package', () => {
   });
 
   test('official generator publishes the declared endpoints with scoped writes and strict codec', () => {
-    expect(TYPERT_REMOTE.descriptors.map(item => item.method).sort()).toEqual(['acknowledgeConversationDetail', 'checkUpdate', 'executePlan', 'getCompatibility', 'getContext', 'getInstalledDetail', 'getOperation', 'getSkillDetail', 'getStatus', 'listInstallTargets', 'listInstalled', 'listReviews', 'listSkills', 'listVersions', 'openConversationDetail', 'prepareUninstall', 'prepareUpgrade', 'recoverOperation', 'reopenConversationDetail', 'startInstall']);
+    expect(TYPERT_REMOTE.descriptors.map(item => item.method).sort()).toEqual(['acknowledgeConversationDetail', 'checkUpdate', 'executePlan', 'getCompatibility', 'getContext', 'getInstalledDetail', 'getOperation', 'getSkillDetail', 'getStatus', 'listCatalog', 'listCatalogByLabel', 'listInstallTargets', 'listInstalled', 'listLabels', 'listReviews', 'listSkills', 'listVersions', 'openConversationDetail', 'prepareUninstall', 'prepareUpgrade', 'recoverOperation', 'reopenConversationDetail', 'startInstall', 'testRegistryConnection']);
     for (const method of ['openConversationDetail', 'reopenConversationDetail', 'acknowledgeConversationDetail', 'listInstallTargets', 'listInstalled', 'getInstalledDetail', 'checkUpdate', 'prepareUninstall', 'prepareUpgrade', 'executePlan', 'startInstall', 'getOperation', 'recoverOperation']) {
       const scoped = TYPERT_REMOTE.descriptors.find(item => item.method === method)!;
       expect(scoped.invocation).toMatchObject({ kind: 'context', context: 'agent', wire: 'agentId' });
@@ -67,7 +67,7 @@ describe('native M0 package', () => {
   });
 
   test('browser artifact registers a lazy ModuleLoader factory, no top-level UI execution', async () => {
-    type ClientModule = { apply: unknown };
+    type ClientModule = { apply: (ctx: unknown) => Promise<() => Promise<void>> };
     type ModuleEntry = { id: string; factory: (require: (id: string) => unknown) => ClientModule };
     const entries: ModuleEntry[] = [];
     const elements: string[] = [];
@@ -83,9 +83,25 @@ describe('native M0 package', () => {
     expect(typeof entries[0]?.factory).toBe('function');
     const require = createRequire(import.meta.url);
     const module = entries[0]!.factory(id => {
-      if (!['react', 'react/jsx-runtime'].includes(id)) throw new Error(`Undeclared Client external: ${id}`);
+      if (!['react', 'react/jsx-runtime', 'react-dom'].includes(id)) throw new Error(`Undeclared Client external: ${id}`);
       return require(id);
     });
     expect(typeof module.apply).toBe('function');
+    const formEntries: string[] = [];
+    const settings = {
+      configForms: { get: (entryId: string) => { formEntries.push(entryId); return {}; } },
+      slots: { inject: () => () => {} },
+    };
+    const dispose = await module.apply({
+      remote: { $mount: async () => async () => {} },
+      inject: (dependencies: string[], setup: (ctx: typeof settings) => void) => {
+        if (dependencies.includes('configForms')) setup(settings);
+        return { dispose: async () => {} };
+      },
+    });
+    const patch = await readFile(new URL('../cordis.patch.yml', import.meta.url), 'utf8');
+    const hostEntryIds = [...patch.matchAll(/^\s*- id: (\S+)$/gm)].map(match => match[1]);
+    expect(formEntries).toEqual(hostEntryIds);
+    await dispose();
   });
 });

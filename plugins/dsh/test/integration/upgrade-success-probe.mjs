@@ -1,3 +1,4 @@
+import { selectValue, selectedValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { readFile, stat, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -66,22 +67,24 @@ try {
   if (await welcome.isVisible()) await welcome.click();
   await later.click();
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   if (mobile) await page.setViewportSize({ width: 390, height: 844 });
   await plaza.getByRole('button', { name: /document-helper/ }).click();
-  assert.equal(await plaza.getByRole('combobox', { name: '安装范围', exact: true }).inputValue(), 'user');
+  assert.equal(await selectedValue(plaza.getByRole('combobox', { name: '安装范围', exact: true })), 'user');
   if (twoTargets) {
     await plaza.getByRole('button', { name: '安装到当前用户', exact: true }).click();
-    await plaza.getByText('当前范围记录版本：1.2.0。文件存在。', { exact: true }).waitFor();
+    await page.getByRole('dialog', { name: '确认安装技能？', exact: true }).getByRole('button', { name: '确认安装', exact: true }).click();
+    await plaza.getByText('已安装此版本', { exact: true }).waitFor();
   }
-  await plaza.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+  await selectValue(plaza.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
   await plaza.getByRole('button', { name: '安装到当前项目', exact: true }).click();
-  await plaza.getByText('当前范围记录版本：1.2.0。文件存在。', { exact: true }).waitFor();
+  await page.getByRole('dialog', { name: '确认安装技能？', exact: true }).getByRole('button', { name: '确认安装', exact: true }).click();
+  await plaza.getByText('已安装此版本', { exact: true }).waitFor();
   await verifyFiles('1.2.0', 'Native installation resource');
   await plaza.getByRole('button', { name: '← 返回技能广场', exact: true }).click();
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
-  await plaza.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
+  await selectValue(plaza.getByRole('combobox', { name: '筛选安装范围' }), 'project');
   await plaza.getByRole('button', { name: '查看已安装详情', exact: true }).waitFor();
   await checkMobile(plaza, 'installed-list');
   await plaza.getByRole('button', { name: '查看已安装详情', exact: true }).click();
@@ -106,10 +109,10 @@ try {
   await verifyFiles('1.3.0', 'Native upgraded resource 1.3.0');
   if (mobile) await page.setViewportSize({ width: 1440, height: 1000 });
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   if (mobile) await page.setViewportSize({ width: 390, height: 844 });
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
-  await plaza.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
+  await selectValue(plaza.getByRole('combobox', { name: '筛选安装范围' }), 'project');
   await plaza.getByRole('button', { name: '查看已安装详情', exact: true }).click();
   await plaza.getByText(`@${namespace}/document-helper · 已安装版本 1.3.0`, { exact: true }).waitFor();
   await plaza.getByText('正在核对本地记录并读取固定版本详情…', { exact: true }).waitFor({ state: 'hidden' });

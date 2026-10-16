@@ -43,7 +43,7 @@ try {
   await page.waitForFunction(() => window.__coexistContexts['@astron-team/skillhub-dsh']
     && window.__coexistContexts['@cocofhu/skillhub']);
   stage = 'catalog';
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   await page.getByRole('region', { name: 'SkillHub 技能广场' }).getByRole('button', { name: /document-helper/ }).waitFor();
   const registrations = await page.evaluate(() => {
     const slots = window.__coexistContexts['@astron-team/skillhub-dsh'].slots;
@@ -79,7 +79,7 @@ try {
     restoreToggle = toggle;
     assert.equal(await toggle.getAttribute('aria-checked'), 'true');
     await toggle.click();
-    await page.getByText('SkillHub', { exact: true }).waitFor({ state: 'hidden' });
+    await page.getByText('技能中心', { exact: true }).waitFor({ state: 'hidden' });
     const deadline = Date.now() + 15000;
     while (await toggle.getAttribute('aria-checked') !== 'false') {
       assert(Date.now() < deadline, 'Disable response did not settle');
@@ -90,7 +90,7 @@ try {
     stage = `cycle-${cycle}:enable`;
     await toggle.click();
     stage = `cycle-${cycle}:catalog-restored`;
-    await page.getByText('SkillHub', { exact: true }).click();
+    await page.getByText('技能中心', { exact: true }).click();
     restoreToggle = undefined;
     await page.getByRole('region', { name: 'SkillHub 技能广场' }).getByRole('button', { name: /document-helper/ }).waitFor();
     await unchanged();
@@ -109,7 +109,7 @@ try {
   if (restoreToggle) {
     try {
       if (await restoreToggle.getAttribute('aria-checked') === 'false') await restoreToggle.click();
-      await page.getByText('SkillHub', { exact: true }).waitFor();
+      await page.getByText('技能中心', { exact: true }).waitFor();
     } catch { process.exitCode = 1; }
   }
   await browser.close();

@@ -1,9 +1,0 @@
-{
-  "kind": "remove-stale-record",
-  "phase": "completed",
-  "files": "stale-record-removed",
-  "quarantine": null,
-  "targetAbsent": true,
-  "externalFixtureUnchanged": true,
-  "remainingTargetsAtPath": 0
-}

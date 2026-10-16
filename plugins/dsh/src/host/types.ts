@@ -40,10 +40,24 @@ export interface CatalogContext {
 }
 
 export interface SkillList {
-  items: { namespace: string; slug: string; latestVersion: string; summary: string }[];
+  items: { namespace: string; slug: string; latestVersion: string; summary: string;
+    displayName?: string; downloadCount?: number; starCount?: number; ratingAvg?: number; ratingCount?: number }[];
   total: number;
   returned: number;
   limit: number;
+}
+
+export interface CatalogLabel { slug: string; type: 'RECOMMENDED' | 'PRIVILEGED'; displayName: string }
+export interface CatalogLabels { available: boolean; items: CatalogLabel[] }
+
+export type CatalogSort = 'newest' | 'downloads' | 'rating';
+export interface CatalogPageResult {
+  items: SkillList['items'];
+  total: number;
+  page: number;
+  size: number;
+  hasMore: boolean;
+  mode: 'paged' | 'limited';
 }
 
 /** Read-only fixed-version content; it is not an installation authorization. */
@@ -51,6 +65,10 @@ export interface SkillDetail {
   detailToken: string;
   title: string;
   summary: string;
+  downloadCount?: number;
+  starCount?: number;
+  ratingAvg?: number;
+  ratingCount?: number;
   tabs: { versions: ModuleAvailability; securityAudit: ModuleAvailability; reviews: ModuleAvailability };
   namespace: string;
   slug: string;
@@ -71,6 +89,7 @@ export interface InstallationTargetList {
 export interface InstalledSkillList {
   items: { itemKey: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
     state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable' }[];
+  /** Completeness of the inventory projection; unavailable roots are reported independently. */
   complete: boolean;
   issues: string[];
   unavailable: ('user' | 'project')[];
@@ -120,4 +139,11 @@ declare module '@deepseek-ai/dsh-typert-protocol' {
     'skillhub/request-conflict': { retryable: false };
     'skillhub/registry-error': { reason: string; retryable: boolean; status?: number; retryAfterSeconds?: number };
   }
+}
+
+/** A read-only directory probe; it does not establish download or installation availability. */
+export interface RegistryConnectionTest {
+  reachable: true;
+  mode: 'paged' | 'limited';
+  elapsedMs: number;
 }

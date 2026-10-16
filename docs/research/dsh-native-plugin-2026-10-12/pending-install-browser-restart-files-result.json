@@ -1,9 +1,0 @@
-{
-  "passed": true,
-  "node": "24.2.0",
-  "sameOperationId": true,
-  "completedJournalCount": 1,
-  "resourceReadable": true,
-  "fingerprintMatches": true,
-  "modelInvoked": false
-}

@@ -1,3 +1,4 @@
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -13,7 +14,7 @@ try {
   await page.goto(entry, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Configure later', exact: true }).click();
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   await plaza.getByRole('textbox', { name: '搜索技能', exact: true }).fill(slug);
   await plaza.getByRole('button', { name: '搜索', exact: true }).click();
@@ -24,9 +25,10 @@ try {
   await plaza.getByRole('tab', { name: '评论', exact: true }).click();
   await plaza.getByRole('navigation', { name: '评论分页' }).waitFor();
   await plaza.getByRole('tab', { name: '详情', exact: true }).click();
-  await plaza.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+  await selectValue(plaza.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
   await plaza.getByRole('button', { name: '安装到当前项目', exact: true }).click();
-  await plaza.getByText(`当前范围记录版本：${version}。文件存在。`, { exact: true }).waitFor();
+  await page.getByRole('dialog', { name: '确认安装技能？', exact: true }).getByRole('button', { name: '确认安装', exact: true }).click();
+  await plaza.getByText('已安装此版本', { exact: true }).waitFor();
   await page.screenshot({ path: `${output}/live-registry-installed.png` });
   assert.equal(installs, 1); assert.deepEqual(errors, []);
   const result = { passed: true, slug, version, anonymousBrowseAndModules: true, projectInstallation: true, installs, errors };

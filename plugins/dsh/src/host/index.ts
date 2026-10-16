@@ -5,7 +5,7 @@ import type {} from '@deepseek-ai/dsh-session-query';
 import { historicalSearchCandidate } from './conversation-history.js';
 import type {} from '@deepseek-ai/dsh-sandbox-policy';
 import { SessionId } from '@deepseek-ai/dsh-session/types';
-import { randomUUID } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { Config } from './config.js';
 import { ConversationSelections } from './conversation-selections.js';
@@ -13,7 +13,7 @@ import type { SelectionSnapshot } from './conversation-selections.js';
 import { registerSearchTool } from './search-tool.js';
 import { registerInstallTool } from './install-tool.js';
 import type { ConversationSearchContext, ConversationSearchResult } from './search-tool.js';
-import type { CatalogContext, ModuleAvailability, ReviewPage, ConversationDetail, SkillDetail, SkillList, VersionPage } from './types.js';
+import type { RegistryConnectionTest, CatalogContext, CatalogLabels, CatalogPageResult, CatalogSort, ModuleAvailability, ReviewPage, ConversationDetail, SkillDetail, SkillList, VersionPage } from './types.js';
 import { RegistryAdapter, RegistryError } from './registry-adapter.js';
 import { LocalRuntime } from './local-runtime.js';
 import { assertRuntimeCompatibility } from './runtime-compatibility.js';
@@ -53,7 +53,7 @@ export class SkillHubService extends TypertRemoteService {
   private readonly installationTargets = new InstallationTargets();
   private readonly upgradePlans = new UpgradePlans();
   private readonly removalPlans = new RemovalPlans();
-  private readonly installedItems = new Map<string, { sessionId: string; cwd: string; sourceRevision: string; item: InstalledProjectionItem }>();
+  private readonly installedReferenceKey = randomBytes(32);
   private readonly capabilities = new Map<string, ModuleAvailability>();
   private readonly details = new Map<string, {
     sourceRevision: string; namespace: string; slug: string; version: string;
@@ -81,7 +81,7 @@ export class SkillHubService extends TypertRemoteService {
       ctx.effect(() => registerSearchTool(ctx.tools, (query, context, signal) => this.searchConversation(query, context, signal)));
       ctx.effect(() => registerInstallTool(ctx.tools, (request, context, signal) => this.installConversation(request, context, signal)));
     });
-    ctx.effect(() => () => { this.lifetime.abort(); this.details.clear(); this.capabilities.clear(); this.selections.clear(); this.installationTargets.clear(); this.installedItems.clear(); this.upgradePlans.clear(); this.removalPlans.clear(); });
+    ctx.effect(() => () => { this.lifetime.abort(); this.details.clear(); this.capabilities.clear(); this.selections.clear(); this.installationTargets.clear(); this.upgradePlans.clear(); this.removalPlans.clear(); });
   }
 
   /** Internal diagnostics, deliberately not a Remote method. */
@@ -102,7 +102,7 @@ export class SkillHubService extends TypertRemoteService {
     this.details.clear();
     this.selections.clear();
     this.installationTargets.clear();
-    this.installedItems.clear();
+
     this.upgradePlans.clear();
     this.removalPlans.clear();
     this.capabilities.clear();
@@ -114,6 +114,27 @@ export class SkillHubService extends TypertRemoteService {
   @Remote
   getStatus(): string {
     return 'SkillHub: connected';
+  }
+
+  /** Probe an unsaved address independently of the active source and its selection state. */
+  @Remote
+  async testRegistryConnection(inputUrl: string, signal: AbortSignal): Promise<RegistryConnectionTest> {
+    const started = performance.now();
+    const deadline = AbortSignal.timeout(10_000);
+    const combined = AbortSignal.any([signal, this.lifetime.signal, deadline]);
+    try {
+      const registry = new RegistryAdapter(inputUrl.trim());
+      const result = await registry.catalog('', 0, 'newest', combined);
+      combined.throwIfAborted();
+      return { reachable: true, mode: result.mode, elapsedMs: Math.round(performance.now() - started) };
+    } catch (error) {
+      const cancelled = signal.aborted || this.lifetime.signal.aborted;
+      const reason = cancelled ? 'CANCELLED' : deadline.aborted ? 'NETWORK_ERROR'
+        : error instanceof RegistryError ? error.code : 'NETWORK_ERROR';
+      throw new RemoteError('skillhub/registry-error', 'SkillHub connection test failed.', {
+        reason, retryable: !cancelled && (deadline.aborted || !(error instanceof RegistryError) || error.retryable),
+      });
+    }
   }
 
   private assertRuntimeBaseline(): void {
@@ -156,6 +177,23 @@ export class SkillHubService extends TypertRemoteService {
   }
 
   @Remote
+  async listCatalog(sourceRevision: string, query: string, page: number, sort: CatalogSort, signal: AbortSignal): Promise<CatalogPageResult> {
+    return this.readSource(sourceRevision, signal, (registry, signal) => registry.catalog(query, page, sort, signal));
+  }
+
+  @Remote
+  async listLabels(sourceRevision: string, signal: AbortSignal): Promise<CatalogLabels> {
+    return this.readSource(sourceRevision, signal, (registry, signal) => registry.labels(signal));
+  }
+
+  @Remote
+  async listCatalogByLabel(
+    sourceRevision: string, query: string, page: number, sort: CatalogSort, label: string, signal: AbortSignal,
+  ): Promise<CatalogPageResult> {
+    return this.readSource(sourceRevision, signal, (registry, signal) => registry.catalog(query, page, sort, signal, label));
+  }
+
+  @Remote
   async getSkillDetail(
     sourceRevision: string, namespace: string, slug: string, version: string, signal: AbortSignal,
   ): Promise<SkillDetail> {
@@ -195,7 +233,9 @@ export class SkillHubService extends TypertRemoteService {
       if (this.details.size >= 100) this.details.delete(this.details.keys().next().value!);
       this.details.set(detailToken, { sourceRevision, namespace, slug, version: resolved.version,
         skillId: metadata.id, versionId: resolved.versionId, fingerprint: resolved.fingerprint });
-      return { detailToken, title: metadata.displayName || slug, summary: metadata.summary ?? '',
+      return { detailToken, title: metadata.displayName?.trim() || slug, summary: metadata.summary ?? '',
+        downloadCount: metadata.downloadCount, starCount: metadata.starCount,
+        ratingAvg: metadata.ratingCount === 0 ? undefined : metadata.ratingAvg, ratingCount: metadata.ratingCount,
         namespace, slug, version: resolved.version, versionId: resolved.versionId, documentation,
         tabs: { versions, reviews, securityAudit: modes.securityAudit === 'hide' ? 'hidden' : 'anonymous-denied' } };
 
@@ -252,12 +292,10 @@ export class SkillHubService extends TypertRemoteService {
     this.assertSource(sourceRevision);
     const unavailable = targets.filter(entry => !entry.target).map(entry => entry.scope);
     const items = result.items.map(item => {
-      const itemKey = randomUUID();
-      if (this.installedItems.size >= 400) this.installedItems.delete(this.installedItems.keys().next().value!);
-      this.installedItems.set(itemKey, { sessionId: agent.session.id, cwd, sourceRevision, item: { ...item } });
+      const itemKey = this.installedItemKey(agent.session.id, cwd, sourceRevision, item);
       return { itemKey, namespace: item.namespace, slug: item.slug, version: item.version, scope: item.scope, state: item.state };
     });
-    return { items, complete: result.complete && !unavailable.length, issues: result.issues, unavailable };
+    return { items, complete: result.complete, issues: result.issues, unavailable };
   }
 
   @RemoteScope('agent')
@@ -365,35 +403,49 @@ export class SkillHubService extends TypertRemoteService {
       target: { scope: baseline.target.scope, path: baseline.target.path } };
   }
 
+  /** Opaque references are stable within a Host and bind the full trusted record snapshot. */
+  private installedItemKey(sessionId: string, cwd: string, sourceRevision: string, item: InstalledProjectionItem): string {
+    return createHmac('sha256', this.installedReferenceKey).update(JSON.stringify([
+      sessionId, cwd, sourceRevision, item.scope, item.namespace, item.slug, item.version,
+      item.targetPath, item.fingerprint ?? null, item.state,
+    ])).digest('base64url');
+  }
+
   private async readInstalledItem(sourceRevision: string, itemKey: string, signal: AbortSignal) {
     this.assertSource(sourceRevision);
     const id = this.ctx.invocation?.request.args.agentId;
     const agent = typeof id === 'string' ? this.ctx.get('agents')?.get(SessionId(id)) : undefined;
-    const saved = this.installedItems.get(itemKey);
     const runtime = this.localRuntime;
     const fs = agent?.ctx.get('fs');
+    const cwd = agent?.session.header.cwd;
+    const sessionId = agent?.session.id;
     const valid = () => {
       this.assertSource(sourceRevision);
-      if (!saved || !agent || !runtime || !fs || saved.sessionId !== agent.session.id
-        || saved.sourceRevision !== sourceRevision || saved.cwd !== agent.session.header.cwd
-        || this.installedItems.get(itemKey) !== saved || this.localRuntime !== runtime
-        || this.ctx.get('agents')?.get(SessionId(agent.session.id)) !== agent
+      if (!agent || !runtime || !fs || !cwd || sessionId !== agent.session.id || cwd !== agent.session.header.cwd
+        || this.localRuntime !== runtime || this.ctx.get('agents')?.get(SessionId(agent.session.id)) !== agent
         || serviceIdentity(agent.ctx.get('fs')) !== serviceIdentity(fs)) {
         throw new RemoteError('skillhub/context-stale', 'Reopen the installed skill list.', { retryable: false });
       }
     };
     valid();
     const combined = AbortSignal.any([signal, this.lifetime.signal]);
-    const target = await resolveInstalledPath({ scope: saved!.item.scope, cwd: saved!.cwd, fs: fs!, signal: combined });
-    if (join(target.root, saved!.item.slug) !== saved!.item.targetPath) {
-      throw new RemoteError('skillhub/context-stale', 'Installed target changed.', { retryable: false });
+    // Re-read trusted roots rather than retaining an evictable cache or decoding client paths.
+    const roots: Awaited<ReturnType<typeof resolveInstalledPath>>[] = [];
+    for (const scope of ['user', 'project'] as const) {
+      try { roots.push(await resolveInstalledPath({ scope, cwd: cwd!, fs: fs!, signal: combined })); }
+      catch { combined.throwIfAborted(); }
     }
-    const result = await runtime!.listInstalled(this.getContext().registryUrl, [target]);
+    const result = await runtime!.listInstalled(this.getContext().registryUrl, roots);
     combined.throwIfAborted();
     valid();
-    const item = result.items.find(item => item.targetPath === saved!.item.targetPath && item.namespace === saved!.item.namespace
-      && item.slug === saved!.item.slug && item.version === saved!.item.version && item.scope === saved!.item.scope);
+    const item = result.items.find(item => this.installedItemKey(sessionId!, cwd!, sourceRevision, item) === itemKey);
     if (!item) throw new RemoteError('skillhub/context-stale', 'Installed record changed or unavailable.', { retryable: false });
+    const target = await resolveInstalledPath({ scope: item.scope, cwd: cwd!, fs: fs!, signal: combined });
+    if (join(target.root, item.slug) !== item.targetPath) {
+      throw new RemoteError('skillhub/context-stale', 'Installed target changed.', { retryable: false });
+    }
+    combined.throwIfAborted();
+    valid();
     return { item, valid, agent, runtime, fs };
   }
 
@@ -763,13 +815,21 @@ export class SkillHubService extends TypertRemoteService {
       const scope = this.selectionScope(agent);
       let detailToken: string;
       if ('selectionRef' in request) {
-        detailToken = this.resolveConversationSelection(agent, request.selectionRef).detailToken;
+        const resolved = await this.selections.resolveForInstall(request.selectionRef, scope, async candidate => {
+          const detail = await this.getSkillDetail(scope.sourceRevision, candidate.namespace, candidate.slug, candidate.version, signal);
+          const snapshot = this.details.get(detail.detailToken);
+          if (!snapshot) throw new RemoteError('skillhub/context-stale', 'Detail expired.', { retryable: false });
+          return { detailToken: detail.detailToken, snapshot };
+        });
+        if (!this.details.has(resolved.detailToken)) throw new RemoteError('skillhub/context-stale', 'Detail expired.', { retryable: false });
+        detailToken = resolved.detailToken;
       } else {
         const resolved = await this.readSource(scope.sourceRevision, signal,
           (registry, signal) => registry.resolve(request.namespace, request.slug, undefined, signal));
         const detail = await this.getSkillDetail(scope.sourceRevision, request.namespace, request.slug, resolved.version, signal);
         detailToken = detail.detailToken;
       }
+      signal.throwIfAborted();
       if (agent.session.header.cwd !== context.cwd || this.ctx.get('agents')?.get(SessionId(context.sessionId)) !== agent) {
         throw new RemoteError('skillhub/context-stale', 'Conversation changed.', { retryable: false });
       }

@@ -1,3 +1,4 @@
+import { expandInstallRecord } from './receipt-disclosure.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile, access, mkdir } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -80,12 +81,14 @@ try {
     if (!await card.isVisible()) await revealTools();
     await card.getByText('技能文件安装完成。', { exact: true }).waitFor({ timeout: 45000 });
     assert(await exists(skillFile), 'Accepted operation did not finish writing');
+    await expandInstallRecord(card);
     await card.getByRole('button', { name: '查询原操作', exact: true }).click();
     await page.reload({ waitUntil: 'domcontentloaded' });
     await openSession();
     await revealTools();
     await card.waitFor();
     assert.equal(await card.locator('code').textContent(), operationId, 'History switched to another operation');
+    await expandInstallRecord(card);
     await card.getByRole('button', { name: '查询原操作', exact: true }).click();
     await card.getByText('技能文件安装完成。', { exact: true }).waitFor();
     await page.screenshot({ path: `${output}/stop-after-history.png` });

@@ -10,7 +10,7 @@ let writes = 0;
 let reason = 'ANONYMOUS_DENIED';
 page.on('pageerror', error => errors.push(error.message.replace(/token=[^\s&]+/g, 'token=[redacted]')));
 page.on('request', request => { if (/\/(startInstall|executePlan)$/.test(new URL(request.url()).pathname)) writes++; });
-await page.route('**/listSkills', async route => {
+await page.route('**/listCatalog', async route => {
   const response = await route.fetch();
   const body = await response.json();
   assert.equal(body.result.ok, true);
@@ -24,7 +24,7 @@ try {
   await welcome.or(later).first().waitFor();
   if (await welcome.isVisible()) await welcome.click();
   await later.click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   const cases = [
     ['ANONYMOUS_DENIED', '当前来源不允许匿名读取此项信息，请联系实例管理员确认公开访问配置。'],
@@ -43,7 +43,7 @@ try {
     assert.equal(await plaza.getByText('没有找到匹配的技能，请尝试其他关键词。', { exact: true }).count(), 0);
   }
   await page.screenshot({ path: `${output}/catalog-error.png` });
-  await page.unroute('**/listSkills');
+  await page.unroute('**/listCatalog');
   await plaza.getByRole('button', { name: '重试', exact: true }).click();
   await plaza.getByRole('button', { name: /document-helper/ }).waitFor();
   assert.equal(writes, 0); assert.deepEqual(errors, []);

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { createHash, randomUUID } from 'node:crypto'
-import { realpath, mkdtemp, readFile, rm, writeFile, symlink } from 'node:fs/promises'
+import { realpath, mkdtemp, readFile, rm, writeFile, symlink, mkdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -165,9 +165,9 @@ test.skipIf(process.platform === 'win32')('a killed native executor leaves a lea
       [join(f.request.root, 'writer')], async () => {})
     await expect(recover()).rejects.toMatchObject({ details: { reason: 'TARGET_BUSY' } })
     await Bun.sleep(11_000)
-    expect(await recover()).toMatchObject({ outcome: 'unknown', reason: 'target-root-unavailable' })
+    expect(await recover()).toMatchObject({ outcome: 'restored', reason: 'installation-not-started' })
     expect(f.downloads()).toBe(0)
-    expect((await f.runtime.listPending()).map(operation => operation.operationId)).toEqual([f.request.operationId])
+    expect(await f.runtime.listPending()).toEqual([])
   } finally { child.kill(); await child.exited; await f.close() }
 }, 25_000)
 
@@ -280,5 +280,136 @@ test('first installation download failure needs no recovery before staging exist
     expect((await f.operations.get(f.request.operationId, f.request.ownerId))?.transaction).toBeUndefined()
     await expect(readFile(join(f.root, 'skills/writer/SKILL.md'))).rejects.toMatchObject({ code: 'ENOENT' })
     expect(await f.runtime.listPending()).toEqual([])
+  } finally { await f.close() }
+})
+
+
+test.each(['accepted', 'staging'] as const)('restart recovers %s before intent with existing or missing roots', async phase => {
+  for (const existingRoot of [false, true]) {
+    const f = await fixture()
+    try {
+      if (existingRoot) await mkdir(f.request.root)
+      if (phase === 'staging') {
+        const before = (await f.operations.get(f.request.operationId, f.request.ownerId))!
+        await f.operations.update(before.operationId, before.ownerId, before.revision, { ...before.operation.status, phase })
+      }
+      const restarted = await openNativeRuntime({ stateDirectory: join(f.root, 'operations'), inventoryHome: join(f.root, 'home') })
+      expect(await restarted.recover(f.request.operationId, f.request.ownerId, [join(f.request.root, 'writer')], async () => {}))
+        .toMatchObject({ outcome: 'restored', reason: 'installation-not-started' })
+      expect(await restarted.listPending()).toEqual([])
+      expect(await restarted.getOperation(f.request.operationId, f.request.ownerId))
+        .toMatchObject({ phase: 'failed', files: 'failed', recovery: 'not-needed' })
+      await expect(readFile(join(f.request.root, 'writer/SKILL.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+      const next = await f.freshRequest()
+      expect(await restarted.executeInstall(next)).toMatchObject({ outcome: 'committed' })
+      expect(f.downloads()).toBe(1)
+    } finally { await f.close() }
+  }
+})
+
+test('early recovery rejects foreign ownership, wrong target, and uncertain phases', async () => {
+  const f = await fixture()
+  try {
+    const target = join(f.request.root, 'writer')
+    await expect(f.runtime.recover(f.request.operationId, 'foreign', [target], async () => {})).rejects.toThrow()
+    expect(await f.runtime.recover(f.request.operationId, f.request.ownerId, [join(f.root, 'other/writer')], async () => {}))
+      .toMatchObject({ outcome: 'unknown', reason: 'target-binding-mismatch' })
+    const initial = (await f.operations.get(f.request.operationId, f.request.ownerId))!
+    await f.operations.update(initial.operationId, initial.ownerId, initial.revision, { ...initial.operation.status, phase: 'revalidating' })
+    expect(await f.runtime.recover(f.request.operationId, f.request.ownerId, [target], async () => {}))
+      .toMatchObject({ outcome: 'unknown' })
+    expect(await f.runtime.listPending()).toHaveLength(1)
+    expect(f.downloads()).toBe(0)
+  } finally { await f.close() }
+})
+
+test('early recovery refuses changed root aliases and schema corruption', async () => {
+  const f = await fixture()
+  try {
+    await mkdir(join(f.root, 'elsewhere'))
+    await symlink(join(f.root, 'elsewhere'), f.request.root, process.platform === 'win32' ? 'junction' : 'dir')
+    expect(await f.runtime.recover(f.request.operationId, f.request.ownerId, [join(f.request.root, 'writer')], async () => {}))
+      .toMatchObject({ outcome: 'unknown', reason: 'target-root-changed' })
+    expect(await f.runtime.listPending()).toHaveLength(1)
+    const path = join(f.root, 'operations', `${f.request.operationId}.json`)
+    const value = JSON.parse(await readFile(path, 'utf8'))
+    value.schemaVersion = 99
+    await writeFile(path, JSON.stringify(value))
+    await expect(f.runtime.recover(f.request.operationId, f.request.ownerId, [join(f.request.root, 'writer')], async () => {}))
+      .rejects.toMatchObject({ code: 'CORRUPT_RECORD' })
+    expect(f.downloads()).toBe(0)
+  } finally { await f.close() }
+})
+
+test('already-installed discovery persists exact evidence and rechecks after Host observation', async () => {
+  const f = await fixture()
+  try {
+    await f.runtime.executeInstall(f.request)
+    const second = await f.freshRequest()
+    await f.runtime.executeInstall(second)
+    const record = (await f.operations.get(second.operationId, second.ownerId))!
+    expect(record.transaction).toBeUndefined()
+    expect(record.existingInstallation).toMatchObject({ fingerprint: f.request.fingerprint, versionId: 1 })
+    expect(record.existingInstallation?.inventoryDigest).toMatch(/^[a-f0-9]{64}$/)
+    const restarted = await openNativeRuntime({ stateDirectory: join(f.root, 'operations'), inventoryHome: join(f.root, 'home') })
+    const query = (owner = second.ownerId, roots = [f.request.root], observe = async () => true) =>
+      restarted.observeInstallation(second.operationId, owner, roots, observe)
+    expect(await query()).toBe(true)
+    expect(await query('foreign')).toBe(false)
+    expect(await query(second.ownerId, [join(f.root, 'other')])).toBe(false)
+    expect(await query(second.ownerId, [f.request.root], async () => false)).toBe(false)
+    expect(await query(second.ownerId, [f.request.root], async () => { throw new Error('Unavailable') })).toBe(false)
+    expect(await query(second.ownerId, [f.request.root], async () => {
+      await writeFile(join(f.request.root, 'writer/SKILL.md'), '# Modified during observation')
+      return true
+    })).toBe(false)
+    expect(await query()).toBe(false)
+    expect(await f.operations.get(second.operationId, second.ownerId)).toEqual(record)
+    expect(f.downloads()).toBe(1)
+  } finally { await f.close() }
+})
+
+test.each(['legacy', 'fingerprint', 'versionId', 'digest', 'metadata', 'version', 'ownership'] as const)(
+  'already-installed discovery fails closed for %s baseline changes', async change => {
+    const f = await fixture()
+    try {
+      await f.runtime.executeInstall(f.request)
+      const second = await f.freshRequest()
+      await f.runtime.executeInstall(second)
+      const path = join(f.root, 'operations', `${second.operationId}.json`)
+      const value = JSON.parse(await readFile(path, 'utf8'))
+      if (change === 'legacy') delete value.existingInstallation
+      if (change === 'fingerprint') value.existingInstallation.fingerprint = 'sha256:' + '0'.repeat(64)
+      if (change === 'versionId') value.existingInstallation.versionId = 2
+      if (change === 'digest') value.existingInstallation.inventoryDigest = '0'.repeat(64)
+      if (['legacy', 'fingerprint', 'versionId', 'digest'].includes(change)) await writeFile(path, JSON.stringify(value))
+      if (change === 'metadata') await writeFile(join(f.request.root, 'writer/.skillhub/metadata.json'), '{}')
+      if (change === 'version' || change === 'ownership') {
+        const inventoryPath = join(f.root, 'home/.skillhub/inventory.json')
+        const inventory = JSON.parse(await readFile(inventoryPath, 'utf8'))
+        if (change === 'version') inventory.items[0].version = '2.0.0'
+        else inventory.items[0].targets[0].installedBy = ['pack:other']
+        await writeFile(inventoryPath, JSON.stringify(inventory))
+      }
+      let calls = 0
+      expect(await f.runtime.observeInstallation(second.operationId, second.ownerId, [f.request.root], async () => { calls++; return true })).toBe(false)
+      expect(calls).toBe(0)
+      expect(f.downloads()).toBe(1)
+    } finally { await f.close() }
+  }
+)
+
+test.each([
+  { fingerprint: 'test', versionId: 0, inventoryDigest: 'a'.repeat(64) },
+  { fingerprint: 'test', versionId: 1, inventoryDigest: 'invalid' },
+  { fingerprint: 'test', versionId: 1, inventoryDigest: 'a'.repeat(64), unsafe: true }
+])('malformed existing-installation evidence is rejected by durable schema', async baseline => {
+  const f = await fixture()
+  try {
+    const path = join(f.root, 'operations', `${f.request.operationId}.json`)
+    const value = JSON.parse(await readFile(path, 'utf8'))
+    value.existingInstallation = baseline
+    await writeFile(path, JSON.stringify(value))
+    await expect(f.operations.get(f.request.operationId, f.request.ownerId)).rejects.toMatchObject({ code: 'CORRUPT_RECORD' })
   } finally { await f.close() }
 })

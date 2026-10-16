@@ -1,6 +1,10 @@
+import { receiptInventoryIssue, receiptPresentation } from './install-receipt-presentation.js';
+import { Button } from './ui.js';
+import { ConversationStyles } from './conversation-styles.js';
+import { SkillAvatar } from './skill-card.js';
+import { readableDate } from './skill-presentation.js';
 import { OperationDetails } from './operation-details.js';
 import { NativeControlStyles } from './native-control-styles.js';
-import { DiscoveryStatus } from './discovery-status.js';
 import type { ToolCallViewProps } from '@deepseek-ai/dsh-client-ui-tool/client';
 import { useState } from 'react';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
@@ -33,7 +37,7 @@ const failureMessages: Record<InstallFailure['code'], string> = {
 
 export function InstallToolView(props: ToolCallViewProps & { services: InstallViewServices }) {
   return <div className="skillhub-controls" style={{ minWidth: 0, overflowWrap: 'anywhere', font: 'inherit' }}>
-    <NativeControlStyles />
+    <NativeControlStyles /><ConversationStyles />
     <InstallToolViewContent {...props} />
   </div>;
 }
@@ -82,27 +86,29 @@ function InstallationResult({ result, services, openInstalled }: {
       return response.value;
     } });
   const entries = current.data?.items.filter(item => item.namespace === result.namespace && item.slug === result.slug) ?? [];
-  return <section aria-label="SkillHub 安装结果" style={{ border: '1px solid #8885', borderRadius: 12, padding: 16, overflowWrap: 'anywhere' }}>
-    <h3>SkillHub · {result.slug}</h3>
-    <p>@{result.namespace}/{result.slug} · {result.version}</p>
-    <p>{result.sourceLabel} · {result.hostLabel} · {result.targetLabel}</p>
-    <p>原请求已接受于 <time dateTime={result.createdAt}>{result.createdAt}</time></p>
-    {query.isError || operation === null || mismatch ? <p role="alert">原操作结果无法核验，请勿重复安装。</p>
-      : !operation ? <p role="status">正在核验原操作状态…</p>
-        : operation.phase === 'completed' ? <>
-          <p>原操作结果：</p>
-          <p>{operation.files === 'already-installed' ? '此版本已安装，无需重复安装。' : '技能文件安装完成。'}</p>
-          <DiscoveryStatus confirmed={operation.discovery === 'confirmed'} checkedAt={query.dataUpdatedAt}
-            refreshing={query.isFetching} refresh={() => { void query.refetch(); }} />
-          <p>以上结果属于原操作，不代表当前仍安装此版本。</p>
-        </> : operation.phase === 'failed' ? <>
-          <p role="alert">本次安装未完成。{operation.recovery === 'not-needed' ? '无需恢复文件。'
-            : operation.recovery === 'restored' ? '原文件已恢复。' : '请检查操作记录和恢复状态。'}</p>
-          {canInspectCurrent && <p>本次请求失败不代表技能未安装，请以下方当前安装记录为准。</p>}
-        </>
-          : ['unknown', 'recovery-required'].includes(operation.phase) ? <p role="alert">操作需要恢复核验，请勿重复安装。</p>
-            : <p role="status">正在安装，请稍候…</p>}
-    <button disabled={query.isFetching} onClick={() => { void query.refetch(); }}>查询原操作</button>
+  const inventoryIssue = canInspectCurrent ? receiptInventoryIssue(result, current.data, current.isError) : null;
+  const inventoryPending = canInspectCurrent && (current.isPending || current.isFetching);
+  const presentation = receiptPresentation(operation, query.isError || !!mismatch, inventoryPending, inventoryIssue);
+  return <section aria-label="SkillHub 安装结果" className="astron-sh-conversation-result astron-sh-conversation-install">
+    <header className="astron-sh-conversation-identity"><SkillAvatar slug={result.slug} namespace={result.namespace} /><div><h4>{result.slug}</h4><p>@{result.namespace}/{result.slug}</p></div><span className="astron-sh-install-badge" data-tone={presentation.tone}>{presentation.label}</span></header>
+    <p className="astron-sh-conversation-caption">v{result.version} · {result.targetLabel}</p>
+    <p className="astron-sh-install-outcome" role={presentation.tone === 'warning' ? 'alert' : 'status'}>{presentation.message}</p>
+    <div className="astron-sh-install-actions"><Button variant="outline" disabled={query.isFetching || inventoryPending} onClick={() => {
+      // Settled operation reads invalidate the enabled current-inventory query in the shared hook.
+      void query.refetch();
+    }}>{query.isFetching || inventoryPending ? '核验中…' : '核验状态'}</Button>
+    {canInspectCurrent && <Button variant="ghost" disabled={opening} onClick={() => {
+      setOpening(true); setActionStatus('');
+      void openInstalled(result).catch(error => setActionStatus(error instanceof CatalogUnavailableError
+        ? 'SkillHub 广场入口暂不可用，请在此卡片查询原操作。'
+        : '会话或来源已变化，请从 SkillHub 入口打开当前已安装列表。'))
+        .finally(() => setOpening(false));
+    }}>在已安装中查看</Button>}</div>
+    <details className="astron-sh-install-record"><summary>安装记录</summary>
+      {!query.isError && !mismatch && operation?.phase === 'completed' && <p>
+        上次核验：{operation.discovery === 'confirmed' ? 'DSH 已发现此次安装的技能内容' : '尚未确认 DSH 发现技能内容'}
+        {query.dataUpdatedAt > 0 && <> · {readableDate(new Date(query.dataUpdatedAt).toISOString(), true)}</>}
+      </p>}
     {canInspectCurrent && <section aria-label="当前安装记录">
       <h4>当前会话可见的安装记录</h4>
       {current.isPending || current.isFetching ? <p role="status">正在核验当前安装记录…</p>
@@ -113,22 +119,16 @@ function InstallationResult({ result, services, openInstalled }: {
               {item.scope === 'project' ? '当前项目' : '当前用户'} · {item.version} · {item.state === 'present' ? '文件存在' : '本地状态异常，请前往已安装核验'}
             </li>)}</ul> : current.data.complete ? <p>当前会话可见范围内已无此技能的安装记录。</p> : null}
           </>}
-      <button disabled={current.isFetching} onClick={() => { void current.refetch(); }}>核验当前安装状态</button>
     </section>}
-    {canInspectCurrent && <button disabled={opening} onClick={() => {
-      setOpening(true); setActionStatus('');
-      void openInstalled(result).catch(error => setActionStatus(error instanceof CatalogUnavailableError
-        ? 'SkillHub 广场入口暂不可用，请在此卡片查询原操作。'
-        : '会话或来源已变化，请从 SkillHub 入口打开当前已安装列表。'))
-        .finally(() => setOpening(false));
-    }}>在已安装中查看</button>}
+
     {!query.isError && !mismatch && operation && <OperationDetails operation={operation} />}
-    <details><summary>操作信息</summary><p>操作 ID：<code>{result.operationId}</code></p>
+    <details className="astron-sh-conversation-provenance"><summary>操作信息</summary><p>{result.sourceLabel} · {result.hostLabel}</p><p>原请求已接受于 <time dateTime={result.createdAt}>{readableDate(result.createdAt, true)}</time></p><p>操作 ID：<code>{result.operationId}</code></p>
       <button onClick={() => {
         if (!navigator.clipboard?.writeText) { setActionStatus('无法访问剪贴板，请手动选择操作 ID 复制。'); return; }
         void navigator.clipboard.writeText(result.operationId).then(() => setActionStatus('操作 ID 已复制。'),
           () => setActionStatus('复制失败，请手动选择操作 ID 复制。'));
       }}>复制操作 ID</button>
+    </details>
     </details>
     {actionStatus && <p role="status">{actionStatus}</p>}
   </section>;

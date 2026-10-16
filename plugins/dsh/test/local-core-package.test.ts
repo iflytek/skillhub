@@ -33,8 +33,9 @@ test('published tarball core installs and reconciles under Node outside the repo
     }
     expect(packedPaths.has(packageManifest.dsh.bundle.patch.replace(/^\.\//, ''))).toBe(true);
     expect(packedPaths.has('LICENSE')).toBe(true);
+    expect(packedPaths.has('THIRD_PARTY_NOTICES.md')).toBe(true);
     for (const path of packedPaths) {
-      expect(/^(?:package\.json|README(?:\.en)?\.md|LICENSE|cordis\.patch\.yml|lib\/)/.test(path),
+      expect(/^(?:package\.json|README(?:\.en)?\.md|THIRD_PARTY_NOTICES\.md|LICENSE|cordis\.patch\.yml|lib\/)/.test(path),
         `Unexpected published file: ${path}`).toBe(true);
       expect(/(?:^|\/)(?:test|tests|fixtures|node_modules|\.env[^/]*|\.trellis)(?:\/|$)/.test(path),
         `Development-only file in package: ${path}`).toBe(false);

@@ -44,7 +44,7 @@ try {
   const later = page.getByRole('button', { name: /^(Configure later|稍后配置)$/ });
   await page.addLocatorHandler(later, async locator => { await locator.click(); });
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场', exact: true });
   const notice = plaza.getByRole('status', { name: 'SkillHub 部分可用', exact: true });
   const message = notice.getByText('对话技能卡片暂不可用，可在技能广场浏览和管理技能。', { exact: true });
@@ -59,9 +59,9 @@ try {
   for (let cycle = 0; cycle < 2; cycle++) {
     await page.evaluate(() => window.__skillhubToolProbe.enable());
     await notice.waitFor({ state: 'hidden' });
-    await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+    await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
     await plaza.getByRole('region', { name: '已安装技能', exact: true }).waitFor();
-    await plaza.getByRole('button', { name: '浏览技能', exact: true }).click();
+    await plaza.getByRole('tab', { name: '浏览技能', exact: true }).click();
     await page.evaluate(() => window.__skillhubToolProbe.disable());
     await message.waitFor();
     await plaza.getByRole('button', { name: /document-helper/ }).waitFor();

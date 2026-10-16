@@ -58,6 +58,9 @@ try {
   assert.equal((await acknowledgment.json()).result.value, true);
   await drawer.getByRole('heading', { name: fresh.value.title, exact: true }).waitFor();
   assert.ok((await drawer.innerText()).includes(fresh.value.version));
+  assert.equal(await drawer.getByText(/^原搜索来源：/).isVisible(), false);
+  assert.equal(await drawer.getByText(/^当前详情来源：/).isVisible(), false);
+  await drawer.locator('summary').filter({ hasText: /^来源信息$/ }).click();
   await drawer.getByText(/^原搜索来源：/).waitFor();
   await drawer.getByText(/^当前详情来源：/).waitFor();
   await drawer.getByRole('combobox', { name: '安装范围', exact: true }).waitFor();

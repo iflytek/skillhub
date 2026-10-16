@@ -1,3 +1,5 @@
+import { expandInstallRecord } from './receipt-disclosure.mjs';
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -36,6 +38,7 @@ async function expand() {
   }
   if (!await card.isVisible()) await page.getByText('Called tools', { exact: true }).click();
   await card.getByText('技能文件安装完成。', { exact: true }).waitFor();
+  await expandInstallRecord(card);
   await card.getByText(/^(上次核验时，DSH 已发现|尚未确认 DSH 发现)此操作对应的技能内容。$/).waitFor();
 }
 try {
@@ -90,11 +93,11 @@ try {
     await card.getByRole('button', { name: '在已安装中查看', exact: true }).click();
     const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
     const installed = plaza.getByRole('region', { name: '已安装技能' });
-    await installed.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+    await selectValue(installed.getByRole('combobox', { name: '筛选安装范围' }), 'project');
     await installed.getByText('document-helper', { exact: true }).waitFor();
     await installed.getByText('已安装版本 1.2.0', { exact: true }).waitFor();
-    await installed.getByRole('cell', { name: '当前项目', exact: true }).waitFor();
-    await installed.getByRole('cell', { name: '文件存在', exact: true }).waitFor();
+    await installed.getByText('当前项目', { exact: true }).waitFor();
+    await installed.getByText('文件存在', { exact: true }).waitFor();
     await page.screenshot({ path: `${output}/installed-list.png` });
     const detailButton = installed.getByRole('button', { name: '查看已安装详情', exact: true });
     await detailButton.click();
@@ -169,9 +172,9 @@ try {
             await page.reload({ waitUntil: 'domcontentloaded' });
             const later = page.getByRole('button', { name: 'Configure later', exact: true });
             if (await later.isVisible()) await later.click();
-            await page.getByText('SkillHub', { exact: true }).click();
-            await plaza.getByRole('button', { name: '已安装', exact: true }).click();
-            await installed.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+            await page.getByText('技能中心', { exact: true }).click();
+            await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
+            await selectValue(installed.getByRole('combobox', { name: '筛选安装范围' }), 'project');
             const deadline = Date.now() + 15_000;
             while (!await installed.getByText('已安装版本 1.3.0', { exact: true }).isVisible() && Date.now() < deadline) {
               await installed.getByRole('button', { name: '刷新已安装', exact: true }).click();

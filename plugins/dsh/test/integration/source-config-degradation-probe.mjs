@@ -58,7 +58,7 @@ try {
   const later = page.getByRole('button', { name: /^(Configure later|稍后配置)$/ });
   await page.addLocatorHandler(later, async locator => { await locator.click(); });
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场', exact: true });
   const missing = plaza.getByText('尚未配置技能来源，且当前配置入口不可用。请先恢复 DSH 的插件配置功能，再连接 SkillHub。', { exact: true });
   const available = plaza.getByText('在 DSH 的插件页面打开 SkillHub 配置，填写来源地址并保存。', { exact: true });

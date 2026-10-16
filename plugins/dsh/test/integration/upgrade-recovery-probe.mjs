@@ -1,3 +1,5 @@
+import { revealReceipt } from './receipt-disclosure.mjs';
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile, unlink } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -64,11 +66,11 @@ try {
   await configureLater.click();
   if (!await page.getByText(title, { exact: true }).isVisible()) await page.getByText(workspace, { exact: true }).click();
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
   const installed = plaza.getByRole('region', { name: '已安装技能', exact: true });
-  await installed.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+  await selectValue(installed.getByRole('combobox', { name: '筛选安装范围' }), 'project');
   await installed.getByRole('button', { name: '查看已安装详情', exact: true }).click();
   const detail = plaza.getByRole('region', { name: '已安装技能详情' });
   await writeFile(state, 'newer');
@@ -112,12 +114,12 @@ try {
     operationResponses.length = 0;
     await page.goto(resumed.entry, { waitUntil: 'domcontentloaded' });
   } else await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.getByText('SkillHub', { exact: true }).click();
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
   stage = 'restarted-history';
   const history = installed.getByRole('region', { name: '未关闭的升级结果', exact: true });
   if (success) {
-    await history.getByText('技能文件升级完成：1.3.0。', { exact: true }).waitFor();
+    await revealReceipt(history.getByText('技能文件升级完成：1.3.0。', { exact: true }));
     await assertDetails(history, 'upgraded', '1.3.0');
     assert.equal(submissions, 1); assert.equal(recoveries, 0); assert.deepEqual(errors, []);
     await page.screenshot({ path: `${output}/upgrade-success-restarted.png` });

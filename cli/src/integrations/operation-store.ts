@@ -26,10 +26,12 @@ const status = z.object({ phase,
   files: z.enum(['pending', 'installed', 'already-installed', 'upgraded', 'removed', 'stale-record-removed', 'failed', 'unknown']),
   discovery: z.enum(['unconfirmed', 'confirmed', 'failed']), warnings: z.array(text).max(100),
   recovery: z.enum(['not-needed', 'restored', 'incomplete', 'unknown']) }).strict()
+const existingInstallation = z.object({ fingerprint: text, versionId: z.number().int().positive(),
+  inventoryDigest: z.string().regex(/^[a-f0-9]{64}$/) }).strict()
 const record = z.object({ schemaVersion: z.literal(1), operationId: id, ownerId: text,
   requestKey: id, requestDigest: z.string().regex(/^[a-f0-9]{64}$/), revision: z.number().int().nonnegative(),
   operation: input.omit({ context: true }).extend({ context, status }), transaction: transactionState.optional(),
-  removal: removalJournal.optional() }).strict()
+  removal: removalJournal.optional(), existingInstallation: existingInstallation.optional() }).strict()
 export type AcceptedOperationInput = z.infer<typeof input>
 export type OperationRecord = z.infer<typeof record>
 export type OperationStatus = z.infer<typeof status>
@@ -130,6 +132,29 @@ export class OperationStore {
       const value: OperationRecord = { ...current, revision: revision + 1, operation: { ...current.operation,
         context: { ...current.operation.context, updatedAt: new Date().toISOString() }, status: parsed } }
       await atomicWrite(this.path(operationId), value)
+      return value
+    })
+  }
+
+  /** Caller holds target/inventory locks and has verified this exact read-only installation. */
+  async completeExistingInstallation(operationId: string, ownerId: string, revision: number,
+    snapshot: z.infer<typeof existingInstallation>): Promise<OperationRecord> {
+    const parsed = existingInstallation.parse(snapshot)
+    return this.locked(async () => {
+      const current = await this.get(operationId, ownerId)
+      if (!current) throw new OperationStoreError('CORRUPT_RECORD')
+      if (current.revision !== revision) throw new OperationStoreError('REVISION_CONFLICT')
+      if (current.operation.kind !== 'install' || current.operation.status.phase !== 'revalidating'
+        || current.operation.status.files !== 'pending' || current.operation.status.recovery !== 'not-needed'
+        || current.transaction || current.removal || current.existingInstallation
+        || current.operation.targetPaths?.length !== 1) throw new OperationStoreError('INVALID_TRANSITION')
+      const next: OperationStatus = { ...current.operation.status,
+        phase: 'completed', files: 'already-installed', recovery: 'not-needed' }
+      assertTransition(current, next)
+      const value: OperationRecord = { ...current, revision: revision + 1, existingInstallation: parsed,
+        operation: { ...current.operation, status: next,
+          context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
+      await atomicWrite(this.path(operationId), record.parse(value))
       return value
     })
   }

@@ -1,5 +1,24 @@
 import { z } from 'zod';
 import { retryAfterDeadline } from './retry-after.js';
+import type { CatalogLabels, CatalogPageResult, CatalogSort } from './types.js';
+
+const labelSlug = z.string().min(1).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u);
+const labelsSchema = z.array(z.object({
+  slug: labelSlug, type: z.enum(['RECOMMENDED', 'PRIVILEGED']), displayName: z.string().trim().min(1),
+}));
+
+// Optional presentation data must not make an otherwise usable old registry fail.
+const optionalCount = z.number().int().nonnegative().safe().nullish().transform(value => value ?? undefined).catch(undefined);
+const publicMetrics = {
+  downloadCount: optionalCount, starCount: optionalCount, ratingCount: optionalCount,
+  ratingAvg: z.number().min(1).max(5).nullish().transform(value => value ?? undefined).catch(undefined),
+};
+const catalogItemSchema = z.object({
+  namespace: z.string().min(1), slug: z.string().min(1),
+  displayName: z.string().nullish(), summary: z.string().nullish(),
+  publishedVersion: z.object({ version: z.string().min(1) }).nullable(),
+  ...publicMetrics,
+});
 
 const searchSchema = z.object({
   items: z.array(z.object({
@@ -16,6 +35,7 @@ const resolveSchema = z.object({
 const metadataSchema = z.object({
   id: z.number().int().positive(), namespace: z.string(), slug: z.string(),
   displayName: z.string().nullable(), summary: z.string().nullable(),
+  ...publicMetrics,
 });
 const versionSchema = z.object({
   version: z.string().min(1), changelog: z.string().nullable(),
@@ -77,6 +97,46 @@ export class RegistryAdapter {
   async search(query = '', signal?: AbortSignal): Promise<SearchResult> {
     const params = new URLSearchParams({ q: query, limit: '20' });
     return this.json(`/api/cli/v1/skills/search?${params}`, searchSchema, signal);
+  }
+
+  async catalog(query: string, page: number, sort: CatalogSort, signal?: AbortSignal, label = ''): Promise<CatalogPageResult> {
+    if (!Number.isSafeInteger(page) || page < 0 || !['newest', 'downloads', 'rating'].includes(sort)) {
+      throw new RegistryError('INVALID_INPUT', false);
+    }
+    if (label !== '' && !labelSlug.safeParse(label).success) throw new RegistryError('INVALID_INPUT', false);
+    const size = 12;
+    const params = new URLSearchParams({ q: query, page: String(page), size: String(size), sort });
+    if (label) params.set('label', label);
+    try {
+      const result = await this.json(`/api/web/skills?${params}`, pageSchema(catalogItemSchema), signal);
+      if (result.page !== page || result.size !== size) throw new RegistryError('INVALID_RESPONSE', false);
+      return { items: result.items.flatMap(item => item.publishedVersion ? [{
+        namespace: item.namespace, slug: item.slug, latestVersion: item.publishedVersion.version,
+        displayName: item.displayName?.trim() || undefined, summary: item.summary ?? '',
+        downloadCount: item.downloadCount, starCount: item.starCount,
+        ratingAvg: item.ratingCount === 0 ? undefined : item.ratingAvg, ratingCount: item.ratingCount,
+      }] : []), total: result.total, page, size,
+      hasMore: result.items.length > 0 && (page + 1) * size < result.total, mode: 'paged' };
+    } catch (error) {
+      // An absent list route can use the original bounded search. Never mask access,
+      // throttling, malformed responses or a failed later page as a legacy source.
+      if (label !== '' || page !== 0 || !(error instanceof RegistryError) || ![404, 405].includes(error.status ?? 0)) throw error;
+      const result = await this.search(query, signal);
+      return { items: result.items.map(item => ({ ...item, summary: item.summary ?? '' })),
+        total: result.total, page: 0, size: result.limit, hasMore: false, mode: 'limited' };
+    }
+  }
+
+  async labels(signal?: AbortSignal): Promise<CatalogLabels> {
+    try {
+      const items = await this.json('/api/web/labels', labelsSchema, signal);
+      return { available: true, items: [...new Map(items.map(item => [item.slug, item])).values()] };
+    } catch (error) {
+      if (error instanceof RegistryError && [404, 405].includes(error.status ?? 0)) {
+        return { available: false, items: [] };
+      }
+      throw error;
+    }
   }
 
   async resolve(namespace: string, slug: string, version?: string, signal?: AbortSignal): Promise<ResolvedSkill> {

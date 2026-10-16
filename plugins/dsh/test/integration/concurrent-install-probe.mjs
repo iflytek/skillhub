@@ -1,3 +1,4 @@
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -15,16 +16,17 @@ try {
   await page.goto(entry, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Configure later', exact: true }).click();
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   await plaza.getByRole('button', { name: /document-helper/ }).click();
-  await plaza.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+  await selectValue(plaza.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
   const accepted = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/startInstall'));
   await plaza.getByRole('button', { name: '安装到当前项目', exact: true }).click();
+  await page.getByRole('dialog', { name: '确认安装技能？', exact: true }).getByRole('button', { name: '确认安装', exact: true }).click();
   const receipt = (await (await accepted).json()).result;
   assert.equal(receipt.ok, true);
   await writeFile(`${root}/dual-trigger.json`, JSON.stringify({ operationId: receipt.value.operationId }));
-  await plaza.getByText('当前范围记录版本：1.2.0。文件存在。', { exact: true }).waitFor();
+  await plaza.getByText('已安装此版本', { exact: true }).waitFor();
   const deadline = Date.now() + 60000;
   let result;
   for (;;) {

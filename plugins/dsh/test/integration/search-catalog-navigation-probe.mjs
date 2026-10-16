@@ -18,7 +18,9 @@ try{
  await card.waitFor();
  const found=(await card.innerText()).includes('document-helper');
   const candidate=card.getByRole('button',{name:'查看技能详情',exact:true}).first();
-  await candidate.locator('strong').click();
+  const headingBox=await candidate.locator('xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " astron-sh-skill-card ")]').getByRole('heading').boundingBox();
+  if(!headingBox)throw Error('Candidate heading is not visible');
+  await page.mouse.click(headingBox.x+headingBox.width/2,headingBox.y+headingBox.height/2);
   const detail=page.getByRole('dialog',{name:'技能详情',exact:true});
   await detail.waitFor();
   await page.keyboard.press('Escape');
@@ -33,7 +35,7 @@ try{
  await page.screenshot({path:process.env.DSH_PROBE_OUTPUT+'/real-model-search.png'});
   await page.setViewportSize({width:390,height:844});
   await candidate.scrollIntoViewIfNeeded();
-  if(!await candidate.evaluate(element=>element.scrollWidth<=element.clientWidth+1))throw Error('Candidate content overflows narrow width');
+  if(!await candidate.evaluate(element=>{const card=element.closest('.astron-sh-skill-card');return card.scrollWidth<=card.clientWidth+1;}))throw Error('Candidate content overflows narrow width');
   await candidate.press('Enter');
   await detail.waitFor();
   if(!await detail.evaluate(element=>element.scrollWidth<=element.clientWidth+1))throw Error('Detail overflows narrow width');
@@ -47,7 +49,7 @@ try{
  await catalog.waitFor();
  const query=await catalog.getByRole('textbox',{name:'搜索技能',exact:true}).inputValue();
  if(query!=='document')throw Error('Search query not preserved');
- await catalog.getByText('document-helper',{exact:true}).waitFor();
+ await catalog.getByRole('button',{name:/@demo\/document-helper/}).waitFor();
  await page.screenshot({path:process.env.DSH_PROBE_OUTPUT+'/search-catalog-navigation.png'});
  await catalog.getByRole('button',{name:'返回会话',exact:true}).click();
  const processButton=page.locator('button[data-turn-process="1"]');

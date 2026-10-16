@@ -21,7 +21,7 @@ try {
     await page.getByText(workspace, { exact: true }).click();
   }
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   await plaza.getByLabel('搜索技能').fill('document');
   await plaza.getByRole('button', { name: '搜索', exact: true }).click();
@@ -29,11 +29,11 @@ try {
   await last.scrollIntoViewIfNeeded();
   const scroll = await plaza.evaluate(element => element.scrollTop);
   assert(scroll > 500, 'Fixture must require real scrolling');
-  const firstTab = plaza.getByRole('button', { name: '已安装', exact: true });
+  const firstTab = plaza.getByRole('tab', { name: '已安装', exact: true });
   await firstTab.evaluate(element => element.focus({ preventScroll: true }));
   await page.keyboard.press('Enter');
   await plaza.getByRole('region', { name: '已安装技能', exact: true }).waitFor();
-  await plaza.getByRole('button', { name: '浏览技能', exact: true }).click();
+  await plaza.getByRole('tab', { name: '浏览技能', exact: true }).click();
   await last.waitFor();
   assert(Math.abs(await plaza.evaluate(element => element.scrollTop) - scroll) <= 1, 'First tab return lost browse scroll');
   await last.click();
@@ -42,18 +42,18 @@ try {
   assert(Math.abs(await plaza.evaluate(element => element.scrollTop) - scroll) <= 1, 'Detail return lost scroll');
   assert(await last.evaluate(element => element === document.activeElement), 'Detail return lost focus');
   // Use keyboard activation without scrolling the header into view first.
-  const installed = plaza.getByRole('button', { name: '已安装', exact: true });
+  const installed = plaza.getByRole('tab', { name: '已安装', exact: true });
   await installed.evaluate(element => element.focus({ preventScroll: true }));
   await page.keyboard.press('Enter');
   await plaza.getByRole('region', { name: '已安装技能', exact: true }).waitFor();
-  await plaza.getByRole('button', { name: '浏览技能', exact: true }).click();
+  await plaza.getByRole('tab', { name: '浏览技能', exact: true }).click();
   await last.waitFor();
   assert(Math.abs(await plaza.evaluate(element => element.scrollTop) - scroll) <= 1, 'Tab return lost browse scroll');
   assert.equal(await plaza.getByLabel('搜索技能').inputValue(), 'document');
   const back = plaza.getByRole('button', { name: '返回会话', exact: true });
   await back.evaluate(element => element.focus({ preventScroll: true }));
   await page.keyboard.press('Enter');
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   await last.waitFor();
   assert(Math.abs(await plaza.evaluate(element => element.scrollTop) - scroll) <= 1, 'Reopening lost browse scroll');
   assert.equal(await plaza.getByLabel('搜索技能').inputValue(), 'document');

@@ -1,3 +1,4 @@
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -15,7 +16,7 @@ let writes = 0;
 page.on('pageerror', error => errors.push(error.message.replace(/token=[^\s&]+/g, 'token=[redacted]')));
 page.on('request', request => {
   const path = new URL(request.url()).pathname;
-  if (/\/(listInstalled|listSkills)$/.test(path)) reads++;
+  if (/\/(listInstalled|listCatalog)$/.test(path)) reads++;
   if (path.endsWith('/checkUpdate')) checks++;
   if (/\/(startInstall|executePlan|recoverOperation)$/.test(path)) writes++;
 });
@@ -24,13 +25,13 @@ try {
   await page.getByRole('button', { name: 'Configure later', exact: true }).click();
   if (!await page.getByText(title, { exact: true }).isVisible()) await page.getByText(workspace, { exact: true }).click();
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
   const installed = plaza.getByRole('region', { name: '已安装技能', exact: true });
-  await installed.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+  await selectValue(installed.getByRole('combobox', { name: '筛选安装范围' }), 'project');
   await installed.getByRole('button', { name: '刷新已安装', exact: true }).waitFor();
-  await installed.getByRole('table', { name: '本地安装记录' }).waitFor();
+  await installed.locator('[aria-label="本地安装记录"]').waitFor();
   assert.equal(checks, 0, 'Opening installed records must not check updates');
   const before = reads;
   const filter = installed.getByRole('searchbox', { name: '过滤已安装技能' });
@@ -48,19 +49,19 @@ try {
   if (process.env.DSH_FIXTURE_UPDATE_STATE) {
     await writeFile(process.env.DSH_FIXTURE_UPDATE_STATE, 'newer');
     await installed.getByRole('button', { name: '检查更新', exact: true }).click();
-    await installed.getByRole('cell', { name: /^可升级至 1\.3\.0/ }).waitFor();
+    await installed.getByText(/^可升级至 1\.3\.0/).waitFor();
     assert.equal(checks, 1);
     if (failureRetry) {
       await page.route('**/checkUpdate', route => route.abort('failed'), { times: 1 });
       await installed.getByRole('button', { name: '检查更新', exact: true }).click();
-      await installed.getByRole('cell', { name: /更新检查未完成|Failed to fetch|fetch failed/ }).waitFor();
+      await installed.getByText(/更新检查未完成|Failed to fetch|fetch failed/).waitFor();
       assert.equal(await installed.getByRole('button', { name: '升级', exact: true }).count(), 0,
         'A failed recheck must not leave a cached upgrade action enabled');
       await installed.getByText(/^上次成功检查/).waitFor();
       await page.screenshot({ path: `${output}/installed-recheck-failed.png` });
       assert.equal(checks, 2);
       await installed.getByRole('button', { name: '检查更新', exact: true }).click();
-      await installed.getByRole('cell', { name: /^可升级至 1\.3\.0/ }).waitFor();
+      await installed.getByText(/^可升级至 1\.3\.0/).waitFor();
       assert.equal(checks, 3);
     }
     await installed.getByRole('button', { name: '升级', exact: true }).click();
@@ -85,10 +86,12 @@ try {
   await page.setViewportSize({ width: 680, height: 1000 });
   await page.screenshot({ path: `${output}/installed-narrow.png` });
   const narrow = await installed.evaluate(element => ({ width: element.clientWidth,
-    scrollWidth: element.scrollWidth, rowDisplay: getComputedStyle(element.querySelector('tbody tr')).display }));
+    scrollWidth: element.scrollWidth, cardDisplay: getComputedStyle(element.querySelector('.astron-sh-installed-card')).display,
+    columns: getComputedStyle(element.querySelector('.astron-sh-card-grid')).gridTemplateColumns.split(' ').length }));
   assert(narrow.width <= 680);
   assert(narrow.scrollWidth <= narrow.width + 1, 'Installed view must not overflow horizontally');
-  assert.equal(narrow.rowDisplay, 'block');
+  assert.equal(narrow.cardDisplay, 'flex');
+  assert.equal(narrow.columns, 1, 'Narrow installed cards must form a single column');
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: `${output}/installed-mobile.png` });
   const mobile = await installed.evaluate(element => ({ width: element.clientWidth, scrollWidth: element.scrollWidth }));

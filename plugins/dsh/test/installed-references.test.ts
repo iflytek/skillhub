@@ -1,0 +1,99 @@
+import { expect, test } from 'bun:test';
+import { randomBytes } from 'node:crypto';
+import { mkdtemp, mkdir, rm, symlink } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import SkillHubService from '../src/host/index.js';
+import type { InstalledProjectionItem } from '../src/host/generated/native-contract.js';
+import type { InstalledSkillList } from '../src/host/types.js';
+
+async function fixture(run: (fixture: {
+  list(): Promise<InstalledSkillList>; read(key: string): Promise<unknown>;
+  records: InstalledProjectionItem[]; session: { id: string; header: { cwd: string } };
+  setComplete(value: boolean): void; revision(value: string): void; restartHost(): void; project: string; home: string;
+}) => Promise<void>) {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-installed-references-'));
+  const previousHome = process.env.DSH_HOME;
+  const home = join(root, 'home'); const project = join(root, 'project');
+  await mkdir(project); process.env.DSH_HOME = home;
+  try {
+    const fs = { processPathFromHostPath: (path: string) => path,
+      resolve: async (path: string) => ({ displayPath: path }), processPath: (target: { displayPath: string }) => target.displayPath };
+    const session = { id: 'session-a', header: { cwd: project } };
+    const agent = { session, ctx: { get: () => fs } };
+    const records: InstalledProjectionItem[] = [];
+    let complete = true; let revision = 'source';
+    const service = Object.assign(Object.create(SkillHubService.prototype), {
+      lifetime: new AbortController(), installedReferenceKey: randomBytes(32),
+      localRuntime: { listInstalled: async (_registry: string, roots: { scope: string; root: string }[]) => ({
+        items: records.filter(item => roots.some(target => target.scope === item.scope && join(target.root, item.slug) === item.targetPath)),
+        complete, issues: complete ? [] : ['inventory-unreadable'],
+      }) },
+      ctx: { invocation: { request: { args: { agentId: 'session-a' } } }, get: () => ({ get: () => agent }) },
+      assertSource: (value: string) => { if (value !== revision) throw new Error('source changed'); },
+      getContext: () => ({ configured: true, registryUrl: 'https://registry.example' }),
+    });
+    await run({ list: () => service.listInstalled('source', new AbortController().signal),
+      read: key => service.readInstalledItem('source', key, new AbortController().signal), records, session,
+      setComplete: value => { complete = value; }, revision: value => { revision = value; },
+      restartHost: () => { service.installedReferenceKey = randomBytes(32); }, project, home });
+  } finally {
+    if (previousHome === undefined) delete process.env.DSH_HOME; else process.env.DSH_HOME = previousHome;
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+function record(home: string, index: number): InstalledProjectionItem {
+  return { namespace: 'demo', slug: `helper-${index}`, version: '1.0', scope: 'user', state: 'present',
+    fingerprint: 'fingerprint', targetPath: join(home, 'skills', `helper-${index}`) };
+}
+
+test('all 401 references work and repeated or cross-session refresh does not evict them', async () => {
+  await fixture(async ({ records, home, list, read, session }) => {
+    records.push(...Array.from({ length: 401 }, (_, index) => record(home, index)));
+    const initial = await list(); expect(initial.items).toHaveLength(401);
+    for (const item of initial.items) await read(item.itemKey);
+    const key = initial.items[0].itemKey;
+    expect(key).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    for (let i = 0; i < 401; i++) await list();
+    expect((await list()).items[0].itemKey).toBe(key); await read(key);
+    session.id = 'session-b'; await expect(read(key)).rejects.toThrow();
+    expect((await list()).items[0].itemKey).not.toBe(key);
+    session.id = 'session-a'; await read(key);
+    await expect(read(`${key.slice(0, -1)}!`)).rejects.toThrow();
+    records[0] = { ...records[0], fingerprint: 'changed' }; await expect(read(key)).rejects.toThrow();
+  });
+}, 20_000);
+
+test('references reject changed cwd, removed/version-changed record and changed source', async () => {
+  await fixture(async ({ records, home, list, read, session, project, revision }) => {
+    records.push(record(home, 0)); const key = (await list()).items[0].itemKey;
+    session.header.cwd = home; await expect(read(key)).rejects.toThrow(); session.header.cwd = project;
+    records[0].version = '2'; await expect(read(key)).rejects.toThrow(); records[0].version = '1.0';
+    records.length = 0; await expect(read(key)).rejects.toThrow();
+    records.push(record(home, 0)); revision('new-source'); await expect(read(key)).rejects.toThrow();
+  });
+});
+
+test('unavailable independent scope preserves inventory completeness; global failure stays closed', async () => {
+  await fixture(async ({ project, home, list, setComplete }) => {
+    await mkdir(join(project, '.dsh')); await mkdir(join(project, 'redirected'));
+    await symlink(join(project, 'redirected'), join(project, '.dsh', 'skills'), 'junction');
+    expect(await list()).toMatchObject({ complete: true, unavailable: ['project'] });
+    setComplete(false);
+    expect(await list()).toMatchObject({ complete: false, issues: ['inventory-unreadable'], unavailable: ['project'] });
+    await rm(join(project, '.dsh', 'skills')); await mkdir(home); await mkdir(join(home, 'redirected'));
+    await symlink(join(home, 'redirected'), join(home, 'skills'), 'junction'); setComplete(true);
+    expect(await list()).toMatchObject({ complete: true, unavailable: ['user'] });
+  });
+});
+
+test('opaque references expire with a Host restart or a different trusted target root', async () => {
+  await fixture(async ({ records, home, list, read, restartHost }) => {
+    records.push(record(home, 0)); const key = (await list()).items[0].itemKey;
+    process.env.DSH_HOME = join(home, 'different');
+    await expect(read(key)).rejects.toThrow(); process.env.DSH_HOME = home;
+    await read(key); restartHost(); await expect(read(key)).rejects.toThrow();
+    expect((await list()).items[0].itemKey).not.toBe(key);
+  });
+});

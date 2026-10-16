@@ -25,7 +25,7 @@ try {
   });
   await page.goto(entry, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Configure later', exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   await plaza.getByRole('button', { name: /document-helper/ }).click();
   await page.setViewportSize({ width: 390, height: 844 });

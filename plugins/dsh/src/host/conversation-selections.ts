@@ -7,7 +7,8 @@ export interface SelectionSnapshot {
   namespace: string; slug: string; version: string; versionId: number; fingerprint: string;
 }
 type Candidate = SelectionScope & { callId: string; namespace: string; slug: string; version: string };
-type Search = Candidate & { kind: 'search'; pending?: string; viewed?: string; identity?: string; ambiguous?: boolean };
+type Verified = { detailToken: string; snapshot: SelectionSnapshot };
+type Search = Candidate & { kind: 'search'; pending?: string; viewed?: string; identity?: string; ambiguous?: boolean; verified?: Verified; verifying?: Promise<Verified> };
 type Fixed = Candidate & { kind: 'fixed'; parent: string; detailToken: string; snapshot: SelectionSnapshot; viewed: boolean };
 
 /** Host-only references: opening a detail does not make it an acknowledged selection. */
@@ -67,6 +68,28 @@ export class ConversationSelections {
     if (fixed.kind !== 'fixed' || !fixed.viewed) this.stale();
     this.lookup(fixed.parent, scope);
     return { selectionRef: fixedRef, detailToken: fixed.detailToken, snapshot: { ...fixed.snapshot } };
+  }
+
+  /** A direct install verifies a search candidate without pretending its detail was displayed. */
+  async resolveForInstall(reference: string, scope: SelectionScope,
+    verify: (candidate: Readonly<Candidate>) => Promise<Verified>): Promise<Verified> {
+    const candidate = this.lookup(reference, scope);
+    if (candidate.kind === 'fixed' || candidate.viewed || candidate.ambiguous) return this.resolve(reference, scope);
+    if (!candidate.verifying && !candidate.verified) {
+      candidate.verifying = verify(this.read(reference, scope));
+    }
+    try {
+      const verified = candidate.verified ?? await candidate.verifying!;
+      if (this.lookup(reference, scope) !== candidate) this.stale();
+      // A detail acknowledged during the request takes precedence, including ambiguity checks.
+      if (candidate.viewed || candidate.ambiguous) return this.resolve(reference, scope);
+      if (verified.snapshot.namespace !== candidate.namespace || verified.snapshot.slug !== candidate.slug
+        || verified.snapshot.version !== candidate.version || !verified.snapshot.fingerprint) this.stale();
+      candidate.verified = { detailToken: verified.detailToken, snapshot: { ...verified.snapshot } };
+      return { detailToken: verified.detailToken, snapshot: { ...verified.snapshot } };
+    } finally {
+      candidate.verifying = undefined;
+    }
   }
 
   private put(record: Search | Fixed): string {

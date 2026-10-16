@@ -1,3 +1,4 @@
+import { expandInstallRecord } from './receipt-disclosure.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -55,7 +56,7 @@ try {
     await card.waitFor();
     injected = await page.evaluate(() => window.__skillhubLayoutInjected);
     assert.equal(injected, 1);
-    assert.equal(await page.getByText('SkillHub', { exact: true }).count(), 0);
+    assert.equal(await page.getByText('技能中心', { exact: true }).count(), 0);
     for (let cycle = 0; cycle < 2; cycle++) {
       const acknowledgment = page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/acknowledgeConversationDetail'));
       await card.getByRole('button', { name: '查看技能详情', exact: true }).click();
@@ -69,9 +70,9 @@ try {
       await page.keyboard.press('Escape');
       await drawer.waitFor({ state: 'detached' });
       await page.evaluate(() => window.__skillhubLayoutProbe.enable());
-      await page.getByText('SkillHub', { exact: true }).waitFor();
+      await page.getByText('技能中心', { exact: true }).waitFor();
       await page.evaluate(() => window.__skillhubLayoutProbe.disable());
-      await page.getByText('SkillHub', { exact: true }).waitFor({ state: 'hidden' });
+      await page.getByText('技能中心', { exact: true }).waitFor({ state: 'hidden' });
       await card.waitFor();
     }
     assert.equal(writes, 0); assert.deepEqual(errors, []);
@@ -89,15 +90,16 @@ try {
   await card.getByText('技能文件安装完成。', { exact: true }).waitFor();
   injected = await page.evaluate(() => window.__skillhubLayoutInjected);
   assert.equal(injected, 1);
-  assert.equal(await page.getByText('SkillHub', { exact: true }).count(), 0);
+  assert.equal(await page.getByText('技能中心', { exact: true }).count(), 0);
   await page.getByRole('status', { name: 'SkillHub 部分可用', exact: true }).getByText('技能广场入口暂不可用，可继续使用对话中的技能卡片。', { exact: true }).waitFor();
   await card.getByRole('button', { name: '在已安装中查看', exact: true }).click();
   await card.getByText('SkillHub 广场入口暂不可用，请在此卡片查询原操作。', { exact: true }).waitFor();
-  await card.getByRole('button', { name: '查询原操作', exact: true }).click();
+  await expandInstallRecord(card);
+    await card.getByRole('button', { name: '查询原操作', exact: true }).click();
   await card.getByText('技能文件安装完成。', { exact: true }).waitFor();
   for (let cycle = 0; cycle < 2; cycle++) {
     await page.evaluate(() => window.__skillhubLayoutProbe.enable());
-    await page.getByText('SkillHub', { exact: true }).waitFor();
+    await page.getByText('技能中心', { exact: true }).waitFor();
     await page.getByRole('status', { name: 'SkillHub 部分可用', exact: true }).waitFor({ state: 'hidden' });
     await card.getByRole('button', { name: '在已安装中查看', exact: true }).click();
     await page.getByRole('button', { name: '返回会话', exact: true }).waitFor();
@@ -105,7 +107,7 @@ try {
     if (!await card.isVisible()) await page.getByText(/^(Called tools|调用的工具|已调用工具)$/).click();
     await card.waitFor();
     await page.evaluate(() => window.__skillhubLayoutProbe.disable());
-    await page.getByText('SkillHub', { exact: true }).waitFor({ state: 'hidden' });
+    await page.getByText('技能中心', { exact: true }).waitFor({ state: 'hidden' });
     await card.getByText('技能文件安装完成。', { exact: true }).waitFor();
   }
   assert.equal(writes, 0); assert.deepEqual(errors, []);

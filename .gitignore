@@ -93,3 +93,6 @@ charts/skillhub/charts/*.tgz
 
 # Local config file
 .mcp.json
+
+# DSH local verification history (archive outside the repository)
+/docs/research/dsh-native-plugin-2026-10-12/

@@ -37,12 +37,12 @@ const panelId = 'skillhub' as MainPanelId;
 export async function apply(ctx: Context): Promise<() => Promise<void>> {
   const availability = new UiAvailability();
   const unmount = await ctx.remote.$mount(TYPERT_REMOTE);
-  ctx.inject(['configForms', 'slots'], (ctx) => {
-    const form = ctx.configForms.get<SkillHubConfig>('skillhub');
+  ctx.inject(['configForms', 'slots', 'remote.skillhub'], (ctx) => {
+    const form = ctx.configForms.get<SkillHubConfig>('astron-skillhub');
     ctx.slots.inject('plugins.bundle.config', () => availability.enable('configuration'));
     ctx.slots.inject('plugins.bundle.config', () => ctx.slots.register({
       name: 'plugins.bundle.config', key: '@astron-team/skillhub-dsh',
-    }, () => <ConfigPage form={form} />));
+    }, () => <ConfigPage form={form} testConnection={(url, signal) => ctx.remote.skillhub.testRegistryConnection(url, signal)} />));
   });
   const panel = ctx.inject(['remote.skillhub', 'slots', 'sessions', 'uiSession'], (ctx) => {
     const client = new QueryClient();
@@ -159,7 +159,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
           } } satisfies InstalledServices : undefined }),
       }, ({ installation, installed }) => <CatalogPage remote={ctx.remote.skillhub} navigation={navigation} client={client}
         installation={installation} installed={installed} availability={availability} onReturn={() => ctx.layout.selectPanel(null)} />));
-      ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({ name: 'sidebar.panellist', id: panelId, label: 'SkillHub', order: 10 }, () => <span aria-hidden="true">S</span>));
+      ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({ name: 'sidebar.panellist', id: panelId, label: '技能中心', order: 10 }, () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.6" /><rect x="3" y="14" width="7" height="7" rx="1.6" /><rect x="14" y="14" width="7" height="7" rx="1.6" /><path d="M17.5 2.5v8M13.5 6.5h8" /></svg>));
     });
   });
   await panel;

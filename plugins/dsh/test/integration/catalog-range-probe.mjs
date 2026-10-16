@@ -16,9 +16,11 @@ try {
   await welcome.or(later).first().waitFor();
   if (await welcome.isVisible()) await welcome.click();
   await later.click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
-  await plaza.getByText('共匹配 55 项，当前显示 20 项；可输入更具体的关键词缩小范围。', { exact: true }).waitFor();
+  await plaza.getByText('共匹配 55 项，当前显示 20 项。', { exact: true }).waitFor();
+  await plaza.getByText('当前来源仅支持首批搜索，不支持分页与排序。可输入更具体的关键词缩小范围。', { exact: true }).waitFor();
+  assert.equal(await plaza.getByRole('combobox', { name: '技能排序' }).count(), 0);
   assert.equal(await plaza.getByRole('button', { name: /document-helper/ }).count(), 20);
   assert.equal(await plaza.getByRole('button', { name: /加载更多|下一页|上一页/ }).count(), 0);
   await plaza.getByRole('button', { name: /@demo-0\/document-helper/ }).click();

@@ -1,3 +1,6 @@
+import { LocalRuntime } from '../src/host/local-runtime.js';
+import type { NativeCore } from '../src/host/generated/native-contract.js';
+import { randomUUID } from 'node:crypto';
 import { expect, test } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -75,3 +78,41 @@ console.log('native lifecycle verified');
     expect(await new Response(child.stdout).text()).toBe('native lifecycle verified\n');
   } finally { await rm(root, { recursive: true, force: true }); }
 }, 20_000);
+
+
+test('recovery of a real accepted-only journal clears the LocalRuntime management blocker', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-early-recovery-host-'));
+  const core: NativeCore = await import(new URL('../lib/local-core.js', import.meta.url).href);
+  const options = { stateDirectory: join(root, 'operations'), inventoryHome: join(root, 'inventory') };
+  let runtime: LocalRuntime | undefined;
+  try {
+    const original = await core.openNativeRuntime(options);
+    const ownerId = 'fixture-owner';
+    const accepted = await original.acceptInstall({ hostInstanceId: original.hostInstanceId, ownerId,
+      requestKey: randomUUID(), mode: 'new', parameters: { version: '1' } }, async () => ({
+      namespace: 'team', slug: 'pending', version: '1', targetLabel: '当前用户', targetPaths: [join(root, 'skills/pending')],
+      context: { sourceIdentity: 'https://registry.example', sourceLabel: 'Registry', sourceRevision: 'source',
+        hostLabel: 'Fixture', initiatedFrom: 'plaza' },
+    }));
+    if (!accepted) throw new Error('Expected persisted acceptance');
+    let baselineChecks = 0;
+    // Exercise the actual journal/recovery core with an explicitly injected test-only Host baseline.
+    // The compiled Host lifecycle test above stays read-only; its fake sessions service is not writable.
+    runtime = new LocalRuntime(() => core.openNativeRuntime(options), () => { baselineChecks++; });
+    await runtime.start();
+    expect(runtime.getStatus().pendingOperations).toBe(1);
+    expect((await runtime.getOperation(accepted.operationId, ownerId))?.phase).toBe('unknown');
+    const recovered = await runtime.recoverOperation(accepted.operationId, ownerId, async operation => {
+      expect(operation.targetPaths).toEqual([join(root, 'skills/pending')]);
+      return async () => {};
+    });
+    expect(recovered?.outcome).toBe('restored');
+    expect(baselineChecks).toBe(1);
+    expect(runtime.getStatus().pendingOperations).toBe(0);
+    expect(await runtime.getOperation(accepted.operationId, ownerId)).toMatchObject({ phase: 'failed', recovery: 'not-needed' });
+    expect(await original.listPending()).toEqual([]);
+  } finally {
+    await runtime?.dispose();
+    await rm(root, { recursive: true, force: true });
+  }
+});

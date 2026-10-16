@@ -1,3 +1,4 @@
+import { expandInstallRecord } from './receipt-disclosure.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -68,6 +69,7 @@ try {
       manualReadRecovery++;
     }
     await completion.waitFor();
+    await expandInstallRecord(card);
     await card.getByRole('button', { name: '刷新发现状态', exact: true }).waitFor({ state: 'visible' });
     if (cycle === 0) {
       // Keep the actual operation unchanged; only its read projection is held pending.
@@ -102,6 +104,7 @@ try {
         document.dispatchEvent(new Event('visibilitychange'));
       });
       await completion.waitFor();
+    await expandInstallRecord(card);
       assert(queries > hiddenQueries, 'Showing the document must refresh the operation');
     }
     const mounted = await count(); assert(mounted > baseline, 'The probe must observe actual mounted subscriptions');
@@ -109,14 +112,14 @@ try {
     await waitCount(baseline);
     const beforeDisable = queries;
     await toggle.click(); disabled = true;
-    await page.getByText('SkillHub', { exact: true }).waitFor({ state: 'hidden' });
+    await page.getByText('技能中心', { exact: true }).waitFor({ state: 'hidden' });
     await waitCount(baseline);
     await page.waitForTimeout(1500);
     assert.equal(queries, beforeDisable, 'Unmounted operation view must not poll');
     counts.push({ cycle, baseline, mounted, disabled: await count() });
     await toggle.click(); disabled = false;
-    await page.getByText('SkillHub', { exact: true }).waitFor();
-    assert.equal(await page.getByText('SkillHub', { exact: true }).count(), 1);
+    await page.getByText('技能中心', { exact: true }).waitFor();
+    assert.equal(await page.getByText('技能中心', { exact: true }).count(), 1);
   }
   assert.equal(new Set(counts.map(c => c.mounted)).size, 1, 'Repeated mounts must not accumulate listeners');
   assert.deepEqual(errors, []);

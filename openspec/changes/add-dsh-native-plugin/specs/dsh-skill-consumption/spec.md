@@ -1,7 +1,7 @@
 ## ADDED Requirements
 
 ### Requirement: Browse and inspect anonymous skills
-The plugin SHALL provide an initial skill list, keyword search, and details with actual coordinates, source, resolved version and available description. It SHALL display truthful result limits and SHALL NOT invent catalog fields or pagination.
+The plugin SHALL provide an initial skill list, keyword search, and details with actual coordinates, source, resolved version and available description. The plaza SHALL request 12 items per page from the anonymous paged catalog and append pages only on explicit load-more actions. Legacy bounded search SHALL remain limited to 20 returned items with a visible range limitation. The plugin SHALL NOT invent catalog fields or pagination.
 
 #### Scenario: Initial browsing
 - **WHEN** the user opens the plaza without a search query
@@ -13,7 +13,23 @@ The plugin SHALL provide an initial skill list, keyword search, and details with
 
 #### Scenario: Limited search response
 - **WHEN** the API only returns a limited result set
-- **THEN** the UI identifies the returned range and does not imply that all skills or invented pages are available
+- **THEN** the UI displays at most 20 skills, identifies the returned range, and does not imply that all skills or invented pages are available
+
+#### Scenario: Newer keyword query wins
+- **WHEN** the user submits a new keyword while an earlier search is still pending
+- **THEN** the earlier response is cancelled or ignored and cannot replace the results of the latest submitted keyword
+
+#### Scenario: Load more and return from detail
+- **WHEN** the user loads another page and opens then closes a skill
+- **THEN** loaded pages, query, sort, scroll and focus are retained; a failed later page preserves existing results and offers retry
+
+#### Scenario: Optional card metrics and avatar fallback
+- **WHEN** a skill has no image or some presentation metrics are absent
+- **THEN** the card uses a stable first-character avatar and hides absent metrics without fabricating zero ratings or expanding the compact card
+
+#### Scenario: Legacy catalog route
+- **WHEN** the first paged catalog request returns 404 or 405
+- **THEN** the plugin may use the original bounded search and identifies its limited mode without load-more or effective sort controls; other failures remain errors
 
 ### Requirement: Explicit trusted installation target
 The plugin SHALL install only after an explicit user action, default to user scope, and allow project scope only with trusted Host project context. It SHALL preserve existing Host policies and SHALL NOT accept arbitrary target paths from UI input.
@@ -67,6 +83,10 @@ The plugin SHALL distinguish file installation from DSH discovery and execution,
 - **WHEN** installation succeeds without reliable discovery evidence
 - **THEN** the UI reports installed and discovery unconfirmed rather than ready or executed
 
+#### Scenario: Conversation use is a separate fact
+- **WHEN** an installed skill is discovered and the user returns to a conversation
+- **THEN** the plugin reports only observed installation and discovery states; actual skill use is established from a separate conversation observation and is not inferred from discovery
+
 #### Scenario: Current details changed during installation
 - **WHEN** the user opens another skill while an installation is running
 - **THEN** completion remains associated with the original skill and target and does not replace the new skill's state
@@ -81,6 +101,14 @@ The plugin SHALL provide installed records for the active Registry within truste
 #### Scenario: Missing directory or partial read
 - **WHEN** installation records reference missing files or some allowed targets cannot be read
 - **THEN** the list identifies inconsistency or partial results instead of silently deleting records or showing an empty complete list
+
+#### Scenario: Independent scope remains available
+- **WHEN** one target scope is unavailable but the shared inventory and another target scope are independently verified
+- **THEN** only the unavailable scope is blocked; an unreadable shared inventory still prevents inferring absence in either scope
+
+#### Scenario: Installed references survive list refresh
+- **WHEN** a complete installed list contains more than 400 records or the same records are read repeatedly across sessions
+- **THEN** every returned item reference remains usable within its valid context; listing and reference retention do not immediately invalidate an item in the response, and changed source, session or installed identity is still rejected
 
 #### Scenario: Installed detail while offline
 - **WHEN** an installed skill detail is opened while the Registry is unavailable
@@ -158,6 +186,14 @@ All file mutations SHALL record enough local operation state to reconcile interr
 - **WHEN** the process restarts with a nonterminal operation journal
 - **THEN** the Host reacquires compatible locks, reconciles actual filesystem and inventory state, and blocks conflicting new mutations until the outcome is known
 
+#### Scenario: Accepted installation interrupted before any staging intent
+- **WHEN** a valid current-schema installation journal remains accepted or staging without a transaction after restart
+- **THEN** explicit recovery holds the execution lease, validates the original trusted targets, and safely terminates the unexecuted request without creating target directories, replaying installation or deleting journal evidence; malformed journals and active executions are not settled this way
+
+#### Scenario: Idempotent installation discovery
+- **WHEN** an already-installed result was completed using a verified read-only baseline
+- **THEN** discovery may be confirmed only after the original identity, exact version, fingerprint, ownership and trusted targets match before and after Host observation; missing historical baseline or changed content remains unconfirmed
+
 #### Scenario: Another provider still supplies the same name
 - **WHEN** uninstall removes one target but another source or scope still exposes the skill
 - **THEN** the UI reports removal of the selected target without claiming global removal or termination of running tasks
@@ -175,3 +211,19 @@ All file mutations SHALL record enough local operation state to reconcile interr
 #### Scenario: Accepted retry with expired references
 - **WHEN** an accepted request is retried after restart or context change with the same owner, request key and original parameter digest
 - **THEN** the Host returns the persisted original operation before evaluating new-write token validity, without starting another mutation; mismatched parameters are rejected and missing recovery evidence yields unknown
+
+
+### Requirement: Public label filtering
+The plugin SHALL display instance-provided public filter labels and apply an explicitly selected label to server-side catalog queries together with search, sorting and pagination. It SHALL NOT substitute version tags or hardcoded example categories.
+
+#### Scenario: Change a label
+- **WHEN** a user selects a different label
+- **THEN** the catalog restarts at its first page and the query identity includes that label; returning from details preserves the selection
+
+#### Scenario: Label filtering is unavailable
+- **WHEN** the label directory is missing or a filtered catalog request fails
+- **THEN** ordinary unfiltered browsing remains independently available, and a selected-label request never silently falls back to unfiltered results
+
+#### Scenario: Change the source
+- **WHEN** the configured source revision changes
+- **THEN** the previous source's selected label and late responses cannot become the new source's active filter

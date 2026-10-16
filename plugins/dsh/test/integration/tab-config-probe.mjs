@@ -1,3 +1,4 @@
+import { selectValue, selectedValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -29,7 +30,7 @@ try {
   await page.getByRole('button', { name: 'Configure later', exact: true }).click();
   for (const mode of liveSwitch ? ['show', 'hide', 'auto'] : ['hide', 'show', 'auto']) {
     const form = await settings();
-    for (let index = 0; index < 3; index++) await form.getByRole('combobox').nth(index).selectOption(mode);
+    for (let index = 0; index < 3; index++) await selectValue(form.getByRole('combobox').nth(index), mode);
     await form.getByRole('button', { name: '保存配置', exact: true }).click();
     await form.getByText('配置已保存。', { exact: true }).waitFor();
     if (!liveSwitch) {
@@ -37,9 +38,9 @@ try {
       await page.getByRole('button', { name: 'Configure later', exact: true }).click();
     }
     const restored = liveSwitch ? form : await settings();
-    for (let index = 0; index < 3; index++) assert.equal(await restored.getByRole('combobox').nth(index).inputValue(), mode);
+    for (let index = 0; index < 3; index++) assert.equal(await selectedValue(restored.getByRole('combobox').nth(index)), mode);
     const before = (await requests()).length;
-    await page.getByText('SkillHub', { exact: true }).click();
+    await page.getByText('技能中心', { exact: true }).click();
     const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
     const card = plaza.getByRole('button', { name: /document-helper/ });
     const detailTab = plaza.getByRole('tab', { name: '详情', exact: true });
@@ -62,7 +63,7 @@ try {
       await plaza.getByRole('tab', { name: '版本', exact: true }).click();
       await plaza.getByText(moduleStatus === 200 ? emptyModules ? '暂无版本信息。' : '改进文档提取' : moduleError, { exact: true }).waitFor();
       await plaza.getByRole('tab', { name: '评论', exact: true }).click();
-      await plaza.getByText('评论针对整个技能，不限定当前版本。', { exact: true }).waitFor();
+      if (moduleStatus === 200) await plaza.getByText('评论针对整个技能，不限定当前版本；不代表安全审核结论。', { exact: true }).waitFor();
       await plaza.getByText(moduleStatus === 200 ? emptyModules ? '暂无评论信息。' : '适合整理长文档' : moduleError, { exact: true }).waitFor();
       assert.equal(await plaza.getByText('暂无评论信息。', { exact: true }).count(), emptyModules && moduleStatus === 200 ? 1 : 0);
       if (emptyModules && moduleStatus === 200) {

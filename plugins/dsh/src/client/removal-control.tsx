@@ -1,3 +1,4 @@
+import { canCollapseHistory } from './operation-presentation.js';
 import { OperationDetails } from './operation-details.js';
 import { HostWriteStatus, useWritableHost, type CompatibilityServices } from './host-compatibility.js';
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
@@ -24,8 +25,8 @@ const blockers: Record<string, string> = {
   'target-alias': '安装位置发生重定向，请先核对本地目录。',
 };
 
-export function RemovalControl({ services, sourceRevision, source, item, eligible = false, onCompleted, onClosed }: {
-  services: RemovalServices; sourceRevision: string; source: string; eligible?: boolean;
+export function RemovalControl({ services, sourceRevision, source, item, eligible = false, onCompleted, onClosed, history = false }: {
+  services: RemovalServices; sourceRevision: string; source: string; eligible?: boolean; history?: boolean;
   item: { itemKey?: string; namespace: string; slug: string; scope: string; state?: InstalledSkillList['items'][number]['state'] }; onCompleted?(): void; onClosed?(): void;
 }) {
   const writableHost = useWritableHost(services);
@@ -95,7 +96,7 @@ export function RemovalControl({ services, sourceRevision, source, item, eligibl
     plan.reset();
     trigger.current?.focus();
   };
-  return <section aria-label={`卸载操作 ${item.slug}`} style={{ border: '1px solid #8885', borderRadius: 12, padding: 16, marginBlock: 16 }}>
+  const content = <section aria-label={`卸载操作 ${item.slug}`} style={{ border: '1px solid #8885', borderRadius: 12, padding: 16, marginBlock: 16 }}>
     <h3>{stale ? '清理失效记录' : '卸载'} @{item.namespace}/{item.slug}</h3>
     <HostWriteStatus state={writableHost} />
     {!attempt && <>
@@ -130,6 +131,7 @@ export function RemovalControl({ services, sourceRevision, source, item, eligibl
           : result?.phase === 'failed' ? <p role="alert">卸载未完成。{result.recovery === 'restored' ? '原文件已恢复。' : result.recovery === 'not-needed' ? '无需恢复文件。' : '请核对恢复状态。'}</p>
             : result && ['recovery-required', 'unknown'].includes(result.phase) ? <p role="alert">此操作需要恢复核验，请勿重复提交。</p>
               : <p role="status">正在处理卸载…</p>}
+      {result && result.warningCount > 0 && <p role="alert">此操作存在需核验告警，请查看原操作结果详情并核验恢复状态。</p>}
       <p>操作 ID：{attempt.operationId}</p>
       {!operation.isError && operation.data && <OperationDetails operation={operation.data} />}
       {!operation.isError && operation.data && (['recovery-required', 'unknown'].includes(operation.data.phase)
@@ -145,6 +147,13 @@ export function RemovalControl({ services, sourceRevision, source, item, eligibl
         }}>关闭本次卸载结果</button>}
     </div>}
   </section>;
+  if (!history) return content;
+  const foldable = canCollapseHistory(operation.data, operation.isError);
+  return <details className="astron-sh-history-entry" open={foldable ? undefined : true}
+    onToggle={event => { if (!foldable && !event.currentTarget.open) event.currentTarget.open = true; }}>
+    <summary><strong>{item.slug}</strong><span>卸载 · {item.scope === 'user' ? '当前用户' : '当前项目'}</span><span>{foldable ? '已完成 · 查看记录' : operation.isError || operation.data === null ? '状态暂未确认' : result?.phase === 'failed' ? '操作失败' : result?.phase === 'recovery-required' ? '需要恢复' : result?.phase === 'unknown' ? '结果未知' : result?.phase === 'completed' ? '已完成 · 需核验告警' : attempt?.state === 'unresolved' ? '请求待确认' : '处理中'}</span></summary>
+    {content}
+  </details>;
 }
 
 export function RemovalHistory({ services, sourceRevision, source, onClosed }: {
@@ -155,8 +164,7 @@ export function RemovalHistory({ services, sourceRevision, source, onClosed }: {
   try { entries = services.removalRequests.list(services.sessionId, source); }
   catch { return <p role="alert">无法读取已保存的卸载请求，请恢复浏览器存储后重试。</p>; }
   if (!entries.length) return null;
-  return <section aria-label="未关闭的卸载结果"><h3>卸载操作</h3>
-    <p>安装记录消失后，仍可在这里查询原请求并核对结果。</p>
-    {entries.map(item => <RemovalControl key={item.key} services={services} sourceRevision={sourceRevision} source={source} item={item} onClosed={onClosed} />)}
+  return <section className="astron-sh-history" aria-label="未关闭的卸载结果"><h3>卸载操作记录</h3>
+    {entries.map(item => <RemovalControl key={item.key} services={services} sourceRevision={sourceRevision} source={source} item={item} onClosed={onClosed} history />)}
   </section>;
 }

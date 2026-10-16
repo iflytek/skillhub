@@ -45,7 +45,7 @@ cli/src/integrations/            # 拟新增最小内部消费入口，不新发
 
 启动读取合法配置并注册服务；首次打开页面请求上下文，列表和本地安装数据按需加载；可选 Tab 未激活不加载完整正文；auto 未知能力允许一次有界只读探测，结果复用，hide 完全不请求。禁用时注销入口、结束轮询并清理临时资源，遵循宿主生命周期，不删除已安装技能。
 
-来源地址限定 HTTP(S)，禁止包含用户名/密码。保留部署子路径的标准化语义需经现有 client 验证；不静默截断到 origin。来源只来自 Host 配置，不允许评论、技能说明或模型输入改变。
+来源地址限定 HTTP(S)，禁止包含用户名/密码。保留部署子路径的标准化语义需经现有 client 验证；不静默截断到 origin。来源只来自 Host 配置，不允许评论、技能说明或模型输入改变。客户端通过 `configForms.get('astron-skillhub')` 绑定 Host 插件 entry ID，必须与 `cordis.patch.yml` 一致；Remote 服务命名空间 `skillhub` 不作为配置 entry ID。
 
 上下文 sourceRevision 在地址变更时递增，Client 响应提交前比较 revision。已开始的安装保持原快照；未开始的 detailToken 和 targetToken 作废。用户打开设置更改 Tab 时不影响已有安装操作。
 
@@ -53,7 +53,7 @@ cli/src/integrations/            # 拟新增最小内部消费入口，不新发
 
 复用 SkillHubClient 的匿名 resolve/search/download；新增只读 detail/versions/reviews/audit/file 适配时遵循统一 JSON 包装与流读取，避免从网站 React hooks 引入 Cookie 或 CSRF 行为。
 
-现有搜索固定 newest 第 0 页，不通过不断提高 limit 假装分页。评论和版本按其已有 PageResponse 真分页；Tab 缓存键至少含来源、坐标、版本/skillId 与页码。SKU、Suite 和技能不能混淆：首版只处理单技能，不触发 Suite install-plan。
+对话搜索保留固定 newest 第 0 页；广场改用匿名 `/api/web/skills` 真实分页（size=12）和服务端排序，通过点击加载更多追加，不通过提高 limit 假装分页。分页路由缺失时仅首批回退原有受限搜索。评论和版本按其已有 PageResponse 真分页；Tab 缓存键至少含来源、坐标、版本/skillId 与页码。SKU、Suite 和技能不能混淆：首版只处理单技能，不触发 Suite install-plan。
 
 SKILL.md 限长、文本解码和 Markdown 安全渲染单独测试。下载包继续使用 CLI 的 bounded reader，当前 MAX_PACKAGE_BYTES 为 100 MiB；解压限制取实际 archive 常量，不在插件另建更宽松上限。
 
@@ -138,7 +138,7 @@ sequenceDiagram
 
 浏览器同一标签页刷新恢复使用 sessionStorage 中带 schemaVersion 的请求记录。发送前先保存原请求及 requestKey，收到响应后补 operationId；不保存成功/失败终态、文件路径或凭证。重载后有 operationId 直接查询 Host，没有 ID 则仅允许用原参数和同 key 的 retry 查询。记录损坏、存储不可读或首次写入失败时禁止发送安装；响应后的补写失败仍保留发送前记录供重试。标签页关闭、浏览器清理存储及 Host 重启后的历史入口需依 Host 日志恢复，不能把 sessionStorage 当作持久操作的权威。
 
-版本 Tab 首版只读历史；展示历史发布说明不改变当前详情固定版本；本期不新增历史详情导航。首版不增加切换历史版本安装按钮，避免无意承诺降级。
+版本 Tab 可显式选择可下载版本，广场通过现有 getSkillDetail(sourceRevision, namespace, slug, version) 重新加载精确版本及 detailToken；新详情就绪前禁用旧安装控件。对话详情保持引用绑定，选择其他版本转到广场；已安装详情固定本地版本。此功能不放宽已有目标冲突保护，不提供降级。
 
 ## 8. 检查与证据
 
@@ -264,3 +264,8 @@ getOperation 对已完成的安装、升级增加当前会话的只读发现观�
 ### 操作读取的短暂不可用
 
 插件重新启用时，本地操作服务可能尚在初始化。客户端只对 getOperation 返回 skillhub/installation-unavailable 且 details.retryable=true 的错误最多重试两次，间隔 500ms、1000ms；其他错误不自动重试。该策略不适用于 startInstall、executePlan 或恢复写入。超过重试次数后仍显示原有错误和手动查询入口；终态不持续轮询，视图卸载或插件关闭继续释放订阅与查询缓存。
+
+
+## 对话安装去除详情展示前置
+
+`conversation-selections.ts` 区分真实展示关联与后台核验的安装快照；`index.ts` 的 `installConversation` 在原请求去重与事务准备内解析安装快照，未展示时调用精确版本读取，完成后重新校验实际上下文。`search-tool.ts` / `install-tool.ts` 仅更新模型指引，不新增参数、工具或公共 Remote。测试覆盖未展示、已展示、版本不漂移、引用失效、上下文竞争、并发核验与失败重试。安装事务、归档验证和恢复机制保持不变。

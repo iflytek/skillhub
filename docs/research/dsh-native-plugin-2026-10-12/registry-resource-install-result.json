@@ -1,9 +1,0 @@
-{
-  "passed": true,
-  "slug": "zero-slop",
-  "version": "2.10.2",
-  "anonymousBrowseAndModules": true,
-  "projectInstallation": true,
-  "installs": 1,
-  "errors": []
-}

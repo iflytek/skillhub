@@ -27,7 +27,7 @@ let disabled = false;
 try {
   await page.goto(entry, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Configure later', exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   await plaza.getByRole('button', { name: /document-helper/ }).waitFor();
   for (let cycle = 0; cycle < 2; cycle++) {
@@ -35,15 +35,15 @@ try {
     await checked(toggle, true);
     await toggle.click(); disabled = true;
     await checked(toggle, false);
-    await page.getByText('SkillHub', { exact: true }).waitFor({ state: 'hidden' });
+    await page.getByText('技能中心', { exact: true }).waitFor({ state: 'hidden' });
     assert.equal(await plaza.count(), 0);
     assert.equal(await page.getByText(/^Could not disable:/).count(), 0, 'Bundle disable must not report a failure');
     await page.screenshot({ path: `${output}/bundle-disabled-${cycle}.png` });
     await toggle.click();
     await checked(toggle, true); disabled = false;
-    await page.getByText('SkillHub', { exact: true }).waitFor();
-    assert.equal(await page.getByText('SkillHub', { exact: true }).count(), 1);
-    await page.getByText('SkillHub', { exact: true }).click();
+    await page.getByText('技能中心', { exact: true }).waitFor();
+    assert.equal(await page.getByText('技能中心', { exact: true }).count(), 1);
+    await page.getByText('技能中心', { exact: true }).click();
     await plaza.getByRole('button', { name: /document-helper/ }).waitFor();
     await plaza.getByLabel('搜索技能').fill('nothing');
     await plaza.getByRole('button', { name: '搜索', exact: true }).click();

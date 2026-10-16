@@ -1,3 +1,4 @@
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { readFile, writeFile, rename, stat } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
@@ -25,12 +26,12 @@ try {
   }
   await page.getByText(title, { exact: true }).click();
   await rename(target, backup); moved = true;
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
   const installed = plaza.getByRole('region', { name: '已安装技能', exact: true });
-  await installed.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
-  await installed.getByRole('cell', { name: '安装目录缺失', exact: true }).waitFor();
+  await selectValue(installed.getByRole('combobox', { name: '筛选安装范围' }), 'project');
+  await installed.getByText('安装目录缺失', { exact: true }).waitFor();
   await installed.getByRole('button', { name: '清理失效记录', exact: true }).click();
   const detail = plaza.getByRole('region', { name: '已安装技能详情' });
   const prepare = detail.getByRole('button', { name: '清理失效记录', exact: true });

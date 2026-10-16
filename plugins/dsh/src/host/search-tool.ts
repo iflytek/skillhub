@@ -33,7 +33,7 @@ export function registerSearchTool(tools: Pick<Context['tools'], 'get' | 'regist
     parameters: { q: { type: 'string', required: true, description: 'Search keywords; empty string lists recent skills.' } },
     output: {
       schema: searchOutputSchema,
-      render: (_args, result) => [{ type: 'text', text: JSON.stringify(result) + '\nSearch only; no skill was installed or executed. If multiple candidates fit a later request such as "that skill", ask the user to identify one by namespace/slug or result number; do not choose a candidate or call install until clarified. selectionRef and sourceRevision are internal references: retain them for tool use, but do not display them or ask the user to copy them. Present skill coordinates, versions, summaries, and status instead.' }],
+      render: (_args, result) => [{ type: 'text', text: JSON.stringify(result) + '\nSearch only; no skill was installed or executed. If multiple candidates fit a later request such as "that skill", ask the user to identify one by namespace/slug or result number; do not choose a candidate or call install until clarified. selectionRef and sourceRevision are internal references: retain them for tool use, but do not display them or ask the user to copy them. Present a short numbered comparison with skill coordinates, versions, and summaries. Tell the user they can view details or reply with a result number and installation scope to request installation; opening details is optional. Do not install until explicitly requested.' }],
       presentationMeta: (_args, result) => result,
     },
     async execute(args, exec) {

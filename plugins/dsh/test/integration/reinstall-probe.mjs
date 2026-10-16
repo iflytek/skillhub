@@ -1,3 +1,5 @@
+import { revealReceipt } from './receipt-disclosure.mjs';
+import { selectValue } from './select-field.mjs';
 import assert from 'node:assert/strict';
 import { writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
@@ -29,16 +31,17 @@ try {
   await page.goto(entry, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: 'Configure later', exact: true }).click();
   await page.getByText(title, { exact: true }).click();
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   const plaza = page.getByRole('region', { name: 'SkillHub 技能广场' });
   await plaza.getByRole('button', { name: /document-helper/ }).click();
-  await plaza.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+  await selectValue(plaza.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
   await plaza.getByRole('button', { name: '安装到当前项目', exact: true }).click();
-  await plaza.getByText('当前范围记录版本：1.2.0。文件存在。', { exact: true }).waitFor();
+  await page.getByRole('dialog', { name: '确认安装技能？', exact: true }).getByRole('button', { name: '确认安装', exact: true }).click();
+  await plaza.getByText('已安装此版本', { exact: true }).waitFor();
   assert.equal(await plaza.getByRole('button', { name: '重新安装到当前项目', exact: true }).count(), 0);
   await plaza.getByRole('button', { name: '← 返回技能广场', exact: true }).click();
-  await plaza.getByRole('button', { name: '已安装', exact: true }).click();
-  await plaza.getByRole('combobox', { name: '筛选安装范围' }).selectOption('project');
+  await plaza.getByRole('tab', { name: '已安装', exact: true }).click();
+  await selectValue(plaza.getByRole('combobox', { name: '筛选安装范围' }), 'project');
   await plaza.getByRole('button', { name: '查看已安装详情', exact: true }).click();
   await plaza.getByRole('button', { name: '卸载此安装位置', exact: true }).click();
   await page.getByRole('dialog', { name: '确认卸载技能', exact: true }).getByRole('button', { name: '确认卸载', exact: true }).click();
@@ -46,9 +49,9 @@ try {
   await plaza.getByRole('button', { name: '关闭本次卸载结果', exact: true }).click();
   await plaza.getByRole('button', { name: '← 返回已安装', exact: true }).click();
   if (verifyReadFailures) inventoryMode = 'partial';
-  await plaza.getByRole('button', { name: '浏览技能', exact: true }).click();
+  await plaza.getByRole('tab', { name: '浏览技能', exact: true }).click();
   await plaza.getByRole('button', { name: /document-helper/ }).click();
-  await plaza.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
+  await selectValue(plaza.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
   if (verifyReadFailures) {
     const readError = plaza.getByText('当前安装记录无法完整核验，请重试或前往已安装查看。', { exact: true });
     await readError.waitFor();
@@ -56,32 +59,34 @@ try {
       if (mode === 'error') {
         inventoryMode = mode;
         const failed = page.waitForEvent('requestfailed', request => new URL(request.url()).pathname.endsWith('/listInstalled'));
-        await plaza.getByRole('button', { name: '核验当前安装状态', exact: true }).click(); await failed;
+        await plaza.getByRole('button', { name: '核验当前安装状态', exact: true }).first().click(); await failed;
         await readError.waitFor();
       }
       assert.equal(await plaza.getByRole('button', { name: '重新安装到当前项目', exact: true }).count(), 0);
-      assert.equal(await plaza.getByText('当前范围已无此技能的安装记录。', { exact: true }).count(), 0);
+      assert.equal(await plaza.getByText('当前范围未安装', { exact: true }).count(), 0);
       assert.equal(installs.length, 1);
       await page.screenshot({ path: `${output}/reinstall-${mode}-blocked.png` });
     }
     inventoryMode = 'real';
-    await plaza.getByRole('button', { name: '核验当前安装状态', exact: true }).click();
+    await plaza.getByRole('button', { name: '核验当前安装状态', exact: true }).first().click();
   }
-  await plaza.getByText('当前范围已无此技能的安装记录。', { exact: true }).waitFor();
+  await plaza.getByText('当前范围未安装', { exact: true }).waitFor();
   assert.equal(installs.length, 1, 'Returning after removal must not automatically reinstall');
   await page.screenshot({ path: `${output}/reinstall-ready.png` });
   await plaza.getByRole('button', { name: '重新安装到当前项目', exact: true }).click();
-  await plaza.getByText('当前范围记录版本：1.2.0。文件存在。', { exact: true }).waitFor();
+  await page.getByRole('dialog', { name: '确认重新安装技能？', exact: true }).getByRole('button', { name: '确认安装', exact: true }).click();
+  await plaza.getByText('已安装此版本', { exact: true }).waitFor();
   assert.equal(installs.length, 2);
   assert.equal(removals, 1);
   assert.equal(installs[0].mode, 'new'); assert.equal(installs[1].mode, 'new');
   assert.notEqual(installs[0].requestKey, installs[1].requestKey);
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.getByText('SkillHub', { exact: true }).click();
+  await page.getByText('技能中心', { exact: true }).click();
   await plaza.getByRole('button', { name: /document-helper/ }).click();
-  await plaza.getByRole('combobox', { name: '安装范围', exact: true }).selectOption('project');
-  await plaza.getByText('当前范围记录版本：1.2.0。文件存在。', { exact: true }).waitFor();
+  await selectValue(plaza.getByRole('combobox', { name: '安装范围', exact: true }), 'project');
+  await plaza.getByText('已安装此版本', { exact: true }).waitFor();
   assert.equal(installs.length, 2, 'Reload must query the replacement receipt without submitting');
+  await revealReceipt(plaza.getByText('技能文件安装完成。', { exact: true }));
   const controls = await plaza.getByRole('button', { name: '核验当前安装状态', exact: true }).evaluate(element => {
     const container = element.closest('.skillhub-controls');
     const style = getComputedStyle(element);
