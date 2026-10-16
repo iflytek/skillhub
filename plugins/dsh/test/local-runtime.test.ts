@@ -2,13 +2,13 @@ import { LocalRuntime } from '../src/host/local-runtime.js';
 import type { NativeCore } from '../src/host/generated/native-contract.js';
 import { randomUUID } from 'node:crypto';
 import { expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 test('compiled Host binds persistent state to DSH home, scans without replay and follows session dependency disposal', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-native-host-'));
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-native-host-')));
   try {
     const child = Bun.spawn(['node', '--input-type=module', '-e', `
 import assert from 'node:assert/strict';
@@ -81,7 +81,8 @@ console.log('native lifecycle verified');
 
 
 test('recovery of a real accepted-only journal clears the LocalRuntime management blocker', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-early-recovery-host-'));
+  // Recovery deliberately rejects ancestor aliases; persist the same canonical path the Host accepts.
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-early-recovery-host-')));
   const core: NativeCore = await import(new URL('../lib/local-core.js', import.meta.url).href);
   const options = { stateDirectory: join(root, 'operations'), inventoryHome: join(root, 'inventory') };
   let runtime: LocalRuntime | undefined;

@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, mkdir, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, realpath, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import SkillHubService from '../src/host/index.js';
@@ -12,7 +12,8 @@ async function fixture(run: (fixture: {
   records: InstalledProjectionItem[]; session: { id: string; header: { cwd: string } };
   setComplete(value: boolean): void; revision(value: string): void; restartHost(): void; project: string; home: string;
 }) => Promise<void>) {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-installed-references-'));
+  // Match the Host's canonical roots (macOS /var aliases and Windows short temp paths).
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-installed-references-')));
   const previousHome = process.env.DSH_HOME;
   const home = join(root, 'home'); const project = join(root, 'project');
   await mkdir(project); process.env.DSH_HOME = home;
@@ -76,16 +77,18 @@ test('references reject changed cwd, removed/version-changed record and changed 
 });
 
 test('unavailable independent scope preserves inventory completeness; global failure stays closed', async () => {
-  await fixture(async ({ project, home, list, setComplete }) => {
-    await mkdir(join(project, '.dsh')); await mkdir(join(project, 'redirected'));
-    await symlink(join(project, 'redirected'), join(project, '.dsh', 'skills'), 'junction');
-    expect(await list()).toMatchObject({ complete: true, unavailable: ['project'] });
-    setComplete(false);
-    expect(await list()).toMatchObject({ complete: false, issues: ['inventory-unreadable'], unavailable: ['project'] });
-    await rm(join(project, '.dsh', 'skills')); await mkdir(home); await mkdir(join(home, 'redirected'));
-    await symlink(join(home, 'redirected'), join(home, 'skills'), 'junction'); setComplete(true);
-    expect(await list()).toMatchObject({ complete: true, unavailable: ['user'] });
-  });
+  for (const scope of ['project', 'user'] as const) {
+    await fixture(async ({ project, home, list, setComplete }) => {
+      const parent = scope === 'project' ? join(project, '.dsh') : home;
+      const redirected = join(project, 'redirected');
+      await mkdir(parent); await mkdir(redirected);
+      await symlink(redirected, join(parent, 'skills'), 'junction');
+      expect(await list()).toMatchObject({ complete: true, unavailable: [scope] });
+      setComplete(false);
+      expect(await list()).toMatchObject({ complete: false, issues: ['inventory-unreadable'], unavailable: [scope] });
+      // Each scope has its own fixture; recursive teardown handles the junction like the other path tests.
+    });
+  }
 });
 
 test('opaque references expire with a Host restart or a different trusted target root', async () => {
