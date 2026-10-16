@@ -6,6 +6,65 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+/** Drain both pipes immediately: waiting for exit or the other pipe can deadlock a verbose child. */
+async function runStage(stage: string, args: string[], options: { cwd: string; env?: NodeJS.ProcessEnv }, timeoutMs: number) {
+  const started = Date.now();
+  console.info(`[packed-core] ${stage}: started`);
+  const child = Bun.spawn(args, { ...options, stdin: 'ignore', stdout: 'pipe', stderr: 'pipe' });
+  let stdoutDrained = false;
+  let stderrDrained = false;
+  const completed = Promise.all([
+    child.exited,
+    new Response(child.stdout).text().then(text => { stdoutDrained = true; return text; }),
+    new Response(child.stderr).text().then(text => { stderrDrained = true; return text; }),
+  ]);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let cleanupFailed = false;
+  let result: { exitCode: number; stdout: string };
+  try {
+    const [exitCode, stdout, stderr] = await Promise.race([
+      completed,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(
+          `[packed-core] ${stage}: deadline ${timeoutMs}ms; stdoutDrained=${stdoutDrained}; stderrDrained=${stderrDrained}`)), timeoutMs);
+      }),
+    ]);
+    // Never print inherited configuration, command arguments or raw npm/probe output to CI.
+    console.info(`[packed-core] ${stage}: exited=${exitCode}; elapsed=${Date.now() - started}ms; stdoutBytes=${Buffer.byteLength(stdout)}; stderrBytes=${Buffer.byteLength(stderr)}`);
+    if (exitCode !== 0) throw new Error(`[packed-core] ${stage}: exit ${exitCode}`);
+    result = { exitCode, stdout };
+  } finally {
+    clearTimeout(timer);
+    try {
+      if (child.exitCode === null) {
+        // npm can be a Windows command wrapper; terminate its descendants as well.
+        let killer: ReturnType<typeof Bun.spawn> | undefined;
+        if (process.platform === 'win32') {
+          try {
+            killer = Bun.spawn([join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'taskkill.exe'),
+              '/PID', String(child.pid), '/T', '/F'], { stdin: 'ignore', stdout: 'ignore', stderr: 'ignore' });
+          } catch { child.kill('SIGKILL'); }
+        } else { child.kill('SIGKILL'); }
+        let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([Promise.all([child.exited, killer?.exited]), new Promise<never>((_resolve, reject) => {
+            cleanupTimer = setTimeout(() => reject(new Error(`[packed-core] ${stage}: process cleanup exceeded 2000ms`)), 2000);
+          })]);
+        } finally {
+          clearTimeout(cleanupTimer);
+          if (killer?.exitCode === null) killer.kill('SIGKILL');
+          if (child.exitCode === null) child.kill('SIGKILL');
+        }
+      }
+    } catch {
+      cleanupFailed = true;
+      console.warn(`[packed-core] ${stage}: cleanupFailed=true`);
+    }
+  }
+  if (cleanupFailed) throw new Error(`[packed-core] ${stage}: process cleanup failed`);
+  return result;
+}
+
 test('published tarball core installs and reconciles under Node outside the repository', async () => {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-dsh-packed-core-')));
   const packageRoot = fileURLToPath(new URL('..', import.meta.url));
@@ -17,9 +76,10 @@ test('published tarball core installs and reconciles under Node outside the repo
     aggregate.update(`${path}:${createHash('sha256').update(content).digest('hex')}\n`);
   }
   try {
-    const pack = Bun.spawn(['npm', 'pack', '--json', '--ignore-scripts', '--pack-destination', root], { cwd: packageRoot, stdout: 'pipe', stderr: 'pipe' });
-    const packed = await new Response(pack.stdout).text();
-    expect(await pack.exited, await new Response(pack.stderr).text()).toBe(0);
+    const pack = await runStage('npm-pack', ['npm', 'pack', '--json', '--ignore-scripts', '--pack-destination', root],
+      { cwd: packageRoot }, 30_000);
+    const packed = pack.stdout;
+    expect(pack.exitCode).toBe(0);
     const manifest = JSON.parse(packed) as Array<{ filename: string; files: Array<{ path: string }> }>;
     const packedPaths = new Set(manifest[0]!.files.map(file => file.path));
     const packageManifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8')) as {
@@ -43,8 +103,8 @@ test('published tarball core installs and reconciles under Node outside the repo
     expect(manifest[0]!.files.some(file => file.path === 'lib/local-core.js')).toBe(true);
     expect(manifest[0]!.files.some(file => file.path === 'README.en.md')).toBe(true);
     expect(manifest[0]!.files.some(file => file.path.startsWith('node_modules/') || file.path.startsWith('cli/'))).toBe(false);
-    const extract = Bun.spawn(['tar', '-xzf', manifest[0]!.filename, '-C', '.'], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
-    expect(await extract.exited, await new Response(extract.stderr).text()).toBe(0);
+    const extract = await runStage('tar-extract', ['tar', '-xzf', manifest[0]!.filename, '-C', '.'], { cwd: root }, 15_000);
+    expect(extract.exitCode).toBe(0);
     await writeFile(join(root, 'fixture.json'), JSON.stringify({ fingerprint: `sha256:${aggregate.digest('hex')}`,
       zip: Buffer.from(zipSync(Object.fromEntries(Object.entries(files).map(([path, content]) => [path, new TextEncoder().encode(content)])))).toString('base64') }));
     await writeFile(join(root, 'probe.mjs'), `
@@ -111,10 +171,26 @@ console.log('packed core verified');
     // supply Bun or SkillHub CLI to the standalone installation operation.
     const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
       !['path', 'node_path', 'node_options'].includes(key.toLowerCase())));
-    const child = Bun.spawn([node, 'probe.mjs'], { cwd: root, stdout: 'pipe', stderr: 'pipe',
-      env: { ...env, PATH: root, NODE_PATH: '', HOME: root, USERPROFILE: root } });
-    expect(await child.exited, await new Response(child.stderr).text()).toBe(0);
-    expect(await new Response(child.stdout).text()).toBe('packed core verified\n');
+    const child = await runStage('node-probe', [node, 'probe.mjs'], { cwd: root,
+      env: { ...env, PATH: root, NODE_PATH: '', HOME: root, USERPROFILE: root } }, 30_000);
+    expect(child.exitCode).toBe(0);
+    expect(child.stdout).toBe('packed core verified\n');
     expect(await readFile(join(root, 'skills/packed/SKILL.md'), 'utf8')).toBe(files['SKILL.md']);
   } finally { await rm(root, { recursive: true, force: true }); }
-}, 30_000);
+}, 90_000);
+
+
+test('packed core stage runner drains both large output streams before waiting for exit', async () => {
+  const result = await runStage('pipe-drain-check', [process.execPath, '-e',
+    "process.stdout.write('o'.repeat(1024 * 1024)); process.stderr.write('e'.repeat(1024 * 1024));"],
+  { cwd: tmpdir() }, 5000);
+  expect(result.exitCode).toBe(0);
+  expect(result.stdout.length).toBe(1024 * 1024);
+}, 10_000);
+
+test('packed core stage runner names a timed-out stage and bounds process cleanup', async () => {
+  const started = Date.now();
+  await expect(runStage('deadline-check', [process.execPath, '-e', 'setInterval(() => {}, 1000)'],
+    { cwd: tmpdir() }, 100)).rejects.toThrow('[packed-core] deadline-check: deadline 100ms');
+  expect(Date.now() - started).toBeLessThan(5000);
+}, 10_000);
