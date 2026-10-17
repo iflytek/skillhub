@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller.authoring;
 
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.authoring.SkillDraft;
+import com.iflytek.skillhub.domain.authoring.service.RuntimeBindingService;
 import com.iflytek.skillhub.domain.authoring.service.SkillDraftService;
 import com.iflytek.skillhub.domain.authoring.service.ValidationRunService;
 import com.iflytek.skillhub.domain.authoring.validation.ValidationRun;
@@ -10,6 +11,8 @@ import com.iflytek.skillhub.dto.CreateDraftRequest;
 import com.iflytek.skillhub.dto.DraftFileContentResponse;
 import com.iflytek.skillhub.dto.DraftFileResponse;
 import com.iflytek.skillhub.dto.DraftResponse;
+import com.iflytek.skillhub.dto.RuntimeBindingRequest;
+import com.iflytek.skillhub.dto.RuntimeBindingResponse;
 import com.iflytek.skillhub.dto.SaveDraftFileRequest;
 import com.iflytek.skillhub.dto.SaveDraftFileResponse;
 import com.iflytek.skillhub.dto.ValidationEventResponse;
@@ -21,6 +24,7 @@ import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -34,26 +38,30 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST endpoints for skill draft authoring and structure validation. Drafts
- * own a SKILL.md scaffold and arbitrary resource files; validation runs
- * execute the STRUCTURE layer and report findings with fix suggestions.
- * Runtime binding, behavior execution and the publish integration arrive with
- * the later layers.
+ * REST endpoints for skill draft authoring and validation. Drafts own a
+ * SKILL.md scaffold and arbitrary resource files; runtime bindings configure
+ * the agent, tool allowlist and MCP servers; validation runs execute the
+ * structure, config and behavior layers and report findings with fix
+ * suggestions. The fix-apply loop and publish integration arrive with the
+ * next layer.
  */
 @RestController
 @RequestMapping({"/api/v1/authoring", "/api/web/authoring"})
 public class SkillAuthoringController extends BaseApiController {
 
     private final SkillDraftService draftService;
+    private final RuntimeBindingService bindingService;
     private final ValidationRunService runService;
     private final ValidationRunOrchestrator orchestrator;
 
     public SkillAuthoringController(com.iflytek.skillhub.dto.ApiResponseFactory responseFactory,
                                     SkillDraftService draftService,
+                                    RuntimeBindingService bindingService,
                                     ValidationRunService runService,
                                     ValidationRunOrchestrator orchestrator) {
         super(responseFactory);
         this.draftService = draftService;
+        this.bindingService = bindingService;
         this.runService = runService;
         this.orchestrator = orchestrator;
     }
@@ -153,6 +161,42 @@ public class SkillAuthoringController extends BaseApiController {
                                         Set<String> platformRoles) {
         draftService.deleteFile(draftId, userId, path, expectedRevision, platformRoles);
         return ok("response.success.deleted", null);
+    }
+
+    // ---------------------------------------------------------------- runtime binding
+
+    @Operation(operationId = "getDraftRuntimeBinding", summary = "Get the draft's runtime binding")
+    @GetMapping("/drafts/{draftId}/runtime")
+    public ApiResponse<RuntimeBindingResponse> getRuntime(@PathVariable Long draftId,
+                                                          @RequestAttribute("userId") String userId,
+                                                          @RequestAttribute(value = "platformRoles", required = false)
+                                                          Set<String> platformRoles) {
+        draftService.getOwnedDraft(draftId, userId, platformRoles);
+        return ok("response.success", bindingService.findBinding(draftId)
+                .map(this::toRuntimeResponse)
+                .orElseGet(() -> new RuntimeBindingResponse(null, Map.of(), List.of(), List.of(), null)));
+    }
+
+    @Operation(operationId = "saveDraftRuntimeBinding", summary = "Configure the agent runtime, tools, and MCP servers")
+    @PutMapping("/drafts/{draftId}/runtime")
+    public ApiResponse<RuntimeBindingResponse> saveRuntime(@PathVariable Long draftId,
+                                                           @Valid @RequestBody RuntimeBindingRequest request,
+                                                           @RequestAttribute("userId") String userId,
+                                                           @RequestAttribute(value = "platformRoles", required = false)
+                                                           Set<String> platformRoles) {
+        return ok("response.success.updated", toRuntimeResponse(bindingService.saveBinding(
+                draftId, userId, request.agentType(), request.config(),
+                request.toolAllowlist(), request.mcpServers(), platformRoles)));
+    }
+
+    private RuntimeBindingResponse toRuntimeResponse(
+            com.iflytek.skillhub.domain.authoring.RuntimeBinding binding) {
+        return new RuntimeBindingResponse(
+                binding.getAgentType().identifier(),
+                binding.getConfig() == null ? Map.of() : binding.getConfig(),
+                binding.getToolAllowlist() == null ? List.of() : binding.getToolAllowlist(),
+                binding.getMcpServers() == null ? List.of() : binding.getMcpServers(),
+                binding.getUpdatedAt());
     }
 
     // ---------------------------------------------------------------- validation runs

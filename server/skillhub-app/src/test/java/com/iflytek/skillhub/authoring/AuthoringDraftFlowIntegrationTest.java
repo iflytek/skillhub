@@ -213,9 +213,13 @@ class AuthoringDraftFlowIntegrationTest {
 
         assertThat(failed.getStatus()).isEqualTo(ValidationRunStatus.FAILED);
         List<ValidationFinding> findings = runService.listFindings(broken.getId());
-        assertThat(findings).hasSize(1);
-        ValidationFinding finding = findings.get(0);
-        assertThat(finding.getRuleCode()).isEqualTo("FRONTMATTER_FIELD_MISSING");
+        // the config layer (added with the runtime layer) also warns that
+        // validation.yaml is absent — the structure ERROR is what fails the run
+        ValidationFinding finding = findings.stream()
+                .filter(f -> "FRONTMATTER_FIELD_MISSING".equals(f.getRuleCode()))
+                .findFirst().orElseThrow();
+        assertThat(finding.getSeverity()).isEqualTo(
+                com.iflytek.skillhub.domain.authoring.validation.FindingSeverity.ERROR);
         assertThat(finding.getSuggestion()).isNotNull();
         assertThat(finding.getSuggestion().safePatches()).hasSize(1);
         assertThat(runService.listEvents(broken.getId(), null))
@@ -233,7 +237,10 @@ class AuthoringDraftFlowIntegrationTest {
 
         assertThat(succeeded.getStatus()).isEqualTo(ValidationRunStatus.SUCCEEDED);
         assertThat(succeeded.getErrorCount()).isZero();
-        assertThat(runService.listFindings(repaired.getId())).isEmpty();
+        // warnings (SPEC_MISSING for the absent validation.yaml) do not block
+        assertThat(runService.listFindings(repaired.getId()))
+                .extracting(ValidationFinding::getSeverity)
+                .doesNotContain(com.iflytek.skillhub.domain.authoring.validation.FindingSeverity.ERROR);
         assertThat(draftService.getDraft(draft.getId()).getValidatedRevision())
                 .isEqualTo(succeeded.getDraftRevision());
     }
