@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Node-only CI entry; keep its helpers importable without starting a Host or downloading dependencies.
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
-import { isolatedEnvironment, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
+import { hostInstallManifest, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
 
 const roots: string[] = [];
 async function root() {
@@ -133,3 +133,28 @@ test('passes Unicode and shell-looking arguments literally without a shell', asy
   await runBounded([script, ...args], { cwd: directory, env: process.env, log, timeoutMs: 10000 });
   expect(JSON.parse((await readFile(log, 'utf8')).trim())).toEqual(args);
 }, 15000);
+
+test('fresh smoke uses ordinary resolution and retained smoke pins the entire validated Cordis family', () => {
+  expect(hostInstallManifest('fresh')).toEqual({ private: true, type: 'module' });
+  expect(hostInstallManifest('retained')).toEqual({ private: true, type: 'module', overrides: retainedCordisFamily });
+  expect(retainedCordisFamily).toEqual({
+    '@deepseek-ai/cordis': '4.0.4', '@deepseek-ai/cordis-plugin-loader': '1.0.5',
+    '@deepseek-ai/cordis-plugin-include': '1.0.9', '@deepseek-ai/cordis-plugin-timer': '1.1.6',
+  });
+  expect(() => hostInstallManifest('unknown')).toThrow('Unknown Cordis family');
+});
+
+test('retained profile pins pnpm separately while fresh profile preserves ordinary configuration', () => {
+  const profile = { private: true, dependencies: { fixture: '1.0.0' },
+    dsh: { profile: { bundles: ['@deepseek-ai/dsh-base'] } },
+    pnpm: { supportedArchitectures: { os: ['current'] }, overrides: { unrelated: '2.0.0' } } };
+  expect(profileInstallManifest(profile, 'fresh')).toBe(profile);
+  expect(profileInstallManifest(profile, 'retained')).toEqual({ ...profile, pnpm: {
+    ...profile.pnpm, overrides: { unrelated: '2.0.0', ...retainedCordisFamily },
+  } });
+  expect(profile.pnpm.overrides).toEqual({ unrelated: '2.0.0' });
+  expect(profileInstallManifest({ private: true }, 'retained')).toEqual({
+    private: true, pnpm: { overrides: retainedCordisFamily },
+  });
+  expect(() => profileInstallManifest(profile, 'unknown')).toThrow('Unknown Cordis family');
+});

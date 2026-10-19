@@ -42,3 +42,33 @@ test('official package service caches metadata while disk verification rejects r
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('official Host lookup rejects a supported plugin peer masking a different nested Host Cordis', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-split-host-graph-'));
+  const ctx = new Context();
+  const fiber = ctx.plugin(PluginPackages);
+  try {
+    await fiber;
+    const parent = pathToFileURL(join(root, 'plugin.js')).href;
+    for (const [name, version] of Object.entries(runtimePackageBaseline)) {
+      const directory = join(root, 'node_modules', name);
+      await mkdir(directory, { recursive: true });
+      await writeFile(join(directory, 'package.json'), JSON.stringify({ name, version }));
+    }
+    const nested = join(root, 'node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai/cordis');
+    await mkdir(nested, { recursive: true });
+    await writeFile(join(nested, 'package.json'), JSON.stringify({ name: '@deepseek-ai/cordis', version: '4.0.5' }));
+    const services = {
+      packageOf: (name: string, parentURL: string) => ctx.pluginPackages.packageOf(name, parentURL),
+      clientPath: (name: string) => `/fixture/${name}/client.js`,
+    };
+    expect(ctx.pluginPackages.packageOf('@deepseek-ai/cordis', parent)?.version).toBe('4.0.4');
+    const hostURL = pathToFileURL(join(root, 'node_modules/@deepseek-ai/dsh/package.json')).href;
+    expect(ctx.pluginPackages.packageOf('@deepseek-ai/cordis', hostURL)?.version).toBe('4.0.5');
+    expect(() => assertRuntimeCompatibility(services, parent,
+      (_file, name) => ({ name, version: '0.2.0-rc.2' }))).toThrow('local writes are disabled');
+  } finally {
+    await fiber.dispose();
+    await rm(root, { recursive: true, force: true });
+  }
+});

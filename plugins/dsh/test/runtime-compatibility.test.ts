@@ -9,7 +9,7 @@ function fixture() {
   const clients = new Map<string, unknown>(clientPackageBaseline.map(name => [name, { name, version: '0.2.0-rc.2' }]));
   const services = {
     packageOf: (name: string, parentURL: string) => {
-      expect(parentURL).toBe('file:///plugin/lib/index.js');
+      expect(parentURL.startsWith('file:')).toBe(true);
       return packages.get(name);
     },
     clientPath: (name: string) => clients.has(name) ? `/client/${name}/lib/client.js` : undefined,
@@ -117,4 +117,35 @@ test('cached Host metadata cannot hide changed, malformed or removed manifests',
       expect(check).not.toThrow();
     }
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('only complete validated Cordis families are accepted and unknown or mixed pairs block writes', () => {
+  const { packages, check } = fixture();
+  packages.get('@deepseek-ai/cordis')!.version = '4.0.5';
+  expect(check).toThrow('local writes are disabled');
+  packages.get('@deepseek-ai/cordis-plugin-loader')!.version = '1.0.6';
+  expect(check).toThrow('local writes are disabled');
+  packages.get('@deepseek-ai/cordis-plugin-include')!.version = '1.0.10';
+  expect(check).toThrow('local writes are disabled');
+  packages.get('@deepseek-ai/cordis-plugin-timer')!.version = '1.1.7';
+  expect(check).not.toThrow();
+  packages.get('@deepseek-ai/cordis-plugin-loader')!.version = '1.0.7';
+  expect(check).toThrow('local writes are disabled');
+});
+
+test('plugin peer copies cannot mask mismatched or absent Host dependency resolutions', () => {
+  const { packages, clients } = fixture();
+  for (const target of ['@deepseek-ai/cordis', '@deepseek-ai/cordis-plugin-loader', '@deepseek-ai/dsh-session']) {
+    for (const anchor of ['@deepseek-ai/dsh', '@deepseek-ai/dsh-app-boot']) {
+      for (const invalid of [undefined, { ...packages.get(target)!, version: '0.0.0-unsupported' }]) {
+        const services = {
+          packageOf: (name: string, parentURL: string) => name === target && parentURL.endsWith(anchor)
+            ? invalid : packages.get(name),
+          clientPath: (name: string) => `/client/${name}/lib/client.js`,
+        };
+        expect(() => assertRuntimeCompatibility(services, 'file:///plugin/lib/index.js',
+          (_file, name) => clients.get(name), file => packages.get(file))).toThrow('local writes are disabled');
+      }
+    }
+  }
 });

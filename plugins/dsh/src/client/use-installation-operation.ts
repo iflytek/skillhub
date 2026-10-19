@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { NativeOperation } from '../host/types.js';
 import type { InstallationServices } from './install-control.js';
 
@@ -34,13 +34,19 @@ export function useInstallationOperation(services: Pick<InstallationServices, 's
       }
       if (settled(response.value)) {
         // One shared operation query refreshes local projections for both page and tool consumers.
-        await Promise.all([
-          client.invalidateQueries({ queryKey: ['skillhub-installed', services.sessionId] }),
-          client.invalidateQueries({ queryKey: ['skillhub-installed-detail', services.sessionId] }),
-        ]);
+        await invalidateInstallationQueries(client, services.sessionId);
       }
       return response.value;
     },
     refetchInterval: query => isVisible && !query.state.error && !settled(query.state.data) && query.state.data !== null ? 1000 : false,
     refetchIntervalInBackground: false });
+}
+
+/** Receipts and page projections share the same settled-operation refresh boundary. */
+export async function invalidateInstallationQueries(client: QueryClient, sessionId: string): Promise<void> {
+  await Promise.all([
+    client.invalidateQueries({ queryKey: ['skillhub-installed', sessionId] }),
+    client.invalidateQueries({ queryKey: ['skillhub-installed-detail', sessionId] }),
+    client.invalidateQueries({ queryKey: ['skillhub-receipt-context', sessionId] }),
+  ]);
 }

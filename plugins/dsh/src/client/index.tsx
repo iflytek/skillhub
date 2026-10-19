@@ -1,3 +1,4 @@
+import { resolveReceiptContext, receiptSessionGuard, type ReceiptReads } from './receipt-context.js';
 import { UiAvailability, UiAvailabilityNotice } from './ui-availability.js';
 import type { Context } from '@deepseek-ai/cordis';
 import { SessionId } from '@deepseek-ai/dsh-session/types';
@@ -65,19 +66,40 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
         operation: (id, host) => call(remote => remote.skillhub.getOperation(id, host)),
       };
     }
+    const receiptGenerations = new WeakMap<AgentContext, { cwd: string | undefined; generation: string }>();
+    function receiptReadsFor(sessionId: string): ReceiptReads {
+      const currentSession = () => ({ scope: ctx.sessions.scope(SessionId(sessionId)),
+        cwd: ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.cwd });
+      const { scope, cwd } = currentSession();
+      const assertCurrent = receiptSessionGuard(currentSession);
+      const previous = scope ? receiptGenerations.get(scope) : undefined;
+      const sessionGeneration = previous && previous.cwd === cwd ? previous.generation : crypto.randomUUID();
+      if (scope) receiptGenerations.set(scope, { cwd, generation: sessionGeneration });
+      return { sessionGeneration, assertCurrent, context: () => ctx.remote.skillhub.getContext(),
+        operation: (id, host) => { assertCurrent(); return withSessionRemote(scope!, remote => remote.skillhub.getOperation(id, host)); },
+        installed: (revision, signal) => { assertCurrent(); return withSessionRemote(scope!, remote => remote.skillhub.listInstalled(revision, signal)); },
+      };
+    }
     ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
       name: 'tool.call.toolview', key: 'astron_skillhub_install',
-      inject: sessionId => ({ services: { client, installation: installationFor(sessionId), openInstalled: async (result: InstallResult) => {
+      inject: sessionId => {
+        const receipt = receiptReadsFor(sessionId);
+        return { services: { client, installation: installationFor(sessionId), receipt, openInstalled: async (result: InstallResult) => {
         const layout = ctx.get('layout');
         if (!layout) throw new CatalogUnavailableError();
-        const current = await ctx.remote.skillhub.getContext();
-        if (!current.ok || current.value.sourceRevision !== result.sourceRevision || current.value.registryUrl !== result.sourceLabel
-          || !ctx.sessions.scope(SessionId(sessionId))) throw new Error('Installation context changed');
-        navigation.tab = 'installed'; navigation.selected = null; navigation.scrollTop = 0;
-        navigation.installedOrigin = { sessionId, sourceRevision: result.sourceRevision };
+        const reads = receipt;
+        const active = () => (ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.retainedBy.mainView ?? 0) > 0;
+        if (!active()) throw new Error('当前会话已变化。');
+        const current = await resolveReceiptContext(reads, result, new AbortController().signal);
+        reads.assertCurrent();
         if (ctx.get('layout') !== layout) throw new CatalogUnavailableError();
+        if (!active()) throw new Error('当前会话已变化。');
+        navigation.tab = 'installed'; navigation.selected = null; navigation.scrollTop = 0;
+        navigation.installedOrigin = { sessionId, sourceRevision: current.sourceRevision };
+        client.setQueryData(['skillhub-context'], current);
         layout.selectPanel(panelId);
-      } } }),
+      } } };
+      },
     }, props => <><UiAvailabilityNotice availability={availability} /><InstallToolView {...props} /></>));
     ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
       name: 'tool.call.toolview', key: 'astron_skillhub_search',

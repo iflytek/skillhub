@@ -10,6 +10,24 @@ import { parseArgs } from 'node:util';
 const DSH_VERSION = '0.2.0-rc.2';
 const PNPM_VERSION = '10.33.0';
 
+export const retainedCordisFamily = {
+  '@deepseek-ai/cordis': '4.0.4',
+  '@deepseek-ai/cordis-plugin-loader': '1.0.5',
+  '@deepseek-ai/cordis-plugin-include': '1.0.9',
+  '@deepseek-ai/cordis-plugin-timer': '1.1.6',
+};
+
+export function hostInstallManifest(family) {
+  if (!['fresh', 'retained'].includes(family)) throw new Error('Unknown Cordis family.');
+  return { private: true, type: 'module', ...(family === 'retained' ? { overrides: retainedCordisFamily } : {}) };
+}
+
+export function profileInstallManifest(manifest, family) {
+  hostInstallManifest(family); // Reject unknown modes before writing any fixture configuration.
+  return family === 'retained' ? { ...manifest, pnpm: { ...manifest.pnpm,
+    overrides: { ...manifest.pnpm?.overrides, ...retainedCordisFamily } } } : manifest;
+}
+
 // No shell or .cmd invocation: npm and the probe run with this exact Node binary.
 // On Windows taskkill attempts tree termination while the parent still exists;
 // the independent cleanup deadline also covers a failed/hung taskkill process.
@@ -146,14 +164,15 @@ async function findNpm() {
 }
 
 async function main() {
-  const { values } = parseArgs({ options: { artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' } } });
+  const { values } = parseArgs({ options: { artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' }, 'cordis-family': { type: 'string', default: 'fresh' } } });
   if (values.help) {
-    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json>');
+    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--cordis-family fresh|retained]');
     return;
   }
   if (!values.artifact || !values.report) throw new Error('Specify --artifact and --report; see --help.');
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major !== 24 || minor < 2) throw new Error('Use the fixed Node >=24.2.0 <25 baseline.');
+  const installManifest = hostInstallManifest(values['cordis-family']);
   const artifact = await selectTarball(values.artifact);
   const npm = await findNpm();
   const reportFile = resolve(values.report);
@@ -162,13 +181,13 @@ async function main() {
   const env = isolatedEnvironment(root);
   for (const directory of ['home', 'native-install-home', 'agents', 'workspace', 'logs']) await mkdir(join(root, directory), { mode: 0o700 });
   for (const name of ['empty.npmrc', 'empty-global.npmrc']) await writeFile(join(root, name), '', { mode: 0o600 });
-  await writeFile(join(root, 'package.json'), JSON.stringify({ private: true, type: 'module' }));
+  await writeFile(join(root, 'package.json'), JSON.stringify(installManifest));
   const abort = new AbortController();
   const stop = () => abort.abort();
   process.once('SIGINT', stop);
   process.once('SIGTERM', stop);
   const summary = { passed: false, platform: process.platform, node: process.versions.node,
-    dsh: DSH_VERSION, pnpm: PNPM_VERSION,
+    dsh: DSH_VERSION, pnpm: PNPM_VERSION, cordisFamily: values['cordis-family'],
     artifactSha256: createHash('sha256').update(await readFile(artifact)).digest('hex'),
     modelCalled: false, probes: [], stage: 'install-host' };
   const run = (name, args, timeoutMs = 300000) => runBounded(args, { cwd: join(root, 'workspace'), env,
@@ -181,6 +200,13 @@ async function main() {
     summary.stage = 'initialize-web';
     await run(summary.stage, [dsh, '--profile', 'skillhub-m0', '--from-default-profile', 'web', '--dump-config']);
     summary.stage = 'install-candidate';
+    // npm's root overrides do not propagate into the profile's separate pnpm project.
+    // Keep the retained fixture coherent even if a future profile enables peer auto-install.
+    if (values['cordis-family'] === 'retained') {
+      const profileManifestPath = join(root, 'home/profiles/skillhub-m0/package.json');
+      const profileManifest = JSON.parse(await readFile(profileManifestPath, 'utf8'));
+      await writeFile(profileManifestPath, JSON.stringify(profileInstallManifest(profileManifest, 'retained'), null, 2) + '\n');
+    }
     await run(summary.stage, [dsh, 'plugin', '--profile', 'skillhub-m0', 'add', artifact, '--ignore-scripts']);
     const manifest = JSON.parse(await readFile(join(root, 'home/profiles/skillhub-m0/node_modules/@astron-team/skillhub-dsh/package.json'), 'utf8'));
     if (manifest.name !== '@astron-team/skillhub-dsh') throw new Error('Unexpected installed candidate identity.');
@@ -191,6 +217,14 @@ async function main() {
       const lines = (await readFile(join(root, 'logs', probe + '.log'), 'utf8')).trim().split('\n');
       const result = JSON.parse(lines.at(-1));
       if (result.passed !== true || result.probe !== probe) throw new Error('Probe did not provide a successful result.');
+      if (probe === 'runtime-baseline') {
+        const detail = JSON.parse(await readFile(result.report, 'utf8'));
+        const resolved = Object.fromEntries(detail.initial.host.map(pkg => [pkg.name, pkg.version]));
+        summary.cordisPackages = Object.fromEntries(Object.keys(retainedCordisFamily).map(name => [name, resolved[name]]));
+        if (values['cordis-family'] === 'retained' && Object.entries(retainedCordisFamily).some(([name, version]) => resolved[name] !== version)) {
+          throw new Error('Retained Cordis family was not exercised.');
+        }
+      }
       summary.probes.push({ name: probe, passed: true });
     }
     summary.stage = 'complete';

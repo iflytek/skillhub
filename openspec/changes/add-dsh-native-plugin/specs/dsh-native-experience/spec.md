@@ -265,3 +265,36 @@ The UI SHALL distinguish current inventory from historical operations. Completed
 #### Scenario: Completed clean upgrade history
 - **WHEN** an upgrade is confirmed completed without warnings
 - **THEN** the installed list remains the primary management view and the old operation is available in a collapsed history section without losing its stored result
+### Requirement: Verified Cordis patch combinations within the DSH baseline
+
+The plugin SHALL declare only explicitly validated Cordis versions for the selected DSH release. Runtime write checks SHALL verify the Host's actual resolved dependency manifests and reject unknown or incoherent dependency combinations. A retained baseline regression and a normal clean-install check SHALL remain independently observable.
+
+#### Scenario: DSH transitive patch dependencies change
+- **WHEN** a clean installation of the supported DSH release resolves the explicitly supported Cordis patch combination
+- **THEN** browsing, installation, upgrade, uninstall and recovery checks use that verified Host combination without requiring an unrelated older peer copy
+- **AND** the retained Cordis baseline continues to pass its separate regression
+
+#### Scenario: Unknown or mixed Host dependencies
+- **WHEN** any required Host dependency is missing, has an unverified version, belongs to an incoherent combination, or its current manifest differs from the resolved package metadata
+- **THEN** new writes remain disabled
+- **AND** existing operation queries remain available without replaying writes
+
+### Requirement: Historical installation receipts recover current read-only context
+
+After a Host restart, the plugin SHALL distinguish durable operation identity from ephemeral source revisions. Current inventory verification and installed-list navigation from a historical receipt SHALL use a freshly verified current source revision only after validating the original operation's Host and session ownership, matching receipt fields and unchanged Registry identity.
+
+#### Scenario: Same Registry after Host restart
+- **WHEN** the user reopens an installation receipt in the owning session after a Host restart and the configured Registry is unchanged
+- **THEN** the original operation remains associated with its durable identity
+- **AND** current inventory verification and installed-list navigation use the current source revision rather than the receipt's expired revision
+- **AND** no install, upgrade, uninstall or recovery request is created
+
+#### Scenario: Source or conversation changes during verification
+- **WHEN** the configured Registry, current source revision, owning session, Host identity or trusted project context changes before a receipt read or navigation finishes
+- **THEN** the stale result is discarded and navigation is rejected
+- **AND** historical selection, detail, target and plan references are not renewed as write authorization
+
+#### Scenario: The installed skill changed after the historical operation
+- **WHEN** the historical operation completed but the skill was subsequently upgraded or uninstalled
+- **THEN** the receipt preserves the original operation result while separately showing the current inventory
+- **AND** it does not claim that the original version is still installed or submit a replacement installation

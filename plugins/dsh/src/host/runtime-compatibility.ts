@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { assertHostDependencies, hostDependencyBaseline } from './compatibility.js';
+import { pathToFileURL } from 'node:url';
+import { assertHostDependencies, cordisFamilies, hostDependencyBaseline } from './compatibility.js';
 
 /** Candidate runtime range, validated at its lower bound and current Node 24 release. */
 export const nodeRuntimeRange = '>=24.2.0 <25';
@@ -16,6 +17,9 @@ export const runtimePackageBaseline = {
   '@deepseek-ai/dsh': '0.2.0-rc.2',
   '@deepseek-ai/dsh-app-boot': '0.2.0-rc.2',
   ...hostDependencyBaseline,
+  '@deepseek-ai/cordis-plugin-loader': '1.0.5',
+  '@deepseek-ai/cordis-plugin-include': '1.0.9',
+  '@deepseek-ai/cordis-plugin-timer': '1.1.6',
 };
 
 export const clientPackageBaseline = [
@@ -59,15 +63,29 @@ export function assertRuntimeCompatibility(
 ): void {
   try {
     assertNodeRuntime();
-    const packages = new Map(Object.entries(runtimePackageBaseline).map(([name, version]) => {
-      const actual = services.packageOf(name, parentURL);
-      if (actual?.name !== name || actual.version !== version || !actual.manifestPath) throw new Error('Runtime package mismatch');
+    const readPackage = (name: string, parent: string) => {
+      const actual = services.packageOf(name, parent);
+      if (actual?.name !== name || !actual.manifestPath) throw new Error('Runtime package mismatch');
       // packageOf caches metadata until a resolution generation is replaced.
       const current = readHostManifest(actual.manifestPath);
       if (!current || typeof current !== 'object' || !('name' in current) || !('version' in current)
-        || current.name !== name || current.version !== version) throw new Error('Runtime manifest mismatch');
-      return [name, actual];
-    }));
+        || current.name !== name || current.version !== actual.version) throw new Error('Runtime manifest mismatch');
+      return actual;
+    };
+    const packages = new Map(Object.keys(runtimePackageBaseline).map(name => [name, readPackage(name, parentURL)]));
+    const family = cordisFamilies.find(candidate => Object.entries(candidate).every(([name, version]) => packages.get(name)?.version === version));
+    if (!family) throw new Error('Runtime Cordis family mismatch');
+    for (const [name, version] of Object.entries({ ...runtimePackageBaseline, ...family })) {
+      if (packages.get(name)?.version !== version) throw new Error('Runtime package mismatch');
+    }
+    // Check the Host's own dependency lookup, not just the plugin's peer copies.
+    // A nested peer can otherwise hide an unsupported Host dependency graph.
+    for (const anchor of ['@deepseek-ai/dsh', '@deepseek-ai/dsh-app-boot']) {
+      const anchorURL = pathToFileURL(packages.get(anchor)!.manifestPath!).href;
+      for (const [name, expected] of packages) {
+        if (readPackage(name, anchorURL).version !== expected.version) throw new Error('Host dependency graph mismatch');
+      }
+    }
     assertHostDependencies(name => packages.get(name));
     for (const name of clientPackageBaseline) {
       const file = services.clientPath(name);

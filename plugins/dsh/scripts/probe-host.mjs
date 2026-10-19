@@ -90,7 +90,8 @@ if (runtimeProbe) {
   const installedPackage = join(root, 'home/profiles/skillhub-m0/node_modules/@astron-team/skillhub-dsh');
   const manifest = JSON.parse(await readFile(join(installedPackage, 'package.json'), 'utf8'));
   Object.assign(config, { output: resultName, pluginEntry: join(installedPackage, 'lib/index.js'),
-    hostPackages: ['@deepseek-ai/dsh', '@deepseek-ai/dsh-app-boot', ...Object.keys(manifest.peerDependencies)],
+    hostPackages: ['@deepseek-ai/dsh', '@deepseek-ai/dsh-app-boot', ...Object.keys(manifest.peerDependencies),
+      '@deepseek-ai/cordis-plugin-loader', '@deepseek-ai/cordis-plugin-include', '@deepseek-ai/cordis-plugin-timer'],
     clientPackages: manifest.dsh.client.inject,
     ...(values.probe === 'runtime-unsupported' ? { expectBlocked: true } : { reloadClient: '@deepseek-ai/dsh-client-ui-layout' }) });
 }

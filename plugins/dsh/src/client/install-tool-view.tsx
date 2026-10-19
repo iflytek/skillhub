@@ -1,3 +1,4 @@
+import { matchesReceipt, resolveReceiptContext, readReceiptInventory, type ReceiptReads } from './receipt-context.js';
 import { receiptInventoryIssue, receiptPresentation } from './install-receipt-presentation.js';
 import { Button } from './ui.js';
 import { ConversationStyles } from './conversation-styles.js';
@@ -17,6 +18,7 @@ import { useInstallationOperation } from './use-installation-operation.js';
 
 export interface InstallViewServices {
   client: QueryClient;
+  receipt: ReceiptReads;
   installation: Pick<InstallationServices, 'sessionId' | 'operation' | 'installed'>;
   openInstalled(result: InstallResult): Promise<void>;
 }
@@ -60,34 +62,30 @@ function InstallToolViewContent(props: ToolCallViewProps & { services: InstallVi
     {props.inspect && <button onClick={props.inspect}>查看调用详情</button>}
   </section>;
   return <QueryClientProvider client={props.services.client}>
-    <InstallationResult result={result} services={props.services.installation} openInstalled={props.services.openInstalled} />
+    <InstallationResult result={result} services={props.services.installation} receipt={props.services.receipt} openInstalled={props.services.openInstalled} />
   </QueryClientProvider>;
 }
 
-function InstallationResult({ result, services, openInstalled }: {
-  result: InstallResult; services: InstallViewServices['installation']; openInstalled: InstallViewServices['openInstalled'];
+function InstallationResult({ result, services, receipt, openInstalled }: {
+  result: InstallResult; services: InstallViewServices['installation']; receipt: ReceiptReads; openInstalled: InstallViewServices['openInstalled'];
 }) {
   const [actionStatus, setActionStatus] = useState('');
   const [opening, setOpening] = useState(false);
   const query = useInstallationOperation(services, result.hostInstanceId, result.operationId);
   const operation = query.data;
-  const mismatch = operation && (operation.operationId !== result.operationId || operation.kind !== 'install'
-    || operation.context.hostInstanceId !== result.hostInstanceId || operation.namespace !== result.namespace
-    || operation.slug !== result.slug || operation.version !== result.version
-    || operation.context.sourceIdentity !== result.sourceLabel || operation.context.sourceRevision !== result.sourceRevision
-    || operation.targetLabel !== result.targetLabel);
+  const mismatch = !!operation && !matchesReceipt(operation, result);
   const canInspectCurrent = !query.isError && !mismatch && (operation?.phase === 'completed'
     || (operation?.phase === 'failed' && ['not-needed', 'restored'].includes(operation.recovery)));
-  const current = useQuery({ queryKey: ['skillhub-installed', services.sessionId, result.sourceRevision], retry: false,
-    enabled: canInspectCurrent,
-    queryFn: async ({ signal }) => {
-      const response = await services.installed(result.sourceRevision, signal);
-      if (!response.ok) throw new Error('当前安装记录无法核验，来源或会话可能已变化。');
-      return response.value;
-    } });
+  const context = useQuery({ queryKey: ['skillhub-receipt-context', services.sessionId, result.hostInstanceId,
+    result.operationId, result.sourceLabel, result.sourceRevision, receipt.sessionGeneration], retry: false, enabled: canInspectCurrent,
+    queryFn: ({ signal }) => resolveReceiptContext(receipt, result, signal) });
+  const current = useQuery({ queryKey: ['skillhub-installed', services.sessionId, context.data?.sourceRevision,
+    'receipt', result.hostInstanceId, result.operationId, result.sourceLabel, receipt.sessionGeneration], retry: false,
+    enabled: canInspectCurrent && !!context.data && !context.isFetching && !context.isError,
+    queryFn: ({ signal }) => readReceiptInventory(receipt, result, context.data!, signal) });
   const entries = current.data?.items.filter(item => item.namespace === result.namespace && item.slug === result.slug) ?? [];
-  const inventoryIssue = canInspectCurrent ? receiptInventoryIssue(result, current.data, current.isError) : null;
-  const inventoryPending = canInspectCurrent && (current.isPending || current.isFetching);
+  const inventoryIssue = canInspectCurrent ? receiptInventoryIssue(result, context.isError ? undefined : current.data, context.isError || current.isError) : null;
+  const inventoryPending = canInspectCurrent && (!context.isError && (context.isPending || context.isFetching || current.isPending || current.isFetching));
   const presentation = receiptPresentation(operation, query.isError || !!mismatch, inventoryPending, inventoryIssue);
   return <section aria-label="SkillHub 安装结果" className="astron-sh-conversation-result astron-sh-conversation-install">
     <header className="astron-sh-conversation-identity"><SkillAvatar slug={result.slug} namespace={result.namespace} /><div><h4>{result.slug}</h4><p>@{result.namespace}/{result.slug}</p></div><span className="astron-sh-install-badge" data-tone={presentation.tone}>{presentation.label}</span></header>
@@ -111,7 +109,7 @@ function InstallationResult({ result, services, openInstalled }: {
       </p>}
     {canInspectCurrent && <section aria-label="当前安装记录">
       <h4>当前会话可见的安装记录</h4>
-      {current.isPending || current.isFetching ? <p role="status">正在核验当前安装记录…</p>
+      {context.isError ? <p role="alert">{context.error.message}</p> : context.isFetching || current.isPending || current.isFetching ? <p role="status">正在核验当前安装记录…</p>
         : current.isError ? <p role="alert">{current.error.message}</p>
           : <>
             {!current.data.complete && <p role="alert">当前安装记录读取不完整，不能判断所有范围是否仍安装。</p>}

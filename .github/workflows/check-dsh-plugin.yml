@@ -84,6 +84,18 @@ jobs:
       - name: Verify native DSH Host in an isolated Web Profile
         working-directory: plugins/dsh
         run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-smoke-summary.json
+      - name: Verify retained Cordis family in an isolated Web Profile
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '24.2.0'
+        working-directory: plugins/dsh
+        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-smoke-retained-summary.json --cordis-family retained
+      - name: Upload retained Host smoke summary
+        if: always() && matrix.os == 'ubuntu-latest' && matrix.node == '24.2.0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillhub-dsh-host-smoke-retained
+          path: plugins/dsh/host-smoke-retained-summary.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Upload sanitized Host smoke summary
         if: always()
         uses: actions/upload-artifact@v4

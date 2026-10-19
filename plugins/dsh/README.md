@@ -4,14 +4,14 @@
 
 SkillHub 的 DSH 原生插件。在 DSH 侧栏打开 **技能中心**，匿名浏览、搜索、查看技能详情，并管理安装、升级和卸载；对话中也可搜索和明确请求安装技能。插件内置本地安装核心，无需另装 SkillHub CLI。
 
-当前准备发布 `@astron-team/skillhub-dsh@0.1.0`，manifest 已允许公开发布。此版本仍处于发布候选阶段，尚未发布到 npm；以 npm 实际可下载版本及发布验收结果为准。
+npm 已发布 `@astron-team/skillhub-dsh@0.1.0`。本分支包含尚未发布的兼容性和历史安装回执修复，后续版本号另行确定；验证这些修复时请安装本分支构建的 tarball，不能使用已发布的 `0.1.0` 替代。
 
 ## 环境与验证范围
 
 | 项目 | 要求或范围 |
 | --- | --- |
 | DSH | `0.2.0-rc.2`，配套官方模块使用相同固定版本 |
-| Cordis | `4.0.4` |
+| Cordis | 本分支明确验证的两组完整组合，见下表 |
 | Host Node | `>=24.2.0 <25`；不能使用 Node 24.0.0 |
 | 开发包管理器 | Bun `1.3.13`，按锁文件安装 |
 | 当前 UI | 中文；支持 DSH 深浅主题和窄屏 |
@@ -43,9 +43,18 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 输出目录须先创建。`--dry-run` 不生成 tarball；实际安装使用生成的 `.tgz`。保留每次候选包及其校验值，不覆盖已经用于验收或回退的包。
 
-## 从 npm 安装（正式发布后）
+本分支验证以下完整组合，不接受交叉混装或未列出的补丁版本。DSH 主包中的 `~` 依赖不会因主包版本固定而自动锁定；以实际宿主解析结果为准。
 
-以下命令在 `0.1.0` 正式发布后使用。先确认 DSH 和 Node 满足上述版本要求，停止目标 Web Profile 的 Host，然后安装精确版本：
+| 组合 | Cordis | Loader | Include | Timer |
+| --- | --- | --- | --- | --- |
+| 保留基线 | `4.0.4` | `1.0.5` | `1.0.9` | `1.1.6` |
+| 新补丁组合 | `4.0.5` | `1.0.6` | `1.0.10` | `1.1.7` |
+
+已发布的 `0.1.0` 尚不包含新补丁组合与历史回执修复；它仍要求原 Cordis `4.0.4` 基线。插件仅从核验后的当前上下文读取历史回执对应的库存，不恢复旧安装引用或计划的写授权。
+
+## 从 npm 安装
+
+以下命令安装已发布的 `0.1.0`。先确认 DSH、Node 和该版本的原 Cordis 基线满足要求，停止目标 Web Profile 的 Host，然后安装精确版本。本分支修复发布前，使用下一节的本地候选包验证方式：
 
 ```sh
 dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.1.0 --ignore-scripts
@@ -153,6 +162,6 @@ dsh plugin --profile skillhub-test remove @astron-team/skillhub-dsh
 
 插件 Host 调用匿名 Registry HTTP API；本地安装事务在 Host 内完成，不需要 SaaS 新增操作用户文件系统的安装接口。开源先定义和验证契约，再将缺失的路径、字段、匿名策略和测试同步到 SaaS。当前未声明 SaaS 已通过验收。详细要求见 [Registry 契约](../../openspec/changes/add-dsh-native-plugin/registry-api-contract.md)。
 
-插件独立使用 `dsh-v<version>` tag，不复用 CLI 或服务镜像发布。`check-dsh-plugin.yml` 配置 Linux/macOS/Windows × Node 24.2.0/当前 Node 24 的检查及隔离 Host 冒烟；`release-dsh-plugin.yml` 手动触发，默认只产出候选包。发布需正式版本、可发布 manifest、候选验收和受保护环境审批；`0.1.0` manifest 已设置 `private: false` 和公开发布权限，但这不代表已完成发布。
+插件独立使用 `dsh-v<version>` tag，不复用 CLI 或服务镜像发布。`check-dsh-plugin.yml` 配置 Linux/macOS/Windows × Node 24.2.0/当前 Node 24 的普通干净安装检查，并额外保留旧 Cordis 组合的隔离 Host 回归；`release-dsh-plugin.yml` 手动触发，默认只产出候选包。发布需正式版本、可发布 manifest、候选验收及明确发布授权；配置了环境保护规则时还须完成相应审批。本分支不自动升级版本或发布 npm。
 
 具体部署、发布后检查与回退清单见 [发布指南](../../openspec/changes/add-dsh-native-plugin/release-guide.md)，变化见 [发布说明](../../openspec/changes/add-dsh-native-plugin/release-notes.md)。上述 OpenSpec 与测试链接面向源码仓库，不包含在 npm tarball 中。

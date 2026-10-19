@@ -4,14 +4,14 @@
 
 A native DSH plugin for anonymous skill browsing, conversation search and installation, and local upgrade/removal. Open **技能中心** (Skill Center) in the DSH sidebar. The installation core is bundled; a separate SkillHub CLI installation is unnecessary.
 
-The release candidate is `@astron-team/skillhub-dsh@0.1.0`. Its manifest permits public publication, but the version has not been published to npm yet. Use the version actually available on npm and its release acceptance results to determine availability.
+`@astron-team/skillhub-dsh@0.1.0` is published on npm. This branch contains compatibility and historical installation receipt fixes that have not been released yet; the next version is selected separately. Validate these changes with a tarball built from this branch, not the published `0.1.0` package.
 
 ## Requirements and validation scope
 
 | Component | Requirement or scope |
 | --- | --- |
 | DSH | `0.2.0-rc.2`, with the matching official module versions |
-| Cordis | `4.0.4` |
+| Cordis | The two explicitly verified complete combinations below |
 | Host Node | `>=24.2.0 <25`; Node 24.0.0 is unsuitable |
 | Build package manager | Bun `1.3.13`, using frozen lockfiles |
 | UI | Chinese, DSH light/dark themes and narrow layouts |
@@ -43,9 +43,18 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 A dry run does not produce an installable package. Retain each candidate and its checksum; do not overwrite packages used for acceptance or rollback.
 
-## Install from npm (after release)
+This branch verifies the following complete combinations, rejecting mixed or unlisted patch versions. Pinning the DSH main package does not lock its transitive `~` dependencies; the actual Host resolution is checked.
 
-Use these commands after `0.1.0` is published. Check the DSH and Node requirements above, stop the target Web Profile Host, then install the exact version:
+| Combination | Cordis | Loader | Include | Timer |
+| --- | --- | --- | --- | --- |
+| Retained baseline | `4.0.4` | `1.0.5` | `1.0.9` | `1.1.6` |
+| New patch combination | `4.0.5` | `1.0.6` | `1.0.10` | `1.1.7` |
+
+Published `0.1.0` still requires the original Cordis `4.0.4` baseline and does not include these fixes. Historical receipts use a freshly verified read-only context; expired installation references and plans never regain write authorization.
+
+## Install from npm
+
+These commands install published `0.1.0`. Check DSH, Node and that version's original Cordis baseline, stop the target Web Profile Host, then install the exact version. Until the branch fixes are released, use the local candidate instructions below to validate them:
 
 ```sh
 dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.1.0 --ignore-scripts
@@ -153,6 +162,6 @@ dsh plugin --profile skillhub-test remove @astron-team/skillhub-dsh
 
 The plugin Host calls anonymous Registry HTTP APIs; local file transactions stay on the Host. SaaS does not need a new API that controls user filesystems. Define and verify contracts in open source first, then synchronize missing routes, fields, anonymous policy and tests to SaaS. SaaS acceptance remains pending. See the [Registry contract](../../openspec/changes/add-dsh-native-plugin/registry-api-contract.md).
 
-The plugin uses independent `dsh-v<version>` tags. `check-dsh-plugin.yml` defines Linux/macOS/Windows × Node 24.2.0/current Node 24 checks and isolated Host smoke tests. `release-dsh-plugin.yml` is manual and defaults to candidate-only operation. Publishing requires an approved version, publishable manifest, candidate acceptance and protected environment approval. The `0.1.0` manifest explicitly sets `private: false` and public access; this does not mean publication has completed.
+The plugin uses independent `dsh-v<version>` tags. `check-dsh-plugin.yml` runs normal clean-install checks on Linux/macOS/Windows × Node 24.2.0/current Node 24, plus an isolated retained-Cordis baseline regression. `release-dsh-plugin.yml` is manual and defaults to candidate-only operation. Publishing requires an approved version, publishable manifest, candidate acceptance and explicit release authorization; configured environment protection rules must also be satisfied. This branch does not bump or publish the package automatically.
 
 See the [release guide](../../openspec/changes/add-dsh-native-plugin/release-guide.md) and [release notes](../../openspec/changes/add-dsh-native-plugin/release-notes.md). OpenSpec and integration links refer to the source repository; those documents are not included in the tarball.
