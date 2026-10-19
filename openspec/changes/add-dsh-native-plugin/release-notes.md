@@ -2,9 +2,9 @@
 
 ## 版本与交付状态
 
-本次交付版本为 `@astron-team/skillhub-dsh@0.1.1`，对应独立标签 `dsh-v0.1.1`。版本包含已合并的兼容性与历史安装回执修复；发布前完成候选验收，发布后下载公开包复核完整性和实际安装。npm 交付状态以公开包完整性和安装验收结果为准。`0.1.0` 已发布的内容保持不变。
+本次交付版本为 `@astron-team/skillhub-dsh@0.1.1`，对应独立标签 `dsh-v0.1.1`。该版本已发布，`latest` 指向 `0.1.1`；版本包含已合并的兼容性与历史安装回执修复，公开包完整性、干净安装及 15 项页面和重启验收通过。`0.1.0` 已发布的内容保持不变。
 
-`0.1.0` 的原环境固定 DSH `0.2.0-rc.2`、Cordis `4.0.4`、Node `>=24.2.0 <25`。当前已验证 Linux Host、真实浏览器页面与交互，以及 Windows 浏览器访问 Host；界面已完成人工 review。Windows 浏览器通过不代表 Windows 原生 Host 全部文件事务通过；macOS 真实 Host/客户端、其他 DSH 发行版和 SaaS 实例仍需独立验收。
+`0.1.0` 的原环境固定 DSH `0.2.0-rc.2`、Cordis `4.0.4`、Node `>=24.2.0 <25`。当前已验证 Linux Host、真实浏览器页面与交互，以及 Windows 浏览器访问 Host；界面已完成人工 review。Windows 浏览器通过不代表 Windows 原生 Host 全部文件事务通过；`0.1.1` 发布标签的 Linux/macOS/Windows 原生 Host CI 六组通过；个人电脑桌面客户端、其他 DSH 发行版和 SaaS 实例仍需独立验收。
 
 ## 0.1.1 修复内容
 
@@ -39,7 +39,7 @@
 
 ## 安装、更新与维护
 
-正式发布后可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.1.1 --ignore-scripts` 安装到已有 Web Profile。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
+可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.1.1 --ignore-scripts` 安装到已有 Web Profile。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
 
 更新或回退前保留原包和校验值、停止新操作并处理待恢复事务，然后停止 Host、安装兼容包并重新启动。浏览器旧资源可强制刷新；这不能代替 Host 依赖重载。禁用或移除包不会卸载技能，不应删除技能目录、inventory 或操作日志。
 
@@ -52,7 +52,7 @@
 1. 当前 UI 为中文，英文指南不代表英文 UI。
 2. 真实模型行为取决于模型和会话；安装成功、DSH 发现和模型执行分别验证。资源路径成功个例不保证所有技能的相对路径解析。
 3. 官方 RC.2 在同端口 Host 重启后可能使原标签页空白，不能承诺无缝重连；使用有效入口重新进入并查询原操作。
-4. 开发候选之间的替换与回退验证，不等于跨正式版本日志迁移兼容。未知格式不能通过删除日志绕过。
+4. 本轮覆盖正式 `0.1.0`→`0.1.1` 升级后原记录和技能保留、历史回执核验及导航，不承诺其他版本迁移或全部回退组合。未知格式不能通过删除日志绕过。
 5. 注册、页面或工具共存测试不证明其他插件全部业务及模型选工具行为均兼容。
 
 兼容范围以 [兼容设计](compatibility-design.md) 为准，行为门禁以 [验收标准](acceptance.md) 为准。

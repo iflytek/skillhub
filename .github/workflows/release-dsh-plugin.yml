@@ -99,16 +99,16 @@ jobs:
           PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
           VERSION: ${{ needs.validate.outputs.version }}
         run: |
-          # Public metadata may briefly return 404 after a successful upload.
+          # Public metadata can remain cached for up to five minutes after upload.
           # Retry only the read; never repeat npm publish after an uncertain response.
-          for attempt in 1 2 3 4 5 6; do
-            if npm view "$PACKAGE_NAME@$VERSION" dist.integrity --json --fetch-retries=0 --fetch-timeout=10000 > published-integrity.json; then
+          for attempt in {1..12}; do
+            if npm view "$PACKAGE_NAME@$VERSION" dist.integrity --json --prefer-online --fetch-retries=0 --fetch-timeout=10000 > published-integrity.json; then
               break
             fi
-            if [ "$attempt" -eq 6 ]; then
+            if [ "$attempt" -eq 12 ]; then
               exit 1
             fi
-            sleep 5
+            sleep 30
           done
           node --input-type=module <<'NODE'
           import { readFileSync, readdirSync } from 'node:fs';
