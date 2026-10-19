@@ -95,6 +95,15 @@ export interface InstalledSkillList {
   unavailable: ('user' | 'project')[];
 }
 
+/** Search-time current-Registry records in approved DSH roots; not discovery or integrity proof. */
+export interface SearchInstallationStatus {
+  checkedAt: string;
+  complete: boolean;
+  unavailable: ('user' | 'project')[];
+  records: { scope: 'user' | 'project'; version: string;
+    state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable' }[];
+}
+
 export interface InstalledSkillDetail {
   item: InstalledSkillList['items'][number];
   content: { state: 'ready'; detail: SkillDetail } | { state: 'local-only'; reason: string };

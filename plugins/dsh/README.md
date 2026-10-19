@@ -4,14 +4,16 @@
 
 SkillHub 的 DSH 原生插件。在 DSH 侧栏打开 **技能中心**，匿名浏览、搜索、查看技能详情，并管理安装、升级和卸载；对话中也可搜索和明确请求安装技能。插件内置本地安装核心，无需另装 SkillHub CLI。
 
-`0.1.1` 交付 DSH 依赖兼容性与历史安装回执修复，发布标签为 `dsh-v0.1.1`。已发布的 `0.1.0` 不包含这些修复；`0.1.1` 的 npm 发布和公开包验收完成前，使用本版本构建的 tarball 验证。
+`0.2.0` 新增来源可核验的搜索安装状态：广场卡片和对话工具可识别当前来源的受管理安装版本、用户/项目范围及异常记录；对话保留查询时快照。未发现本来源记录不代表其他市场或手工安装不存在，文件存在也不代表 DSH 已启用该技能。按来源、命名空间和技能标识匹配；不按同名目录认领其他来源技能。
+
+本版使用独立发布标签 `dsh-v0.2.0`，保留 `0.1.1` 的 DSH 依赖兼容性与历史安装回执修复。npm 发布及公开包验收完成前，使用本版本构建的 tarball 验证。
 
 ## 环境与验证范围
 
 | 项目 | 要求或范围 |
 | --- | --- |
 | DSH | `0.2.0-rc.2`，配套官方模块使用相同固定版本 |
-| Cordis | `0.1.1` 明确验证的两组完整组合，见下表 |
+| Cordis | 以下两组完整组合，沿用 `0.1.1` 的兼容基线 |
 | Host Node | `>=24.2.0 <25`；不能使用 Node 24.0.0 |
 | 开发包管理器 | Bun `1.3.13`，按锁文件安装 |
 | 当前 UI | 中文；支持 DSH 深浅主题和窄屏 |
@@ -43,7 +45,7 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 输出目录须先创建。`--dry-run` 不生成 tarball；实际安装使用生成的 `.tgz`。保留每次候选包及其校验值，不覆盖已经用于验收或回退的包。
 
-`0.1.1` 验证以下完整组合，不接受交叉混装或未列出的补丁版本。DSH 主包中的 `~` 依赖不会因主包版本固定而自动锁定；以实际宿主解析结果为准。
+本版沿用以下完整组合，不接受交叉混装或未列出的补丁版本。DSH 主包中的 `~` 依赖不会因主包版本固定而自动锁定；以实际宿主解析结果为准。
 
 | 组合 | Cordis | Loader | Include | Timer |
 | --- | --- | --- | --- | --- |
@@ -54,10 +56,10 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 ## 从 npm 安装
 
-`0.1.1` 在 npm 发布完成后，使用以下命令安装。先确认 DSH、Node 和上表完整 Cordis 组合满足要求，停止目标 Web Profile 的 Host，然后安装精确版本。发布完成前使用下一节的本地候选包：
+`0.2.0` 在 npm 发布完成后，使用以下命令安装。先确认 DSH、Node 和上表完整 Cordis 组合满足要求，停止目标 Web Profile 的 Host，然后安装精确版本。发布完成前使用下一节的本地候选包：
 
 ```sh
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.1.1 --ignore-scripts
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.2.0 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 

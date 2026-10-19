@@ -34,6 +34,7 @@
 | [release-guide.md](release-guide.md) | 验证、环境部署、插件发布与回退 |
 | [release-notes.md](release-notes.md) | 当前开发候选的功能变化、使用限制及发布前缺口 |
 | [registry-api-contract.md](registry-api-contract.md) | Registry 公共契约与开源/SaaS 同步 |
+| [saas-agent-prompt.md](saas-agent-prompt.md) | 可直接交给 SaaS 研发 Agent 的适配任务、边界与验收要求 |
 | [tasks.md](tasks.md)、[verification.md](verification.md) | 任务进度、当前验证结果与发布缺口 |
 
 ## 文档使用规则

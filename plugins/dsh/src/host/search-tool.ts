@@ -15,6 +15,14 @@ export const searchOutputSchema = {
     items: { type: 'array', required: true, items: {
       type: 'object', additionalProperties: false, properties: {
         namespace: string, slug: string, latestVersion: string, summary: string, selectionRef: string,
+        installation: { type: 'object', additionalProperties: false, properties: {
+          checkedAt: string, complete: { type: 'boolean', required: true },
+          unavailable: { type: 'array', required: true, items: { type: 'string', enum: ['user', 'project'] } },
+          records: { type: 'array', required: true, items: { type: 'object', additionalProperties: false, properties: {
+            scope: { type: 'string', enum: ['user', 'project'], required: true }, version: string,
+            state: { type: 'string', enum: ['present', 'missing', 'metadata-invalid', 'mismatch', 'unreadable'], required: true },
+          } } },
+        } },
       },
     } },
   },
@@ -33,7 +41,7 @@ export function registerSearchTool(tools: Pick<Context['tools'], 'get' | 'regist
     parameters: { q: { type: 'string', required: true, description: 'Search keywords; empty string lists recent skills.' } },
     output: {
       schema: searchOutputSchema,
-      render: (_args, result) => [{ type: 'text', text: JSON.stringify(result) + '\nSearch only; no skill was installed or executed. If multiple candidates fit a later request such as "that skill", ask the user to identify one by namespace/slug or result number; do not choose a candidate or call install until clarified. selectionRef and sourceRevision are internal references: retain them for tool use, but do not display them or ask the user to copy them. Present a short numbered comparison with skill coordinates, versions, and summaries. Tell the user they can view details or reply with a result number and installation scope to request installation; opening details is optional. Do not install until explicitly requested.' }],
+      render: (_args, result) => [{ type: 'text', text: JSON.stringify(result) + '\nSearch only; no skill was installed or executed. If multiple candidates fit a later request such as "that skill", ask the user to identify one by namespace/slug or result number; do not choose a candidate or call install until clarified. selectionRef and sourceRevision are internal references: retain them for tool use, but do not display them or ask the user to copy them. Present a short numbered comparison with skill coordinates, versions, and summaries. Tell the user they can view details or reply with a result number and installation scope to request installation; opening details is optional. Installation is a search-time snapshot of current-Registry records in approved user/project roots. Only state=present means files were found for that recorded version and scope; it does not prove content integrity or that DSH is using that skill. Missing, metadata-invalid, mismatch and unreadable records are abnormal, not confirmed installations. Empty records mean no current-source record, never globally uninstalled; other sources or custom roots may contain the skill. complete=false or unavailable scopes mean status is unknown there; absent installation means historical status was not checked. Mention known installed versions and scopes in the comparison, and uncertainty when relevant. Recheck current installed status before making claims about an old snapshot. Do not install until explicitly requested.' }],
       presentationMeta: (_args, result) => result,
     },
     async execute(args, exec) {

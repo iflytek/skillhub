@@ -8,6 +8,7 @@ import { Button, Card } from './ui.js';
 import { readableDate } from './skill-presentation.js';
 import { ConversationStyles } from './conversation-styles.js';
 import { parseSearchResult } from './search-result.js';
+import { InstallationStatus } from './installation-status.js';
 
 /** Only the original call's validated metadata is rendered; opening a transcript makes no requests. */
 export function SearchToolView(props: ToolCallViewProps & { services: SearchViewServices }) {
@@ -41,10 +42,12 @@ function SearchToolViewContent(props: ToolCallViewProps & { services: SearchView
     }} />}
     <header className="astron-sh-conversation-heading"><span className="astron-sh-conversation-mark"><Icon name="search" /></span><h3>{result.query || '最近技能'}</h3><span>SkillHub</span></header>
     <p className="astron-sh-conversation-caption">共匹配 {result.total} 项，显示 {result.returned} 项 · 查看详情，或回复序号安装</p>
+    {result.items.some(item => item.installation) && <p className="astron-sh-conversation-caption">安装状态为查询时快照 · <time dateTime={result.createdAt}>{readableDate(result.createdAt, true)}</time></p>}
     {result.items.length === 0 ? <p>没有匹配的技能，可换个关键词再搜索。</p> : <div className="astron-sh-conversation-list">
       {result.items.map(item => <Card key={item.selectionRef} className="astron-sh-conversation-skill">
         <div className="astron-sh-conversation-identity"><SkillAvatar slug={item.slug} namespace={item.namespace} /><div><h4>{item.slug}</h4><p title={`@${item.namespace}/${item.slug}`}>@{item.namespace}/{item.slug}<span> · v{item.latestVersion}</span></p></div></div>
-        <p id={`skillhub-candidate-${item.selectionRef}`} className="astron-sh-conversation-summary" title={item.summary}>{item.summary || '暂无摘要'}</p>
+        <div className="astron-sh-conversation-summary"><p id={`skillhub-candidate-${item.selectionRef}`} title={item.summary}>{item.summary || '暂无摘要'}</p>
+          <InstallationStatus installation={item.installation} snapshot /></div>
         <Button variant="outline" className="astron-sh-conversation-detail-action" aria-label="查看技能详情" aria-describedby={`skillhub-candidate-${item.selectionRef}`} onClick={() => setSelection(item.selectionRef)}>查看详情<Icon name="arrow" /></Button>
       </Card>)}
     </div>}

@@ -2,6 +2,8 @@
 
 ## 1. 接口分层
 
+交给 SaaS 研发 Agent 执行时，可使用 [SaaS 研发交接 Prompt](saas-agent-prompt.md)，按当前实现核验差异后补齐。搜索结果的本机安装状态由插件负责，不新增 SaaS 安装清单接口。
+
 | 接口层 | 调用方与服务方 | 发布位置 | SaaS 是否需要同步 |
 | --- | --- | --- | --- |
 | Registry HTTP API | 插件 Host → SkillHub 服务端 | 开源及 SaaS 后端 | 需要，共享对外契约 |

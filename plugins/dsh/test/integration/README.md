@@ -486,6 +486,14 @@ node plugins/dsh/scripts/probe-host.mjs --root /absolute/path/to/prepared-tempor
 `history-detail-reopen-probe.mjs` 使用已有持久搜索会话，不调用模型、不创建搜索结果或安装技能。先重启隔离 Host 使旧引用失效；提供 `DSH_PROBE_URL`、`DSH_PROBE_OUTPUT`、`DSH_SEARCH_FIXTURE_TITLE`，必要时提供 `DSH_SEARCH_FIXTURE_WORKSPACE` 和 `DSH_PROBE_CHROMIUM`。探针验证打开历史卡片不发详情请求、失效后不自动重开、点击“重新查看详情”使用真实 callId 和原引用、返回新引用并确认展示、来源版本与安装控件可见、关闭焦点恢复、零安装/恢复请求。输出 `history-detail-reopen-result.json` 与截图。成功仅证明该隔离环境的历史读取链路，不证明模型安装或所有平台通过。
 
 
+## 搜索结果中的本地安装状态
+
+将 `search-installation-fixture.mjs` 复制到新建的临时根目录中，作为包外 Host observer 加载，配置包含绝对路径 `root`，可选 `profile`（默认 `search-installation`）、`namespace`（默认 `meeting`）、`slug`（默认 `meeting-notes`）、`query`（默认 `助手`）。先在该 Profile 中通过官方安装器安装当前候选包，配置本地 Registry 夹具；查询必须能返回指定坐标，且其最新版本可下载。此探针会真实安装技能，因此只允许新建隔离环境：`HOME=<root>/native-install-home`、`DSH_HOME=<root>/home`、`DSH_AGENTS_HOME=<root>/agents`。不要加载到个人 Profile 或真实项目中。调度观察器前会检查三个环境目录均真实存在且没有符号链接或路径重定向；备份和临时写入 inventory、metadata 前另检查目标为根目录内的普通文件且父路径未重定向。
+
+探针通过官方 `ctx.tools.execute` 执行搜索、项目安装、用户安装，再搜索并检查两个范围的版本和文件状态；同坐标两个范围安装相同版本，保留现有多目标版本一致性保护。随后依次构造其他 Registry、同名不同命名空间、损坏元数据和不可读 inventory 的隔离夹具，检查不误认来源、异常和未知状态。其中不同命名空间夹具故意保留原文件元数据，因此结果应为无当前坐标记录且查询不完整，不能把这个合成的不一致清单认定为正常外部安装。所有临时文件修改均在 `finally` 中逐字节恢复；安装完成的两个测试目标保留，以供浏览器查看。
+
+`<root>/search-installation-ready.json` 包含通过标志、会话标题、会话 ID、隔离工作目录和各阶段快照。会话使用真实工具结果生成**明确标注“非模型”的合成历史**，并验证旧搜索对象不随新安装而改变；这不等同于真实模型理解安装状态，也不代替重启后浏览器历史重放验证。浏览器可按报告中的标题打开会话，检查查询时状态与未知、异常提示，并在技能中心查看当前安装状态。成功报告已存在时，重启只复用该报告，不重复安装。报告与截图留在 worktree 外，不提交原始宿主日志。
+
 ## 三平台 CI 的隔离 Host 冒烟入口
 
 在插件目录构建并打包候选后执行：

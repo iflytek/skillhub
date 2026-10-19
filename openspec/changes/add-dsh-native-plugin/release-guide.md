@@ -73,7 +73,7 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 ### 2.3 隔离环境验证
 
-`0.1.1` 交付固定 DSH `0.2.0-rc.2`、Node `>=24.2.0 <25`。Cordis、Loader、Include、Timer 须为已验证的完整组合：`4.0.4 / 1.0.5 / 1.0.9 / 1.1.6` 或 `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7`，不得交叉混装；以实际 Host 解析结果为准。已发布 `0.1.0` 尚不包含后一组合支持及历史回执修复，`0.1.1` 包含这些修复，发布前使用其 tarball 验证。在独立测试账户或容器中准备 Web Profile、工作区和测试技能，连接测试 Registry。仅隔离 Profile/DSH home 不足以隔离共享 inventory。
+本次 `0.2.0` 交付固定 DSH `0.2.0-rc.2`、Node `>=24.2.0 <25`。Cordis、Loader、Include、Timer 须为已验证的完整组合：`4.0.4 / 1.0.5 / 1.0.9 / 1.1.6` 或 `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7`，不得交叉混装；以实际 Host 解析结果为准。已发布 `0.1.0` 尚不包含后一组合支持及历史回执修复，`0.1.1` 起包含这些修复，`0.2.0` 延续此兼容基线；发布前使用本次 tarball 验证。在独立测试账户或容器中准备 Web Profile、工作区和测试技能，连接测试 Registry。仅隔离 Profile/DSH home 不足以隔离共享 inventory。
 
 首次创建测试 Web Profile，然后安装本地候选包：
 
@@ -107,6 +107,7 @@ node scripts/smoke-native-host.mjs --artifact /absolute/path/to/candidate.tgz --
 4. 检查更新、全部允许目标升级、单目标卸载；离线卸载及本地修改阻断。
 5. 更新来源、切换项目、打开历史卡片，确认旧引用不能写入新上下文。
 6. 禁用、重载、升级插件，确认既有技能保留且操作日志可核验。
+7. 搜索按来源、命名空间和当前可信范围展示安装版本及异常；安装、升级、卸载后刷新当前状态，历史对话保留查询时快照。
 
 Linux、macOS、Windows 分别记录 DSH 发行版、插件版本、Registry 契约版本及结果。未覆盖组合标为“未验证”，不列入支持列表。
 
@@ -157,7 +158,7 @@ SaaS 使用其现有流水线部署；公共接口契约、测试数据规则与
 
 ### 4.1 独立发布流程
 
-插件使用独立版本，tag 前缀固定为 `dsh-v`（本次为 `dsh-v0.1.1`），不复用 CLI 的 `cli-v*` 发布流程。专用工作流为 `.github/workflows/release-dsh-plugin.yml`；发布前仍须确认 npm 包名、兼容基线及候选包验收，本次交付为 `0.1.1`，manifest 已显式设为 `private: false`；默认 Registry 为空。正式发布仍以最终提交、候选验收和审批结果为准。
+插件使用独立版本，tag 前缀固定为 `dsh-v`（本次为 `dsh-v0.2.0`），不复用 CLI 的 `cli-v*` 发布流程。专用工作流为 `.github/workflows/release-dsh-plugin.yml`；发布前仍须确认 npm 包名、兼容基线及候选包验收，本次交付为 `0.2.0`，manifest 已显式设为 `private: false`；默认 Registry 为空。正式发布仍以最终提交、候选验收和审批结果为准。
 
 发布流程依次完成：校验版本 → 测试与构建 → 生成并检查 tarball → 隔离 DSH 候选验收 → 发布审批 → 发布 npm → 校验已发布包。当前工作流自动执行版本校验、测试与构建、包检查、上传及完整性校验；隔离 DSH 的 UI、真实模型和平台验收需在发布审批前另行完成，CI 矩阵成功不等同于这些验收通过。工作流使用仓库的 `NPM_TOKEN` 发布凭证，源码及 npm 包不包含凭证；配置了环境保护规则时还须完成对应审批。
 
@@ -180,7 +181,7 @@ SaaS 使用其现有流水线部署；公共接口契约、测试数据规则与
 
 ### 4.3 发布说明
 
-`0.1.1` 的变更说明见 [release-notes.md](release-notes.md)。正式版本发布前按最终候选及验收结果更新，不沿用开发版本的支持声明。
+`0.2.0` 的变更说明见 [release-notes.md](release-notes.md)。正式版本发布前按最终候选及验收结果更新，不沿用开发版本的支持声明。
 
 每个版本包含：
 

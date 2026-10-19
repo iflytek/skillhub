@@ -15,6 +15,8 @@ import { SelectField, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger } 
 import { Icon, SkillAvatar, SkillCard, SkillMetrics } from './skill-card.js';
 import type { InfiniteData } from '@tanstack/react-query';
 import type { CatalogPageResult, SkillList } from '../host/types.js';
+import { summarizeInstallation } from '../host/installation-summary.js';
+import { InstallationStatus } from './installation-status.js';
 import '../../lib/typert.remote-client.js';
 
 type Item = SkillList['items'][number];
@@ -59,6 +61,10 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   const context = useQuery({ queryKey: ['skillhub-context'], queryFn: async () => unwrap(await remote.getContext()), retry: false });
   const compatibility = useQuery({ queryKey: ['skillhub-compatibility'], queryFn: async () => unwrap(await remote.getCompatibility()), retry: false });
   const revision = context.data?.sourceRevision;
+  // Share the installed tab's cache and settled-operation invalidation, without blocking market reads.
+  const inventory = useQuery({ queryKey: ['skillhub-installed', installed?.sessionId, revision],
+    enabled: !!installed && !!revision && !!context.data?.configured && tab === 'browse', retry: false,
+    queryFn: async ({ signal }) => unwrap(await installed!.list(revision!, signal)) });
   const label = labelSelection && labelSelection.sourceRevision === revision ? labelSelection.slug : '';
   const labels = useQuery({ queryKey: ['skillhub-labels', revision], enabled: !!context.data?.configured, retry: false,
     queryFn: async ({ signal }) => unwrap(await remote.listLabels(revision!, signal)) });
@@ -168,6 +174,8 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
               {listing.isPending ? <CardSkeletons /> : listing.isError && !pages ? error(listing.error.message, () => { void listing.refetch(); }) : <>
                 {items.length === 0 ? <p className="astron-sh-empty">{listing.hasNextPage ? '此批没有可展示的已发布技能，可继续加载。' : '没有找到匹配的技能，请尝试其他关键词。'}</p>
                   : <div className="astron-sh-card-grid">{items.map(item => <SkillCard key={`${item.namespace}/${item.slug}`} item={item} version={item.latestVersion}
+                    status={<InstallationStatus pending={!!installed && inventory.isFetching}
+                      installation={inventory.data && !inventory.isError && !inventory.isFetching ? summarizeInstallation(item, inventory.data, new Date(inventory.dataUpdatedAt).toISOString()) : undefined} />}
                     ref={node => { if (lastSelected.current?.namespace === item.namespace && lastSelected.current?.slug === item.slug) lastCard.current = node; }}
                     onOpen={event => { lastSelected.current = item; lastCard.current = event.currentTarget; navigation.scrollTop = scroller.current?.scrollTop ?? 0;
                       navigation.selected = item; navigation.sourceRevision = revision!; setSelected(item); }} />)}</div>}

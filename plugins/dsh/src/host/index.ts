@@ -11,6 +11,7 @@ import { Config } from './config.js';
 import { ConversationSelections } from './conversation-selections.js';
 import type { SelectionSnapshot } from './conversation-selections.js';
 import { registerSearchTool } from './search-tool.js';
+import { summarizeInstallation } from './installation-summary.js';
 import { registerInstallTool } from './install-tool.js';
 import type { ConversationSearchContext, ConversationSearchResult } from './search-tool.js';
 import type { RegistryConnectionTest, CatalogContext, CatalogLabels, CatalogPageResult, CatalogSort, ModuleAvailability, ReviewPage, ConversationDetail, SkillDetail, SkillList, VersionPage } from './types.js';
@@ -258,13 +259,21 @@ export class SkillHubService extends TypertRemoteService {
 
   @RemoteScope('agent')
   async listInstalled(sourceRevision: string, signal: AbortSignal): Promise<InstalledSkillList> {
-    this.assertSource(sourceRevision);
     const id = this.ctx.invocation?.request.args.agentId;
-    const agent = typeof id === 'string' ? this.ctx.get('agents')?.get(SessionId(id)) : undefined;
+    return this.listInstalledForAgent(typeof id === 'string' ? id : '', sourceRevision, signal);
+  }
+
+  /** Tools use explicit trusted context, never a forged Remote invocation. */
+  private async listInstalledForAgent(
+    agentId: string, sourceRevision: string, signal: AbortSignal, expectedCwd?: string,
+  ): Promise<InstalledSkillList> {
+    this.assertSource(sourceRevision);
+    const agent = this.ctx.get('agents')?.get(SessionId(agentId));
     const cwd = agent?.session.header.cwd;
     const fs = agent?.ctx.get('fs');
     const runtime = this.localRuntime;
-    if (!agent || !cwd || !fs || !runtime) throw new RemoteError('skillhub/context-stale', 'Session unavailable.', { retryable: false });
+    if (!agent || !cwd || (expectedCwd !== undefined && cwd !== expectedCwd)) throw new RemoteError('skillhub/context-stale', 'Session unavailable.', { retryable: false });
+    if (!fs || !runtime) throw new RemoteError('skillhub/context-stale', 'Session unavailable.', { retryable: false });
     const source = this.getContext();
     if (!source.configured) throw new RemoteError('skillhub/source-not-configured', 'Configure a SkillHub source first.', { retryable: false });
     const combined = AbortSignal.any([signal, this.lifetime.signal]);
@@ -273,7 +282,9 @@ export class SkillHubService extends TypertRemoteService {
       catch { combined.throwIfAborted(); return { scope, target: undefined }; }
     }));
     const roots = targets.flatMap(entry => entry.target ? [entry.target] : []);
-    const result = await runtime.listInstalled(source.registryUrl, roots);
+    const outcome = await runtime.listInstalled(source.registryUrl, roots).then(
+      result => ({ result, error: undefined }), error => ({ result: undefined, error }),
+    );
     combined.throwIfAborted();
     this.assertSource(sourceRevision);
     if (agent.session.header.cwd !== cwd || serviceIdentity(agent.ctx.get('fs')) !== serviceIdentity(fs)
@@ -281,7 +292,9 @@ export class SkillHubService extends TypertRemoteService {
       throw new RemoteError('skillhub/context-stale', 'Session changed.', { retryable: false });
     }
     for (const target of roots) {
-      const current = await resolveInstalledPath({ scope: target.scope, cwd, fs, signal: combined });
+      let current: ResolvedInstallationTarget;
+      try { current = await resolveInstalledPath({ scope: target.scope, cwd, fs, signal: combined }); }
+      catch { combined.throwIfAborted(); throw new RemoteError('skillhub/context-stale', 'Skill root changed.', { retryable: false }); }
       if (current.root !== target.root) throw new RemoteError('skillhub/context-stale', 'Skill root changed.', { retryable: false });
     }
     combined.throwIfAborted();
@@ -290,6 +303,8 @@ export class SkillHubService extends TypertRemoteService {
       throw new RemoteError('skillhub/context-stale', 'Session changed.', { retryable: false });
     }
     this.assertSource(sourceRevision);
+    if (!outcome.result) throw outcome.error;
+    const result = outcome.result;
     const unavailable = targets.filter(entry => !entry.target).map(entry => entry.scope);
     const items = result.items.map(item => {
       const itemKey = this.installedItemKey(agent.session.id, cwd, sourceRevision, item);
@@ -951,15 +966,40 @@ export class SkillHubService extends TypertRemoteService {
 
   async searchConversation(query: string, context: ConversationSearchContext, signal: AbortSignal): Promise<ConversationSearchResult> {
     const source = this.getContext();
-    const result = await this.listSkills(source.sourceRevision, query, signal);
-    this.assertSource(source.sourceRevision);
+    const agent = this.ctx.get('agents')?.get(SessionId(context.sessionId));
+    const fs = agent?.ctx.get('fs');
+    const runtime = this.localRuntime;
+    const combined = AbortSignal.any([signal, this.lifetime.signal]);
+    const valid = () => {
+      combined.throwIfAborted();
+      this.assertSource(source.sourceRevision);
+      if (!agent || agent.session.id !== context.sessionId || agent.session.header.cwd !== context.cwd
+        || this.ctx.get('agents')?.get(SessionId(context.sessionId)) !== agent
+        || serviceIdentity(agent.ctx.get('fs')) !== serviceIdentity(fs) || this.localRuntime !== runtime) {
+        throw new RemoteError('skillhub/context-stale', 'Search session changed.', { retryable: false });
+      }
+    };
+    valid();
+    const result = await this.listSkills(source.sourceRevision, query, combined);
+    valid();
+    let installed: InstalledSkillList | undefined;
+    try {
+      if (fs && runtime) installed = await this.listInstalledForAgent(context.sessionId, source.sourceRevision, combined, context.cwd);
+    }
+    catch (error) {
+      valid();
+      if (error instanceof RemoteError) throw error;
+      // Local read failures cannot turn successful market results into uninstalled claims.
+    }
+    valid();
+    const checkedAt = new Date().toISOString();
     const items = result.items.map(item => {
       const selectionRef = this.selections.add({ ...context, sourceRevision: source.sourceRevision },
         { namespace: item.namespace, slug: item.slug, version: item.latestVersion });
-      return { ...item, selectionRef };
+      return { ...item, selectionRef, installation: summarizeInstallation(item, installed, checkedAt) };
     });
     return { ...result, items, schemaVersion: 1, kind: 'skillhub-search', query,
-      sourceRevision: source.sourceRevision, sourceLabel: source.registryUrl, createdAt: new Date().toISOString() };
+      sourceRevision: source.sourceRevision, sourceLabel: source.registryUrl, createdAt: checkedAt };
   }
 
   private readDetail(token: string, module: 'versions' | 'reviews') {

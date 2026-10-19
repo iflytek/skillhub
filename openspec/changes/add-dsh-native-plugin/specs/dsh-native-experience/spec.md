@@ -1,5 +1,28 @@
 ## ADDED Requirements
 
+### Requirement: Source-aware installation status in search
+The plugin SHALL enrich conversation search and plaza cards with read-only local installation status scoped to the selected Registry and trusted session user/project roots. Matching SHALL include Registry, namespace and slug. The result SHALL preserve installed versions, scopes and abnormal record states without exposing local paths or action tokens. This status SHALL NOT authorize mutation or assert DSH discovery, integrity or effective provider selection.
+
+#### Scenario: Installed candidates across scopes
+- **WHEN** a searched skill has matching user and project installation records
+- **THEN** cards and model-visible results preserve each recorded version and scope while retaining the market candidate version independently, without relaxing the shared core's cross-target version-conflict protection
+
+#### Scenario: Foreign or untracked skills
+- **WHEN** another Registry, namespace, manual copy or external provider supplies a same-name skill without a matching current-source managed record
+- **THEN** it is not claimed as installed from the current source, and absence of a matching record is not presented as proof that DSH has no installed copy
+
+#### Scenario: Abnormal and unavailable inventory
+- **WHEN** a matching record is missing files or has inconsistent metadata, or any installation scope cannot be checked
+- **THEN** the result distinguishes abnormal records and incomplete verification from a confirmed present record, and market browsing remains available
+
+#### Scenario: Historical search snapshots
+- **WHEN** a conversation search result is reopened after an installation change
+- **THEN** its installation state remains explicitly labelled as a query-time snapshot and opening history sends no automatic inventory requests; older results without the optional state field remain readable with unknown status
+
+#### Scenario: Context changes during a read
+- **WHEN** the source, session, filesystem service or approved roots change while local status is being read
+- **THEN** the stale read is rejected rather than attributed to the new context
+
 ### Requirement: Host-integrated skill plaza
 The plugin SHALL provide one SkillHub entry with browse and installed-management tabs, a dedicated detail subpage with a top-left return action, and an install experience inside the DSH host while preserving workspace and conversation navigation. It SHALL support explicit update checks, upgrade plans and exact-target uninstall, without account or DSH-plugin-market screens.
 
