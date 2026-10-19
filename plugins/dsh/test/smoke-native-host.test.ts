@@ -70,11 +70,16 @@ test('bounded process runner keeps raw output private and cancels a running proc
     console.log('private-output');
     spawn(process.execPath, [${JSON.stringify(grandchild)}], { stdio: 'ignore' });
     setInterval(() => {}, 1000);`);
+  // The first Windows runner also starts PowerShell and compiles windows-job.ps1's
+  // Add-Type Job wrapper before Node can create the readiness marker. Budget that
+  // cold startup separately; the test deadline also covers 10s cleanup and the
+  // unchanged 3.5s orphan observation after real cancellation.
+  const readinessTimeoutMs = process.platform === 'win32' ? 30000 : 10000;
   const controller = new AbortController();
   const result = runBounded([script], { cwd: directory, env: process.env, log,
-    timeoutMs: 15000, signal: controller.signal }).then(() => undefined, (error: unknown) => error);
+    timeoutMs: readinessTimeoutMs + 5000, signal: controller.signal }).then(() => undefined, (error: unknown) => error);
   try {
-    const deadline = Date.now() + 10000;
+    const deadline = Date.now() + readinessTimeoutMs;
     let started = false;
     while (Date.now() < deadline) {
       try { await access(ready); started = true; break; }
@@ -90,7 +95,7 @@ test('bounded process runner keeps raw output private and cancels a running proc
     await new Promise(resolve => setTimeout(resolve, 3500));
     await expect(access(orphanMarker)).rejects.toThrow();
   } finally { controller.abort(); await result; }
-}, 30000);
+}, process.platform === 'win32' ? 60000 : 30000);
 
 test('failed tree termination cannot make the runner wait indefinitely for child exit', async () => {
   const directory = await root();

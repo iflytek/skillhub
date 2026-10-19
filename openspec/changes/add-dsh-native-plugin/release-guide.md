@@ -73,7 +73,7 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 ### 2.3 隔离环境验证
 
-当前候选固定 DSH `0.2.0-rc.2`、Cordis `4.0.4`、Node `>=24.2.0 <25`。在独立测试账户或容器中准备 Web Profile、工作区和测试技能，连接测试 Registry。仅隔离 Profile/DSH home 不足以隔离共享 inventory。
+当前候选固定 DSH `0.2.0-rc.2`、Node `>=24.2.0 <25`。Cordis、Loader、Include、Timer 须为已验证的完整组合：`4.0.4 / 1.0.5 / 1.0.9 / 1.1.6` 或 `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7`，不得交叉混装；以实际 Host 解析结果为准。已发布 `0.1.0` 尚不包含后一组合支持及历史回执修复，本轮使用分支 tarball 验证。在独立测试账户或容器中准备 Web Profile、工作区和测试技能，连接测试 Registry。仅隔离 Profile/DSH home 不足以隔离共享 inventory。
 
 首次创建测试 Web Profile，然后安装本地候选包：
 
@@ -91,7 +91,13 @@ dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 node scripts/smoke-native-host.mjs --artifact /absolute/path/to/candidate.tgz --report /absolute/path/to/host-smoke-summary.json
 ```
 
-该脚本验证包安装与 Host 加载，不调用模型，不能替代浏览器和技能写入验收。
+默认执行普通全新安装。保留旧组合的回归需另行执行：
+
+```sh
+node scripts/smoke-native-host.mjs --artifact /absolute/path/to/candidate.tgz --report /absolute/path/to/host-smoke-retained-summary.json --cordis-family retained
+```
+
+脚本分别核对实际 Host 依赖解析与插件生命周期；旧组合同时约束 Host 和 Profile 的依赖，不能只固定顶层 Cordis。该脚本不调用模型，不能替代浏览器和技能写入验收。历史回执用例须真实停止并重启同一 Profile，验证核验状态、跳转已安装及无重复安装请求；页面刷新不能代替 Host 重启。
 
 按 [验收矩阵](acceptance.md) 完成以下主路径：
 
