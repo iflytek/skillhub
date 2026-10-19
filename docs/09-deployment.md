@@ -291,6 +291,12 @@ services:
 - `SKILLHUB_TRUST_FORWARDED_PROTO` 默认保持 `false`。只有 Web 容器仅能经由可信
   TLS 终止代理访问，且该代理会覆盖客户端传入的 `X-Forwarded-Proto` 时才设为
   `true`；否则客户端可伪造协议并影响 OAuth 回调、重定向和安全 Cookie 判断
+- Web 代理从收到的 `Host` 生成后端的 `Host` 和 `X-Forwarded-Host`，保留显式端口；
+  客户端传入的 `Forwarded` 和 `X-Forwarded-Port` 会被清除，`X-Forwarded-Host`
+  会被覆盖。外层代理必须保留完整公网 `Host`（含非默认端口，例如 Nginx 的
+  `proxy_set_header Host $http_host;`），不能只靠这些被覆盖的转发头补端口。
+  主机名可包含内部下划线，支持 IPv4 和括号 IPv6；歧义的 Host（含逗号、空白、
+  用户信息、路径或非数字端口）会被拒绝。升级 Web 镜像并重新创建 Web 容器后生效。
 - 如果通过网关部署在 `/skillhub/` 等子路径，需同时配置：
   - `SKILLHUB_WEB_BASE_PATH=/skillhub/`
   - `SKILLHUB_WEB_API_BASE_URL=/skillhub`

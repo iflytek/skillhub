@@ -11,6 +11,7 @@ DEFAULT_PROXY="${TEST_ID}-default"
 TRUSTED_PROXY="${TEST_ID}-trusted"
 TMP_DIR="$(mktemp -d)"
 CONTAINERS=()
+ORIGIN_ASSERTIONS=0
 
 cleanup() {
   if ((${#CONTAINERS[@]} > 0)); then
@@ -53,16 +54,51 @@ start_proxy() {
   local container="$1"
   local trust_forwarded_proto="$2"
   local backend_name="${3:-$BACKEND}"
+  local base_path="${4:-/}"
   docker run --detach \
     --name "$container" \
     --network "$NETWORK" \
+    --publish 127.0.0.1::80 \
     --env "NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1" \
     --env "SKILLHUB_API_UPSTREAM=http://$backend_name:8080" \
     --env "SKILLHUB_TRUST_FORWARDED_PROTO=$trust_forwarded_proto" \
+    --env "SKILLHUB_WEB_BASE_PATH=$base_path" \
     --volume "$TEMPLATE:/etc/nginx/templates/default.conf.template:ro" \
+    --volume "$TMP_DIR/20-base-path.sh:/docker-entrypoint.d/20-base-path.sh:ro" \
     "$NGINX_IMAGE" >/dev/null
   CONTAINERS+=("$container")
   wait_for_nginx "$container"
+}
+
+# This backend observes actual forwarded headers, not a simulated redirect. The
+# release gate separately exercises Spring's redirect construction and logout.
+assert_origin() {
+  local container="$1" authority="$2" expected_proto="$3" expected_prefix="$4" path="$5"
+  local proto_header="${6:-https}" version="${7:---http1.1}" port actual expected host_header="Host:"
+  [[ -z "$authority" ]] || host_header="Host: $authority"
+  port="$(docker inspect --format '{{(index (index .NetworkSettings.Ports "80/tcp") 0).HostPort}}' "$container")"
+  actual="$(curl --noproxy '*' -fsS "$version" \
+    -H "$host_header" \
+    -H "X-Forwarded-Proto: $proto_header" \
+    -H 'Forwarded: for=192.0.2.1;host="attacker.example:9443";proto=https' \
+    -H 'X-Forwarded-Host: attacker.example:9443' \
+    -H 'X-Forwarded-Port: 9443' \
+    -H 'X-Forwarded-Prefix: /attacker' \
+    "http://127.0.0.1:$port$path")" \
+    || fail "origin request rejected: $container $path Host='${authority:-<none>}' ($version)"
+  expected="${authority:-_}|${authority:-_}|||$expected_proto|$expected_prefix"
+  [[ "$actual" == "$expected" ]] \
+    || fail "origin $container $path Host='${authority:-<none>}': '$actual', expected '$expected'"
+  ORIGIN_ASSERTIONS=$((ORIGIN_ASSERTIONS + 1))
+}
+
+assert_invalid_host() {
+  local container="$1" authority="$2" version="${3:---http1.1}" port status
+  port="$(docker inspect --format '{{(index (index .NetworkSettings.Ports "80/tcp") 0).HostPort}}' "$container")"
+  status="$(curl --noproxy '*' -sS "$version" -o /dev/null -w '%{http_code}' \
+    -H "Host: $authority" "http://127.0.0.1:$port/api/origin")"
+  [[ "$status" == 400 ]] || fail "invalid Host '$authority' returned $status, expected 400"
+  ORIGIN_ASSERTIONS=$((ORIGIN_ASSERTIONS + 1))
 }
 
 assert_proto() {
@@ -85,6 +121,10 @@ assert_proto() {
 cat >"$TMP_DIR/backend.conf" <<'EOF'
 server {
     listen 8080;
+    location ~ /origin$ {
+        default_type text/plain;
+        return 200 "$http_host|$http_x_forwarded_host|$http_x_forwarded_port|$http_forwarded|$http_x_forwarded_proto|$http_x_forwarded_prefix";
+    }
     location / {
         default_type text/plain;
         return 200 $http_x_forwarded_proto;
@@ -93,11 +133,13 @@ server {
 EOF
 
 create_test_network
+cp "$REPO_ROOT/web/docker-entrypoint.d/20-base-path.sh" "$TMP_DIR/20-base-path.sh"
+chmod +x "$TMP_DIR/20-base-path.sh"
 docker run --detach \
   --name "$BACKEND" \
   --network "$NETWORK" \
   --volume "$TMP_DIR/backend.conf:/etc/nginx/conf.d/default.conf:ro" \
-  "$NGINX_IMAGE" >/dev/null
+  --entrypoint nginx "$NGINX_IMAGE" -g 'daemon off;' >/dev/null
 CONTAINERS+=("$BACKEND")
 
 start_proxy "$DEFAULT_PROXY" false
@@ -109,6 +151,33 @@ for path in /api/proto /oauth2/proto /login/oauth2/proto /.well-known/proto; do
 done
 assert_proto "$TRUSTED_PROXY" http
 assert_proto "$TRUSTED_PROXY" http "https,http"
+
+SUBPATH_DEFAULT="${TEST_ID}-subpath-default"
+SUBPATH_TRUSTED="${TEST_ID}-subpath-trusted"
+start_proxy "$SUBPATH_DEFAULT" false "$BACKEND" /skillhub/
+start_proxy "$SUBPATH_TRUSTED" true "$BACKEND" /skillhub/
+
+for path in /api/origin /oauth2/origin /login/oauth2/origin /.well-known/origin; do
+  for authority in skill.example.com:28086 skill.example.com skill.example.com:80 \
+    skill.example.com:443 skill.example.com:8443 127.0.0.1:28086 \
+    skillhub_web:28086 '[::1]' '[2001:db8::1]:8443'; do
+    assert_origin "$DEFAULT_PROXY" "$authority" http '' "$path"
+    assert_origin "$TRUSTED_PROXY" "$authority" https '' "$path"
+    assert_origin "$SUBPATH_DEFAULT" "$authority" http /skillhub "/skillhub$path"
+    assert_origin "$SUBPATH_TRUSTED" "$authority" https /skillhub "/skillhub$path"
+  done
+  assert_origin "$TRUSTED_PROXY" skill.example.com:28086 http '' "$path" http
+  assert_origin "$TRUSTED_PROXY" skill.example.com:28086 http '' "$path" 'https,http'
+  assert_origin "$SUBPATH_TRUSTED" skill.example.com:28086 http /skillhub "/skillhub$path" 'invalid'
+  assert_origin "$DEFAULT_PROXY" '' http '' "$path" http --http1.0
+done
+for container in "$DEFAULT_PROXY" "$TRUSTED_PROXY" "$SUBPATH_DEFAULT" "$SUBPATH_TRUSTED"; do
+  for bad_host in 'bad/path' 'bad..host' 'user@host.example' 'host.example:invalid' 'bad,host' 'bad host'; do
+    assert_invalid_host "$container" "$bad_host"
+  done
+  assert_invalid_host "$container" ''
+done
+echo "origin forwarding passed ($ORIGIN_ASSERTIONS assertions); spoofed headers never reached upstream"
 
 DNS_BACKEND="${TEST_ID}-dns-backend"
 DNS_OLD_BACKEND="${TEST_ID}-dns-old"
@@ -147,7 +216,7 @@ EOF
     "${alias_args[@]}" \
     "${ip_args[@]}" \
     --volume "$config:/etc/nginx/conf.d/default.conf:ro" \
-    "$NGINX_IMAGE" >/dev/null
+    --entrypoint nginx "$NGINX_IMAGE" -g 'daemon off;' >/dev/null
   CONTAINERS+=("$container")
 }
 
