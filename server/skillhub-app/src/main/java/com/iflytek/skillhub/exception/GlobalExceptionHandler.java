@@ -32,6 +32,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.support.MissingServletRequestPartException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Translates application, domain, auth, and infrastructure exceptions into the platform's JSON API
@@ -127,6 +129,13 @@ public class GlobalExceptionHandler {
             response.allow(supportedMethods.toArray(HttpMethod[]::new));
         }
         return response.body(apiResponseFactory.error(405, "error.methodNotAllowed"));
+    }
+
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<ApiResponse<Void>> handleNotFound(Exception ex, HttpServletRequest request) {
+        logHandledException(HttpStatus.NOT_FOUND, "error.notFound", request);
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                apiResponseFactory.error(404, "error.notFound"));
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)

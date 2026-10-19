@@ -43,6 +43,16 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.context.request.async.AsyncRequestTimeoutException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 
 @ExtendWith(MockitoExtension.class)
 class GlobalExceptionHandlerTest {
@@ -70,6 +80,7 @@ class GlobalExceptionHandlerTest {
         StaticMessageSource messageSource = new StaticMessageSource();
         messageSource.addMessage("error.request.timeout", java.util.Locale.getDefault(), "Request timed out");
         messageSource.addMessage("error.badRequest", java.util.Locale.getDefault(), "Invalid request");
+        messageSource.addMessage("error.notFound", java.util.Locale.getDefault(), "Resource not found");
         messageSource.addMessage("error.methodNotAllowed", java.util.Locale.getDefault(), "HTTP method is not supported");
         messageSource.addMessage("error.unsupportedMediaType", java.util.Locale.getDefault(), "Unsupported media type");
         messageSource.addMessage("error.notAcceptable", java.util.Locale.getDefault(),
@@ -271,6 +282,28 @@ class GlobalExceptionHandlerTest {
         assertThat(loggedMessages()).anySatisfy(message -> assertThat(message)
                 .contains("status=406")
                 .contains("code=error.notAcceptable"));
+    }
+
+    @Test
+    void noHandlerFoundReturns404EnvelopeWithoutExceptionDetails() throws Exception {
+        var mvc = MockMvcBuilders.standaloneSetup(new MissingHandlerController())
+                .setControllerAdvice(handler).build();
+        mvc.perform(get("/missing-handler").locale(java.util.Locale.getDefault()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value(404))
+                .andExpect(jsonPath("$.msg").value("Resource not found"))
+                .andExpect(jsonPath("$.timestamp").exists())
+                .andExpect(content().string(not(containsString("internal-route-secret"))))
+                .andExpect(content().string(not(containsString("NoHandlerFoundException"))));
+    }
+
+    @org.springframework.boot.test.context.TestComponent
+    @RestController
+    static class MissingHandlerController {
+        @GetMapping("/missing-handler")
+        void missing() throws NoHandlerFoundException {
+            throw new NoHandlerFoundException("GET", "/internal-route-secret", new org.springframework.http.HttpHeaders());
+        }
     }
 
     private void authenticateRequest() {

@@ -50,8 +50,9 @@ public class ClawHubRegistrySecurityConfig {
                                 new AntPathRequestMatcher("/api/v1/search"),
                                 new AntPathRequestMatcher("/api/v1/download"),
                                 new AntPathRequestMatcher("/api/v1/skills/*")),
-                        new NegatedRequestMatcher(new AntPathRequestMatcher(
-                                "/api/v1/skills/package-preview", HttpMethod.POST.name()))
+                        new NegatedRequestMatcher(new OrRequestMatcher(
+                                new AntPathRequestMatcher("/api/v1/skills/package-preview", HttpMethod.POST.name()),
+                                new AntPathRequestMatcher("/api/v1/skills/avatar-uploads", HttpMethod.POST.name())))
                 ))
                 .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
                 .requestCache(cache -> cache.disable())

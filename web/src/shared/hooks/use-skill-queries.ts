@@ -6,6 +6,7 @@ import { getSkillDetailQueryKey } from './query-keys'
 import { buildSkillSearchUrl } from './skill-query-helpers'
 
 const PUBLISH_REQUEST_TIMEOUT_MS = 60_000
+const SCAN_POLL_INTERVAL_MS = 5_000
 
 async function searchSkills(params: SearchParams): Promise<PagedResponse<SkillSummary>> {
   return fetchJson<PagedResponse<SkillSummary>>(buildSkillSearchUrl(params))
@@ -91,6 +92,10 @@ export function useSkillDetail(namespace: string, slug: string, enabled = true) 
     queryFn: () => getSkillDetail(namespace, slug),
     enabled: enabled && !!namespace && !!slug,
     refetchOnMount: 'always',
+    refetchInterval: query => query.state.status !== 'error'
+      && (query.state.data?.headlineVersion?.status === 'SCANNING'
+        || query.state.data?.ownerPreviewVersion?.status === 'SCANNING')
+      ? SCAN_POLL_INTERVAL_MS : false,
   })
 }
 
@@ -99,6 +104,9 @@ export function useSkillVersions(namespace: string, slug: string, enabled = true
     queryKey: ['skills', namespace, slug, 'versions'],
     queryFn: () => getSkillVersions(namespace, slug),
     enabled: enabled && !!namespace && !!slug,
+    refetchInterval: query => query.state.status !== 'error'
+      && query.state.data?.some(version => version.status === 'SCANNING')
+      ? SCAN_POLL_INTERVAL_MS : false,
   })
 }
 
@@ -138,6 +146,8 @@ export function useSkillVersionDetail(namespace: string, slug: string, version?:
     queryKey: ['skills', namespace, slug, 'versions', version, 'detail'],
     queryFn: () => getSkillVersionDetail(namespace, slug, version!),
     enabled: enabled && !!namespace && !!slug && !!version,
+    refetchInterval: query => query.state.status !== 'error' && query.state.data?.status === 'SCANNING'
+      ? SCAN_POLL_INTERVAL_MS : false,
   })
 }
 
