@@ -6,7 +6,9 @@ A native DSH plugin for anonymous skill browsing, conversation search and instal
 
 Version `0.2.0` adds source-aware installation status to catalog cards and conversation results, including recorded versions, user/project scopes and abnormal records. Conversation status is a query-time snapshot. No matching record does not exclude manual or other-source installations, and file presence does not prove DSH activation. Matching uses Registry source, namespace and slug; a same-named directory from another source is not claimed.
 
-This version uses the independent `dsh-v0.2.0` release tag and retains the DSH dependency compatibility and historical receipt fixes from `0.1.1`. Until npm publication and public-package verification finish, validate this version using its built tarball.
+Version `0.2.1` defaults to `https://skill.xfyun.cn` when `registryUrl` is omitted. An explicit empty or whitespace-only value still disconnects; existing custom addresses are preserved. CLI defaults and credentials are not inherited.
+
+This version uses the independent `dsh-v0.2.1` release tag and retains the DSH dependency compatibility and historical receipt fixes from `0.1.1`. Until npm publication and public-package verification finish, validate this version using its built tarball.
 
 ## Requirements and validation scope
 
@@ -18,7 +20,7 @@ This version uses the independent `dsh-v0.2.0` release tag and retains the DSH d
 | Build package manager | Bun `1.3.13`, using frozen lockfiles |
 | UI | Chinese, DSH light/dark themes and narrow layouts |
 | Verified environments | Linux DSH Host/browser integration; Windows browser UI and interactions against a real Host |
-| Pending validation | Real macOS Host/client; other DSH releases; SaaS instances |
+| Pending validation | Real macOS Host/client; other DSH releases; real model execution of SaaS skills |
 
 Windows browser acceptance does not establish complete native Windows Host filesystem support. CI results do not replace desktop, model, or target-instance acceptance. See the repository's [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and [acceptance criteria](../../openspec/changes/add-dsh-native-plugin/acceptance.md).
 
@@ -56,14 +58,14 @@ Published `0.1.0` still requires the original Cordis `4.0.4` baseline and does n
 
 ## Install from npm
 
-After `0.2.0` is published on npm, use these commands to install it. Check DSH, Node and a complete Cordis combination listed above, stop the target Web Profile Host, then install the exact version. Before publication, use the local candidate instructions below:
+After `0.2.1` is published on npm, use these commands to install it. Check DSH, Node and a complete Cordis combination listed above, stop the target Web Profile Host, then install the exact version. Before publication, use the local candidate instructions below:
 
 ```sh
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.2.0 --ignore-scripts
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.2.1 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 
-Replace `skillhub-test` with the intended Web Profile; initial creation is documented below. The plugin has no default Registry URL: enter a source in plugin settings, test it and save it. Before publication, use a local candidate; failure to fetch an unpublished npm version does not indicate a plugin loading error.
+Replace `skillhub-test` with the intended Web Profile; initial creation is documented below. When `registryUrl` is omitted, the plugin uses `https://skill.xfyun.cn`. To use a self-hosted instance, change, test and save the source in plugin settings. Explicitly saving an empty address disconnects. Before publication, use a local candidate; failure to fetch an unpublished npm version does not indicate a plugin loading error.
 
 ## Install a local candidate
 
@@ -101,7 +103,7 @@ Open DSH **Plugins → @astron-team/skillhub-dsh → SkillHub 设置**.
 
 | Field | Meaning |
 | --- | --- |
-| `registryUrl` | Registry base URL; empty means no default external source is contacted |
+| `registryUrl` | Registry base URL; defaults to `https://skill.xfyun.cn` when omitted; explicit empty/whitespace disconnects without fallback; custom values are preserved |
 | `detailTabs.versions` | Version history visibility |
 | `detailTabs.securityAudit` | Security audit visibility |
 | `detailTabs.reviews` | Read-only review visibility |
@@ -162,7 +164,7 @@ dsh plugin --profile skillhub-test remove @astron-team/skillhub-dsh
 
 ## Server synchronization and independent release
 
-The plugin Host calls anonymous Registry HTTP APIs; local file transactions stay on the Host. SaaS does not need a new API that controls user filesystems. Define and verify contracts in open source first, then synchronize missing routes, fields, anonymous policy and tests to SaaS. SaaS acceptance remains pending. See the [Registry contract](../../openspec/changes/add-dsh-native-plugin/registry-api-contract.md).
+The plugin Host calls anonymous Registry HTTP APIs; local file transactions stay on the Host. SaaS does not need a new API that controls user filesystems. Define and verify contracts in open source first, then synchronize missing routes, fields, anonymous policy and tests to SaaS. Public npm `0.2.0` has verified catalog, search, documentation, version selection and fixed-version project installation against `https://skill.xfyun.cn`, including files/fingerprint, inventory and DSH discovery. This candidate and its public package require separate acceptance. Non-SemVer versions with no reliable ordering, including date-based versions, remain blocked from automatic upgrades; no executable upgrade action is offered. Verified first-time fixed-version installation remains available. Real model execution of SaaS skills is unverified. See the [Registry contract](../../openspec/changes/add-dsh-native-plugin/registry-api-contract.md).
 
 The plugin uses independent `dsh-v<version>` tags. `check-dsh-plugin.yml` runs normal clean-install checks on Linux/macOS/Windows × Node 24.2.0/current Node 24, plus an isolated retained-Cordis baseline regression. `release-dsh-plugin.yml` is manual and defaults to candidate-only operation. Publishing requires an approved version, publishable manifest, candidate acceptance and explicit release authorization; configured environment protection rules must also be satisfied. Version updates are explicit commits; npm publication uses the dedicated workflow after release authorization.
 

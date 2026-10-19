@@ -1,5 +1,20 @@
 ## ADDED Requirements
 
+### Requirement: Official default with explicit source control
+The plugin SHALL default an omitted registryUrl to https://skill.xfyun.cn using its Host configuration schema. An explicitly empty or whitespace-only value SHALL disconnect without fallback. Existing custom addresses SHALL remain selected. The plugin SHALL NOT inherit CLI source configuration or credentials, and initialization or reading source configuration alone SHALL NOT initiate Registry requests.
+
+#### Scenario: First installation or empty configuration object
+- **WHEN** the plugin starts without configuration or with an empty configuration object
+- **THEN** the selected Registry is https://skill.xfyun.cn and requests begin only through existing explicit read or user interface flows
+
+#### Scenario: Explicitly disconnected installation
+- **WHEN** a new or existing configuration contains an empty or whitespace-only registryUrl
+- **THEN** the source remains unconfigured and search is refused without contacting the official default
+
+#### Scenario: Existing custom source
+- **WHEN** an existing configuration contains a custom Registry address
+- **THEN** that source is preserved through upgrade with existing URL normalization and source-isolation behavior
+
 ### Requirement: One anonymous Registry source
 The plugin SHALL connect to one configured SkillHub Registry using anonymous requests and SHALL NOT implement login, Token configuration, or credential reuse in this release.
 

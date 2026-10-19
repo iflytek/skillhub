@@ -1,9 +1,40 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { Context } from '@deepseek-ai/cordis';
 import SkillHubService from '@astron-team/skillhub-dsh';
+import { Config } from '../src/host/config.ts';
 import type { TabMode } from '../src/host/types.ts';
 
 describe('native catalog service', () => {
+  test.each([undefined, {}])('missing Registry uses the official default without fetching (%j)', async configuration => {
+    const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(Object.assign(
+      () => { throw new Error('Unexpected network request.'); }, { preconnect: fetch.preconnect }));
+    const ctx = new Context();
+    const fiber = ctx.plugin(SkillHubService, configuration);
+    try {
+      await fiber;
+      expect(Config(configuration).get()).toMatchObject({ registryUrl: 'https://skill.xfyun.cn' });
+      expect(ctx.skillhub.getContext()).toMatchObject({
+        configured: true, registryUrl: 'https://skill.xfyun.cn',
+        detailTabs: { versions: 'auto', securityAudit: 'auto', reviews: 'auto' },
+      });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally { await fiber.dispose(); fetchSpy.mockRestore(); }
+  });
+
+  test('explicit custom Registry survives schema resolution and Host initialization without fetching', async () => {
+    const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(Object.assign(
+      () => { throw new Error('Unexpected network request.'); }, { preconnect: fetch.preconnect }));
+    const registryUrl = 'https://registry.example/team';
+    const ctx = new Context();
+    const fiber = ctx.plugin(SkillHubService, { registryUrl });
+    try {
+      await fiber;
+      expect(Config({ registryUrl }).get().registryUrl).toBe(registryUrl);
+      expect(ctx.skillhub.getContext()).toMatchObject({ configured: true, registryUrl });
+      expect(fetchSpy).not.toHaveBeenCalled();
+    } finally { await fiber.dispose(); fetchSpy.mockRestore(); }
+  });
+
   test('detail pins both requests to the selected version and does not expose download addresses', async () => {
     const paths: string[] = [];
     const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch(request) {
@@ -122,9 +153,9 @@ describe('native catalog service', () => {
     } finally { await fiber.dispose(); }
   });
 
-  test('unconfigured source has explicit defaults and refuses search', async () => {
+  test.each(['', '   '])('explicit blank source %j disconnects and refuses search', async registryUrl => {
     const ctx = new Context();
-    const fiber = ctx.plugin(SkillHubService);
+    const fiber = ctx.plugin(SkillHubService, { registryUrl });
     await fiber;
     try {
       const context = ctx.skillhub.getContext();

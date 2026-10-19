@@ -6,7 +6,9 @@ SkillHub 的 DSH 原生插件。在 DSH 侧栏打开 **技能中心**，匿名�
 
 `0.2.0` 新增来源可核验的搜索安装状态：广场卡片和对话工具可识别当前来源的受管理安装版本、用户/项目范围及异常记录；对话保留查询时快照。未发现本来源记录不代表其他市场或手工安装不存在，文件存在也不代表 DSH 已启用该技能。按来源、命名空间和技能标识匹配；不按同名目录认领其他来源技能。
 
-本版使用独立发布标签 `dsh-v0.2.0`，保留 `0.1.1` 的 DSH 依赖兼容性与历史安装回执修复。npm 发布及公开包验收完成前，使用本版本构建的 tarball 验证。
+`0.2.1` 缺省连接 `https://skill.xfyun.cn`；显式空串或仅空白仍表示断开，已有自定义地址保留。插件不继承 CLI 的默认地址或凭证。
+
+本版使用独立发布标签 `dsh-v0.2.1`，保留 `0.1.1` 的 DSH 依赖兼容性与历史安装回执修复。npm 发布及公开包验收完成前，使用本版本构建的 tarball 验证。
 
 ## 环境与验证范围
 
@@ -18,7 +20,7 @@ SkillHub 的 DSH 原生插件。在 DSH 侧栏打开 **技能中心**，匿名�
 | 开发包管理器 | Bun `1.3.13`，按锁文件安装 |
 | 当前 UI | 中文；支持 DSH 深浅主题和窄屏 |
 | 已验证环境 | Linux DSH Host 与浏览器集成；Windows 浏览器访问真实 Host 的界面和交互 |
-| 待验证范围 | macOS 真实 Host/客户端；其他 DSH 发行版；SaaS 实例接入 |
+| 待验证范围 | macOS 真实 Host/客户端；其他 DSH 发行版；SaaS 技能的真实模型执行 |
 
 Windows 浏览器验证不等于 Windows 原生 Host 的全部文件操作已经验证。CI 的平台矩阵也不替代真实桌面、模型及目标实例验收。完整支持边界见仓库内的 [兼容设计](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) 和 [验收标准](../../openspec/changes/add-dsh-native-plugin/acceptance.md)。
 
@@ -56,14 +58,14 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 ## 从 npm 安装
 
-`0.2.0` 在 npm 发布完成后，使用以下命令安装。先确认 DSH、Node 和上表完整 Cordis 组合满足要求，停止目标 Web Profile 的 Host，然后安装精确版本。发布完成前使用下一节的本地候选包：
+`0.2.1` 在 npm 发布完成后，使用以下命令安装。先确认 DSH、Node 和上表完整 Cordis 组合满足要求，停止目标 Web Profile 的 Host，然后安装精确版本。发布完成前使用下一节的本地候选包：
 
 ```sh
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.2.0 --ignore-scripts
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.2.1 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 
-`skillhub-test` 替换为实际 Web Profile；首次创建方法见下一节。插件默认没有 Registry 地址，首次使用需在插件设置中填写来源并测试、保存。发布前请使用本地候选包验收，不要将未发布版本的 npm 安装失败当成插件加载失败。
+`skillhub-test` 替换为实际 Web Profile；首次创建方法见下一节。未配置 `registryUrl` 时默认使用 `https://skill.xfyun.cn`。如需自建实例，在插件设置中修改来源并测试、保存；显式保存空地址可断开。发布前请使用本地候选包验收，不要将未发布版本的 npm 安装失败当成插件加载失败。
 
 ## 安装本地候选包
 
@@ -101,7 +103,7 @@ Loader entry ID 为 `astron-skillhub`；`skillhub` 是 Host/Remote 服务名。�
 
 | 字段 | 行为 |
 | --- | --- |
-| `registryUrl` | Registry 基础地址；留空时不请求默认外部实例 |
+| `registryUrl` | Registry 基础地址；缺省为 `https://skill.xfyun.cn`；显式空串或仅空白断开，不回退；自定义值保留 |
 | `detailTabs.versions` | 版本历史显示策略 |
 | `detailTabs.securityAudit` | 安全审核显示策略 |
 | `detailTabs.reviews` | 只读评论显示策略 |
@@ -162,7 +164,7 @@ dsh plugin --profile skillhub-test remove @astron-team/skillhub-dsh
 
 ## 服务端同步与发布
 
-插件 Host 调用匿名 Registry HTTP API；本地安装事务在 Host 内完成，不需要 SaaS 新增操作用户文件系统的安装接口。开源先定义和验证契约，再将缺失的路径、字段、匿名策略和测试同步到 SaaS。当前未声明 SaaS 已通过验收。详细要求见 [Registry 契约](../../openspec/changes/add-dsh-native-plugin/registry-api-contract.md)。
+插件 Host 调用匿名 Registry HTTP API；本地安装事务在 Host 内完成，不需要 SaaS 新增操作用户文件系统的安装接口。开源先定义和验证契约，再将缺失的路径、字段、匿名策略和测试同步到 SaaS。公开 npm `0.2.0` 已对 `https://skill.xfyun.cn` 完成目录、搜索、文档、版本选择和固定版本项目安装及文件/指纹、库存、DSH 发现核验；本版候选和公开包须独立验收。日期格式等无法可靠排序的非 SemVer 版本继续阻断自动升级，不显示可执行升级入口；这不影响已验证的固定版本首次安装。SaaS 技能的真实模型执行尚未验收。详细要求见 [Registry 契约](../../openspec/changes/add-dsh-native-plugin/registry-api-contract.md)。
 
 插件独立使用 `dsh-v<version>` tag，不复用 CLI 或服务镜像发布。`check-dsh-plugin.yml` 配置 Linux/macOS/Windows × Node 24.2.0/当前 Node 24 的普通干净安装检查，并额外保留旧 Cordis 组合的隔离 Host 回归；`release-dsh-plugin.yml` 手动触发，默认只产出候选包。发布需正式版本、可发布 manifest、候选验收及明确发布授权；配置了环境保护规则时还须完成相应审批。版本更新需显式提交，npm 发布需明确授权后运行专用工作流。
 
