@@ -77,7 +77,8 @@ test('connection probe cancellation stops an in-flight read', async () => {
 test('the ten-second total deadline includes the legacy fallback request', async () => {
   const paths: string[] = [];
   const release = Promise.withResolvers<Response>();
-  const server = Bun.serve({ hostname: '127.0.0.1', port: 0, async fetch(request) {
+  // Keep the fixture socket alive beyond the probe deadline; an idle disconnect can retry GET.
+  const server = Bun.serve({ hostname: '127.0.0.1', port: 0, idleTimeout: 30, async fetch(request) {
     const path = new URL(request.url).pathname;
     paths.push(path);
     if (path === '/api/web/skills') {
@@ -91,7 +92,9 @@ test('the ten-second total deadline includes the legacy fallback request', async
     const started = performance.now();
     const result = await f.api.testRegistryConnection(server.url.href, new AbortController().signal).catch(error => error);
     expect(result).toMatchObject({ code: 'skillhub/registry-error', details: { reason: 'NETWORK_ERROR', retryable: true } });
-    expect(performance.now() - started).toBeLessThan(10_900);
+    const elapsed = performance.now() - started;
+    expect(elapsed).toBeGreaterThanOrEqual(9_900);
+    expect(elapsed).toBeLessThan(10_900);
     expect(paths).toEqual(['/api/web/skills', '/api/cli/v1/skills/search']);
   } finally { release.resolve(new Response('')); await f.close(); await server.stop(true); }
 }, 15_000);
