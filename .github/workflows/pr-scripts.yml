@@ -20,6 +20,7 @@ on:
       - 'web/nginx.conf.template'
       - 'web/docker-entrypoint.d/**'
       - '.github/workflows/pr-cli.yml'
+      - '.github/workflows/deepwiki.yml'
       - '.github/workflows/pr-e2e.yml'
       - '.github/workflows/pr-helm-chart.yml'
       - '.github/workflows/pr-tests.yml'
@@ -57,3 +58,4 @@ jobs:
       - run: bash scripts/tests/dev-web-host-test.sh
       - run: bash scripts/tests/server-image-compat-test.sh
       - run: bash scripts/tests/workflow-security-test.sh
+      - run: python3 -m unittest discover -s scripts/tests -p 'test_deepwiki_workflow.py' -v

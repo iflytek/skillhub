@@ -3,6 +3,7 @@ name: DeepWiki Documentation Crawler
 on:
   release:
     types: [published]
+  workflow_dispatch:
 
 concurrency:
   group: deepwiki-${{ github.ref }}
@@ -15,16 +16,41 @@ jobs:
   crawl:
     name: Crawl DeepWiki Documentation
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CRAWLER_DIR: ${{ github.workspace }}/.deepwiki-crawler
+      REPOSITORY: ${{ github.repository }}
+      MAX_CONCURRENCY: '3'
+      REQUEST_TIMEOUT: '30000'
+      RETRY_ATTEMPTS: '3'
+      USER_AGENT: DeepWiki-Crawler/1.0
 
     steps:
-      - name: Check out repository
+      - name: Check out pinned crawler source
         uses: actions/checkout@v4
-
-      - name: Create package-lock.json for action cache
-        run: echo '{}' > package-lock.json
-
-      - name: DeepWiki Documentation Crawler
-        uses: erayack/deepwiki-action@v1
         with:
-          repository: ${{ github.repository }}
-          max_concurrency: '3'
+          repository: erayack/deepwiki-action
+          ref: b9fc8378235f298d736d12c5f4651d6ea0820c61
+          path: .deepwiki-crawler
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install crawler runtime dependencies
+        # Install beside the scripts: Node resolves require() from their directory,
+        # not the shell's cwd. Pin CommonJS-compatible versions; skip lifecycle hooks.
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --prefix "$CRAWLER_DIR" --ignore-scripts --no-audit --no-fund --package-lock=false --save-exact node-fetch@2.7.0 cheerio@1.0.0
+
+      - name: Check repository and crawl DeepWiki
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$REPOSITORY" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]
+          cd "$CRAWLER_DIR"
+          node scripts/check-deepwiki.js "$REPOSITORY"
+          node scripts/crawl-deepwiki.js "$REPOSITORY"
