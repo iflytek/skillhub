@@ -73,7 +73,7 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 ### 2.3 隔离环境验证
 
-当前候选固定 DSH `0.2.0-rc.2`、Node `>=24.2.0 <25`。Cordis、Loader、Include、Timer 须为已验证的完整组合：`4.0.4 / 1.0.5 / 1.0.9 / 1.1.6` 或 `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7`，不得交叉混装；以实际 Host 解析结果为准。已发布 `0.1.0` 尚不包含后一组合支持及历史回执修复，本轮使用分支 tarball 验证。在独立测试账户或容器中准备 Web Profile、工作区和测试技能，连接测试 Registry。仅隔离 Profile/DSH home 不足以隔离共享 inventory。
+`0.1.1` 交付固定 DSH `0.2.0-rc.2`、Node `>=24.2.0 <25`。Cordis、Loader、Include、Timer 须为已验证的完整组合：`4.0.4 / 1.0.5 / 1.0.9 / 1.1.6` 或 `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7`，不得交叉混装；以实际 Host 解析结果为准。已发布 `0.1.0` 尚不包含后一组合支持及历史回执修复，`0.1.1` 包含这些修复，发布前使用其 tarball 验证。在独立测试账户或容器中准备 Web Profile、工作区和测试技能，连接测试 Registry。仅隔离 Profile/DSH home 不足以隔离共享 inventory。
 
 首次创建测试 Web Profile，然后安装本地候选包：
 
@@ -157,9 +157,9 @@ SaaS 使用其现有流水线部署；公共接口契约、测试数据规则与
 
 ### 4.1 独立发布流程
 
-插件使用独立版本，tag 前缀固定为 `dsh-v`（例如 `dsh-v0.1.0`），不复用 CLI 的 `cli-v*` 发布流程。专用工作流为 `.github/workflows/release-dsh-plugin.yml`；发布前仍须确认 npm 包名、兼容基线及候选包验收，当前候选为 `0.1.0`，manifest 已显式设为 `private: false`；默认 Registry 为空。正式发布仍以最终提交、候选验收和审批结果为准。
+插件使用独立版本，tag 前缀固定为 `dsh-v`（本次为 `dsh-v0.1.1`），不复用 CLI 的 `cli-v*` 发布流程。专用工作流为 `.github/workflows/release-dsh-plugin.yml`；发布前仍须确认 npm 包名、兼容基线及候选包验收，本次交付为 `0.1.1`，manifest 已显式设为 `private: false`；默认 Registry 为空。正式发布仍以最终提交、候选验收和审批结果为准。
 
-发布流程依次完成：校验版本 → 测试与构建 → 生成并检查 tarball → 隔离 DSH 候选验收 → 发布审批 → 发布 npm → 校验已发布包。当前工作流自动执行版本校验、测试与构建、包检查、上传及完整性校验；隔离 DSH 的 UI、真实模型和平台验收需在发布审批前另行完成，CI 矩阵成功不等同于这些验收通过。通过受保护 CI 环境使用发布凭证，源码及 npm 包不包含凭证。
+发布流程依次完成：校验版本 → 测试与构建 → 生成并检查 tarball → 隔离 DSH 候选验收 → 发布审批 → 发布 npm → 校验已发布包。当前工作流自动执行版本校验、测试与构建、包检查、上传及完整性校验；隔离 DSH 的 UI、真实模型和平台验收需在发布审批前另行完成，CI 矩阵成功不等同于这些验收通过。工作流使用仓库的 `NPM_TOKEN` 发布凭证，源码及 npm 包不包含凭证；配置了环境保护规则时还须完成对应审批。
 
 `publish-images.yml` 的 publish job 在 Release tag 以 `dsh-v` 开头时跳过，其依赖的运行时镜像同步 job 随之跳过；手动执行和其他 Release 行为保留。`publish-chart.yml` 的发布 job 限定为手动触发或 `v`、`chart-v`、`helm-v` 前缀。`release-cli.yml` 自动触发仅匹配 `cli-v*`，并支持手动执行。插件 Release 必须使用 `dsh-v` 前缀，不能使用平台或 CLI 前缀。以上隔离不等于插件已获发布授权，发布前仍需完成专用发布工作流和候选验收。
 
@@ -170,9 +170,9 @@ SaaS 使用其现有流水线部署；公共接口契约、测试数据规则与
 发布前须完成以下准备：
 
 1. 审核包名及正式版本，将可发布 manifest 显式设为 `private: false`，完成候选版本验收并创建对应 tag。
-2. 在仓库设置中配置 `dsh-npm` Environment、发布审批规则和 `NPM_TOKEN` secret，限制其可发布的包与 tag。YAML 中引用 Environment 不会自动创建审批规则；这些设置必须单独核验。
-3. 从同一 tag 手动运行工作流并选择 `publish=true`。版本身份校验后复用 `check-dsh-plugin.yml` 的完整矩阵，所有组合成功才进入发布环境。审批者须下载本次运行的 `skillhub-dsh-release-candidate`，核对 tarball 与 SHA512SUMS，并关联该候选包的隔离 DSH 验收记录后批准；缺少验收结果时不批准。`publish=false` 和后续 `publish=true` 是两次独立构建，不能仅凭 tag 相同认定包字节相同；如果复用前次验收，须先确认 SHA-512 一致，否则重新验收本次候选包。
-4. 发布固定的 Linux/Node 24.2.0 检查产物，不在发布阶段重新构建。候选归档前读取 tarball 内的 `package/package.json`，重新验证包名、版本与 private 条件；不只信任源码 manifest。上传前校验 SHA-512，npm 返回成功后比较 Registry 的 `dist.integrity` 与候选 tarball。
+2. 核验仓库现有 `NPM_TOKEN` 对目标包和 tag 的发布权限，可以复用 CLI 使用的仓库 secret，无需重复配置。工作流引用的 `dsh-npm` Environment 不存在时 GitHub 会自动创建，但不自动配置审批规则；如设置了保护规则，发布还须满足这些规则。
+3. 从同一 tag 手动运行工作流并选择 `publish=true`。版本身份校验后复用 `check-dsh-plugin.yml` 的完整矩阵，所有组合成功才进入发布环境。发布负责人须下载本次运行的 `skillhub-dsh-release-candidate`，核对 tarball 与 SHA512SUMS，并关联该候选包的隔离 DSH 验收记录及本次明确授权；配置了审批规则时由审批者核对后批准。缺少验收结果时不继续发布。`publish=false` 和后续 `publish=true` 是两次独立构建，不能仅凭 tag 相同认定包字节相同；如果复用前次验收，须先确认 SHA-512 一致，否则重新验收本次候选包。
+4. 发布固定的 Linux/Node 24.2.0 检查产物，不在发布阶段重新构建。候选归档前读取 tarball 内的 `package/package.json`，重新验证包名、版本与 private 条件；不只信任源码 manifest。上传前校验 SHA-512，npm 返回成功后比较 Registry 的 `dist.integrity` 与候选 tarball。新版本刚上传后，公开读取可能短暂返回 404；应在有限时间内重新读取并校验，不重复执行 `npm publish`。上传成功与公开包验证成功分别记录，超过验证期限仍须报告未完成。
 
 预发行版本使用 npm `next`，正式版本使用 `latest`。版本已经存在或发布失败时工作流失败，不把错误当成成功；排查后按实际 Registry 状态处理，不覆盖已发布版本。该工作流不创建 GitHub Release、不部署服务端；发布后仍须按下节在干净 DSH 环境安装验收，完整性相同不能替代功能验收。
 
@@ -180,7 +180,7 @@ SaaS 使用其现有流水线部署；公共接口契约、测试数据规则与
 
 ### 4.3 发布说明
 
-当前开发候选的变更说明见 [release-notes.md](release-notes.md)。正式版本发布前按最终候选及验收结果更新，不沿用开发版本的支持声明。
+`0.1.1` 的变更说明见 [release-notes.md](release-notes.md)。正式版本发布前按最终候选及验收结果更新，不沿用开发版本的支持声明。
 
 每个版本包含：
 

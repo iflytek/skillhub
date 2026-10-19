@@ -2,11 +2,11 @@
 
 ## 版本与交付状态
 
-`@astron-team/skillhub-dsh@0.1.0` 已发布到 npm。本分支包含待发布修复，版本号与发布时间另行确定；本轮不修改已发布包、不创建发布标签。
+本次交付版本为 `@astron-team/skillhub-dsh@0.1.1`，对应独立标签 `dsh-v0.1.1`。版本包含已合并的兼容性与历史安装回执修复；发布前完成候选验收，发布后下载公开包复核完整性和实际安装。npm 交付状态以公开包完整性和安装验收结果为准。`0.1.0` 已发布的内容保持不变。
 
 `0.1.0` 的原环境固定 DSH `0.2.0-rc.2`、Cordis `4.0.4`、Node `>=24.2.0 <25`。当前已验证 Linux Host、真实浏览器页面与交互，以及 Windows 浏览器访问 Host；界面已完成人工 review。Windows 浏览器通过不代表 Windows 原生 Host 全部文件事务通过；macOS 真实 Host/客户端、其他 DSH 发行版和 SaaS 实例仍需独立验收。
 
-## 待发布修复
+## 0.1.1 修复内容
 
 - 在同一 DSH `0.2.0-rc.2` 下支持两组完整 Cordis/Loader/Include/Timer 组合：`4.0.4/1.0.5/1.0.9/1.1.6` 和 `4.0.5/1.0.6/1.0.10/1.1.7`。每次新写入重新核验插件及实际 Host 的依赖解析和当前清单，未知、混装或不一致版本继续拒绝写入。
 - Host 重启后，历史安装回执核验原操作归属，再使用当前来源上下文读取安装记录和跳转已安装。会话、项目或来源变化时拒绝旧响应；不恢复过期搜索引用、安装目标或操作计划，不触发重复安装。
@@ -39,7 +39,7 @@
 
 ## 安装、更新与维护
 
-正式发布后可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.1.0 --ignore-scripts` 安装到已有 Web Profile。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
+正式发布后可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.1.1 --ignore-scripts` 安装到已有 Web Profile。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
 
 更新或回退前保留原包和校验值、停止新操作并处理待恢复事务，然后停止 Host、安装兼容包并重新启动。浏览器旧资源可强制刷新；这不能代替 Host 依赖重载。禁用或移除包不会卸载技能，不应删除技能目录、inventory 或操作日志。
 
@@ -61,7 +61,7 @@
 
 - 确定正式版本、最终候选校验值和支持平台；未验证的平台、DSH 或 SaaS 组合不得声明支持。
 - 验证候选包在干净目标 Profile 中安装、读取来源、安装测试技能及保留原数据的维护流程。
-- 确认可发布 manifest、`dsh-v<version>` tag、npm 身份和受保护发布环境审批；`0.1.0` manifest 可发布，但仍需完成最终候选验收与审批。
+- 确认可发布 manifest、`dsh-v<version>` tag、npm 身份和发布凭证权限；配置了环境保护规则时完成相应审批；`0.1.1` manifest 显式允许公开发布，仍需完成最终候选验收及本次发布授权。
 - 获批发布后，从 npm 下载实际包，对比完整性并执行发布后安装检查。
 
-插件、开源服务和 SaaS 独立发布；本说明不表示已创建 tag、上传 npm 或部署服务。
+插件、开源服务和 SaaS 独立发布；npm 插件发布不部署服务端。

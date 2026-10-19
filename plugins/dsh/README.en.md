@@ -4,7 +4,7 @@
 
 A native DSH plugin for anonymous skill browsing, conversation search and installation, and local upgrade/removal. Open **技能中心** (Skill Center) in the DSH sidebar. The installation core is bundled; a separate SkillHub CLI installation is unnecessary.
 
-`@astron-team/skillhub-dsh@0.1.0` is published on npm. This branch contains compatibility and historical installation receipt fixes that have not been released yet; the next version is selected separately. Validate these changes with a tarball built from this branch, not the published `0.1.0` package.
+Version `0.1.1` delivers DSH dependency compatibility and historical installation receipt fixes under the `dsh-v0.1.1` tag. Published `0.1.0` does not contain these fixes. Until npm publication and public-package verification finish, validate `0.1.1` using its built tarball.
 
 ## Requirements and validation scope
 
@@ -43,7 +43,7 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 A dry run does not produce an installable package. Retain each candidate and its checksum; do not overwrite packages used for acceptance or rollback.
 
-This branch verifies the following complete combinations, rejecting mixed or unlisted patch versions. Pinning the DSH main package does not lock its transitive `~` dependencies; the actual Host resolution is checked.
+Version `0.1.1` verifies the following complete combinations, rejecting mixed or unlisted patch versions. Pinning the DSH main package does not lock its transitive `~` dependencies; the actual Host resolution is checked.
 
 | Combination | Cordis | Loader | Include | Timer |
 | --- | --- | --- | --- | --- |
@@ -54,10 +54,10 @@ Published `0.1.0` still requires the original Cordis `4.0.4` baseline and does n
 
 ## Install from npm
 
-These commands install published `0.1.0`. Check DSH, Node and that version's original Cordis baseline, stop the target Web Profile Host, then install the exact version. Until the branch fixes are released, use the local candidate instructions below to validate them:
+After `0.1.1` is published on npm, use these commands to install it. Check DSH, Node and a complete Cordis combination listed above, stop the target Web Profile Host, then install the exact version. Before publication, use the local candidate instructions below:
 
 ```sh
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.1.0 --ignore-scripts
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.1.1 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 
@@ -162,6 +162,6 @@ dsh plugin --profile skillhub-test remove @astron-team/skillhub-dsh
 
 The plugin Host calls anonymous Registry HTTP APIs; local file transactions stay on the Host. SaaS does not need a new API that controls user filesystems. Define and verify contracts in open source first, then synchronize missing routes, fields, anonymous policy and tests to SaaS. SaaS acceptance remains pending. See the [Registry contract](../../openspec/changes/add-dsh-native-plugin/registry-api-contract.md).
 
-The plugin uses independent `dsh-v<version>` tags. `check-dsh-plugin.yml` runs normal clean-install checks on Linux/macOS/Windows × Node 24.2.0/current Node 24, plus an isolated retained-Cordis baseline regression. `release-dsh-plugin.yml` is manual and defaults to candidate-only operation. Publishing requires an approved version, publishable manifest, candidate acceptance and explicit release authorization; configured environment protection rules must also be satisfied. This branch does not bump or publish the package automatically.
+The plugin uses independent `dsh-v<version>` tags. `check-dsh-plugin.yml` runs normal clean-install checks on Linux/macOS/Windows × Node 24.2.0/current Node 24, plus an isolated retained-Cordis baseline regression. `release-dsh-plugin.yml` is manual and defaults to candidate-only operation. Publishing requires an approved version, publishable manifest, candidate acceptance and explicit release authorization; configured environment protection rules must also be satisfied. Version updates are explicit commits; npm publication uses the dedicated workflow after release authorization.
 
 See the [release guide](../../openspec/changes/add-dsh-native-plugin/release-guide.md) and [release notes](../../openspec/changes/add-dsh-native-plugin/release-notes.md). OpenSpec and integration links refer to the source repository; those documents are not included in the tarball.
