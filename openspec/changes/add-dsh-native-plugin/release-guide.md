@@ -173,7 +173,7 @@ SaaS 使用其现有流水线部署；公共接口契约、测试数据规则与
 1. 审核包名及正式版本，将可发布 manifest 显式设为 `private: false`，完成候选版本验收并创建对应 tag。
 2. 核验仓库现有 `NPM_TOKEN` 对目标包和 tag 的发布权限，可以复用 CLI 使用的仓库 secret，无需重复配置。工作流引用的 `dsh-npm` Environment 不存在时 GitHub 会自动创建，但不自动配置审批规则；如设置了保护规则，发布还须满足这些规则。
 3. 从同一 tag 手动运行工作流并选择 `publish=true`。版本身份校验后复用 `check-dsh-plugin.yml` 的完整矩阵，所有组合成功才进入发布环境。发布负责人须下载本次运行的 `skillhub-dsh-release-candidate`，核对 tarball 与 SHA512SUMS，并关联该候选包的隔离 DSH 验收记录及本次明确授权；配置了审批规则时由审批者核对后批准。缺少验收结果时不继续发布。`publish=false` 和后续 `publish=true` 是两次独立构建，不能仅凭 tag 相同认定包字节相同；如果复用前次验收，须先确认 SHA-512 一致，否则重新验收本次候选包。
-4. 发布固定的 Linux/Node 24.2.0 检查产物，不在发布阶段重新构建。候选归档前读取 tarball 内的 `package/package.json`，重新验证包名、版本与 private 条件；不只信任源码 manifest。上传前校验 SHA-512，npm 返回成功后比较 Registry 的 `dist.integrity` 与候选 tarball。新版本刚上传后，公开读取可能短暂返回 404；使用 `--prefer-online` 读取，最多读取 12 次、失败后间隔 30 秒，单次 fetch 超时为 10 秒，以覆盖观察到的五分钟公开元数据缓存；不重复执行 `npm publish`。这些是读取重试参数，不是 npm 进程的严格墙钟时限。上传成功与公开包验证成功分别记录，超过验证期限仍须报告未完成。
+4. 发布固定的 Linux/Node 24.2.0 检查产物，不在发布阶段重新构建。候选归档前读取 tarball 内的 `package/package.json`，重新验证包名、版本与 private 条件；不只信任源码 manifest。上传前校验 SHA-512，npm 返回成功后比较 Registry 的 `dist.integrity` 与候选 tarball。npm 会在开放安装前扫描新上传的包，处理期间公开读取可能返回 404，并非单纯客户端缓存。使用 `--prefer-online` 读取，最多读取 40 次、失败后间隔 30 秒，单次 fetch 超时为 10 秒，提供约 20 分钟的等待窗口；不重复执行 `npm publish`。npm 处理可能超过该窗口，参见 [官方发布扫描说明](https://github.blog/changelog/2026-07-28-npm-publish-time-malware-scanning-and-dual-use-metadata/)。这些是读取重试参数，不是 npm 进程的严格墙钟时限。上传成功与公开包验证成功分别记录，超过验证期限仍须报告未完成。
 
 预发行版本使用 npm `next`，正式版本使用 `latest`。版本已经存在或发布失败时工作流失败，不把错误当成成功；排查后按实际 Registry 状态处理，不覆盖已发布版本。该工作流不创建 GitHub Release、不部署服务端；发布后仍须按下节在干净 DSH 环境安装验收，完整性相同不能替代功能验收。
 

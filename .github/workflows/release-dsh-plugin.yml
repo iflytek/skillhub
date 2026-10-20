@@ -99,13 +99,13 @@ jobs:
           PACKAGE_NAME: ${{ needs.validate.outputs.package_name }}
           VERSION: ${{ needs.validate.outputs.version }}
         run: |
-          # Public metadata can remain cached for up to five minutes after upload.
+          # npm scans uploads before availability; processing can exceed 15 minutes.
           # Retry only the read; never repeat npm publish after an uncertain response.
-          for attempt in {1..12}; do
+          for attempt in {1..40}; do
             if npm view "$PACKAGE_NAME@$VERSION" dist.integrity --json --prefer-online --fetch-retries=0 --fetch-timeout=10000 > published-integrity.json; then
               break
             fi
-            if [ "$attempt" -eq 12 ]; then
+            if [ "$attempt" -eq 40 ]; then
               exit 1
             fi
             sleep 30
