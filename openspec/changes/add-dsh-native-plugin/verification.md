@@ -2,7 +2,7 @@
 
 ## 1. 当前结论
 
-`0.2.1` 已通过 [PR #979](https://github.com/iflytek/skillhub/pull/979) 合并并发布；默认来源为 `https://skill.xfyun.cn`。本轮准备发布 `0.3.0` 开源交互改进，不以历史发布结果代替新代码验证。
+`0.2.1` 已通过 [PR #979](https://github.com/iflytek/skillhub/pull/979) 合并并发布；默认来源为 `https://skill.xfyun.cn`。`0.3.0` 开源交互改进已通过 PR #986 合并、发布并完成公开包独立验收，结果见本文发布验收记录，不以历史版本结果代替新代码验证。
 
 2026-10-19 使用公开 npm `0.2.0` 的真实 Linux DSH 插件连接 `https://skill.xfyun.cn`，连接测试、目录、搜索、Markdown 和版本选择通过；选择 `global/scientella@20260724.052402` 实际安装到隔离项目，7 个文件及归档 fingerprint 一致，inventory 来源与目标正确，再搜索显示项目已安装旧版，DSH 发现成功。评论接口 404 按可选能力处理，安全审核 401 按匿名拒绝处理。本轮未调用模型，不据此声明技能实际执行或生产 Pod 已核验。该技能使用日期格式的非 SemVer 版本，版本比较返回 `blocked/unknown-order`，按既有策略不提供升级入口；不得把固定版本安装通过写成升级通过。升级阻断前后文件保持不变；真实卸载后 DSH 发现消失，inventory 与重新搜索的安装记录清空。公开 `0.2.0` 的正式来源基线共 9 项浏览器检查通过，无页面脚本异常。
 
@@ -144,3 +144,12 @@
 自动化回归位于 `plugins/dsh/test/`，包括 `native-scope-choice.test.ts`、`install-control-state.test.tsx`、`installation-progress.test.tsx`、`removal-confirmation.test.tsx`、`upgrade-presentation.test.tsx`、`prepare-upgrade.test.ts` 与 `update-check.test.ts`。详细运行报告和截图保留在仓库外，不作为发布包内容。
 
 浏览器与真实模型验收环境为 Linux 官方 DSH `0.2.0-rc.2`；macOS/Windows 原生 Host 兼容性由发布 CI 单独验证。升级故障恢复依赖现有事务自动化测试，本次浏览器结果不扩大为所有故障环境验收。发布状态以实际 tag、CI 和公开 npm 包为准。
+
+## 0.3.0 发布与公开包验收（2026-10-20）
+
+- [PR #986](https://github.com/iflytek/skillhub/pull/986) 合并；独立 tag 为 `dsh-v0.3.0`。PR 的 15 项检查成功、1 项按配置跳过，包含服务端、Web、真实服务 E2E 与三平台 DSH。
+- [正式发布运行](https://github.com/iflytek/skillhub/actions/runs/39385741792) 的六组 Linux/macOS/Windows、两档 Node 检查通过，包括原生 Host 及保留 Cordis 组合。npm 接收上传后进入扫描处理，原约五分钟的公开读取校验超时，发布运行因此标为失败；未重复上传。
+- 扫描结束后，官方 Registry 的 `latest` 确认为 `0.3.0`；独立下载 [公开 npm 包](https://www.npmjs.com/package/@astron-team/skillhub-dsh/v/0.3.0)，`dist.integrity`、SHA-512 和全部 tarball 字节均与本次 CI 发布候选一致。上传接收、自动核验超时与后续公开包验收分别记录，不将失败的工作流描述为全绿。
+- 使用公开 tarball，通过官方安装器装入干净隔离 Profile；复用已安装的官方 DSH 程序，运行基线和插件生命周期探针均通过。该路径不等于重新从网络安装整套 DSH 依赖。
+- 现有 Linux 预览升级到公开 `0.3.0`，81 个交付文件逐字节核对；15 个历史对话归档及技能状态文件在升级和重启后保持一致。浏览器技能中心加载 3 张联调技能卡片，无页面脚本异常。
+- 本轮发布后未新增模型请求，不将先前候选的真实模型验收写为公开包的新模型验收；预览使用本地开源市场，不代表 SaaS 新契约已部署。后续发布将公开读取窗口扩大到 40 次、间隔 30 秒，保留严格完整性比对与不重复发布边界。
