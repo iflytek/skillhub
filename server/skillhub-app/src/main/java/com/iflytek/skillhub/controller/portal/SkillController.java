@@ -174,10 +174,13 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "false") boolean downloadableOnly,
             @RequestAttribute(value = "userId", required = false) String userId,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
 
-        Page<SkillVersion> versions = skillQueryService.listVersions(
+        Page<SkillVersion> versions = downloadableOnly ? skillQueryService.listVersions(
+                namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of(),
+                PageRequest.of(page, size), true) : skillQueryService.listVersions(
                 namespace,
                 slug,
                 userId,

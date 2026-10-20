@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import type { MouseEventHandler, ReactNode } from 'react';
-import { Avatar, AvatarImage, AvatarFallback, Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui.js';
+import { Avatar, AvatarImage, AvatarFallback, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui.js';
 import { formatCount, skillInitial, skillTone, validCount, validRating } from './skill-presentation.js';
 
 export function Icon({ name }: { name: 'download' | 'bookmark' | 'star' | 'arrow' | 'search' | 'grid' | 'info' | 'close' }) {
@@ -35,15 +35,16 @@ export function SkillMetrics({ item }: { item: SkillPresentation }) {
 }
 export const SkillCard = forwardRef<HTMLButtonElement, {
   item: SkillPresentation; version: string; onOpen: MouseEventHandler<HTMLButtonElement>; status?: ReactNode;
-  actionLabel?: string; accessibleLabel?: string; descriptionId?: string;
-}>(({ item, version, onOpen, status, actionLabel = '详情', accessibleLabel, descriptionId }, ref) =>
+  actions?: ReactNode; accessibleLabel?: string; descriptionId?: string;
+}>(({ item, version, onOpen, status, actions, accessibleLabel, descriptionId }, ref) =>
   <Card className="astron-sh-skill-card">
+    <button ref={ref} type="button" className="astron-sh-card-open" onClick={onOpen}
+      aria-label={accessibleLabel || `查看 ${item.displayName || item.slug} @${item.namespace}/${item.slug} ${version} 详情`} aria-describedby={descriptionId} />
     <CardHeader className="astron-sh-skill-heading"><SkillAvatar name={item.displayName} slug={item.slug} namespace={item.namespace} />
       <div><CardTitle>{item.displayName || item.slug}</CardTitle><CardDescription title={`@${item.namespace}/${item.slug}`}>@{item.namespace}/{item.slug}</CardDescription></div>
     </CardHeader>
     <CardContent className="astron-sh-skill-body"><p id={descriptionId} className="astron-sh-skill-summary" title={item.summary}>{item.summary || '暂无摘要'}</p>
       <div className="astron-sh-skill-meta"><span title={version}>v{version}</span>{status}</div></CardContent>
-    <CardFooter><SkillMetrics item={item} /><Button ref={ref} className="astron-sh-card-open" variant="ghost" onClick={onOpen}
-      aria-label={accessibleLabel || `查看 ${item.displayName || item.slug} @${item.namespace}/${item.slug} ${version} 详情`} aria-describedby={descriptionId}>{actionLabel}<Icon name="arrow" /></Button></CardFooter>
+    <CardFooter><SkillMetrics item={item} /><div className="astron-sh-card-actions">{actions}</div></CardFooter>
   </Card>);
 SkillCard.displayName = 'SkillCard';

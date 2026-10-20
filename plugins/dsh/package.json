@@ -1,6 +1,6 @@
 {
   "name": "@astron-team/skillhub-dsh",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": false,
   "type": "module",
   "license": "Apache-2.0",
@@ -82,7 +82,8 @@
     "@deepseek-ai/dsh-session-query": "0.2.0-rc.2",
     "@deepseek-ai/dsh-skill-filesystem": "0.2.0-rc.2",
     "@deepseek-ai/dsh-tools": "0.2.0-rc.2",
-    "@deepseek-ai/dsh-typert-protocol": "0.2.0-rc.2"
+    "@deepseek-ai/dsh-typert-protocol": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-user-questions": "0.2.0-rc.2"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "3.18.4",
@@ -123,7 +124,8 @@
     "@deepseek-ai/cordis": "4.0.5",
     "@deepseek-ai/cordis-plugin-loader": "1.0.6",
     "@deepseek-ai/cordis-plugin-include": "1.0.10",
-    "@deepseek-ai/cordis-plugin-timer": "1.1.7"
+    "@deepseek-ai/cordis-plugin-timer": "1.1.7",
+    "@deepseek-ai/dsh-user-questions": "0.2.0-rc.2"
   },
   "engines": {
     "node": ">=24.2.0 <25"
@@ -146,5 +148,10 @@
     "@deepseek-ai/cordis-plugin-loader": "1.0.6",
     "@deepseek-ai/cordis-plugin-include": "1.0.10",
     "@deepseek-ai/cordis-plugin-timer": "1.1.7"
+  },
+  "peerDependenciesMeta": {
+    "@deepseek-ai/dsh-user-questions": {
+      "optional": true
+    }
   }
 }

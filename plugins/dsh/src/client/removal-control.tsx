@@ -1,11 +1,14 @@
 import { canCollapseHistory } from './operation-presentation.js';
 import { OperationDetails } from './operation-details.js';
 import { HostWriteStatus, useWritableHost, type CompatibilityServices } from './host-compatibility.js';
-import { useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol';
 import type { HostExecutePlanRequest, HostRecoveryRequest, NativeOperation, UninstallPlanView, InstalledSkillList } from '../host/types.js';
 import { type RemovalRequests, upgradeRequestKey } from './upgrade-requests.js';
+import { Dialog, DialogContent, DialogTitle, DialogDescription, Button } from './ui.js';
+import { SkillAvatar } from './skill-card.js';
+import { NativeControlStyles } from './native-control-styles.js';
 import { useInstallationOperation } from './use-installation-operation.js';
 
 export interface RemovalServices extends CompatibilityServices {
@@ -25,17 +28,18 @@ const blockers: Record<string, string> = {
   'target-alias': '安装位置发生重定向，请先核对本地目录。',
 };
 
-export function RemovalControl({ services, sourceRevision, source, item, eligible = false, onCompleted, onClosed, history = false }: {
-  services: RemovalServices; sourceRevision: string; source: string; eligible?: boolean; history?: boolean;
-  item: { itemKey?: string; namespace: string; slug: string; scope: string; state?: InstalledSkillList['items'][number]['state'] }; onCompleted?(): void; onClosed?(): void;
+export function RemovalControl({ services, sourceRevision, source, item, eligible = false, onCompleted, onClosed, history = false, presentation = 'panel' }: {
+  services: RemovalServices; sourceRevision: string; source: string; eligible?: boolean; history?: boolean; presentation?: 'panel' | 'dialog';
+  item: { itemKey?: string; namespace: string; slug: string; scope: string; version?: string; state?: InstalledSkillList['items'][number]['state'] }; onCompleted?(): void; onClosed?(): void;
 }) {
   const writableHost = useWritableHost(services);
   const key = upgradeRequestKey(services.sessionId, source, item);
   const attempt = useSyncExternalStore(services.removalRequests.subscribe, () => services.removalRequests.get(key), () => undefined);
-  const dialog = useRef<HTMLDialogElement>(null);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(presentation === 'dialog');
+  const prepared = useRef(false);
+  const opener = useRef(typeof document === 'undefined' ? null : document.activeElement);
   const trigger = useRef<HTMLButtonElement>(null);
-  const cancel = useRef<HTMLButtonElement>(null);
-  const titleId = useId();
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now);
   const plan = useMutation({ mutationFn: async () => {
@@ -46,13 +50,11 @@ export function RemovalControl({ services, sourceRevision, source, item, eligibl
     return response.value;
   } });
   useEffect(() => {
-    const element = dialog.current;
-    if (!element) return;
-    if (plan.data?.status === 'ready' && !attempt) {
-      if (!element.open) element.showModal();
-      cancel.current?.focus();
-    } else if (element.open) element.close();
-  }, [plan.data, attempt]);
+    if (presentation === 'dialog' && !prepared.current && writableHost.canWrite && eligible && !attempt) {
+      prepared.current = true;
+      plan.mutate();
+    }
+  }, [presentation, writableHost.canWrite, eligible, attempt, plan.mutate]);
   useEffect(() => {
     if (!plan.data?.expiresAt || attempt) return;
     setNow(Date.now());
@@ -92,34 +94,58 @@ export function RemovalControl({ services, sourceRevision, source, item, eligibl
   const kind = result?.kind ?? plan.data?.kind;
   const stale = kind ? kind === 'remove-stale-record' : item.state === 'missing';
   const cancelPlan = () => {
-    dialog.current?.close();
-    plan.reset();
-    trigger.current?.focus();
+    if (presentation === 'dialog' && !operation.isError && operation.data && recoveryConfirmed) {
+      try { services.removalRequests.closeResult(key, operation.data); }
+      catch { setError('原结果暂不能关闭，请稍后核验。'); return; }
+    }
+    setDialogOpen(false); plan.reset();
+    if (presentation === 'dialog') onClosed?.();
+    else trigger.current?.focus();
   };
+  const confirmation = <Dialog open={dialogOpen} onOpenChange={open => { if (!open) cancelPlan(); }}>
+    <DialogContent className="astron-sh-dialog astron-sh-removal-dialog" container={container} onOpenAutoFocus={event => {
+      event.preventDefault(); container?.querySelector<HTMLButtonElement>('[data-removal-cancel]')?.focus();
+    }} onCloseAutoFocus={event => { event.preventDefault(); if (opener.current instanceof HTMLElement && opener.current.isConnected) opener.current.focus(); }}>
+      <DialogTitle>{stale ? '清理安装记录' : '卸载技能'}</DialogTitle>
+      <DialogDescription>{stale ? '仅清理所选范围的失效记录' : '确认要移除这项技能吗？'}</DialogDescription>
+      <RemovalConfirmationSummary item={item} version={plan.data?.currentVersion ?? result?.version ?? item.version} stale={stale} />
+      <HostWriteStatus state={writableHost} />
+      {!attempt && <>
+        {plan.isPending && <p role="status">正在检查安装状态…</p>}
+        {plan.isError && <p role="alert">{plan.error.message}</p>}
+        {plan.data?.status === 'blocked' && <p role="alert">{blockers[plan.data.reason] ?? '无法核验当前安装，请刷新记录后重试。'}</p>}
+        {expired && <p role="alert">确认已过期，请重新检查。</p>}
+      </>}
+      {attempt && <div className="astron-sh-removal-status" aria-live="polite">
+        {attempt.state === 'submitting' ? <p role="status">正在卸载…</p>
+          : attempt.state === 'unresolved' || operation.isError || operation.data === null ? <p role="alert">卸载结果暂未确认，请查询原请求。</p>
+            : result?.phase === 'completed' ? <p role="status">{operation.data?.phase === 'completed' ? stale ? '安装记录已清理' : '卸载完成' : '正在确认卸载结果…'}</p>
+              : result?.phase === 'failed' ? <p role="alert">卸载未完成，请检查安装状态。</p>
+                : result && ['recovery-required', 'unknown'].includes(result.phase) ? <p role="alert">卸载结果需要核验，请勿重复操作。</p> : <p role="status">正在卸载…</p>}
+        {!!result?.warningCount && <p role="alert">仍有残留需要核验。</p>}
+        {attempt.state === 'unresolved' && <Button size="sm" onClick={submit}>查询原请求</Button>}
+        {attempt.state === 'accepted' && (operation.isError || operation.data === null) && <Button size="sm" onClick={() => { void operation.refetch(); }}>查询原请求</Button>}
+        {result && (['recovery-required', 'unknown'].includes(result.phase) || (result.phase === 'completed' && result.warningCount > 0)) && <Button size="sm" disabled={!writableHost.canWrite || recovery.isPending} onClick={() => recovery.mutate()}>核验并恢复</Button>}
+        {recovery.isError && <p role="alert">{recovery.error.message}</p>}
+      </div>}
+      {error && <p role="alert">{error}</p>}
+      <div className="astron-sh-dialog-actions">
+        <Button data-removal-cancel onClick={cancelPlan}>{attempt ? '关闭' : '取消'}</Button>
+        {!attempt && (plan.isError || expired) && <Button disabled={plan.isPending || !writableHost.canWrite} onClick={() => plan.mutate()}>重新检查</Button>}
+        {!attempt && <Button variant="destructive" disabled={!writableHost.canWrite || expired || plan.isPending || plan.data?.status !== 'ready' || !eligible} onClick={submit}>{stale ? '确认清理' : '确认卸载'}</Button>}
+      </div>
+    </DialogContent>
+  </Dialog>;
+  if (presentation === 'dialog') return <div ref={setContainer} className="skillhub-controls"><NativeControlStyles />{container && confirmation}</div>;
   const content = <section aria-label={`卸载操作 ${item.slug}`} style={{ border: '1px solid #8885', borderRadius: 12, padding: 16, marginBlock: 16 }}>
     <h3>{stale ? '清理失效记录' : '卸载'} @{item.namespace}/{item.slug}</h3>
     <HostWriteStatus state={writableHost} />
     {!attempt && <>
-      <button ref={trigger} disabled={!writableHost.canWrite || plan.isPending || !eligible} onClick={() => { setError(null); plan.mutate(); }}>{plan.isPending ? '正在核验操作范围…' : stale ? '清理失效记录' : '卸载此安装位置'}</button>
+      <button ref={trigger} disabled={!writableHost.canWrite || plan.isPending || !eligible} onClick={() => { setError(null); setDialogOpen(true); plan.mutate(); }}>{plan.isPending ? '正在核验操作范围…' : stale ? '清理失效记录' : '卸载此安装位置'}</button>
       {plan.isError && <p role="alert">{plan.error.message}</p>}
       {plan.data?.status === 'blocked' && <p role="alert">{blockers[plan.data.reason] ?? '当前记录或目录无法通过核验，暂不能卸载。'}</p>}
     </>}
-    <dialog ref={dialog} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); cancelPlan(); }}
-      style={{ boxSizing: 'border-box', maxWidth: 'min(560px, calc(100vw - 32px))', maxHeight: 'calc(100vh - 32px)',
-        overflowY: 'auto', overflowWrap: 'anywhere', borderRadius: 12, padding: 24 }}>
-      <h3 id={titleId}>{stale ? '确认清理失效记录' : '确认卸载技能'}</h3>
-      <p>@{item.namespace}/{item.slug} · {plan.data?.currentVersion}</p>
-      <p style={{ overflowWrap: 'anywhere' }}>来源：{source}</p>
-      <p>目标主机：当前 DSH 主机</p>
-      <p>{plan.data?.target?.scope === 'user' ? '当前用户' : '当前项目'}：<code style={{ overflowWrap: 'anywhere' }}>{plan.data?.target?.path}</code></p>
-      <p>{stale ? '此位置的目录已缺失，本次只移除安装记录，不删除文件。' : '将移除此位置的技能文件和对应安装记录，其他安装位置和远端技能不受影响。'}</p>
-      <p>同名技能仍可能从其他位置提供；正在运行的任务不会被强制终止。</p>
-      {plan.data?.expiresAt && <p>确认有效至：<time dateTime={plan.data.expiresAt}>{new Date(plan.data.expiresAt).toLocaleString()}</time></p>}
-      {expired && <p role="alert">计划已过期，请取消后重新核验。</p>}
-      <button ref={cancel} onClick={cancelPlan}>取消</button>
-      <button className="skillhub-danger" disabled={!writableHost.canWrite || expired || plan.data?.status !== 'ready'} onClick={submit} style={{ marginInlineStart: 12 }}>{stale ? '仅清理失效记录' : '确认卸载'}</button>
-      {error && !attempt && <p role="alert">{error}</p>}
-    </dialog>
+    <div ref={setContainer}>{container && confirmation}</div>
     {error && <p role="alert">{error}</p>}
     {attempt?.state === 'submitting' && <p role="status">正在提交卸载请求…</p>}
     {attempt?.state === 'unresolved' && <div role="alert"><p>请求结果尚未确认，请查询原请求。</p><button onClick={submit}>查询原卸载请求</button></div>}
@@ -167,4 +193,14 @@ export function RemovalHistory({ services, sourceRevision, source, onClosed }: {
   return <section className="astron-sh-history" aria-label="未关闭的卸载结果"><h3>卸载操作记录</h3>
     {entries.map(item => <RemovalControl key={item.key} services={services} sourceRevision={sourceRevision} source={source} item={item} onClosed={onClosed} history />)}
   </section>;
+}
+
+/** Only information needed to confirm the selected target; no raw host paths or plan metadata. */
+export function RemovalConfirmationSummary({ item, version, stale }: {
+  item: { namespace: string; slug: string; scope: string }; version?: string; stale: boolean;
+}) {
+  return <><div className="astron-sh-removal-identity"><SkillAvatar namespace={item.namespace} slug={item.slug} /><div>
+    <strong>{item.slug}</strong><p>@{item.namespace}/{item.slug}{version ? ` · v${version}` : ''}</p></div></div>
+    <div className="astron-sh-removal-scope"><span>卸载范围</span><strong>{item.scope === 'user' ? '所有项目（当前用户）' : '仅此项目'}</strong></div>
+    <p className="astron-sh-removal-impact">{stale ? '仅移除失效记录，不删除文件。' : item.scope === 'user' ? '移除当前用户共享的技能，项目内的独立安装保留。' : '仅移除此项目的安装，用户级及其他项目的安装保留。'}</p></>;
 }

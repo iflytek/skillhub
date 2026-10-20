@@ -21,7 +21,7 @@ describe('source-aware installation badges', () => {
       { scope: 'user', version: '1.0.0', state: 'present' },
       { scope: 'project', version: '2.0.0', state: 'present' },
     ] });
-    expect(html).toContain('v1.0.0 · 当前用户 / v2.0.0 · 当前项目');
+    expect(html).toContain('v1.0.0 · 所有项目 / v2.0.0 · 仅此项目');
     expect(html).toContain('data-tone="success"');
     expect(html).toContain('文件存在不代表 DSH 已启用或技能已执行');
     expect(html).toContain('role="status"');
@@ -41,15 +41,15 @@ describe('source-aware installation badges', () => {
     expect(render({ ...snapshot, unavailable: ['project'] })).toContain('安装状态未知');
     expect(render({ ...snapshot, complete: false })).toContain('安装状态未知');
     const html = render({ ...snapshot, unavailable: ['project'], records: [{ scope: 'user', version: '1.0.0', state: 'present' }] });
-    expect(html).toContain('已安装 v1.0.0 · 当前用户 · 部分未知');
+    expect(html).toContain('已安装 v1.0.0 · 所有项目 · 部分未知');
   });
   test('mixed records retain the installed location and warn about the abnormal one', () => {
     const html = render({ ...snapshot, records: [
       { scope: 'user', version: '1.0.0', state: 'present' },
       { scope: 'project', version: '2.0.0', state: 'mismatch' },
     ] });
-    expect(html).toContain('已安装 v1.0.0 · 当前用户 · 部分异常');
-    expect(html).toContain('当前项目 · v2.0.0 · 安装记录与本地文件不一致');
+    expect(html).toContain('已安装 v1.0.0 · 所有项目 · 部分异常');
+    expect(html).toContain('仅此项目 · v2.0.0 · 安装记录与本地文件不一致');
   });
   test('history explicitly labels its snapshot time and does not imply current state', () => {
     const html = render(snapshot, { snapshot: true });

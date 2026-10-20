@@ -4,7 +4,8 @@ import { assertHostDependencies, hostDependencyBaseline } from '../src/host/comp
 
 test('Host dependency guard matches exact peer versions and installed development artifacts', async () => {
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-  expect({ ...hostDependencyBaseline, '@deepseek-ai/cordis': '4.0.4 || 4.0.5' }).toEqual(manifest.peerDependencies);
+  expect(manifest.peerDependenciesMeta).toEqual({ '@deepseek-ai/dsh-user-questions': { optional: true } });
+  expect(Object.fromEntries(Object.entries(manifest.peerDependencies).filter(([name]) => !manifest.peerDependenciesMeta?.[name]?.optional))).toEqual({ ...hostDependencyBaseline, '@deepseek-ai/cordis': '4.0.4 || 4.0.5' });
   expect(() => assertHostDependencies()).not.toThrow();
 });
 

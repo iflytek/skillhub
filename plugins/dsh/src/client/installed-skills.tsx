@@ -7,6 +7,7 @@ import type { RemoteResult, TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-ty
 import type { InstalledSkillList, InstalledSkillDetail, InstalledUpdateCheck, SkillHubConfig } from '../host/types.js';
 import { UpgradeControl, UpgradeHistory } from './upgrade-control.js';
 import type { UpgradeServices } from './upgrade-control.js';
+import { readCacheOptions } from './read-cache.js';
 import { DetailContent } from './detail-content.js';
 import { RemovalControl, RemovalHistory, type RemovalServices } from './removal-control.js';
 import { InstalledStyles } from './installed-styles.js';
@@ -36,9 +37,9 @@ const updateReasons: Record<string, string> = {
   RATE_LIMITED: '来源暂时限流，请稍后重试。',
 };
 
-export function InstalledSkills({ services, sourceRevision, source, remote, modes, scrollContainer, navigation }: {
+export function InstalledSkills({ services, sourceRevision, source, remote, modes, scrollContainer, navigation, onRemove, onUpgrade }: {
   services: InstalledServices; sourceRevision: string; source: string; remote: TypertRemoteNamespaceMap['skillhub']; modes: SkillHubConfig['detailTabs'];
-  scrollContainer: RefObject<HTMLElement>; navigation: InstalledNavigation;
+  scrollContainer: RefObject<HTMLElement>; navigation: InstalledNavigation; onRemove?(item: InstalledSkillList['items'][number]): void; onUpgrade?(item: InstalledSkillList['items'][number]): void;
 }) {
   const [scope, setScope] = useState(navigation.scope);
   const [keyword, setKeyword] = useState(navigation.keyword);
@@ -80,7 +81,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
         ? '会话或来源已变化，请重新打开已安装列表。' : '无法读取本地安装记录，请检查 DSH 会话后重试。');
       return response.value;
     } });
-  const detail = useQuery({ queryKey: ['skillhub-installed-detail', services.sessionId, sourceRevision, selected?.itemKey],
+  const detail = useQuery({ ...readCacheOptions, queryKey: ['skillhub-installed-detail', services.sessionId, sourceRevision, selected?.itemKey],
     enabled: !!selected, retry: false, queryFn: async ({ signal }) => {
       const response = await services.detail(sourceRevision, selected!.itemKey, signal);
       if (!response.ok) throw new Error('安装记录已变化或暂时无法读取，请返回列表刷新。');
@@ -97,14 +98,14 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
     <button onClick={() => { triggerKey.current = refreshedItem?.itemKey ?? selected.itemKey; setSelected(null); }}>← 返回已安装</button>
     <div className="astron-sh-detail-heading"><SkillAvatar slug={selected.slug} namespace={selected.namespace} /><h2 ref={heading} tabIndex={-1}>{selected.slug}</h2></div>
     <p>@{selected.namespace}/{selected.slug} · {removed ? '原安装版本' : '已安装版本'} {upgradedVersion ?? selected.version}</p>
-    <p>{selected.scope === 'user' ? '当前用户' : '当前项目'} · {removed ? '此安装记录已移除' : states[currentLocalState ?? selected.state]}</p>
+    <p>{selected.scope === 'user' ? '所有项目' : '仅此项目'} · {removed ? '此安装记录已移除' : states[currentLocalState ?? selected.state]}</p>
     <div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation">{removed ? <p role="status">此安装位置的操作已完成，请查看下方结果或返回列表。</p>
       : upgradedVersion ? <p role="status">安装版本已更新。<button disabled={!refreshedItem || refreshedItem.version !== upgradedVersion}
       onClick={() => { if (refreshedItem) setSelected(refreshedItem); }}>查看升级后详情</button></p>
       : detail.isPending ? <p role="status">正在核对本地记录并读取固定版本详情…</p>
       : detail.isError ? <p role="alert">{detail.error.message}</p>
         : detail.data.content.state === 'local-only' ? <p role="status">远端详情暂时不可用，以上保留本地安装信息。未切换到其他版本。</p>
-          : <DetailContent detail={detail.data.content.detail} modes={modes} remote={remote} retry={() => { void detail.refetch(); }} />}
+          : <DetailContent detail={detail.data.content.detail} modes={modes} remote={remote} retry={() => { void detail.refetch(); }} cacheIdentity={JSON.stringify([services.sessionId, sourceRevision, selected.namespace, selected.slug, detail.data.content.detail.version])} onContextStale={() => { void detail.refetch(); }} />}
     </article><aside className="astron-sh-detail-aside">
     {!removed && !upgradedVersion && <Card className="astron-sh-version-update"><CardHeader><h3>版本与更新</h3></CardHeader><CardContent><div className="astron-sh-update-actions"><Button size="sm" variant="outline" disabled={detail.isFetching} onClick={() => { void detail.refetch(); }}>重新读取详情</Button>
     <Button size="sm" variant="outline" disabled={update.isFetching} onClick={() => { void update.refetch(); }}>检查更新</Button></div>
@@ -135,20 +136,22 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
         <input type="search" aria-label="过滤已安装技能" placeholder="名称、命名空间或已安装版本" value={keyword} onChange={event => setKeyword(event.target.value)} />
       </label>
       <label>安装范围 <SelectField ref={filter} label="筛选安装范围" value={scope} onValueChange={value => setScope(value as typeof scope)}
-        options={[{ value: 'all', label: '全部范围' }, { value: 'project', label: '当前项目' }, { value: 'user', label: '当前用户' }]} /></label>
+        options={[{ value: 'all', label: '全部范围' }, { value: 'project', label: '仅此项目' }, { value: 'user', label: '所有项目' }]} /></label>
       <button onClick={() => { void query.refetch(); }} disabled={query.isFetching}>刷新已安装</button>
       {keyword && <button onClick={() => setKeyword('')}>清空过滤</button>}
     </div>
     <p className="skillhub-installed-note">显示当前 SkillHub 来源在当前用户和项目中的安装记录。“文件存在”不代表内容完整性或安全审核已通过。</p>
     {query.isPending ? <CardSkeletons message="正在读取本地安装记录…" /> : query.isError ? <p role="alert">{query.error.message}</p> : <>
       {(!query.data.complete || query.data.unavailable.length > 0) && <div role="alert"><p>部分安装记录无法读取，以下列表可能不完整。</p>
-        {query.data.unavailable.length > 0 && <p>无法读取范围：{query.data.unavailable.map(value => value === 'user' ? '当前用户' : '当前项目').join('、')}</p>}
+        {query.data.unavailable.length > 0 && <p>无法读取范围：{query.data.unavailable.map(value => value === 'user' ? '所有项目' : '仅此项目').join('、')}</p>}
       </div>}
       <p role="status">当前显示 {items.length} 项安装记录。</p>
       {items.length === 0 ? <p className="skillhub-installed-empty">{term ? '没有匹配的本地安装记录，请调整关键词或安装范围。' : (scope === 'all' ? query.data.complete && query.data.unavailable.length === 0 : isInventoryScopeVerified(query.data, scope)) ? '当前范围没有该来源的安装记录。' : '当前范围没有可展示的记录，请先处理读取问题。'}</p>
         : <div className="astron-sh-card-grid" aria-label="本地安装记录">{items.map(item => <InstalledRow key={item.itemKey} item={item} services={services} sourceRevision={sourceRevision}
             buttonRef={(action, node) => { if (triggerKey.current === item.itemKey && intent.current === action) trigger.current = node; }}
             navigate={(action, button) => {
+              if (action === 'remove' && onRemove) { onRemove(item); return; }
+              if (action === 'upgrade' && onUpgrade) { onUpgrade(item); return; }
               listScroll.current = scrollContainer.current?.scrollTop ?? 0;
               intent.current = action; triggerKey.current = item.itemKey; trigger.current = button; setSelected(item);
             }} />)}</div>}
@@ -168,7 +171,7 @@ function InstalledRow({ item, services, sourceRevision, navigate, buttonRef }: {
   return <Card className="astron-sh-installed-card">
     <CardHeader className="astron-sh-skill-heading"><SkillAvatar slug={item.slug} namespace={item.namespace} /><div>
     <h3>{item.slug}</h3><span className="skillhub-installed-coordinate">@{item.namespace}/{item.slug}</span></div></CardHeader><CardContent>
-    <div className="astron-sh-installed-meta"><span>已安装版本 {item.version}</span><span>{item.scope === 'user' ? '当前用户' : '当前项目'}</span></div>
+    <div className="astron-sh-installed-meta"><span>已安装版本 {item.version}</span><span>{item.scope === 'user' ? '所有项目' : '仅此项目'}</span></div>
     <p><span className="astron-sh-state-badge" data-state={item.state}>{states[item.state]}</span></p>
     <div aria-live="polite">
       {update.isFetching ? '正在检查更新…' : update.isError ? update.error.message : !update.data ? '尚未检查'

@@ -2,13 +2,13 @@
 
 ## 1. 当前结论
 
-`0.2.0` 已经通过 [PR #977](https://github.com/iflytek/skillhub/pull/977) 合并并发布。本轮准备 `0.2.1`，仅调整缺省来源为 `https://skill.xfyun.cn`；候选、CI、npm 发布与公开包验收各自记录，尚未完成的项目不视为通过。
+`0.2.1` 已通过 [PR #979](https://github.com/iflytek/skillhub/pull/979) 合并并发布；默认来源为 `https://skill.xfyun.cn`。本轮准备发布 `0.3.0` 开源交互改进，不以历史发布结果代替新代码验证。
 
 2026-10-19 使用公开 npm `0.2.0` 的真实 Linux DSH 插件连接 `https://skill.xfyun.cn`，连接测试、目录、搜索、Markdown 和版本选择通过；选择 `global/scientella@20260724.052402` 实际安装到隔离项目，7 个文件及归档 fingerprint 一致，inventory 来源与目标正确，再搜索显示项目已安装旧版，DSH 发现成功。评论接口 404 按可选能力处理，安全审核 401 按匿名拒绝处理。本轮未调用模型，不据此声明技能实际执行或生产 Pod 已核验。该技能使用日期格式的非 SemVer 版本，版本比较返回 `blocked/unknown-order`，按既有策略不提供升级入口；不得把固定版本安装通过写成升级通过。升级阻断前后文件保持不变；真实卸载后 DSH 发现消失，inventory 与重新搜索的安装记录清空。公开 `0.2.0` 的正式来源基线共 9 项浏览器检查通过，无页面脚本异常。
 
 `0.2.1` 本地构建、typecheck、lint、299 项测试（7158 次断言）及 OpenSpec 严格校验通过；配置测试覆盖缺省、空对象、显式空串/空白、自定义来源与初始化零网络请求。该结果不代替候选或公开包的真实 DSH 验收。
 
-`0.2.1` 候选已通过官方安装器装入干净隔离 Profile，归档 SHA-256 为 `c80a9608d739e26d3ddeef42791e05645106e22895bf6039c3c4d493b539bc1a`，74 个交付文件逐字节一致。安装 patch 未设置 `registryUrl`，真实 Host 的 `getContext` 返回 `configured=true` 和正式域名；插件设置页默认输入与测试连接、目录与标签搜索、`scientella` Markdown 共 3 项浏览器检查通过。已有显式来源的升级保留通过：先用公开 `0.2.0` 安装 `scientella@20261017.164831`，再升级到 `0.2.1` 候选；11 个技能文件、metadata、inventory 及历史会话压缩文件逐字节保留，原 journal 为 completed，新搜索显示项目最新版本 present，DSH 发现正常，74 个候选文件再次核对一致。另在插件设置中显式保存空白后，真实 Host 返回 `configured=false`；重启后仍保留空白并保持断开。自定义来源保存、重启及页面连接测试也已通过；公开 `0.2.1` 包仍待发布后核验。
+`0.2.1` 候选已通过官方安装器装入干净隔离 Profile，归档 SHA-256 为 `c80a9608d739e26d3ddeef42791e05645106e22895bf6039c3c4d493b539bc1a`，74 个交付文件逐字节一致。安装 patch 未设置 `registryUrl`，真实 Host 的 `getContext` 返回 `configured=true` 和正式域名；插件设置页默认输入与测试连接、目录与标签搜索、`scientella` Markdown 共 3 项浏览器检查通过。已有显式来源的升级保留通过：先用公开 `0.2.0` 安装 `scientella@20261017.164831`，再升级到 `0.2.1` 候选；11 个技能文件、metadata、inventory 及历史会话压缩文件逐字节保留，原 journal 为 completed，新搜索显示项目最新版本 present，DSH 发现正常，74 个候选文件再次核对一致。另在插件设置中显式保存空白后，真实 Host 返回 `configured=false`；重启后仍保留空白并保持断开。自定义来源保存、重启及页面连接测试也已通过；公开 `0.2.1` 的发布后安装与真实 SaaS 模型验收另见后续验收记录。
 
 候选配置持久化实机补充：在真实设置页保存空地址后重启，输入仍为空且 Host `configured=false`；保存自定义本地 Registry 后重启，地址与 `configured=true` 保留，页面测试连接成功。测试后恢复正式来源以供预览。上述操作不修改已发布包，也不代替公开 `0.2.1` 的发布后核验。
 
@@ -125,3 +125,22 @@
 - 可复现的包外 Host 探针与限制见 [实机探针说明](../../../plugins/dsh/test/integration/README.md#搜索结果中的本地安装状态)。原始报告和截图保留在仓库外。上述宿主及页面用例未调用模型，市场内容为本地 HTTP 夹具，不代表真实 SaaS 或线上市场验收；未重新验证该新增能力在 Windows/macOS Host 上的行为。
 - 另在同一候选包上使用真实 `astron-code-latest` 完成 3 轮对话、6 次模型请求，真实调用搜索 → 项目安装 → 再搜索。首次正确识别已有用户级 `meeting/meeting-notes@1.3.0`，没有将其他项目的 `demo/document-helper` 记录归入新项目；实际安装后，重新搜索正确识别新增项目级 `demo/document-helper@1.3.0`。安装操作完成，元数据及资源文件核验通过，DSH 已发现技能；模型回复、工具结果和完整对话均持久保存，未手工构造模型消息。浏览器核对了首次/复查卡片与当前广场状态，未重放写入。模型测试仍使用本地模拟市场，不能据此声明 SaaS 或真实线上技能执行效果已验收。
 - 上述为 `0.2.0` 发布前的功能验收；其后已合并 PR #977 并发布 `0.2.0`，不修改已发布包。
+
+
+## 0.3.0 交互与版本管理验收
+
+本版默认来源保持 `https://skill.xfyun.cn`。以下新增功能使用独立开源后端和隔离技能验证，不代表 SaaS 已同步新增版本过滤接口，也不代表技能内容已执行。
+
+| 范围 | 验证内容与结果 |
+| --- | --- |
+| 插件质量 | `cd plugins/dsh && bun run check`：构建、类型、Lint、357 项测试和 7414 次断言通过。 |
+| 服务端契约 | `SkillQueryServiceTest` 53 项、`SkillControllerTest` 14 项通过；domain 全模块 699 项测试通过。HTTP 验证过滤后分页、总数和全局版本顺序，缺省保留管理历史。生成 OpenAPI 与 web 类型检查通过。 |
+| 市场与详情 | 浏览器验证卡片操作不触发导航、中文标签、frontmatter 隐藏、短期详情缓存和窄屏布局，无页面脚本异常。 |
+| 对话确认 | 真实 `astron-code-latest` 两轮、4 次请求触发原生安装范围问题；选择项目后真实安装并核对文件、fingerprint 和 DSH 发现。取消不写文件，缺少原生问答服务回退确认卡片。 |
+| 安装与当前状态 | 10 项进度检查、7 项范围生命周期检查通过。确认后弹窗向右展开，延迟响应保持处理状态，重复提交与终态刷新去重。用户级安装、切换项目、卸载和再次安装均核对真实库存与文件。 |
+| 原地卸载 | 10 项浏览器检查通过，覆盖市场、列表、详情入口、预检等待、取消、焦点恢复、窄屏和重复确认仅执行一次。真实文件移除后按原版本恢复。 |
+| 版本升级 | 10 项浏览器检查通过：用户和项目固定版本安装、精确升级到非最新版、最新版升级、取消无写入、同版不重复、旧版禁止降级、本地修改阻止整个升级。核对两处 metadata、文件内容和 SHA-256。 |
+
+自动化回归位于 `plugins/dsh/test/`，包括 `native-scope-choice.test.ts`、`install-control-state.test.tsx`、`installation-progress.test.tsx`、`removal-confirmation.test.tsx`、`upgrade-presentation.test.tsx`、`prepare-upgrade.test.ts` 与 `update-check.test.ts`。详细运行报告和截图保留在仓库外，不作为发布包内容。
+
+浏览器与真实模型验收环境为 Linux 官方 DSH `0.2.0-rc.2`；macOS/Windows 原生 Host 兼容性由发布 CI 单独验证。升级故障恢复依赖现有事务自动化测试，本次浏览器结果不扩大为所有故障环境验收。发布状态以实际 tag、CI 和公开 npm 包为准。

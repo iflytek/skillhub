@@ -106,6 +106,8 @@ interface SkillHubPluginConfig {
 | `startInstall` | input：detailToken,targetToken,requestKey,hostInstanceId,mode,initiatedFrom；可信 agent scope | NativeOperation 或 null | 持久接受后返回操作快照，同 key 同参数返回原操作；retry 未找到记录返回 null，不创建操作 |
 | `listInstallTargets` | detailToken，可信 agent scope | hostInstanceId、targets（targetToken、scope）、unavailable（范围列表） | 只读；从 Agent 文件系统解析，来源/项目/详情变化时拒绝；不返回路径，不代表已授权写入 |
 | `checkUpdate` | sourceRevision,itemKey | 更新状态、当前/候选版本、checkedAt | 只读，不下载完整包 |
+| `checkVersionUpdate` | sourceRevision,itemKey,version | InstalledUpdateCheck | 按所选精确版本检查，不回退 latest |
+| `prepareVersionUpgrade` | sourceRevision,itemKey,version | UpgradePlanView | 固定精确候选，复用完整目标升级计划 |
 | `prepareUpgrade` | sourceRevision,itemKey | UpgradePlanView | 解析全部共享目标，仅允许当前用户/项目范围 |
 | `prepareUninstall` | sourceRevision,itemKey | UninstallPlanView | 只解析一个目标；离线可用 |
 | `executePlan` | input：planId,requestKey；可信 agent scope | NativeOperation 或 null | 校验计划和精确 before，提交后不能复用 |
@@ -290,7 +292,7 @@ local-only 详情不能发起远端安装或升级，但可通过独立 prepareU
 
 ## 对话工具接口
 
-首期提供 astron_skillhub_search 与 astron_skillhub_install。模型仅提供关键词或技能坐标/范围；来源、可信目标、幂等键由 Host 适配层派生。具体输入、结果 envelope、历史操作绑定与错误语义见 [对话设计第 6 节](conversation-design.md#6-工具与服务契约)。页面与工具均复用本文 startInstall/getOperation，工具不接受任意文件路径或下载地址。
+首期提供 astron_skillhub_search 与 astron_skillhub_install。模型仅提供关键词或技能坐标/范围；来源、可信目标、幂等键由 Host 适配层派生。具体输入、结果 envelope、历史操作绑定与错误语义见 [对话设计第 6 节](conversation-design.md#6-工具与服务契约)。页面与工具均复用本文 startInstall/getOperation，工具不接受任意文件路径或下载地址。用户未明确范围时省略 scope，工具仅返回 awaiting-confirmation（无 operationId），卡片经 openConversationDetail 和既有 InstallControl 选择范围后才调用 startInstall；该等待状态只固定候选版本，不固定指纹、不下载包、不创建安装事务，也不能由历史恢复自动重放。
 
 
 ## 10. 已接受操作的查重顺序与历史快照
@@ -298,7 +300,7 @@ local-only 详情不能发起远端安装或升级，但可通过独立 prepareU
 本节定义插件内部协议。Host 启动在插件状态目录读取或首次生成 hostInstanceId，重启保持不变；状态目录丢失或迁移到新 Host 时视为新身份，不能用显示名称猜测同一主机。会话/调用身份来自宿主可信上下文；具体传递能力须 M0 验证。
 
 1. 建立当前调用归属：hostInstanceId、会话/Client 归属。无法确认归属不返回另一会话/主机的操作。
-2. 对 startInstall/executePlan/工具安装，先以该归属与 requestKey 查持久 accepted 记录，对原始参数摘要 requestDigest 做一致性比较。摘要包括原 token/ref 或计划引用及显式参数，不只比较当前 resolve 结果。
+2. 对 startInstall/executePlan/已明确范围的工具安装，先以该归属与 requestKey 查持久 accepted 记录，对原始参数摘要 requestDigest 做一致性比较。摘要包括原 token/ref 或计划引用及显式参数，不只比较当前 resolve 结果。
 3. 同 key 同摘要已存在时返回原 operationId 与保存的 context；即使旧 token 已过期或配置已变化，也仅恢复查询，不开始新写。同 key 不同摘要返回 REQUEST_KEY_CONFLICT。
 4. 无记录且这是已知的重试/恢复请求时返回 unknown，不自动转换成新操作。Client 为首次请求创建键后记录其提交状态；工具映射随 accepted 记录持久化。身份/日志丢失无法证明首次请求时亦按 unknown 处理。
 5. 只有可确认为新操作才进入当前 token、sourceRevision、项目、版本及计划 expiry 校验；持久化 accepted、requestDigest 与稳定调用映射成功后才能开始写文件。
@@ -332,3 +334,29 @@ accepted 不表示安装完成。工具立即返回 accepted 及 operationId，�
 `testRegistryConnection(inputUrl, signal)`仅供配置页显式测试，不注册Agent工具。Host创建独立RegistryAdapter并验证HTTP(S)地址，不接受凭证、查询参数或片段；匿名GET、不跟随重定向、响应体仍使用既有大小限制。探测目录第一页，接口缺失时沿用基础搜索回退，整个测试最多10秒。请求失败返回既有`skillhub/registry-error`安全原因，不暴露响应正文或凭证。
 
 测试不使用当前来源写路径，不改变配置、sourceRevision、目录缓存或本地文件；不尝试下载或安装。Client取消旧请求并以请求代次隔离结果，防止地址变更后显示旧地址成功信息。mode为paged仅说明分页目录可读，limited仅说明基础搜索可读，二者均不证明写入或可选Tab能力。
+
+
+### 原生安装范围确认
+
+安装工具省略 scope 时由 Host 使用可选的 `ctx.userQuestions.ask` 显示输入框旁的单选题，问题含固定版本、来源、实际可用范围及取消。回答必须匹配该问题的一条准确范围选项；取消、空、自定义或多个答案返回 `{schemaVersion:1,kind:"skillhub-install",status:"cancelled",toolCallId}`，不含操作 ID。用户回答后重新检查上下文，再复用现有安装事务。无服务或回答器时保留 `awaiting-confirmation` 卡片；该卡片直接打开确认弹窗，不打开详情抽屉。显式 scope 的原流程保留。
+
+此能力是宿主可选 peer，不改变既有写入依赖基线。不使用新计时问题 API，不回放旧提问授权，不向模型发送目录或目标 token。问答取消与执行中止不转换成用户级安装。
+
+
+### 安装进度与列表刷新边界
+
+复用原 startInstall、requestKey、getOperation 和共享请求存储，不增加写入接口。提交后固定范围；响应丢失核验使用原 requestKey 的 retry，不能创建新写入意图。弹窗展开不导航、不重读技能详情。只在操作首次进入结束阶段或结束阶段变化时使当前会话的库存投影失效；重复读取同一结束阶段不重复刷新。后台库存读取保留已有卡片和状态，写入资格继续由完整核验及 Host 事务边界保护。
+
+
+### 原地卸载组件与接口复用
+
+`RemovalControl` 支持面板与弹窗两种呈现，使用同一 `prepareUninstall → executePlan → getOperation` 流程及 `RemovalRequests` 幂等请求。市场与已安装列表只保存选中的库存项并打开弹窗，不调用技能详情读取接口，也不改变当前 Tab 或详情选择。清理失效记录仍使用原清理计划，不能转成删除不存在目录的普通卸载。
+
+确认框默认隐藏 URL、路径和绝对到期时间，但保留来源、会话、目标、文件基线和过期核验；用户取消只关闭本次 UI。关闭已提交但未确认的结果保留原请求；只有读取到可关闭的结束状态时才清除前端请求记录。原始事务日志和恢复数据不被 UI 简化删除。
+
+
+### 选定版本升级
+
+保留 `checkUpdate` 与 `prepareUpgrade` 的原签名及“检查最新版”行为，新增 Agent-scoped `checkVersionUpdate(sourceRevision,itemKey,version,signal)` 和 `prepareVersionUpgrade(sourceRevision,itemKey,version,signal)`。两组接口共享当前库存重读、完整目标基线、版本比较、文件修改保护与确认计划；定向接口必须按指定 version 解析，响应版本不一致即拒绝，不使用 latest 替换不可用版本。执行仍只提交原 executePlan，无新文件写入接口或 SaaS 安装接口。
+
+详情按 source/session/itemKey/所选 version 隔离只读检查缓存，切换仅触发读取。较新且可核验的版本显示升级到该版本，相同版本不重复显示升级，旧版本或不可排序版本明确阻断。确认使用捕获的库存项与精确目标，不因后台库存刷新重建另一升级意图；升级完成使库存失效，旧 itemKey 的检查结果不会绑定到新记录。

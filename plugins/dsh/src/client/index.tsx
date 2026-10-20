@@ -18,10 +18,12 @@ import { SearchToolView } from './search-tool-view.js';
 import { CatalogUnavailableError, InstallToolView } from './install-tool-view.js';
 import type { InstallResult } from './install-result.js';
 import { QueryClient } from '@tanstack/react-query';
+import { installedNavigationFor } from './installed-navigation.js';
 import { CatalogPage, createCatalogNavigation } from './catalog-page.js';
 import { UpgradeRequests, RemovalRequests } from './upgrade-requests.js';
 import { InstallationRequests } from './installation-requests.js';
 import type { InstalledServices } from './installed-skills.js';
+import type { UpgradeServices } from './upgrade-control.js';
 import type { InstallationServices } from './install-control.js';
 import { TYPERT_REMOTE } from '../../lib/typert.remote-client.js';
 
@@ -59,7 +61,24 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
         if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');
         return withSessionRemote(scope, action);
       };
-      return { sessionId, requests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
+      const upgrades: UpgradeServices = { sessionId, upgradeRequests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
+        prepareUpgrade: (revision, itemKey, signal) => call(remote => remote.skillhub.prepareUpgrade(revision, itemKey, signal)),
+        prepareVersionUpgrade: (revision, itemKey, version, signal) => call(remote => remote.skillhub.prepareVersionUpgrade(revision, itemKey, version, signal)),
+        executePlan: (input, signal) => call(remote => remote.skillhub.executePlan(input, signal)),
+        operation: (id, host) => call(remote => remote.skillhub.getOperation(id, host)),
+        recoverOperation: input => call(remote => remote.skillhub.recoverOperation(input)),
+      };
+      return { sessionId, requests, upgrades, registryIdentity: async revision => { const source = await ctx.remote.skillhub.getContext(); if (!source.ok || !source.value.configured || source.value.sourceRevision !== revision) throw new Error('来源已变化，请重新读取详情。'); return source.value.registryUrl; },
+        checkVersionUpdate: (revision, itemKey, version, signal) => call(remote => remote.skillhub.checkVersionUpdate(revision, itemKey, version, signal)),
+        manageInstalled: (sourceRevision, item) => {
+        const layout = ctx.get('layout');
+        if (!layout || !ctx.sessions.scope(SessionId(sessionId))) throw new Error('当前会话不可用。');
+        const installed = installedNavigationFor(navigation, sessionId, sourceRevision);
+        Object.assign(installed, { scope: item.scope, keyword: '', selected: item, intent: 'remove', completed: null, removalCompleted: null, triggerKey: item.itemKey });
+        navigation.selected = null; navigation.tab = 'installed'; navigation.scrollTop = 0;
+        navigation.installedOrigin = { sessionId, sourceRevision };
+        layout.selectPanel(panelId);
+      }, compatibility: () => ctx.remote.skillhub.getCompatibility(),
         targets: (token, signal) => call(remote => remote.skillhub.listInstallTargets(token, signal)),
         installed: (revision, signal) => call(remote => remote.skillhub.listInstalled(revision, signal)),
         start: (input, signal) => call(remote => remote.skillhub.startInstall(input, signal)),
@@ -84,7 +103,24 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       name: 'tool.call.toolview', key: 'astron_skillhub_install',
       inject: sessionId => {
         const receipt = receiptReadsFor(sessionId);
-        return { services: { client, installation: installationFor(sessionId), receipt, openInstalled: async (result: InstallResult) => {
+        return { services: { client, installation: installationFor(sessionId), receipt,
+          confirmation: { client, remote: ctx.remote.skillhub, installation: installationFor(sessionId),
+            openCatalog: async () => { throw new Error('请从技能中心重新搜索。'); },
+            openDetail: async (reference: string, signal: AbortSignal) => {
+              receipt.assertCurrent();
+              const scope = ctx.sessions.scope(SessionId(sessionId));
+              if (!scope) throw new Error('当前会话已关闭，请重新搜索技能。');
+              return withSessionRemote(scope, remote => remote.skillhub.openConversationDetail(reference, signal));
+            },
+            // Pending install history is not trusted search history and must never be reissued.
+            reopenDetail: async () => { throw new Error('此安装选择已过期，请在当前会话重新搜索技能。'); },
+            acknowledgeDetail: async (reference: string, token: string) => {
+              receipt.assertCurrent();
+              const scope = ctx.sessions.scope(SessionId(sessionId));
+              if (!scope) throw new Error('当前会话已关闭，请重新搜索技能。');
+              return withSessionRemote(scope, remote => remote.skillhub.acknowledgeConversationDetail(reference, token));
+            },
+          }, openInstalled: async (result: InstallResult) => {
         const layout = ctx.get('layout');
         if (!layout) throw new CatalogUnavailableError();
         const reads = receipt;
@@ -158,6 +194,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
               if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');
               return withSessionRemote(scope, remote => remote.skillhub.prepareUninstall(revision, itemKey, signal));
             },
+            prepareVersionUpgrade: installationFor(sessionId).upgrades!.prepareVersionUpgrade,
             prepareUpgrade: async (revision, itemKey, signal) => {
               const scope = ctx.sessions.scope(SessionId(sessionId));
               if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');

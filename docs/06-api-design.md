@@ -86,6 +86,8 @@
 | GET | `/api/v1/namespaces` | 公开命名空间列表 |
 | GET | `/api/v1/namespaces/{slug}` | 命名空间详情 |
 
+版本列表支持 `page`（从 0 开始）、`size` 和可选 `downloadableOnly`（缺省 `false`）。`true` 仅返回已发布、下载就绪且未撤回的版本，先过滤和排序后分页，`total` 为过滤后的数量。公开列表按发布时间倒序、空时间靠后，再按创建时间和 ID 倒序稳定排序。管理者缺省读取保留生命周期分组和未发布历史。过滤不探测对象存储，实际下载仍可能因文件缺失或网络错误失败。
+
 Public API 的可见性规则：
 - `PUBLIC` 技能：若存在已发布版本，则已登录用户可访问；匿名访问仍受下载/resolve 端点的 namespace 类型限制
 - `NAMESPACE_ONLY` 技能：仅该命名空间成员可访问（需登录）

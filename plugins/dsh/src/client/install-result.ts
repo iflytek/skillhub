@@ -28,3 +28,19 @@ export function parseInstallResult(value: unknown): InstallResult | undefined {
   const result = schema.safeParse(value);
   return result.success ? result.data : undefined;
 }
+
+const pendingSchema = schema.pick({ schemaVersion: true, kind: true, toolCallId: true,
+  namespace: true, slug: true, version: true, sourceLabel: true, sourceRevision: true, createdAt: true }).extend({
+  status: z.literal('awaiting-confirmation'), selectionRef: z.uuid(),
+}).strict();
+export type PendingInstallResult = z.infer<typeof pendingSchema>;
+/** A pending history snapshot can only open a still-valid Host choice, never restore authorization. */
+export function parsePendingInstallResult(value: unknown): PendingInstallResult | undefined {
+  const result = pendingSchema.safeParse(value);
+  return result.success ? result.data : undefined;
+}
+
+export function isCancelledInstallResult(value: unknown): boolean {
+  return z.object({ schemaVersion: z.literal(1), kind: z.literal('skillhub-install'),
+    status: z.literal('cancelled'), toolCallId: text }).strict().safeParse(value).success;
+}

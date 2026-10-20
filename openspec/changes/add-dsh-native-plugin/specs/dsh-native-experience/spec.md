@@ -103,8 +103,20 @@ The plugin SHALL provide a read-only skill search tool with clickable cards in t
 The plugin SHALL provide an installation tool and a custom operation result card for explicit user installation requests. It SHALL use the same Host installation service, trusted targets, immutable version selection, conflict protection and operation journal as the plaza. It SHALL NOT accept arbitrary paths or download URLs from the model or automatically upgrade, uninstall or execute skills.
 
 #### Scenario: Unambiguous explicit request
-- **WHEN** the user explicitly requests installation of an identified skill
+- **WHEN** the user explicitly requests installation of an identified skill and specifies current project or current user scope
 - **THEN** the Host resolves a fixed version and trusted scope, starts a shared installation operation, and presents separate file and discovery outcomes
+
+#### Scenario: Installation request without a specified scope
+- **WHEN** the user requests installation of an identified skill without specifying current project or current user
+- **THEN** the Host presents a native input-adjacent scope question bound to the selected exact version; it MAY read detail and available targets but SHALL NOT create an operation, download the skill archive or mutate installed files before an exact answer
+- **AND** the native question offers only available project/user targets plus cancellation; if the service or answerer is unavailable the result is awaiting-confirmation and a card opens a compact confirmation dialog without detail navigation
+- **AND** the model does not claim installation started before human confirmation or issuing another call to select a scope on the user's behalf; a later user message explicitly choosing a scope may initiate a new call with the original still-valid search reference, never the dedicated pending reference
+
+#### Scenario: Pending confirmation is canceled or becomes stale
+- **WHEN** the user closes the confirmation or its source, conversation, project, Agent, runtime or Host changes
+- **THEN** no installation is replayed and stale choices require a fresh search rather than coordinate or latest-version fallback
+- **AND** an unchanged repeated call keeps the original pending version while changed arguments under that call are rejected
+- **AND** pending history has no operation identity, cannot restore write authority and remains a query-time snapshot after a UI-confirmed installation
 
 #### Scenario: Ambiguous identity or unavailable project
 - **WHEN** the requested identity is ambiguous or the requested project has no trusted root
@@ -321,3 +333,90 @@ After a Host restart, the plugin SHALL distinguish durable operation identity fr
 - **WHEN** the historical operation completed but the skill was subsequently upgraded or uninstalled
 - **THEN** the receipt preserves the original operation result while separately showing the current inventory
 - **AND** it does not claim that the original version is still installed or submit a replacement installation
+
+
+### Requirement: Compact market actions and readable cached details
+The market SHALL use an independent whole-card detail trigger and sibling install-management buttons, omit ordinary no-source-record badges, and require a target when multiple installed scopes exist. Built-in labels SHALL have Chinese display names without changing filter slugs. Details SHALL omit complete leading Markdown frontmatter and global optional-module retry clutter. Public reads MAY be reused for 60 seconds using source/session/version identities; cached content SHALL remain visible during refresh and stale write references SHALL be revalidated.
+
+#### Scenario: Card action does not open the detail page
+- **WHEN** a user chooses remove or upgrade on a card
+- **THEN** only the chosen installed target enters the existing preflight/confirmation flow
+- **AND** the detail navigation trigger does not fire
+
+#### Scenario: Return to a recently read detail
+- **WHEN** the same session and source return within the read-cache window
+- **THEN** the detail content and selected tab are reused without a blank loading replacement
+- **AND** installation still uses valid Host context rather than trusting cached presentation
+
+
+### Requirement: Direct market installation and safe native answers
+Clicking a market install action SHALL open a compact scope-confirmation dialog without navigating to the detail page. When current installation records exist, the default scope SHALL prefer an installed scope (project first when both exist); otherwise it SHALL be the trusted current project when available, then current user; a default selection SHALL NOT submit installation. The native conversation question SHALL carry the exact live Agent and cancellation signal. Only one exact supported scope answer SHALL allow a single transaction after all source/session/runtime/reference bindings are rechecked. Skipped, custom, cancelled, ambiguous or stale answers SHALL NOT install. Missing native providers SHALL retain the no-write pending-card fallback.
+
+#### Scenario: Native scope question is canceled
+- **WHEN** the user cancels or skips the question instead of selecting a supported scope
+- **THEN** the tool returns cancelled without an operation identifier or filesystem mutation
+- **AND** no automatic retry or default-scope installation occurs
+
+#### Scenario: A card install is canceled
+- **WHEN** the user opens the install dialog from a card and cancels it
+- **THEN** no installation request is submitted and the catalog, scroll position and focused trigger remain available
+
+
+### Requirement: Installation confirmation expands into compact progress
+After an installation is explicitly confirmed and its original request is saved, the plugin SHALL keep the dialog open and expand it to the right where viewport space permits. The left column SHALL retain the skill, fixed version and selected scope. The right column SHALL show compact real operation progress and result without raw operation history. Narrow viewports SHALL stack the columns within the dialog. Closing SHALL NOT cancel an already submitted installation.
+
+#### Scenario: Installation submission is waiting for a response
+- **WHEN** the saved installation request is submitting and has no operation response yet
+- **THEN** the right panel shows an indeterminate submitting state rather than an unknown-result warning
+- **AND** expansion does not navigate or re-read skill details
+
+#### Scenario: Operation completes and is read repeatedly
+- **WHEN** the operation first enters a terminal phase
+- **THEN** current-session installation projections refresh while existing cards remain visible
+- **AND** repeated reads of the same terminal phase do not trigger repeated inventory refreshes
+- **AND** only completed operations show full progress, with discovery and warning outcomes accurately distinguished
+
+
+### Requirement: Current installed inventory owns installation management state
+The plugin SHALL derive current installation state and removal actions from the current source/session inventory, separately from historical operation receipts. An existing installation SHALL display its version and an explicit management action in its selected scope without a duplicate installation action. Completed historical receipts SHALL NOT be displayed as current installation success after removal. Scope presentation SHALL distinguish project-only availability from current-user availability across projects without changing Host paths or permissions.
+
+#### Scenario: User-level installation is opened in details
+- **WHEN** a skill has a user-level record and no current-project record
+- **THEN** details default to the user-level scope and display the installed version with a removal entry
+- **AND** explicitly selecting the project scope offers a separate project installation without submitting it automatically
+
+#### Scenario: A completed installation was later removed
+- **WHEN** fresh inventory confirms that the selected installation is absent
+- **THEN** the control shows an explicit installation action instead of the old success receipt
+- **AND** new explicit confirmation may supersede the completed request while unresolved requests retain their original request identity
+
+
+### Requirement: Removal opens a compact confirmation in place
+Removal actions from the market, installed list and skill detail SHALL open confirmation in place rather than navigate to another detail screen. The confirmation SHALL show the selected skill, version, scope and scope-specific impact, while omitting routine raw Registry URLs, Host paths and plan expiry timestamps. Existing preflight, expiry, identity, fingerprint, confirmation and recovery protections SHALL remain unchanged.
+
+#### Scenario: Open and cancel removal
+- **WHEN** the user opens removal from an installed card
+- **THEN** the original page remains underneath a confirmation dialog and the plugin performs read-only preflight
+- **AND** confirmation remains disabled until the plan is ready
+- **AND** cancellation or Escape performs no removal and restores focus to the originating trigger
+
+#### Scenario: Confirm removal
+- **WHEN** the user confirms a ready unexpired plan
+- **THEN** the original idempotent request submits exactly once and progress/result remains in the same dialog
+- **AND** inventory refreshes when the operation settles without navigating to detail
+- **AND** failed, unknown or recovery-required results never appear as successful removal
+
+
+### Requirement: Selecting a newer version offers an exact-version upgrade
+Selecting a version SHALL be read-only. For an installed skill, a newer verifiable selected version SHALL offer an explicit upgrade to that exact version. The plugin SHALL preserve existing latest-version update methods while adding agent-scoped exact-version checks and preflight. Unavailable or mismatched selected candidates SHALL NOT fall back to latest. Same versions SHALL NOT offer duplicate upgrades; older or unorderable versions SHALL explain why upgrade is blocked.
+
+#### Scenario: Upgrade to a selected non-latest version
+- **WHEN** version 1.0 is installed, 1.2 is latest and the user selects 1.1
+- **THEN** checking and confirmation bind 1.1 and no execution occurs until confirmation
+- **AND** cancellation leaves files and inventory unchanged
+- **AND** confirmed execution uses the existing complete-target transaction and displays every affected scope
+
+#### Scenario: Local file changes or unmanaged targets block upgrade
+- **WHEN** any required installed target cannot pass the existing baseline or ownership checks
+- **THEN** confirmation is blocked for the entire upgrade and no target is overwritten
+- **AND** current installed state remains independently queryable

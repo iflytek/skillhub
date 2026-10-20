@@ -1,6 +1,7 @@
 import { Context, symbols } from '@deepseek-ai/cordis';
 import { Remote, RemoteError, RemoteScope, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type {} from '@deepseek-ai/dsh-agent';
+import type {} from '@deepseek-ai/dsh-user-questions';
 import type {} from '@deepseek-ai/dsh-session-query';
 import { historicalSearchCandidate } from './conversation-history.js';
 import type {} from '@deepseek-ai/dsh-sandbox-policy';
@@ -28,6 +29,7 @@ import { observeDshInstallation } from './skill-discovery.js';
 import { validateDshSkill } from './skill-format.js';
 import { installRequest, operationQuery, executePlanRequest } from './install-request.js';
 import { conversationInstallKey, conversationInstallRequest } from './conversation-install-request.js';
+import type { PendingConversationInstall, CancelledConversationInstall } from './conversation-install-request.js';
 import type { PreparedNativeInstall } from './local-runtime.js';
 import type { NativeOperation, HostInstallRequest } from './types.js';
 import type { NativeRecoveryResult } from './generated/native-contract.js';
@@ -43,7 +45,7 @@ declare module '@deepseek-ai/cordis' {
 
 /** Native SkillHub service with session-scoped installation and read-only catalog methods. */
 export class SkillHubService extends TypertRemoteService {
-  static Config = Config;
+  static Config: typeof Config = Config;
   private readonly configuration: ReturnType<typeof Config>;
   private sourceRevision = randomUUID();
   private registry?: RegistryAdapter;
@@ -51,6 +53,8 @@ export class SkillHubService extends TypertRemoteService {
   private readonly lifetime = new AbortController();
   private localRuntime?: LocalRuntime;
   private readonly selections = new ConversationSelections();
+  private readonly pendingConversationInstalls = new Map<string, { parameters: string; agent: unknown; runtime: LocalRuntime; result: Promise<PendingConversationInstall>; confirmation?: Promise<NativeOperation | PendingConversationInstall | CancelledConversationInstall | undefined> }>();
+  private readonly pendingConversationChoices = new Map<string, { agent: unknown; runtime: LocalRuntime }>();
   private readonly installationTargets = new InstallationTargets();
   private readonly upgradePlans = new UpgradePlans();
   private readonly removalPlans = new RemovalPlans();
@@ -80,9 +84,9 @@ export class SkillHubService extends TypertRemoteService {
     });
     ctx.inject(['tools'], ctx => {
       ctx.effect(() => registerSearchTool(ctx.tools, (query, context, signal) => this.searchConversation(query, context, signal)));
-      ctx.effect(() => registerInstallTool(ctx.tools, (request, context, signal) => this.installConversation(request, context, signal)));
+      ctx.effect(() => registerInstallTool(ctx.tools, (request, context, signal) => this.installConversationWithChoice(request, context, signal)));
     });
-    ctx.effect(() => () => { this.lifetime.abort(); this.details.clear(); this.capabilities.clear(); this.selections.clear(); this.installationTargets.clear(); this.upgradePlans.clear(); this.removalPlans.clear(); });
+    ctx.effect(() => () => { this.lifetime.abort(); this.pendingConversationInstalls.clear(); this.pendingConversationChoices.clear(); this.details.clear(); this.capabilities.clear(); this.selections.clear(); this.installationTargets.clear(); this.upgradePlans.clear(); this.removalPlans.clear(); });
   }
 
   /** Internal diagnostics, deliberately not a Remote method. */
@@ -247,7 +251,7 @@ export class SkillHubService extends TypertRemoteService {
   async listVersions(detailToken: string, page: number, signal: AbortSignal): Promise<VersionPage> {
     const detail = this.readDetail(detailToken, 'versions');
     return this.readSource(detail.sourceRevision, signal,
-      (registry, signal) => registry.versions(detail.namespace, detail.slug, page, 20, signal));
+      (registry, signal) => registry.browseVersions(detail.namespace, detail.slug, page, 20, signal));
   }
 
   @Remote
@@ -332,16 +336,26 @@ export class SkillHubService extends TypertRemoteService {
 
   @RemoteScope('agent')
   async checkUpdate(sourceRevision: string, itemKey: string, signal: AbortSignal): Promise<InstalledUpdateCheck> {
+    return this.checkUpdateForVersion(sourceRevision, itemKey, undefined, signal);
+  }
+
+  @RemoteScope('agent')
+  async checkVersionUpdate(sourceRevision: string, itemKey: string, version: string, signal: AbortSignal): Promise<InstalledUpdateCheck> {
+    return this.checkUpdateForVersion(sourceRevision, itemKey, version, signal);
+  }
+
+  private async checkUpdateForVersion(sourceRevision: string, itemKey: string, version: string | undefined, signal: AbortSignal): Promise<InstalledUpdateCheck> {
     const { item, valid } = await this.readInstalledItem(sourceRevision, itemKey, signal);
     const base = { currentVersion: item.version, candidateVersion: null, checkedAt: new Date().toISOString() };
     if (item.state !== 'present') return { ...base, state: 'blocked', reason: 'local-record-unverified' };
     let candidate;
     try {
-      candidate = await this.readSource(sourceRevision, signal, (registry, signal) => registry.resolve(item.namespace, item.slug, undefined, signal));
+      candidate = await this.readSource(sourceRevision, signal, (registry, signal) => registry.resolve(item.namespace, item.slug, version, signal));
     } catch (error) {
       signal.throwIfAborted(); valid();
       return { ...base, state: 'unavailable', reason: installationFailureCode(error) };
     }
+    if (version !== undefined && candidate.version !== version) throw new RemoteError('skillhub/context-stale', 'Selected version changed.', { retryable: false });
     const after = await this.readInstalledItem(sourceRevision, itemKey, signal);
     if (after.item.state !== item.state || after.item.fingerprint !== item.fingerprint) {
       throw new RemoteError('skillhub/context-stale', 'Installed record changed during update check.', { retryable: false });
@@ -355,6 +369,15 @@ export class SkillHubService extends TypertRemoteService {
 
   @RemoteScope('agent')
   async prepareUpgrade(sourceRevision: string, itemKey: string, signal: AbortSignal): Promise<UpgradePlanView> {
+    return this.prepareUpgradeForVersion(sourceRevision, itemKey, undefined, signal);
+  }
+
+  @RemoteScope('agent')
+  async prepareVersionUpgrade(sourceRevision: string, itemKey: string, version: string, signal: AbortSignal): Promise<UpgradePlanView> {
+    return this.prepareUpgradeForVersion(sourceRevision, itemKey, version, signal);
+  }
+
+  private async prepareUpgradeForVersion(sourceRevision: string, itemKey: string, version: string | undefined, signal: AbortSignal): Promise<UpgradePlanView> {
     const { item, valid, agent, runtime, fs } = await this.readInstalledItem(sourceRevision, itemKey, signal);
     const combined = AbortSignal.any([signal, this.lifetime.signal]);
     const context = this.selectionScope(agent!);
@@ -373,7 +396,8 @@ export class SkillHubService extends TypertRemoteService {
     valid(); combined.throwIfAborted();
     if (baseline.status === 'blocked') return { ...base, reason: baseline.reason };
     const candidate = await this.readSource(sourceRevision, combined,
-      (registry, signal) => registry.resolve(item.namespace, item.slug, undefined, signal));
+      (registry, signal) => registry.resolve(item.namespace, item.slug, version, signal));
+    if (version !== undefined && candidate.version !== version) throw new RemoteError('skillhub/context-stale', 'Selected version changed.', { retryable: false });
     const assessment = await runtime!.assessUpdate(baseline.inventoryItem, candidate);
     valid(); combined.throwIfAborted();
     if (assessment.state !== 'upgradable') return { ...base,
@@ -596,6 +620,8 @@ export class SkillHubService extends TypertRemoteService {
     const snapshot = this.details.get(detail.detailToken);
     if (!snapshot) throw new RemoteError('skillhub/context-stale', 'Detail expired.', { retryable: false });
     const fixedRef = this.selections.stage(selectionRef, this.selectionScope(agent), detail.detailToken, snapshot);
+    const pendingOrigin = this.pendingConversationChoices.get(selectionRef);
+    if (pendingOrigin) this.pendingConversationChoices.set(fixedRef, pendingOrigin);
     return { ...detail, selectionRef: fixedRef };
   }
 
@@ -814,8 +840,61 @@ export class SkillHubService extends TypertRemoteService {
     };
   }
 
+  /** Use the Host question surface without creating an operation until a human answers. */
+  async installConversationWithChoice(input: unknown, context: ConversationSearchContext, signal: AbortSignal): Promise<NativeOperation | PendingConversationInstall | CancelledConversationInstall | undefined> {
+    const request = conversationInstallRequest.parse(input);
+    const result = await this.installConversation(request, context, signal);
+    if (request.scope || !result || !('status' in result)) return result;
+    const questions = this.ctx.get('userQuestions');
+    if (!questions) return result;
+    const runtime = this.localRuntime;
+    const agent = this.ctx.get('agents')?.get(SessionId(context.sessionId));
+    const hostInstanceId = runtime?.getStatus().hostInstanceId;
+    if (!runtime || !agent || !hostInstanceId) throw new RemoteError('skillhub/context-stale', 'Conversation changed.', { retryable: false });
+    const requestKey = conversationInstallKey({ hostInstanceId, sessionId: context.sessionId, callId: context.callId });
+    const entry = this.pendingConversationInstalls.get(requestKey)!;
+    if (!entry.confirmation) entry.confirmation = (async () => {
+      const selectionScope = this.selectionScope(agent);
+      this.selections.read(result.selectionRef, selectionScope);
+      const detail = await this.getSkillDetail(result.sourceRevision, result.namespace, result.slug, result.version, signal);
+      const available = await this.installationTargetsFor(context.sessionId, detail.detailToken, signal);
+      if (!available.targets.length) throw new RemoteError('skillhub/target-unavailable', 'No installation target available.', { retryable: false });
+      const labels = { project: '安装到当前项目', user: '安装到当前用户' };
+      let answer;
+      try {
+        answer = await questions.ask({ agent, signal, questions: [{ id: 'skillhub-install-scope', header: '安装范围',
+          question: `安装 @${result.namespace}/${result.slug} · ${result.version} 到哪里？`,
+          detail: `技能：${detail.title}\n\n版本：${detail.version}\n\n来源：${result.sourceLabel}\n\n选择范围并提交即确认安装。项目范围不会自动同步给协作者。`,
+          options: [...[...available.targets].sort((a, b) => Number(b.scope === 'project') - Number(a.scope === 'project')).map(target => ({ label: labels[target.scope], description: target.scope === 'project'
+            ? '仅当前工作区使用，不自动共享或同步给协作者。' : '此 DSH 主机上当前用户的多个项目可用。' })),
+            { label: '取消安装', description: '不下载技能包，不写入技能文件。' }], multiSelect: false }] });
+      } catch (error) {
+        if (error && typeof error === 'object' && Reflect.get(error, 'code') === 'NO_PROVIDER') return result;
+        if (!signal.aborted && error && typeof error === 'object' && Reflect.get(error, 'code') === 'ASK_CANCELLED') {
+          return { schemaVersion: 1 as const, kind: 'skillhub-install' as const, status: 'cancelled' as const, toolCallId: context.callId };
+        }
+        throw error;
+      }
+      signal.throwIfAborted();
+      const choice = answer.answers.find(item => item.id === 'skillhub-install-scope');
+      const target = !choice?.custom && choice?.selected.length === 1
+        ? available.targets.find(target => labels[target.scope] === choice.selected[0]) : undefined;
+      if (!target) return { schemaVersion: 1 as const, kind: 'skillhub-install' as const, status: 'cancelled' as const, toolCallId: context.callId };
+      // Recheck every binding after the potentially long human wait. Never resolve latest again.
+      this.assertSource(result.sourceRevision);
+      this.selections.read(result.selectionRef, this.selectionScope(agent));
+      if (this.localRuntime !== runtime || this.ctx.get('agents')?.get(SessionId(context.sessionId)) !== agent || agent.session.header.cwd !== context.cwd) {
+        throw new RemoteError('skillhub/context-stale', 'Conversation changed.', { retryable: false });
+      }
+      return runtime.submitInstall({ ownerId: context.sessionId, hostInstanceId, requestKey, mode: 'new',
+        parameters: { ...request, scope: target.scope, cwd: context.cwd, initiatedFrom: 'conversation' } },
+        () => this.prepareInstallation(context.sessionId, detail.detailToken, target.targetToken, 'conversation', signal));
+    })();
+    return entry.confirmation;
+  }
+
   /** Stable tool identity is checked in the journal before resolving ephemeral detail/target references. */
-  async installConversation(input: unknown, context: ConversationSearchContext, signal: AbortSignal): Promise<NativeOperation | undefined> {
+  async installConversation(input: unknown, context: ConversationSearchContext, signal: AbortSignal): Promise<NativeOperation | PendingConversationInstall | undefined> {
     const request = conversationInstallRequest.parse(input);
     const runtime = this.localRuntime;
     const agent = this.ctx.get('agents')?.get(SessionId(context.sessionId));
@@ -824,6 +903,55 @@ export class SkillHubService extends TypertRemoteService {
       throw new RemoteError('skillhub/context-stale', 'Installation context unavailable.', { retryable: false });
     }
     const requestKey = conversationInstallKey({ hostInstanceId, sessionId: context.sessionId, callId: context.callId });
+    const parameters = JSON.stringify({ ...request, cwd: context.cwd });
+    const pending = this.pendingConversationInstalls.get(requestKey);
+    if (pending) {
+      if (pending.agent !== agent || pending.runtime !== runtime) throw new RemoteError('skillhub/context-stale', 'Conversation changed.', { retryable: false });
+      if (pending.parameters !== parameters) throw new RemoteError('skillhub/request-conflict', 'Request parameters changed.', { retryable: false });
+      const result = await pending.result;
+      signal.throwIfAborted();
+      this.selections.read(result.selectionRef, this.selectionScope(agent));
+      if (this.localRuntime !== runtime || this.ctx.get('agents')?.get(SessionId(context.sessionId)) !== agent) {
+        throw new RemoteError('skillhub/context-stale', 'Conversation changed.', { retryable: false });
+      }
+      return result;
+    }
+    if (!request.scope) {
+      // No transaction, target token, download, or fingerprint is created before visible confirmation.
+      const result = (async (): Promise<PendingConversationInstall> => {
+        signal.throwIfAborted();
+        const scope = this.selectionScope(agent);
+        let selectionRef: string;
+        let candidate: { namespace: string; slug: string; version: string };
+        if ('selectionRef' in request) {
+          const { namespace, slug, version } = this.selections.read(request.selectionRef, scope);
+          candidate = { namespace, slug, version };
+          selectionRef = this.selections.add({ ...context, sourceRevision: scope.sourceRevision }, candidate);
+        } else {
+          const resolved = await this.readSource(scope.sourceRevision, signal,
+            (registry, signal) => registry.resolve(request.namespace, request.slug, undefined, signal));
+          candidate = { namespace: request.namespace, slug: request.slug, version: resolved.version };
+          selectionRef = this.selections.add({ ...context, sourceRevision: scope.sourceRevision }, candidate);
+        }
+        signal.throwIfAborted();
+        this.assertSource(scope.sourceRevision);
+        if (agent.session.header.cwd !== context.cwd || this.localRuntime !== runtime
+          || this.ctx.get('agents')?.get(SessionId(context.sessionId)) !== agent) {
+          throw new RemoteError('skillhub/context-stale', 'Conversation changed.', { retryable: false });
+        }
+        this.pendingConversationChoices.set(selectionRef, { agent, runtime });
+        return { schemaVersion: 1, kind: 'skillhub-install', status: 'awaiting-confirmation',
+          toolCallId: context.callId, selectionRef, namespace: candidate.namespace, slug: candidate.slug,
+          version: candidate.version, sourceLabel: this.getContext().registryUrl,
+          sourceRevision: scope.sourceRevision, createdAt: new Date().toISOString() };
+      })();
+      // Retain a failed choice too: retrying the call must never silently resolve a newer candidate.
+      this.pendingConversationInstalls.set(requestKey, { parameters, agent, runtime, result });
+      return result;
+    }
+    if ('selectionRef' in request && this.pendingConversationChoices.has(request.selectionRef)) {
+      throw new RemoteError('skillhub/context-stale', 'Choose the scope and confirm in the installation card.', { retryable: false });
+    }
     return runtime.submitInstall({ ownerId: context.sessionId, hostInstanceId, requestKey, mode: 'new',
       parameters: { ...request, cwd: context.cwd, initiatedFrom: 'conversation' } }, async () => {
       signal.throwIfAborted();
@@ -953,6 +1081,10 @@ export class SkillHubService extends TypertRemoteService {
   }
 
   private conversationSelection(agent: { session: { id: string; header: { cwd?: string } } }, reference: string) {
+    const pending = this.pendingConversationChoices.get(reference);
+    if (pending && (pending.agent !== agent || pending.runtime !== this.localRuntime)) {
+      throw new RemoteError('skillhub/context-stale', 'Installation choice expired. Search again.', { retryable: false });
+    }
     return this.selections.read(reference, this.selectionScope(agent));
   }
 

@@ -70,7 +70,7 @@ export function DialogContent({ container, children, ...props }: React.Component
 /** shadcn/ui Select (MIT), New York registry select.json; scoped CSS replaces utilities. */
 export const SelectField = React.forwardRef<HTMLButtonElement, {
   label: string; value: string; onValueChange(value: string): void; disabled?: boolean;
-  options: readonly { value: string; label: string }[];
+  options: readonly { value: string; label: string; disabled?: boolean }[];
 }>(({ label, value, onValueChange, disabled, options }, ref) => {
   const [container, setContainer] = React.useState<HTMLSpanElement | null>(null);
   return <span className="astron-sh-select-root" ref={setContainer}>
@@ -82,7 +82,7 @@ export const SelectField = React.forwardRef<HTMLButtonElement, {
         <SelectPrimitive.Content position="popper" sideOffset={5} className="astron-sh-select-content">
           <SelectPrimitive.ScrollUpButton className="astron-sh-select-scroll" aria-label="向上滚动">⌃</SelectPrimitive.ScrollUpButton>
           <SelectPrimitive.Viewport><SelectPrimitive.Group>
-            {options.map(option => <SelectPrimitive.Item key={option.value} value={option.value} className="astron-sh-select-item">
+            {options.map(option => <SelectPrimitive.Item key={option.value} value={option.value} disabled={option.disabled} className="astron-sh-select-item">
               <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
               <SelectPrimitive.ItemIndicator aria-hidden="true">✓</SelectPrimitive.ItemIndicator>
             </SelectPrimitive.Item>)}

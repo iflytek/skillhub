@@ -11,14 +11,17 @@ import { useState } from 'react';
 import { QueryClientProvider, useQuery } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 import type { InstallationServices } from './install-control.js';
-import { parseInstallResult, parseInstallFailure } from './install-result.js';
+import { parseInstallResult, parseInstallFailure, parsePendingInstallResult, isCancelledInstallResult } from './install-result.js';
 import type { InstallFailure } from './install-result.js';
-import type { InstallResult } from './install-result.js';
+import type { InstallResult, PendingInstallResult } from './install-result.js';
+import { SkillInstallDialog } from './install-dialog.js';
+import type { SearchViewServices } from './conversation-detail.js';
 import { useInstallationOperation } from './use-installation-operation.js';
 
 export interface InstallViewServices {
   client: QueryClient;
   receipt: ReceiptReads;
+  confirmation?: SearchViewServices;
   installation: Pick<InstallationServices, 'sessionId' | 'operation' | 'installed'>;
   openInstalled(result: InstallResult): Promise<void>;
 }
@@ -51,11 +54,14 @@ function InstallToolViewContent(props: ToolCallViewProps & { services: InstallVi
     <p role="alert">本次安装请求未确认。请检查原操作或重新查看技能详情，不要直接重复安装。</p>
     {props.inspect && <button onClick={props.inspect}>查看调用详情</button>}
   </section>;
+  if (isCancelledInstallResult(props.block.meta)) return <p role="status">安装未提交，未写入技能文件。</p>;
   const failure = parseInstallFailure(props.block.meta);
   if (failure) return <section aria-label="SkillHub 安装请求未确认">
     <p role="alert">{failureMessages[failure.code]}</p>
     {props.inspect && <button onClick={props.inspect}>查看调用详情</button>}
   </section>;
+  const pending = parsePendingInstallResult(props.block.meta);
+  if (pending) return <PendingInstallation result={pending} services={props.services.confirmation} />;
   const result = parseInstallResult(props.block.meta);
   if (!result) return <section aria-label="SkillHub 安装记录">
     <p>这条记录的格式无法识别，不能核验安装结果。</p>
@@ -129,5 +135,25 @@ function InstallationResult({ result, services, receipt, openInstalled }: {
     </details>
     </details>
     {actionStatus && <p role="status">{actionStatus}</p>}
+  </section>;
+}
+
+export function PendingInstallation({ result, services }: { result: PendingInstallResult; services?: SearchViewServices }) {
+  const [open, setOpen] = useState(false);
+  return <section className="astron-sh-conversation-result astron-sh-conversation-install" aria-label="选择安装范围">
+    <header className="astron-sh-conversation-identity"><SkillAvatar slug={result.slug} namespace={result.namespace} />
+      <div><h4>{result.slug}</h4><p>@{result.namespace}/{result.slug} · v{result.version}</p></div>
+      <span className="astron-sh-install-badge" data-tone="warning">等待确认</span></header>
+    <p>尚未安装。请选择安装范围并确认。</p>
+    <p className="astron-sh-conversation-caption">当前项目：供这个项目中的 DSH 会话使用。<br />当前用户：可在其他项目中发现，读取仍受会话权限限制。</p>
+    <Button disabled={!services} onClick={() => setOpen(true)}>选择范围并安装</Button>
+    {!services && <p role="alert">当前会话无法打开确认界面，请重新搜索并选择技能。</p>}
+    <p className="astron-sh-conversation-caption">这是等待确认时的记录；关闭或取消不会安装。来源或会话变化后请重新搜索。</p>
+    {open && services && <SkillInstallDialog client={services.client} services={services.installation} initiatedFrom="conversation"
+      identity={JSON.stringify([result.toolCallId, result.selectionRef])} close={() => setOpen(false)} load={async signal => {
+        const [context, detail] = await Promise.all([services.remote.getContext(), services.openDetail(result.selectionRef, signal)]);
+        if (!context.ok || !detail.ok || context.value.sourceRevision !== result.sourceRevision) throw new Error('原选择已失效，请重新搜索。');
+        return { detail: detail.value, sourceRevision: context.value.sourceRevision };
+      }} />}
   </section>;
 }

@@ -16638,6 +16638,7 @@ export interface operations {
             query?: {
                 page?: number;
                 size?: number;
+                downloadableOnly?: boolean;
             };
             header?: never;
             path: {
@@ -16664,6 +16665,7 @@ export interface operations {
             query?: {
                 page?: number;
                 size?: number;
+                downloadableOnly?: boolean;
             };
             header?: never;
             path: {

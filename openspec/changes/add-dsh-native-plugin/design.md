@@ -236,3 +236,8 @@ flowchart TB
 ## 对话入口与共享架构
 
 对话搜索与安装纳入首期。Host 工具适配器和 Client 广场 Remote 适配器调用相同应用服务：Registry API 获取内容，内置 CLI 核心写入文件；不执行 PATH CLI。Client 共用 DetailContent，分别装入广场子页面与对话抽屉。安装操作归属、锁、日志与幂等不因入口改变；详见 [对话设计](conversation-design.md)。
+
+
+## 版本目录的开源接口增量
+
+排序、可安装状态过滤和分页总数由开源后端统一计算；DSH 每页请求一次 `downloadableOnly=true`，不全量拉取或逐项 resolve 探测。固定版本安装仍经既有目标、指纹与包校验，管理者缺省历史行为保留。完整参数和排序契约见 [Registry API](registry-api-contract.md#版本目录的开源接口增量)；SaaS 同步单独验收。

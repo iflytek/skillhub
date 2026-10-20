@@ -53,7 +53,7 @@ test('saved acceptance uses original operation identity and presentation never i
     return operation;
   });
   const tool = tools.get(INSTALL_TOOL_NAME)!;
-  const result = await tool.execute({ selectionRef: 'ref' }, context);
+  const result = await tool.execute({ selectionRef: 'ref', scope: 'user' }, context);
   expect(result).toMatchObject({ status: 'accepted', operationId: operation.operationId, toolCallId: 'call',
     sourceLabel: 'Original Registry', hostLabel: 'Original Host', createdAt: operation.context.createdAt });
   expect(result).not.toHaveProperty('phase');
@@ -75,4 +75,25 @@ test('installation failures do not expose Host filesystem diagnostics', async ()
   expect(result).toEqual({ schemaVersion: 1, kind: 'skillhub-install', status: 'not-confirmed', toolCallId: 'call', code: 'UNCONFIRMED' });
   expect(JSON.stringify(result)).not.toContain('/private');
   expect(JSON.stringify(result)).not.toContain('secret');
+});
+
+test('omitted scope returns visible confirmation without a fake operation or leaking its choice to model text', async () => {
+  const tools = registry();
+  const pending = { schemaVersion: 1 as const, kind: 'skillhub-install' as const, status: 'awaiting-confirmation' as const,
+    toolCallId: 'call', selectionRef: randomUUID(), namespace: 'team', slug: 'writer', version: '1.0.0',
+    sourceLabel: 'https://registry.example', sourceRevision: randomUUID(), createdAt: new Date().toISOString() };
+  registerInstallTool(tools, async request => {
+    expect(request).toEqual({ selectionRef: 'ref' });
+    return pending;
+  });
+  const tool = tools.get(INSTALL_TOOL_NAME)!;
+  const result = await tool.execute({ selectionRef: 'ref' }, context);
+  expect(result).toEqual(pending);
+  expect(result).not.toHaveProperty('operationId');
+  const text = JSON.stringify(tool.output.render({}, pending));
+  expect(text).toContain('Not installed');
+  expect(text).toContain('choose current project or current user');
+  expect(text).toContain('Do not call this tool again');
+  expect(text).not.toContain(pending.selectionRef);
+  expect(tool.output.presentationMeta!({}, pending)).toEqual(pending);
 });

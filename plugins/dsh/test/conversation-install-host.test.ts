@@ -21,15 +21,15 @@ test('conversation retries reach durable acceptance before expired reference res
   try {
     const context = { sessionId: 'owner', cwd: '/project', callId: 'install-call' };
     const signal = new AbortController().signal;
-    await ctx.skillhub.installConversation({ selectionRef: 'expired' }, context, signal);
-    await ctx.skillhub.installConversation({ selectionRef: 'expired' }, context, signal);
+    await ctx.skillhub.installConversation({ selectionRef: 'expired', scope: 'user' }, context, signal);
+    await ctx.skillhub.installConversation({ selectionRef: 'expired', scope: 'user' }, context, signal);
     await ctx.skillhub.installConversation({ selectionRef: 'changed', scope: 'project' }, context, signal);
     expect(requests).toHaveLength(3);
     expect(requests[0]).toEqual(requests[1]);
     expect(requests[2]!.requestKey).toBe(requests[0]!.requestKey);
     expect(requests[0]!.parameters).toEqual({ selectionRef: 'expired', scope: 'user', cwd: '/project', initiatedFrom: 'conversation' });
     expect(requests[2]!.parameters).not.toEqual(requests[0]!.parameters);
-    await expect(ctx.skillhub.installConversation({ selectionRef: 'expired' }, { ...context, cwd: '/other' }, signal)).rejects.toThrow();
+    await expect(ctx.skillhub.installConversation({ selectionRef: 'expired', scope: 'user' }, { ...context, cwd: '/other' }, signal)).rejects.toThrow();
     await expect(ctx.skillhub.installConversation({ selectionRef: 'expired', path: '/other' }, context, signal)).rejects.toThrow();
     expect(requests).toHaveLength(3);
   } finally { await fiber.dispose(); await remove(); }
@@ -58,10 +58,10 @@ test('new conversation install preserves fixed detail and never falls back from 
   Reflect.set(ctx.skillhub, 'prepareInstallation', async (...args: unknown[]) => { preparations.push(args); return {}; });
   try {
     const context = { sessionId: 'owner', cwd: '/project', callId: 'install-call' };
-    await ctx.skillhub.installConversation({ selectionRef: viewed }, context, signal);
+    await ctx.skillhub.installConversation({ selectionRef: viewed, scope: 'user' }, context, signal);
     expect(preparations).toEqual([['owner', 'fixed-detail', 'user-target', 'conversation', signal]]);
     await expect(ctx.skillhub.installConversation({ selectionRef: viewed, scope: 'project' }, context, signal)).rejects.toThrow();
-    await expect(ctx.skillhub.installConversation({ selectionRef: 'expired' }, context, signal)).rejects.toThrow();
+    await expect(ctx.skillhub.installConversation({ selectionRef: 'expired', scope: 'user' }, context, signal)).rejects.toThrow();
     expect(preparations).toHaveLength(1);
   } finally { await fiber.dispose(); await remove(); }
 });
@@ -141,8 +141,111 @@ test.each(['cwd', 'agent', 'source', 'abort'])('direct installation rejects %s d
   });
   Reflect.set(ctx.skillhub, 'installationTargetsFor', async () => { targets++; throw new Error('unexpected target resolution'); });
   try {
-    await expect(ctx.skillhub.installConversation({ selectionRef: ref }, { sessionId: 'owner', cwd: '/project', callId: 'install' }, abort.signal)).rejects.toThrow();
+    await expect(ctx.skillhub.installConversation({ selectionRef: ref, scope: 'user' }, { sessionId: 'owner', cwd: '/project', callId: 'install' }, abort.signal)).rejects.toThrow();
     expect(targets).toBe(0);
     expect(() => selections.resolve(ref, scope)).toThrow();
   } finally { await fiber.dispose(); await remove(); }
+});
+
+async function pendingFixture() {
+  const ctx = new Context();
+  const agent = { session: { id: 'owner', header: { cwd: '/project' } } };
+  let current = agent;
+  const remove = ctx.provide('agents', { get: () => current } as never);
+  const removeInvocation = ctx.provide('invocation', { request: { args: { agentId: 'owner' } } } as never);
+  const fiber = ctx.plugin(SkillHubService, { registryUrl: 'https://registry.example' });
+  await fiber;
+  const hostInstanceId = randomUUID();
+  let mutations = 0;
+  const runtime = { getStatus: () => ({ state: 'ready', hostInstanceId }),
+    submitInstall: async () => { mutations++; throw new Error('No transaction is allowed before UI confirmation'); } };
+  Reflect.set(ctx.skillhub, 'localRuntime', runtime);
+  Reflect.set(ctx.skillhub, 'prepareInstallation', async () => { mutations++; throw new Error('No preparation before UI confirmation'); });
+  Reflect.set(ctx.skillhub, 'installationTargetsFor', async () => { mutations++; throw new Error('No target before UI confirmation'); });
+  Reflect.set(ctx.skillhub, 'getSkillDetail', async () => { mutations++; throw new Error('No detail or fingerprint lock before UI confirmation'); });
+  const selections: ConversationSelections = Reflect.get(ctx.skillhub, 'selections');
+  const scope = { sessionId: 'owner', cwd: '/project', sourceRevision: ctx.skillhub.getContext().sourceRevision };
+  const ref = selections.add({ ...scope, callId: 'search' }, { namespace: 'team', slug: 'writer', version: '1.0.0' });
+  return { ctx, agent, scope, ref, selections, runtime, mutations: () => mutations,
+    replaceAgent: () => { current = { session: { ...agent.session } }; },
+    close: async () => { await fiber.dispose(); await removeInvocation(); await remove(); } };
+}
+const pendingContext = { sessionId: 'owner', cwd: '/project', callId: 'install-choice' };
+
+test('search selection without scope returns an exact pending choice, preserves idempotency, and never prepares or submits', async () => {
+  const f = await pendingFixture();
+  const signal = new AbortController().signal;
+  try {
+    const pending = await f.ctx.skillhub.installConversation({ selectionRef: f.ref }, pendingContext, signal);
+    expect(pending).toMatchObject({ status: 'awaiting-confirmation', namespace: 'team', slug: 'writer', version: '1.0.0',
+      sourceRevision: f.scope.sourceRevision });
+    expect(pending && 'selectionRef' in pending ? pending.selectionRef : '').not.toBe(f.ref);
+    if (pending && 'selectionRef' in pending) {
+      await expect(f.ctx.skillhub.installConversation({ selectionRef: pending.selectionRef, scope: 'user' },
+        { ...pendingContext, callId: 'bypass' }, signal)).rejects.toThrow('confirm in the installation card');
+    }
+    expect(pending).not.toHaveProperty('operationId');
+    expect(pending).not.toHaveProperty('fingerprint');
+    expect(pending).not.toHaveProperty('cwd');
+    expect(pending).not.toHaveProperty('detailToken');
+    expect(await f.ctx.skillhub.installConversation({ selectionRef: f.ref }, pendingContext, signal)).toEqual(pending);
+    await expect(f.ctx.skillhub.installConversation({ selectionRef: f.ref, scope: 'user' }, pendingContext, signal)).rejects.toThrow('parameters changed');
+    await expect(f.ctx.skillhub.installConversation({ namespace: 'other', slug: 'skill' }, pendingContext, signal)).rejects.toThrow('parameters changed');
+    expect(() => f.selections.resolve(f.ref, f.scope)).toThrow();
+    expect(f.mutations()).toBe(0);
+  } finally { await f.close(); }
+});
+
+test.each(['source', 'cwd', 'agent', 'runtime', 'clear', 'abort'])('pending choice cannot reopen installation authority after %s changes', async change => {
+  const f = await pendingFixture();
+  const abort = new AbortController();
+  try {
+    const pending = await f.ctx.skillhub.installConversation({ selectionRef: f.ref }, pendingContext, abort.signal);
+    if (change === 'source') Reflect.set(f.ctx.skillhub, 'sourceRevision', randomUUID());
+    if (change === 'cwd') f.agent.session.header.cwd = '/changed';
+    if (change === 'agent') f.replaceAgent();
+    if (change === 'runtime') Reflect.set(f.ctx.skillhub, 'localRuntime', undefined);
+    if (change === 'clear') f.selections.clear();
+    if (change === 'abort') abort.abort();
+    if (change !== 'abort' && pending && 'selectionRef' in pending) {
+      await expect(f.ctx.skillhub.openConversationDetail(pending.selectionRef, abort.signal)).rejects.toThrow();
+    }
+    // No retry with an old candidate is allowed to submit an installation.
+    await expect(f.ctx.skillhub.installConversation({ selectionRef: f.ref }, pendingContext, abort.signal)).rejects.toThrow();
+    expect(f.mutations()).toBe(0);
+  } finally { await f.close(); }
+});
+
+test('new explicit coordinates without scope resolve a candidate version once, not a prepared install snapshot', async () => {
+  const f = await pendingFixture();
+  let resolves = 0;
+  Reflect.set(f.ctx.skillhub, 'readSource', async (_revision: string, _signal: AbortSignal,
+    read: (adapter: { resolve: () => Promise<{ version: string }> }, signal: AbortSignal) => Promise<unknown>) =>
+    read({ resolve: async () => { resolves++; return { version: '2.1.0' }; } }, _signal));
+  try {
+    const request = { namespace: 'team', slug: 'writer' };
+    const first = await f.ctx.skillhub.installConversation(request, pendingContext, new AbortController().signal);
+    expect(first).toMatchObject({ status: 'awaiting-confirmation', namespace: 'team', slug: 'writer', version: '2.1.0' });
+    expect(first && 'selectionRef' in first ? f.selections.read(first.selectionRef, f.scope).version : null).toBe('2.1.0');
+    expect(await f.ctx.skillhub.installConversation(request, pendingContext, new AbortController().signal)).toEqual(first);
+    expect(resolves).toBe(1);
+    expect(f.mutations()).toBe(0);
+  } finally { await f.close(); }
+});
+
+test.each(['source', 'cwd', 'agent', 'runtime', 'abort'])('pending coordinate resolution fails closed on asynchronous %s drift', async change => {
+  const f = await pendingFixture();
+  const abort = new AbortController();
+  Reflect.set(f.ctx.skillhub, 'readSource', async () => {
+    if (change === 'source') Reflect.set(f.ctx.skillhub, 'sourceRevision', randomUUID());
+    if (change === 'cwd') f.agent.session.header.cwd = '/changed';
+    if (change === 'agent') f.replaceAgent();
+    if (change === 'runtime') Reflect.set(f.ctx.skillhub, 'localRuntime', undefined);
+    if (change === 'abort') abort.abort();
+    return { version: '2.1.0' };
+  });
+  try {
+    await expect(f.ctx.skillhub.installConversation({ namespace: 'team', slug: 'writer' }, pendingContext, abort.signal)).rejects.toThrow();
+    expect(f.mutations()).toBe(0);
+  } finally { await f.close(); }
 });

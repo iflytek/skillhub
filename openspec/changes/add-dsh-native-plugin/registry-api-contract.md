@@ -177,3 +177,15 @@ sequenceDiagram
 ### 可选公开标签能力
 
 插件标签筛选复用开源已有 `/api/web/labels` 和 `/api/web/skills` 的 `label` 查询参数，无新增后端路由。SaaS 同步时应核对公开标签投影、匿名策略及筛选实际生效；未通过不能声明具备标签筛选。标签目录 404/405 时普通浏览继续可用；标签过滤请求失败必须明确提示，不得静默退回全部结果。
+
+
+## 版本目录的开源接口增量
+
+`GET /api/v1/skills/{namespace}/{slug}/versions` 增加可选参数 `downloadableOnly`，缺省 `false`，保留管理端版本历史。DSH 版本 Tab 使用 `true`；服务端沿用现有可见性检查，仅保留 `PUBLISHED`、`downloadReady=true`、未撤回的版本，在分页前按 `publishedAt DESC NULLS LAST`、`createdAt DESC NULLS LAST`、`id DESC` 排序，`total` 为过滤后的总量。普通公开版本读取也按相同时间顺序；管理者缺省读取保留生命周期分组顺序。
+
+此过滤描述领域可安装状态，不逐项探测对象存储；实际文件丢失由既有解析、下载路径处理。插件每页只请求一次版本接口，不全量拉取历史或并发 resolve 探测。固定版本安装仍重新校验目标和指纹。SaaS 后续需同步参数、排序、过滤和 total 契约后独立验收，本轮不代表 SaaS 已同步或发布。
+
+
+### 选定版本升级的 Registry 复用
+
+定向升级仍使用现有 `GET /api/cli/v1/skills/{namespace}/{slug}/resolve?version={精确版本}` 与固定版本下载路径，不新增 SaaS 文件安装或升级 API。插件新增的 checkVersionUpdate、prepareVersionUpgrade 是本地 DSH Host 的 Agent-scoped 类型化方法，不是 SaaS HTTP 接口。resolve 返回其他版本时拒绝；不可用候选不重新请求无 version 的 latest。原最新版检查/计划方法继续使用无 version 的解析。

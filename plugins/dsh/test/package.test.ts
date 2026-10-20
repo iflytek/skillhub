@@ -54,8 +54,8 @@ describe('native M0 package', () => {
   });
 
   test('official generator publishes the declared endpoints with scoped writes and strict codec', () => {
-    expect(TYPERT_REMOTE.descriptors.map(item => item.method).sort()).toEqual(['acknowledgeConversationDetail', 'checkUpdate', 'executePlan', 'getCompatibility', 'getContext', 'getInstalledDetail', 'getOperation', 'getSkillDetail', 'getStatus', 'listCatalog', 'listCatalogByLabel', 'listInstallTargets', 'listInstalled', 'listLabels', 'listReviews', 'listSkills', 'listVersions', 'openConversationDetail', 'prepareUninstall', 'prepareUpgrade', 'recoverOperation', 'reopenConversationDetail', 'startInstall', 'testRegistryConnection']);
-    for (const method of ['openConversationDetail', 'reopenConversationDetail', 'acknowledgeConversationDetail', 'listInstallTargets', 'listInstalled', 'getInstalledDetail', 'checkUpdate', 'prepareUninstall', 'prepareUpgrade', 'executePlan', 'startInstall', 'getOperation', 'recoverOperation']) {
+    expect(TYPERT_REMOTE.descriptors.map(item => item.method).sort()).toEqual(['acknowledgeConversationDetail', 'checkUpdate', 'checkVersionUpdate', 'executePlan', 'getCompatibility', 'getContext', 'getInstalledDetail', 'getOperation', 'getSkillDetail', 'getStatus', 'listCatalog', 'listCatalogByLabel', 'listInstallTargets', 'listInstalled', 'listLabels', 'listReviews', 'listSkills', 'listVersions', 'openConversationDetail', 'prepareUninstall', 'prepareUpgrade', 'prepareVersionUpgrade', 'recoverOperation', 'reopenConversationDetail', 'startInstall', 'testRegistryConnection']);
+    for (const method of ['openConversationDetail', 'reopenConversationDetail', 'acknowledgeConversationDetail', 'listInstallTargets', 'listInstalled', 'getInstalledDetail', 'checkUpdate', 'checkVersionUpdate', 'prepareUninstall', 'prepareUpgrade', 'prepareVersionUpgrade', 'executePlan', 'startInstall', 'getOperation', 'recoverOperation']) {
       const scoped = TYPERT_REMOTE.descriptors.find(item => item.method === method)!;
       expect(scoped.invocation).toMatchObject({ kind: 'context', context: 'agent', wire: 'agentId' });
     }

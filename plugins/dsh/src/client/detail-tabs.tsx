@@ -1,20 +1,27 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent, Card, Button } from './ui.js';
 import { SkillAvatar, Icon } from './skill-card.js';
 import { readableDate, validRating, validCount } from './skill-presentation.js';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol';
 import type { SkillDetail, SkillHubConfig } from '../host/types.js';
 import type { ReactNode } from 'react';
 import '../../lib/typert.remote-client.js';
+import { readCacheOptions } from './read-cache.js';
 
 type Remote = TypertRemoteNamespaceMap['skillhub'];
 type Tab = 'details' | 'versions' | 'securityAudit' | 'reviews';
 const names: Record<Tab, string> = { details: '详情', versions: '版本', securityAudit: '安全审核', reviews: '评论' };
-export function DetailTabs({ detail, modes, remote, children, onSelectVersion, versionActionLabel }: {
-  detail: SkillDetail; modes: SkillHubConfig['detailTabs']; remote: Remote; children: ReactNode; onSelectVersion?(version: string): void; versionActionLabel?: string;
+export function DetailTabs({ detail, modes, remote, children, onSelectVersion, versionActionLabel, cacheIdentity, onContextStale }: {
+  detail: SkillDetail; modes: SkillHubConfig['detailTabs']; remote: Remote; children: ReactNode; onSelectVersion?(version: string): void; versionActionLabel?: string; cacheIdentity?: string; onContextStale?(): void;
 }) {
-  const [selected, setSelected] = useState<Tab>('details');
+  const identity = cacheIdentity ?? JSON.stringify([detail.namespace, detail.slug, detail.version]);
+  const client = useQueryClient();
+  const uiKey = ['skillhub-detail-ui', identity];
+  const saved = client.getQueryData<{ selected: Tab; pages: { versions: number; reviews: number } }>(uiKey);
+  const [pages, setPages] = useState(saved?.pages ?? { versions: 0, reviews: 0 });
+  const [selected, setSelected] = useState<Tab>(saved?.selected ?? 'details');
+  useEffect(() => { client.setQueryData(['skillhub-detail-ui', identity], { selected, pages }); }, [client, identity, selected, pages]);
   const visible = (Object.keys(names) as Tab[]).filter(tab => tab === 'details'
     || modes[tab] === 'show' || (modes[tab] === 'auto' && detail.tabs[tab] === 'available'));
   const active = visible.includes(selected) ? selected : 'details';
@@ -23,18 +30,18 @@ export function DetailTabs({ detail, modes, remote, children, onSelectVersion, v
     {visible.map(tab => <TabsContent key={tab} value={tab}>
       {active !== tab ? null : tab === 'details' ? <><div className="astron-sh-reading-body">{children}</div><footer className="astron-sh-panel-footer"><span>SKILL.md</span><span>当前版本 {detail.version}</span></footer></> : tab === 'securityAudit' ? <><div className="astron-sh-reading-body astron-sh-audit-empty"><Icon name="info" /><h3>当前来源未提供公开审核信息</h3><p>当前来源的审核信息不支持匿名读取。</p><p>请检查技能内容与来源，不能据此判断技能已通过安全审核。</p></div><footer className="astron-sh-panel-footer">审核状态取决于当前来源提供的信息</footer></>
         : <>
-          <ModulePage key={`${detail.detailToken}/${tab}`} tab={tab} token={detail.detailToken} remote={remote} detail={detail} onSelectVersion={onSelectVersion} versionActionLabel={versionActionLabel} /></>}
+          <ModulePage key={`${identity}/${tab}`} cacheIdentity={identity} page={pages[tab]} setPage={page => setPages(previous => ({ ...previous, [tab]: page }))} onContextStale={onContextStale} tab={tab} token={detail.detailToken} remote={remote} detail={detail} onSelectVersion={onSelectVersion} versionActionLabel={versionActionLabel} /></>}
     </TabsContent>)}
   </Tabs></Card>;
 }
 
-function ModulePage({ tab, token, remote, detail, onSelectVersion, versionActionLabel }: { tab: 'versions' | 'reviews'; token: string; remote: Remote; detail: SkillDetail; onSelectVersion?(version: string): void; versionActionLabel?: string }) {
-  const [page, setPage] = useState(0);
-  const result = useQuery({ queryKey: ['skillhub-module', token, tab, page], retry: false,
+function ModulePage({ tab, token, remote, detail, onSelectVersion, versionActionLabel, cacheIdentity, onContextStale, page, setPage }: { page: number; setPage(page: number): void; tab: 'versions' | 'reviews'; token: string; remote: Remote; detail: SkillDetail; onSelectVersion?(version: string): void; versionActionLabel?: string; cacheIdentity?: string; onContextStale?(): void }) {
+  const result = useQuery({ ...readCacheOptions, queryKey: ['skillhub-module', cacheIdentity, tab, page], retry: false,
     queryFn: async ({ signal }) => {
       const response = tab === 'versions' ? await remote.listVersions(token, page, signal) : await remote.listReviews(token, page, signal);
       if (!response.ok) {
         const error = response.error;
+        if (error.code === 'skillhub/context-stale') throw new StaleModuleError('详情已过期，正在重新读取。');
         if (error.code === 'skillhub/registry-error') {
           if (error.details.reason === 'ANONYMOUS_DENIED') throw new Error('当前来源不允许匿名读取此项信息。');
           if (error.details.reason === 'NOT_FOUND') throw new Error('未找到此项信息，无法判断是内容不存在还是来源尚未支持。');
@@ -44,6 +51,12 @@ function ModulePage({ tab, token, remote, detail, onSelectVersion, versionAction
       return response.value;
     },
   });
+  const staleToken = useRef<string | null>(null);
+  useEffect(() => {
+    if (!(result.error instanceof StaleModuleError)) return;
+    if (staleToken.current === null) { staleToken.current = token; onContextStale?.(); }
+    else if (staleToken.current !== token) { staleToken.current = null; void result.refetch(); }
+  }, [result.error, token, onContextStale, result.refetch]);
   if (result.isPending) return <div className="astron-sh-reading-body" role="status">正在读取{names[tab]}…</div>;
   if (result.isError) return <div className="astron-sh-reading-body" role="alert"><p>{result.error.message}</p><Button onClick={() => { void result.refetch(); }}>重试</Button></div>;
   const data = result.data;
@@ -70,6 +83,7 @@ function ModulePage({ tab, token, remote, detail, onSelectVersion, versionAction
     </nav>
   </>;
 }
+class StaleModuleError extends Error {}
 function Rating({ score }: { score: number }) {
   return <span className="astron-sh-stars" aria-label={`评分 ${score} / 5`} title={`${score} / 5`}>
     {[1, 2, 3, 4, 5].map(value => <span key={value} data-filled={value <= Math.round(score)}><Icon name="star" /></span>)}

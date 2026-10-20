@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { z } from 'zod';
 
-const scope = z.enum(['user', 'project']).default('user');
+const scope = z.enum(['user', 'project']).optional();
 const coordinate = z.string().min(1).max(2048).refine(value =>
   // eslint-disable-next-line no-control-regex -- Deliberately reject control characters in untrusted coordinates.
   value !== '.' && value !== '..' && !/[\s/\\\u0000-\u001f\u007f]/u.test(value));
@@ -27,4 +27,16 @@ export function conversationInstallKey(context: z.infer<typeof invocation>): str
   bytes[8] = (bytes[8]! & 0x3f) | 0x80;
   const hex = bytes.toString('hex');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
+/** A choice awaiting UI confirmation is not an accepted operation or a fingerprint lock. */
+export interface PendingConversationInstall {
+  schemaVersion: 1; kind: 'skillhub-install'; status: 'awaiting-confirmation';
+  toolCallId: string; selectionRef: string; namespace: string; slug: string; version: string;
+  sourceLabel: string; sourceRevision: string; createdAt: string;
+}
+
+/** No installation was submitted after a human declined or skipped the scope question. */
+export interface CancelledConversationInstall {
+  schemaVersion: 1; kind: 'skillhub-install'; status: 'cancelled'; toolCallId: string;
 }

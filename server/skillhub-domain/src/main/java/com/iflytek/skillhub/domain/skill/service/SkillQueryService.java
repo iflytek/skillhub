@@ -498,11 +498,24 @@ public class SkillQueryService {
                                            String currentUserId,
                                            Map<Long, NamespaceRole> userNsRoles,
                                            Pageable pageable) {
+        return listVersions(namespaceSlug, skillSlug, currentUserId, userNsRoles, pageable, false);
+    }
+
+    public Page<SkillVersion> listVersions(String namespaceSlug,
+                                           String skillSlug,
+                                           String currentUserId,
+                                           Map<Long, NamespaceRole> userNsRoles,
+                                           Pageable pageable,
+                                           boolean downloadableOnly) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
         assertPublishedAccessible(namespace, skill, currentUserId, userNsRoles);
+        Comparator<SkillVersion> newestFirst = Comparator
+                .comparing(SkillVersion::getPublishedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(SkillVersion::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(SkillVersion::getId, Comparator.reverseOrder());
         List<SkillVersion> visibleVersions;
-        if (canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
+        if (canManageRestrictedSkill(skill, currentUserId, userNsRoles) && !downloadableOnly) {
             visibleVersions = skillVersionRepository.findBySkillId(skill.getId()).stream()
                     .filter(version -> version.getStatus() == SkillVersionStatus.PUBLISHED
                             || version.getStatus() == SkillVersionStatus.PENDING_REVIEW
@@ -522,10 +535,13 @@ public class SkillQueryService {
                     .toList();
         } else {
             visibleVersions = skillVersionRepository.findBySkillIdAndStatus(
-                    skill.getId(), SkillVersionStatus.PUBLISHED);
+                    skill.getId(), SkillVersionStatus.PUBLISHED).stream()
+                    .filter(version -> !downloadableOnly || isDownloadAvailable(version))
+                    .sorted(newestFirst)
+                    .toList();
         }
 
-        // Manual pagination
+        // Filter and order the complete visible result before pagination.
         int start = Math.min((int) pageable.getOffset(), visibleVersions.size());
         int end = Math.min(start + pageable.getPageSize(), visibleVersions.size());
         List<SkillVersion> pageContent = visibleVersions.subList(start, end);

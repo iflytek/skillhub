@@ -3,8 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { conversationInstallKey, conversationInstallRequest } from '../src/host/conversation-install-request.js';
 
-test('installation accepts a reference or complete coordinates and defaults only omitted scope', () => {
-  expect(conversationInstallRequest.parse({ selectionRef: 'selection' })).toEqual({ selectionRef: 'selection', scope: 'user' });
+test('installation accepts a reference or complete coordinates and preserves omitted scope for visible confirmation', () => {
+  expect(conversationInstallRequest.parse({ selectionRef: 'selection' })).toEqual({ selectionRef: 'selection' });
+  expect(conversationInstallRequest.parse({ selectionRef: 'selection', scope: 'user' })).toEqual({ selectionRef: 'selection', scope: 'user' });
   expect(conversationInstallRequest.parse({ namespace: 'demo', slug: 'document-helper', scope: 'project' }))
     .toEqual({ namespace: 'demo', slug: 'document-helper', scope: 'project' });
   for (const value of [null, {}, { namespace: 'demo' }, { slug: 'skill' },

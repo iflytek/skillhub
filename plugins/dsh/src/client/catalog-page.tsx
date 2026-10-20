@@ -1,3 +1,9 @@
+import { UpgradeControl } from './upgrade-control.js';
+import { RemovalControl } from './removal-control.js';
+import { SkillInstallDialog } from './install-dialog.js';
+import { readCacheOptions } from './read-cache.js';
+import { catalogLabel } from './catalog-label.js';
+import { MarketCardActions } from './market-card-actions.js';
 import { CardSkeletons, CatalogSkeleton, DetailSkeleton } from './loading-layout.js';
 import { UiAvailabilityNotice, type UiAvailability } from './ui-availability.js';
 import { NativeControlStyles } from './native-control-styles.js';
@@ -14,7 +20,7 @@ import type { InstallationServices } from './install-control.js';
 import { SelectField, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger } from './ui.js';
 import { Icon, SkillAvatar, SkillCard, SkillMetrics } from './skill-card.js';
 import type { InfiniteData } from '@tanstack/react-query';
-import type { CatalogPageResult, SkillList } from '../host/types.js';
+import type { CatalogPageResult, SkillList, InstalledSkillList } from '../host/types.js';
 import { summarizeInstallation } from '../host/installation-summary.js';
 import { InstallationStatus } from './installation-status.js';
 import '../../lib/typert.remote-client.js';
@@ -47,6 +53,9 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   const queryClient = useQueryClient();
   const entries = useSyncExternalStore(availability.subscribe, availability.getSnapshot);
   const [sourceOpen, setSourceOpen] = useState(false);
+  const [upgradeCandidate, setUpgradeCandidate] = useState<{ item: InstalledSkillList['items'][number]; revision: string; source: string } | null>(null);
+  const [removalCandidate, setRemovalCandidate] = useState<{ item: InstalledSkillList['items'][number]; revision: string; source: string } | null>(null);
+  const [installCandidate, setInstallCandidate] = useState<{ item: Item; revision: string } | null>(null);
   const [tab, setTab] = useState(navigation.tab);
   const [installedOrigin, setInstalledOrigin] = useState(navigation.installedOrigin);
   const [draft, setDraft] = useState(navigation.draft);
@@ -66,7 +75,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
     enabled: !!installed && !!revision && !!context.data?.configured && tab === 'browse', retry: false,
     queryFn: async ({ signal }) => unwrap(await installed!.list(revision!, signal)) });
   const label = labelSelection && labelSelection.sourceRevision === revision ? labelSelection.slug : '';
-  const labels = useQuery({ queryKey: ['skillhub-labels', revision], enabled: !!context.data?.configured, retry: false,
+  const labels = useQuery({ ...readCacheOptions, queryKey: ['skillhub-labels', revision], enabled: !!context.data?.configured, retry: false,
     queryFn: async ({ signal }) => unwrap(await remote.listLabels(revision!, signal)) });
   useLayoutEffect(() => {
     if (revision && labelSelection && labelSelection.sourceRevision !== revision) {
@@ -77,6 +86,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   const installedNavigation = installed && revision ? installedNavigationFor(navigation, installed.sessionId, revision) : undefined;
   const sourceMatches = !selected || revision === navigation.sourceRevision;
   const listing = useInfiniteQuery({
+    ...readCacheOptions,
     queryKey: ['skillhub-catalog', revision, query, sort, label], enabled: !!context.data?.configured && tab === 'browse',
     initialPageParam: 0, retry: false,
     queryFn: async ({ signal, pageParam }) => unwrap(await (label ? remote.listCatalogByLabel(revision!, query, pageParam, sort, label, signal)
@@ -87,6 +97,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   const items = Array.from(new Map((pages?.flatMap(page => page.items) ?? []).map(item => [`${item.namespace}/${item.slug}`, item])).values());
   const limited = pages?.[0]?.mode === 'limited';
   const detail = useQuery({
+    ...readCacheOptions,
     queryKey: ['skillhub-detail', revision, selected?.namespace, selected?.slug, selected?.latestVersion],
     enabled: !!selected && !!context.data?.configured && sourceMatches,
     queryFn: async ({ signal }) => unwrap(await remote.getSkillDetail(revision!, selected!.namespace, selected!.slug, selected!.latestVersion, signal)), retry: false,
@@ -98,6 +109,17 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
     else lastCard.current?.focus({ preventScroll: true });
   }, [selected, navigation, tab]);
   function back() { navigation.selected = null; setSelected(null); }
+  function openSkill(item: Item, button?: HTMLButtonElement) {
+    lastSelected.current = item;
+    if (button) lastCard.current = button;
+    navigation.scrollTop = scroller.current?.scrollTop ?? 0;
+    navigation.selected = item; navigation.sourceRevision = revision!;
+    setSelected(item);
+  }
+  function manageSkill(item: NonNullable<typeof inventory.data>['items'][number], intent: 'remove' | 'upgrade') {
+    if (intent === 'remove') { if (revision && context.data) setRemovalCandidate({ item, revision, source: context.data.registryUrl }); return; }
+    if (revision && context.data) setUpgradeCandidate({ item, revision, source: context.data.registryUrl });
+  }
   function error(message: string, retry: () => void) {
     return <div role="alert" className="astron-sh-error"><p>{message}</p><Button onClick={retry}>重试</Button></div>;
   }
@@ -124,6 +146,19 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   }
   return <section ref={scroller} className="skillhub-controls astron-sh-catalog" aria-label="SkillHub 技能广场">
     <NativeControlStyles /><UiAvailabilityNotice availability={availability} />
+    {upgradeCandidate && installed && <UpgradeControl key={`${installed.sessionId}:${upgradeCandidate.revision}:${upgradeCandidate.item.itemKey}`} presentation="dialog" eligible
+      services={installed} sourceRevision={upgradeCandidate.revision} source={upgradeCandidate.source} item={upgradeCandidate.item} onClosed={() => setUpgradeCandidate(null)} />}
+    {removalCandidate && installed && <RemovalControl key={`${installed.sessionId}:${removalCandidate.revision}:${removalCandidate.item.itemKey}`} presentation="dialog"
+      services={installed} sourceRevision={removalCandidate.revision} source={removalCandidate.source} item={removalCandidate.item}
+      eligible={['present', 'missing'].includes(removalCandidate.item.state)} onClosed={() => setRemovalCandidate(null)} />}
+    {installCandidate && installation && <SkillInstallDialog client={queryClient} identity={JSON.stringify([installCandidate.revision, installCandidate.item.namespace, installCandidate.item.slug, installCandidate.item.latestVersion])}
+      services={installation} initiatedFrom="plaza" close={() => setInstallCandidate(null)} onManage={item => { setInstallCandidate(null); manageSkill(item, 'remove'); }} load={async signal => {
+        const source = unwrap(await remote.getContext());
+        if (source.sourceRevision !== installCandidate.revision) throw new Error('来源已变化，请重新选择。');
+        const detail = unwrap(await remote.getSkillDetail(installCandidate.revision, installCandidate.item.namespace, installCandidate.item.slug, installCandidate.item.latestVersion, signal));
+        return { detail, sourceRevision: source.sourceRevision };
+      }} />}
+
     <header className="astron-sh-catalog-header"><div className="astron-sh-location"><Icon name="grid" /><strong>SkillHub</strong><span>/</span><span>{selected ? '技能详情' : '技能广场'}</span></div>
       <div className="astron-sh-toolbar-actions"><Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
       {(installation || installed) && <Button variant="ghost" className="astron-sh-icon-button" aria-label="返回会话" title="关闭 SkillHub，返回会话" onClick={() => { if (!selected && tab === 'browse') navigation.scrollTop = scroller.current?.scrollTop ?? 0; onReturn(); }}><Icon name="close" /></Button>}</div>
@@ -141,20 +176,22 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
               <p>@{selected.namespace}/{selected.slug} · {selected.latestVersion}</p></div></div>
           <p className="astron-sh-detail-summary">{sourceMatches ? detail.data?.summary ?? selected.summary : selected.summary}</p>
           {!sourceMatches ? error('来源已变化，请返回技能广场重新选择。', back)
-            : detail.isPending || detail.isFetching ? <DetailSkeleton />
+            : detail.isPending ? <DetailSkeleton />
               : detail.isError ? error(detail.error.message, () => { void detail.refetch(); })
                 : <><SkillMetrics item={detail.data} /><div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation" aria-label="技能说明">
                   <DetailContent detail={detail.data} modes={context.data.detailTabs} remote={remote} retry={() => { void detail.refetch(); }}
+                    cacheIdentity={JSON.stringify([installation?.sessionId ?? installed?.sessionId, revision, selected.namespace, selected.slug, selected.latestVersion])}
+                    onContextStale={() => { void detail.refetch(); }}
                     onSelectVersion={version => { const next = { ...selected, latestVersion: version }; navigation.selected = next; setSelected(next); }} />
-                </article><aside className="astron-sh-detail-aside">
-                  {installation ? <InstallControl key={installation.sessionId} detail={detail.data} sourceRevision={revision!} services={installation} initiatedFrom="plaza" />
+                </article><aside aria-label="选择安装范围并安装" className="astron-sh-detail-aside">
+                  {installation ? <InstallControl key={installation.sessionId} detail={detail.data} sourceRevision={revision!} services={installation} initiatedFrom="plaza" onManage={item => manageSkill(item, 'remove')} onContextStale={() => { void detail.refetch(); }} />
                     : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话，再选择安装范围。</p><Button onClick={onReturn}>前往会话</Button></div>}
                 </aside></div></>}
         </> : <>
           <Tabs value={tab} onValueChange={changeTab}><TabsList className="astron-sh-directory-tabs" aria-label="技能目录"><TabsTrigger value="browse">浏览技能</TabsTrigger><TabsTrigger value="installed" onClick={() => { navigation.installedOrigin = undefined; setInstalledOrigin(undefined); }}>已安装</TabsTrigger></TabsList>
           <TabsContent value="installed">{installedOrigin && (installedOrigin.sessionId !== installed?.sessionId || installedOrigin.sourceRevision !== revision)
             ? <p role="alert">会话或来源已变化，请点击“已安装”查看当前上下文的记录。</p>
-            : installed ? <InstalledSkills key={`${installed.sessionId}:${revision}`} services={installed} navigation={installedNavigation!} source={context.data.registryUrl} sourceRevision={revision!} remote={remote} modes={context.data.detailTabs} scrollContainer={scroller} />
+            : installed ? <InstalledSkills key={`${installed.sessionId}:${revision}`} services={installed} onRemove={item => manageSkill(item, 'remove')} onUpgrade={item => manageSkill(item, 'upgrade')} navigation={installedNavigation!} source={context.data.registryUrl} sourceRevision={revision!} remote={remote} modes={context.data.detailTabs} scrollContainer={scroller} />
               : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话，再查看该用户和项目的安装记录。</p><Button onClick={onReturn}>前往会话</Button></div>
             }</TabsContent><TabsContent value="browse">
               <form className="astron-sh-search-form" onSubmit={event => { event.preventDefault(); search(draft.trim()); }}>
@@ -163,22 +200,28 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
               </form>
               {(label || !!labels.data?.items.length) && <div className="astron-sh-label-filter" role="group" aria-label="技能标签">
                 <span>标签</span><Button size="sm" variant="ghost" aria-pressed={!label} onClick={() => changeLabel('')}>全部</Button>
-                {labels.data?.items.map(item => <Button key={item.slug} size="sm" variant="ghost" aria-pressed={label === item.slug} onClick={() => changeLabel(item.slug)}>{item.displayName || item.slug}</Button>)}
+                {labels.data?.items.map(item => <Button key={item.slug} size="sm" variant="ghost" aria-pressed={label === item.slug} onClick={() => changeLabel(item.slug)}>{catalogLabel(item)}</Button>)}
                 {label && !labels.data?.items.some(item => item.slug === label) && <Button size="sm" variant="ghost" aria-pressed="true" onClick={() => changeLabel('')}>{label} · 清除</Button>}
               </div>}
               {labels.isError && <p className="astron-sh-label-note" role="status">标签暂时无法读取。<Button size="sm" variant="ghost" disabled={labels.isFetching} onClick={() => { void labels.refetch(); }}>重试标签</Button>{label && <Button size="sm" variant="ghost" onClick={() => changeLabel('')}>清除标签筛选</Button>}</p>}
               <div className="astron-sh-result-bar"><p role="status">{pages ? `共匹配 ${pages[0]!.total} 项，当前显示 ${items.length} 项。` : '技能目录'}</p>
                 {!limited && <label>排序<SelectField label="技能排序" value={sort} onValueChange={next => { const value = next as Sort; resetListing(query, value); navigation.sort = value; setSort(value); }} options={[{ value: 'newest', label: '最新发布' }, { value: 'downloads', label: '下载量' }, { value: 'rating', label: '评分' }]} /></label>}
               </div>
+              {installed && inventory.isPending && !inventory.data && <p className="astron-sh-label-note" role="status">正在核对本地安装状态，完成后可安装或管理技能。</p>}
+              {installed && !inventory.isFetching && (inventory.isError || !inventory.data || !inventory.data.complete || inventory.data.unavailable.length > 0) && <p className="astron-sh-label-note" role="status">部分本地安装状态暂时无法核实，安装和管理操作暂不可用。<Button size="sm" variant="ghost" onClick={() => { void inventory.refetch(); }}>重新核对</Button></p>}
               {limited && <p role="status" className="astron-sh-source">当前来源仅支持首批搜索，不支持分页与排序。可输入更具体的关键词缩小范围。</p>}
               {listing.isPending ? <CardSkeletons /> : listing.isError && !pages ? error(listing.error.message, () => { void listing.refetch(); }) : <>
                 {items.length === 0 ? <p className="astron-sh-empty">{listing.hasNextPage ? '此批没有可展示的已发布技能，可继续加载。' : '没有找到匹配的技能，请尝试其他关键词。'}</p>
                   : <div className="astron-sh-card-grid">{items.map(item => <SkillCard key={`${item.namespace}/${item.slug}`} item={item} version={item.latestVersion}
-                    status={<InstallationStatus pending={!!installed && inventory.isFetching}
-                      installation={inventory.data && !inventory.isError && !inventory.isFetching ? summarizeInstallation(item, inventory.data, new Date(inventory.dataUpdatedAt).toISOString()) : undefined} />}
+                    status={inventory.data && !inventory.isError
+                      && inventory.data.items.some(record => record.namespace === item.namespace && record.slug === item.slug)
+                      ? <InstallationStatus hideEmpty installation={summarizeInstallation(item, inventory.data, new Date(inventory.dataUpdatedAt).toISOString())} /> : undefined}
+                    actions={<MarketCardActions records={inventory.data?.items.filter(record => record.namespace === item.namespace && record.slug === item.slug) ?? []}
+                      services={installed} sourceRevision={revision!}
+                      verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
+                      onInstall={() => revision && setInstallCandidate({ item, revision })} onManage={manageSkill} />}
                     ref={node => { if (lastSelected.current?.namespace === item.namespace && lastSelected.current?.slug === item.slug) lastCard.current = node; }}
-                    onOpen={event => { lastSelected.current = item; lastCard.current = event.currentTarget; navigation.scrollTop = scroller.current?.scrollTop ?? 0;
-                      navigation.selected = item; navigation.sourceRevision = revision!; setSelected(item); }} />)}</div>}
+                    onOpen={event => openSkill(item, event.currentTarget)} />)}</div>}
                 {listing.isRefetchError && <div role="alert" className="astron-sh-error"><p>刷新失败，当前保留上次加载的结果，尚未确认是否为最新内容。{listing.error.message}</p><Button disabled={listing.isFetching} onClick={() => { void listing.refetch(); }}>重新刷新</Button></div>}
                 {listing.isFetchNextPageError && <p role="alert">下一批暂时无法读取，已加载的技能保留。请重试。</p>}
                 {listing.hasNextPage && <div className="astron-sh-load-more"><span>已显示 {items.length} 项</span><Button disabled={listing.isFetching} onClick={() => { void listing.fetchNextPage(); }}>{listing.isFetchingNextPage ? '正在加载…' : listing.isFetchNextPageError ? '重新加载下一批' : '加载更多'}</Button></div>}

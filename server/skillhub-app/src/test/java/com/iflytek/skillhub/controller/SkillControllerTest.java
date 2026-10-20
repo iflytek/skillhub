@@ -31,6 +31,7 @@ import java.util.TimeZone;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.mockito.ArgumentMatchers.any;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -321,6 +322,24 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.data[0].filePath").value("README.md"))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    void downloadableVersionFilterShouldPreserveFilteredPagination() throws Exception {
+        SkillVersion version = new SkillVersion(1L, "2.0.0", "owner-1");
+        var pageable = org.springframework.data.domain.PageRequest.of(1, 1);
+        when(skillQueryService.listVersions("team", "demo", null, Map.of(), pageable, true))
+                .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(version), pageable, 3));
+        when(skillQueryService.isDownloadAvailable(version)).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/skills/team/demo/versions")
+                        .param("downloadableOnly", "true").param("page", "1").param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.page").value(1))
+                .andExpect(jsonPath("$.data.total").value(3))
+                .andExpect(jsonPath("$.data.items[0].version").value("2.0.0"))
+                .andExpect(jsonPath("$.data.items[0].downloadAvailable").value(true));
+        verify(skillQueryService).listVersions("team", "demo", null, Map.of(), pageable, true);
     }
 
     @Test

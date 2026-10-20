@@ -2,15 +2,16 @@ import type { ConversationSearchResult } from '../host/search-result.js';
 import { readableDate } from './skill-presentation.js';
 
 type Installation = NonNullable<ConversationSearchResult['items'][number]['installation']>;
-const scopeLabel = { user: '当前用户', project: '当前项目' };
+const scopeLabel = { user: '所有项目', project: '仅此项目' };
 const stateLabel = {
   present: '文件存在', missing: '安装目录缺失', 'metadata-invalid': '安装记录无法识别',
   mismatch: '安装记录与本地文件不一致', unreadable: '本地文件无法读取',
 };
 
-export function InstallationStatus({ installation, pending = false, snapshot = false }: {
-  installation?: Installation; pending?: boolean; snapshot?: boolean;
+export function InstallationStatus({ installation, pending = false, snapshot = false, hideEmpty = false }: {
+  installation?: Installation; pending?: boolean; snapshot?: boolean; hideEmpty?: boolean;
 }) {
+  if (hideEmpty && !pending && installation?.complete && !installation.unavailable.length && !installation.records.length) return null;
   const present = installation?.records.filter(record => record.state === 'present') ?? [];
   const abnormal = installation?.records.filter(record => record.state !== 'present') ?? [];
   const partial = !installation?.complete || !!installation.unavailable.length;

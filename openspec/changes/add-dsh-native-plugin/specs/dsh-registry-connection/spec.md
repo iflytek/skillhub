@@ -81,3 +81,16 @@ The plugin SHALL provide an explicit connection test for the draft Registry addr
 #### Scenario: Invalid or unavailable source
 - **WHEN** the address is invalid, public access is denied, the response is incompatible, or the deadline expires
 - **THEN** the page shows an appropriate safe error without exposing response contents, credentials, or a false successful connection
+
+
+### Requirement: Downloadable version pagination
+The open-source versions endpoint SHALL accept optional `downloadableOnly`, defaulting to false. When true it SHALL preserve skill authorization, filter by existing installability before pagination, sort by publication time descending with nulls last and deterministic creation-time/id descending tie breakers, and return the filtered total. Default manager history SHALL preserve lifecycle grouping. Public version ordering SHALL be newest first.
+
+#### Scenario: Filtered pages remain globally ordered
+- **WHEN** published versions include unavailable downloads and publication order differs from repository creation order
+- **THEN** the client receives only installable lifecycle versions, globally ordered before page slicing with the filtered total
+- **AND** object-storage presence remains checked by the existing resolution/download flow
+
+#### Scenario: Existing consumers omit the new parameter
+- **WHEN** a management consumer omits downloadableOnly
+- **THEN** its authorized lifecycle history remains available and no authentication policy changes

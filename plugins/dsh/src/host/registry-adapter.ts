@@ -169,6 +169,17 @@ export class RegistryAdapter {
     return this.page(`/api/v1/skills/${segment(namespace)}/${segment(slug)}/versions`, versionSchema, page, size, signal);
   }
 
+  /** Public browser query: the Registry filters and orders before pagination. */
+  async browseVersions(namespace: string, slug: string, page: number, size: number, signal?: AbortSignal) {
+    if (!Number.isSafeInteger(page) || page < 0 || !Number.isSafeInteger(size) || size < 1 || size > 20) {
+      throw new RegistryError('INVALID_INPUT', false);
+    }
+    const params = new URLSearchParams({ page: String(page), size: String(size), downloadableOnly: 'true' });
+    const result = await this.json(`/api/v1/skills/${segment(namespace)}/${segment(slug)}/versions?${params}`, pageSchema(versionSchema), signal);
+    if (result.page !== page || result.size !== size) throw new RegistryError('INVALID_RESPONSE', false);
+    return result;
+  }
+
   async reviews(skillId: number, page: number, size: number, signal?: AbortSignal) {
     if (!Number.isSafeInteger(skillId) || skillId < 1) throw new RegistryError('INVALID_INPUT', false);
     const result = await this.page(`/api/v1/skills/${skillId}/reviews`, reviewSchema, page, size, signal);

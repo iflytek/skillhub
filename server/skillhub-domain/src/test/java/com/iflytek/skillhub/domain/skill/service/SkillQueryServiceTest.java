@@ -1518,6 +1518,65 @@ class SkillQueryServiceTest {
                 result.getContent().stream().map(SkillVersion::getVersion).toList());
     }
 
+    @Test
+    void downloadableVersionsShouldFilterBeforePaginationAndSortGlobally() throws Exception {
+        Namespace namespace = new Namespace("team", "Team", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo", "owner-1", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        SkillVersion oldest = downloadableVersion(10L, "1.0.0", "2026-01-01T00:00:00Z");
+        SkillVersion newest = downloadableVersion(11L, "2.0.0", "2026-10-01T00:00:00Z");
+        SkillVersion tied = downloadableVersion(12L, "2.0.1", "2026-10-01T00:00:00Z");
+        SkillVersion unavailable = downloadableVersion(13L, "3.0.0", "2026-10-10T00:00:00Z");
+        unavailable.setDownloadReady(false);
+        SkillVersion yanked = downloadableVersion(14L, "4.0.0", "2026-10-11T00:00:00Z");
+        yanked.setYankedAt(Instant.parse("2026-10-12T00:00:00Z"));
+        SkillVersion undated = downloadableVersion(15L, "0.1.0", null);
+        skill.setLatestVersionId(11L);
+        when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "demo")).thenReturn(List.of(skill));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED))
+                .thenReturn(List.of(oldest, unavailable, newest, yanked, undated, tied));
+
+        Page<SkillVersion> first = service.listVersions("team", "demo", null, Map.of(), PageRequest.of(0, 2), true);
+        Page<SkillVersion> second = service.listVersions("team", "demo", "owner-1", Map.of(), PageRequest.of(1, 2), true);
+        Page<SkillVersion> empty = service.listVersions("team", "demo", null, Map.of(), PageRequest.of(2, 2), true);
+
+        assertEquals(List.of("2.0.1", "2.0.0"), first.map(SkillVersion::getVersion).getContent());
+        assertEquals(List.of("1.0.0", "0.1.0"), second.map(SkillVersion::getVersion).getContent());
+        assertEquals(4, first.getTotalElements());
+        assertEquals(4, second.getTotalElements());
+        assertTrue(empty.isEmpty());
+        assertEquals(4, empty.getTotalElements());
+        verify(skillVersionRepository, never()).findBySkillId(1L);
+        verifyNoInteractions(objectStorageService);
+    }
+
+    @Test
+    void downloadableVersionsShouldPreservePrivateSkillAuthorization() throws Exception {
+        Namespace namespace = new Namespace("team", "Team", "owner-1");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo", "owner-1", SkillVisibility.PRIVATE);
+        setId(skill, 1L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "demo")).thenReturn(List.of(skill));
+
+        assertThrows(DomainBadRequestException.class, () -> service.listVersions(
+                "team", "demo", null, Map.of(), PageRequest.of(0, 20), true));
+        verifyNoInteractions(skillVersionRepository, objectStorageService);
+    }
+
+    private SkillVersion downloadableVersion(Long id, String name, String publishedAt) throws Exception {
+        SkillVersion version = new SkillVersion(1L, name, "owner-1");
+        setId(version, id);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        version.setDownloadReady(true);
+        version.setPublishedAt(publishedAt == null ? null : Instant.parse(publishedAt));
+        return version;
+    }
+
     private void setId(Object entity, Long id) throws Exception {
         Field idField = entity.getClass().getDeclaredField("id");
         idField.setAccessible(true);
