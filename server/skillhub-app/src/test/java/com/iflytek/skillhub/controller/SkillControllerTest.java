@@ -330,7 +330,7 @@ class SkillControllerTest {
         var pageable = org.springframework.data.domain.PageRequest.of(1, 1);
         when(skillQueryService.listVersions("team", "demo", null, Map.of(), pageable, true))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(version), pageable, 3));
-        when(skillQueryService.isDownloadAvailable(version)).thenReturn(true);
+        when(skillQueryService.isDownloadAvailable(eq(version), org.mockito.ArgumentMatchers.nullable(String.class))).thenReturn(true);
 
         mockMvc.perform(get("/api/v1/skills/team/demo/versions")
                         .param("downloadableOnly", "true").param("page", "1").param("size", "1"))
