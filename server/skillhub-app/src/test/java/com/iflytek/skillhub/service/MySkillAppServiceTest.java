@@ -81,8 +81,7 @@ class MySkillAppServiceTest {
                 .thenReturn(managementQuery);
         org.mockito.Mockito.lenient().when(managementQuery.getResultList()).thenReturn(List.of());
         ReflectionTestUtils.setField(mySkillQueryRepository, "entityManager", entityManager);
-        service = new MySkillAppService(
-                skillRepository,
+        service = new MySkillAppService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skillRepository,
                 skillVersionRepository,
                 starredSkillQueryRepository,
                 skillSubscriptionRepository,

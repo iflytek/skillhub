@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -20,6 +21,7 @@ import java.util.Optional;
  */
 @Service
 public class SkillDeleteAppService {
+    private final SkillOwnerAccessPolicy ownerAccess;
 
     public record DeleteResult(Long skillId, String namespace, String slug, boolean deleted) {
     }
@@ -29,10 +31,11 @@ public class SkillDeleteAppService {
     private final SkillHardDeleteService skillHardDeleteService;
     private final SearchIndexService searchIndexService;
 
-    public SkillDeleteAppService(SkillRepository skillRepository,
+    public SkillDeleteAppService(SkillOwnerAccessPolicy ownerAccess, SkillRepository skillRepository,
                                  NamespaceRepository namespaceRepository,
                                  SkillHardDeleteService skillHardDeleteService,
                                  SearchIndexService searchIndexService) {
+        this.ownerAccess = ownerAccess;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
         this.skillHardDeleteService = skillHardDeleteService;
@@ -114,6 +117,10 @@ public class SkillDeleteAppService {
                                              PlatformPrincipal principal) {
         if (enforcePortalOwnership && !canDeleteFromPortal(skill, principal)) {
             throw new DomainForbiddenException("error.forbidden");
+        }
+        if (principal == null || !principal.platformRoles().contains("SKILL_ADMIN")) {
+            ownerAccess.assertCanWrite(skill, actorUserId,
+                    principal == null ? java.util.Set.of() : principal.platformRoles());
         }
         searchIndexService.remove(skill.getId());
         skillHardDeleteService.hardDeleteSkill(

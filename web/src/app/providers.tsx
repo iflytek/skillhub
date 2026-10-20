@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider, QueryCache, MutationCache } from '@ta
 import { RouterProvider } from '@tanstack/react-router'
 import { Toaster } from '@/shared/components/toaster'
 import { handleApiError } from '@/shared/lib/api-error'
+import { refreshSkillPermissionsAfterForbidden } from '@/features/skill/refresh-skill-permissions'
 import { router } from './router'
 
 /**
@@ -33,7 +34,8 @@ const queryClient = new QueryClient({
     },
   }),
   mutationCache: new MutationCache({
-    onError: (error, _variables, _context, mutation) => {
+    onError: async (error, _variables, _context, mutation) => {
+      await refreshSkillPermissionsAfterForbidden(queryClient, error)
       if (mutation.meta?.skipGlobalErrorHandler) {
         return
       }

@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SecurityScanRetryAppService {
+    private final SkillOwnerAccessPolicy ownerAccess;
 
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
@@ -31,12 +33,13 @@ public class SecurityScanRetryAppService {
     private final ObjectStorageService objectStorageService;
     private final AuditLogService auditLogService;
 
-    public SecurityScanRetryAppService(SkillRepository skillRepository,
+    public SecurityScanRetryAppService(SkillOwnerAccessPolicy ownerAccess, SkillRepository skillRepository,
                                        SkillVersionRepository skillVersionRepository,
                                        SecurityAuditRepository securityAuditRepository,
                                        SecurityScanService securityScanService,
                                        ObjectStorageService objectStorageService,
                                        AuditLogService auditLogService) {
+        this.ownerAccess = ownerAccess;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.securityAuditRepository = securityAuditRepository;
@@ -104,6 +107,9 @@ public class SecurityScanRetryAppService {
         Set<String> roles = platformRoles != null ? platformRoles : Set.of();
         Map<Long, NamespaceRole> memberships = namespaceRoles != null ? namespaceRoles : Map.of();
         NamespaceRole namespaceRole = memberships.get(skill.getNamespaceId());
+        if (!roles.contains("SKILL_ADMIN")) {
+            ownerAccess.assertCanWrite(skill, userId, roles);
+        }
         boolean allowed = skill.getOwnerId().equals(userId)
                 || namespaceRole == NamespaceRole.OWNER
                 || namespaceRole == NamespaceRole.ADMIN

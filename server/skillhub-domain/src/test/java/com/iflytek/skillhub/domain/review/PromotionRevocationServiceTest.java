@@ -44,7 +44,7 @@ class PromotionRevocationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new PromotionRevocationService(promotionRepository, revocationRepository,
+        service = new PromotionRevocationService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), promotionRepository, revocationRepository,
                 historyRepository, skillRepository, namespaceRepository, hardDeleteService,
                 Clock.fixed(Instant.parse("2026-10-09T00:00:00Z"), ZoneOffset.UTC));
         source = new Skill(2L, "foo", "owner-1", SkillVisibility.PUBLIC);

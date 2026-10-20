@@ -57,7 +57,7 @@ import static org.mockito.Mockito.*;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @Testcontainers
-@Import({com.iflytek.skillhub.domain.review.ReviewService.class, com.iflytek.skillhub.domain.review.ReviewPermissionChecker.class, SkillAvatarAppService.class, SkillAvatarUploadService.class, SkillPublishAppService.class,
+@Import({com.iflytek.skillhub.auth.rbac.RbacService.class, com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class, com.iflytek.skillhub.domain.review.ReviewService.class, com.iflytek.skillhub.domain.review.ReviewPermissionChecker.class, SkillAvatarAppService.class, SkillAvatarUploadService.class, SkillPublishAppService.class,
         SkillPublishService.class, SkillStorageDeletionCompensationService.class, JpaSkillStorageDeletionCompensationRepositoryAdapter.class, SkillAvatarCleanupTask.class,
         SkillAvatarUploadPostgresTest.Configuration.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)

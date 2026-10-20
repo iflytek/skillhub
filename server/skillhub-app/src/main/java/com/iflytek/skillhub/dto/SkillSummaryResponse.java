@@ -40,7 +40,13 @@ public record SkillSummaryResponse(
 
     /** Owner workspace projection, never populated by public discovery or social lists. */
     public record ManagementState(String requestedVisibility, Long reviewTaskId,
-                                  String promotionRole, String relatedNamespace, String relatedSlug) {}
+                                  String promotionRole, String relatedNamespace, String relatedSlug,
+                                  boolean ownerReadOnly) {
+        public ManagementState(String requestedVisibility, Long reviewTaskId, String promotionRole,
+                               String relatedNamespace, String relatedSlug) {
+            this(requestedVisibility, reviewTaskId, promotionRole, relatedNamespace, relatedSlug, false);
+        }
+    }
 
     public SkillSummaryResponse(
             Long id, String slug, String displayName, String summary, String visibility, String status,
@@ -59,7 +65,7 @@ public record SkillSummaryResponse(
     public SkillSummaryResponse withManagementState(ManagementState state) {
         return new SkillSummaryResponse(id, slug, displayName, summary, visibility, status, downloadCount,
                 starCount, ratingAvg, ratingCount, namespace, updatedAt, ownerId, ownerDisplayName,
-                canSubmitPromotion, headlineVersion, publishedVersion, ownerPreviewVersion,
+                canSubmitPromotion && (state == null || !state.ownerReadOnly()), headlineVersion, publishedVersion, ownerPreviewVersion,
                 resolutionMode, complianceSnapshot, labels, avatarUrl, state);
     }
 

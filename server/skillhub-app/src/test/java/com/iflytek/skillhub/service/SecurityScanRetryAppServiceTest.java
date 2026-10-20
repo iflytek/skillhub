@@ -49,8 +49,7 @@ class SecurityScanRetryAppServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SecurityScanRetryAppService(
-                skillRepository,
+        service = new SecurityScanRetryAppService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skillRepository,
                 skillVersionRepository,
                 securityAuditRepository,
                 securityScanService,

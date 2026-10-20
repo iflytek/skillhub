@@ -98,6 +98,16 @@ Anyone who obtains the link can use it after normal account admission. Do not po
 
 > After freezing, all skill packages in the namespace cannot publish new versions, but existing versions remain downloadable.
 
+## Skills After Member Removal
+
+Removing a member does not delete, move, transfer, or unpublish their skills. The namespace, address, current owner, and version history remain unchanged.
+
+An active account that still owns a skill can view and download its own content, including private content, drafts, and history, from My Skills. The management interface explains that membership has ended and the skill is read-only. The owner cannot upload or republish, change the avatar or visibility, withdraw requests, archive, or delete content. This exception does not grant access to another owner's internal skills.
+
+Rejoining restores normal maintenance permissions if the account is active and ownership is unchanged. Disabled accounts cannot use the owner read exception. Re-enabling an account does not recreate removed namespace membership. Previously submitted review requests remain in the existing review workflow; removal does not automatically approve or withdraw them.
+
+Existing namespace and platform governance permissions remain unchanged. Removal does not appoint a successor. This change adds no skill transfer, self-service namespace exit, or permanent account deletion feature.
+
 ## API Reference
 
 **Create a Namespace**:

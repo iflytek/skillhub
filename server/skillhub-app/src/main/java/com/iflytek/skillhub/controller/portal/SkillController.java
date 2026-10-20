@@ -99,7 +99,7 @@ public class SkillController extends BaseApiController {
         Set<String> platformRoles = principal == null || principal.platformRoles() == null
                 ? Set.of() : principal.platformRoles();
         SkillQueryService.SkillDetailDTO detail = skillQueryService.getSkillDetail(
-                namespace, slug, userId, namespaceRoles);
+                namespace, slug, userId, namespaceRoles, platformRoles);
         PageResponse<SkillSuiteReferenceResponse> memberOfSuites =
                 skillSuiteAppService.findVisibleMemberships(
                         detail.id(), userId, namespaceRoles, platformRoles, 0, 20);
@@ -137,7 +137,8 @@ public class SkillController extends BaseApiController {
                 SkillVisibility.PRIVATE == SkillVisibility.valueOf(detail.visibility())
                         && !detail.ownerId().equals(userId) ? null
                         : SkillAvatarUrls.current(detail.activeAvatarId(), detail.activeAvatarAudience(),
-                                SkillVisibility.valueOf(detail.visibility()), namespace, detail.slug())
+                                SkillVisibility.valueOf(detail.visibility()), namespace, detail.slug()),
+                detail.ownerReadOnly()
         );
 
         return ok("response.success.read", response);
@@ -195,7 +196,7 @@ public class SkillController extends BaseApiController {
                 v.getFileCount(),
                 v.getTotalSize(),
                 v.getPublishedAt(),
-                skillQueryService.isDownloadAvailable(v),
+                skillQueryService.isDownloadAvailable(v, userId),
                 complianceSnapshotProjectionService.fromParsedMetadataJson(v.getParsedMetadataJson())
         )));
 

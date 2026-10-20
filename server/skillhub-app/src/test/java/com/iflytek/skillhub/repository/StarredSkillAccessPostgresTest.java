@@ -122,6 +122,20 @@ class StarredSkillAccessPostgresTest {
         assertThat(query.findAccessible("viewer", Map.of(), Set.of(), PageRequest.of(0, 50)).getTotalElements()).isZero();
     }
 
+    @Test
+    void removedOwnerRetainsInternalStarsWithoutExposingThemToOtherNonMembers() {
+        Skill internal = fixtures.stream()
+                .filter(skill -> skill.getVisibility() == SkillVisibility.NAMESPACE_ONLY)
+                .filter(skill -> skill.getLatestVersionId() != null && !skill.isHidden())
+                .findFirst().orElseThrow();
+        var owner = query.findAccessible("owner", Map.of(), Set.of(), PageRequest.of(0, 50));
+        var other = query.findAccessible("viewer", Map.of(), Set.of(), PageRequest.of(0, 50));
+        assertThat(owner.getContent()).extracting(Skill::getId).contains(internal.getId());
+        assertThat(owner.getTotalElements()).isEqualTo(12);
+        assertThat(other.getContent()).extracting(Skill::getId).doesNotContain(internal.getId());
+        assertThat(other.getTotalElements()).isEqualTo(1);
+    }
+
     private void assertPolicy(String user, Map<Long, NamespaceRole> roles, Set<String> platformRoles) {
         var checker = new VisibilityChecker();
         List<Long> expected = fixtures.stream().filter(skill -> checker.canAccess(skill, user, roles, platformRoles))

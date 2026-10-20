@@ -61,7 +61,7 @@
 | slug | varchar(128) | URL 友好标识 |
 | display_name | varchar(256) | |
 | summary | varchar(512) | |
-| owner_id | varchar(128) | 主要维护人（可转让） |
+| owner_id | varchar(128) | 当前技能所有者；不等同于命名空间 OWNER，当前无独立技能转让入口 |
 | source_skill_id | bigint | 派生来源（团队技能提升到全局时记录原 skill ID），nullable |
 | visibility | enum | `PUBLIC` / `NAMESPACE_ONLY` / `PRIVATE` |
 | status | enum | `ACTIVE` / `ARCHIVED` |
@@ -81,12 +81,14 @@
   - 若 `hidden=true`：仅 skill owner 或该 namespace 的 `ADMIN` / `OWNER` 可读
   - 若 `latest_version_id is null`：仅 skill owner 可读；即使 `visibility=PUBLIC` 也不会对外公开
   - `PUBLIC`：任意人可读 skill 容器与已发布版本
-  - `NAMESPACE_ONLY`：该 namespace 任意成员可读（`MEMBER` / `ADMIN` / `OWNER`）
+  - `NAMESPACE_ONLY`：该 namespace 任意成员及当前技能 owner 可读；owner 被移出 TEAM 空间后保留自己内容的只读访问
   - `PRIVATE`：仅 skill owner 或该 namespace 的 `ADMIN` / `OWNER` 可读，普通 `MEMBER` 不可读
-- `owner_id` 语义为"主要维护人"，可转让。权限主轴是 namespace role，不是 owner：
-  - namespace ADMIN 对空间内所有 skill 有完整管理权（归档、版本管理、提升到全局），不受 owner 限制
-  - owner 作为 MEMBER 时可管理自己创建的 skill（提交审核、编辑草稿）
-  - owner 离职/换组后，namespace ADMIN 仍能完整管理所有技能
+- `owner_id` 表示当前技能所有者，空间角色与技能所有权分别参与授权：
+  - 正常账号且仍为 TEAM 空间成员的 owner 按既有规则维护自己的 skill。
+  - 被移出 TEAM 空间但仍是当前 owner 时，可以查看、下载自己的内容，不能凭 owner 身份继续写入；不自动转移技能或所有权。
+  - 账号正常、重新加入且仍为 owner 时恢复正常维护权限；停用账号继续服从认证层限制。
+  - namespace ADMIN/OWNER 与平台角色的既有独立治理、审核权限保持不变，不因本条成为内容作者，也不新增全员覆盖能力。
+  - 历史提交人不是当前 owner 时，按普通可见性与已有角色判断访问，不获得永久私有内容读取权。
 - `rating_avg` / `rating_count` 冗余字段，避免每次查询聚合
 - `slug`：面向用户的 URL 标识，来自 SKILL.md 的 `name` 字段，首次发布后不可变更。slug 格式校验规则与 namespace slug 相同：`[a-z0-9]([a-z0-9-]*[a-z0-9])?`，同样适用保留词限制，且不得包含连续两个以上的连字符 `--`（为兼容层坐标映射保留）。全局空间（`@global`）下的 skill slug 额外禁止包含 `--`，以避免与兼容层 canonical slug 产生歧义
 - `source_skill_id`：仅在"团队技能提升到全局"场景下填充，记录原始团队空间的 skill ID，用于追溯来源

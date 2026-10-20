@@ -19,6 +19,7 @@ import static org.assertj.core.api.Assertions.*;
 class ReviewVisibilityWorkflowTest {
     private final ReviewTaskRepository tasks = mock(ReviewTaskRepository.class);
     private final SkillVersionRepository versions = mock(SkillVersionRepository.class);
+    private final SkillRepository skills = mock(SkillRepository.class);
     private final NamespaceRepository namespaces = mock(NamespaceRepository.class);
     private final ReviewPermissionChecker permissions = mock(ReviewPermissionChecker.class);
     private final ReviewAvatarParticipant avatars = mock(ReviewAvatarParticipant.class);
@@ -28,12 +29,13 @@ class ReviewVisibilityWorkflowTest {
 
     @BeforeEach
     void setup() throws Exception {
-        service = new ReviewService(tasks, versions, mock(SkillRepository.class), namespaces, permissions,
+        service = new ReviewService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), tasks, versions, skills, namespaces, permissions,
                 mock(ApplicationEventPublisher.class), new ObjectMapper(), mock(SkillGovernanceService.class),
                 mock(GovernanceNotificationService.class), mock(EntityManager.class), Clock.systemUTC());
         service.setAvatarParticipant(avatars); service.setVisibilityService(visibility);
         Skill skill = mock(Skill.class);
         when(skill.getId()).thenReturn(1L); when(skill.getNamespaceId()).thenReturn(2L);
+        when(skills.findById(1L)).thenReturn(Optional.of(skill));
         when(skill.getVisibility()).thenReturn(SkillVisibility.PRIVATE); when(skill.getLatestVersionId()).thenReturn(3L);
         task = ReviewTask.forVisibility(skill, SkillVisibility.PUBLIC, "owner");
         var id = ReviewTask.class.getDeclaredField("id"); id.setAccessible(true); id.set(task, 4L);
@@ -67,6 +69,7 @@ class ReviewVisibilityWorkflowTest {
     @Test
     void withdrawUsesExistingReviewPathWithoutChangingPublishedContent() {
         service.withdrawMetadata(task, "owner");
+        verify(skills).findById(1L);
         verify(tasks).delete(task);
         verify(avatars).withdraw(task);
         verifyNoInteractions(visibility, versions);

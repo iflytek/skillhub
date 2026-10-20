@@ -40,7 +40,7 @@ class SkillLifecycleAppServiceTest {
     private final AuditLogService auditLogService = mock(AuditLogService.class);
     private final SkillSlugResolutionService skillSlugResolutionService = mock(SkillSlugResolutionService.class);
     private final SkillLifecycleAppService service = new SkillLifecycleAppService(
-            namespaceRepository,
+            mock(com.iflytek.skillhub.auth.rbac.RbacService.class), namespaceRepository,
             skillVersionRepository,
             skillGovernanceService,
             reviewService,
@@ -61,7 +61,7 @@ class SkillLifecycleAppServiceTest {
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(namespace));
         when(skillSlugResolutionService.resolve(7L, "demo-skill", "owner-1", SkillSlugResolutionService.Preference.CURRENT_USER))
                 .thenReturn(skill);
-        when(skillGovernanceService.archiveSkill(eq(11L), eq("owner-1"), anyMap(), nullable(String.class), nullable(String.class), eq("cleanup")))
+        when(skillGovernanceService.archiveSkill(eq(11L), eq("owner-1"), anyMap(), nullable(String.class), nullable(String.class), eq("cleanup"), org.mockito.ArgumentMatchers.anySet()))
                 .thenReturn(skill);
 
         var response = service.archiveSkill(
@@ -76,7 +76,7 @@ class SkillLifecycleAppServiceTest {
         assertThat(response.skillId()).isEqualTo(11L);
         assertThat(response.action()).isEqualTo("ARCHIVE");
         assertThat(response.status()).isEqualTo("ARCHIVED");
-        verify(skillGovernanceService).archiveSkill(11L, "owner-1", Map.of(7L, NamespaceRole.OWNER), "127.0.0.1", "JUnit", "cleanup");
+        verify(skillGovernanceService).archiveSkill(11L, "owner-1", Map.of(7L, NamespaceRole.OWNER), "127.0.0.1", "JUnit", "cleanup", java.util.Set.of());
     }
 
     @Test
@@ -121,7 +121,7 @@ class SkillLifecycleAppServiceTest {
                 Map.of(7L, NamespaceRole.OWNER),
                 "127.0.0.1",
                 "JUnit",
-                "global"
+                "global", java.util.Set.of()
         );
     }
 
@@ -151,7 +151,7 @@ class SkillLifecycleAppServiceTest {
                 anyMap(),
                 nullable(String.class),
                 nullable(String.class),
-                eq("broken")
+                eq("broken"), org.mockito.ArgumentMatchers.anySet()
         )).thenReturn(version);
 
         var response = service.yankVersion(
@@ -174,7 +174,7 @@ class SkillLifecycleAppServiceTest {
                 Map.of(7L, NamespaceRole.OWNER),
                 "127.0.0.1",
                 "JUnit",
-                "broken"
+                "broken", java.util.Set.of()
         );
     }
 }

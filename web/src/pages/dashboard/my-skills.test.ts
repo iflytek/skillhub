@@ -158,6 +158,24 @@ describe('MySkillsPage', () => {
     })
   })
 
+  it.each(['ACTIVE', 'ARCHIVED'])('keeps a removed owner’s %s skill readable without write actions', (status) => {
+    useMySkillsMock.mockReturnValue({ data: { items: [{
+      id: 1, displayName: 'Owned skill', namespace: 'team-ai', slug: 'owned',
+      status, visibility: 'PRIVATE', downloadCount: 0, canSubmitPromotion: false,
+      managementState: { ownerReadOnly: true },
+      publishedVersion: { id: 1, version: '1.0.0', status: 'PUBLISHED' },
+      ownerPreviewVersion: { id: 2, version: '1.1.0', status: 'PENDING_REVIEW' },
+    }], total: 1, page: 0, size: 10 }, isLoading: false })
+    const markup = renderToStaticMarkup(createElement(MySkillsPage))
+    expect(markup).toContain('Owned skill')
+    expect(markup).toContain('mySkills.ownerReadOnly')
+    if (status === 'ACTIVE') expect(markup).toContain('data-submitted-avatar')
+    expect(markup).not.toContain('visibility-control')
+    for (const label of ['update', 'withdrawReview', 'archive', 'unarchive', 'promoteToGlobal']) {
+      expect(buttonRecords.some(button => button.label === `mySkills.${label}`)).toBe(false)
+    }
+  })
+
   it('renders a localized display name independently of the package slug', () => {
     useMySkillsMock.mockReturnValue({
       data: {

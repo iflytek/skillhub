@@ -26,12 +26,14 @@ import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { SkillAvatarEditor, KEEP_AVATAR, type AvatarEdit } from '@/features/skill/skill-avatar-editor'
 import { SkillAvatarManager } from '@/features/skill/skill-avatar-manager'
-import { previewSkillPackage, usePublishSkill } from '@/shared/hooks/use-skill-queries'
+import { previewSkillPackage, usePublishSkill, useSkillDetail } from '@/shared/hooks/use-skill-queries'
+import { getSkillDetailQueryKey } from '@/shared/hooks/query-keys'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { navigateAfterOverlays } from '@/shared/lib/navigate-after-overlays'
 import { toast } from '@/shared/lib/toast'
+import { refreshSkillPermissionsAfterForbidden } from '@/features/skill/refresh-skill-permissions'
 import { ApiError, skillAvatarApi } from '@/api/client'
 
 const EMPTY_NAMESPACE_VALUE = '__select_namespace__'
@@ -60,6 +62,8 @@ export function PublishPage() {
 
   const { data: namespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
   const publishMutation = usePublishSkill()
+  const { data: updateTarget } = useSkillDetail(namespaceSlug, updateSlug ?? '', !!namespaceSlug && !!updateSlug)
+  const ownerReadOnly = updateTarget?.ownerReadOnly === true
   const packagePreview = useQuery({
     queryKey: ['skill-package-preview', previewId, fileRevision],
     queryFn: () => previewSkillPackage(selectedFile!),
@@ -76,7 +80,7 @@ export function PublishPage() {
   const avatarUnavailable = !!updateSlug && (avatarTarget.isLoading || avatarTarget.isError)
   const isBusy = publishMutation.isPending || isSavingAvatar
   const avatarOnly = isUpdate && !selectedFile
-  const canSubmit = (!selectedFile || packagePreview.isSuccess) && displayName.trim().length <= 200 && !!namespaceSlug && avatarEdit.ready && !avatarUnavailable && !isBusy && (selectedFile !== null || (isUpdate && avatarEdit.action !== 'KEEP'))
+  const canSubmit = !ownerReadOnly && (!selectedFile || packagePreview.isSuccess) && displayName.trim().length <= 200 && !!namespaceSlug && avatarEdit.ready && !avatarUnavailable && !isBusy && (selectedFile !== null || (isUpdate && avatarEdit.action !== 'KEEP'))
   const selectedNamespace = namespaces?.find((ns) => ns.slug === namespaceSlug)
   const namespaceOnlyLabel = selectedNamespace?.type === 'GLOBAL'
     ? t('publish.visibilityOptions.loggedInUsersOnly')
@@ -116,7 +120,7 @@ export function PublishPage() {
   const publishSkill = async (confirmWarnings = false) => {
     if (submitting.current) return
     if (!canSubmit) {
-      toast.error(t('publish.selectRequired'))
+      toast.error(t(ownerReadOnly ? 'mySkills.ownerReadOnly' : 'publish.selectRequired'))
       return
     }
 
@@ -164,6 +168,13 @@ export function PublishPage() {
         navigate({ to: '/dashboard/skills' })
       })
     } catch (error) {
+      // A package rejection may also reflect changed membership. Re-read the
+      // server state instead of inferring permissions from its localized message.
+      if (updateSlug && !avatarOnly && error instanceof ApiError && error.status === 400) {
+        await queryClient.invalidateQueries({ queryKey: getSkillDetailQueryKey(namespaceSlug, updateSlug ?? '') })
+      }
+      // Avatar-only updates call the API directly rather than a mutation.
+      if (avatarOnly) await refreshSkillPermissionsAfterForbidden(queryClient, error)
       if (error instanceof ApiError && error.status === 408) {
         toast.error(t('publish.timeoutTitle'), t('publish.timeoutDescription'))
         return
@@ -214,6 +225,7 @@ export function PublishPage() {
     <div className="mx-auto max-w-2xl space-y-8 animate-fade-up">
       <DashboardPageHeader title={t(isUpdate ? 'publish.updateTitle' : 'publish.title')} subtitle={t(isUpdate ? 'publish.updateSubtitle' : 'publish.subtitle')} />
 
+      {ownerReadOnly && <p role="status" className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">{t('mySkills.ownerReadOnly')}</p>}
       <Card className="space-y-8 p-6 md:p-8">
         {prefill.resubmitSkill && prefill.resubmitVersion ? (
           <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4">
@@ -267,7 +279,7 @@ export function PublishPage() {
 
         <div className="space-y-3">
           <Label htmlFor="visibility" className="text-sm font-semibold font-heading">{t('publish.visibility')}</Label>
-          <Select value={visibility} onValueChange={setVisibility} disabled={isBusy || avatarOnly}>
+          <Select value={visibility} onValueChange={setVisibility} disabled={ownerReadOnly || isBusy || avatarOnly}>
             <SelectTrigger id="visibility">
               <SelectValue />
             </SelectTrigger>
@@ -285,7 +297,7 @@ export function PublishPage() {
           <UploadZone
             onFileSelect={handleFileSelect}
             onFolderSelect={handleFolderSelect}
-            disabled={isBusy || isPackaging}
+            disabled={ownerReadOnly || isBusy || isPackaging}
           />
           {selectedFile && (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-secondary/30 px-4 py-3">
@@ -302,7 +314,7 @@ export function PublishPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleRemoveSelectedFile}
-                disabled={isBusy}
+                disabled={ownerReadOnly || isBusy}
               >
                 {t('publish.removeSelectedFile')}
               </Button>
@@ -316,7 +328,7 @@ export function PublishPage() {
             id="skill-display-name"
             value={displayName}
             maxLength={200}
-            disabled={isBusy || !selectedFile}
+            disabled={ownerReadOnly || isBusy || !selectedFile}
             placeholder={isUpdate ? search.updateName : t('publish.displayNamePlaceholder')}
             aria-describedby="skill-display-name-help"
             onChange={event => {
@@ -333,8 +345,8 @@ export function PublishPage() {
           {selectedFile && packagePreview.data && <p className="break-all text-xs text-muted-foreground">{t('publish.packageName')}: <code>{packagePreview.data.name}</code></p>}
         </div>
 
-        <SkillAvatarEditor key={`${namespaceSlug}/${updateSlug}`} name={search.updateName ?? updateSlug} currentUrl={avatarTarget.data?.avatarUrl} canRemove={!!updateSlug} disabled={isBusy || avatarUnavailable} onChange={setAvatarEdit} />
-        {updateSlug && <SkillAvatarManager namespace={namespaceSlug} slug={updateSlug} disabled={isBusy} />}
+        <SkillAvatarEditor key={`${namespaceSlug}/${updateSlug}`} name={search.updateName ?? updateSlug} currentUrl={avatarTarget.data?.avatarUrl} canRemove={!!updateSlug} disabled={ownerReadOnly || isBusy || avatarUnavailable} onChange={setAvatarEdit} />
+        {updateSlug && <SkillAvatarManager namespace={namespaceSlug} slug={updateSlug} disabled={ownerReadOnly || isBusy} />}
         {avatarTarget.isError && <p role="alert" className="text-sm text-destructive">{t('skillAvatar.failed')}</p>}
 
         <Button

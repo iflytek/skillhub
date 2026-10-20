@@ -116,7 +116,7 @@ class SkillControllerTest {
         var pageable = org.springframework.data.domain.PageRequest.of(0, 1);
         when(skillQueryService.listVersions("team", "demo", null, Map.of(), pageable))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(version), pageable, 3));
-        when(skillQueryService.isDownloadAvailable(version)).thenReturn(true);
+        when(skillQueryService.isDownloadAvailable(eq(version), org.mockito.ArgumentMatchers.nullable(String.class))).thenReturn(true);
 
         mockMvc.perform(get("/api/v1/skills/team/demo/versions").param("page", "0").param("size", "1"))
                 .andExpect(status().isOk())
@@ -236,7 +236,7 @@ class SkillControllerTest {
                 eq("team"),
                 eq("demo"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()), org.mockito.ArgumentMatchers.anySet()))
                 .thenReturn(new SkillQueryService.SkillDetailDTO(
                         1L,
                         "demo",
@@ -298,7 +298,7 @@ class SkillControllerTest {
                 eq("team"),
                 eq("demo"),
                 eq((String) null),
-                eq(Map.<Long, NamespaceRole>of())))
+                eq(Map.<Long, NamespaceRole>of()), org.mockito.ArgumentMatchers.anySet()))
                 .thenThrow(new DomainForbiddenException("error.namespace.archived", "team"));
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
@@ -355,7 +355,7 @@ class SkillControllerTest {
                 eq(Map.<Long, NamespaceRole>of()),
                 any()))
                 .thenReturn(new org.springframework.data.domain.PageImpl<>(List.of(version)));
-        when(skillQueryService.isDownloadAvailable(version)).thenReturn(false);
+        when(skillQueryService.isDownloadAvailable(eq(version), org.mockito.ArgumentMatchers.nullable(String.class))).thenReturn(false);
 
         mockMvc.perform(get("/api/v1/skills/team/demo/versions"))
                 .andExpect(status().isOk())

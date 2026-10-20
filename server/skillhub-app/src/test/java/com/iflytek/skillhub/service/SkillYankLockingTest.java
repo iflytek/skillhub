@@ -121,8 +121,7 @@ class SkillYankLockingTest {
         AuditLogService auditLogService = mock(AuditLogService.class);
         ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
         when(skillRepository.findById(fixture.skillId())).thenReturn(java.util.Optional.empty());
-        SkillGovernanceService service = new SkillGovernanceService(
-                skillRepository,
+        SkillGovernanceService service = new SkillGovernanceService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skillRepository,
                 skillVersionRepository,
                 mock(SkillFileRepository.class),
                 mock(ReviewTaskRepository.class),

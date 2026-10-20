@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.review;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.event.PromotionApprovedEvent;
@@ -41,6 +42,7 @@ import java.util.Set;
  */
 @Service
 public class PromotionService {
+    private final SkillOwnerAccessPolicy ownerAccess;
 
     private final PromotionRequestRepository promotionRequestRepository;
     private final SkillRepository skillRepository;
@@ -60,7 +62,7 @@ public class PromotionService {
         this.visibilityService = service;
     }
 
-    public PromotionService(PromotionRequestRepository promotionRequestRepository,
+    public PromotionService(SkillOwnerAccessPolicy ownerAccess, PromotionRequestRepository promotionRequestRepository,
                             SkillRepository skillRepository,
                             SkillVersionRepository skillVersionRepository,
                             SkillFileRepository skillFileRepository,
@@ -72,6 +74,7 @@ public class PromotionService {
                             EntityManager entityManager,
                             Clock clock,
                             ObjectMapper objectMapper) {
+        this.ownerAccess = ownerAccess;
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -123,6 +126,9 @@ public class PromotionService {
                 .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", sourceSkill.getNamespaceId()));
         assertNamespaceActive(sourceNamespace);
 
+        if (legacyAuth || !platformRoles.contains("SKILL_ADMIN")) {
+            ownerAccess.assertCanWrite(sourceSkill, userId, platformRoles);
+        }
         boolean permitted = legacyAuth
                 ? permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles)
                 : permissionChecker.canSubmitPromotion(sourceSkill, userId, userNamespaceRoles, platformRoles);

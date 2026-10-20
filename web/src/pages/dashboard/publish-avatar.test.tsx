@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-const mocks = vi.hoisted(() => ({ publish: vi.fn(), navigate: vi.fn(), submit: vi.fn(), remove: vi.fn(), refresh: vi.fn(), search: { namespace: 'team', visibility: 'PUBLIC', updateSkill: 'foo', resubmitSkill: '' } }))
+const mocks = vi.hoisted(() => ({ publish: vi.fn(), navigate: vi.fn(), submit: vi.fn(), remove: vi.fn(), refresh: vi.fn(), ownerReadOnly: false, search: { namespace: 'team', visibility: 'PUBLIC', updateSkill: 'foo', resubmitSkill: '' } }))
 vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: mocks.refresh }), useQuery: ({ queryKey, enabled }: { queryKey: unknown[]; enabled?: boolean }) => queryKey[0] === 'skill-package-preview'
   ? { data: enabled ? { name: 'foo', displayName: 'Foo', version: '1.1' } : undefined, isSuccess: !!enabled, isPending: false, isError: false }
   : { data: { avatarUrl: '/owner-active' }, isLoading: false, isError: false } }))
@@ -9,7 +9,7 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate, us
 vi.mock('react-i18next', async () => ({ ...await vi.importActual<typeof import('react-i18next')>('react-i18next'), useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
   usePublishSkill: () => ({ mutateAsync: mocks.publish, isPending: false }),
-  useSkillDetail: () => ({ data: { displayName: 'Foo', avatarUrl: '/active' }, isLoading: false, isError: false }),
+  useSkillDetail: () => ({ data: { displayName: 'Foo', avatarUrl: '/active', ownerReadOnly: mocks.ownerReadOnly }, isLoading: false, isError: false }),
 }))
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({ useMyNamespaces: () => ({ data: [{ slug: 'team', displayName: 'Team' }], isLoading: false }) }))
 vi.mock('@/features/publish/upload-zone', () => ({ UploadZone: ({ onFileSelect }: { onFileSelect: (file: File) => void }) => <button onClick={() => onFileSelect(new File(['zip'], 'skill.zip'))}>choose package</button> }))
@@ -26,10 +26,37 @@ vi.mock('@/shared/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn()
 vi.mock('@/features/skill/skill-avatar-manager', () => ({ SkillAvatarManager: () => null }))
 vi.mock('@/api/client', async () => ({ ...await vi.importActual<typeof import('@/api/client')>('@/api/client'), skillAvatarApi: { submit: mocks.submit, delete: mocks.remove } }))
 import { PublishPage } from './publish'
+import { ApiError } from '@/api/client'
+import { toast } from '@/shared/lib/toast'
 
 describe('Publish avatar submission', () => {
-  beforeEach(() => { mocks.publish.mockReset(); mocks.navigate.mockReset(); mocks.search.updateSkill = 'foo'; mocks.search.resubmitSkill = ''; mocks.submit.mockReset(); mocks.remove.mockReset(); mocks.refresh.mockReset(); mocks.refresh.mockResolvedValue(undefined) })
+  beforeEach(() => { vi.mocked(toast.success).mockClear(); vi.mocked(toast.error).mockClear(); mocks.ownerReadOnly = false; mocks.publish.mockReset(); mocks.navigate.mockReset(); mocks.search.updateSkill = 'foo'; mocks.search.resubmitSkill = ''; mocks.submit.mockReset(); mocks.remove.mockReset(); mocks.refresh.mockReset(); mocks.refresh.mockResolvedValue(undefined) })
   afterEach(cleanup)
+
+  it('blocks both package and avatar-only updates when the server says the owner is read-only', () => {
+    mocks.ownerReadOnly = true
+    render(<PublishPage />)
+    expect(screen.getByText('mySkills.ownerReadOnly')).toBeTruthy()
+    fireEvent.click(screen.getByText('image uploaded'))
+    expect(screen.getByRole('button', { name: 'publish.saveAvatar' }).hasAttribute('disabled')).toBe(true)
+    fireEvent.click(screen.getByText('choose package'))
+    expect(screen.getByRole('button', { name: 'publish.confirm' }).hasAttribute('disabled')).toBe(true)
+    expect(mocks.submit).not.toHaveBeenCalled()
+    expect(mocks.publish).not.toHaveBeenCalled()
+  })
+
+  it('refreshes permissions after an avatar API rejects a stale page, without a success notification', async () => {
+    mocks.submit.mockRejectedValue(new ApiError('Forbidden', 403))
+    render(<PublishPage />)
+    fireEvent.click(screen.getByText('image uploaded'))
+    fireEvent.click(screen.getByRole('button', { name: 'publish.saveAvatar' }))
+    await waitFor(() => expect(toast.error).toHaveBeenCalled())
+    expect(mocks.refresh).toHaveBeenCalledWith({ queryKey: ['skills'] })
+    expect(mocks.refresh).toHaveBeenCalledWith({ queryKey: ['skill-avatar'] })
+    expect(mocks.navigate).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(mocks.submit).toHaveBeenCalledTimes(1)
+  })
 
   it('blocks publishing a selected image until staged upload completes', async () => {
     mocks.publish.mockResolvedValue({ namespace: 'team', slug: 'foo', version: '1.1', status: 'PENDING_REVIEW' })

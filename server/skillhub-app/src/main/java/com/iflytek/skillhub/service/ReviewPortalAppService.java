@@ -138,8 +138,8 @@ public class ReviewPortalAppService {
             return;
         }
         if (task.getSubjectType() == ReviewSubjectType.SKILL_METADATA) {
-            reviewService.withdrawMetadata(task, userId);
-        } else { reviewService.withdrawReview(task.getSkillVersionId(), userId); }
+            reviewService.withdrawMetadata(task, userId, platformRoles(userId));
+        } else { reviewService.withdrawReview(task.getSkillVersionId(), userId, platformRoles(userId)); }
         recordAudit(
                 "REVIEW_WITHDRAW",
                 userId,

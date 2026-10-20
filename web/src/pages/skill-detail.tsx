@@ -239,7 +239,7 @@ export function SkillDetailPage() {
   const hasPublishedPendingReview = Boolean(publishedVersion && hasPendingOwnerPreview)
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
-  const canHardDeleteSkill = Boolean(skill && user && (skill.ownerId === user.userId || hasRole('SUPER_ADMIN')))
+  const canHardDeleteSkill = Boolean(skill && user && ((!skill.ownerReadOnly && skill.ownerId === user.userId) || hasRole('SUPER_ADMIN')))
   const canManageLabels = Boolean(skill && user && (skill.canManageLifecycle || hasRole('SUPER_ADMIN')))
   const canManageSecurityScan = Boolean(skill && user && (
     skill.canManageLifecycle || hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
@@ -247,7 +247,8 @@ export function SkillDetailPage() {
   const securityAuditVersion = ownerPreviewVersion?.status === 'SCAN_FAILED'
     ? ownerPreviewVersion
     : selectedVersionEntry
-  const isVersionDownloadable = selectedVersionEntry?.status === 'PUBLISHED' && (selectedVersionEntry?.downloadAvailable ?? false)
+  const isVersionDownloadable = selectedVersionEntry?.downloadAvailable ?? false
+  const isVersionInstallable = selectedVersionEntry?.status === 'PUBLISHED' && isVersionDownloadable
   const suiteMemberships = skill?.memberOfSuites?.items ?? skill?.entryForSuites ?? []
   const suiteMembershipTotal = skill?.memberOfSuites?.total ?? suiteMemberships.length
 
@@ -430,7 +431,7 @@ export function SkillDetailPage() {
       requireLogin()
       return
     }
-    if (!selectedVersionEntry || isPendingPreview) {
+    if (!selectedVersionEntry || !isVersionDownloadable) {
       return
     }
 
@@ -865,6 +866,7 @@ export function SkillDetailPage() {
     <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
       {/* Main Content */}
       <div className="flex-1 min-w-0 space-y-8">
+        {skill.ownerReadOnly && <p role="status" className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">{t('mySkills.ownerReadOnly')}</p>}
         <div className="space-y-3">
           <Button
             variant="ghost"
@@ -1407,7 +1409,7 @@ export function SkillDetailPage() {
             <Button
               variant="outline"
               onClick={() => setWithdrawVersionTarget(ownerPreviewVersion.version)}
-              disabled={withdrawReviewMutation.isPending}
+              disabled={!skill.canManageLifecycle || withdrawReviewMutation.isPending}
             >
               {withdrawReviewMutation.isPending ? t('skillDetail.processing') : t('skillDetail.withdrawReview')}
             </Button>
@@ -1437,7 +1439,7 @@ export function SkillDetailPage() {
           namespace={namespace}
           slug={slug}
           version={selectedVersionEntry?.version ?? publishedVersion?.version ?? ''}
-          disabled={!selectedVersionEntry || skill.status === 'ARCHIVED' || !isVersionDownloadable}
+          disabled={!selectedVersionEntry || skill.status === 'ARCHIVED' || !isVersionInstallable}
         />
 
         {canManageSecurityScan && securityAuditVersion && (

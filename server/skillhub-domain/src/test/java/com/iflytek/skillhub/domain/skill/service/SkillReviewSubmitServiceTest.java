@@ -47,8 +47,7 @@ class SkillReviewSubmitServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SkillReviewSubmitService(
-                skillRepository,
+        service = new SkillReviewSubmitService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skillRepository,
                 skillVersionRepository,
                 reviewTaskRepository,
                 null, // namespaceMemberRepository not used in these tests

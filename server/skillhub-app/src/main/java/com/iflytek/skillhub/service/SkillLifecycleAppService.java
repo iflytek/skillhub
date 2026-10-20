@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.auth.rbac.RbacService;
 import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
@@ -27,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class SkillLifecycleAppService {
+    private final RbacService rbacService;
 
     private final NamespaceRepository namespaceRepository;
     private final SkillVersionRepository skillVersionRepository;
@@ -37,7 +39,7 @@ public class SkillLifecycleAppService {
     private final AuditLogService auditLogService;
     private final SkillSlugResolutionService skillSlugResolutionService;
 
-    public SkillLifecycleAppService(NamespaceRepository namespaceRepository,
+    public SkillLifecycleAppService(RbacService rbacService, NamespaceRepository namespaceRepository,
                                     SkillVersionRepository skillVersionRepository,
                                     SkillGovernanceService skillGovernanceService,
                                     ReviewService reviewService,
@@ -45,6 +47,7 @@ public class SkillLifecycleAppService {
                                     SkillReviewSubmitService skillReviewSubmitService,
                                     AuditLogService auditLogService,
                                     SkillSlugResolutionService skillSlugResolutionService) {
+        this.rbacService = rbacService;
         this.namespaceRepository = namespaceRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillGovernanceService = skillGovernanceService;
@@ -69,7 +72,8 @@ public class SkillLifecycleAppService {
                 normalizeRoles(userNamespaceRoles),
                 auditContext.clientIp(),
                 auditContext.userAgent(),
-                request != null ? request.reason() : null
+                request != null ? request.reason() : null,
+                ownerPlatformRoles(skill, userId)
         );
         return new SkillLifecycleMutationResponse(archived.getId(), null, "ARCHIVE", archived.getStatus().name());
     }
@@ -86,7 +90,8 @@ public class SkillLifecycleAppService {
                 userId,
                 normalizeRoles(userNamespaceRoles),
                 auditContext.clientIp(),
-                auditContext.userAgent()
+                auditContext.userAgent(),
+                ownerPlatformRoles(skill, userId)
         );
         return new SkillLifecycleMutationResponse(restored.getId(), null, "UNARCHIVE", restored.getStatus().name());
     }
@@ -107,7 +112,8 @@ public class SkillLifecycleAppService {
                 normalizeRoles(userNamespaceRoles),
                 auditContext.clientIp(),
                 auditContext.userAgent(),
-                namespace
+                namespace,
+                ownerPlatformRoles(skill, userId)
         );
         return new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "DELETE_VERSION", version);
     }
@@ -129,7 +135,8 @@ public class SkillLifecycleAppService {
                 normalizeRoles(userNamespaceRoles),
                 auditContext.clientIp(),
                 auditContext.userAgent(),
-                request != null ? request.reason() : null
+                request != null ? request.reason() : null,
+                ownerPlatformRoles(skill, userId)
         );
         return new SkillLifecycleMutationResponse(skill.getId(), skillVersion.getId(), "YANK", yanked.getStatus().name());
     }
@@ -142,7 +149,7 @@ public class SkillLifecycleAppService {
                                                          AuditRequestContext auditContext) {
         Skill skill = findSkill(namespace, slug, userId);
         SkillVersion skillVersion = findVersion(skill.getId(), version);
-        SkillVersion withdrawnVersion = reviewService.withdrawReview(skillVersion.getId(), userId);
+        SkillVersion withdrawnVersion = reviewService.withdrawReview(skillVersion.getId(), userId, ownerPlatformRoles(skill, userId));
         auditLogService.record(
                 userId,
                 "REVIEW_WITHDRAW",
@@ -178,7 +185,8 @@ public class SkillLifecycleAppService {
                 targetVersion,
                 userId,
                 normalizeRoles(userNamespaceRoles),
-                request.confirmWarnings()
+                request.confirmWarnings(),
+                ownerPlatformRoles(skill, userId)
         );
         auditLogService.record(
                 userId,
@@ -213,7 +221,8 @@ public class SkillLifecycleAppService {
                 skillVersion.getId(),
                 com.iflytek.skillhub.domain.skill.SkillVisibility.valueOf(targetVisibility),
                 userId,
-                normalizeRoles(userNamespaceRoles)
+                normalizeRoles(userNamespaceRoles),
+                ownerPlatformRoles(skill, userId)
         );
         auditLogService.record(
                 userId,
@@ -246,7 +255,8 @@ public class SkillLifecycleAppService {
                 skill.getId(),
                 skillVersion.getId(),
                 userId,
-                normalizeRoles(userNamespaceRoles)
+                normalizeRoles(userNamespaceRoles),
+                ownerPlatformRoles(skill, userId)
         );
         auditLogService.record(
                 userId,
@@ -264,6 +274,11 @@ public class SkillLifecycleAppService {
                 "CONFIRM_PUBLISH",
                 "PUBLISHED"
         );
+    }
+
+    private java.util.Set<String> ownerPlatformRoles(Skill skill, String userId) {
+        // These legacy owner endpoints did not grant a new write path to non-owner platform admins.
+        return skill.getOwnerId().equals(userId) ? rbacService.getUserRoleCodes(userId) : java.util.Set.of();
     }
 
     private Skill findSkill(String namespaceSlug, String skillSlug, String currentUserId) {

@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.review;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditDetail;
@@ -44,6 +45,7 @@ import java.util.Set;
  */
 @Service
 public class ReviewService {
+    private final SkillOwnerAccessPolicy ownerAccess;
 
     private final ReviewTaskRepository reviewTaskRepository;
     private final SkillVersionRepository skillVersionRepository;
@@ -69,7 +71,7 @@ public class ReviewService {
     public void setAvatarParticipant(ReviewAvatarParticipant participant) { this.avatarParticipant = participant; }
 
 
-    public ReviewService(ReviewTaskRepository reviewTaskRepository,
+    public ReviewService(SkillOwnerAccessPolicy ownerAccess, ReviewTaskRepository reviewTaskRepository,
                          SkillVersionRepository skillVersionRepository,
                          SkillRepository skillRepository,
                          NamespaceRepository namespaceRepository,
@@ -80,6 +82,7 @@ public class ReviewService {
                          GovernanceNotificationService governanceNotificationService,
                          EntityManager entityManager,
                          Clock clock) {
+        this.ownerAccess = ownerAccess;
         this.reviewTaskRepository = reviewTaskRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillRepository = skillRepository;
@@ -110,6 +113,9 @@ public class ReviewService {
         Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
                 .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", skill.getNamespaceId()));
         assertNamespaceActive(namespace);
+        if (!platformRoles.contains("SKILL_ADMIN")) {
+            ownerAccess.assertCanWrite(skill, userId, platformRoles);
+        }
 
         if (!permissionChecker.canSubmitForReview(skill, userId, userNamespaceRoles, platformRoles)) {
             throw new DomainForbiddenException("review.submit.no_permission");
@@ -157,6 +163,7 @@ public class ReviewService {
         Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
                 .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", skill.getNamespaceId()));
         assertNamespaceActive(namespace);
+        ownerAccess.assertCanWrite(skill, userId, Set.of());
 
         if (visibilityService != null) {
             visibilityService.lockedSkill(skill.getId());
@@ -358,6 +365,11 @@ public class ReviewService {
      */
     @Transactional
     public SkillVersion withdrawReview(Long skillVersionId, String userId) {
+        return withdrawReview(skillVersionId, userId, java.util.Set.of());
+    }
+
+    @Transactional
+    public SkillVersion withdrawReview(Long skillVersionId, String userId, java.util.Set<String> platformRoles) {
         ReviewTask task = reviewTaskRepository.findBySkillVersionIdAndStatus(
                         skillVersionId, ReviewTaskStatus.PENDING)
                 .orElseThrow(() -> new DomainNotFoundException("review_task.not_found_for_version", skillVersionId));
@@ -365,6 +377,10 @@ public class ReviewService {
         if (!task.getSubmittedBy().equals(userId)) {
             throw new DomainForbiddenException("review.withdraw.not_submitter");
         }
+
+        Skill withdrawnSkill = skillRepository.findById(task.getSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", task.getSkillId()));
+        ownerAccess.assertCanWrite(withdrawnSkill, userId, platformRoles);
 
         if (avatarParticipant != null) { avatarParticipant.lock(task); avatarParticipant.withdraw(task); }
         reviewTaskRepository.delete(task);
@@ -395,7 +411,15 @@ public class ReviewService {
 
     @Transactional
     public void withdrawMetadata(ReviewTask task, String userId) {
+        withdrawMetadata(task, userId, java.util.Set.of());
+    }
+
+    @Transactional
+    public void withdrawMetadata(ReviewTask task, String userId, java.util.Set<String> platformRoles) {
         if (!task.getSubmittedBy().equals(userId)) { throw new DomainForbiddenException("review.withdraw.not_submitter"); }
+        Skill skill = skillRepository.findById(task.getSkillId())
+                .orElseThrow(() -> new DomainNotFoundException("skill.not_found", task.getSkillId()));
+        ownerAccess.assertCanWrite(skill, userId, platformRoles);
         if (avatarParticipant != null) { avatarParticipant.lock(task); entityManager.refresh(task); }
         if (avatarParticipant == null && (task.getAvatarCandidateId() != null || task.isAvatarRemoval()
                 || task.getSubjectType() == ReviewSubjectType.SKILL_METADATA)) {

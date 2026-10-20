@@ -518,6 +518,7 @@
     "securityDesc": "Change password and account security options"
   },
   "mySkills": {
+    "ownerReadOnly": "You are no longer a member of this space. You can view and download your skills, but cannot modify them.",
     "updateGlobalVersion": "Update global version",
     "viewGlobalCopy": "View global copy",
     "viewTeamSource": "View team source",

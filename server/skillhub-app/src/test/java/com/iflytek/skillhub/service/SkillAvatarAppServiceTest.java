@@ -67,7 +67,7 @@ class SkillAvatarAppServiceTest {
 
     @BeforeEach
     void setup() {
-        service = new SkillAvatarAppService(skills, namespaces, candidates, storage, imageProcessor,
+        service = new SkillAvatarAppService(org.mockito.Mockito.mock(com.iflytek.skillhub.auth.rbac.RbacService.class), org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skills, namespaces, candidates, storage, imageProcessor,
                 settings, moderation, visibility, skillQueries, audit, requestIds, entityManager, transactionManager);
         service.configureUnifiedReviews(reviews, new com.iflytek.skillhub.domain.review.ReviewPermissionChecker());
         service.setEvents(events);

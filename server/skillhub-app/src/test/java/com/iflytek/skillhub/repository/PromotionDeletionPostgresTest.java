@@ -56,7 +56,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @Testcontainers
-@Import({PromotionRevocationService.class, PromotionRevocationHistoryJpaRepository.class,
+@Import({com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class, PromotionRevocationService.class, PromotionRevocationHistoryJpaRepository.class,
         SkillHardDeleteService.class, AuditLogService.class, PromotionDeletionPostgresTest.Config.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class PromotionDeletionPostgresTest {
@@ -83,6 +83,7 @@ class PromotionDeletionPostgresTest {
     @Autowired private NamespaceJpaRepository namespaces;
     @Autowired private UserAccountJpaRepository users;
     @Autowired private SkillJpaRepository skills;
+    @Autowired private com.iflytek.skillhub.infra.jpa.NamespaceMemberJpaRepository members;
     @Autowired private SkillVersionJpaRepository versions;
     @Autowired private PromotionRequestJpaRepository promotions;
     @Autowired private PromotionRevocationService revocations;
@@ -145,6 +146,8 @@ class PromotionDeletionPostgresTest {
             users.saveAndFlush(new UserAccount(owner, owner, null, null));
             users.saveAndFlush(new UserAccount(reviewer, reviewer, null, null));
             Namespace team = namespaces.saveAndFlush(new Namespace("delete-" + suffix, "Deletion team", owner));
+            members.saveAndFlush(new com.iflytek.skillhub.domain.namespace.NamespaceMember(
+                    team.getId(), owner, com.iflytek.skillhub.domain.namespace.NamespaceRole.OWNER));
             Namespace global = namespaces.findBySlug("global").orElseGet(() -> {
                 Namespace created = new Namespace("global", "Global", reviewer);
                 created.setType(NamespaceType.GLOBAL);

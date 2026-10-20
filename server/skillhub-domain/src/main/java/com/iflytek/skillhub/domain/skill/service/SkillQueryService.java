@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -49,6 +50,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class SkillQueryService {
+    private final SkillOwnerAccessPolicy ownerAccess;
 
     private final NamespaceRepository namespaceRepository;
     private final SkillRepository skillRepository;
@@ -64,6 +66,7 @@ public class SkillQueryService {
     private final UserAccountRepository userAccountRepository;
 
     public SkillQueryService(
+            SkillOwnerAccessPolicy ownerAccess,
             NamespaceRepository namespaceRepository,
             SkillRepository skillRepository,
             SkillVersionRepository skillVersionRepository,
@@ -76,6 +79,7 @@ public class SkillQueryService {
             SkillSlugResolutionService skillSlugResolutionService,
             SkillLifecycleProjectionService skillLifecycleProjectionService,
             UserAccountRepository userAccountRepository) {
+        this.ownerAccess = ownerAccess;
         this.namespaceRepository = namespaceRepository;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -119,7 +123,40 @@ public class SkillQueryService {
             String resolutionMode,
             Long activeAvatarId,
             SkillVisibility activeAvatarAudience
-    ) {}
+,
+            boolean ownerReadOnly
+    ) {
+        public SkillDetailDTO(Long id,
+            String slug,
+            String displayName,
+            String ownerId,
+            String ownerDisplayName,
+            String summary,
+            String visibility,
+            String status,
+            Long downloadCount,
+            Integer starCount,
+            Integer subscriptionCount,
+            java.math.BigDecimal ratingAvg,
+            Integer ratingCount,
+            boolean hidden,
+            Long namespaceId,
+            java.time.Instant createdAt,
+            java.time.Instant updatedAt,
+            boolean canManageLifecycle,
+            boolean canSubmitPromotion,
+            boolean canInteract,
+            boolean canReport,
+            SkillLifecycleProjectionService.VersionProjection headlineVersion,
+            SkillLifecycleProjectionService.VersionProjection publishedVersion,
+            SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion,
+            String ownerPreviewReviewComment,
+            String resolutionMode,
+            Long activeAvatarId,
+            SkillVisibility activeAvatarAudience) {
+            this(id, slug, displayName, ownerId, ownerDisplayName, summary, visibility, status, downloadCount, starCount, subscriptionCount, ratingAvg, ratingCount, hidden, namespaceId, createdAt, updatedAt, canManageLifecycle, canSubmitPromotion, canInteract, canReport, headlineVersion, publishedVersion, ownerPreviewVersion, ownerPreviewReviewComment, resolutionMode, activeAvatarId, activeAvatarAudience, false);
+        }
+    }
 
     public record SkillVersionDetailDTO(
             Long id,
@@ -196,11 +233,17 @@ public class SkillQueryService {
             String documentationContent
     ) {}
 
-    public SkillDetailDTO getSkillDetail(
+    public SkillDetailDTO getSkillDetail(String namespaceSlug, String skillSlug, String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles) {
+        return getSkillDetailInternal(namespaceSlug, skillSlug, currentUserId, userNsRoles, Set.of());
+    }
+
+    private SkillDetailDTO getSkillDetailInternal(
             String namespaceSlug,
             String skillSlug,
             String currentUserId,
-            Map<Long, NamespaceRole> userNsRoles) {
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         Namespace namespace = findNamespace(namespaceSlug);
         Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
 
@@ -242,8 +285,9 @@ public class SkillQueryService {
                 skill.getNamespaceId(),
                 skill.getCreatedAt(),
                 skill.getUpdatedAt(),
-                canManageRestrictedSkill(skill, currentUserId, userNsRoles),
-                canSubmitPromotion(namespace, skill, publishedVersion, currentUserId, userNsRoles),
+                canManageRestrictedSkill(skill, currentUserId, userNsRoles)
+                        && !ownerAccess.isReadOnly(skill, currentUserId, platformRoles),
+                canSubmitPromotion(namespace, skill, publishedVersion, currentUserId, userNsRoles, platformRoles),
                 skill.getStatus() == SkillStatus.ACTIVE
                         && (headlineVersion == null || "PUBLISHED".equals(headlineVersion.status())),
                 currentUserId == null || !Objects.equals(skill.getOwnerId(), currentUserId),
@@ -253,7 +297,8 @@ public class SkillQueryService {
                 ownerPreviewReviewComment,
                 projection.resolutionMode().name(),
                 skill.getActiveAvatarId(),
-                skill.getActiveAvatarAudience()
+                skill.getActiveAvatarAudience(),
+                ownerAccess.isReadOnly(skill, currentUserId, platformRoles)
         );
     }
 
@@ -263,7 +308,7 @@ public class SkillQueryService {
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles,
             Set<String> platformRoles) {
-        return getSkillDetail(namespaceSlug, skillSlug, currentUserId, userNsRoles);
+        return getSkillDetailInternal(namespaceSlug, skillSlug, currentUserId, userNsRoles, platformRoles);
     }
 
     /**
@@ -551,6 +596,26 @@ public class SkillQueryService {
 
     public boolean isDownloadAvailable(SkillVersion version) {
         return SkillInstallability.isInstallableVersion(version);
+    }
+
+    public boolean isDownloadAvailable(SkillVersion version, String currentUserId) {
+        if (isDownloadAvailable(version)) {
+            return true;
+        }
+        if (currentUserId == null || version.getYankedAt() != null) {
+            return false;
+        }
+        Skill skill = skillRepository.findById(version.getSkillId()).orElse(null);
+        if (skill == null || skill.getStatus() != SkillStatus.ACTIVE
+                || !currentUserId.equals(skill.getOwnerId())) {
+            return false;
+        }
+        return switch (version.getStatus()) {
+            case DRAFT, REJECTED, UPLOADED, PENDING_REVIEW ->
+                    objectStorageService.exists(getBundleStorageKey(skill.getId(), version.getId()))
+                            || !availableFiles(version.getId()).isEmpty();
+            default -> false;
+        };
     }
 
     public ReviewSkillSnapshotDTO getReviewSkillSnapshot(Long skillVersionId) {
@@ -940,7 +1005,8 @@ public class SkillQueryService {
             Skill skill,
             SkillLifecycleProjectionService.VersionProjection publishedVersion,
             String currentUserId,
-            Map<Long, NamespaceRole> userNsRoles) {
+            Map<Long, NamespaceRole> userNsRoles,
+            Set<String> platformRoles) {
         if (namespace.getType() == NamespaceType.GLOBAL) {
             return false;
         }
@@ -953,7 +1019,8 @@ public class SkillQueryService {
         if (promotionRequestRepository.findBySourceSkillIdAndStatus(skill.getId(), ReviewTaskStatus.PENDING).isPresent()) {
             return false;
         }
-        return canManageRestrictedSkill(skill, currentUserId, userNsRoles);
+        return canManageRestrictedSkill(skill, currentUserId, userNsRoles)
+                && !ownerAccess.isReadOnly(skill, currentUserId, platformRoles);
     }
 
     private boolean isOwner(Skill skill, String currentUserId) {

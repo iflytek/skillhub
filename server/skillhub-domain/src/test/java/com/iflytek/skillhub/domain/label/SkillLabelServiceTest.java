@@ -97,7 +97,7 @@ class SkillLabelServiceTest {
         when(skillRepository.findById(10L)).thenReturn(Optional.of(skill));
         when(labelDefinitionRepository.findBySlugIgnoreCase("automation")).thenReturn(Optional.of(label));
         return new SkillLabelService(skillRepository, labelDefinitionRepository, skillLabelRepository,
-                new LabelPermissionChecker(), 10);
+                new LabelPermissionChecker(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class)), 10);
     }
 
     private static Stream<Arguments> skillLabelPermissions() {

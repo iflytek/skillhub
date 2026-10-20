@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.auth.rbac.RbacService;
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.review.ReviewAvatarParticipant;
 import com.iflytek.skillhub.domain.review.ReviewPermissionChecker;
 import com.iflytek.skillhub.domain.review.ReviewSubjectType;
@@ -54,6 +56,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 @Service
 public class SkillAvatarAppService implements ReviewAvatarParticipant {
+    private final RbacService rbacService;
+    private final SkillOwnerAccessPolicy ownerAccess;
     private final SkillJpaRepository skills;
     private final NamespaceRepository namespaces;
     private final SkillAvatarCandidateJpaRepository candidates;
@@ -83,12 +87,14 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
     }
 
 
-    public SkillAvatarAppService(SkillJpaRepository skills, NamespaceRepository namespaces,
+    public SkillAvatarAppService(RbacService rbacService, SkillOwnerAccessPolicy ownerAccess, SkillJpaRepository skills, NamespaceRepository namespaces,
                                  SkillAvatarCandidateJpaRepository candidates, ObjectStorageService storage,
                                  SkillAvatarImageProcessor imageProcessor, AvatarReviewSettingsService settings,
                                  AvatarModerationGateway moderation, VisibilityChecker visibility,
                                  SkillQueryService skillQueries, AuditLogService audit, RequestIdAccessor requestIds,
                                  EntityManager entityManager, PlatformTransactionManager transactionManager) {
+        this.rbacService = rbacService;
+        this.ownerAccess = ownerAccess;
         this.skills = skills;
         this.namespaces = namespaces;
         this.candidates = candidates;
@@ -109,6 +115,7 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
     public SkillAvatarStatusResponse submit(String namespaceSlug, String slug, String actor, byte[] image,
                                             AuditRequestContext context) {
         Skill skill = lockedOwnedSkill(namespaceSlug, slug, actor);
+        ownerAccess.assertCanWrite(skill, actor, rbacService.getUserRoleCodes(actor));
         requireOwner(skill, actor);
         byte[] normalized = imageProcessor.normalize(image);
         return createCandidate(skill, namespaceSlug, actor, actor, "SKILL_AVATAR_SUBMIT", normalized, context);
@@ -172,13 +179,16 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
 
     @Transactional
     public void lockOwnedSkill(String namespaceSlug, String slug, String actor) {
-        requireOwner(lockedOwnedSkill(namespaceSlug, slug, actor), actor);
+        Skill skill = lockedOwnedSkill(namespaceSlug, slug, actor);
+        ownerAccess.assertCanWrite(skill, actor, rbacService.getUserRoleCodes(actor));
+        requireOwner(skill, actor);
     }
 
     @Transactional
     public SkillAvatarStatusResponse submitStored(String namespaceSlug, String slug, String actor,
                                                  String objectKey, String sha256, SkillVisibility audience, AuditRequestContext context) {
         Skill skill = lockedOwnedSkill(namespaceSlug, slug, actor);
+        ownerAccess.assertCanWrite(skill, actor, rbacService.getUserRoleCodes(actor));
         requireOwner(skill, actor);
         return submitStoredForReview(namespaceSlug, slug, actor, objectKey, sha256, audience, context, null);
     }
@@ -188,6 +198,7 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
             String objectKey, String sha256, SkillVisibility audience, AuditRequestContext context,
             ReviewTask review) {
         Skill skill = lockedOwnedSkill(namespaceSlug, slug, actor);
+        ownerAccess.assertCanWrite(skill, actor, rbacService.getUserRoleCodes(actor));
         requireOwner(skill, actor);
         return createStoredCandidate(skill, namespaceSlug, actor, actor, "SKILL_AVATAR_SUBMIT", objectKey, sha256,
                 audience == null ? skill.getVisibility() : audience, context, review);
@@ -364,6 +375,7 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
     public SkillAvatarStatusResponse appeal(String namespaceSlug, String slug, long candidateId, String actor,
                                             AuditRequestContext context) {
         Skill skill = lockedOwnedSkill(namespaceSlug, slug, actor);
+        ownerAccess.assertCanWrite(skill, actor, rbacService.getUserRoleCodes(actor));
         requireOwner(skill, actor);
         SkillAvatarCandidate candidate = currentPending(skill, candidateId);
         candidate.appeal();
@@ -379,6 +391,7 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
     @Transactional(readOnly = true)
     public void requireCurrentOwnerCandidate(String namespaceSlug, String slug, long candidateId, String actor) {
         Skill skill = findOwnedSkill(namespaceSlug, slug, actor);
+        ownerAccess.assertCanWrite(skill, actor, rbacService.getUserRoleCodes(actor));
         requireOwner(skill, actor);
         if (!Objects.equals(skill.getPendingAvatarId(), candidateId)) {
             throw new DomainConflictException("error.skill.avatar.notPending");
@@ -423,6 +436,7 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
                 throw new DomainBadRequestException("error.skill.avatar.reasonRequired");
             }
         } else {
+            ownerAccess.assertCanWrite(skill, actor, platformRoles);
             requireOwner(skill, actor);
         }
         if (skill.getActiveAvatarId() == null && skill.getPendingAvatarId() == null) {
@@ -557,6 +571,7 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
     @Transactional
     public void prepareRemoval(ReviewTask task, String namespace, String slug, String actor) {
         Skill skill = lockedOwnedSkill(namespace, slug, actor);
+        ownerAccess.assertCanWrite(skill, actor, rbacService.getUserRoleCodes(actor));
         task.prepareAvatarRemoval(skill.getActiveAvatarId(), skill.getPendingAvatarId());
         reviews.save(task);
     }

@@ -371,6 +371,7 @@ export function MySkillsPage() {
           <div className="grid grid-cols-1 gap-4">
             {skills.map((skill, idx) => (
               (() => {
+                const ownerReadOnly = skill.managementState?.ownerReadOnly === true
                 const relatedNamespace = skill.managementState?.relatedNamespace
                 const relatedSlug = skill.managementState?.relatedSlug
                 const headlineVersion = getHeadlineVersion(skill)
@@ -399,6 +400,7 @@ export function MySkillsPage() {
                             {displayName}
                           </h3>
                         </div>
+                        {ownerReadOnly && <p role="status" className="mb-3 text-sm text-muted-foreground">{t('mySkills.ownerReadOnly')}</p>}
                         {skill.managementState?.promotionRole && (
                           <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <span>{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</span>
@@ -456,7 +458,7 @@ export function MySkillsPage() {
                           >
                             {t('mySkills.restoreHidden')}
                           </Button>
-                        ) : filter === 'HIDDEN' ? null : skill.status !== 'ARCHIVED' && (
+                        ) : filter === 'HIDDEN' || ownerReadOnly ? null : skill.status !== 'ARCHIVED' && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -468,11 +470,11 @@ export function MySkillsPage() {
                             {t('mySkills.update')}
                           </Button>
                         )}
-                        {filter !== 'HIDDEN' && skill.status === 'ACTIVE' && publishedVersion && (
+                        {!ownerReadOnly && filter !== 'HIDDEN' && skill.status === 'ACTIVE' && publishedVersion && (
                           <SkillVisibilityDialog namespace={skill.namespace} slug={skill.slug}
                             visibility={skill.visibility ?? 'PUBLIC'} disabled={hasPendingPreview} />
                         )}
-                        {filter === 'HIDDEN' ? null : hasPendingPreview && ownerPreviewVersion ? (
+                        {filter === 'HIDDEN' || ownerReadOnly ? null : hasPendingPreview && ownerPreviewVersion ? (
                           <Button
                             size="sm"
                             variant="outline"

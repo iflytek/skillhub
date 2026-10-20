@@ -518,6 +518,7 @@
     "securityDesc": "修改密码和账户安全选项"
   },
   "mySkills": {
+    "ownerReadOnly": "你已不在该空间，只能查看和下载自己的技能，不能修改。",
     "updateGlobalVersion": "更新全局版本",
     "viewGlobalCopy": "查看全局副本",
     "viewTeamSource": "查看团队来源",

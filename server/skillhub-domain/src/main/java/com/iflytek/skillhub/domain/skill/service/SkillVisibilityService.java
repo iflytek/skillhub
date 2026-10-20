@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.event.SkillVisibilityChangedEvent;
 import com.iflytek.skillhub.domain.security.*;
 import com.iflytek.skillhub.domain.namespace.*;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Changes access scope without changing the published package or version identity. */
 @Service
 public class SkillVisibilityService {
+    private final SkillOwnerAccessPolicy ownerAccess;
     @jakarta.persistence.PersistenceContext
     private jakarta.persistence.EntityManager entityManager;
     private final SkillRepository skills;
@@ -26,9 +28,10 @@ public class SkillVisibilityService {
     private final SecurityScanService scanner;
     private final SecurityAuditRepository audits;
 
-    public SkillVisibilityService(SkillRepository skills, SkillVersionRepository versions,
+    public SkillVisibilityService(SkillOwnerAccessPolicy ownerAccess, SkillRepository skills, SkillVersionRepository versions,
             ReviewTaskRepository reviews, NamespaceRepository namespaces, ApplicationEventPublisher events,
             SecurityScanService scanner, SecurityAuditRepository audits) {
+        this.ownerAccess = ownerAccess;
         this.skills = skills;
         this.versions = versions;
         this.reviews = reviews;
@@ -42,6 +45,7 @@ public class SkillVisibilityService {
     public ReviewTask change(Long skillId, SkillVisibility target, String actor,
             Map<Long, NamespaceRole> roles, Set<String> platformRoles) {
         Skill skill = lockedSkill(skillId);
+        ownerAccess.assertCanWrite(skill, actor, platformRoles);
         assertCanManage(skill, actor, roles, platformRoles);
         assertActive(skill);
         if (target == null || target == skill.getVisibility()) {

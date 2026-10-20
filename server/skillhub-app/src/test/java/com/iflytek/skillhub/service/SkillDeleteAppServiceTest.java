@@ -42,7 +42,7 @@ class SkillDeleteAppServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SkillDeleteAppService(skillRepository, namespaceRepository, skillHardDeleteService, searchIndexService);
+        service = new SkillDeleteAppService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skillRepository, namespaceRepository, skillHardDeleteService, searchIndexService);
     }
 
     @Test

@@ -70,8 +70,7 @@ class ReviewServiceTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        reviewService = new ReviewService(
-                reviewTaskRepository, skillVersionRepository, skillRepository,
+        reviewService = new ReviewService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), reviewTaskRepository, skillVersionRepository, skillRepository,
                 namespaceRepository, permissionChecker, eventPublisher, objectMapper, skillGovernanceService, governanceNotificationService, entityManager, CLOCK);
     }
 
@@ -94,7 +93,7 @@ class ReviewServiceTest {
     }
 
     private ReviewTask createPendingReviewTask() {
-        ReviewTask task = new ReviewTask(SKILL_VERSION_ID, NAMESPACE_ID, USER_ID);
+        ReviewTask task = new ReviewTask(SKILL_VERSION_ID, SKILL_ID, NAMESPACE_ID, "1.0.0", USER_ID);
         setField(task, "id", REVIEW_TASK_ID);
         return task;
     }
@@ -119,6 +118,73 @@ class ReviewServiceTest {
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository useRealMembershipPolicy() {
+        var members = mock(com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository.class);
+        reviewService = new ReviewService(new com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy(namespaceRepository, members),
+                reviewTaskRepository, skillVersionRepository, skillRepository, namespaceRepository,
+                new ReviewPermissionChecker(), eventPublisher, objectMapper, skillGovernanceService,
+                governanceNotificationService, entityManager, CLOCK);
+        return members;
+    }
+
+    @Test
+    void removedOwnerCannotWithdrawExistingPendingReview() {
+        useRealMembershipPolicy();
+        var skill = createSkill();
+        var task = createPendingReviewTask();
+        when(reviewTaskRepository.findBySkillVersionIdAndStatus(SKILL_VERSION_ID, ReviewTaskStatus.PENDING))
+                .thenReturn(Optional.of(task));
+        when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+        when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(createTeamNamespace()));
+
+        var error = assertThrows(DomainForbiddenException.class,
+                () -> reviewService.withdrawReview(SKILL_VERSION_ID, USER_ID));
+        assertEquals("error.skill.owner.readOnly", error.messageCode());
+        assertEquals(ReviewTaskStatus.PENDING, task.getStatus());
+        verify(reviewTaskRepository, never()).delete(any());
+        verifyNoInteractions(skillGovernanceService, eventPublisher);
+    }
+
+    @Test
+    void removedOwnerCannotSubmitEvenWhenRequestContainsOldMemberRole() {
+        useRealMembershipPolicy();
+        var version = createDraftSkillVersion();
+        when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(version));
+        when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
+        when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(createTeamNamespace()));
+
+        var error = assertThrows(DomainForbiddenException.class, () -> reviewService.submitReview(
+                SKILL_VERSION_ID, USER_ID, Map.of(NAMESPACE_ID, NamespaceRole.MEMBER), Set.of()));
+        assertEquals("error.skill.owner.readOnly", error.messageCode());
+        assertEquals(SkillVersionStatus.DRAFT, version.getStatus());
+        verify(skillVersionRepository, never()).save(any());
+        verifyNoInteractions(reviewTaskRepository, eventPublisher);
+    }
+
+    @Test
+    void existingReviewCanStillBeApprovedByNamespaceAdminAfterOwnerRemoval() {
+        var members = useRealMembershipPolicy();
+        var task = createPendingReviewTask();
+        var version = createPendingReviewSkillVersion();
+        var skill = createSkill();
+        when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+        when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(createTeamNamespace()));
+        when(reviewTaskRepository.updateStatusWithVersion(REVIEW_TASK_ID, ReviewTaskStatus.APPROVED,
+                REVIEWER_ID, "ok", task.getVersion())).thenReturn(1);
+        when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(version));
+        when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
+
+        var result = reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
+                Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
+        assertEquals(ReviewTaskStatus.APPROVED, result.getStatus());
+        assertEquals(SkillVersionStatus.PUBLISHED, version.getStatus());
+        assertEquals(SKILL_VERSION_ID, skill.getLatestVersionId());
+        verify(skillVersionRepository).save(version);
+        verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));
+        verifyNoInteractions(members);
     }
 
     @Nested

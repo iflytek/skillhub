@@ -342,6 +342,11 @@ public class SkillDownloadService {
                     throw new DomainBadRequestException("error.skill.version.notDownloadable", version.getVersion());
                 }
             }
+            case DRAFT, REJECTED -> {
+                if (!skill.getOwnerId().equals(currentUserId) || version.getYankedAt() != null) {
+                    throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+                }
+            }
             case UPLOADED, PENDING_REVIEW -> {
                 if (!canManageSkillDraft(skill, currentUserId, userNsRoles)) {
                     throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());

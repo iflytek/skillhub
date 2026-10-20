@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.label;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.suite.SkillSuite;
@@ -11,6 +12,12 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class LabelPermissionChecker {
+    private final SkillOwnerAccessPolicy ownerAccess;
+
+    public LabelPermissionChecker(SkillOwnerAccessPolicy ownerAccess) {
+        this.ownerAccess = ownerAccess;
+    }
+
 
     public boolean canManageDefinitions(Set<String> platformRoles) {
         return platformRoles.contains("SUPER_ADMIN");
@@ -23,6 +30,9 @@ public class LabelPermissionChecker {
                                        Set<String> platformRoles) {
         if (platformRoles.contains("SUPER_ADMIN")) {
             return true;
+        }
+        if (ownerAccess.isReadOnly(skill, userId, platformRoles)) {
+            return false;
         }
         if (userId == null) {
             return false;

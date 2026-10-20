@@ -13,6 +13,8 @@ import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
@@ -386,7 +388,7 @@ class SkillDownloadServiceTest {
     }
 
     @Test
-    void testDownloadVersion_ShouldRejectDraftVersion() throws Exception {
+    void testDownloadVersion_ShouldRejectOtherUsersDraftVersion() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";
         String versionStr = "1.0.0";
@@ -398,17 +400,18 @@ class SkillDownloadServiceTest {
         Skill skill = new Skill(1L, skillSlug, userId, SkillVisibility.PUBLIC);
         setId(skill, 1L);
         skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(9L);
         SkillVersion version = new SkillVersion(1L, versionStr, userId);
         setId(version, 10L);
         version.setStatus(SkillVersionStatus.DRAFT);
 
         when(namespaceRepository.findBySlug(namespaceSlug)).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, skillSlug)).thenReturn(List.of(skill));
-        when(visibilityChecker.canAccess(skill, userId, userNsRoles)).thenReturn(true);
+        when(visibilityChecker.canAccess(skill, "another-user", userNsRoles)).thenReturn(true);
         when(skillVersionRepository.findBySkillIdAndVersion(1L, versionStr)).thenReturn(Optional.of(version));
 
-        assertThrows(DomainBadRequestException.class, () ->
-                service.downloadVersion(namespaceSlug, skillSlug, versionStr, userId, userNsRoles));
+        assertThrows(DomainForbiddenException.class, () ->
+                service.downloadVersion(namespaceSlug, skillSlug, versionStr, "another-user", userNsRoles));
         verify(skillRepository, never()).incrementDownloadCount(anyLong());
         verify(skillVersionStatsRepository, never()).incrementDownloadCount(anyLong(), anyLong());
         verify(eventPublisher, never()).publishEvent(any(SkillDownloadedEvent.class));
@@ -629,6 +632,57 @@ class SkillDownloadServiceTest {
         verify(skillRepository, never()).incrementDownloadCount(anyLong());
         verify(skillVersionStatsRepository, never()).incrementDownloadCount(anyLong(), anyLong());
         verify(eventPublisher, never()).publishEvent(any(SkillDownloadedEvent.class));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SkillVersionStatus.class, names = {"DRAFT", "REJECTED", "PENDING_REVIEW", "UPLOADED"})
+    void removedCurrentOwnerCanDownloadInternalVersionsWithoutPublishingOrCounting(SkillVersionStatus status) throws Exception {
+        service = new SkillDownloadService(namespaceRepository, skillRepository, skillVersionRepository,
+                skillVersionStatsRepository, skillFileRepository, skillTagRepository, objectStorageService,
+                new VisibilityChecker(), eventPublisher, skillSlugResolutionService);
+        Namespace namespace = new Namespace("team", "Team", "admin");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "owned", "removed-owner", SkillVisibility.NAMESPACE_ONLY);
+        setId(skill, 9L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        SkillVersion version = new SkillVersion(9L, "1.0.0", "removed-owner");
+        setId(version, 10L);
+        version.setStatus(status);
+        when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "owned")).thenReturn(List.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(9L, "1.0.0")).thenReturn(Optional.of(version));
+        when(objectStorageService.exists("packages/9/10/bundle.zip")).thenReturn(true);
+        when(objectStorageService.getMetadata("packages/9/10/bundle.zip"))
+                .thenReturn(new ObjectMetadata(4L, "application/zip", Instant.now()));
+        when(objectStorageService.getObject("packages/9/10/bundle.zip"))
+                .thenReturn(new ByteArrayInputStream("safe".getBytes()));
+
+        var result = service.downloadVersion("team", "owned", "1.0.0", "removed-owner", Map.of());
+        assertArrayEquals("safe".getBytes(), result.openContent().readAllBytes());
+        assertEquals(status, version.getStatus());
+        verify(skillRepository, never()).incrementDownloadCount(anyLong());
+        verify(skillVersionStatsRepository, never()).incrementDownloadCount(anyLong(), anyLong());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SkillVersionStatus.class, names = {"SCANNING", "SCAN_FAILED", "YANKED"})
+    void currentOwnerReadExceptionDoesNotBypassUnsafeVersionState(SkillVersionStatus status) throws Exception {
+        Namespace namespace = new Namespace("team", "Team", "admin");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "owned", "owner", SkillVisibility.NAMESPACE_ONLY);
+        setId(skill, 9L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        SkillVersion version = new SkillVersion(9L, "1.0.0", "owner");
+        version.setStatus(status);
+        when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "owned")).thenReturn(List.of(skill));
+        when(visibilityChecker.canAccess(skill, "owner", Map.of())).thenReturn(true);
+        when(skillVersionRepository.findBySkillIdAndVersion(9L, "1.0.0")).thenReturn(Optional.of(version));
+        assertThrows(DomainBadRequestException.class,
+                () -> service.downloadVersion("team", "owned", "1.0.0", "owner", Map.of()));
+        verifyNoInteractions(objectStorageService, eventPublisher);
+        verify(skillRepository, never()).incrementDownloadCount(anyLong());
     }
 
     private void setId(Object entity, Long id) throws Exception {

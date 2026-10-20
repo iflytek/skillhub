@@ -4,7 +4,9 @@ import com.iflytek.skillhub.TestRedisConfig;
 import com.iflytek.skillhub.auth.device.DeviceAuthService;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillFile;
@@ -66,7 +68,7 @@ class SkillDeleteFlowIntegrationTest {
     @MockBean
     private ObjectStorageService objectStorageService;
 
-    @MockBean
+    @Autowired
     private NamespaceMemberRepository namespaceMemberRepository;
 
     @MockBean
@@ -135,6 +137,7 @@ class SkillDeleteFlowIntegrationTest {
     private PersistedSkillGraph createSkillGraph(String ownerId) {
         String suffix = UUID.randomUUID().toString().substring(0, 8);
         Namespace namespace = namespaceRepository.save(new Namespace("global-delete-" + suffix, "Global Delete " + suffix, "system"));
+        namespaceMemberRepository.save(new NamespaceMember(namespace.getId(), ownerId, NamespaceRole.MEMBER));
 
         Skill skill = new Skill(namespace.getId(), "demo-skill-" + suffix, ownerId, SkillVisibility.PUBLIC);
         skill.setCreatedBy(ownerId);

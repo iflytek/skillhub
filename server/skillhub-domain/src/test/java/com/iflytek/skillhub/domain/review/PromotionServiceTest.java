@@ -64,8 +64,7 @@ class PromotionServiceTest {
 
     @BeforeEach
     void setUp() {
-        promotionService = new PromotionService(
-                promotionRequestRepository, skillRepository, skillVersionRepository,
+        promotionService = new PromotionService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), promotionRequestRepository, skillRepository, skillVersionRepository,
                 skillFileRepository, namespaceRepository, namespaceMemberRepository, permissionChecker,
                 eventPublisher, governanceNotificationService, entityManager, CLOCK, new ObjectMapper());
         lenient().when(namespaceRepository.findById(5L)).thenReturn(Optional.of(createSourceNamespace()));

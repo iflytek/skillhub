@@ -42,7 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @Testcontainers
-@Import({SkillVisibilityService.class, SkillReviewSubmitService.class,
+@Import({com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class, SkillVisibilityService.class, SkillReviewSubmitService.class,
         JpaSkillRepositoryAdapter.class, PromotionService.class, ReviewPermissionChecker.class, SkillVisibilityPostgresTest.Configuration.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class SkillVisibilityPostgresTest {
@@ -69,6 +69,7 @@ class SkillVisibilityPostgresTest {
     @Autowired SkillJpaRepository skills;
     @Autowired SkillVersionJpaRepository versions;
     @Autowired NamespaceJpaRepository namespaces;
+    @Autowired NamespaceMemberJpaRepository members;
     @Autowired UserAccountJpaRepository users;
     @Autowired SecurityAuditJpaRepository audits;
     @Autowired ReviewTaskJpaRepository reviews;
@@ -238,6 +239,8 @@ class SkillVisibilityPostgresTest {
             String owner = "scope-owner-" + suffix;
             users.saveAndFlush(new UserAccount(owner, owner, null, null));
             Namespace ns = namespaces.saveAndFlush(new Namespace("scope-" + suffix, "Scope", owner));
+            members.saveAndFlush(new com.iflytek.skillhub.domain.namespace.NamespaceMember(
+                    ns.getId(), owner, com.iflytek.skillhub.domain.namespace.NamespaceRole.OWNER));
             Skill skill = skills.saveAndFlush(new Skill(ns.getId(), "foo", owner, SkillVisibility.PRIVATE));
             SkillVersion published = new SkillVersion(skill.getId(), "1.0.0", owner);
             published.setStatus(SkillVersionStatus.PUBLISHED);

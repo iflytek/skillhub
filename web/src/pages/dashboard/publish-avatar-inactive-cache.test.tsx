@@ -16,6 +16,7 @@ vi.mock('@/features/skill/skill-avatar-editor', () => ({
 }))
 vi.mock('@/shared/lib/navigate-after-overlays', () => ({ navigateAfterOverlays: (callback: () => void) => callback() }))
 vi.mock('@/shared/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
+vi.mock('@/shared/hooks/use-skill-queries', async () => ({ ...await vi.importActual<typeof import('@/shared/hooks/use-skill-queries')>('@/shared/hooks/use-skill-queries'), useSkillDetail: () => ({ data: undefined }) }))
 import { PublishPage } from './publish'
 
 describe('avatar-only removal refreshes inactive display caches', () => {

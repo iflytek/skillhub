@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.repository.StarredSkillQueryRepository;
@@ -27,6 +28,7 @@ import java.util.List;
  */
 @Service
 public class MySkillAppService {
+    private final SkillOwnerAccessPolicy ownerAccess;
     public enum MySkillFilter {
         ALL,
         PENDING_REVIEW,
@@ -46,6 +48,7 @@ public class MySkillAppService {
     private final NamespaceRepository namespaceRepository;
 
     public MySkillAppService(
+            SkillOwnerAccessPolicy ownerAccess,
             SkillRepository skillRepository,
             SkillVersionRepository skillVersionRepository,
             StarredSkillQueryRepository starredSkillQueryRepository,
@@ -54,6 +57,7 @@ public class MySkillAppService {
             HiddenSkillQueryRepository hiddenSkillQueryRepository,
             SkillLifecycleProjectionService skillLifecycleProjectionService,
             NamespaceRepository namespaceRepository) {
+        this.ownerAccess = ownerAccess;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.starredSkillQueryRepository = starredSkillQueryRepository;
@@ -104,7 +108,18 @@ public class MySkillAppService {
 
         if (normalizedFilter != MySkillFilter.HIDDEN) {
             var managementStates = mySkillQueryRepository.getManagementStates(skillPage.getContent(), userId);
-            items = items.stream().map(item -> item.withManagementState(managementStates.get(item.id()))).toList();
+            Map<Long, Skill> skillsById = skillPage.getContent().stream()
+                    .collect(java.util.stream.Collectors.toMap(Skill::getId, skill -> skill));
+            items = items.stream().map(item -> {
+                var state = managementStates.get(item.id());
+                boolean readOnly = ownerAccess.isReadOnly(skillsById.get(item.id()), userId, platformRoles);
+                return item.withManagementState(new SkillSummaryResponse.ManagementState(
+                        state == null ? null : state.requestedVisibility(),
+                        state == null ? null : state.reviewTaskId(),
+                        state == null ? null : state.promotionRole(),
+                        state == null ? null : state.relatedNamespace(),
+                        state == null ? null : state.relatedSlug(), readOnly));
+            }).toList();
         }
         return new PageResponse<>(items, skillPage.getTotalElements(), skillPage.getNumber(), skillPage.getSize());
     }

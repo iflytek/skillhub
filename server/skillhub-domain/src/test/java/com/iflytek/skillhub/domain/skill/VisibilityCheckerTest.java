@@ -65,6 +65,12 @@ class VisibilityCheckerTest {
     }
 
     @Test
+    void namespaceOnlySkillRemainsReadableByCurrentOwnerAfterMembershipRemoval() {
+        assertTrue(checker.canAccess(namespaceOnlySkill, OWNER_ID, Map.of()));
+        assertFalse(checker.canAccess(namespaceOnlySkill, OTHER_USER_ID, Map.of()));
+    }
+
+    @Test
     void testNamespaceOnlySkillAccessibleByMember() {
         Map<Long, NamespaceRole> roles = Map.of(NAMESPACE_ID, NamespaceRole.MEMBER);
         boolean canAccess = checker.canAccess(namespaceOnlySkill, OTHER_USER_ID, roles);

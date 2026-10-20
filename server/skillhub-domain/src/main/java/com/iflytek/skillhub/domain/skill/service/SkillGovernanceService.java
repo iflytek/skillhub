@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
@@ -40,6 +41,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
  */
 @Service
 public class SkillGovernanceService {
+    private final SkillOwnerAccessPolicy ownerAccess;
 
     private static final Logger log = LoggerFactory.getLogger(SkillGovernanceService.class);
 
@@ -55,7 +57,7 @@ public class SkillGovernanceService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
-    public SkillGovernanceService(SkillRepository skillRepository,
+    public SkillGovernanceService(SkillOwnerAccessPolicy ownerAccess, SkillRepository skillRepository,
                                   SkillVersionRepository skillVersionRepository,
                                   SkillFileRepository skillFileRepository,
                                   ReviewTaskRepository reviewTaskRepository,
@@ -66,6 +68,7 @@ public class SkillGovernanceService {
                                   SkillStorageDeletionCompensationService compensationService,
                                   ObjectMapper objectMapper,
                                   Clock clock) {
+        this.ownerAccess = ownerAccess;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.skillFileRepository = skillFileRepository;
@@ -99,9 +102,19 @@ public class SkillGovernanceService {
                               String clientIp,
                               String userAgent,
                               String reason) {
+        return archiveSkill(skillId, actorUserId, userNamespaceRoles, clientIp, userAgent, reason, java.util.Set.of());
+    }
+
+    @Transactional
+    public Skill archiveSkill(Long skillId,
+                              String actorUserId,
+                              Map<Long, NamespaceRole> userNamespaceRoles,
+                              String clientIp,
+                              String userAgent,
+                              String reason, java.util.Set<String> platformRoles) {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
-        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
         return archiveSkillInternal(skill, actorUserId, clientIp, userAgent, reason);
     }
 
@@ -149,9 +162,18 @@ public class SkillGovernanceService {
                                 Map<Long, NamespaceRole> userNamespaceRoles,
                                 String clientIp,
                                 String userAgent) {
+        return unarchiveSkill(skillId, actorUserId, userNamespaceRoles, clientIp, userAgent, java.util.Set.of());
+    }
+
+    @Transactional
+    public Skill unarchiveSkill(Long skillId,
+                                String actorUserId,
+                                Map<Long, NamespaceRole> userNamespaceRoles,
+                                String clientIp,
+                                String userAgent, java.util.Set<String> platformRoles) {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
-        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
 
         SkillStatus previousStatus = skill.getStatus();
         skill.setStatus(SkillStatus.ACTIVE);
@@ -170,7 +192,18 @@ public class SkillGovernanceService {
                               String clientIp,
                               String userAgent,
                               String namespaceSlug) {
-        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        deleteVersion(skill, version, actorUserId, userNamespaceRoles, clientIp, userAgent, namespaceSlug, java.util.Set.of());
+    }
+
+    @Transactional
+    public void deleteVersion(Skill skill,
+                              SkillVersion version,
+                              String actorUserId,
+                              Map<Long, NamespaceRole> userNamespaceRoles,
+                              String clientIp,
+                              String userAgent,
+                              String namespaceSlug, java.util.Set<String> platformRoles) {
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
         if (version.getStatus() != SkillVersionStatus.DRAFT
                 && version.getStatus() != SkillVersionStatus.REJECTED
                 && version.getStatus() != SkillVersionStatus.SCAN_FAILED
@@ -290,7 +323,18 @@ public class SkillGovernanceService {
                                     String clientIp,
                                     String userAgent,
                                     String reason) {
-        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles);
+        return yankVersion(skill, version, actorUserId, userNamespaceRoles, clientIp, userAgent, reason, java.util.Set.of());
+    }
+
+    @Transactional
+    public SkillVersion yankVersion(Skill skill,
+                                    SkillVersion version,
+                                    String actorUserId,
+                                    Map<Long, NamespaceRole> userNamespaceRoles,
+                                    String clientIp,
+                                    String userAgent,
+                                    String reason, java.util.Set<String> platformRoles) {
+        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, platformRoles);
         return yankVersionInternal(version, actorUserId, clientIp, userAgent, reason);
     }
 
@@ -352,7 +396,8 @@ public class SkillGovernanceService {
 
     private void assertCanManageLifecycle(Skill skill,
                                           String actorUserId,
-                                          Map<Long, NamespaceRole> userNamespaceRoles) {
+                                          Map<Long, NamespaceRole> userNamespaceRoles, java.util.Set<String> platformRoles) {
+        ownerAccess.assertCanWrite(skill, actorUserId, platformRoles);
         NamespaceRole namespaceRole = userNamespaceRoles.get(skill.getNamespaceId());
         boolean canManage = skill.getOwnerId().equals(actorUserId)
                 || namespaceRole == NamespaceRole.ADMIN

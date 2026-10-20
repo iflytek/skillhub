@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.review.ReviewAvatarParticipant;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -68,6 +69,7 @@ import java.util.zip.ZipOutputStream;
  */
 @Service
 public class SkillPublishService {
+    private final SkillOwnerAccessPolicy ownerAccess;
 
     private static final DateTimeFormatter AUTO_VERSION_FORMATTER =
             DateTimeFormatter.ofPattern("yyyyMMdd.HHmmss").withZone(ZoneId.systemDefault());
@@ -128,6 +130,7 @@ public class SkillPublishService {
     private final Clock clock;
 
     public SkillPublishService(
+            SkillOwnerAccessPolicy ownerAccess,
             NamespaceRepository namespaceRepository,
             NamespaceMemberRepository namespaceMemberRepository,
             SkillRepository skillRepository,
@@ -143,6 +146,7 @@ public class SkillPublishService {
             SkillStorageDeletionCompensationService compensationService,
             ApplicationEventPublisher eventPublisher,
             Clock clock) {
+        this.ownerAccess = ownerAccess;
         this.namespaceRepository = namespaceRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.skillRepository = skillRepository;
@@ -374,9 +378,20 @@ public class SkillPublishService {
             String publisherId,
             Map<Long, NamespaceRole> userNamespaceRoles,
             boolean confirmWarnings) {
+        return rereleasePublishedVersion(skillId, sourceVersion, targetVersion, publisherId, userNamespaceRoles, confirmWarnings, java.util.Set.of());
+    }
+
+    @Transactional
+    public PublishResult rereleasePublishedVersion(
+            Long skillId,
+            String sourceVersion,
+            String targetVersion,
+            String publisherId,
+            Map<Long, NamespaceRole> userNamespaceRoles,
+            boolean confirmWarnings, java.util.Set<String> platformRoles) {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillId));
-        assertCanManageLifecycle(skill, publisherId, userNamespaceRoles);
+        assertCanManageLifecycle(skill, publisherId, userNamespaceRoles, platformRoles);
 
         SkillVersion publishedVersion = skillVersionRepository.findBySkillIdAndVersion(skillId, sourceVersion)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", sourceVersion));
@@ -921,16 +936,11 @@ public class SkillPublishService {
         }
     }
 
-    private void assertCanManageLifecycle(Skill skill,
-                                          String actorUserId,
-                                          Map<Long, NamespaceRole> userNamespaceRoles) {
-        assertCanManageLifecycle(skill, actorUserId, userNamespaceRoles, Set.of());
-    }
-
-    private void assertCanManageLifecycle(Skill skill,
+private void assertCanManageLifecycle(Skill skill,
                                           String actorUserId,
                                           Map<Long, NamespaceRole> userNamespaceRoles,
                                           Set<String> platformRoles) {
+        ownerAccess.assertCanWrite(skill, actorUserId, platformRoles);
         NamespaceRole namespaceRole = userNamespaceRoles.get(skill.getNamespaceId());
         boolean canManage = skill.getOwnerId().equals(actorUserId)
                 || namespaceRole == NamespaceRole.ADMIN

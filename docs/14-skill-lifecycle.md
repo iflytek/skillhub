@@ -69,7 +69,7 @@ Status: contract reference with documented implementation exception
 - 默认公开展示、安装与搜索以最新已发布版本为候选；显式版本或自定义标签可指向其他 `PUBLISHED` 版本，仍须通过入口授权与就绪检查
 - owner 详情页只有在不存在 `publishedVersion` 时，才允许 `headlineVersion = ownerPreviewVersion`
 - compat latest 和默认公开下载采用最新已发布版本语义；promotion 可选择来源 skill 的任一 `PUBLISHED` 版本，不要求等于 `publishedVersion`。原始指针与各入口解析差异见第 3.1 节
-- 管理者的授权预览下载与公开分发不同：owner 或 namespace ADMIN/OWNER 可下载 `UPLOADED` / `PENDING_REVIEW`，仍须通过 Skill 可见性检查；`DRAFT` 等其他非发布状态不能据此下载。常规 `downloadLatest` 读取原始指针后也使用相同版本授权判断，因此 PRIVATE 指针例外下，默认下载不一定是已发布版本；该行为不授予公众访问权。
+- 管理者的授权预览下载与公开分发不同：owner 或 namespace ADMIN/OWNER 可下载 `UPLOADED` / `PENDING_REVIEW`，当前 owner 另可受控下载自己的 `DRAFT` / `REJECTED`，仍须通过 Skill 可见性、文件就绪及其他安全检查；不因此放行 `SCANNING` / `SCAN_FAILED` / `YANKED` 或公开分发未发布版本。常规 `downloadLatest` 读取原始指针后也使用相同版本授权判断，因此 PRIVATE 指针例外下，默认下载不一定是已发布版本；该行为不授予公众访问权。
 - 已发布版本可安装还要求 `downloadReady=true`、`yankedAt=null`；下载要求容器为 `ACTIVE`，元数据可读不等于可下载
 
 ## 4. 代码实际链路
@@ -171,6 +171,14 @@ Status: contract reference with documented implementation exception
 撤销时已有的全局更新申请会失效，不能在全局记录删除后重新发布到该记录。提升撤销保留提升、撤销与删除审计；来源技能后续永久删除仍按既有物理删除流程清理其业务记录，操作审计继续保留。不要通过手工清除来源关联字段来绕过撤销审核。
 
 ## 6. 权限边界
+
+### TEAM 成员移除后的当前所有者
+
+账号正常但已不是 TEAM 成员的当前技能所有者，保留自己的技能、私有内容、草稿及历史版本的查看和受控下载权限，不能凭所有者身份执行以下写操作。成员移除不删除技能、不迁移地址、不改 owner、不自动撤回待审核申请；既有审核人继续按原安全与审核规则处理。重新加入且账号正常、所有权未变时恢复原有维护权限。
+
+本条只收紧普通 owner 的成员边界，空间／平台管理员的原有独立权限不变；其他空间和 GLOBAL 原有规则不变。账号停用仍由原认证机制拒绝，不能通过 owner 匹配绕过。以下各行中的 owner 写权限均以这条成员边界为前提，不影响管理员独立路径。
+
+### 操作边界
 
 - `withdraw-review`：仅提交人本人
 - 删除版本：owner 或 namespace ADMIN/OWNER，仅限 `DRAFT` / `REJECTED` / `SCAN_FAILED` / `UPLOADED`，禁止删除最后一个版本。数据库删除提交后清理对象存储，失败调用补偿入口；不是跨存储原子删除，补偿持久化的验证限制见[对象存储写入策略](./05-business-flows.md#对象存储写入策略)

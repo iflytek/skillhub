@@ -61,7 +61,7 @@ public class JpaStarredSkillQueryRepository implements StarredSkillQueryReposito
         Predicate member = roles.isEmpty() ? builder.disjunction() : skill.get("namespaceId").in(roles.keySet());
         Predicate visibility = builder.or(
                 builder.equal(skill.get("visibility"), SkillVisibility.PUBLIC),
-                builder.and(builder.equal(skill.get("visibility"), SkillVisibility.NAMESPACE_ONLY), member),
+                builder.and(builder.equal(skill.get("visibility"), SkillVisibility.NAMESPACE_ONLY), builder.or(owner, member)),
                 builder.and(builder.equal(skill.get("visibility"), SkillVisibility.PRIVATE), builder.or(owner, admin)));
         Predicate accessible = builder.or(
                 builder.and(builder.isTrue(skill.get("hidden")), builder.or(owner, admin)),

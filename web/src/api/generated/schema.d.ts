@@ -7742,6 +7742,7 @@ export interface components {
             promotionRole?: string;
             relatedNamespace?: string;
             relatedSlug?: string;
+            ownerReadOnly?: boolean;
         };
         SearchResponse: {
             items?: components["schemas"]["SkillSummaryResponse"][];
@@ -8083,6 +8084,7 @@ export interface components {
             entryForSuites?: components["schemas"]["SkillSuiteReferenceResponse"][];
             memberOfSuites?: components["schemas"]["PageResponseSkillSuiteReferenceResponse"];
             avatarUrl?: string;
+            ownerReadOnly?: boolean;
         };
         ApiResponseReviewSkillDetailResponse: {
             /** Format: int32 */

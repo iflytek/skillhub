@@ -20,7 +20,7 @@ class SkillVisibilityServiceTest {
     private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
     private final SecurityScanService scanner = mock(SecurityScanService.class);
     private final SecurityAuditRepository audits = mock(SecurityAuditRepository.class);
-    private final SkillVisibilityService service = new SkillVisibilityService(skills, versions, reviews, namespaces, events, scanner, audits);
+    private final SkillVisibilityService service = new SkillVisibilityService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skills, versions, reviews, namespaces, events, scanner, audits);
     private Skill skill;
 
     @BeforeEach

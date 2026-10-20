@@ -89,8 +89,7 @@ class SkillPublishServiceTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        service = new SkillPublishService(
-                namespaceRepository,
+        service = new SkillPublishService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), namespaceRepository,
                 namespaceMemberRepository,
                 skillRepository,
                 skillVersionRepository,

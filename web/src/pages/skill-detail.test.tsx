@@ -336,6 +336,22 @@ describe('SkillDetailPage', () => {
     useSkillFileMock.mockReturnValue({ data: null, isLoading: false, error: null })
   })
 
+  it('shows the removed owner read-only reason and keeps controlled draft download without write controls', () => {
+    useSkillDetailMock.mockReturnValue({ data: createSkill({
+      ownerReadOnly: true, canManageLifecycle: false, canSubmitPromotion: false,
+      resolutionMode: 'OWNER_PREVIEW', headlineVersion: { id: 11, version: '1.1.0', status: 'PENDING_REVIEW' },
+      ownerPreviewVersion: { id: 11, version: '1.1.0', status: 'PENDING_REVIEW' },
+    }), isLoading: false, isFetching: false, error: null })
+    useSkillVersionsMock.mockReturnValue({ data: [{ id: 11, version: '1.1.0', status: 'PENDING_REVIEW', downloadAvailable: true }] })
+    render(<SkillDetailPage />)
+    expect(screen.getByText('mySkills.ownerReadOnly')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'skillDetail.download' }).hasAttribute('disabled')).toBe(false)
+    expect(screen.queryByRole('button', { name: 'skillDetail.deleteSkill' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'skillDetail.rereleaseVersion' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'skillDetail.withdrawReview' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.queryByText('skillDetail.lifecycle')).toBeNull()
+  })
+
   it('consumes protected deletion failures at the actual button boundary and allows retry', async () => {
     deleteSkillMock.mockRejectedValue(new Error('revoke global publication first'))
     render(<SkillDetailPage />)

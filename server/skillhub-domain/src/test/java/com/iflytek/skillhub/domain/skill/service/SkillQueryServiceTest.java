@@ -69,8 +69,7 @@ class SkillQueryServiceTest {
         visibilityChecker = new VisibilityChecker();
         skillSlugResolutionService = new SkillSlugResolutionService(skillRepository);
         skillLifecycleProjectionService = new SkillLifecycleProjectionService(skillVersionRepository);
-        service = new SkillQueryService(
-                namespaceRepository,
+        service = new SkillQueryService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), namespaceRepository,
                 skillRepository,
                 skillVersionRepository,
                 skillFileRepository,
@@ -83,6 +82,39 @@ class SkillQueryServiceTest {
                 skillLifecycleProjectionService,
                 userAccountRepository
         );
+    }
+
+    @Test
+    void removedOwnerSeesReadOnlyDetailAndRejoiningRestoresManagement() throws Exception {
+        var members = mock(com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository.class);
+        service = new SkillQueryService(new SkillOwnerAccessPolicy(namespaceRepository, members), namespaceRepository,
+                skillRepository, skillVersionRepository, skillFileRepository, skillTagRepository,
+                objectStorageService, visibilityChecker, promotionRequestRepository, reviewTaskRepository,
+                skillSlugResolutionService, skillLifecycleProjectionService, userAccountRepository);
+        Namespace namespace = new Namespace("team", "Team", "admin");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "owned", "owner", SkillVisibility.NAMESPACE_ONLY);
+        setId(skill, 9L);
+        skill.setLatestVersionId(10L);
+        SkillVersion version = new SkillVersion(9L, "1.0.0", "owner");
+        setId(version, 10L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
+        when(namespaceRepository.findById(1L)).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "owned")).thenReturn(List.of(skill));
+        when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
+
+        var removed = service.getSkillDetail("team", "owned", "owner", Map.of());
+        assertTrue(removed.ownerReadOnly());
+        assertFalse(removed.canManageLifecycle());
+        assertFalse(removed.canSubmitPromotion());
+        assertEquals("1.0.0", removed.headlineVersion().version());
+        when(members.findByNamespaceIdAndUserId(1L, "owner"))
+                .thenReturn(Optional.of(mock(com.iflytek.skillhub.domain.namespace.NamespaceMember.class)));
+        var rejoined = service.getSkillDetail("team", "owned", "owner", Map.of(1L, NamespaceRole.MEMBER));
+        assertFalse(rejoined.ownerReadOnly());
+        assertTrue(rejoined.canManageLifecycle());
+        assertTrue(rejoined.canSubmitPromotion());
     }
 
     @Test

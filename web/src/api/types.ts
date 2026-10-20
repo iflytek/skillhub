@@ -356,6 +356,7 @@ export type SkillDetail = Omit<
     GeneratedSkillDetail,
     | 'ownerId'
     | 'ownerDisplayName'
+    | 'ownerReadOnly'
     | 'summary'
     | 'subscriptionCount'
     | 'ratingAvg'

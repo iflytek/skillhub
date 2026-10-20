@@ -62,7 +62,7 @@ import static org.mockito.Mockito.when;
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 @Testcontainers
-@Import({SkillAvatarRecoveryPostgresTest.ReviewConfiguration.class, com.iflytek.skillhub.domain.review.ReviewService.class, com.iflytek.skillhub.domain.review.ReviewPermissionChecker.class, SkillAvatarAppService.class, SkillAvatarMachineRecoveryTask.class,
+@Import({com.iflytek.skillhub.auth.rbac.RbacService.class, com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class, SkillAvatarRecoveryPostgresTest.ReviewConfiguration.class, com.iflytek.skillhub.domain.review.ReviewService.class, com.iflytek.skillhub.domain.review.ReviewPermissionChecker.class, SkillAvatarAppService.class, SkillAvatarMachineRecoveryTask.class,
         SkillAvatarScopeReviewListener.class, SkillAvatarScopeReviewRecoveryTask.class,
         com.iflytek.skillhub.task.SkillAvatarCleanupTask.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
@@ -82,6 +82,7 @@ class SkillAvatarRecoveryPostgresTest {
 
     @Autowired private SkillJpaRepository skills;
     @Autowired private NamespaceJpaRepository namespaces;
+    @Autowired private com.iflytek.skillhub.infra.jpa.NamespaceMemberJpaRepository members;
     @Autowired private com.iflytek.skillhub.infra.jpa.SkillVersionJpaRepository versions;
     @Autowired private SkillAvatarCandidateJpaRepository candidates;
     @Autowired private SkillAvatarAppService avatars;
@@ -616,6 +617,8 @@ class SkillAvatarRecoveryPostgresTest {
         return new TransactionTemplate(transactions).execute(status -> {
             String suffix = UUID.randomUUID().toString().substring(0, 8);
             Namespace ns = namespaces.saveAndFlush(new Namespace("avatar-" + suffix, "Avatar recovery", "owner"));
+            members.saveAndFlush(new com.iflytek.skillhub.domain.namespace.NamespaceMember(
+                    ns.getId(), "owner", com.iflytek.skillhub.domain.namespace.NamespaceRole.OWNER));
             Skill skill = skills.saveAndFlush(new Skill(ns.getId(), "skill", "owner", expanded ? SkillVisibility.PRIVATE : SkillVisibility.PUBLIC));
             if (expanded) {
                 SkillAvatarCandidate old = new SkillAvatarCandidate(skill.getId(), "owner", "old/" + skill.getId(), "old-sha-" + suffix,

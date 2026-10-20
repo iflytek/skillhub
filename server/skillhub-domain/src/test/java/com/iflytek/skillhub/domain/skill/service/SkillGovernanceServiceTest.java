@@ -74,8 +74,7 @@ class SkillGovernanceServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SkillGovernanceService(
-                skillRepository,
+        service = new SkillGovernanceService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skillRepository,
                 skillVersionRepository,
                 skillFileRepository,
                 reviewTaskRepository,
@@ -87,6 +86,35 @@ class SkillGovernanceServiceTest {
                 new ObjectMapper(),
                 CLOCK
         );
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"archive", "unarchive"})
+    void removedOwnerCannotChangeLifecycleAndDenialHasNoSideEffects(String action) {
+        var namespaces = org.mockito.Mockito.mock(com.iflytek.skillhub.domain.namespace.NamespaceRepository.class);
+        var members = org.mockito.Mockito.mock(com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository.class);
+        var namespace = new com.iflytek.skillhub.domain.namespace.Namespace("team", "Team", "admin");
+        org.mockito.Mockito.when(namespaces.findById(1L)).thenReturn(Optional.of(namespace));
+        var policy = new com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy(namespaces, members);
+        service = new SkillGovernanceService(policy, skillRepository, skillVersionRepository, skillFileRepository,
+                reviewTaskRepository, objectStorageService, auditLogService, eventPublisher, securityScanService,
+                compensationService, new ObjectMapper(), CLOCK);
+        Skill skill = new Skill(1L, "demo", "owner", com.iflytek.skillhub.domain.skill.SkillVisibility.NAMESPACE_ONLY);
+        skill.setStatus(action.equals("archive") ? SkillStatus.ACTIVE : SkillStatus.ARCHIVED);
+        SkillStatus originalStatus = skill.getStatus();
+        given(skillRepository.findById(10L)).willReturn(Optional.of(skill));
+
+        var error = assertThrows(DomainForbiddenException.class, () -> {
+            if (action.equals("archive")) {
+                service.archiveSkill(10L, "owner", Map.of(), "127.0.0.1", "JUnit", "test");
+            } else {
+                service.unarchiveSkill(10L, "owner", Map.of(), "127.0.0.1", "JUnit");
+            }
+        });
+        assertThat(error.messageCode()).isEqualTo("error.skill.owner.readOnly");
+        assertThat(skill.getStatus()).isEqualTo(originalStatus);
+        verify(skillRepository, never()).save(any());
+        org.mockito.Mockito.verifyNoInteractions(auditLogService, eventPublisher, objectStorageService);
     }
 
     @AfterEach

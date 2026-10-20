@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.review;
 
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 /** Reviews a request to remove a specific derived global skill, preserving its promotion history. */
 @Service
 public class PromotionRevocationService {
+    private final SkillOwnerAccessPolicy ownerAccess;
     private final PromotionRequestRepository promotionRepository;
     private final PromotionRevocationRequestRepository revocationRepository;
     private final PromotionRevocationHistoryRepository historyRepository;
@@ -29,13 +31,14 @@ public class PromotionRevocationService {
     private final SkillHardDeleteService hardDeleteService;
     private final Clock clock;
 
-    public PromotionRevocationService(PromotionRequestRepository promotionRepository,
+    public PromotionRevocationService(SkillOwnerAccessPolicy ownerAccess, PromotionRequestRepository promotionRepository,
                                       PromotionRevocationRequestRepository revocationRepository,
                                       PromotionRevocationHistoryRepository historyRepository,
                                       SkillRepository skillRepository,
                                       NamespaceRepository namespaceRepository,
                                       SkillHardDeleteService hardDeleteService,
                                       Clock clock) {
+        this.ownerAccess = ownerAccess;
         this.promotionRepository = promotionRepository;
         this.revocationRepository = revocationRepository;
         this.historyRepository = historyRepository;
@@ -51,6 +54,9 @@ public class PromotionRevocationService {
                                              Set<String> platformRoles, String reason) {
         Skill source = skillRepository.findById(sourceSkillId)
                 .orElseThrow(() -> new DomainNotFoundException("skill.not_found", sourceSkillId));
+        if (!platformRoles.contains("SKILL_ADMIN")) {
+            ownerAccess.assertCanWrite(source, actorId, platformRoles);
+        }
         if (!canSubmit(source, actorId, namespaceRoles, platformRoles)) {
             throw new DomainForbiddenException("promotion.revocation.submit_no_permission");
         }
