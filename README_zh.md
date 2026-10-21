@@ -164,7 +164,7 @@ skillhub list
 ### 前置要求
 
 - Java 21+
-- Node.js 20+
+- 前端开发：Node.js 22.13+（22.x，默认）或 24.x；pnpm 版本以 `web/package.json` 为准。可在仓库根目录执行 `nvm install && nvm use` 选择默认版本。
 - Docker & Docker Compose
 - Make
 

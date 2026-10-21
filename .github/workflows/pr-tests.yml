@@ -18,7 +18,11 @@ permissions:
 
 jobs:
   web-tests:
-    name: Web Build And Test
+    name: Web Build And Test (Node ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
     if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     runs-on: ubuntu-latest
 
@@ -31,12 +35,12 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          package_json_file: web/package.json
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: pnpm
           cache-dependency-path: web/pnpm-lock.yaml
 
@@ -45,6 +49,17 @@ jobs:
 
       - name: Run frontend unit tests
         run: make test-frontend
+
+  web-tests-gate:
+    name: Web Build And Test
+    needs: web-tests
+    if: ${{ always() && (github.event_name != 'pull_request' || !github.event.pull_request.draft) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require both supported Node.js versions
+        env:
+          WEB_TESTS_RESULT: ${{ needs.web-tests.result }}
+        run: test "$WEB_TESTS_RESULT" = success
 
   server-tests:
     name: Server Unit Tests

@@ -24,7 +24,9 @@ Prerequisites:
 
 - Docker and Docker Compose
 - Java 21
-- Node.js and `pnpm`
+- For the web frontend: Node.js 22.13+ (22.x, default in `.nvmrc`) or 24.x, and the pnpm version declared in `web/package.json`. Other Node.js majors are not supported for frontend development (see #991).
+
+Use `nvm install && nvm use` from the repository root, then enable Corepack (`corepack enable`). Frontend dependency installation enforces this Node.js range via `web/.npmrc`; CI builds and tests both supported majors. CLI and integration packages retain their own runtime requirements.
 
 Start the local stack:
 
