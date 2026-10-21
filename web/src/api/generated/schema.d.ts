@@ -530,6 +530,42 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/authoring/drafts/{draftId}/runtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the draft's runtime binding */
+        get: operations["getDraftRuntimeBinding"];
+        /** Configure the agent runtime, tools, and MCP servers */
+        put: operations["saveDraftRuntimeBinding"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/authoring/drafts/{draftId}/runtime": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the draft's runtime binding */
+        get: operations["getDraftRuntimeBinding_1"];
+        /** Configure the agent runtime, tools, and MCP servers */
+        put: operations["saveDraftRuntimeBinding_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/authoring/drafts/{draftId}/files": {
         parameters: {
             query?: never;
@@ -7498,6 +7534,37 @@ export interface components {
             sourceId?: number;
             ignorePatterns?: string[];
         };
+        RuntimeBindingRequest: {
+            agentType: string;
+            config?: {
+                [key: string]: Record<string, never>;
+            };
+            toolAllowlist?: string[];
+            mcpServers?: {
+                [key: string]: Record<string, never>;
+            }[];
+        };
+        ApiResponseRuntimeBindingResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["RuntimeBindingResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        RuntimeBindingResponse: {
+            agentType?: string;
+            config?: {
+                [key: string]: Record<string, never>;
+            };
+            toolAllowlist?: string[];
+            mcpServers?: {
+                [key: string]: Record<string, never>;
+            }[];
+            /** Format: date-time */
+            updatedAt?: string;
+        };
         SaveDraftFileRequest: {
             path: string;
             content: string;
@@ -13041,6 +13108,102 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseGithubSourceIgnoreResponse"];
+                };
+            };
+        };
+    };
+    getDraftRuntimeBinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRuntimeBindingResponse"];
+                };
+            };
+        };
+    };
+    saveDraftRuntimeBinding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuntimeBindingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRuntimeBindingResponse"];
+                };
+            };
+        };
+    };
+    getDraftRuntimeBinding_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRuntimeBindingResponse"];
+                };
+            };
+        };
+    };
+    saveDraftRuntimeBinding_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draftId: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuntimeBindingRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRuntimeBindingResponse"];
                 };
             };
         };
