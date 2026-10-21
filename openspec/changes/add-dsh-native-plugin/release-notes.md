@@ -2,7 +2,7 @@
 
 ## 版本与交付状态
 
-本次发布候选为 `@astron-team/skillhub-dsh@0.3.1`，计划使用独立标签 `dsh-v0.3.1`。[兼容修复 PR #988](https://github.com/iflytek/skillhub/pull/988) 已合并；npm 上传、公开包完整性及发布后安装检查尚待完成，分别记录于 [验证摘要](verification.md)。历史已发布版本保持不变。
+`@astron-team/skillhub-dsh@0.3.1` 已发布，独立标签为 `dsh-v0.3.1`。[发布准备 PR #995](https://github.com/iflytek/skillhub/pull/995) 已合并，[专用发布工作流](https://github.com/iflytek/skillhub/actions/runs/39556075587) 成功；[公开 npm 包](https://www.npmjs.com/package/@astron-team/skillhub-dsh/v/0.3.1) 与工作流产物逐字节一致，`latest` 指向 `0.3.1`。两版 Linux 的严格安装、原生探针及浏览器操作复验通过，测试工件与公开包字节一致，结果见 [验证摘要](verification.md)。历史已发布版本保持不变。
 
 ## 0.3.1 DSH 双 RC 兼容
 
