@@ -20,5 +20,15 @@ jobs:
           java-version: 21
           cache: maven
 
+      - name: Set up Go for integration tests
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: github-sync-go/go.mod
+          cache-dependency-path: github-sync-go/go.mod
+
+      - name: Compile Go integration test dependencies
+        working-directory: github-sync-go
+        run: go test ./internal/worker -run '^$'
+
       - name: Backend tests
         run: cd server && ./mvnw -B test
