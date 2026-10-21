@@ -1,0 +1,45 @@
+name: Migration Preflight
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize, closed, edited, ready_for_review]
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: migration-preflight
+  cancel-in-progress: true
+
+jobs:
+  preflight:
+    name: Advisory Flyway version scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      # Never check out a PR head or run SQL. This workflow only runs trusted
+      # default-branch code, including for pull requests from forks.
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        id: checkout
+        continue-on-error: true
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Summarize open PR migration versions
+        id: scan
+        if: steps.checkout.outcome == 'success'
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/migration-preflight.py
+
+      - name: Report unavailable scan
+        if: ${{ always() && (steps.checkout.outcome != 'success' || steps.scan.outcome != 'success') }}
+        run: |
+          printf '%s\n' '## Flyway migration preflight' '' '**Warning: scan unavailable. No clearance issued.** Check this workflow run for checkout, runtime or timeout failures.' >> "$GITHUB_STEP_SUMMARY"

@@ -30,6 +30,7 @@ on:
       - '.github/workflows/publish-chart.yml'
       - '.github/workflows/security.yml'
       - '.github/workflows/pr-scripts.yml'
+      - '.github/workflows/migration-preflight.yml'
       - '**/*.py'
 
 permissions:
@@ -66,3 +67,4 @@ jobs:
       - run: bash scripts/tests/server-image-compat-test.sh
       - run: bash scripts/tests/workflow-security-test.sh
       - run: python3 -m unittest discover -s scripts/tests -p 'test_deepwiki_workflow.py' -v
+      - run: python3 -m unittest discover -s scripts/tests -p 'test_migration_preflight.py' -v
