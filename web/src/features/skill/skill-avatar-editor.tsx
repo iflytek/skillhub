@@ -121,7 +121,7 @@ export function SkillAvatarEditor({ name, currentUrl, canRemove = false, disable
 
   return <section className="space-y-2" aria-label={t('skillAvatar.title')}>
     <h2 className="text-sm font-medium">{t('skillAvatar.optionalTitle')}</h2>
-    <div {...getRootProps()} data-analytics-id="skill.avatar.file.drop" data-analytics-event="drop" className="flex items-center gap-3">
+    <div {...getRootProps()} data-analytics-id={disabled || state === 'UPLOADING' ? undefined : 'skill.avatar.file.drop'} data-analytics-event="drop" className="flex items-center gap-3">
       {state === 'READY' && previewUrl ? <img src={buildApiUrl(previewUrl)} alt={t('skillAvatar.cropPreview')} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
         : <SkillAvatar name={name} url={state === 'REMOVE' ? null : currentUrl} size="h-16 w-16 shrink-0 text-xl" />}
       <input {...getInputProps({ 'aria-label': t('skillAvatar.choose'), className: 'sr-only', style: undefined, disabled: disabled || state === 'UPLOADING' })} data-analytics-id="skill.avatar.file.select" />
@@ -142,7 +142,7 @@ export function SkillAvatarEditor({ name, currentUrl, canRemove = false, disable
           <DialogTitle>{t('skillAvatar.cropTitle')}</DialogTitle>
           <DialogDescription>{t('skillAvatar.cropHelp')}</DialogDescription>
         </DialogHeader>
-        {sourceUrl && <div data-analytics-id="skill.avatar.crop.adjust" data-analytics-event="pointerup+keydown" className="flex h-80 max-h-[min(320px,45vh)] min-w-0 items-center justify-center overflow-hidden rounded-lg bg-muted/40">
+        {sourceUrl && <div data-analytics-id={disabled || state === 'UPLOADING' ? undefined : 'skill.avatar.crop.adjust'} data-analytics-event="pointerup+keydown" className="flex h-80 max-h-[min(320px,45vh)] min-w-0 items-center justify-center overflow-hidden rounded-lg bg-muted/40">
           <ReactCrop crop={crop} aspect={1} keepSelection minWidth={16} minHeight={16}
             className="max-h-[min(320px,45vh)] max-w-full"
             disabled={disabled || state === 'UPLOADING'}

@@ -7,6 +7,7 @@ import { InstallCommand } from '@/features/skill/install-command'
 import { InstallForAgentButton } from '@/features/skill/install-for-agent-button'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { Pagination } from '@/shared/components/pagination'
+import { UploadZone } from '@/features/publish/upload-zone'
 import type { SkillSummary } from '@/api/types'
 
 const mocks = vi.hoisted(() => ({ copy: vi.fn(), language: 'en' }))
@@ -20,6 +21,23 @@ const attr = (element: Element) => element.getAttribute('data-analytics-id')
 afterEach(() => { cleanup(); vi.clearAllMocks(); mocks.language = 'en' })
 
 describe('passive, caller-scoped analytics attributes', () => {
+  it('omits disabled dropzone intents without changing dropzone or native folder guards', () => {
+    const select = vi.fn()
+    const view = render(<UploadZone analyticsId="skill.package.select" folderAnalyticsId="skill.package.folder.select" onFileSelect={select} onFolderSelect={vi.fn()} />)
+    const drop = view.container.querySelector('.upload-zone')!
+    expect(attr(drop)).toBe('skill.package.select')
+    view.rerender(<UploadZone analyticsId="skill.package.select" folderAnalyticsId="skill.package.folder.select" onFileSelect={select} onFolderSelect={vi.fn()} disabled />)
+    expect(attr(drop)).toBeNull()
+    const file = view.container.querySelector('.upload-zone input')!
+    expect(attr(file)).toBeNull()
+    expect(view.container.querySelector('[data-analytics-id="skill.package.folder.select"]')?.hasAttribute('disabled')).toBe(true)
+    fireEvent.change(file, { target: { files: [new File(['synthetic'], 'synthetic.zip', { type: 'application/zip' })] } })
+    fireEvent.click(drop)
+    expect(select).not.toHaveBeenCalled()
+    view.rerender(<UploadZone onFileSelect={select} />)
+    expect(view.container.querySelector('[data-analytics-id]')).toBeNull()
+  })
+
   it('marks only opted-in search forms and keeps typing/clear separate from submit', () => {
     const search = vi.fn()
     const view = render(<SearchBar analyticsId="search.query.submit" onSearch={search} />)

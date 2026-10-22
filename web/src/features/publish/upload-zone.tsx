@@ -70,15 +70,15 @@ export function UploadZone({ onFileSelect, onFolderSelect, disabled, analyticsId
     <div className="flex flex-col gap-3">
       <div
         {...getRootProps()}
-        data-analytics-id={analyticsId}
-        data-analytics-event={analyticsId ? 'click+keydown+drop' : undefined}
+        data-analytics-id={disabled ? undefined : analyticsId}
+        data-analytics-event={!disabled && analyticsId ? 'click+keydown+drop' : undefined}
         className={cn(
           'upload-zone rounded-xl p-10 text-center cursor-pointer transition-all duration-300',
           isDragActive && 'border-primary bg-primary/5 scale-[1.01]',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
       >
-        <input {...getInputProps()} data-analytics-id={analyticsId} />
+        <input {...getInputProps()} data-analytics-id={disabled ? undefined : analyticsId} />
         <div className="flex flex-col items-center gap-3">
           <div className="w-14 h-14 rounded-2xl bg-secondary/60 flex items-center justify-center">
             <svg
