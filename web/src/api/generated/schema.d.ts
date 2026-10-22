@@ -362,6 +362,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/notification-email-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["preferences_2"];
+        put: operations["preferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-email-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["preferences_3"];
+        put: operations["preferences_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/namespaces/{slug}/members/{userId}/role": {
         parameters: {
             query?: never;
@@ -632,7 +664,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/admin/system-config/avatar-review": {
+    "/api/v1/admin/system-config/notification/email": {
         parameters: {
             query?: never;
             header?: never;
@@ -641,6 +673,22 @@ export interface paths {
         };
         get: operations["current_2"];
         put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-config/avatar-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["current_3"];
+        put: operations["update_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -758,7 +806,7 @@ export interface paths {
         /** 读取平台技能采集控制状态 */
         get: operations["get_2"];
         /** 暂停或恢复平台技能采集 */
-        put: operations["update_1"];
+        put: operations["update_2"];
         post?: never;
         delete?: never;
         options?: never;
@@ -813,7 +861,7 @@ export interface paths {
          */
         get: operations["get_3"];
         /** 按配置版本更新官方 GitHub 深度探索设置 */
-        put: operations["update_2"];
+        put: operations["update_3"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2315,6 +2363,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notification-email-contact/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notification-email-contact/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verify_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-email-contact/verification-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notification-email-contact/verification-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestCode_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/namespaces/{slug}/unfreeze": {
         parameters: {
             query?: never;
@@ -2943,6 +3055,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/notification-email-deliveries/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retry_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/admin/notification-email-deliveries/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retry_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tokens": {
         parameters: {
             query?: never;
@@ -2950,7 +3094,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_8"];
+        get: operations["list_10"];
         put?: never;
         post: operations["create_4"];
         delete?: never;
@@ -3694,7 +3838,7 @@ export interface paths {
             cookie?: never;
         };
         /** 查看系统级公开 GitHub 凭证的脱敏状态 */
-        get: operations["list_11"];
+        get: operations["list_13"];
         put?: never;
         /** 加密保存系统级公开 GitHub 凭证 */
         post: operations["create_5"];
@@ -3730,7 +3874,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["verify"];
+        post: operations["verify_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -5407,6 +5551,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notification-email-deliveries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notification-email-deliveries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["detail_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-email-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["contact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notification-email-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["contact_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/namespaces/{slug}/member-candidates": {
         parameters: {
             query?: never;
@@ -6167,6 +6375,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/admin/notification-email-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_8"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/notification-email-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_9"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/whoami": {
         parameters: {
             query?: never;
@@ -6478,7 +6718,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_9"];
+        get: operations["list_11"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6730,7 +6970,7 @@ export interface paths {
             cookie?: never;
         };
         /** 查看 GitHub 发现规则与精选入口 */
-        get: operations["list_10"];
+        get: operations["list_12"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7370,6 +7610,22 @@ export interface components {
             channel?: string;
             enabled?: boolean;
         };
+        NotificationEmailPreferenceResponse: {
+            category?: string;
+            mode?: string;
+        };
+        NotificationEmailPreferenceUpdateRequest: {
+            preferences?: components["schemas"]["NotificationEmailPreferenceResponse"][];
+        };
+        ApiResponseListNotificationEmailPreferenceResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailPreferenceResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
         UpdateMemberRoleRequest: {
             /** @enum {string} */
             role: "OWNER" | "ADMIN" | "MEMBER";
@@ -7629,6 +7885,32 @@ export interface components {
             version?: number;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        NotificationEmailSettingsUpdateRequest: {
+            enabled?: boolean;
+            /** Format: int32 */
+            digestWindowMinutes?: number;
+            publicBaseUrl?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        ApiResponseNotificationEmailSettingsResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailSettingsResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        NotificationEmailSettingsResponse: {
+            enabled?: boolean;
+            /** Format: int32 */
+            digestWindowMinutes?: number;
+            publicBaseUrl?: string;
+            /** Format: int64 */
+            version?: number;
+            smtpConfigured?: boolean;
         };
         AvatarReviewSettingsUpdateRequest: {
             machineEnabled?: boolean;
@@ -8348,6 +8630,30 @@ export interface components {
             sourceSkillId?: number;
             reason?: string;
         };
+        VerifyRequest: {
+            code?: string;
+        };
+        ApiResponseNotificationEmailContactResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailContactResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        NotificationEmailContactResponse: {
+            email?: string | null;
+            verified?: boolean;
+            available?: boolean;
+            locale?: string;
+            /** Format: date-time */
+            resendAvailableAt?: string | null;
+            reason?: string | null;
+        };
+        CodeRequest: {
+            locale?: string;
+        };
         TransferOwnershipRequest: {
             newOwnerId: string;
         };
@@ -8561,6 +8867,9 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+        };
+        NotificationEmailRetryRequest: {
+            confirmDuplicateRisk?: boolean;
         };
         TokenCreateRequest: {
             name: string;
@@ -9842,6 +10151,45 @@ export interface components {
             /** Format: int32 */
             size?: number;
         };
+        ApiResponseNotificationEmailDeliveryDetailResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailDeliveryDetailResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        NotificationEmailDeliveryDetailResponse: {
+            /** Format: int64 */
+            id?: number;
+            status?: string;
+            kind?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            acceptedAt?: string;
+            items?: components["schemas"]["NotificationEmailDeliveryItemResponse"][];
+            /** Format: int64 */
+            totalItems?: number;
+            /** Format: int64 */
+            unavailableItems?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        NotificationEmailDeliveryItemResponse: {
+            /** Format: int64 */
+            id?: number;
+            category?: string;
+            eventType?: string;
+            /** Format: date-time */
+            occurredAt?: string;
+            targetPath?: string;
+        };
         Pageable: {
             /** Format: int32 */
             page?: number;
@@ -10455,6 +10803,40 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+        };
+        ApiResponseNotificationEmailDeliveryAdminPageResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailDeliveryAdminPageResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        NotificationEmailDeliveryAdminPageResponse: {
+            items?: components["schemas"]["NotificationEmailDeliveryAdminResponse"][];
+            /** Format: int64 */
+            totalItems?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        NotificationEmailDeliveryAdminResponse: {
+            /** Format: int64 */
+            id?: number;
+            recipientId?: string;
+            kind?: string;
+            status?: string;
+            /** Format: int32 */
+            attempts?: number;
+            resultCode?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            acceptedAt?: string;
         };
         ClawHubWhoamiResponse: {
             user?: components["schemas"]["User"];
@@ -12643,6 +13025,94 @@ export interface operations {
             };
         };
     };
+    preferences_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListNotificationEmailPreferenceResponse"];
+                };
+            };
+        };
+    };
+    preferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationEmailPreferenceUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListNotificationEmailPreferenceResponse"];
+                };
+            };
+        };
+    };
+    preferences_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListNotificationEmailPreferenceResponse"];
+                };
+            };
+        };
+    };
+    preferences_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationEmailPreferenceUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListNotificationEmailPreferenceResponse"];
+                };
+            };
+        };
+    };
     updateMemberRole: {
         parameters: {
             query?: never;
@@ -13334,12 +13804,56 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponseAvatarReviewSettingsResponse"];
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailSettingsResponse"];
                 };
             };
         };
     };
     update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationEmailSettingsUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailSettingsResponse"];
+                };
+            };
+        };
+    };
+    current_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseAvatarReviewSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -13618,7 +14132,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -13714,7 +14228,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -16320,6 +16834,102 @@ export interface operations {
             };
         };
     };
+    verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
+    verify_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
+    requestCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
+    requestCode_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
     unfreezeNamespace: {
         parameters: {
             query?: never;
@@ -17558,7 +18168,59 @@ export interface operations {
             };
         };
     };
-    list_8: {
+    retry_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationEmailRetryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    retry_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationEmailRetryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    list_10: {
         parameters: {
             query?: {
                 page?: number;
@@ -18795,7 +19457,7 @@ export interface operations {
             };
         };
     };
-    list_11: {
+    list_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -18865,7 +19527,7 @@ export interface operations {
             };
         };
     };
-    verify: {
+    verify_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -21488,6 +22150,96 @@ export interface operations {
             };
         };
     };
+    detail: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailDeliveryDetailResponse"];
+                };
+            };
+        };
+    };
+    detail_1: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailDeliveryDetailResponse"];
+                };
+            };
+        };
+    };
+    contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
+    contact_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
     searchMemberCandidates: {
         parameters: {
             query: {
@@ -22610,6 +23362,54 @@ export interface operations {
             };
         };
     };
+    list_8: {
+        parameters: {
+            query?: {
+                status?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailDeliveryAdminPageResponse"];
+                };
+            };
+        };
+    };
+    list_9: {
+        parameters: {
+            query?: {
+                status?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailDeliveryAdminPageResponse"];
+                };
+            };
+        };
+    };
     whoami: {
         parameters: {
             query?: never;
@@ -23057,7 +23857,7 @@ export interface operations {
             };
         };
     };
-    list_9: {
+    list_11: {
         parameters: {
             query?: {
                 status?: string;
@@ -23422,7 +24222,7 @@ export interface operations {
             };
         };
     };
-    list_10: {
+    list_12: {
         parameters: {
             query?: never;
             header?: never;
