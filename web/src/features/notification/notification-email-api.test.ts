@@ -6,7 +6,7 @@ import { notificationEmailApi } from './notification-email-api'
 const fetchMock = vi.fn()
 function response(data: unknown, status = 200, code = 0) { return new Response(JSON.stringify({ code, msg: code ? 'rejected' : 'ok', data }), { status, headers: { 'Content-Type': 'application/json' } }) }
 describe('typed notification email API boundary', () => {
-  beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockResolvedValue(response(null)); document.cookie = 'XSRF-TOKEN=test-csrf' })
+  beforeEach(() => { vi.stubGlobal('fetch', fetchMock); fetchMock.mockImplementation(() => Promise.resolve(response(null))); document.cookie = 'XSRF-TOKEN=test-csrf' })
   afterEach(() => { vi.unstubAllGlobals(); fetchMock.mockReset(); document.cookie = 'XSRF-TOKEN=;max-age=0' })
   it('uses existing web API and envelope for current-user reads', async () => {
     const contact = { email: 'a***@example.test', verified: false, available: false, reason: 'UNVERIFIED', locale: 'en' }
@@ -40,4 +40,26 @@ describe('typed notification email API boundary', () => {
     expect(path).toBe('/api/web/admin/notification-email-deliveries/11/retry')
     expect(JSON.parse(init.body)).toEqual({ confirmDuplicateRisk: true })
   })
+  it('uses the controller real v1 route for email settings GET', async () => {
+    await notificationEmailApi.settings()
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/admin/system-config/notification/email')
+  })
+  it('uses the controller real v1 route, version and CSRF for settings PUT', async () => {
+    const settings = { enabled: true, digestWindowMinutes: 60, publicBaseUrl: 'https://example.test/sub', version: 4 }
+    await notificationEmailApi.updateSettings(settings)
+    const [path, init] = fetchMock.mock.calls[0]
+    expect(path).toBe('/api/v1/admin/system-config/notification/email')
+    expect(init.method).toBe('PUT')
+    expect(new Headers(init.headers).get('X-XSRF-TOKEN')).toBe('test-csrf')
+    expect(JSON.parse(init.body)).toEqual(settings)
+  })
+  it('prefixes settings GET and PUT with the runtime base exactly once', async () => {
+    window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: '/skillhub' }
+    try {
+      await notificationEmailApi.settings()
+      await notificationEmailApi.updateSettings({ enabled: false, digestWindowMinutes: 60, publicBaseUrl: '', version: 1 })
+      for (const call of fetchMock.mock.calls) expect(call[0]).toBe('/skillhub/api/v1/admin/system-config/notification/email')
+    } finally { delete window.__SKILLHUB_RUNTIME_CONFIG__ }
+  })
+
 })
