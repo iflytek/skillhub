@@ -5,7 +5,9 @@ import com.iflytek.skillhub.domain.shared.exception.*;
 import com.iflytek.skillhub.notification.email.*;
 import jakarta.persistence.*;
 import java.net.URI;
-import java.util.Map;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.HashMap;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class NotificationEmailSettingsService implements NotificationEmailPolicyProvider, ApplicationRunner {
     public static final String SETTING_KEY = "notification.email";
+    private final Clock clock;
     private final SystemSettingRepository settings;
     private final EntityManager entityManager;
     private final boolean initialEnabled;
@@ -31,7 +34,8 @@ public class NotificationEmailSettingsService implements NotificationEmailPolicy
             @Value("${spring.mail.host:}") String smtpHost,
             @Value("${skillhub.notification.email.from-address:${spring.mail.username:}}") String fromAddress,
             com.iflytek.skillhub.domain.audit.AuditLogService audit,
-            com.iflytek.skillhub.notification.email.delivery.NotificationEmailCancellation cancellation) {
+            com.iflytek.skillhub.notification.email.delivery.NotificationEmailCancellation cancellation, Clock clock) {
+        this.clock = clock;
         this.settings = settings;
         this.entityManager = entityManager;
         this.initialEnabled = enabled;
@@ -45,7 +49,9 @@ public class NotificationEmailSettingsService implements NotificationEmailPolicy
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        if (settings.findBySettingKey(SETTING_KEY).isPresent())
+        var existing = settings.findBySettingKey(SETTING_KEY);
+        if (existing.isPresent() && (!Boolean.TRUE.equals(existing.get().getValue().get("enabled"))
+                || existing.get().getValue().get("enabledSince") != null))
             return;
         // Match the existing auth initializer: serialize replica seeding on PostgreSQL,
         // while keeping the H2 application-test profile supported.
@@ -57,31 +63,45 @@ public class NotificationEmailSettingsService implements NotificationEmailPolicy
             }
         });
         if (settings.findBySettingKey(SETTING_KEY).isPresent()) {
+            var setting = load(LockModeType.PESSIMISTIC_WRITE);
+            // Existing deployments receive a single startup baseline; reads never manufacture a new watermark.
+            if (Boolean.TRUE.equals(setting.getValue().get("enabled"))
+                    && setting.getValue().get("enabledSince") == null) {
+                var values = new HashMap<String, Object>(setting.getValue());
+                values.put("enabledSince", Instant.now(clock).toString());
+                setting.update(values, null);
+                settings.saveAndFlush(setting);
+            }
             return;
         }
         validate(initialEnabled, initialWindow, initialUrl);
-        settings.saveAndFlush(new SystemSetting(SETTING_KEY,
-                Map.of("enabled", initialEnabled, "digestWindowMinutes", initialWindow, "publicBaseUrl", initialUrl)));
+        var values = new HashMap<String, Object>();
+        values.put("enabled", initialEnabled);
+        values.put("digestWindowMinutes", initialWindow);
+        values.put("publicBaseUrl", initialUrl);
+        if (initialEnabled)
+            values.put("enabledSince", Instant.now(clock).toString());
+        settings.saveAndFlush(new SystemSetting(SETTING_KEY, values));
     }
     @Override
     @Transactional(readOnly = true)
     public NotificationEmailPolicy current() {
-        return policy(load(false));
+        return policy(load(LockModeType.NONE));
     }
     @Override
     @Transactional
     public NotificationEmailPolicy lockCurrent() {
-        return policy(load(true));
+        return policy(load(LockModeType.PESSIMISTIC_READ));
     }
-    private SystemSetting load(boolean lock) {
+    private SystemSetting load(LockModeType lockMode) {
         var query =
                 entityManager.createQuery("select s from SystemSetting s where s.settingKey=:key", SystemSetting.class)
                         .setParameter("key", SETTING_KEY);
-        if (lock)
-            query.setLockMode(LockModeType.PESSIMISTIC_WRITE);
         var setting = query.getSingleResult();
-        if (lock)
-            entityManager.refresh(setting, LockModeType.PESSIMISTIC_WRITE);
+        // Lock via refresh: upgrading a query lock can reject a cached old @Version before refresh runs.
+        // Policy decisions and update version checks happen only after this locked database reload.
+        if (lockMode != LockModeType.NONE)
+            entityManager.refresh(setting, lockMode);
         return setting;
     }
     private NotificationEmailPolicy policy(SystemSetting s) {
@@ -90,7 +110,9 @@ public class NotificationEmailSettingsService implements NotificationEmailPolicy
                 || !(values.get("digestWindowMinutes") instanceof Number window)
                 || !(values.get("publicBaseUrl") instanceof String url))
             throw new IllegalStateException("Invalid notification email settings");
-        return new NotificationEmailPolicy(enabled, window.intValue(), url, s.getVersion());
+        var since = values.get("enabledSince");
+        return new NotificationEmailPolicy(enabled, window.intValue(), url, s.getVersion(),
+                since instanceof String timestamp ? Instant.parse(timestamp) : null);
     }
     public boolean smtpConfigured() {
         return smtpHost != null && !smtpHost.isBlank() && fromAddress != null
@@ -99,10 +121,16 @@ public class NotificationEmailSettingsService implements NotificationEmailPolicy
     @Transactional
     public NotificationEmailPolicy update(boolean enabled, int window, String url, long version, String actor) {
         validate(enabled, window, url);
-        var setting = load(true);
+        var setting = load(LockModeType.PESSIMISTIC_WRITE);
         if (setting.getVersion() != version)
             throw new DomainConflictException("error.system.settings.version.conflict");
-        setting.update(Map.of("enabled", enabled, "digestWindowMinutes", window, "publicBaseUrl", url), actor);
+        var values = new HashMap<String, Object>(setting.getValue());
+        if (enabled && !Boolean.TRUE.equals(values.get("enabled")))
+            values.put("enabledSince", Instant.now(clock).toString());
+        values.put("enabled", enabled);
+        values.put("digestWindowMinutes", window);
+        values.put("publicBaseUrl", url);
+        setting.update(values, actor);
         settings.saveAndFlush(setting);
         if (!enabled)
             cancellation.cancelAll();

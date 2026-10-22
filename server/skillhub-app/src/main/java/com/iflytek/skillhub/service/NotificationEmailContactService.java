@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
-public class NotificationEmailContactService implements NotificationEmailRecipientProvider {
+public class NotificationEmailContactService implements NotificationEmailRecipientProvider, NotificationEmailAccountLifecycle {
     private static final SecureRandom RANDOM = new SecureRandom();
     private final UserAccountRepository accounts;
     private final NotificationEmailContactRepository contacts;
@@ -63,7 +63,7 @@ public class NotificationEmailContactService implements NotificationEmailRecipie
                                 .map(c
                                         -> new NotificationEmailRecipient(id,
                                                 UserAccount.normalizeEmail(user.getEmail()), user.getEmailRevision(),
-                                                c.getLocale())));
+                                                c.getLocale(), c.eligibleSince())));
     }
     @Override
     @Transactional
@@ -72,9 +72,16 @@ public class NotificationEmailContactService implements NotificationEmailRecipie
             var c = contacts.lockOrCreate(id);
             return c.verified(user.getEmail(), user.getEmailRevision())
                     ? Optional.of(new NotificationEmailRecipient(
-                              id, UserAccount.normalizeEmail(user.getEmail()), user.getEmailRevision(), c.getLocale()))
+                              id, UserAccount.normalizeEmail(user.getEmail()), user.getEmailRevision(), c.getLocale(), c.eligibleSince()))
                     : Optional.empty();
         });
+    }
+    @Override
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.MANDATORY)
+    public void markActive(String id) {
+        var contact = contacts.lockOrCreate(id);
+        contact.markActive(Instant.now(clock));
+        contacts.save(contact);
     }
     @Transactional(readOnly = true)
     public NotificationEmailContactResponse status(String id) {
@@ -184,7 +191,7 @@ public class NotificationEmailContactService implements NotificationEmailRecipie
                               .filter(p -> p.getCategory() == entry.getKey())
                               .findFirst()
                               .orElseGet(() -> new NotificationEmailPreference(id, entry.getKey()));
-            row.setMode(entry.getValue());
+            row.setMode(entry.getValue(), Instant.now(clock));
             preferences.save(row);
         }
         var off = changes.entrySet()

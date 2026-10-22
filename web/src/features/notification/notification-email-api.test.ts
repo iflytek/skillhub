@@ -23,8 +23,8 @@ describe('typed notification email API boundary', () => {
     expect(init.method).toBe('POST')
   })
   it('encodes the batch identifier and requests its independent page', async () => {
-    await notificationEmailApi.batch('23/unsafe', 2)
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/web/notification-email-deliveries/23%2Funsafe?page=2&size=20')
+    await notificationEmailApi.batch('23/unsafe', '100')
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/web/notification-email-deliveries/23%2Funsafe?size=20&cursor=100')
   })
   it('honors the runtime API subpath exactly once', async () => {
     window.__SKILLHUB_RUNTIME_CONFIG__ = { apiBaseUrl: '/skillhub' }

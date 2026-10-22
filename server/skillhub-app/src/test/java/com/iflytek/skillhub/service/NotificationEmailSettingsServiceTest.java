@@ -21,6 +21,7 @@ class NotificationEmailSettingsServiceTest {
                 .withBean(EntityManager.class, () -> em)
                 .withBean(AuditLogService.class, () -> mock(AuditLogService.class))
                 .withBean(NotificationEmailCancellation.class, () -> mock(NotificationEmailCancellation.class))
+                .withBean(java.time.Clock.class, java.time.Clock::systemUTC)
                 .withBean(NotificationEmailSettingsService.class)
                 .run(context -> {
                     context.getBean(NotificationEmailSettingsService.class).run(null);
@@ -39,7 +40,7 @@ class NotificationEmailSettingsServiceTest {
                 .thenReturn(Optional.of(new SystemSetting("notification.email",
                         Map.of("enabled", false, "digestWindowMinutes", 15, "publicBaseUrl", ""))));
         var service = new NotificationEmailSettingsService(repository, em, true, -1, "invalid", "", "",
-                mock(AuditLogService.class), mock(NotificationEmailCancellation.class));
+                mock(AuditLogService.class), mock(NotificationEmailCancellation.class), java.time.Clock.systemUTC());
         assertThatCode(() -> service.run(null)).doesNotThrowAnyException();
         verifyNoInteractions(em);
     }
@@ -48,7 +49,7 @@ class NotificationEmailSettingsServiceTest {
         var repository = mock(SystemSettingRepository.class);
         var em = mock(EntityManager.class);
         var service = new NotificationEmailSettingsService(repository, em, false, 15, "", "smtp.test",
-                "noreply@test.com", mock(AuditLogService.class), mock(NotificationEmailCancellation.class));
+                "noreply@test.com", mock(AuditLogService.class), mock(NotificationEmailCancellation.class), java.time.Clock.systemUTC());
         for (String url : List.of("https://good.test/#bad", "https://user:password@good.test", "javascript:alert(1)",
                      "https://good.test?x=1"))
             assertThatThrownBy(() -> service.update(true, 15, url, 0, "admin"))

@@ -20,7 +20,7 @@ class NotificationEmailPreferencesTest {
             var rows = Arrays.stream(NotificationCategory.values())
                                .map(category -> {
                                    var row = new NotificationEmailPreference("u", category);
-                                   row.setMode(mode);
+                                   row.setMode(mode, java.time.Instant.parse("2026-10-22T10:00:00Z"));
                                    return row;
                                })
                                .toList();

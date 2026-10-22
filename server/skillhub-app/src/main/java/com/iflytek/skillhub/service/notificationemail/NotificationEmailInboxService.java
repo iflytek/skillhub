@@ -20,10 +20,11 @@ public class NotificationEmailInboxService implements NotificationEmailEnqueuer 
     private final NotificationEmailEligibility eligibility;
     private final ObjectMapper mapper;
     private final Clock clock;
+    private final NotificationEmailAdmissionProvider admission;
     public NotificationEmailInboxService(NotificationEmailPolicyProvider policy,
             NotificationEmailRecipientProvider recipients, NotificationEmailPreferenceService preferences,
             NotificationEmailDeliveryRepository repository, NotificationEmailEligibility eligibility,
-            ObjectMapper mapper, Clock clock) {
+            ObjectMapper mapper, Clock clock, NotificationEmailAdmissionProvider admission) {
         this.policy = policy;
         this.recipients = recipients;
         this.preferences = preferences;
@@ -31,6 +32,7 @@ public class NotificationEmailInboxService implements NotificationEmailEnqueuer 
         this.eligibility = eligibility;
         this.mapper = mapper;
         this.clock = clock;
+        this.admission = admission;
     }
 
     @Override
@@ -55,6 +57,9 @@ public class NotificationEmailInboxService implements NotificationEmailEnqueuer 
         if (mode == null || mode == NotificationEmailMode.OFF) {
             return;
         }
+        var watermark = admission.currentUnderLocks(command.recipientId(), command.category()).orElse(null);
+        if (watermark == null || command.occurredAt().isBefore(watermark))
+            return;
         Long skillId = safeSkillId(command);
         var candidate = new NotificationEmailItem(0, 0, command.recipientId(), command.eventKey(), command.category(),
                 command.eventType(), skillId, command.entityId(), command.occurredAt(), now, "ACTIVE");
@@ -71,7 +76,7 @@ public class NotificationEmailInboxService implements NotificationEmailEnqueuer 
                     mode == NotificationEmailMode.IMMEDIATE ? now : Instant.ofEpochSecond(start + (late + 1) * seconds);
             var batch =
                     repository.openBatch(command.recipientId(), mode.name(), key, recipient.emailRevision(), due, now);
-            if ("PENDING".equals(batch.status())) {
+            if ("PENDING".equals(batch.status()) && !batch.recoveryRoot()) {
                 repository.addItem(batch.id(), command, skillId, now);
                 return;
             }

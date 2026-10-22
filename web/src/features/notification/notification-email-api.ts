@@ -22,7 +22,7 @@ export const notificationEmailApi = {
   updatePreferences: (preferences: EmailPreferences) => write<EmailPreferences>('/notification-email-preferences', 'PUT', { preferences }),
   settings: () => fetchJson<EmailSettings>(`${WEB_API_PREFIX}/admin/system-config/notification/email`),
   updateSettings: (settings: Pick<EmailSettings, 'enabled' | 'digestWindowMinutes' | 'publicBaseUrl' | 'version'>) => write<EmailSettings>('/admin/system-config/notification/email', 'PUT', settings),
-  batch: (id: string, page: number) => fetchJson<EmailBatch>(`${WEB_API_PREFIX}/notification-email-deliveries/${encodeURIComponent(id)}?page=${page}&size=20`),
+  batch: (id: string, cursor: string | null) => fetchJson<EmailBatch>(`${WEB_API_PREFIX}/notification-email-deliveries/${encodeURIComponent(id)}?size=20${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`),
   deliveries: (page: number, status: string) => fetchJson<EmailDeliveryPage>(`${WEB_API_PREFIX}/admin/notification-email-deliveries?page=${page}&size=20${status ? `&status=${encodeURIComponent(status)}` : ''}`),
   retry: (id: number, confirmDuplicateRisk: boolean) => write<null>(`/admin/notification-email-deliveries/${id}/retry`, 'POST', { confirmDuplicateRisk }),
 }

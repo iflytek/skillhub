@@ -10,6 +10,7 @@ public class NotificationEmailContact {
     @Column(name = "verified_email", length = 256) private String verifiedEmail;
     @Column(name = "verified_revision") private Long verifiedRevision;
     @Column(name = "verified_at") private Instant verifiedAt;
+    @Column(name = "account_enabled_since") private Instant accountEnabledSince;
     @Column(name = "challenge_hash", length = 256) private String challengeHash;
     @Column(name = "challenge_id", length = 36) private String challengeId;
     @Column(name = "challenge_email", length = 256) private String challengeEmail;
@@ -70,6 +71,15 @@ public class NotificationEmailContact {
     }
     private String normalize(String email) {
         return com.iflytek.skillhub.domain.user.UserAccount.normalizeEmail(email);
+    }
+    public void markActive(Instant now) {
+        accountEnabledSince = java.util.Objects.requireNonNull(now);
+    }
+    public Instant eligibleSince() {
+        if (verifiedAt == null)
+            return null;
+        return accountEnabledSince != null && accountEnabledSince.isAfter(verifiedAt)
+                ? accountEnabledSince : verifiedAt;
     }
     public String getChallengeHash() {
         return challengeHash;

@@ -28,6 +28,7 @@ public class NotificationEmailDispatcher {
     private final TransactionTemplate transaction;
     private final AtomicBoolean dispatchRunning = new AtomicBoolean();
     private final AtomicBoolean cleanupRunning = new AtomicBoolean();
+    private final AtomicBoolean immediateFirst = new AtomicBoolean();
     private final AtomicBoolean stopping = new AtomicBoolean();
     public NotificationEmailDispatcher(NotificationEmailDeliveryRepository repository,
             NotificationEmailPolicyProvider policy, NotificationEmailRecipientProvider recipients,
@@ -51,13 +52,27 @@ public class NotificationEmailDispatcher {
             return;
         }
         try {
+            transaction.executeWithoutResult(status -> {
+                policy.lockCurrent();
+                repository.drainCancelledItems();
+            });
             transaction.executeWithoutResult(status -> repository.recoverExpired(clock.instant()));
+            Set<String> visited = new HashSet<>();
+            boolean firstImmediate = immediateFirst.getAndSet(!immediateFirst.get());
             for (int i = 0; i < properties.getBatchSize() && !stopping.get(); i++) {
-                var claimed = transaction.execute(
-                        status -> repository.claim(clock.instant(), leaseEnd(), UUID.randomUUID().toString()));
+                String preferred = (i % 2 == 0) == firstImmediate ? "IMMEDIATE" : "DIGEST";
+                var claimed = transaction.execute(status
+                        -> repository.claim(
+                                clock.instant(), leaseEnd(), UUID.randomUUID().toString(), preferred, visited));
                 if (claimed == null || claimed.isEmpty()) {
-                    break;
+                    String fallback = "IMMEDIATE".equals(preferred) ? "DIGEST" : "IMMEDIATE";
+                    claimed = transaction.execute(status
+                            -> repository.claim(
+                                    clock.instant(), leaseEnd(), UUID.randomUUID().toString(), fallback, visited));
                 }
+                if (claimed == null || claimed.isEmpty())
+                    break;
+                visited.add(claimed.get().recipientId());
                 process(claimed.get());
             }
         } catch (RuntimeException ex) {
@@ -69,6 +84,11 @@ public class NotificationEmailDispatcher {
     }
 
     public void process(NotificationEmailDelivery claimed) {
+        if ("DIGEST".equals(claimed.kind())
+                && (!claimed.recoveryRoot() || !claimed.sourcesComplete() || claimed.previewItemIds().isBlank())) {
+            transaction.executeWithoutResult(status -> prepare(claimed));
+            return;
+        }
         Authorized authorized = transaction.execute(status -> authorize(claimed));
         if (authorized == null) {
             return;
@@ -84,74 +104,158 @@ public class NotificationEmailDispatcher {
         transaction.executeWithoutResult(status -> {
             Instant now = clock.instant();
             repository.recoverExpired(now);
-            String state = switch (outcome) {
-                case ACCEPTED -> "SENT";
-                case PERMANENT_FAILURE -> "FAILED";
-                case UNKNOWN -> "UNKNOWN";
-                case TEMPORARY_FAILURE -> authorized.attempts >= properties.getMaxAttempts() ? "FAILED" : "RETRY";
-            };
-            String code = outcome == NotificationEmailSender.Result.TEMPORARY_FAILURE && "FAILED".equals(state)
-                    ? "RETRY_EXHAUSTED"
-                    : outcome.name();
             long backoff = Math.min(3600, 30L << Math.min(authorized.attempts, 10));
-            repository.finish(claimed.id(), claimed.leaseToken(), state, code, now.plusSeconds(backoff),
-                    outcome == NotificationEmailSender.Result.ACCEPTED ? now : null);
+            if (outcome == NotificationEmailSender.Result.TEMPORARY_FAILURE) {
+                repository.temporaryFailure(claimed.id(), claimed.leaseToken(), now, now.plusSeconds(backoff),
+                        properties.getRetryWindowHours());
+            } else {
+                String state = switch (outcome) {
+                    case ACCEPTED -> "SENT";
+                    case PERMANENT_FAILURE -> "FAILED";
+                    default -> "UNKNOWN";
+                };
+                repository.finish(claimed.id(), claimed.leaseToken(), state, outcome.name(), now,
+                        outcome == NotificationEmailSender.Result.ACCEPTED ? now : null);
+            }
         });
     }
 
-    private Authorized authorize(NotificationEmailDelivery claim) {
-        // Shared lock order with settings/contact/preference writes. Batch lock always last.
+    private boolean validClaim(NotificationEmailDelivery batch, NotificationEmailDelivery claim) {
+        return batch != null && "CLAIMED".equals(batch.status())
+                && Objects.equals(batch.leaseToken(), claim.leaseToken())
+                && batch.leaseUntil().isAfter(clock.instant());
+    }
+
+    private boolean blockedByRoot(NotificationEmailDelivery batch) {
+        var root = repository.activeRoot(batch.recipientId()).orElse(null);
+        return "DIGEST".equals(batch.kind()) && root != null && root.id() != batch.id();
+    }
+
+    private boolean available(
+            NotificationEmailDelivery batch, NotificationEmailRecipient recipient, NotificationEmailPolicy setting) {
+        if (batch.retryDeadline() != null && !batch.retryDeadline().isAfter(clock.instant())) {
+            repository.expireRecovery(batch.id(), clock.instant());
+            return false;
+        }
+        if (!setting.enabled() || recipient == null || recipient.emailRevision() != batch.emailRevision()) {
+            repository.suppress(batch.id(), batch.leaseToken(), "RECIPIENT_OR_PLATFORM_UNAVAILABLE", clock.instant());
+            return false;
+        }
+        return true;
+    }
+
+    /** One bounded preparation page per scheduler round. The contact gate also blocks stale claimed sources. */
+    private void prepare(NotificationEmailDelivery claim) {
         var setting = policy.lockCurrent();
         var recipient = recipients.lockCurrent(claim.recipientId()).orElse(null);
+        if (!repository.lockRecipient(claim.recipientId()))
+            return;
         var modes = preferences.lockCurrent(claim.recipientId());
         var batch = repository.lock(claim.id());
-        if (batch == null || !"CLAIMED".equals(batch.status())
-                || !Objects.equals(batch.leaseToken(), claim.leaseToken())
-                || !batch.leaseUntil().isAfter(clock.instant()))
-            return null;
-        if (!setting.enabled() || recipient == null || recipient.emailRevision() != batch.emailRevision()) {
-            repository.suppress(batch.id(), claim.leaseToken(), "RECIPIENT_OR_PLATFORM_UNAVAILABLE");
-            return null;
-        }
-        List<NotificationEmailItem> active = new ArrayList<>();
-        for (var item : repository.items(batch.id())) {
-            if (!"ACTIVE".equals(item.status())) {
-                continue;
+        if (!validClaim(batch, claim) || blockedByRoot(batch) || !available(batch, recipient, setting))
+            return;
+        var root = repository.beginPreparation(batch.id(), claim.leaseToken(), clock.instant());
+        if (root == null)
+            return;
+        if (!root.sourcesComplete()) {
+            boolean done = repository.mergeSourcePage(root, clock.instant());
+            root = repository.find(root.id()).orElseThrow();
+            if (!done) {
+                repository.savePreparation(root.id(), claim.leaseToken(), root.itemCursor(), root.itemsComplete(),
+                        root.previewItemIds(), false);
+                return;
             }
-            if (modes.getOrDefault(item.category(), NotificationEmailMode.OFF) == NotificationEmailMode.OFF
+        }
+        if (root.retryDeadline() != null && !root.retryDeadline().isAfter(clock.instant())) {
+            repository.expireRecovery(root.id(), clock.instant());
+            return;
+        }
+        var raw = repository.itemPage(root.id(), root.itemCursor(), 100);
+        var cancelled = repository.cancelledItemIds(raw.stream().map(NotificationEmailItem::id).toList());
+        List<Long> previews = new ArrayList<>();
+        long cursor = root.itemCursor();
+        // Stop once a bounded preview exists. We do not scan an entire backlog to fill 50 slots.
+        for (var item : raw) {
+            cursor = item.id();
+            if ("ACTIVE".equals(item.status()) && !cancelled.contains(item.id())
+                    && modes.getOrDefault(item.category(), NotificationEmailMode.OFF) != NotificationEmailMode.OFF
+                    && eligibility.eligible(item))
+                previews.add(item.id());
+            else if ("ACTIVE".equals(item.status()))
+                repository.suppressItem(item.id());
+            if (previews.size() == 50)
+                break;
+        }
+        boolean complete = raw.size() < 100 && (raw.isEmpty() || cursor == raw.getLast().id());
+        if (previews.isEmpty() && complete) {
+            repository.suppress(root.id(), claim.leaseToken(), "NO_ELIGIBLE_ITEMS", clock.instant());
+            return;
+        }
+        String ids = previews.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+        repository.savePreparation(root.id(), claim.leaseToken(), cursor, complete, ids, !previews.isEmpty());
+    }
+
+    private Authorized authorize(NotificationEmailDelivery claim) {
+        var setting = policy.lockCurrent();
+        var recipient = recipients.lockCurrent(claim.recipientId()).orElse(null);
+        if (!repository.lockRecipient(claim.recipientId()))
+            return null;
+        var modes = preferences.lockCurrent(claim.recipientId());
+        var batch = repository.lock(claim.id());
+        if (!validClaim(batch, claim) || blockedByRoot(batch) || !available(batch, recipient, setting))
+            return null;
+        List<NotificationEmailItem> candidates;
+        if (batch.recoveryRoot()) {
+            var ids = Arrays.stream(batch.previewItemIds().split(","))
+                              .filter(value -> !value.isBlank())
+                              .map(Long::parseLong)
+                              .limit(50)
+                              .toList();
+            candidates = repository.previewItems(batch.id(), ids);
+        } else {
+            candidates = repository.itemPage(batch.id(), 0, 50);
+        }
+        var cancelled = repository.cancelledItemIds(candidates.stream().map(NotificationEmailItem::id).toList());
+        List<NotificationEmailItem> active = new ArrayList<>();
+        for (var item : candidates) {
+            if (!"ACTIVE".equals(item.status()))
+                continue;
+            if (cancelled.contains(item.id())
+                    || modes.getOrDefault(item.category(), NotificationEmailMode.OFF) == NotificationEmailMode.OFF
                     || !eligibility.eligible(item))
                 repository.suppressItem(item.id());
             else
                 active.add(item);
         }
         if (active.isEmpty()) {
-            repository.suppress(batch.id(), claim.leaseToken(), "NO_ELIGIBLE_ITEMS");
+            if (batch.recoveryRoot() && !batch.itemsComplete()) {
+                repository.beginPreparation(batch.id(), claim.leaseToken(), clock.instant());
+                repository.savePreparation(batch.id(), claim.leaseToken(), batch.itemCursor(), false, "", false);
+            } else
+                repository.suppress(batch.id(), claim.leaseToken(), "NO_ELIGIBLE_ITEMS", clock.instant());
             return null;
         }
-        if (!repository.authorize(batch.id(), claim.leaseToken(), clock.instant(), leaseEnd())) {
+        if (!repository.authorize(batch.id(), claim.leaseToken(), clock.instant(), leaseEnd()))
             return null;
-        }
         String link = setting.publicBaseUrl().replaceAll("/+$", "") + "/dashboard/notifications/email/" + batch.id();
         boolean zh = "zh".equals(recipient.locale());
-        String subject =
-                zh ? "SkillHub 通知（" + active.size() + " 条）" : "SkillHub notifications (" + active.size() + ")";
-        StringBuilder text =
-                new StringBuilder(zh ? "您有以下通知（时间为 UTC）：\n" : "Your notifications (times in UTC):\n");
-        var counts = new EnumMap<com.iflytek.skillhub.notification.domain.NotificationCategory, Integer>(
-                com.iflytek.skillhub.notification.domain.NotificationCategory.class);
-        active.forEach(item -> counts.merge(item.category(), 1, Integer::sum));
-        int displayed = 0;
-        for (var entry : counts.entrySet()) {
-            text.append('\n').append(entry.getKey().name()).append(": ").append(entry.getValue()).append('\n');
-            for (var item : active) {
-                if (item.category() == entry.getKey() && displayed < 50) {
-                    text.append(item.category()).append(" · ").append(item.occurredAt()).append('\n');
-                    displayed++;
-                }
-            }
-        }
-        if (active.size() > 50) {
-            text.append(zh ? "更多通知请查看详情。\n" : "See details for remaining notifications.\n");
+        String subject = zh ? "SkillHub 通知摘要" : "SkillHub notifications";
+        StringBuilder text = new StringBuilder(zh ? "原始通知记录数：" : "Original notification records: ");
+        text.append(batch.itemCount())
+                .append(zh ? "。实际可见内容以详情为准。时间为 UTC。\n"
+                           : ". Current access is checked in details. Times are UTC.\n");
+        for (var category : com.iflytek.skillhub.notification.domain.NotificationCategory.values()) {
+            var section = active.stream().filter(item -> item.category() == category).toList();
+            if (section.isEmpty())
+                continue;
+            String label = switch (category) {
+                case PUBLISH -> zh ? "发布动态" : "Publishing";
+                case REVIEW -> zh ? "审核进度" : "Reviews";
+                case PROMOTION -> zh ? "全局提升" : "Promotions";
+                case REPORT -> zh ? "举报处理" : "Reports";
+            };
+            text.append('\n').append(label).append(zh ? "（预览）\n" : " (preview)\n");
+            for (var item : section) text.append(label).append(" · ").append(item.occurredAt()).append('\n');
         }
         text.append('\n').append(link).append('\n');
         return new Authorized(recipient, batch.attempts() + 1, subject, text.toString());

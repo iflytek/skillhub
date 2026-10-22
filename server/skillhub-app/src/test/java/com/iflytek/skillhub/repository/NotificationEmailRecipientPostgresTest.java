@@ -161,7 +161,7 @@ class NotificationEmailRecipientPostgresTest {
         var cancellation = mock(NotificationEmailCancellation.class);
         var service = new NotificationEmailSettingsService(settingsRepository, em, false, 15, "https://example.test",
                 "smtp.example.test", "noreply@example.test",
-                mock(com.iflytek.skillhub.domain.audit.AuditLogService.class), cancellation);
+                mock(com.iflytek.skillhub.domain.audit.AuditLogService.class), cancellation, Clock.systemUTC());
         var tx = new TransactionTemplate(manager);
         tx.executeWithoutResult(status -> service.run(null));
         assertThat(service.current().enabled()).isFalse();

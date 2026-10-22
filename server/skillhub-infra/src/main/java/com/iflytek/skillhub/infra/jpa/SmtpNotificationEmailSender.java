@@ -5,12 +5,14 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import org.eclipse.angus.mail.smtp.SMTPAddressFailedException;
 import org.eclipse.angus.mail.smtp.SMTPSendFailedException;
+import org.eclipse.angus.mail.util.MailConnectException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailAuthenticationException;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
@@ -61,8 +63,7 @@ public class SmtpNotificationEmailSender implements NotificationEmailSender {
             if (rejected != null) {
                 return rejected;
             }
-            boolean connectFailure = ex.getFailedMessages().isEmpty() && hasConnectFailure(ex);
-            return connectFailure ? Result.TEMPORARY_FAILURE : Result.UNKNOWN;
+            return connectionSetupFailure(sender, ex) ? Result.TEMPORARY_FAILURE : Result.UNKNOWN;
         } catch (MailException ex) {
             return Result.UNKNOWN;
         } catch (MessagingException | java.io.UnsupportedEncodingException | IllegalArgumentException ex) {
@@ -88,11 +89,31 @@ public class SmtpNotificationEmailSender implements NotificationEmailSender {
         return null;
     }
 
-    private boolean hasConnectFailure(Throwable ex) {
-        for (Throwable cause = ex; cause != null; cause = cause.getCause())
-            if (cause instanceof java.net.ConnectException || cause instanceof java.net.UnknownHostException) {
+    private boolean connectionSetupFailure(JavaMailSender sender, MailSendException failure) {
+        Throwable setup = failure.getCause();
+        // Spring doSend attaches the same connectTransport exception to every not-yet-sent message.
+        // sendMessage failures instead have no top-level cause; close failures have an empty map or
+        // a different cause. A nonempty failedMessages map alone never proves a pre-DATA failure.
+        if (!(sender instanceof JavaMailSenderImpl) || setup == null || failure.getFailedMessages().isEmpty()
+                || failure.getFailedMessages().values().stream().anyMatch(value -> value != setup))
+            return false;
+        var pending = new java.util.ArrayDeque<Throwable>();
+        var visited = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<Throwable, Boolean>());
+        pending.add(setup);
+        while (!pending.isEmpty()) {
+            var cause = pending.removeFirst();
+            if (!visited.add(cause))
+                continue;
+            if (cause instanceof MailConnectException || cause instanceof java.net.ConnectException
+                    || cause instanceof java.net.UnknownHostException
+                    || cause instanceof java.net.SocketTimeoutException || cause instanceof java.net.SocketException
+                    || cause instanceof javax.net.ssl.SSLException)
                 return true;
-            }
+            if (cause.getCause() != null)
+                pending.add(cause.getCause());
+            if (cause instanceof MessagingException messaging && messaging.getNextException() != null)
+                pending.add(messaging.getNextException());
+        }
         return false;
     }
 }

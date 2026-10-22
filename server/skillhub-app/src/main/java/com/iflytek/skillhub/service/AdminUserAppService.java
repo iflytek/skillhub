@@ -52,6 +52,7 @@ public class AdminUserAppService {
     private final ApplicationEventPublisher eventPublisher;
     private final NotificationEmailPolicyProvider emailPolicy;
     private final NotificationEmailCancellation emailCancellation;
+    private final com.iflytek.skillhub.notification.email.NotificationEmailAccountLifecycle emailLifecycle;
 
     public AdminUserAppService(
             AdminUserSearchRepository adminUserSearchRepository,
@@ -60,7 +61,8 @@ public class AdminUserAppService {
             RoleRepository roleRepository,
             ApplicationEventPublisher eventPublisher,
             NotificationEmailPolicyProvider emailPolicy,
-            NotificationEmailCancellation emailCancellation) {
+            NotificationEmailCancellation emailCancellation,
+            com.iflytek.skillhub.notification.email.NotificationEmailAccountLifecycle emailLifecycle) {
         this.adminUserSearchRepository = adminUserSearchRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
@@ -68,6 +70,7 @@ public class AdminUserAppService {
         this.eventPublisher = eventPublisher;
         this.emailPolicy = emailPolicy;
         this.emailCancellation = emailCancellation;
+        this.emailLifecycle = emailLifecycle;
     }
 
     @Transactional(readOnly = true)
@@ -133,6 +136,7 @@ public class AdminUserAppService {
             emailCancellation.cancelCategories(userId, Set.of(NotificationCategory.values()));
         }
         if (nextStatus == UserStatus.ACTIVE && previousStatus != UserStatus.ACTIVE) {
+            emailLifecycle.markActive(userId);
             eventPublisher.publishEvent(
                     new UserActivatedEvent(user.getId(), user.getDisplayName(), user.getEmail()));
         }

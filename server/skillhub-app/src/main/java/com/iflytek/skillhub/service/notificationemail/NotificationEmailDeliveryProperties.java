@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 public class NotificationEmailDeliveryProperties {
     private long pollDelayMs = 10000;
     private int leaseSeconds = 120;
-    private int maxAttempts = 5;
+    private int retryWindowHours = 24;
     private int batchSize = 20;
     private int sentRetentionDays = 30;
     private int failedRetentionDays = 90;
@@ -35,15 +35,15 @@ public class NotificationEmailDeliveryProperties {
         leaseSeconds = value;
     }
 
-    public int getMaxAttempts() {
-        return maxAttempts;
+    public int getRetryWindowHours() {
+        return retryWindowHours;
     }
 
-    public void setMaxAttempts(int value) {
-        if (value < 1 || value > 20) {
-            throw new IllegalArgumentException("attempts");
+    public void setRetryWindowHours(int value) {
+        if (value < 1 || value > 168) {
+            throw new IllegalArgumentException("retry window");
         }
-        maxAttempts = value;
+        retryWindowHours = value;
     }
 
     public int getBatchSize() {

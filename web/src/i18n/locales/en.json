@@ -3270,8 +3270,8 @@
     "batchHelp": "Independent of in-app notifications. Only currently authorized items are shown. SMTP acceptance does not guarantee inbox delivery.",
     "expired": "This batch is unavailable, expired, or belongs to another account.",
     "forbidden": "You cannot access this email batch.",
-    "itemCount": "{{count}} notifications in this batch",
-    "unavailableItems": "{{count}} items have been deleted or are no longer accessible.",
+    "itemCount": "{{count}} original records in this batch; this is not a count of currently accessible items",
+    "unavailableItems": "{{count}} records on this page are deleted or no longer accessible.",
     "noItems": "No accessible notifications on this page",
     "openItem": "View details",
     "adminTitle": "Business email notifications",
@@ -3289,8 +3289,8 @@
     "noDeliveries": "No delivery records",
     "retry": "Retry",
     "retryTitle": "Retry email batch #{{id}}?",
-    "duplicateRisk": "The previous result is unknown and the email may already have been accepted. Retrying may create a duplicate. This action is audited and eligibility is checked again.",
-    "retryHelp": "Retry keeps the original recipient and content and checks eligibility again. Expired records cannot be retried.",
+    "duplicateRisk": "The previous result is unknown and the email may already have been accepted. Retrying may create a duplicate. Eligibility is checked again; a new recovery window starts at the next temporary failure, up to 24 hours by default. The action is audited.",
+    "retryHelp": "Retry keeps the original recipient account and checks eligibility again. A new recovery window starts at the next temporary failure, up to 24 hours by default, and the action is audited. Expired records cannot be retried.",
     "column": {
       "batch": "Batch",
       "recipient": "Recipient account",
@@ -3307,8 +3307,14 @@
       "RETRY": "Waiting to retry",
       "FAILED": "Failed",
       "UNKNOWN": "Unknown result",
-      "SUPPRESSED": "Suppressed"
+      "SUPPRESSED": "Suppressed",
+      "PREPARING": "Preparing digest",
+      "MERGED": "Merged into digest"
     },
-    "inAppTitle": "In-app notifications"
+    "inAppTitle": "In-app notifications",
+    "mergedHelp": "This batch was merged into another digest. Open that batch to view details you can currently access.",
+    "viewMergedBatch": "View merged batch #{{id}}",
+    "mergedTarget": "Merged into #{{id}}",
+    "retryPolicy": "Temporary SMTP failures use a 24-hour retry window from the first failure by default, not a delivery guarantee. Restarting or adding notifications does not extend it. Permanent rejection fails immediately; unknown results are not automatically resent. An audited manual retry starts a new window."
   }
 }

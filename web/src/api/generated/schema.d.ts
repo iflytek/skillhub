@@ -10168,18 +10168,17 @@ export interface components {
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
-            acceptedAt?: string;
+            acceptedAt?: string | null;
             items?: components["schemas"]["NotificationEmailDeliveryItemResponse"][];
             /** Format: int64 */
             totalItems?: number;
             /** Format: int64 */
-            unavailableItems?: number;
-            /** Format: int32 */
-            page?: number;
+            unavailableCount?: number;
             /** Format: int32 */
             size?: number;
-            /** Format: int32 */
-            totalPages?: number;
+            nextCursor?: string | null;
+            /** Format: int64 */
+            mergedIntoDeliveryId?: number | null;
         };
         NotificationEmailDeliveryItemResponse: {
             /** Format: int64 */
@@ -10832,11 +10831,13 @@ export interface components {
             status?: string;
             /** Format: int32 */
             attempts?: number;
-            resultCode?: string;
+            resultCode?: string | null;
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
-            acceptedAt?: string;
+            acceptedAt?: string | null;
+            /** Format: int64 */
+            mergedIntoDeliveryId?: number | null;
         };
         ClawHubWhoamiResponse: {
             user?: components["schemas"]["User"];
@@ -22153,7 +22154,7 @@ export interface operations {
     detail: {
         parameters: {
             query?: {
-                page?: number;
+                cursor?: string;
                 size?: number;
             };
             header?: never;
@@ -22178,7 +22179,7 @@ export interface operations {
     detail_1: {
         parameters: {
             query?: {
-                page?: number;
+                cursor?: string;
                 size?: number;
             };
             header?: never;

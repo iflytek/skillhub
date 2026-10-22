@@ -44,7 +44,7 @@ class AdminUserAppServiceTest {
             userAccountRepository,
             userRoleBindingRepository,
             roleRepository,
-            eventPublisher, emailPolicy, emailCancellation
+            eventPublisher, emailPolicy, emailCancellation, mock(com.iflytek.skillhub.notification.email.NotificationEmailAccountLifecycle.class)
     );
 
     @Test

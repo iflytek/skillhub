@@ -72,6 +72,19 @@ class NotificationEmailOpenApiIntegrationTest {
         for (String field : new String[] {"email", "resendAvailableAt", "reason"}) {
             assertThat(contact.path("properties").path(field).path("nullable").asBoolean()).as(field).isTrue();
         }
+        var schemas = document.path("components").path("schemas");
+        var detail = schemas.path("NotificationEmailDeliveryDetailResponse").path("properties");
+        for (String field : new String[] {"acceptedAt", "nextCursor", "mergedIntoDeliveryId"})
+            assertThat(detail.path(field).path("nullable").asBoolean()).as("delivery detail %s", field).isTrue();
+        assertThat(detail.has("page")).isFalse();
+        assertThat(detail.has("nextOffset")).isFalse();
+        var admin = schemas.path("NotificationEmailDeliveryAdminResponse").path("properties");
+        for (String field : new String[] {"acceptedAt", "resultCode", "mergedIntoDeliveryId"})
+            assertThat(admin.path(field).path("nullable").asBoolean()).as("delivery admin %s", field).isTrue();
+        var parameters = paths.path("/api/v1/notification-email-deliveries/{id}").path("get").path("parameters");
+        java.util.Set<String> names = new java.util.HashSet<>();
+        parameters.forEach(parameter -> names.add(parameter.path("name").asText()));
+        assertThat(names).contains("cursor", "size").doesNotContain("page", "offset");
         String output = System.getProperty("skillhub.test.openapi-output");
         if (output != null && !output.isBlank()) {
             Path target = Path.of(output);

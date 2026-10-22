@@ -55,4 +55,31 @@ class NotificationEmailContactTest {
         assertThat(contact.verified(" A@EXAMPLE.TEST ", 0)).isTrue();
         assertThat(contact.verified("a@example.test", 1)).isFalse();
     }
+    @Test
+    void recipientWatermarkTracksVerificationAndActualReactivationOnly() {
+        var contact = new NotificationEmailContact("user");
+        assertThat(contact.eligibleSince()).isNull();
+        contact.markActive(now.minusSeconds(30));
+        contact.challenge("id", "hash", "a@test.com", 0, "en", now);
+        contact.consume(now);
+        assertThat(contact.eligibleSince()).isEqualTo(now);
+        contact.markActive(now.plusSeconds(60));
+        assertThat(contact.eligibleSince()).isEqualTo(now.plusSeconds(60));
+        contact.challenge("id2", "hash", "a@test.com", 0, "en", now.plusSeconds(120));
+        contact.consume(now.plusSeconds(120));
+        assertThat(contact.eligibleSince()).isEqualTo(now.plusSeconds(120));
+    }
+    @Test
+    void categoryAdmissionBaselineChangesOnlyWhenTurningOn() {
+        var preference = new NotificationEmailPreference("user",
+                com.iflytek.skillhub.notification.domain.NotificationCategory.PUBLISH);
+        assertThat(preference.getEnabledSince()).isNull();
+        preference.setMode(NotificationEmailMode.DIGEST, now);
+        preference.setMode(NotificationEmailMode.IMMEDIATE, now.plusSeconds(60));
+        assertThat(preference.getEnabledSince()).isEqualTo(now);
+        preference.setMode(NotificationEmailMode.OFF, now.plusSeconds(120));
+        preference.setMode(NotificationEmailMode.IMMEDIATE, now.plusSeconds(180));
+        assertThat(preference.getEnabledSince()).isEqualTo(now.plusSeconds(180));
+    }
+
 }

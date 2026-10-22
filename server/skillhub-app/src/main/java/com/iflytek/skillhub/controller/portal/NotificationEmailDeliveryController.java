@@ -18,8 +18,9 @@ public class NotificationEmailDeliveryController extends BaseApiController {
     }
     @GetMapping("/{id}")
     public ApiResponse<NotificationEmailDeliveryDetailResponse> detail(@PathVariable long id,
-            @RequestAttribute("userId") String userId, @RequestParam(defaultValue = "0") @Min(0) @Max(1000000) int page,
+            @RequestAttribute("userId") String userId,
+            @RequestParam(required = false) @Pattern(regexp = "[0-9]{1,19}") String cursor,
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
-        return ok("response.success.read", service.detail(id, userId, page, size));
+        return ok("response.success.read", service.detail(id, userId, cursor, size));
     }
 }

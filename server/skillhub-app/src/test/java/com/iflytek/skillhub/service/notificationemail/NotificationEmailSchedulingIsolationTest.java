@@ -50,10 +50,11 @@ class NotificationEmailSchedulingIsolationTest {
         Instant now = Instant.parse("2026-10-22T00:00:00Z");
         var batch = new NotificationEmailDelivery(
                 1, "user", "IMMEDIATE", "one", 0, "CLAIMED", 0, now, "token", now.plusSeconds(120), null, now, null);
-        when(repository.claim(any(), any(), any())).thenReturn(Optional.of(batch), Optional.empty());
+        when(repository.claim(any(), any(), any(), any(), anySet())).thenReturn(Optional.of(batch), Optional.empty());
         when(repository.lock(1)).thenReturn(batch);
+        when(repository.lockRecipient("user")).thenReturn(true);
         when(repository.authorize(eq(1L), eq("token"), any(), any())).thenReturn(true);
-        when(repository.items(1))
+        when(repository.itemPage(1, 0, 50))
                 .thenReturn(List.of(new NotificationEmailItem(1, 1, "user", "event", NotificationCategory.REVIEW,
                         "REVIEW_APPROVED", 1L, 1L, now, now, "ACTIVE")));
         when(policy.lockCurrent()).thenReturn(new NotificationEmailPolicy(true, 15, "https://example.test", 0));
@@ -123,7 +124,7 @@ class NotificationEmailSchedulingIsolationTest {
             }
             assertThat(worker.getQueueSize()).isZero();
             assertThat(worker.getActiveCount()).isEqualTo(2);
-            verify(repository, times(1)).claim(any(), any(), any());
+            verify(repository, times(1)).claim(any(), any(), any(), any(), anySet());
             verify(repository, times(1)).cleanup(any(), any());
             try (var closer = Executors.newSingleThreadExecutor()) {
                 var closed = closer.submit(context::close);
@@ -135,7 +136,7 @@ class NotificationEmailSchedulingIsolationTest {
             assertThat(worker.getThreadPoolExecutor().isTerminated()).isTrue();
             assertThat(authoringTimer.isShutdown()).isTrue();
             assertThat(releaseTimedOut).isFalse();
-            verify(repository, times(1)).claim(any(), any(), any());
+            verify(repository, times(1)).claim(any(), any(), any(), any(), anySet());
         } finally {
             release.countDown();
             context.close();
