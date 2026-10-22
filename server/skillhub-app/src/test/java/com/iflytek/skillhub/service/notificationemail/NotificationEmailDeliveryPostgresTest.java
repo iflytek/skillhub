@@ -1076,4 +1076,191 @@ class NotificationEmailDeliveryPostgresTest {
         assertThat(root.retryStartedAt()).isEqualTo(clock.instant().plusSeconds(901));
         assertThat(root.retryDeadline()).isEqualTo(clock.instant().plusSeconds(901 + 86400));
     }
+    private long cleanupFixture(String user, String status, int items, int sources) {
+        jdbc.update("INSERT INTO notification_email_contact(user_id) VALUES(?) ON CONFLICT DO NOTHING", user);
+        var row = tx.execute(ignored -> repository.openBatch(
+                user, "DIGEST", "cleanup", 0, clock.instant(), clock.instant()));
+        jdbc.update("UPDATE notification_email_delivery SET status=?,terminal_at=? WHERE id=?", status,
+                java.sql.Timestamp.from(clock.instant()), row.id());
+        jdbc.update("""
+                INSERT INTO notification_email_delivery(recipient_id,email_revision,kind,window_key,status,
+                  due_at,next_attempt_at,created_at,merged_into_id)
+                SELECT ?,0,'DIGEST','source-'||n,'MERGED',?,?,?,? FROM generate_series(1,?) n
+                """, user, java.sql.Timestamp.from(clock.instant()), java.sql.Timestamp.from(clock.instant()),
+                java.sql.Timestamp.from(clock.instant()), row.id(), sources);
+        jdbc.update("""
+                INSERT INTO notification_email_item(delivery_id,recipient_id,event_key,category,event_type,
+                  occurred_at,enqueued_at)
+                SELECT ?,?,'item-'||n,'PUBLISH','PUBLISHED',?,? FROM generate_series(1,?) n
+                """, row.id(), user, java.sql.Timestamp.from(clock.instant()),
+                java.sql.Timestamp.from(clock.instant()), items);
+        return row.id();
+    }
+
+    private int cleanupExpired() {
+        return tx.execute(ignored -> repository.cleanup(clock.instant().plusSeconds(1), clock.instant().plusSeconds(1)));
+    }
+
+    private long rawRows(String table) {
+        return jdbc.queryForObject("SELECT count(*) FROM " + table, Long.class);
+    }
+
+    @Test
+    void cleanupLargeRootIsBoundedResumableAndNeverExposesPartiallyDeletedHistory() {
+        long root = cleanupFixture("large", "FAILED", 350, 250);
+        long source = jdbc.queryForObject("SELECT min(id) FROM notification_email_delivery WHERE merged_into_id=?",
+                Long.class, root);
+        jdbc.update("UPDATE notification_email_item SET delivery_id=? WHERE delivery_id=?", source, root);
+        assertThat(cleanupExpired()).isEqualTo(100);
+        assertThat(rawRows("notification_email_item")).isEqualTo(250);
+        assertThat(rawRows("notification_email_delivery")).isEqualTo(151);
+        assertThat(repository.find(root)).isEmpty();
+        assertThat(repository.find(source)).isEmpty();
+        assertThat(repository.list(null, 0, 100)).isEmpty();
+        assertThat(repository.count(null)).isZero();
+        var query = new NotificationEmailDeliveryQueryService(
+                repository, eligibility, mock(com.iflytek.skillhub.domain.audit.AuditLogService.class), clock, policy, recipients);
+        assertThatThrownBy(() -> query.detail(root, "large", null, 50))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException.class);
+        assertThatThrownBy(() -> tx.executeWithoutResult(ignored -> query.retry(root, "admin", false)))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException.class);
+        tx.executeWithoutResult(ignored -> repository.retry(root, clock.instant()));
+        assertThat(jdbc.queryForObject("SELECT status FROM notification_email_delivery WHERE id=?", String.class, root))
+                .isEqualTo("FAILED");
+        // A new repository instance resumes from the durable marker after an interrupted process.
+        repository = new JdbcNotificationEmailDeliveryRepository(jdbc);
+        for (int turn = 0; turn < 4 && rawRows("notification_email_delivery") > 0; turn++) {
+            long beforeItems = rawRows("notification_email_item");
+            long beforeRows = rawRows("notification_email_delivery");
+            cleanupExpired();
+            assertThat(beforeItems - rawRows("notification_email_item")).isBetween(0L, 100L);
+            assertThat(beforeRows - rawRows("notification_email_delivery")).isBetween(0L, 101L);
+        }
+        assertThat(rawRows("notification_email_item")).isZero();
+        assertThat(rawRows("notification_email_delivery")).isZero();
+    }
+
+    @Test
+    void cleanupRotatesBeyondFirstTenLargeRootsAndBoundsEveryTurn() {
+        for (int n = 0; n < 11; n++) cleanupFixture("fair-" + n, "SENT", 350, 0);
+        cleanupExpired();
+        assertThat(rawRows("notification_email_item")).isEqualTo(2850);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_email_delivery WHERE purge_started_at IS NOT NULL",
+                Long.class)).isEqualTo(10);
+        cleanupExpired();
+        assertThat(rawRows("notification_email_item")).isEqualTo(1850);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_email_delivery WHERE purge_started_at IS NOT NULL",
+                Long.class)).isEqualTo(11);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_email_item WHERE recipient_id='fair-10'",
+                Long.class)).isEqualTo(250);
+    }
+
+    @Test
+    void cleanupRetentionBoundaryAndRecentMergedItemProtectWholeGroup() {
+        for (String status : List.of("SENT", "SUPPRESSED", "FAILED", "UNKNOWN")) {
+            cleanupFixture("boundary-" + status, status, 1, 1);
+        }
+        tx.executeWithoutResult(ignored -> repository.cleanup(clock.instant(), clock.instant()));
+        assertThat(rawRows("notification_email_delivery")).isEqualTo(8);
+        assertThat(rawRows("notification_email_item")).isEqualTo(4);
+        long source = jdbc.queryForObject("SELECT min(id) FROM notification_email_delivery WHERE status='MERGED'", Long.class);
+        jdbc.update("""
+                INSERT INTO notification_email_item(delivery_id,recipient_id,event_key,category,event_type,occurred_at,enqueued_at)
+                VALUES(?,'recent-source','recent','PUBLISH','PUBLISHED',?,?)
+                """, source, java.sql.Timestamp.from(clock.instant()), java.sql.Timestamp.from(clock.instant().plusSeconds(1)));
+        cleanupExpired();
+        assertThat(rawRows("notification_email_delivery")).isEqualTo(2);
+        assertThat(rawRows("notification_email_item")).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_email_delivery WHERE purge_started_at IS NOT NULL",
+                Long.class)).isZero();
+        tx.executeWithoutResult(ignored -> repository.cleanup(clock.instant().plusSeconds(2), clock.instant().plusSeconds(2)));
+        assertThat(rawRows("notification_email_delivery")).isZero();
+    }
+
+    @Test
+    void cleanupRollbackKeepsRetryableHistoryWhole() {
+        long root = cleanupFixture("rollback", "UNKNOWN", 350, 150);
+        assertThatThrownBy(() -> tx.executeWithoutResult(ignored -> {
+            cleanupExpired();
+            throw new IllegalStateException("simulated interruption before commit");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(repository.find(root)).isPresent();
+        assertThat(rawRows("notification_email_item")).isEqualTo(350);
+        assertThat(rawRows("notification_email_delivery")).isEqualTo(151);
+        cleanupExpired();
+        assertThat(rawRows("notification_email_item")).isEqualTo(250);
+    }
+
+    @Test
+    void cleanupWinsRaceAfterRetryReadAndPreventsRevivingPartiallyRemovedItems() throws Exception {
+        long root = cleanupFixture("race", "FAILED", 350, 0);
+        CountDownLatch retryRead = new CountDownLatch(1), continueRetry = new CountDownLatch(1);
+        when(recipients.lockCurrent("race")).thenAnswer(inv -> {
+            retryRead.countDown();
+            if (!continueRetry.await(10, TimeUnit.SECONDS)) throw new AssertionError("retry latch timed out");
+            return Optional.of(new NotificationEmailRecipient("race", "same@example.test", 0, "en"));
+        });
+        var query = new NotificationEmailDeliveryQueryService(
+                repository, eligibility, mock(com.iflytek.skillhub.domain.audit.AuditLogService.class), clock, policy, recipients);
+        try (var pool = Executors.newSingleThreadExecutor()) {
+            Future<?> pending = pool.submit(() -> tx.executeWithoutResult(ignored -> query.retry(root, "admin", false)));
+            try {
+                assertThat(retryRead.await(10, TimeUnit.SECONDS)).isTrue();
+                cleanupExpired();
+            } finally {
+                continueRetry.countDown();
+            }
+            assertThatThrownBy(() -> pending.get(10, TimeUnit.SECONDS))
+                    .hasCauseInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException.class);
+        }
+        assertThat(rawRows("notification_email_item")).isEqualTo(250);
+        assertThat(jdbc.queryForObject("SELECT status FROM notification_email_delivery WHERE id=?", String.class, root))
+                .isEqualTo("FAILED");
+    }
+
+    @Test
+    void cleanupSkipsLockedRetryRootThenRechecksItsNonterminalState() throws Exception {
+        long root = cleanupFixture("retry-first", "FAILED", 350, 0);
+        long other = cleanupFixture("unrelated", "SENT", 1, 0);
+        CountDownLatch locked = new CountDownLatch(1), release = new CountDownLatch(1);
+        try (var pool = Executors.newSingleThreadExecutor()) {
+            Future<?> pending = pool.submit(() -> tx.executeWithoutResult(ignored -> {
+                repository.lock(root);
+                locked.countDown();
+                try {
+                    if (!release.await(10, TimeUnit.SECONDS)) throw new AssertionError("cleanup latch timed out");
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(interrupted);
+                }
+                repository.retry(root, clock.instant());
+            }));
+            try {
+                assertThat(locked.await(10, TimeUnit.SECONDS)).isTrue();
+                assertThat(cleanupExpired()).isEqualTo(1);
+                assertThat(repository.find(other)).isEmpty();
+            } finally {
+                release.countDown();
+            }
+            pending.get(10, TimeUnit.SECONDS);
+        }
+        assertThat(cleanupExpired()).isZero();
+        assertThat(repository.find(root).orElseThrow().status()).isEqualTo("RETRY");
+        assertThat(rawRows("notification_email_item")).isEqualTo(350);
+    }
+
+    @Test
+    void cleanupNeverMarksActiveStatesOrTerminalRootWithUnfinishedSource() {
+        for (String status : List.of("PENDING", "CLAIMED", "PREPARING", "SENDING", "RETRY")) {
+            cleanupFixture("unfinished-" + status, status, 1, 0);
+        }
+        long root = cleanupFixture("unfinished-source", "SENT", 1, 1);
+        jdbc.update("UPDATE notification_email_delivery SET status='RETRY' WHERE merged_into_id=?", root);
+        assertThat(cleanupExpired()).isZero();
+        assertThat(rawRows("notification_email_item")).isEqualTo(6);
+        assertThat(rawRows("notification_email_delivery")).isEqualTo(7);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_email_delivery WHERE purge_started_at IS NOT NULL",
+                Long.class)).isZero();
+    }
+
 }

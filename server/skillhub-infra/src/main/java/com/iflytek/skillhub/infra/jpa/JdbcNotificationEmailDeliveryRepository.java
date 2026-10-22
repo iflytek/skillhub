@@ -40,14 +40,20 @@ public class JdbcNotificationEmailDeliveryRepository implements NotificationEmai
 
     @Override
     public Optional<NotificationEmailDelivery> find(long id) {
-        return jdbc.query("SELECT * FROM notification_email_delivery WHERE id=?", this::delivery, id)
+        return jdbc.query("""
+                SELECT * FROM notification_email_delivery d WHERE id=? AND purge_started_at IS NULL
+                AND NOT EXISTS (SELECT 1 FROM notification_email_delivery p
+                  WHERE p.id=d.merged_into_id AND p.purge_started_at IS NOT NULL)
+                """, this::delivery, id)
                 .stream()
                 .findFirst();
     }
 
     @Override
     public NotificationEmailDelivery lock(long id) {
-        return jdbc.query("SELECT * FROM notification_email_delivery WHERE id=? FOR UPDATE", this::delivery, id)
+        return jdbc.query(
+                        "SELECT * FROM notification_email_delivery WHERE id=? AND purge_started_at IS NULL FOR UPDATE",
+                        this::delivery, id)
                 .stream()
                 .findFirst()
                 .orElse(null);
@@ -413,7 +419,10 @@ public class JdbcNotificationEmailDeliveryRepository implements NotificationEmai
 
     @Override
     public List<NotificationEmailDelivery> list(String status, int offset, int limit) {
-        return jdbc.query("SELECT * FROM notification_email_delivery WHERE (CAST(? AS VARCHAR) IS NULL OR status=?) "
+        return jdbc.query("SELECT * FROM notification_email_delivery d WHERE purge_started_at IS NULL "
+                        + "AND NOT EXISTS (SELECT 1 FROM notification_email_delivery p "
+                        + "WHERE p.id=d.merged_into_id AND p.purge_started_at IS NOT NULL) "
+                        + "AND (CAST(? AS VARCHAR) IS NULL OR status=?) "
                         + "ORDER BY id DESC LIMIT ? OFFSET ?",
                 this::delivery, status, status, limit, offset);
     }
@@ -421,7 +430,10 @@ public class JdbcNotificationEmailDeliveryRepository implements NotificationEmai
     @Override
     public long count(String status) {
         return Objects.requireNonNull(jdbc.queryForObject(
-                "SELECT count(*) FROM notification_email_delivery WHERE (CAST(? AS VARCHAR) IS NULL OR status=?)",
+                "SELECT count(*) FROM notification_email_delivery d WHERE purge_started_at IS NULL "
+                        + "AND NOT EXISTS (SELECT 1 FROM notification_email_delivery p "
+                        + "WHERE p.id=d.merged_into_id AND p.purge_started_at IS NOT NULL) "
+                        + "AND (CAST(? AS VARCHAR) IS NULL OR status=?)",
                 Long.class, status, status));
     }
 
@@ -430,21 +442,51 @@ public class JdbcNotificationEmailDeliveryRepository implements NotificationEmai
         jdbc.update("""
                 UPDATE notification_email_delivery SET status='RETRY',attempts=0,next_attempt_at=?,lease_token=NULL,lease_until=NULL,
                 result_code='ADMIN_RETRY',retry_started_at=NULL,retry_deadline=NULL,terminal_at=NULL,
-                recovery_cutoff_at=NULL,sources_complete=FALSE,source_cursor=0,item_cursor=0,items_complete=FALSE,preview_item_ids='' WHERE id=? AND status IN ('FAILED','UNKNOWN')
+                recovery_cutoff_at=NULL,sources_complete=FALSE,source_cursor=0,item_cursor=0,items_complete=FALSE,preview_item_ids='' WHERE id=? AND purge_started_at IS NULL AND status IN ('FAILED','UNKNOWN')
                 """, ts(now), id);
     }
 
     @Override
     public int cleanup(Instant sentBefore, Instant failedBefore) {
-        return jdbc.update("""
-                DELETE FROM notification_email_delivery d WHERE d.merged_into_id IS NULL
-                AND ((d.status IN ('SENT','SUPPRESSED') AND coalesce(d.terminal_at,d.created_at)<?)
-                  OR (d.status IN ('FAILED','UNKNOWN') AND coalesce(d.terminal_at,d.created_at)<?))
-                AND NOT EXISTS (SELECT 1 FROM notification_email_delivery s WHERE s.merged_into_id=d.id
-                  AND s.status<>'MERGED')
-                AND NOT EXISTS (SELECT 1 FROM notification_email_item i JOIN notification_email_delivery s ON s.id=i.delivery_id
-                  WHERE (s.id=d.id OR s.merged_into_id=d.id) AND i.enqueued_at>=
-                    CASE WHEN d.status IN ('SENT','SUPPRESSED') THEN CAST(? AS TIMESTAMPTZ) ELSE CAST(? AS TIMESTAMPTZ) END)
-                """, ts(sentBefore), ts(failedBefore), ts(sentBefore), ts(failedBefore));
+        // Lock roots first, as manual retry does. Once purging starts it cannot be retried or read partially.
+        var roots = jdbc.queryForList("""
+                SELECT d.id FROM notification_email_delivery d WHERE d.merged_into_id IS NULL
+                AND (d.purge_started_at IS NOT NULL OR (
+                  ((d.status IN ('SENT','SUPPRESSED') AND coalesce(d.terminal_at,d.created_at)<?)
+                    OR (d.status IN ('FAILED','UNKNOWN') AND coalesce(d.terminal_at,d.created_at)<?))
+                  AND NOT EXISTS (SELECT 1 FROM notification_email_delivery s WHERE s.merged_into_id=d.id
+                    AND s.status<>'MERGED')
+                  AND NOT EXISTS (SELECT 1 FROM notification_email_item i JOIN notification_email_delivery s ON s.id=i.delivery_id
+                    WHERE (s.id=d.id OR s.merged_into_id=d.id) AND i.enqueued_at>=
+                      CASE WHEN d.status IN ('SENT','SUPPRESSED') THEN CAST(? AS TIMESTAMPTZ) ELSE CAST(? AS TIMESTAMPTZ) END)))
+                ORDER BY d.next_attempt_at,d.id LIMIT 10 FOR UPDATE OF d SKIP LOCKED
+                """, Long.class, ts(sentBefore), ts(failedBefore), ts(sentBefore), ts(failedBefore));
+        int removed = 0;
+        for (long root : roots) {
+            // Only expired, marked roots reuse next_attempt_at for fair cleanup rotation, never sendable batches.
+            jdbc.update("""
+                    UPDATE notification_email_delivery SET purge_started_at=coalesce(purge_started_at,clock_timestamp()),
+                    next_attempt_at=clock_timestamp() WHERE id=?
+                    """, root);
+            jdbc.update("""
+                    DELETE FROM notification_email_item WHERE id IN (
+                      SELECT i.id FROM notification_email_item i JOIN notification_email_delivery d ON d.id=i.delivery_id
+                      WHERE d.id=? OR d.merged_into_id=? ORDER BY i.id LIMIT 100)
+                    """, root, root);
+            removed += jdbc.update("""
+                    DELETE FROM notification_email_delivery WHERE id IN (
+                      SELECT s.id FROM notification_email_delivery s WHERE s.merged_into_id=? AND s.status='MERGED'
+                      AND NOT EXISTS (SELECT 1 FROM notification_email_item i WHERE i.delivery_id=s.id)
+                      AND NOT EXISTS (SELECT 1 FROM notification_email_delivery c WHERE c.merged_into_id=s.id)
+                      ORDER BY s.id LIMIT 100)
+                    """, root);
+            // Explicit emptiness checks ensure FK cascades have no unbounded work left to do.
+            removed += jdbc.update("""
+                    DELETE FROM notification_email_delivery d WHERE d.id=? AND d.purge_started_at IS NOT NULL
+                    AND NOT EXISTS (SELECT 1 FROM notification_email_item i WHERE i.delivery_id=d.id)
+                    AND NOT EXISTS (SELECT 1 FROM notification_email_delivery s WHERE s.merged_into_id=d.id)
+                    """, root);
+        }
+        return removed;
     }
 }

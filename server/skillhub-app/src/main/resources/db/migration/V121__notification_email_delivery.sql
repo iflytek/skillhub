@@ -18,6 +18,7 @@ CREATE TABLE notification_email_delivery (
  item_cursor BIGINT NOT NULL DEFAULT 0, items_complete BOOLEAN NOT NULL DEFAULT FALSE,
  preview_item_ids VARCHAR(1200) NOT NULL DEFAULT '', item_count BIGINT NOT NULL DEFAULT 0,
  retry_started_at TIMESTAMPTZ, retry_deadline TIMESTAMPTZ, terminal_at TIMESTAMPTZ,
+ purge_started_at TIMESTAMPTZ,
  UNIQUE(recipient_id, window_key)
 );
 CREATE INDEX idx_notification_email_due ON notification_email_delivery(status,next_attempt_at,due_at);

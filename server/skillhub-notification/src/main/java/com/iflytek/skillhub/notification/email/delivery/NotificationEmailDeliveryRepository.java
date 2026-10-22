@@ -35,5 +35,9 @@ public interface NotificationEmailDeliveryRepository {
     List<NotificationEmailDelivery> list(String status, int offset, int limit);
     long count(String status);
     void retry(long id, Instant now);
+    /**
+     * One transaction: at most 10 roots, each with 100 items, 100 empty sources, one empty root and one marker update.
+     * Returns the number of delivery rows removed; purging groups are no longer readable or retryable.
+     */
     int cleanup(Instant sentBefore, Instant failedBefore);
 }
