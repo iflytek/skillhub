@@ -154,6 +154,12 @@ and the returned function removes listeners. It catches callback errors and neve
 calls preventDefault/stopPropagation. Tests use synthetic data and are not browser
 or deployment acceptance.
 
+The repository-integration test lives at `web/analytics-example.test.ts`, alongside
+the existing root-level web tests. Vitest discovers it with `pnpm -C web test`;
+run it alone with `pnpm -C web test analytics-example.test.ts`. It stays outside
+the production TypeScript project's `src`/`test` inputs because the docs-only
+example is not present in the `web/` Docker build context.
+
 ## Optional deployment-owned Nginx injection
 
 Prefer a separately maintained same-origin HTTPS module, optionally inserted by

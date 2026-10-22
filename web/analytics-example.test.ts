@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent } from '@testing-library/react'
-import { observeSkillhubIntents } from '../../../docs/examples/skillhub-intents.mjs'
+import { observeSkillhubIntents } from '../docs/examples/skillhub-intents.mjs'
 
 const stops: Array<() => void> = []
 afterEach(() => { stops.splice(0).forEach(stop => stop()); document.body.replaceChildren(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
