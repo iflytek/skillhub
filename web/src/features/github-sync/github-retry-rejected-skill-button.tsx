@@ -27,7 +27,7 @@ export function GithubRetryRejectedSkillButton({ sourceId, path, namespaceSlug }
 
   if (!skillPath || (path.latestBindingIngestionStatus !== 'REJECTED' && !path.retryRequested)) return null
   return <div className="space-y-1">
-    <Button size="sm" className="sync-action" variant="outline" disabled={!!path.retryInProgress || !!path.ignoredByCurrentPolicy || retry.isPending}
+    <Button data-analytics-id="github.rejected.retry" size="sm" className="sync-action" variant="outline" disabled={!!path.retryInProgress || !!path.ignoredByCurrentPolicy || retry.isPending}
       onClick={() => { setFeedback(''); retry.mutate() }}>
       {path.retryInProgress ? t('githubSync.retryRejectedPending') : t('githubSync.retryRejected')}
     </Button>

@@ -39,7 +39,7 @@ export function MySubscriptionsPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {skills.map((skill) => (
-              <SkillCard
+              <SkillCard analyticsId="skill.card.open"
                 key={skill.id}
                 skill={skill}
                 onClick={() => navigate({
@@ -50,7 +50,7 @@ export function MySubscriptionsPage() {
             ))}
           </div>
           {data && data.total > PAGE_SIZE ? (
-            <Pagination
+            <Pagination analyticsId="skill.subscribed.paginate"
               page={page}
               totalPages={totalPages}
               onPageChange={(nextPage) => navigate({

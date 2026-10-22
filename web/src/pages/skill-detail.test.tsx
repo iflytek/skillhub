@@ -336,6 +336,31 @@ describe('SkillDetailPage', () => {
     useSkillFileMock.mockReturnValue({ data: null, isLoading: false, error: null })
   })
 
+  it('marks rendered content only after loading/error/missing guards, without treating rerenders as visits', () => {
+    const view = render(<SkillDetailPage />)
+    expect(view.container.querySelectorAll('[data-analytics-id="skill.detail.render"]')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'skillDetail.download' }).getAttribute('data-analytics-id')).toBe('skill.download.request')
+    view.rerender(<SkillDetailPage />)
+    expect(view.container.querySelectorAll('[data-analytics-id="skill.detail.render"]')).toHaveLength(1)
+    for (const result of [
+      { data: undefined, isLoading: true, error: null },
+      { data: undefined, isLoading: false, error: new Error('synthetic error') },
+      { data: undefined, isLoading: false, error: null },
+    ]) {
+      useSkillDetailMock.mockReturnValue(result)
+      view.rerender(<SkillDetailPage />)
+      expect(view.container.querySelector('[data-analytics-id="skill.detail.render"]')).toBeNull()
+    }
+  })
+
+  it('retains archive download guards on the marked intent button', () => {
+    useSkillDetailMock.mockReturnValue({ data: createSkill({ status: 'ARCHIVED' }), isLoading: false, isFetching: false, error: null })
+    render(<SkillDetailPage />)
+    const download = screen.getByRole('button', { name: 'skillDetail.download' })
+    expect(download.getAttribute('data-analytics-id')).toBe('skill.download.request')
+    expect(download.hasAttribute('disabled')).toBe(true)
+  })
+
   it('shows the removed owner read-only reason and keeps controlled draft download without write controls', () => {
     useSkillDetailMock.mockReturnValue({ data: createSkill({
       ownerReadOnly: true, canManageLifecycle: false, canSubmitPromotion: false,

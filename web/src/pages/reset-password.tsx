@@ -106,12 +106,12 @@ export function ResetPasswordPage() {
               <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                 {t('resetPassword.successMessage')}
               </p>
-              <Link to="/login" className="block text-center font-medium text-primary hover:underline">
+              <Link data-analytics-id="auth.login.open" to="/login" className="block text-center font-medium text-primary hover:underline">
                 {t('resetPassword.backToLogin')}
               </Link>
             </div>
           ) : capabilities?.passwordLoginEnabled ? (
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form data-analytics-id="auth.password.reset.submit" className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="reset-password-email">
                   {t('resetPassword.email')}
@@ -126,7 +126,7 @@ export function ResetPasswordPage() {
                     autoComplete="email"
                     required
                   />
-                  <Button
+                  <Button data-analytics-id="auth.password.code.request"
                     className="sm:w-auto"
                     disabled={isSendingCode || isSubmitting}
                     type="button"

@@ -57,7 +57,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{t('review.skillDetailDescription', { skill: `${detail.skill.namespace}/${detail.skill.slug}` })}</p>
-        {downloadHref && <a className={buttonVariants({ variant: 'outline', size: 'sm', className: 'px-2.5' })} href={buildApiUrl(downloadHref)}>
+        {downloadHref && <a data-analytics-id="review.package.download" className={buttonVariants({ variant: 'outline', size: 'sm', className: 'px-2.5' })} href={buildApiUrl(downloadHref)}>
           {t('review.downloadSkillZip')}
         </a>}
       </div>
@@ -66,7 +66,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
           <h3 className="mb-2 text-sm font-semibold">{t('fileTree.title')} <span className="font-normal text-muted-foreground">{detail.files.length}</span></h3>
           {detail.files.length > 0 ? (
             <div className="max-h-[620px] overflow-auto">
-              <FileTree files={detail.files} onFileClick={(node) => { setPreviewNode(node); setPreviewDialogOpen(true) }} bare compact />
+              <FileTree analyticsId="review.file.open" files={detail.files} onFileClick={(node) => { setPreviewNode(node); setPreviewDialogOpen(true) }} bare compact />
             </div>
           ) : <p className="text-sm text-muted-foreground">{t('skillDetail.noFiles')}</p>}
         </Card>
@@ -78,7 +78,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
             <div className="space-y-2 text-sm text-muted-foreground">
               <p className="text-destructive">{t('review.documentationLoadFailed')}</p>
               {detail.documentationPath && reviewId && (
-                <a className="text-primary underline" href={buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(detail.documentationPath)}`)} download>
+                <a data-analytics-id="review.file.download" className="text-primary underline" href={buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(detail.documentationPath)}`)} download>
                   {t('filePreview.downloadFile')}
                 </a>
               )}
@@ -91,14 +91,14 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
           ) : documentationTooLarge && detail.documentationPath && reviewId ? (
             <div className="space-y-2 text-sm text-muted-foreground">
               <p>{t('review.documentationTooLarge')}</p>
-              <a className="text-primary underline" href={buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(detail.documentationPath)}`)} download>
+              <a data-analytics-id="review.file.download" className="text-primary underline" href={buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(detail.documentationPath)}`)} download>
                 {t('filePreview.downloadFile')}
               </a>
             </div>
           ) : <p className="text-sm text-muted-foreground">{t('review.noDocumentation')}</p>}
         </Card>
       </div>
-      <FilePreviewDialog
+      <FilePreviewDialog closeAnalyticsId="review.file.close" downloadAnalyticsId="review.file.download"
         open={previewDialogOpen}
         onOpenChange={setPreviewDialogOpen}
         node={previewNode}
@@ -106,7 +106,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
         isLoading={isLoadingPreview}
         error={previewError}
         onDownload={handleDownloadFile}
-        maxPreviewBytes={256 * 1024}
+        maxPreviewBytes={256 * 1024} copyAnalyticsId="review.file.copy"
       />
     </div>
   )

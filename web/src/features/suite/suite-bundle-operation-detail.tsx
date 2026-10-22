@@ -109,7 +109,7 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
                 {t(`suite.bundle.statusLabel.${status}`)}
               </span>
               {status === 'BLOCKED_RETRYABLE' && !demoOnlyOperation ? (
-                <Button
+                <Button data-analytics-id="suite.operation.retry"
                   size="sm"
                   disabled={retryMutation.isPending}
                   onClick={() => retryMutation.mutate(operationId, {
@@ -120,21 +120,21 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
                 </Button>
               ) : null}
               {canCancel ? (
-                <Button size="sm" variant="outline" disabled={cancelMutation.isPending} onClick={() => setCancelOpen(true)}>
+                <Button data-analytics-id="suite.operation.cancel" size="sm" variant="outline" disabled={cancelMutation.isPending} onClick={() => setCancelOpen(true)}>
                   {t('suite.bundle.cancelOperation')}
                 </Button>
               ) : null}
               {status === 'REPREVIEW_REQUIRED' || status === 'CANCELLED' ? (
-                <Button size="sm" onClick={restartOperation}>{t('suite.bundle.startAgain')}</Button>
+                <Button data-analytics-id="suite.operation.restart" size="sm" onClick={restartOperation}>{t('suite.bundle.startAgain')}</Button>
               ) : null}
               {status === 'SUITE_DRAFT_CREATED' && !draftMissing && draftCoordinate && operation?.targetVersion ? (
-                <Button size="sm" onClick={() => navigate({
+                <Button data-analytics-id="suite.draft.open" size="sm" onClick={() => navigate({
                   to: `/dashboard/suites/${draftCoordinate.namespace}/${encodeURIComponent(draftCoordinate.slug)}`,
                   search: { version: operation.targetVersion },
                 })}>{t('suite.bundle.openDraft')}</Button>
               ) : null}
               {draftMissing ? (
-                <Button size="sm" onClick={restartOperation}>{t('suite.bundle.startAgain')}</Button>
+                <Button data-analytics-id="suite.operation.restart" size="sm" onClick={restartOperation}>{t('suite.bundle.startAgain')}</Button>
               ) : null}
             </div>
           ) : null}
@@ -178,7 +178,7 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
       {operationQuery.error ? (
         <Card className="flex flex-wrap items-center justify-between gap-3 border-destructive/30 p-4 text-sm text-destructive" role="alert">
           <span>{t('suite.bundle.operationLoadFailed')}</span>
-          <Button variant="outline" size="sm" onClick={() => operationQuery.refetch()}>
+          <Button data-analytics-id="suite.operation.refresh" variant="outline" size="sm" onClick={() => operationQuery.refetch()}>
             <RefreshCw className="mr-2 h-4 w-4" />{t('suite.bundle.reloadOperation')}
           </Button>
         </Card>
@@ -277,7 +277,7 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
                     {needsAttention ? t('suite.bundle.memberStatus.ATTENTION') : t(`suite.bundle.memberStatus.${member.status}`)}
                   </span>
                   {canViewSkill ? (
-                    <Button
+                    <Button data-analytics-id="skill.detail.open"
                       variant="outline"
                       size="sm"
                       className="h-7 px-2 text-xs"
@@ -307,7 +307,7 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
         </div>
       </Card>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="suite.operation.cancel.confirm" cancelAnalyticsId="suite.operation.cancel.cancel"
         open={cancelOpen}
         onOpenChange={setCancelOpen}
         title={t('suite.bundle.cancelConfirmTitle')}

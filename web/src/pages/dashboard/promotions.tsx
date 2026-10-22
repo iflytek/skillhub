@@ -79,7 +79,7 @@ function PromotionPagination({ data, onPageChange }: { data: PromotionPage; onPa
   if (totalPages <= 1) {
     return null
   }
-  return <Pagination page={data.page} totalPages={totalPages} onPageChange={onPageChange} />
+  return <Pagination analyticsId="promotion.list.paginate" page={data.page} totalPages={totalPages} onPageChange={onPageChange} />
 }
 
 function useClampPromotionPage(data: PromotionPage | undefined, page: number, onPageChange: (page: number) => void) {
@@ -148,10 +148,10 @@ function PendingPromotionCard({
         onChange={(event) => onCommentChange(event.target.value)}
       />
       <div className="flex flex-wrap gap-3">
-        <Button onClick={onApprove} disabled={isMutating}>
+        <Button data-analytics-id="promotion.review.approve" onClick={onApprove} disabled={isMutating}>
           {t('promotions.approve')}
         </Button>
-        <Button variant="destructive" onClick={onReject} disabled={isMutating}>
+        <Button data-analytics-id="promotion.review.reject" variant="destructive" onClick={onReject} disabled={isMutating}>
           {t('promotions.reject')}
         </Button>
       </div>
@@ -247,16 +247,16 @@ function PendingRevocationList() {
             onChange={(event) => setCommentById((previous) => ({ ...previous, [item.id]: event.target.value }))}
           />
           <div className="flex flex-wrap gap-3">
-            <Button variant="destructive" onClick={() => setApproveId(item.id)} disabled={approveMutation.isPending || rejectMutation.isPending}>
+            <Button data-analytics-id="promotion.revocation.approve" variant="destructive" onClick={() => setApproveId(item.id)} disabled={approveMutation.isPending || rejectMutation.isPending}>
               {t('promotions.approveRevocation')}
             </Button>
-            <Button variant="outline" onClick={() => handleReject(item.id)} disabled={approveMutation.isPending || rejectMutation.isPending}>
+            <Button data-analytics-id="promotion.revocation.reject" variant="outline" onClick={() => handleReject(item.id)} disabled={approveMutation.isPending || rejectMutation.isPending}>
               {t('promotions.rejectRevocation')}
             </Button>
           </div>
         </Card>
       ))}
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="promotion.revocation.confirm" cancelAnalyticsId="promotion.revocation.cancel"
         open={approveId !== null}
         onOpenChange={(open) => { if (!open) setApproveId(null) }}
         title={t('promotions.revocationConfirmTitle')}
@@ -293,7 +293,7 @@ function RevocationHistoryList() {
           {item.reviewComment && <p className="break-words text-muted-foreground">{t('promotions.revocationReviewComment', { comment: item.reviewComment })}</p>}
         </Card>
       ))}
-      {totalPages > 1 && <Pagination page={data.page} totalPages={totalPages} onPageChange={setPage} />}
+      {totalPages > 1 && <Pagination analyticsId="promotion.revocation.paginate" page={data.page} totalPages={totalPages} onPageChange={setPage} />}
     </div>
   )
 }
@@ -348,7 +348,7 @@ function PromotionHistoryTable({
             <TableHead className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('promotions.colSubmitter')}</TableHead>
             <TableHead className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('promotions.colReviewer')}</TableHead>
             <TableHead aria-sort={sortDirection === 'DESC' ? 'descending' : 'ascending'} className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-              <Button
+              <Button data-analytics-id="promotion.history.sort"
                 type="button"
                 variant="ghost"
                 size="sm"
@@ -434,11 +434,11 @@ export function PromotionsPage() {
       <Tabs defaultValue="PENDING">
         <div className="max-w-full overflow-x-auto">
           <TabsList>
-            <TabsTrigger value="PENDING">{t('promotions.tabPending')}</TabsTrigger>
-            <TabsTrigger value="REVOCATIONS">{t('promotions.tabRevocations')}</TabsTrigger>
-            <TabsTrigger value="REVOCATION_HISTORY">{t('promotions.tabRevocationHistory')}</TabsTrigger>
-            <TabsTrigger value="APPROVED">{t('promotions.tabApproved')}</TabsTrigger>
-            <TabsTrigger value="REJECTED">{t('promotions.tabRejected')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="promotion.pending.tab" value="PENDING">{t('promotions.tabPending')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="promotion.revocation.tab" value="REVOCATIONS">{t('promotions.tabRevocations')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="promotion.revocation.history" value="REVOCATION_HISTORY">{t('promotions.tabRevocationHistory')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="promotion.approved.tab" value="APPROVED">{t('promotions.tabApproved')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="promotion.rejected.tab" value="REJECTED">{t('promotions.tabRejected')}</TabsTrigger>
           </TabsList>
         </div>
         <TabsContent value="PENDING" className="mt-6">

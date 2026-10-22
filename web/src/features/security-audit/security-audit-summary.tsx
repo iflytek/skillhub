@@ -53,7 +53,7 @@ export function SecurityAuditSummary({ skillId, versionId, versionStatus, canRet
           {t('securityAudit.totalFindings', { count: totalFindings })}
         </p>
         {canRetry && versionStatus === 'SCAN_FAILED' && (
-          <Button
+          <Button data-analytics-id="security.scan.retry"
             size="sm"
             className="w-full"
             disabled={retryMutation.isPending}
@@ -68,13 +68,13 @@ export function SecurityAuditSummary({ skillId, versionId, versionStatus, canRet
             {retryMutation.isPending ? t('securityAudit.retrying') : t('securityAudit.retry')}
           </Button>
         )}
-        <Button variant="outline" size="sm" className="w-full" onClick={() => setDialogOpen(true)}>
+        <Button data-analytics-id="security.scan.open" variant="outline" size="sm" className="w-full" onClick={() => setDialogOpen(true)}>
           {t('securityAudit.viewDetails')}
         </Button>
       </Card>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-[min(calc(100vw-2rem),48rem)] max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
+        <DialogContent closeAnalyticsId="security.scan.close" className="w-[min(calc(100vw-2rem),48rem)] max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
           <DialogHeader className="shrink-0">
             <DialogTitle>{t('securityAudit.title')}</DialogTitle>
             <DialogDescription>{t('securityAudit.dialogDescription')}</DialogDescription>

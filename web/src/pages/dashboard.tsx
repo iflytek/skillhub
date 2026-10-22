@@ -22,6 +22,7 @@ interface SidebarItem {
   icon: React.ComponentType<{ className?: string }>
   label: string
   to: string
+  analyticsId?: string
   admin?: boolean
   superAdmin?: boolean
   passwordCapability?: boolean
@@ -37,29 +38,29 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
   {
     label: 'sidebar.account',
     items: [
-      { key: 'profile', icon: UserCog, label: 'sidebar.profile', to: '/settings/profile' },
-      { key: 'security', icon: Lock, label: 'sidebar.security', to: '/settings/security', passwordCapability: true },
-      { key: 'notifications', icon: Bell, label: 'sidebar.notifications', to: '/settings/notifications' },
+      { key: 'profile', icon: UserCog, label: 'sidebar.profile', to: '/settings/profile', analyticsId: 'account.profile.open' },
+      { key: 'security', icon: Lock, label: 'sidebar.security', to: '/settings/security', analyticsId: 'account.security.open', passwordCapability: true },
+      { key: 'notifications', icon: Bell, label: 'sidebar.notifications', to: '/settings/notifications', analyticsId: 'notification.settings.open' },
     ],
   },
   {
     label: 'sidebar.skillsAndData',
     items: [
-      { key: 'skills', icon: Package, label: 'sidebar.mySkills', to: '/dashboard/skills' },
-      { key: 'suites', icon: Boxes, label: 'sidebar.mySuites', to: '/dashboard/suites' },
-      { key: 'namespaces', icon: Globe, label: 'sidebar.namespaces', to: '/dashboard/namespaces' },
-      { key: 'stars', icon: Star, label: 'sidebar.stars', to: '/dashboard/stars' },
-      { key: 'subscriptions', icon: Heart, label: 'sidebar.subscriptions', to: '/dashboard/subscriptions' },
-      { key: 'tokens', icon: Key, label: 'sidebar.tokens', to: '/dashboard/tokens' },
-      { key: 'reviewProgress', icon: Clock, label: 'sidebar.reviewProgress', to: '/dashboard/review-progress' },
+      { key: 'skills', icon: Package, label: 'sidebar.mySkills', to: '/dashboard/skills', analyticsId: 'navigation.owned.skills' },
+      { key: 'suites', icon: Boxes, label: 'sidebar.mySuites', to: '/dashboard/suites', analyticsId: 'navigation.owned.suites' },
+      { key: 'namespaces', icon: Globe, label: 'sidebar.namespaces', to: '/dashboard/namespaces', analyticsId: 'namespace.list.open' },
+      { key: 'stars', icon: Star, label: 'sidebar.stars', to: '/dashboard/stars', analyticsId: 'navigation.starred.open' },
+      { key: 'subscriptions', icon: Heart, label: 'sidebar.subscriptions', to: '/dashboard/subscriptions', analyticsId: 'navigation.subscriptions.open' },
+      { key: 'tokens', icon: Key, label: 'sidebar.tokens', to: '/dashboard/tokens', analyticsId: 'account.tokens.open' },
+      { key: 'reviewProgress', icon: Clock, label: 'sidebar.reviewProgress', to: '/dashboard/review-progress', analyticsId: 'review.progress.open' },
     ],
   },
   {
     label: 'sidebar.admin',
     items: [
-      { key: 'governance', icon: Shield, label: 'sidebar.governance', to: '/dashboard/governance', admin: true },
-      { key: 'reports', icon: Flag, label: 'sidebar.reports', to: '/dashboard/reports', admin: true },
-      { key: 'githubSync', icon: Github, label: 'sidebar.githubSync', to: '/dashboard/github-sync', superAdmin: true },
+      { key: 'governance', icon: Shield, label: 'sidebar.governance', to: '/dashboard/governance', analyticsId: 'governance.center.open', admin: true },
+      { key: 'reports', icon: Flag, label: 'sidebar.reports', to: '/dashboard/reports', analyticsId: 'report.queue.open', admin: true },
+      { key: 'githubSync', icon: Github, label: 'sidebar.githubSync', to: '/dashboard/github-sync', analyticsId: 'github.sync.open', superAdmin: true },
     ],
   },
 ]
@@ -83,12 +84,12 @@ export const SIDEBAR_NAV = SIDEBAR_NAV_ITEMS.map(({ key, icon, label, to, admin,
  * Shown as a grid of quick-access cards linking to main sections.
  */
 const OVERVIEW_CARDS = [
-  { key: 'skills', icon: Package, label: 'overview.mySkills', to: '/dashboard/skills', desc: 'overview.mySkillsDesc' },
-  { key: 'suites', icon: Boxes, label: 'overview.mySuites', to: '/dashboard/suites', desc: 'overview.mySuitesDesc' },
-  { key: 'tokens', icon: Key, label: 'overview.tokens', to: '/dashboard/tokens', desc: 'overview.tokensDesc' },
-  { key: 'stars', icon: Star, label: 'overview.stars', to: '/dashboard/stars', desc: 'overview.starsDesc' },
-  { key: 'profile', icon: UserCog, label: 'overview.profile', to: '/settings/profile', desc: 'overview.profileDesc' },
-  { key: 'security', icon: Lock, label: 'overview.security', to: '/settings/security', desc: 'overview.securityDesc' },
+  { key: 'skills', icon: Package, label: 'overview.mySkills', to: '/dashboard/skills', analyticsId: 'navigation.owned.skills', desc: 'overview.mySkillsDesc' },
+  { key: 'suites', icon: Boxes, label: 'overview.mySuites', to: '/dashboard/suites', analyticsId: 'navigation.owned.suites', desc: 'overview.mySuitesDesc' },
+  { key: 'tokens', icon: Key, label: 'overview.tokens', to: '/dashboard/tokens', analyticsId: 'account.tokens.open', desc: 'overview.tokensDesc' },
+  { key: 'stars', icon: Star, label: 'overview.stars', to: '/dashboard/stars', analyticsId: 'navigation.starred.open', desc: 'overview.starsDesc' },
+  { key: 'profile', icon: UserCog, label: 'overview.profile', to: '/settings/profile', analyticsId: 'account.profile.open', desc: 'overview.profileDesc' },
+  { key: 'security', icon: Lock, label: 'overview.security', to: '/settings/security', analyticsId: 'account.security.open', desc: 'overview.securityDesc' },
 ] as const
 
 /**
@@ -124,7 +125,7 @@ export function DashboardPage() {
             {OVERVIEW_CARDS.filter((card) => card.key !== 'security' || user?.canChangePassword === true).map((card) => {
               const Icon = card.icon
               return (
-                <Link
+                <Link data-analytics-id={card.analyticsId}
                   key={card.key}
                   to={card.to}
                   className="group flex items-start gap-4 rounded-xl border border-border/60 p-5 transition-all duration-150 hover:bg-accent hover:border-border hover:shadow-sm"
@@ -172,7 +173,7 @@ export function DashboardSidebar({
   return (
     <aside className="w-full lg:w-56 flex-shrink-0">
       <div className="rounded-lg border bg-background lg:hidden">
-        <button
+        <button data-analytics-id="navigation.dashboard.toggle"
           type="button"
           className="flex h-10 w-full items-center justify-between gap-3 px-3 text-sm font-medium"
           aria-expanded={mobileOpen}
@@ -190,7 +191,7 @@ export function DashboardSidebar({
               const Icon = item.icon
               const isActive = pathname === item.to || pathname.startsWith(item.to)
               return (
-                <Link
+                <Link data-analytics-id={item.analyticsId}
                   key={item.key}
                   to={item.to}
                   className={`flex items-center gap-2 rounded-md px-2.5 py-2 text-xs font-medium ${isActive ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent'}`}
@@ -241,7 +242,7 @@ export function DashboardSidebar({
               const Icon = item.icon
               const isActive = pathname === item.to || pathname.startsWith(item.to)
               return (
-                <Link
+                <Link data-analytics-id={item.analyticsId}
                   key={item.key}
                   to={item.to}
                   className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors duration-150 ${

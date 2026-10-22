@@ -4,6 +4,9 @@ import { useDropzone } from 'react-dropzone'
 import { cn } from '@/shared/lib/utils'
 
 interface UploadZoneProps {
+  analyticsId?: string
+  folderAnalyticsId?: string
+  pickerAnalyticsId?: string
   onFileSelect: (file: File) => void
   /** Optional: called with the raw files of a picked folder (webkitdirectory). */
   onFolderSelect?: (files: File[]) => void
@@ -19,7 +22,7 @@ export function supportsDirectorySelection(input: HTMLInputElement | null): bool
  * The component is intentionally stateless so packaging validation can remain in
  * the publish flow that knows the surrounding form and backend constraints.
  */
-export function UploadZone({ onFileSelect, onFolderSelect, disabled }: UploadZoneProps) {
+export function UploadZone({ onFileSelect, onFolderSelect, disabled, analyticsId, folderAnalyticsId, pickerAnalyticsId }: UploadZoneProps) {
   const { t } = useTranslation()
   const folderInputRef = useRef<HTMLInputElement>(null)
   const [folderSelectionSupported, setFolderSelectionSupported] = useState(false)
@@ -67,13 +70,15 @@ export function UploadZone({ onFileSelect, onFolderSelect, disabled }: UploadZon
     <div className="flex flex-col gap-3">
       <div
         {...getRootProps()}
+        data-analytics-id={analyticsId}
+        data-analytics-event={analyticsId ? 'click+keydown+drop' : undefined}
         className={cn(
           'upload-zone rounded-xl p-10 text-center cursor-pointer transition-all duration-300',
           isDragActive && 'border-primary bg-primary/5 scale-[1.01]',
           disabled && 'opacity-50 cursor-not-allowed'
         )}
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} data-analytics-id={analyticsId} />
         <div className="flex flex-col items-center gap-3">
           <div className="w-14 h-14 rounded-2xl bg-secondary/60 flex items-center justify-center">
             <svg
@@ -106,6 +111,7 @@ export function UploadZone({ onFileSelect, onFolderSelect, disabled }: UploadZon
       {onFolderSelect && (
         <div className="text-center">
           <input
+            data-analytics-id={folderAnalyticsId}
             ref={folderInputRef}
             type="file"
             className="hidden"
@@ -115,6 +121,7 @@ export function UploadZone({ onFileSelect, onFolderSelect, disabled }: UploadZon
           />
           {folderSelectionSupported ? (
             <button
+              data-analytics-id={pickerAnalyticsId}
               type="button"
               className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => folderInputRef.current?.click()}

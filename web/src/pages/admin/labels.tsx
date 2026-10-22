@@ -246,7 +246,7 @@ export function AdminLabelsPage() {
           <h1 className="mb-2 text-4xl font-bold font-heading">{t('adminLabels.title')}</h1>
           <p className="text-lg text-muted-foreground">{t('adminLabels.subtitle')}</p>
         </div>
-        <Button type="button" onClick={openCreateDialog}>
+        <Button data-analytics-id="admin.label.create" type="button" onClick={openCreateDialog}>
           {t('adminLabels.createAction')}
         </Button>
       </div>
@@ -314,10 +314,10 @@ export function AdminLabelsPage() {
                   <TableCell>{definition.createdAt ? formatLocalDateTime(definition.createdAt, i18n.language) : '-'}</TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => handleMove(index, -1)} disabled={index === 0 || updateSortOrderMutation.isPending}>
+                      <Button data-analytics-id="admin.label.up" type="button" size="sm" variant="outline" onClick={() => handleMove(index, -1)} disabled={index === 0 || updateSortOrderMutation.isPending}>
                         {t('adminLabels.moveUp')}
                       </Button>
-                      <Button
+                      <Button data-analytics-id="admin.label.down"
                         type="button"
                         size="sm"
                         variant="outline"
@@ -326,10 +326,10 @@ export function AdminLabelsPage() {
                       >
                         {t('adminLabels.moveDown')}
                       </Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => openEditDialog(definition)}>
+                      <Button data-analytics-id="admin.label.edit" type="button" size="sm" variant="outline" onClick={() => openEditDialog(definition)}>
                         {t('adminLabels.editAction')}
                       </Button>
-                      <Button
+                      <Button data-analytics-id="admin.label.delete"
                         type="button"
                         size="sm"
                         variant="outline"
@@ -350,7 +350,7 @@ export function AdminLabelsPage() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-[min(calc(100vw-2rem),44rem)]">
+        <DialogContent closeAnalyticsId={editingSlug ? 'admin.label.edit.cancel' : 'admin.label.create.cancel'} className="w-[min(calc(100vw-2rem),44rem)]">
           <DialogHeader>
             <DialogTitle>{editingSlug ? t('adminLabels.editDialogTitle') : t('adminLabels.createDialogTitle')}</DialogTitle>
             <DialogDescription>
@@ -374,12 +374,12 @@ export function AdminLabelsPage() {
                 value={form.type}
                 onValueChange={(value) => setForm((current) => ({ ...current, type: value as LabelFormState['type'] }))}
               >
-                <SelectTrigger id="label-type">
+                <SelectTrigger data-analytics-id="admin.label.type.interact" id="label-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="RECOMMENDED">{t('adminLabels.typeRecommended')}</SelectItem>
-                  <SelectItem value="PRIVILEGED">{t('adminLabels.typePrivileged')}</SelectItem>
+                  <SelectItem data-analytics-id="admin.label.type.recommended" value="RECOMMENDED">{t('adminLabels.typeRecommended')}</SelectItem>
+                  <SelectItem data-analytics-id="admin.label.type.privileged" value="PRIVILEGED">{t('adminLabels.typePrivileged')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -389,12 +389,12 @@ export function AdminLabelsPage() {
                 value={form.visibleInFilter ? 'visible' : 'hidden'}
                 onValueChange={(value) => setForm((current) => ({ ...current, visibleInFilter: value === 'visible' }))}
               >
-                <SelectTrigger id="label-visibility">
+                <SelectTrigger data-analytics-id="admin.label.visibility.interact" id="label-visibility">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="visible">{t('adminLabels.visibilityVisible')}</SelectItem>
-                  <SelectItem value="hidden">{t('adminLabels.visibilityHidden')}</SelectItem>
+                  <SelectItem data-analytics-id="admin.label.visibility.visible" value="visible">{t('adminLabels.visibilityVisible')}</SelectItem>
+                  <SelectItem data-analytics-id="admin.label.visibility.hidden" value="hidden">{t('adminLabels.visibilityHidden')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -415,7 +415,7 @@ export function AdminLabelsPage() {
                 <div className="text-sm font-semibold text-foreground">{t('adminLabels.formTranslations')}</div>
                 <div className="text-xs text-muted-foreground">{t('adminLabels.formTranslationsHint')}</div>
               </div>
-              <Button type="button" variant="outline" size="sm" onClick={addTranslation}>
+              <Button data-analytics-id="admin.label.translation.add" type="button" variant="outline" size="sm" onClick={addTranslation}>
                 {t('adminLabels.addTranslation')}
               </Button>
             </div>
@@ -433,7 +433,7 @@ export function AdminLabelsPage() {
                     value={translation.displayName}
                     onChange={(event) => handleTranslationChange(index, 'displayName', event.target.value)}
                   />
-                  <Button type="button" variant="outline" onClick={() => removeTranslation(index)}>
+                  <Button data-analytics-id="admin.label.translation.remove" type="button" variant="outline" onClick={() => removeTranslation(index)}>
                     {t('adminLabels.removeTranslation')}
                   </Button>
                 </div>
@@ -442,10 +442,10 @@ export function AdminLabelsPage() {
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button data-analytics-id={editingSlug ? 'admin.label.edit.cancel' : 'admin.label.create.cancel'} type="button" variant="outline" onClick={() => setDialogOpen(false)}>
               {t('adminLabels.cancelAction')}
             </Button>
-            <Button
+            <Button data-analytics-id={editingSlug ? 'admin.label.edit.submit' : 'admin.label.create.submit'}
               type="button"
               onClick={handleSubmit}
               disabled={createMutation.isPending || updateMutation.isPending}
@@ -457,7 +457,7 @@ export function AdminLabelsPage() {
       </Dialog>
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId="admin.label.delete.cancel">
           <DialogHeader>
             <DialogTitle>{t('adminLabels.deleteDialogTitle')}</DialogTitle>
             <DialogDescription>
@@ -465,10 +465,10 @@ export function AdminLabelsPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)}>
+            <Button data-analytics-id="admin.label.delete.cancel" type="button" variant="outline" onClick={() => setDeleteDialogOpen(false)}>
               {t('adminLabels.cancelAction')}
             </Button>
-            <Button type="button" onClick={handleDelete} disabled={deleteMutation.isPending}>
+            <Button data-analytics-id="admin.label.delete.confirm" type="button" onClick={handleDelete} disabled={deleteMutation.isPending}>
               {t('adminLabels.deleteAction')}
             </Button>
           </DialogFooter>

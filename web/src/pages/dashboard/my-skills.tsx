@@ -303,7 +303,7 @@ export function MySkillsPage() {
 
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <form className="flex gap-2 sm:w-full sm:max-w-md" onSubmit={event => {
+          <form data-analytics-id="skill.owned.search" className="flex gap-2 sm:w-full sm:max-w-md" onSubmit={event => {
             event.preventDefault()
             updateSearch({ q: keywordInput.trim() || undefined, page: 0 }, { replace: true })
           }}>
@@ -324,13 +324,13 @@ export function MySkillsPage() {
                 updateSearch({ namespace: value === ALL_NAMESPACES_VALUE ? undefined : value, page: 0 })
               }}
             >
-              <SelectTrigger aria-label={t('mySkills.namespaceFilterLabel')} className="sm:max-w-[14rem]">
+              <SelectTrigger data-analytics-id="skill.owned.namespace.interact" aria-label={t('mySkills.namespaceFilterLabel')} className="sm:max-w-[14rem]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_NAMESPACES_VALUE}>{t('mySkills.namespaceFilterAll')}</SelectItem>
+                <SelectItem data-analytics-id="skill.owned.namespace" value={ALL_NAMESPACES_VALUE}>{t('mySkills.namespaceFilterAll')}</SelectItem>
                 {(namespaceOptions ?? []).map((ns: { id: number; slug: string }) => (
-                  <SelectItem key={ns.id} value={ns.slug}>
+                  <SelectItem data-analytics-id="skill.owned.namespace" key={ns.id} value={ns.slug}>
                     @{ns.slug}
                   </SelectItem>
                 ))}
@@ -338,7 +338,7 @@ export function MySkillsPage() {
             </Select>
           )}
           {hasActiveSearch ? (
-            <Button
+            <Button data-analytics-id="skill.owned.clear"
               type="button"
               size="sm"
               variant="ghost"
@@ -351,7 +351,7 @@ export function MySkillsPage() {
 
         <div className="flex flex-wrap gap-2">
           {availableFilters.map((option) => (
-            <Button
+            <Button data-analytics-id="skill.owned.filter"
               key={option}
               type="button"
               size="sm"
@@ -387,7 +387,7 @@ export function MySkillsPage() {
 
 
                 return (
-                  <Card
+                  <Card data-analytics-id={filter === "HIDDEN" ? undefined : "skill.owned.open"}
                     key={skill.id}
                     className={`p-5 group animate-fade-up delay-${Math.min(idx + 1, 6)} ${filter === 'HIDDEN' ? '' : 'cursor-pointer'}`}
                     onClick={filter === 'HIDDEN' ? undefined : () => handleSkillClick(skill.namespace, skill.slug, preview?.version)}
@@ -405,7 +405,7 @@ export function MySkillsPage() {
                           <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                             <span>{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</span>
                             {relatedNamespace && relatedSlug && (
-                              <button type="button" className="text-primary underline underline-offset-4"
+                              <button data-analytics-id="skill.related.open" type="button" className="text-primary underline underline-offset-4"
                                 onClick={event => {
                                   event.stopPropagation()
                                   handleSkillClick(relatedNamespace, relatedSlug)
@@ -448,7 +448,7 @@ export function MySkillsPage() {
                       </div>
                       <div className="flex shrink-0 flex-wrap items-center gap-2 sm:max-w-[45%] sm:justify-end">
                         {canRestoreHidden ? (
-                          <Button
+                          <Button data-analytics-id="skill.restore.request"
                             size="sm"
                             variant="outline"
                             onClick={(event) => {
@@ -459,7 +459,7 @@ export function MySkillsPage() {
                             {t('mySkills.restoreHidden')}
                           </Button>
                         ) : filter === 'HIDDEN' || ownerReadOnly ? null : skill.status !== 'ARCHIVED' && (
-                          <Button
+                          <Button data-analytics-id="skill.update.open"
                             size="sm"
                             variant="outline"
                             onClick={(event) => {
@@ -475,7 +475,7 @@ export function MySkillsPage() {
                             visibility={skill.visibility ?? 'PUBLIC'} disabled={hasPendingPreview} />
                         )}
                         {filter === 'HIDDEN' || ownerReadOnly ? null : hasPendingPreview && ownerPreviewVersion ? (
-                          <Button
+                          <Button data-analytics-id="skill.review.withdraw"
                             size="sm"
                             variant="outline"
                             onClick={(event) => {
@@ -491,7 +491,7 @@ export function MySkillsPage() {
                             {t('mySkills.withdrawReview')}
                           </Button>
                         ) : skill.canSubmitPromotion && publishedVersion ? (
-                          <Button
+                          <Button data-analytics-id={skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'skill.promotion.update.request' : 'skill.promotion.create.request'}
                             size="sm"
                             variant="outline"
                             onClick={(event) => {
@@ -507,7 +507,7 @@ export function MySkillsPage() {
                             {t(skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'mySkills.updateGlobalVersion' : 'mySkills.promoteToGlobal')}
                           </Button>
                         ) : skill.status === 'ARCHIVED' ? (
-                          <Button
+                          <Button data-analytics-id="skill.unarchive.request"
                             size="sm"
                             variant="outline"
                             onClick={(event) => {
@@ -522,7 +522,7 @@ export function MySkillsPage() {
                             {t('mySkills.unarchive')}
                           </Button>
                         ) : publishedVersion ? (
-                          <Button
+                          <Button data-analytics-id="skill.archive.request"
                             size="sm"
                             variant="outline"
                             onClick={(event) => {
@@ -551,7 +551,7 @@ export function MySkillsPage() {
           </div>
 
           {skillPage.total > PAGE_SIZE ? (
-            <Pagination page={page} totalPages={totalPages} onPageChange={(next) => updateSearch({ page: next })} />
+            <Pagination analyticsId="skill.owned.paginate" page={page} totalPages={totalPages} onPageChange={(next) => updateSearch({ page: next })} />
           ) : null}
         </>
       ) : (
@@ -560,7 +560,7 @@ export function MySkillsPage() {
           description={hasActiveSearch ? t('mySkills.emptySearchDescription') : t(emptyStateKey.description)}
           action={
             hasActiveSearch ? (
-              <Button size="lg" variant="outline" onClick={handleClearSearch}>
+              <Button data-analytics-id="skill.owned.clear" size="lg" variant="outline" onClick={handleClearSearch}>
                 {t('mySkills.clearSearch')}
               </Button>
             ) : undefined
@@ -568,7 +568,7 @@ export function MySkillsPage() {
         />
       )}
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.restore.confirm" cancelAnalyticsId="skill.restore.cancel"
         open={!!restoreHiddenTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -582,6 +582,8 @@ export function MySkillsPage() {
       />
 
       <ConfirmDialog
+        confirmAnalyticsId={skillPage?.items.find((skill) => skill.id === promotionTarget?.skillId)?.managementState?.promotionRole === 'TEAM_SOURCE' ? 'skill.promotion.update.confirm' : 'skill.promotion.create.confirm'}
+        cancelAnalyticsId={skillPage?.items.find((skill) => skill.id === promotionTarget?.skillId)?.managementState?.promotionRole === 'TEAM_SOURCE' ? 'skill.promotion.update.cancel' : 'skill.promotion.create.cancel'}
         open={!!promotionTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -594,7 +596,7 @@ export function MySkillsPage() {
         onConfirm={handleSubmitPromotion}
       />
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.archive.confirm" cancelAnalyticsId="skill.archive.cancel"
         open={!!archiveTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -607,7 +609,7 @@ export function MySkillsPage() {
         onConfirm={handleArchiveSkill}
       />
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.unarchive.confirm" cancelAnalyticsId="skill.unarchive.cancel"
         open={!!unarchiveTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -620,7 +622,7 @@ export function MySkillsPage() {
         onConfirm={handleUnarchiveSkill}
       />
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.review.withdraw.confirm" cancelAnalyticsId="skill.review.withdraw.cancel"
         open={!!withdrawTarget}
         onOpenChange={(open) => {
           if (!open) {

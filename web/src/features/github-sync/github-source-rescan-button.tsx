@@ -27,7 +27,7 @@ export function GithubSourceRescanButton({ sourceId, status, namespaceSlug }: {
   })
 
   return <div className="space-y-1">
-    <Button size="sm" className="sync-action" variant="outline" disabled={status === 'PAUSED' || rescan.isPending}
+    <Button data-analytics-id="github.source.rescan" size="sm" className="sync-action" variant="outline" disabled={status === 'PAUSED' || rescan.isPending}
       onClick={() => { setFeedback(''); rescan.mutate() }}>
       {t('githubSync.rescan')}
     </Button>

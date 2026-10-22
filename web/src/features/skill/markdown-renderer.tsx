@@ -169,7 +169,7 @@ function MarkdownRendererComponent({ content, className, onLinkClick }: Markdown
             </p>
           ),
           a: ({ className: linkClassName, children, href, ...props }) => (
-            <a
+            <a data-analytics-id="skill.markdown.link"
               className={cn(
                 'font-medium text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:text-primary/80',
                 linkClassName

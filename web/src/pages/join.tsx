@@ -55,7 +55,7 @@ export function JoinPage() {
         {!invalid && preview.error ? (
           <div className="space-y-3">
             <p role="alert">{t('invitation.networkError')}</p>
-            <Button onClick={() => preview.refetch()}>{t('invitation.retry')}</Button>
+            <Button data-analytics-id="namespace.join.retry" onClick={() => preview.refetch()}>{t('invitation.retry')}</Button>
           </div>
         ) : null}
         {!invalid && preview.data ? (
@@ -67,7 +67,7 @@ export function JoinPage() {
             ) : (
               <>
                 <p>{t('invitation.permissions')}</p>
-                <Button disabled={accept.isPending} onClick={() => accept.mutate()}>{t('invitation.confirm')}</Button>
+                <Button data-analytics-id="namespace.join.confirm" disabled={accept.isPending} onClick={() => accept.mutate()}>{t('invitation.confirm')}</Button>
                 {accept.error && !(accept.error instanceof ApiError && accept.error.status === 404) ? (
                   <p role="alert">{t('invitation.networkError')}</p>
                 ) : null}

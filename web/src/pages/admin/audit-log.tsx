@@ -104,10 +104,10 @@ export function AuditLogPage() {
 
       <Card className="p-5">
         <div className="mb-4 flex flex-wrap gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={applySearchIndexRebuildFilter}>
+          <Button data-analytics-id="admin.audit.rebuild.filter" type="button" variant="outline" size="sm" onClick={applySearchIndexRebuildFilter}>
             {t('auditLog.quickFilterSearchRebuild')}
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
+          <Button data-analytics-id="admin.audit.clear" type="button" variant="outline" size="sm" onClick={clearFilters}>
             {t('auditLog.clearFilters')}
           </Button>
         </div>
@@ -120,12 +120,12 @@ export function AuditLogPage() {
               setPage(0)
             }}
           >
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger data-analytics-id="admin.audit.action.interact" className="w-[200px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {ACTION_OPTIONS.map((option) => (
-                <SelectItem
+                <SelectItem data-analytics-id={option.value === '' ? 'admin.audit.action.all' : option.value === 'CLI_PUBLISH' ? 'admin.audit.action.cli.publish' : option.value === 'COMPAT_PUBLISH' ? 'admin.audit.action.compat.publish' : option.value === 'REVIEW_SUBMIT' ? 'admin.audit.action.review.submit' : option.value === 'REVIEW_APPROVE' ? 'admin.audit.action.review.approve' : option.value === 'REVIEW_REJECT' ? 'admin.audit.action.review.reject' : option.value === 'PROMOTION_SUBMIT' ? 'admin.audit.action.promotion.submit' : option.value === 'PROMOTION_APPROVE' ? 'admin.audit.action.promotion.approve' : option.value === 'PROMOTION_REJECT' ? 'admin.audit.action.promotion.reject' : option.value === 'REPORT_SKILL' ? 'admin.audit.action.report' : option.value === 'RESOLVE_SKILL_REPORT' ? 'admin.audit.action.report.resolve' : option.value === 'DISMISS_SKILL_REPORT' ? 'admin.audit.action.report.dismiss' : option.value === 'HIDE_SKILL' ? 'admin.audit.action.hide' : option.value === 'ARCHIVE_SKILL' ? 'admin.audit.action.archive' : option.value === 'UNHIDE_SKILL' ? 'admin.audit.action.unhide' : option.value === 'UNARCHIVE_SKILL' ? 'admin.audit.action.unarchive' : option.value === 'YANK_SKILL_VERSION' ? 'admin.audit.action.version.yank' : 'admin.audit.action.search.rebuild'}
                   key={option.value || allActionFilterValue}
                   value={option.value || allActionFilterValue}
                 >
@@ -134,7 +134,7 @@ export function AuditLogPage() {
               ))}
             </SelectContent>
           </Select>
-          <Input
+          <Input data-analytics-id="admin.audit.user.filter"
             placeholder={t('auditLog.userIdPlaceholder')}
             value={userIdFilter}
             onChange={(e) => {
@@ -142,7 +142,7 @@ export function AuditLogPage() {
               setPage(0)
             }}
           />
-          <Input
+          <Input data-analytics-id="admin.audit.request.filter"
             placeholder={t('auditLog.requestIdPlaceholder')}
             value={requestIdFilter}
             onChange={(e) => {
@@ -150,7 +150,7 @@ export function AuditLogPage() {
               setPage(0)
             }}
           />
-          <Input
+          <Input data-analytics-id="admin.audit.ip.filter"
             placeholder={t('auditLog.ipPlaceholder')}
             value={ipFilter}
             onChange={(e) => {
@@ -158,7 +158,7 @@ export function AuditLogPage() {
               setPage(0)
             }}
           />
-          <Input
+          <Input data-analytics-id="admin.audit.type.filter"
             placeholder={t('auditLog.resourceTypePlaceholder')}
             value={resourceTypeFilter}
             onChange={(e) => {
@@ -166,7 +166,7 @@ export function AuditLogPage() {
               setPage(0)
             }}
           />
-          <Input
+          <Input data-analytics-id="admin.audit.resource.filter"
             placeholder={t('auditLog.resourceIdPlaceholder')}
             value={resourceIdFilter}
             onChange={(e) => {
@@ -174,7 +174,7 @@ export function AuditLogPage() {
               setPage(0)
             }}
           />
-          <Input
+          <Input data-analytics-id="admin.audit.start.filter"
             type="datetime-local"
             value={startTimeFilter}
             onChange={(e) => {
@@ -182,7 +182,7 @@ export function AuditLogPage() {
               setPage(0)
             }}
           />
-          <Input
+          <Input data-analytics-id="admin.audit.end.filter"
             type="datetime-local"
             value={endTimeFilter}
             onChange={(e) => {
@@ -239,7 +239,7 @@ export function AuditLogPage() {
               {t('auditLog.totalRecords', { total: data.total, page: page + 1 })}
             </p>
             <div className="flex gap-2">
-              <Button
+              <Button data-analytics-id="admin.audit.previous"
                 variant="outline"
                 size="sm"
                 disabled={page === 0}
@@ -247,7 +247,7 @@ export function AuditLogPage() {
               >
                 {t('auditLog.prevPage')}
               </Button>
-              <Button
+              <Button data-analytics-id="admin.audit.next"
                 variant="outline"
                 size="sm"
                 disabled={(page + 1) * 20 >= data.total}

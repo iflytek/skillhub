@@ -67,7 +67,7 @@ export function GovernanceInbox({ items, isLoading }: GovernanceInboxProps) {
             </div>
           </div>
           <div className="flex justify-end">
-            <Button variant="outline" size="sm" onClick={() => openItem(item)}>
+            <Button data-analytics-id={item.type === 'REVIEW' ? 'governance.review.open' : item.type === 'PROMOTION' ? 'governance.promotion.open' : item.type === 'REPORT' ? 'governance.report.open' : item.namespace && item.skillSlug ? 'governance.skill.open' : undefined} variant="outline" size="sm" onClick={() => openItem(item)}>
               {t('governance.openItem')}
             </Button>
           </div>

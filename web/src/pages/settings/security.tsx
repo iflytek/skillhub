@@ -93,7 +93,7 @@ export function SecuritySettingsPage() {
       <Card className="glass-strong">
         <CardContent>
           {canChangePassword ? (
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form data-analytics-id="account.password.save" className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="current-password">{t('security.currentPassword')}</label>
                 <Input

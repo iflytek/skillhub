@@ -60,7 +60,7 @@ export function NamespaceSkills({ namespace, showHeader = true }: { namespace: s
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {skillsData.items.map((skill, idx) => (
                 <div key={skill.id} className={`relative animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
-                  <SkillCard
+                  <SkillCard analyticsId="skill.card.open"
                     skill={skill}
                     onClick={() => handleSkillClick(skill.slug)}
                   />
@@ -69,7 +69,7 @@ export function NamespaceSkills({ namespace, showHeader = true }: { namespace: s
             </div>
 
             {skillsData.total > PAGE_SIZE ? (
-              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              <Pagination analyticsId="namespace.skill.paginate" page={page} totalPages={totalPages} onPageChange={setPage} />
             ) : null}
           </>
         ) : (
