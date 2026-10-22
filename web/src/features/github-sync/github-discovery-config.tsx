@@ -168,12 +168,12 @@ export function GithubDiscoveryConfig({ layout = 'default' }: { layout?: 'defaul
         </div>
         <div className="flex flex-wrap gap-2" role="group" aria-label={t('githubSync.discoveryMode')}>
           {layout === 'default' ? <Button size="sm" className="sync-action" onClick={() => openForm('repository')}>{t('githubSync.addRepository')}</Button> : null}
-          <Button size="sm" variant="outline" className="sync-action" onClick={() => openForm('owner')}>{t('githubSync.addOwner')}</Button>
-          <Button size="sm" variant="outline" className="sync-action" onClick={() => openForm('rule')}>{t('githubSync.addRule')}</Button>
+          <Button data-analytics-id="github.owner.create" size="sm" variant="outline" className="sync-action" onClick={() => openForm('owner')}>{t('githubSync.addOwner')}</Button>
+          <Button data-analytics-id="github.rule.create" size="sm" variant="outline" className="sync-action" onClick={() => openForm('rule')}>{t('githubSync.addRule')}</Button>
         </div>
       </div>
       <Dialog open={mode !== null} onOpenChange={(open) => { if (!open) closeForm() }}>
-        <DialogContent className="github-sync-surface w-[min(calc(100vw-2rem),60rem)] rounded-md">
+        <DialogContent closeAnalyticsId={mode === 'owner' ? 'github.owner.cancel' : editingRuleId ? 'github.rule.edit.cancel' : 'github.rule.create.cancel'} className="github-sync-surface w-[min(calc(100vw-2rem),60rem)] rounded-md">
           <DialogHeader>
             <DialogTitle>{t(mode === 'repository' ? 'githubSync.addRepository' : mode === 'owner' ? 'githubSync.addOwner' : editingRuleId ? 'githubSync.editRule' : 'githubSync.addRule')}</DialogTitle>
             <DialogDescription>{t(mode === 'repository' ? 'githubSync.repositoryHelp' : mode === 'owner' ? 'githubSync.ownerHelp' : 'githubSync.ruleHelp')}</DialogDescription>
@@ -188,7 +188,7 @@ export function GithubDiscoveryConfig({ layout = 'default' }: { layout?: 'defaul
         ) : null}
         {mode === 'owner' ? (
         <div>
-          <form onSubmit={addOwner} className="space-y-3">
+          <form data-analytics-id="github.owner.add" onSubmit={addOwner} className="space-y-3">
             <Input aria-label={t('githubSync.owner')} placeholder="owner" value={owner} onChange={(event) => setOwner(event.target.value)} required />
             <label className="block text-sm">{t('githubSync.targetHours')}
               <Input type="number" min={1} max={720} value={ownerHours}
@@ -203,7 +203,7 @@ export function GithubDiscoveryConfig({ layout = 'default' }: { layout?: 'defaul
         {mode === 'rule' ? (
         <div>
           <div className="grid gap-6 lg:grid-cols-2">
-          <form onSubmit={saveRule} className="space-y-3">
+          <form data-analytics-id={editingRuleId ? 'github.rule.edit.submit' : 'github.rule.create.submit'} onSubmit={saveRule} className="space-y-3">
             <Input aria-label={t('githubSync.ruleTitle')} placeholder={t('githubSync.ruleTitle')} value={ruleTitle} onChange={(event) => setRuleTitle(event.target.value)} required />
             <label className="block text-sm">{t('githubSync.targetHours')}
               <Input type="number" min={1} max={720} value={ruleHours}
@@ -216,12 +216,12 @@ export function GithubDiscoveryConfig({ layout = 'default' }: { layout?: 'defaul
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block text-sm">{t('githubSync.selectorKind')}
                     <select className="mt-1 w-full px-2 text-sm" value={selector.kind} onChange={(event) => setSelectors((current) => current.map((item, at) => at === index ? { ...item, kind: event.target.value as Selector['kind'] } : item))}>
-                      <option value="KEYWORD">{t('githubSync.keyword')}</option><option value="TOPIC">{t('githubSync.topic')}</option>
+                      <option data-analytics-id="github.selector.kind.keyword" value="KEYWORD">{t('githubSync.keyword')}</option><option data-analytics-id="github.selector.kind.topic" value="TOPIC">{t('githubSync.topic')}</option>
                     </select>
                   </label>
                   <label className="block text-sm">{t('githubSync.selectorPriority')}
                     <select className="mt-1 w-full px-2 text-sm" value={selector.priority} onChange={(event) => setSelectors((current) => current.map((item, at) => at === index ? { ...item, priority: event.target.value as Selector['priority'] } : item))}>
-                      <option value="CORE">{t('githubSync.core')}</option><option value="EXTENSION">{t('githubSync.extension')}</option>
+                      <option data-analytics-id="github.selector.priority.core" value="CORE">{t('githubSync.core')}</option><option data-analytics-id="github.selector.priority.extension" value="EXTENSION">{t('githubSync.extension')}</option>
                     </select>
                   </label>
                 </div>
@@ -229,15 +229,15 @@ export function GithubDiscoveryConfig({ layout = 'default' }: { layout?: 'defaul
                   <label className="min-w-40 flex-1 text-sm">{t(selector.kind === 'TOPIC' ? 'githubSync.topic' : 'githubSync.keyword')}
                     <Input className="mt-1" value={selector.value} onChange={(event) => setSelectors((current) => current.map((item, at) => at === index ? { ...item, value: event.target.value } : item))} required />
                   </label>
-                  {selectors.length > 1 ? <Button type="button" size="sm" className="sync-action" variant="outline" onClick={() => setSelectors((current) => current.filter((_, at) => at !== index))}>{t('githubSync.remove')}</Button> : null}
+                  {selectors.length > 1 ? <Button data-analytics-id="github.selector.remove" type="button" size="sm" className="sync-action" variant="outline" onClick={() => setSelectors((current) => current.filter((_, at) => at !== index))}>{t('githubSync.remove')}</Button> : null}
                 </div>
               </div>
             ))}
-            {selectors.length < 20 ? <Button type="button" size="sm" className="sync-action" variant="outline" onClick={() => setSelectors((current) => [...current, initialSelector])}>{t('githubSync.addSelector')}</Button> : null}
+            {selectors.length < 20 ? <Button data-analytics-id="github.selector.add" type="button" size="sm" className="sync-action" variant="outline" onClick={() => setSelectors((current) => [...current, initialSelector])}>{t('githubSync.addSelector')}</Button> : null}
             <div className="flex flex-wrap gap-2">
               <Button type="submit" size="sm" className="sync-action" disabled={mutations.addSearchRule.isPending || mutations.updateSearchRule.isPending}>{t(editingRuleId ? 'githubSync.save' : 'githubSync.add')}</Button>
-              <Button type="button" size="sm" className="sync-action" variant="outline" disabled={previewPending || workerStatus.data?.online !== true || !ruleTitle.trim() || selectors.some((selector) => !selector.value.trim())} onClick={previewRule}>{t('githubSync.previewRule')}</Button>
-              <Button type="button" size="sm" className="sync-action" variant="outline" onClick={closeForm}>{t('githubSync.cancel')}</Button>
+              <Button data-analytics-id="github.rule.preview" type="button" size="sm" className="sync-action" variant="outline" disabled={previewPending || workerStatus.data?.online !== true || !ruleTitle.trim() || selectors.some((selector) => !selector.value.trim())} onClick={previewRule}>{t('githubSync.previewRule')}</Button>
+              <Button data-analytics-id={editingRuleId ? 'github.rule.edit.cancel' : 'github.rule.create.cancel'} type="button" size="sm" className="sync-action" variant="outline" onClick={closeForm}>{t('githubSync.cancel')}</Button>
             </div>
           </form>
           <div className="sync-preview p-4" aria-live="polite">
@@ -292,8 +292,8 @@ export function GithubDiscoveryConfig({ layout = 'default' }: { layout?: 'defaul
                 <TableCell>{formatLocalDateTime(entry.nextDueAt, i18n.language)}</TableCell>
                 <TableCell><span className="sync-state" data-tone={entry.enabled ? 'teal' : 'amber'}>{entry.enabled ? t('githubSync.active') : t('githubSync.paused')}</span></TableCell>
                 <TableCell className="space-x-2">
-                  {entry.entryType === 'SEARCH_RULE' ? <Button size="sm" className="sync-action" variant="outline" onClick={() => editRule(entry)}>{t('githubSync.edit')}</Button> : null}
-                  <Button size="sm" className="sync-action" variant="outline" disabled={!entry.id || mutations.setEnabled.isPending} onClick={() => entry.id && setEnabled(entry.id, !entry.enabled)}>{entry.enabled ? t('githubSync.disable') : t('githubSync.enable')}</Button>
+                  {entry.entryType === 'SEARCH_RULE' ? <Button data-analytics-id="github.rule.edit" size="sm" className="sync-action" variant="outline" onClick={() => editRule(entry)}>{t('githubSync.edit')}</Button> : null}
+                  <Button data-analytics-id={entry.entryType === 'SEARCH_RULE' ? entry.enabled ? 'github.rule.disable' : 'github.rule.enable' : entry.enabled ? 'github.owner.disable' : 'github.owner.enable'} size="sm" className="sync-action" variant="outline" disabled={!entry.id || mutations.setEnabled.isPending} onClick={() => entry.id && setEnabled(entry.id, !entry.enabled)}>{entry.enabled ? t('githubSync.disable') : t('githubSync.enable')}</Button>
                 </TableCell>
               </TableRow>
             ))}</TableBody>

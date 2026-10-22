@@ -11,6 +11,7 @@ import { formatRelativeTime } from '@/shared/lib/format-relative-time'
 import { Bookmark, ShieldCheck, User, Clock } from 'lucide-react'
 
 interface SkillCardProps {
+  analyticsId?: string
   skill: SkillSummary
   onClick?: () => void
   highlightStarred?: boolean
@@ -19,7 +20,7 @@ interface SkillCardProps {
 /**
  * Reusable card for displaying one skill in lists such as landing, namespace, search, and stars.
  */
-export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCardProps) {
+export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId }: SkillCardProps) {
   const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuth()
   // Batch highlight via shared ['skills','stars'] — never N× useStar per grid row.
@@ -34,6 +35,7 @@ export function SkillCard({ skill, onClick, highlightStarred = true }: SkillCard
 
   return (
     <Card
+      data-analytics-id={isInteractive ? analyticsId : undefined}
       className="group relative h-full min-w-0 cursor-pointer overflow-hidden rounded-md border border-border/60 bg-card p-4 text-card-foreground transition-[transform,box-shadow,border-color] duration-150 ease-out card-hover focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/15"
       style={{ borderColor: 'hsl(var(--border-card))', boxShadow: 'var(--shadow-card)' }}
       onClick={onClick}

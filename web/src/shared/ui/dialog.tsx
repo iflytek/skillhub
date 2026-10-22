@@ -28,8 +28,8 @@ DialogOverlay.displayName = 'DialogOverlay'
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideClose?: boolean }
->(({ className, children, hideClose = false, ...props }, ref) => (
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideClose?: boolean; closeAnalyticsId?: string }
+>(({ className, children, hideClose = false, closeAnalyticsId, ...props }, ref) => (
   <DialogPortal container={getPortalContainer()}>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -42,7 +42,7 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      {!hideClose ? <DialogPrimitive.Close className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground/60 transition-all duration-150 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none disabled:pointer-events-none">
+      {!hideClose ? <DialogPrimitive.Close data-analytics-id={closeAnalyticsId} className="absolute right-4 top-4 rounded-lg p-1.5 text-muted-foreground/60 transition-all duration-150 hover:bg-accent hover:text-foreground focus-visible:bg-accent focus-visible:text-foreground focus-visible:outline-none disabled:pointer-events-none">
         <span className="sr-only">Close</span>
         <svg
           xmlns="http://www.w3.org/2000/svg"

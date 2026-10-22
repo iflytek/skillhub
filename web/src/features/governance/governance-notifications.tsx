@@ -45,7 +45,7 @@ export function GovernanceNotifications({ items, isLoading, onMarkRead, isMarkin
           {item.bodyJson ? <div className="text-sm text-muted-foreground break-all">{item.bodyJson}</div> : null}
           {item.status === 'UNREAD' && item.id ? (
             <div className="flex justify-end">
-              <Button size="sm" variant="outline" disabled={isMarkingRead} onClick={() => onMarkRead(item.id as number)}>
+              <Button data-analytics-id="notification.read.request" size="sm" variant="outline" disabled={isMarkingRead} onClick={() => onMarkRead(item.id as number)}>
                 {t('governance.markRead')}
               </Button>
             </div>

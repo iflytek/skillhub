@@ -65,7 +65,7 @@ export function NamespaceHeader({ namespace, canEdit = false }: NamespaceHeaderP
       </div>
       {canEdit ? (
         <EditNamespaceDialog namespace={namespace}>
-          <Button type="button" variant="outline" size="sm" aria-label={t('namespaceEdit.editButton')}>
+          <Button data-analytics-id="namespace.settings.edit" type="button" variant="outline" size="sm" aria-label={t('namespaceEdit.editButton')}>
             <Pencil className="mr-1 h-4 w-4" />
             {t('namespaceEdit.editButton')}
           </Button>

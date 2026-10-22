@@ -21,9 +21,9 @@ const SOURCE_STATUSES = ['ACTIVE', 'PAUSED', 'UNREACHABLE'] as const
 type Search = { repositoryId?: number; page?: number; q?: string; originType?: GithubSyncRepositoryQuery['originType']; state?: GithubSyncRepositoryQuery['state']; sourceStatus?: GithubSyncRepositoryQuery['sourceStatus']; asOf?: string; runId?: string }
 type Change = (changes: Partial<Search>) => void
 
-function SelectFilter({ label, value, options, onChange }: { label: string; value?: string; options: readonly string[]; onChange: (value?: string) => void }) {
+function SelectFilter({ label, value, options, onChange, analyticsId }: { label: string; value?: string; options: readonly string[]; onChange: (value?: string) => void; analyticsId?: string }) {
   const { t } = useTranslation()
-  return <label className="text-sm">{label}<select className="mt-1 block h-9 w-full rounded border bg-background px-2" value={value ?? ''} onChange={(event) => onChange(event.target.value || undefined)}>
+  return <label className="text-sm">{label}<select data-analytics-id={analyticsId} className="mt-1 block h-9 w-full rounded border bg-background px-2" value={value ?? ''} onChange={(event) => onChange(event.target.value || undefined)}>
     <option value="">{t('githubSync.all')}</option>
     {options.map((option) => <option value={option} key={option}>{t(`githubSync.repositoryFilter.${option}`, { defaultValue: option })}</option>)}
   </select></label>
@@ -51,13 +51,13 @@ export function RepositoryDetail({ repositoryId, visible, onClose, onRun }: { re
   }
 
   return <Dialog open onOpenChange={(open) => { if (!open && !navigatingAway.current) onClose() }}>
-    <DialogContent className="github-sync-surface !left-auto !right-0 !top-0 !h-dvh !max-h-dvh !grid-rows-[auto_minmax(0,1fr)] !gap-0 !overflow-hidden w-[min(100vw,40rem)] !translate-x-0 !translate-y-0 !rounded-none p-0">
+    <DialogContent closeAnalyticsId="github.repository.close" className="github-sync-surface !left-auto !right-0 !top-0 !h-dvh !max-h-dvh !grid-rows-[auto_minmax(0,1fr)] !gap-0 !overflow-hidden w-[min(100vw,40rem)] !translate-x-0 !translate-y-0 !rounded-none p-0">
       <DialogHeader className="border-b px-5 py-4 text-left"><DialogTitle>{t('githubSync.repositoryDetail')}</DialogTitle><DialogDescription>{t('githubSync.repositoryDetailHelp')}</DialogDescription></DialogHeader>
       <div className="min-h-0 space-y-5 overflow-y-auto overscroll-contain px-5 py-5">
         {detail.isLoading ? <p className="text-sm text-muted-foreground">{t('githubSync.loading')}</p> : null}
         {detail.error ? <p role="alert" className="text-sm text-destructive">{t('githubSync.loadFailed')}: {detail.error.message}</p> : null}
         {repository ? <>
-          <div className="space-y-2"><a className="inline-flex max-w-full items-center gap-1 break-all text-lg font-semibold text-primary hover:underline" href={`https://github.com/${encodeURIComponent(repository.owner ?? '')}/${encodeURIComponent(repository.name ?? '')}`} target="_blank" rel="noopener noreferrer">{repository.owner}/{repository.name}<ExternalLink className="h-4 w-4 shrink-0" /></a>
+          <div className="space-y-2"><a data-analytics-id="github.repository.external" className="inline-flex max-w-full items-center gap-1 break-all text-lg font-semibold text-primary hover:underline" href={`https://github.com/${encodeURIComponent(repository.owner ?? '')}/${encodeURIComponent(repository.name ?? '')}`} target="_blank" rel="noopener noreferrer">{repository.owner}/{repository.name}<ExternalLink className="h-4 w-4 shrink-0" /></a>
             <p className="text-sm">{t(`githubSync.repositoryState.${repository.state}`, { defaultValue: repository.state ?? '—' })}{repository.sourceStatus ? ` · ${t(`githubSync.sourceStatus.${repository.sourceStatus}`, { defaultValue: repository.sourceStatus })}` : ''}</p>
             <p className="text-xs text-muted-foreground">{t('githubSync.firstSeen')}: {date(repository.firstSeenAt)} · ID {repository.repositoryId}</p>
           </div>
@@ -66,21 +66,21 @@ export function RepositoryDetail({ repositoryId, visible, onClose, onRun }: { re
             <div><dt className="text-xs text-muted-foreground">{t('githubSync.nextCheck')}</dt><dd>{date(detail.data?.nextCheckAt)}</dd></div>
             {detail.data?.lastErrorCode ? <div className="sm:col-span-2"><dt className="text-xs text-muted-foreground">{t('githubSync.failureReason')}</dt><dd>{t(`githubSync.codes.${detail.data.lastErrorCode}`, { defaultValue: detail.data.lastErrorCode })}</dd></div> : null}
           </dl>
-          {detail.data?.latestRunId ? <Button size="sm" variant="outline" onClick={() => onRun(detail.data!.latestRunId!)}>{t('githubSync.viewRun')}</Button> : null}
+          {detail.data?.latestRunId ? <Button data-analytics-id="github.run.open" size="sm" variant="outline" onClick={() => onRun(detail.data!.latestRunId!)}>{t('githubSync.viewRun')}</Button> : null}
           <section className="space-y-2 border-t pt-4"><h3 className="font-semibold">{t('githubSync.origins')}</h3>
             {origins.isLoading ? <p className="text-sm text-muted-foreground">{t('githubSync.loading')}</p> : null}
             {origins.error ? <p role="alert" className="text-sm text-destructive">{t('githubSync.loadFailed')}: {origins.error.message}</p> : null}
             {origins.data?.items?.length ? <div className="divide-y rounded border text-sm">{origins.data.items.map((origin, index) => <div key={`${origin.originType}:${origin.originKey}:${index}`} className="space-y-1 p-3"><p className="font-medium">{t(`githubSync.repositoryFilter.${origin.originType}`, { defaultValue: origin.originType ?? '—' })}</p><p className="break-all text-muted-foreground">{origin.originKey}</p><p className="text-xs text-muted-foreground">{t('githubSync.firstSeen')}: {date(origin.firstSeenAt)}{origin.lastSeenAt ? ` · ${t('deepDiscovery.lastDiscovered')}: ${date(origin.lastSeenAt)}` : ''}</p></div>)}</div> : !origins.isLoading && !origins.error ? <p className="text-sm text-muted-foreground">{t('githubSync.empty')}</p> : null}
-            {originPages > 1 ? <Pagination page={originPage} totalPages={originPages} onPageChange={(next) => { setOriginAsOf(originAsOf ?? origins.data?.asOf); setOriginPage(next) }} /> : null}
+            {originPages > 1 ? <Pagination analyticsId="github.provenance.paginate" page={originPage} totalPages={originPages} onPageChange={(next) => { setOriginAsOf(originAsOf ?? origins.data?.asOf); setOriginPage(next) }} /> : null}
           </section>
           <section className="space-y-2 border-t pt-4"><h3 className="font-semibold">{t('deepDiscovery.pathResults')} {paths.data ? `(${paths.data.total ?? 0})` : ''}</h3>
             {paths.isLoading ? <p className="text-sm text-muted-foreground">{t('githubSync.loading')}</p> : null}
             {paths.error ? <p role="alert" className="text-sm text-destructive">{t('githubSync.loadFailed')}: {paths.error.message}</p> : null}
-            {paths.data?.items?.length ? <div className="divide-y rounded border text-sm">{paths.data.items.map((path, index) => <div key={`${path.skillPath}:${index}`} className="space-y-1 p-3"><p className="break-all font-medium">{path.skillPath}</p><p className="text-xs text-muted-foreground">{t(`deepDiscovery.pathOutcome.${path.outcome}`, { defaultValue: path.outcome ?? '—' })}{path.reasonCode ? ` · ${t(`githubSync.codes.${path.reasonCode}`, { defaultValue: path.reasonCode })}` : ''}</p>{path.reviewId ? <Link to="/dashboard/reviews/$id" params={{ id: String(path.reviewId) }} onClickCapture={markNavigation} className="text-xs text-primary hover:underline">{t('deepDiscovery.viewReview')}</Link> : null}</div>)}</div> : !paths.isLoading && !paths.error ? <p className="text-sm text-muted-foreground">{t('deepDiscovery.noPaths')}</p> : null}
-            {pathPages > 1 ? <Pagination page={pathPage} totalPages={pathPages} onPageChange={(next) => { setPathAsOf(pathAsOf ?? paths.data?.asOf); setPathPage(next) }} /> : null}
+            {paths.data?.items?.length ? <div className="divide-y rounded border text-sm">{paths.data.items.map((path, index) => <div key={`${path.skillPath}:${index}`} className="space-y-1 p-3"><p className="break-all font-medium">{path.skillPath}</p><p className="text-xs text-muted-foreground">{t(`deepDiscovery.pathOutcome.${path.outcome}`, { defaultValue: path.outcome ?? '—' })}{path.reasonCode ? ` · ${t(`githubSync.codes.${path.reasonCode}`, { defaultValue: path.reasonCode })}` : ''}</p>{path.reviewId ? <Link data-analytics-id="review.detail.open" to="/dashboard/reviews/$id" params={{ id: String(path.reviewId) }} onClickCapture={markNavigation} className="text-xs text-primary hover:underline">{t('deepDiscovery.viewReview')}</Link> : null}</div>)}</div> : !paths.isLoading && !paths.error ? <p className="text-sm text-muted-foreground">{t('deepDiscovery.noPaths')}</p> : null}
+            {pathPages > 1 ? <Pagination analyticsId="github.path.paginate" page={pathPage} totalPages={pathPages} onPageChange={(next) => { setPathAsOf(pathAsOf ?? paths.data?.asOf); setPathPage(next) }} /> : null}
           </section>
-          {repository.sourceId ? <section className="border-t pt-4"><Button size="sm" variant="outline" aria-expanded={sourceActions} onClick={() => setSourceActions(!sourceActions)}>{t('githubSync.sourceActions')}</Button>{sourceActions && visible ? <div className="mt-4"><GithubSyncSourceDetail sourceId={repository.sourceId} status={repository.sourceStatus ?? undefined} visible={visible} /></div> : null}</section> : null}
-          <Link to="/dashboard/reviews" search={{ type: 'sync' }} onClickCapture={markNavigation} className="inline-block border-t pt-4 text-sm text-primary hover:underline">{t('githubSync.openReviewQueue')}</Link>
+          {repository.sourceId ? <section className="border-t pt-4"><Button data-analytics-id="github.source.actions" size="sm" variant="outline" aria-expanded={sourceActions} onClick={() => setSourceActions(!sourceActions)}>{t('githubSync.sourceActions')}</Button>{sourceActions && visible ? <div className="mt-4"><GithubSyncSourceDetail sourceId={repository.sourceId} status={repository.sourceStatus ?? undefined} visible={visible} /></div> : null}</section> : null}
+          <Link data-analytics-id="review.queue.open" to="/dashboard/reviews" search={{ type: 'sync' }} onClickCapture={markNavigation} className="inline-block border-t pt-4 text-sm text-primary hover:underline">{t('githubSync.openReviewQueue')}</Link>
         </> : null}
       </div>
     </DialogContent>
@@ -114,14 +114,14 @@ export function GithubSyncRepositories({ visible, search, onChange }: { visible:
 
   return <div className="space-y-4">
     <div><h2 className="text-lg font-semibold">{t('githubSync.repositoriesTab')}</h2><p className="text-sm text-muted-foreground">{t('githubSync.repositoriesHelp')}</p></div>
-    <form onSubmit={submit} className="grid gap-3 rounded border p-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(145px,180px))_auto]">
+    <form data-analytics-id="github.repository.search" onSubmit={submit} className="grid gap-3 rounded border p-3 sm:grid-cols-2 xl:grid-cols-[minmax(180px,1fr)_repeat(3,minmax(145px,180px))_auto]">
       <label className="text-sm">{t('githubSync.searchRepository')}<Input className="mt-1" value={input} onChange={(event) => setInput(event.target.value)} maxLength={120} placeholder="owner/repository" /></label>
-      <SelectFilter label={t('githubSync.discoveryMethod')} value={search.originType} options={ORIGIN_TYPES} onChange={(originType) => changeFilter({ originType: originType as GithubSyncRepositoryQuery['originType'] })} />
-      <SelectFilter label={t('githubSync.repositoryStateLabel')} value={search.state} options={STATES} onChange={(state) => changeFilter({ state: state as GithubSyncRepositoryQuery['state'] })} />
-      <SelectFilter label={t('githubSync.sourceState')} value={search.sourceStatus} options={SOURCE_STATUSES} onChange={(sourceStatus) => changeFilter({ sourceStatus: sourceStatus as GithubSyncRepositoryQuery['sourceStatus'] })} />
+      <SelectFilter analyticsId="github.repository.origin.filter" label={t('githubSync.discoveryMethod')} value={search.originType} options={ORIGIN_TYPES} onChange={(originType) => changeFilter({ originType: originType as GithubSyncRepositoryQuery['originType'] })} />
+      <SelectFilter analyticsId="github.repository.state.filter" label={t('githubSync.repositoryStateLabel')} value={search.state} options={STATES} onChange={(state) => changeFilter({ state: state as GithubSyncRepositoryQuery['state'] })} />
+      <SelectFilter analyticsId="github.repository.source.status.filter" label={t('githubSync.sourceState')} value={search.sourceStatus} options={SOURCE_STATUSES} onChange={(sourceStatus) => changeFilter({ sourceStatus: sourceStatus as GithubSyncRepositoryQuery['sourceStatus'] })} />
       <Button type="submit" size="sm" className="self-end">{t('githubSync.search')}</Button>
     </form>
-    {newResults ? <div role="status" className="flex items-center justify-between rounded border border-primary/30 bg-primary/5 p-3 text-sm"><span>{t('githubSync.newRepositoryResults')}</span><Button size="sm" variant="outline" onClick={refresh}><RefreshCw className="h-4 w-4" />{t('githubSync.refreshResults')}</Button></div> : null}
+    {newResults ? <div role="status" className="flex items-center justify-between rounded border border-primary/30 bg-primary/5 p-3 text-sm"><span>{t('githubSync.newRepositoryResults')}</span><Button data-analytics-id="github.repository.refresh" size="sm" variant="outline" onClick={refresh}><RefreshCw className="h-4 w-4" />{t('githubSync.refreshResults')}</Button></div> : null}
     <Card className="sync-section overflow-x-auto">
       {repositories.isLoading ? <p className="p-5 text-sm text-muted-foreground">{t('githubSync.loading')}</p> : null}
       {repositories.error ? <p role="alert" className="p-5 text-sm text-destructive">{t('githubSync.loadFailed')}: {repositories.error.message}</p> : null}
@@ -131,10 +131,10 @@ export function GithubSyncRepositories({ visible, search, onChange }: { visible:
         <TableCell className="min-w-36"><div className="flex flex-wrap gap-1">{item.originTypes?.map((type) => <span className="rounded border px-2 py-0.5 text-xs" key={type}>{t(`githubSync.repositoryFilter.${type}`, { defaultValue: type })}</span>)}</div></TableCell>
         <TableCell><span className="sync-state" data-tone={item.state === 'REGISTERED' ? 'blue' : item.state === 'VALIDATION_FAILED' || item.state === 'UNREACHABLE' ? 'red' : 'amber'}>{t(`githubSync.repositoryState.${item.state}`, { defaultValue: item.state ?? '—' })}</span>{item.sourceStatus ? <span className="mt-1 block text-xs text-muted-foreground">{t(`githubSync.sourceStatus.${item.sourceStatus}`, { defaultValue: item.sourceStatus })}</span> : null}</TableCell>
         <TableCell>{formatLocalDateTime(item.firstSeenAt, i18n.language)}</TableCell>
-        <TableCell><Button size="sm" variant="outline" onClick={() => onChange({ repositoryId: item.repositoryId })}>{t('githubSync.details')}</Button></TableCell>
+        <TableCell><Button data-analytics-id="github.repository.open" size="sm" variant="outline" onClick={() => onChange({ repositoryId: item.repositoryId })}>{t('githubSync.details')}</Button></TableCell>
       </TableRow>)}</TableBody></Table> : null}
     </Card>
-    {repositories.data && pages > 1 ? <Pagination page={search.page ?? 0} totalPages={pages} onPageChange={(page) => onChange({ page, asOf: search.asOf ?? repositories.data?.asOf })} /> : null}
+    {repositories.data && pages > 1 ? <Pagination analyticsId="github.repository.paginate" page={search.page ?? 0} totalPages={pages} onPageChange={(page) => onChange({ page, asOf: search.asOf ?? repositories.data?.asOf })} /> : null}
     {search.repositoryId ? <RepositoryDetail key={search.repositoryId} repositoryId={search.repositoryId} visible={visible} onClose={() => onChange({ repositoryId: undefined })} onRun={(runId) => onChange({ runId, repositoryId: undefined })} /> : null}
   </div>
 }

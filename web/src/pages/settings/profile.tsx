@@ -183,12 +183,12 @@ export function ProfileSettingsPage() {
           {!isEditing ? (
             <div className="flex items-center gap-2">
               {user?.canChangePassword === true ? (
-                <Button type="button" variant="outline" size="sm" onClick={() => void navigate({ to: '/settings/security' })}>
+                <Button data-analytics-id="account.security.open" type="button" variant="outline" size="sm" onClick={() => void navigate({ to: '/settings/security' })}>
                   {t('profile.resetPassword')}
                 </Button>
               ) : null}
               {hasEditableFields ? (
-                <Button type="button" variant="outline" size="sm" onClick={handleEdit}>
+                <Button data-analytics-id="account.profile.edit" type="button" variant="outline" size="sm" onClick={handleEdit}>
                   {t('profile.edit')}
                 </Button>
               ) : null}
@@ -212,7 +212,7 @@ export function ProfileSettingsPage() {
             <p className="text-sm text-muted-foreground">{user?.userId || '-'}</p>
           </div>
 
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form data-analytics-id="account.profile.save" className="space-y-4" onSubmit={handleSubmit}>
             {/* Dynamic fields */}
             {Object.entries(fieldPolicies).map(([field, policy]) => {
               const label = t(`profile.${field}`)
@@ -258,7 +258,7 @@ export function ProfileSettingsPage() {
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? t('profile.saving') : t('profile.save')}
                 </Button>
-                <Button type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
+                <Button data-analytics-id="account.profile.cancel" type="button" variant="outline" onClick={handleCancel} disabled={isSubmitting}>
                   {t('profile.cancel')}
                 </Button>
               </div>

@@ -112,7 +112,7 @@ export function ReviewsPage() {
     return (
       <div className="flex flex-col gap-3 border-t border-border/60 px-6 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
         <p>{t('reviews.pageSummary', { total: totalElements, page: currentPage + 1 })}</p>
-        <Pagination page={currentPage} totalPages={Math.max(totalPages, 1)} onPageChange={(nextPage) => changePage(status, nextPage)} />
+        <Pagination analyticsId="review.list.paginate" page={currentPage} totalPages={Math.max(totalPages, 1)} onPageChange={(nextPage) => changePage(status, nextPage)} />
       </div>
     )
   }
@@ -155,7 +155,7 @@ export function ReviewsPage() {
           </TableHeader>
           <TableBody>
             {reviews.map((review) => (
-              <TableRow
+              <TableRow data-analytics-id="review.detail.open"
                 key={review.id}
                 className="cursor-pointer transition-colors hover:bg-muted/30"
                 onClick={() => handleRowClick(review.id)}
@@ -204,12 +204,12 @@ export function ReviewsPage() {
                 {t('reviews.sortLabel')}
               </p>
               <Select value={sortDirection} onValueChange={handleSortChange}>
-                <SelectTrigger>
+                <SelectTrigger data-analytics-id="review.list.sort.interact">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="DESC">{t('reviews.sortNewest')}</SelectItem>
-                  <SelectItem value="ASC">{t('reviews.sortOldest')}</SelectItem>
+                  <SelectItem data-analytics-id="review.list.sort" value="DESC">{t('reviews.sortNewest')}</SelectItem>
+                  <SelectItem data-analytics-id="review.list.sort" value="ASC">{t('reviews.sortOldest')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -218,19 +218,19 @@ export function ReviewsPage() {
         <CardContent className="space-y-6">
           <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as ReviewStatus)}>
             <TabsList className="gap-4 rounded-xl border-b-0 bg-muted/70 p-1 shadow-none">
-              <TabsTrigger
+              <TabsTrigger data-analytics-id="review.pending.tab"
                 value="PENDING"
                 className="mb-0 rounded-lg border-b-0 px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
               >
                 {t('reviews.tabPending')}
               </TabsTrigger>
-              <TabsTrigger
+              <TabsTrigger data-analytics-id="review.approved.tab"
                 value="APPROVED"
                 className="mb-0 rounded-lg border-b-0 px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
               >
                 {t('reviews.tabApproved')}
               </TabsTrigger>
-              <TabsTrigger
+              <TabsTrigger data-analytics-id="review.rejected.tab"
                 value="REJECTED"
                 className="mb-0 rounded-lg border-b-0 px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
               >
@@ -271,19 +271,19 @@ export function ReviewsPage() {
       {showTypeTabs ? (
         <Tabs value={activeType} onValueChange={handleTypeChange}>
           <TabsList className="gap-2 rounded-2xl border-b-0 bg-muted/80 p-1 shadow-sm">
-            <TabsTrigger
+            <TabsTrigger data-analytics-id="review.skill.tab"
               value="skill"
               className="mb-0 rounded-xl border-b-0 px-5 py-3 text-base font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
             >
               {t('reviews.typeSkill')}
             </TabsTrigger>
-            <TabsTrigger
+            <TabsTrigger data-analytics-id="review.sync.tab"
               value="sync"
               className="mb-0 rounded-xl border-b-0 px-5 py-3 text-base font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
             >
               {t('reviews.typeSync')}
             </TabsTrigger>
-            {isUserAdmin && <TabsTrigger
+            {isUserAdmin && <TabsTrigger data-analytics-id="review.profile.tab"
               value="profile"
               className="mb-0 rounded-xl border-b-0 px-5 py-3 text-base font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
             >

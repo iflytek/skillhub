@@ -24,7 +24,7 @@ export function SuiteMemberTable({ suite, returnTo, management = false, onEdit }
           {t(management ? 'suite.management.membersSnapshotDescription' : 'suite.membersSnapshotDescription')}
         </p>
         {management && onEdit ? (
-          <button type="button" className={cn(buttonVariants({ variant: 'soft', size: 'sm' }), 'h-6 px-2 text-[11px]')} onClick={onEdit}>
+          <button data-analytics-id="suite.members.edit" type="button" className={cn(buttonVariants({ variant: 'soft', size: 'sm' }), 'h-6 px-2 text-[11px]')} onClick={onEdit}>
             {t('suite.management.editMembers')}
           </button>
         ) : null}
@@ -68,7 +68,7 @@ export function SuiteMemberTable({ suite, returnTo, management = false, onEdit }
               className="grid gap-2 px-3 py-2 text-xs md:grid-cols-[minmax(200px,1.25fr)_88px_minmax(160px,1fr)_100px_108px] md:items-center md:gap-3"
             >
               {navigable ? (
-                <Link
+                <Link data-analytics-id="skill.detail.open"
                   to="/space/$namespace/$slug"
                   params={{ namespace: member.namespace, slug: member.slug }}
                   search={{ returnTo, version: member.version }}
@@ -94,7 +94,7 @@ export function SuiteMemberTable({ suite, returnTo, management = false, onEdit }
               </span>
               <div className="text-left md:text-right">
                 {navigable ? (
-                  <Link
+                  <Link data-analytics-id="skill.version.open"
                     to="/space/$namespace/$slug"
                     params={{ namespace: member.namespace, slug: member.slug }}
                     search={{ returnTo, version: member.version }}

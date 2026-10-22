@@ -85,17 +85,17 @@ export function LoginPage() {
 
         {hasOrganizationMethod && passwordEnabled ? (
           <div role="group" aria-label={t('login.loginMode')} className="grid grid-cols-2 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-900">
-            <button type="button" aria-pressed={loginMode === 'personal'} onClick={() => setLoginMode('personal')} className={`h-11 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 xl:h-10 ${loginMode === 'personal' ? 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button data-analytics-id="auth.personal.select" type="button" aria-pressed={loginMode === 'personal'} onClick={() => setLoginMode('personal')} className={`h-11 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 xl:h-10 ${loginMode === 'personal' ? 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100' : 'text-muted-foreground hover:text-foreground'}`}>
               {t('login.tabPersonal')}
             </button>
-            <button type="button" aria-pressed={loginMode === 'organization'} onClick={() => setLoginMode('organization')} className={`h-11 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 xl:h-10 ${loginMode === 'organization' ? 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100' : 'text-muted-foreground hover:text-foreground'}`}>
+            <button data-analytics-id="auth.enterprise.select" type="button" aria-pressed={loginMode === 'organization'} onClick={() => setLoginMode('organization')} className={`h-11 rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 xl:h-10 ${loginMode === 'organization' ? 'bg-sky-100 text-sky-900 dark:bg-sky-900 dark:text-sky-100' : 'text-muted-foreground hover:text-foreground'}`}>
               {t('login.tabEnterprise')}
             </button>
           </div>
         ) : null}
 
         {passwordEnabled ? <div hidden={effectiveLoginMode !== 'personal'}>
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form data-analytics-id="auth.login.submit" className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
                 <label className="text-sm font-medium" htmlFor="username">{t('login.username')}</label>
                 <div className="relative">
@@ -122,7 +122,7 @@ export function LoginPage() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <label className="text-sm font-medium" htmlFor="password">{t('login.password')}</label>
-                  <Link to="/reset-password" className="text-sm font-medium text-sky-700 hover:underline dark:text-sky-300">
+                  <Link data-analytics-id="auth.password.reset.open" to="/reset-password" className="text-sm font-medium text-sky-700 hover:underline dark:text-sky-300">
                     {t('login.forgotPassword')}
                   </Link>
                 </div>
@@ -143,7 +143,7 @@ export function LoginPage() {
                     className="h-11 pl-10 pr-12 xl:h-10"
                     aria-invalid={fieldErrors.password ? 'true' : 'false'}
                   />
-                  <button
+                  <button data-analytics-id="auth.password.visibility"
                     type="button"
                     aria-label={showPassword ? t('login.hidePassword') : t('login.showPassword')}
                     aria-pressed={showPassword}
@@ -197,7 +197,7 @@ export function LoginPage() {
         {localCapabilities?.registrationAvailable ? <p className="text-center text-sm text-muted-foreground">
           {t('login.noAccount')}
           {' '}
-          <Link to="/register" search={{ returnTo }} className="font-medium text-sky-700 hover:underline dark:text-sky-300">
+          <Link data-analytics-id="auth.register.open" to="/register" search={{ returnTo }} className="font-medium text-sky-700 hover:underline dark:text-sky-300">
             {t('login.register')}
           </Link>
         </p> : null}
@@ -205,13 +205,13 @@ export function LoginPage() {
         <p className="mt-auto text-center text-xs text-muted-foreground">
           {t('login.agreementPrefix')}
           {isChinese ? null : ' '}
-          <Link to="/terms" className="text-primary hover:underline">
+          <Link data-analytics-id="navigation.terms.open" to="/terms" className="text-primary hover:underline">
             {t('login.terms')}
           </Link>
           {isChinese ? null : ' '}
           {t('login.and')}
           {isChinese ? null : ' '}
-          <Link to="/privacy" className="text-primary hover:underline">
+          <Link data-analytics-id="navigation.privacy.open" to="/privacy" className="text-primary hover:underline">
             {t('login.privacy')}
           </Link>
         </p>

@@ -141,7 +141,7 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
       setOpen(nextOpen)
     }}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <DialogContent closeAnalyticsId={createdToken ? 'account.token.created.close' : 'account.token.create.cancel'}>
         {!createdToken ? (
           <>
             <DialogHeader className="text-center">
@@ -153,7 +153,7 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
             <div className="space-y-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="token-name">{t('createToken.nameLabel')}</Label>
-                <Input
+                <Input data-analytics-id="account.token.create"
                   id="token-name"
                   placeholder={t('createToken.namePlaceholder')}
                   value={name}
@@ -190,15 +190,15 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
                     setExpiresAtError(null)
                   }}
                 >
-                  <SelectTrigger id="token-expiration">
+                  <SelectTrigger data-analytics-id="account.token.create.expiry.interact" id="token-expiration">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="never">{t('createToken.expirationNever')}</SelectItem>
-                    <SelectItem value="7d">{t('createToken.expiration7d')}</SelectItem>
-                    <SelectItem value="30d">{t('createToken.expiration30d')}</SelectItem>
-                    <SelectItem value="90d">{t('createToken.expiration90d')}</SelectItem>
-                    <SelectItem value="custom">{t('createToken.expirationCustom')}</SelectItem>
+                    <SelectItem data-analytics-id="account.token.create.expiry.never" value="never">{t('createToken.expirationNever')}</SelectItem>
+                    <SelectItem data-analytics-id="account.token.create.expiry.week" value="7d">{t('createToken.expiration7d')}</SelectItem>
+                    <SelectItem data-analytics-id="account.token.create.expiry.month" value="30d">{t('createToken.expiration30d')}</SelectItem>
+                    <SelectItem data-analytics-id="account.token.create.expiry.quarter" value="90d">{t('createToken.expiration90d')}</SelectItem>
+                    <SelectItem data-analytics-id="account.token.create.expiry.custom" value="custom">{t('createToken.expirationCustom')}</SelectItem>
                   </SelectContent>
                 </Select>
                 {expirationMode === 'custom' ? (
@@ -226,10 +226,10 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
               <p className="text-sm text-red-600">{createMutation.error.message}</p>
             ) : null}
             <DialogFooter className="sm:justify-center sm:space-x-3">
-              <Button variant="outline" onClick={handleClose}>
+              <Button data-analytics-id="account.token.create.cancel" variant="outline" onClick={handleClose}>
                 {t('dialog.cancel')}
               </Button>
-              <Button
+              <Button data-analytics-id="account.token.create"
                 onClick={handleCreate}
                 disabled={!normalizedName || hasDuplicateName || createMutation.isPending}
               >
@@ -262,10 +262,10 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
               </div>
             </div>
             <DialogFooter className="sm:justify-center sm:space-x-3">
-              <Button onClick={handleCopyToken}>
+              <Button data-analytics-id="account.token.copy" onClick={handleCopyToken}>
                 {t('createToken.copyToken')}
               </Button>
-              <Button variant="outline" onClick={handleClose}>
+              <Button data-analytics-id="account.token.created.close" variant="outline" onClick={handleClose}>
                 {t('dialog.close')}
               </Button>
             </DialogFooter>

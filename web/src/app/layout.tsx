@@ -82,15 +82,16 @@ export function Layout() {
   const navItems: Array<{
     label: string
     to: string
+    analyticsId?: string
     exact?: boolean
     auth?: boolean
   }> = [
-    { label: t('nav.landing'), to: '/', exact: true },
-    { label: t('nav.publish'), to: '/dashboard/publish', auth: true },
-    { label: t('nav.marketplace'), to: '/search' },
-    { label: t('nav.githubSkills'), to: '/github' },
-    { label: t('nav.suites'), to: '/suites' },
-    { label: t('nav.dashboard'), to: '/dashboard', auth: true },
+    { label: t('nav.landing'), to: '/', analyticsId: 'navigation.home.open', exact: true },
+    { label: t('nav.publish'), to: '/dashboard/publish', analyticsId: 'skill.publish.open', auth: true },
+    { label: t('nav.marketplace'), to: '/search', analyticsId: 'navigation.skills.open' },
+    { label: t('nav.githubSkills'), to: '/github', analyticsId: 'navigation.github.open' },
+    { label: t('nav.suites'), to: '/suites', analyticsId: 'navigation.suites.open' },
+    { label: t('nav.dashboard'), to: '/dashboard', analyticsId: 'navigation.dashboard.open', auth: true },
   ]
 
   const isActive = (to: string, exact?: boolean) => {
@@ -122,7 +123,7 @@ export function Layout() {
         style={isSplitAuthRoute ? undefined : { borderColor: 'hsl(var(--border))' }}
       >
         {!isSplitAuthRoute ? (
-          <Link to="/" className="text-xl font-semibold tracking-tight flex-shrink-0" style={{ color: 'hsl(var(--foreground))' }}>
+          <Link data-analytics-id="navigation.home.open" to="/" className="text-xl font-semibold tracking-tight flex-shrink-0" style={{ color: 'hsl(var(--foreground))' }}>
             SkillHub
           </Link>
         ) : null}
@@ -135,7 +136,7 @@ export function Layout() {
               const active = isActive(item.to, item.exact)
 
               return (
-                <Link
+                <Link data-analytics-id={item.analyticsId}
                   key={item.to}
                   to={item.to}
                   className={
@@ -155,7 +156,7 @@ export function Layout() {
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0" style={{ color: 'hsl(var(--text-secondary))' }}>
           {/* Hamburger — visible below lg */}
           {!isAuthEntryRoute ? (
-            <button
+            <button data-analytics-id="navigation.menu.toggle"
               type="button"
               className="lg:hidden inline-flex items-center justify-center rounded-lg p-2 hover:bg-accent transition-colors"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
@@ -171,7 +172,7 @@ export function Layout() {
           {isLoading ? null : user ? (
             <UserMenu user={user} />
           ) : !isAuthEntryRoute ? (
-            <Link
+            <Link data-analytics-id="auth.login.open"
               to="/login"
               className="hover:opacity-80 transition-opacity"
             >
@@ -189,7 +190,7 @@ export function Layout() {
               if (item.auth && !user) return null
               const active = isActive(item.to, item.exact)
               return (
-                <Link
+                <Link data-analytics-id={item.analyticsId}
                   key={item.to}
                   to={item.to}
                   className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
@@ -247,37 +248,37 @@ export function Layout() {
             <div>
               <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.product')}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><Link to="/search" search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }} className={FOOTER_LINK_CLASS_NAME}>{t('footer.marketplace')}</Link></li>
-                <li><Link to="/dashboard/publish" className={FOOTER_LINK_CLASS_NAME}>{t('footer.publish')}</Link></li>
-                <li><Link to="/dashboard" className={FOOTER_LINK_CLASS_NAME}>{t('nav.dashboard')}</Link></li>
+                <li><Link data-analytics-id="navigation.skills.open" to="/search" search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }} className={FOOTER_LINK_CLASS_NAME}>{t('footer.marketplace')}</Link></li>
+                <li><Link data-analytics-id="skill.publish.open" to="/dashboard/publish" className={FOOTER_LINK_CLASS_NAME}>{t('footer.publish')}</Link></li>
+                <li><Link data-analytics-id="navigation.dashboard.open" to="/dashboard" className={FOOTER_LINK_CLASS_NAME}>{t('nav.dashboard')}</Link></li>
               </ul>
             </div>
 
             <div>
               <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.developers')}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><a href="https://github.com/iflytek/skillhub/tree/main/docs/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.docs')}</a></li>
-                <li><a href="https://www.npmjs.com/package/@astron-team/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>CLI</a></li>
-                <li><a href="https://github.com/iflytek/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>GitHub</a></li>
+                <li><a data-analytics-id="navigation.documentation.open" href="https://github.com/iflytek/skillhub/tree/main/docs/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.docs')}</a></li>
+                <li><a data-analytics-id="navigation.cli.open" href="https://www.npmjs.com/package/@astron-team/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>CLI</a></li>
+                <li><a data-analytics-id="navigation.repository.open" href="https://github.com/iflytek/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>GitHub</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.project')}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><a href="https://github.com/iflytek/skillhub/blob/main/LICENSE" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>License</a></li>
-                <li><a href="https://github.com/iflytek/skillhub/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>Contributing</a></li>
-                <li><a href="https://github.com/iflytek/skillhub/releases" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>Changelog</a></li>
-                <li><a href="https://github.com/iflytek/skillhub/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.codeOfConduct')}</a></li>
+                <li><a data-analytics-id="navigation.license.open" href="https://github.com/iflytek/skillhub/blob/main/LICENSE" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>License</a></li>
+                <li><a data-analytics-id="navigation.contributing.open" href="https://github.com/iflytek/skillhub/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>Contributing</a></li>
+                <li><a data-analytics-id="navigation.changelog.open" href="https://github.com/iflytek/skillhub/releases" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>Changelog</a></li>
+                <li><a data-analytics-id="navigation.conduct.open" href="https://github.com/iflytek/skillhub/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.codeOfConduct')}</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.resources')}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><a href="https://github.com/iflytek/skillhub/discussions" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.community')}</a></li>
-                <li><Link to="/privacy" className={FOOTER_LINK_CLASS_NAME}>{t('footer.privacy')}</Link></li>
-                <li><Link to="/terms" className={FOOTER_LINK_CLASS_NAME}>{t('footer.terms')}</Link></li>
+                <li><a data-analytics-id="navigation.community.open" href="https://github.com/iflytek/skillhub/discussions" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.community')}</a></li>
+                <li><Link data-analytics-id="navigation.privacy.open" to="/privacy" className={FOOTER_LINK_CLASS_NAME}>{t('footer.privacy')}</Link></li>
+                <li><Link data-analytics-id="navigation.terms.open" to="/terms" className={FOOTER_LINK_CLASS_NAME}>{t('footer.terms')}</Link></li>
               </ul>
             </div>
           </div>

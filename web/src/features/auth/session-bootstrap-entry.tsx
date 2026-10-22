@@ -51,7 +51,7 @@ export function SessionBootstrapEntry({ onAuthenticated, methodDisplayName, comp
   if (compact) {
     return (
       <div className="space-y-3">
-        <Button
+        <Button data-analytics-id="auth.sso.request"
           className="h-11 w-full rounded-xl bg-[#315b86] text-white hover:bg-[#25496d] dark:bg-sky-300 dark:text-sky-950 dark:hover:bg-sky-200 xl:h-10"
           type="button"
           disabled={bootstrapMutation.isPending}
@@ -91,7 +91,7 @@ export function SessionBootstrapEntry({ onAuthenticated, methodDisplayName, comp
         </p>
       </div>
 
-      <Button
+      <Button data-analytics-id="auth.sso.request"
         className="w-full"
         type="button"
         variant="outline"

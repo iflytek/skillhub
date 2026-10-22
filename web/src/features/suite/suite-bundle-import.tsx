@@ -238,7 +238,7 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate, returnToSu
             <p className="mt-1 text-xs text-muted-foreground">{t('suite.bundle.uploadDescription')}</p>
           </div>
         </div>
-        <UploadZone
+        <UploadZone analyticsId="suite.bundle.select" folderAnalyticsId="suite.bundle.folder.select" pickerAnalyticsId="suite.bundle.folder.open"
           onFileSelect={previewFile}
           onFolderSelect={previewFolder}
           disabled={previewMutation.isPending || packaging}
@@ -314,7 +314,7 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate, returnToSu
                 {(member.warnings ?? []).map((warning) => <p key={warning} className="mt-2 text-xs text-amber-700 dark:text-amber-300">{warning}</p>)}
                 {(member.warnings?.length ?? 0) > 0 ? (
                   <label className="mt-3 flex items-start gap-2 rounded-md border border-amber-500/30 p-2 text-xs">
-                    <input
+                    <input data-analytics-id="suite.bundle.warning"
                       type="checkbox"
                       checked={Boolean(
                         member.coordinate && acceptedWarningMembers.has(member.coordinate)
@@ -355,7 +355,7 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate, returnToSu
 
           {removalCount > 0 ? (
             <label className="flex items-start gap-2 rounded-lg border p-3 text-sm">
-              <input
+              <input data-analytics-id="suite.bundle.removals"
                 type="checkbox"
                 checked={removalsAccepted}
                 onChange={(event) => setRemovalsAccepted(event.target.checked)}
@@ -365,10 +365,10 @@ export function SuiteBundleImport({ expectedMode, expectedCoordinate, returnToSu
           ) : null}
 
           <div className="flex justify-end gap-2 border-t pt-3">
-            <Button size="sm" variant="outline" onClick={() => { setPreview(null); setFileName('') }}>
+            <Button data-analytics-id="suite.bundle.reset" size="sm" variant="outline" onClick={() => { setPreview(null); setFileName('') }}>
               {t('suite.bundle.chooseAgain')}
             </Button>
-            <Button size="sm" disabled={!canConfirm || confirmMutation.isPending} onClick={confirm}>
+            <Button data-analytics-id="suite.bundle.confirm" size="sm" disabled={!canConfirm || confirmMutation.isPending} onClick={confirm}>
               {t('suite.bundle.confirm')}
             </Button>
           </div>

@@ -181,8 +181,8 @@ export function NamespaceMembersPage() {
         {canViewInvitations ? <div className="flex flex-wrap items-center justify-end gap-2">
           {canViewInvitations ? (
             <Dialog>
-              <DialogTrigger asChild><Button variant="outline">{t(canManageMembers ? 'namespaceManagement.invite' : 'invitation.historyTitle')}</Button></DialogTrigger>
-              <DialogContent className="w-[min(calc(100vw-2rem),40rem)] gap-5 p-5 sm:p-6">
+              <DialogTrigger asChild><Button data-analytics-id="namespace.invitation.open" variant="outline">{t(canManageMembers ? 'namespaceManagement.invite' : 'invitation.historyTitle')}</Button></DialogTrigger>
+              <DialogContent closeAnalyticsId="namespace.invitation.close" className="w-[min(calc(100vw-2rem),40rem)] gap-5 p-5 sm:p-6">
                 <DialogTitle>{t(canManageMembers ? 'namespaceManagement.invite' : 'invitation.historyTitle')}</DialogTitle>
                 <DialogDescription className="break-words">{namespace.displayName} <span className="text-muted-foreground">@{slug}</span></DialogDescription>
                 {canManageMembers ? <InvitationControls slug={slug} /> : <InvitationHistory key={slug} slug={slug} />}
@@ -191,16 +191,16 @@ export function NamespaceMembersPage() {
           ) : null}
           {canTransferOwnership ? (
             <TransferOwnershipDialog namespace={namespace} members={members}>
-              <Button variant="outline">{t('members.transferOwnership')}</Button>
+              <Button data-analytics-id="namespace.ownership.open" variant="outline">{t('members.transferOwnership')}</Button>
             </TransferOwnershipDialog>
           ) : null}
           {canManageMembers ? (
             <>
               <BatchImportMembersDialog slug={slug}>
-                <Button variant="outline">{t('members.batchImport')}</Button>
+                <Button data-analytics-id="namespace.import.open" variant="outline">{t('members.batchImport')}</Button>
               </BatchImportMembersDialog>
               <AddNamespaceMemberDialog slug={slug}>
-                <Button>{t('members.addMember')}</Button>
+                <Button data-analytics-id="namespace.member.open">{t('members.addMember')}</Button>
               </AddNamespaceMemberDialog>
             </>
           ) : null}
@@ -258,12 +258,12 @@ export function NamespaceMembersPage() {
                                   }))
                                 }}
                               >
-                                <SelectTrigger ref={(element) => { roleSelectRefs.current[member.userId] = element }} className="w-36" aria-label={t('members.colRole')}>
+                                <SelectTrigger data-analytics-id="namespace.member.role.draft.interact" ref={(element) => { roleSelectRefs.current[member.userId] = element }} className="w-36" aria-label={t('members.colRole')}>
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="MEMBER">{t('members.roleMember')}</SelectItem>
-                                  <SelectItem value="ADMIN">{t('members.roleAdmin')}</SelectItem>
+                                  <SelectItem data-analytics-id="namespace.member.role.draft.member" value="MEMBER">{t('members.roleMember')}</SelectItem>
+                                  <SelectItem data-analytics-id="namespace.member.role.draft.admin" value="ADMIN">{t('members.roleAdmin')}</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -286,13 +286,13 @@ export function NamespaceMembersPage() {
                               <div className="flex items-center justify-end gap-1">
                                 {roleValue !== member.role ? (
                                   <>
-                                    <Button type="button" variant="ghost" size="icon"
+                                    <Button data-analytics-id="namespace.member.role.save" type="button" variant="ghost" size="icon"
                                       aria-label={t('members.saveRole')} title={t('members.saveRole')}
                                       disabled={isSavingRole || isRemoving}
                                       onClick={() => handleRoleSave(member.userId, member.role)}>
                                       {isSavingRole ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Check className="h-4 w-4" aria-hidden="true" />}
                                     </Button>
-                                    <Button type="button" variant="ghost" size="icon"
+                                    <Button data-analytics-id="namespace.member.role.cancel" type="button" variant="ghost" size="icon"
                                       aria-label={t('members.cancelRole')} title={t('members.cancelRole')}
                                       disabled={isSavingRole || isRemoving}
                                       onClick={() => {
@@ -303,7 +303,7 @@ export function NamespaceMembersPage() {
                                     </Button>
                                   </>
                                 ) : null}
-                                <Button type="button" variant="ghost" size="icon"
+                                <Button data-analytics-id="namespace.member.remove" type="button" variant="ghost" size="icon"
                                   className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                                   aria-label={t('members.remove')} title={t('members.remove')}
                                   disabled={isRemoving || isSavingRole}
@@ -328,11 +328,11 @@ export function NamespaceMembersPage() {
         )}
 
         {totalMembers > MEMBER_PAGE_SIZE ? (
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          <Pagination analyticsId="namespace.member.paginate" page={page} totalPages={totalPages} onPageChange={setPage} />
         ) : null}
       </div>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="namespace.member.remove.confirm" cancelAnalyticsId="namespace.member.remove.cancel"
         open={!!pendingRemoval}
         onOpenChange={(open) => {
           if (!open) {

@@ -157,12 +157,12 @@ export function SkillVersionComparePage() {
               })
             }}
           >
-            <SelectTrigger id="compare-from-select" aria-label={t('skillCompare.baseVersion')}>
+            <SelectTrigger data-analytics-id="skill.comparison.base.interact" id="compare-from-select" aria-label={t('skillCompare.baseVersion')}>
               <SelectValue placeholder={t('skillCompare.baseVersion')} />
             </SelectTrigger>
             <SelectContent>
               {publishedVersions.map((version) => (
-                <SelectItem key={version.id} value={version.version} disabled={version.version === normalizedVersions.to}>
+                <SelectItem data-analytics-id="skill.comparison.base" key={version.id} value={version.version} disabled={version.version === normalizedVersions.to}>
                   v{version.version}
                 </SelectItem>
               ))}
@@ -184,12 +184,12 @@ export function SkillVersionComparePage() {
               })
             }}
           >
-            <SelectTrigger id="compare-to-select" aria-label={t('skillCompare.headVersion')}>
+            <SelectTrigger data-analytics-id="skill.comparison.head.interact" id="compare-to-select" aria-label={t('skillCompare.headVersion')}>
               <SelectValue placeholder={t('skillCompare.headVersion')} />
             </SelectTrigger>
             <SelectContent>
               {publishedVersions.map((version) => (
-                <SelectItem key={version.id} value={version.version} disabled={version.version === normalizedVersions.from}>
+                <SelectItem data-analytics-id="skill.comparison.head" key={version.id} value={version.version} disabled={version.version === normalizedVersions.from}>
                   v{version.version}
                 </SelectItem>
               ))}
@@ -197,7 +197,7 @@ export function SkillVersionComparePage() {
           </Select>
         </div>
 
-        <Input
+        <Input data-analytics-id="skill.comparison.filter"
           value={keyword}
           onChange={(event) => setKeyword(event.target.value)}
           placeholder={t('skillCompare.searchFiles')}
@@ -209,7 +209,7 @@ export function SkillVersionComparePage() {
             filteredFiles.map((file, index) => {
               const isActive = activePath ? activePath === file.path : index === 0
               return (
-                <a
+                <a data-analytics-id="skill.comparison.file"
                   key={file.path}
                   href={`#${toDiffSectionId(file.path)}`}
                   onClick={() => setActivePath(file.path)}

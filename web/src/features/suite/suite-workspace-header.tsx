@@ -23,7 +23,7 @@ export function SuiteWorkspaceHeader({
   return (
     <header className="space-y-2">
       {backLabel && onBack ? (
-        <Button
+        <Button data-analytics-id="suite.workspace.back"
           type="button"
           variant="ghost"
           size="sm"

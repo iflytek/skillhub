@@ -215,7 +215,7 @@ export function CliAuthPage() {
             <p className="text-sm text-center text-muted-foreground">
               {t('cliAuth.loginRequired')}
             </p>
-            <Button
+            <Button data-analytics-id="auth.cli.login"
               className="w-full"
               onClick={() => {
                 const returnTo = `/cli/auth?${ORIGINAL_PARAMS.toString()}`

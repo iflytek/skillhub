@@ -76,7 +76,7 @@ export function ReviewProgressPage() {
       <Card className="border-border/70">
         <CardContent className="space-y-6 p-5 md:p-6">
           <div className="flex flex-col gap-3 md:flex-row md:items-end">
-            <form className="flex min-w-0 flex-1 gap-2" onSubmit={submitSearch}>
+            <form data-analytics-id="review.progress.search" className="flex min-w-0 flex-1 gap-2" onSubmit={submitSearch}>
               <div className="relative min-w-0 flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -97,13 +97,13 @@ export function ReviewProgressPage() {
                   page: 0,
                 })}
               >
-                <SelectTrigger aria-label={t('reviewProgress.typeFilter')}>
+                <SelectTrigger data-analytics-id="review.progress.type.interact" aria-label={t('reviewProgress.typeFilter')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">{t('reviewProgress.typeAll')}</SelectItem>
-                  <SelectItem value="SKILL_VERSION">{t('reviewProgress.typeSkill')}</SelectItem>
-                  <SelectItem value="SUITE_VERSION">{t('reviewProgress.typeSuite')}</SelectItem>
+                  <SelectItem data-analytics-id="review.progress.type" value="ALL">{t('reviewProgress.typeAll')}</SelectItem>
+                  <SelectItem data-analytics-id="review.progress.type" value="SKILL_VERSION">{t('reviewProgress.typeSkill')}</SelectItem>
+                  <SelectItem data-analytics-id="review.progress.type" value="SUITE_VERSION">{t('reviewProgress.typeSuite')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -115,14 +115,14 @@ export function ReviewProgressPage() {
                   page: 0,
                 })}
               >
-                <SelectTrigger aria-label={t('reviewProgress.statusFilter')}>
+                <SelectTrigger data-analytics-id="review.progress.status.interact" aria-label={t('reviewProgress.statusFilter')}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ALL">{t('reviewProgress.statusAll')}</SelectItem>
-                  <SelectItem value="PENDING">{t('reviewProgress.statusPending')}</SelectItem>
-                  <SelectItem value="APPROVED">{t('reviewProgress.statusApproved')}</SelectItem>
-                  <SelectItem value="REJECTED">{t('reviewProgress.statusRejected')}</SelectItem>
+                  <SelectItem data-analytics-id="review.progress.status" value="ALL">{t('reviewProgress.statusAll')}</SelectItem>
+                  <SelectItem data-analytics-id="review.progress.status" value="PENDING">{t('reviewProgress.statusPending')}</SelectItem>
+                  <SelectItem data-analytics-id="review.progress.status" value="APPROVED">{t('reviewProgress.statusApproved')}</SelectItem>
+                  <SelectItem data-analytics-id="review.progress.status" value="REJECTED">{t('reviewProgress.statusRejected')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -135,7 +135,7 @@ export function ReviewProgressPage() {
                 ['APPROVED', progressQuery.data.statusCounts.approved, 'statusApproved'],
                 ['REJECTED', progressQuery.data.statusCounts.rejected, 'statusRejected'],
               ] as const).map(([status, count, labelKey]) => (
-                <button
+                <button data-analytics-id="review.progress.status"
                   key={status}
                   type="button"
                   aria-pressed={search.status === status}
@@ -190,7 +190,7 @@ export function ReviewProgressPage() {
           )}
 
           {totalPages > 1 ? (
-            <Pagination
+            <Pagination analyticsId="review.progress.paginate"
               page={page}
               totalPages={totalPages}
               onPageChange={(nextPage) => updateSearch({ page: nextPage })}
@@ -225,11 +225,11 @@ function ProgressItem({
       <div className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between md:p-5">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            {isSuite ? <Link
+            {isSuite ? <Link data-analytics-id="suite.workspace.open"
               to="/dashboard/suites/$namespace/$slug"
               params={{ namespace: item.namespace, slug }} search={{ version: item.skillVersion }}
               className="truncate font-semibold text-foreground underline-offset-4 hover:underline"
-            >@{item.namespace}/{slug}</Link> : <Link
+            >@{item.namespace}/{slug}</Link> : <Link data-analytics-id="skill.detail.open"
               to="/space/$namespace/$slug"
               params={{ namespace: item.namespace, slug }}
               search={{ returnTo: '/dashboard/review-progress' }}
@@ -259,7 +259,7 @@ function ProgressItem({
 
         <div className="flex shrink-0 flex-wrap gap-2">
           {status === 'REJECTED' && !isSuite ? (
-            <Link
+            <Link data-analytics-id="skill.resubmit.open"
               to="/dashboard/publish"
               search={{
                 namespace: item.namespace,
@@ -271,11 +271,11 @@ function ProgressItem({
               {t('reviewProgress.resubmit')}
             </Link>
           ) : null}
-          {status === 'REJECTED' && isSuite ? <Link
+          {status === 'REJECTED' && isSuite ? <Link data-analytics-id="suite.workspace.open"
             to="/dashboard/suites/$namespace/$slug" params={{ namespace: item.namespace, slug }}
             search={{ version: item.skillVersion }} className={buttonVariants({ variant: 'outline', size: 'sm' })}
           >{t('suite.view')}</Link> : null}
-          <Button
+          <Button data-analytics-id="review.history.toggle"
             type="button"
             variant="ghost"
             size="sm"

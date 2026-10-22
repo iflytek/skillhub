@@ -85,7 +85,7 @@ export function NotificationsPage() {
       <DashboardPageHeader
         title={t('notification.title')}
         actions={
-          <Button
+          <Button data-analytics-id="notification.all.read"
             variant="outline"
             size="sm"
             onClick={() => markAllRead.mutate()}
@@ -99,7 +99,7 @@ export function NotificationsPage() {
       {/* Category tabs */}
       <div className="flex gap-1 border-b">
         {CATEGORIES.map((cat) => (
-          <button
+          <button data-analytics-id={cat === 'PUBLISH' ? 'notification.category.publish' : cat === 'REVIEW' ? 'notification.category.review' : cat === 'PROMOTION' ? 'notification.category.promotion' : cat === 'REPORT' ? 'notification.category.report' : 'notification.category.all'}
             key={cat}
             type="button"
             onClick={() => handleCategoryChange(cat)}
@@ -130,7 +130,7 @@ export function NotificationsPage() {
               const display = resolveNotificationDisplay(item, i18n.language)
               return (
                 <div key={item.id} className="flex items-start gap-3 px-5 py-4 hover:bg-muted/40 transition-colors">
-                  <button
+                  <button data-analytics-id={item.targetRoute?.startsWith('/') && !item.targetRoute.startsWith('//') ? 'notification.target.provided.open' : item.entityType?.toLowerCase() === 'review' ? item.entityId ? 'notification.review.detail.open' : 'notification.review.list.open' : item.entityType?.toLowerCase() === 'report' ? 'notification.report.open' : item.entityType?.toLowerCase() === 'promotion' ? 'notification.promotion.open' : 'notification.fallback.open'}
                     type="button"
                     onClick={() => handleItemClick(item)}
                     className="flex min-w-0 flex-1 items-start gap-3 text-left"
@@ -155,7 +155,7 @@ export function NotificationsPage() {
                   <div className="flex items-center gap-2">
                     <CategoryBadge category={item.category} />
                     {item.status === 'READ' ? (
-                      <Button
+                      <Button data-analytics-id="notification.delete.request"
                         type="button"
                         variant="ghost"
                         size="icon"
@@ -174,7 +174,7 @@ export function NotificationsPage() {
           </Card>
 
           {shouldShowNotificationPagination(getNotificationTotal(data), PAGE_SIZE) ? (
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            <Pagination analyticsId="notification.list.paginate" page={page} totalPages={totalPages} onPageChange={setPage} />
           ) : null}
         </>
       )}

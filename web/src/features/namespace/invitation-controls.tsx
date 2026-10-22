@@ -115,7 +115,7 @@ export function InvitationControls({ slug, compact = false }: { slug: string; co
               <label className="sr-only" htmlFor={linkId}>{t('invitation.link')}</label>
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input id={linkId} className="h-8 min-w-0 flex-1 bg-background font-mono text-xs" readOnly value={link} onFocus={(event) => event.currentTarget.select()} />
-                <Button size="sm" className="shrink-0 gap-1.5 px-2.5" onClick={() => void copyLink(link)}><Copy className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.copy')}</Button>
+                <Button data-analytics-id="namespace.invitation.copy" size="sm" className="shrink-0 gap-1.5 px-2.5" onClick={() => void copyLink(link)}><Copy className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.copy')}</Button>
               </div>
               {expiresAt ? <p className="text-xs text-muted-foreground">{t('invitation.expiresAtLabel')}: {expiresAt}</p> : null}
               <p className="text-xs leading-relaxed text-muted-foreground">{t(storageUnavailable ? 'invitation.storageUnavailable' : 'invitation.localLinkHint')}</p>
@@ -123,10 +123,10 @@ export function InvitationControls({ slug, compact = false }: { slug: string; co
           ) : null}
           {!link && !status.isFetching && !status.isError && status.data?.active ? <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{t('invitation.activeUnavailable')}</p> : null}
           {!status.isError && !status.data?.active ? (
-            <div className="mt-4"><Button size="sm" className="gap-1.5 px-2.5" disabled={!user || status.isPending || status.isFetching || create.isPending} onClick={handleCreate}><Link2 className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.create')}</Button></div>
+            <div className="mt-4"><Button data-analytics-id="namespace.invitation.create" size="sm" className="gap-1.5 px-2.5" disabled={!user || status.isPending || status.isFetching || create.isPending} onClick={handleCreate}><Link2 className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.create')}</Button></div>
           ) : null}
         </div>
-      ) : <Button variant="outline" size="sm" className="gap-1.5 px-2.5" disabled={!user || status.isFetching || create.isPending} onClick={handleCreate}>{t('invitation.create')}</Button>}
+      ) : <Button data-analytics-id="namespace.invitation.create" variant="outline" size="sm" className="gap-1.5 px-2.5" disabled={!user || status.isFetching || create.isPending} onClick={handleCreate}>{t('invitation.create')}</Button>}
       {!compact ? (
         <div className="space-y-3 text-sm">
           <p className="font-medium">{t('invitation.detailsTitle')}</p>
@@ -137,20 +137,20 @@ export function InvitationControls({ slug, compact = false }: { slug: string; co
       {(create.error || revoke.error || status.error) ? (
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
           <p role="alert" className="text-sm text-destructive">{t('invitation.error')}</p>
-          {status.error ? <Button variant="outline" size="sm" className="gap-1.5 px-2.5" disabled={status.isFetching} onClick={() => void status.refetch()}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.retry')}</Button> : null}
+          {status.error ? <Button data-analytics-id="namespace.invitation.retry" variant="outline" size="sm" className="gap-1.5 px-2.5" disabled={status.isFetching} onClick={() => void status.refetch()}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.retry')}</Button> : null}
         </div>
       ) : null}
       {!compact && !status.isError && status.data?.active ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4">
           <span className="text-xs text-muted-foreground">{t('invitation.managementTitle')}</span>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" className="gap-1.5 px-2.5" disabled={!user || status.isFetching || create.isPending || revoke.isPending} onClick={handleCreate}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.replaceAction')}</Button>
-            <Button variant="ghost" size="sm" className="gap-1.5 px-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={status.isFetching || revoke.isPending || create.isPending} onClick={() => setConfirm('revoke')}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.revoke')}</Button>
+            <Button data-analytics-id="namespace.invitation.replace" variant="outline" size="sm" className="gap-1.5 px-2.5" disabled={!user || status.isFetching || create.isPending || revoke.isPending} onClick={handleCreate}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.replaceAction')}</Button>
+            <Button data-analytics-id="namespace.invitation.revoke" variant="ghost" size="sm" className="gap-1.5 px-2.5 text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={status.isFetching || revoke.isPending || create.isPending} onClick={() => setConfirm('revoke')}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.revoke')}</Button>
           </div>
         </div>
       ) : null}
       {!compact && user ? <InvitationHistory key={`${slug}:${user.userId}`} slug={slug} /> : null}
-      <ConfirmDialog open={confirm !== null} onOpenChange={(open) => { if (!open) setConfirm(null) }}
+      <ConfirmDialog confirmAnalyticsId={confirm === 'revoke' ? 'namespace.invitation.revoke.confirm' : confirm === 'replace' ? 'namespace.invitation.replace.confirm' : undefined} cancelAnalyticsId={confirm === 'revoke' ? 'namespace.invitation.revoke.cancel' : confirm === 'replace' ? 'namespace.invitation.replace.cancel' : undefined} open={confirm !== null} onOpenChange={(open) => { if (!open) setConfirm(null) }}
         title={t(confirm === 'revoke' ? 'invitation.revokeTitle' : 'invitation.replaceTitle')}
         description={t(confirm === 'revoke' ? 'invitation.revokeDescription' : 'invitation.replaceDescription')}
         confirmText={t('dialog.confirm')}
