@@ -49,8 +49,11 @@ skillhub:
   security:
     scanner:
       enabled: false
+  authoring:
+    local-script:
+      # tests exercise the inline script runtime directly; no docker needed
+      execution-mode: inline
 
-logging:
   level:
     root: ERROR
     com.iflytek.skillhub: ERROR
