@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service.authoring.adapter;
 
 import com.iflytek.skillhub.config.AuthoringProperties;
+import com.iflytek.skillhub.domain.authoring.service.ScriptEnvironmentPolicy;
 import com.iflytek.skillhub.domain.authoring.runtime.RuntimeEventSink;
 import com.iflytek.skillhub.domain.authoring.runtime.RuntimeExecutionContext;
 import com.iflytek.skillhub.domain.authoring.runtime.SkillRuntimeAdapter;
@@ -24,7 +25,7 @@ import org.springframework.stereotype.Component;
 /**
  * Behavior-layer adapter that executes the skill's own scripts in an isolated working
  * directory with a scrubbed environment. Only whitelisted interpreters may run and only
- * environment variables named in the binding's {@code envAllowlist} pass through.
+ * deployment-authorized variables selected by the binding's {@code envAllowlist} pass through.
  *
  * <p>Where the process actually runs is delegated to a {@link ScriptCommandBuilder}:
  * the inline backend spawns the interpreter on the server host, the docker backend
@@ -38,11 +39,24 @@ public class LocalScriptRuntimeAdapter implements SkillRuntimeAdapter {
     private static final long POLL_SLICE_MS = 200;
 
     private final AuthoringProperties properties;
+    private final ScriptEnvironmentPolicy environmentPolicy;
+    private final Function<String, String> environmentLookup;
     private final Map<String, ScriptCommandBuilder> commandBuilders;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public LocalScriptRuntimeAdapter(AuthoringProperties properties,
-                                     List<ScriptCommandBuilder> commandBuilders) {
+                                     List<ScriptCommandBuilder> commandBuilders,
+                                     ScriptEnvironmentPolicy environmentPolicy) {
+        this(properties, commandBuilders, environmentPolicy, System::getenv);
+    }
+
+    LocalScriptRuntimeAdapter(AuthoringProperties properties,
+                              List<ScriptCommandBuilder> commandBuilders,
+                              ScriptEnvironmentPolicy environmentPolicy,
+                              Function<String, String> environmentLookup) {
         this.properties = properties;
+        this.environmentPolicy = environmentPolicy;
+        this.environmentLookup = environmentLookup;
         this.commandBuilders = commandBuilders.stream()
                 .collect(Collectors.toUnmodifiableMap(ScriptCommandBuilder::backend,
                         Function.identity()));
@@ -66,6 +80,8 @@ public class LocalScriptRuntimeAdapter implements SkillRuntimeAdapter {
     @Override
     public TaskResult execute(RuntimeExecutionContext context, ValidationTaskSpec task,
                               RuntimeEventSink sink) throws Exception {
+        // Recheck the effective policy before probing a backend or creating a process.
+        Map<String, String> scrubbedEnvironment = scrubEnvironment(context);
         ScriptCommandBuilder builder = commandBuilder();
         if (!builder.available()) {
             throw new IllegalStateException(
@@ -75,8 +91,6 @@ public class LocalScriptRuntimeAdapter implements SkillRuntimeAdapter {
         String interpreter = resolveInterpreter(context);
         Path scriptPath = resolveInsideWorkingDirectory(context.workingDirectory(), task.script());
         String runTag = context.runId() + "-" + task.name();
-        Map<String, String> scrubbedEnvironment = scrubEnvironment(context);
-
         ScriptCommandBuilder.ScriptExecutionPlan plan = builder.plan(
                 context.workingDirectory(), interpreter, scriptPath,
                 task.safeArgs(), scrubbedEnvironment, runTag);
@@ -132,20 +146,20 @@ public class LocalScriptRuntimeAdapter implements SkillRuntimeAdapter {
         return "sh";
     }
 
-    private Map<String, String> scrubEnvironment(RuntimeExecutionContext context) {
+    Map<String, String> scrubEnvironment(RuntimeExecutionContext context) {
+        // Authorize the entire selection before looking up any host value. An old persisted
+        // binding does not retain permission after the effective deployment policy changes.
+        java.util.Set<String> selected = environmentPolicy.authorize(
+                context.safeAdapterConfig().get("envAllowlist"));
         Map<String, String> environment = new java.util.LinkedHashMap<>();
-        environment.put("PATH", System.getenv().getOrDefault("PATH", "/usr/bin:/bin"));
+        String path = environmentLookup.apply("PATH");
+        environment.put("PATH", path == null ? "/usr/bin:/bin" : path);
         environment.put("HOME", context.workingDirectory().toString());
         environment.put("LANG", "C.UTF-8");
-        Object allowlist = context.safeAdapterConfig().get("envAllowlist");
-        if (allowlist instanceof List<?> entries) {
-            for (Object entry : entries) {
-                if (entry != null) {
-                    String value = System.getenv(entry.toString());
-                    if (value != null) {
-                        environment.put(entry.toString(), value);
-                    }
-                }
+        for (String name : selected) {
+            String value = environmentLookup.apply(name);
+            if (value != null) {
+                environment.put(name, value);
             }
         }
         return environment;

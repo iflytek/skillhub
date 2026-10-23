@@ -145,6 +145,8 @@ skillhub:
     maintenance-interval-ms: ${SKILLHUB_AUTHORING_MAINTENANCE_INTERVAL_MS:30000}
     local-script:
       enabled: ${SKILLHUB_AUTHORING_LOCAL_SCRIPT_ENABLED:true}
+      # Deployment ceiling; draft envAllowlist may only select a subset. Empty denies all.
+      environment-allowlist: ${SKILLHUB_AUTHORING_SCRIPT_ENVIRONMENT_ALLOWLIST:}
       # docker is the production default: scripts run in a locked-down container —
       # no network, memory/cpu/pids caps, read-only rootfs, all capabilities dropped.
       # inline runs subprocesses on the server host and is only allowed with a

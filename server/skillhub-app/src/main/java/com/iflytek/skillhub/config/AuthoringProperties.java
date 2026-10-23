@@ -68,6 +68,17 @@ public class AuthoringProperties {
         /** Where scripts run: INLINE on the server host (dev), DOCKER in a locked-down container (production). */
         private ScriptExecutionMode executionMode = ScriptExecutionMode.INLINE;
 
+        /** Deployment-owned variable names available to all local-script draft owners. Empty denies all. */
+        private List<String> environmentAllowlist = List.of();
+
+        public List<String> getEnvironmentAllowlist() {
+            return environmentAllowlist;
+        }
+
+        public void setEnvironmentAllowlist(List<String> environmentAllowlist) {
+            this.environmentAllowlist = environmentAllowlist == null ? List.of() : List.copyOf(environmentAllowlist);
+        }
+
         private final Docker docker = new Docker();
 
         public boolean isEnabled() {

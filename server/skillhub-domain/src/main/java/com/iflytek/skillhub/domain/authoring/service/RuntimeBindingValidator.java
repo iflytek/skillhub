@@ -29,7 +29,10 @@ public class RuntimeBindingValidator {
     private static final List<String> TRANSPORTS = List.of("http", "sse", "stdio");
     private static final List<String> INTERPRETERS = List.of("sh", "bash", "python3", "node");
 
-    public RuntimeBindingValidator() {
+    private final ScriptEnvironmentPolicy environmentPolicy;
+
+    public RuntimeBindingValidator(ScriptEnvironmentPolicy environmentPolicy) {
+        this.environmentPolicy = environmentPolicy;
     }
 
     /**
@@ -83,10 +86,16 @@ public class RuntimeBindingValidator {
         Object envAllowlist = config.get("envAllowlist");
         if (envAllowlist instanceof List<?> entries) {
             for (Object entry : entries) {
-                if (entry == null || !ENV_REF_NAME.matcher(entry.toString()).matches()) {
+                if (!(entry instanceof String name) || !ENV_REF_NAME.matcher(name).matches()) {
                     findings.add(FindingDraft.error(ValidationLayer.CONFIG, "ENV_ALLOWLIST_INVALID",
                             "Invalid environment variable name: " + entry));
                 }
+            }
+            try {
+                environmentPolicy.authorize(entries);
+            } catch (IllegalArgumentException exception) {
+                findings.add(FindingDraft.error(ValidationLayer.CONFIG, "ENV_ALLOWLIST_FORBIDDEN",
+                        "Environment selection is not permitted by deployment policy"));
             }
         } else if (envAllowlist != null) {
             findings.add(FindingDraft.error(ValidationLayer.CONFIG, "ENV_ALLOWLIST_INVALID",
