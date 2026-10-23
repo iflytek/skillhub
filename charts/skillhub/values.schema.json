@@ -73,6 +73,18 @@
         }
       }
     },
+    "notificationEmail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "digestWindowMinutes", "publicBaseUrl", "fromAddress", "fromName"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "digestWindowMinutes": { "type": "integer", "minimum": 5, "maximum": 1440 },
+        "publicBaseUrl": { "type": "string", "pattern": "^$|^https?://[^/?#]+([/][^?#]*)?$" },
+        "fromAddress": { "type": "string" },
+        "fromName": { "type": "string" }
+      }
+    },
     "builtinSkills": {
       "type": "object",
       "additionalProperties": false,

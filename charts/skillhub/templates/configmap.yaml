@@ -61,3 +61,10 @@ data:
   web-base-path: {{ .Values.web.basePath | default "" | quote }}
   web-api-base-url: {{ .Values.web.apiBaseUrl | default "" | quote }}
   builtin-skills-enabled: {{ .Values.builtinSkills.enabled | quote }}
+
+  # Notification email: policy seeds, plus deployment-owned sender identity.
+  notification-email-enabled: {{ .Values.notificationEmail.enabled | quote }}
+  notification-email-window: {{ .Values.notificationEmail.digestWindowMinutes | quote }}
+  notification-email-public-url: {{ .Values.notificationEmail.publicBaseUrl | default .Values.publicBaseUrl | quote }}
+  notification-email-from-address: {{ .Values.notificationEmail.fromAddress | quote }}
+  notification-email-from-name: {{ .Values.notificationEmail.fromName | quote }}

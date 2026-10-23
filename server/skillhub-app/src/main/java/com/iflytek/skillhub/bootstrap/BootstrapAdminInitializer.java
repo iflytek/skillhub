@@ -76,7 +76,7 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
         // 1. Create admin user account. When the credential already belongs to the
         // configured bootstrap user, only backfill role/membership and preserve
         // any existing profile fields managed elsewhere.
-        UserAccount admin = userAccountRepository.findById(bootstrapAdminProperties.getUserId())
+        UserAccount admin = userAccountRepository.findLockedFreshById(bootstrapAdminProperties.getUserId())
                 .orElse(null);
         if (admin == null) {
             admin = userAccountRepository.save(new UserAccount(

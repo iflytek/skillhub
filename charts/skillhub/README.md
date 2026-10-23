@@ -548,6 +548,17 @@ helm -n skillhub upgrade -i skillhub ./charts/skillhub \
 每个 HPA 至少需要一个非零 CPU 或内存利用率目标。本地存储的 Server HPA 同样
 要求 RWX；也可以启用 S3 来避免共享 PVC。
 
+## 业务邮件通知
+
+业务邮件默认关闭，按用户和摘要窗口聚合，不是每个技能一封。Chart 的 `notificationEmail`
+提供 `enabled`、`digestWindowMinutes`、`publicBaseUrl`、`fromAddress`、`fromName` 五个字段。
+前三项仅初始化缺失的数据库设置，之后由超级管理员在“系统配置”维护；发件人仍由部署管理。
+SMTP 连接与密码重置共用，通过 `server.extraEnv` 配置，用户名/密码使用
+`valueFrom.secretKeyRef`，不要写入普通 values 或 ConfigMap。用户还需要独立验邮并选择通知类别。
+
+完整字段、Secret 引用示例、用户流程、摘要数量、UNKNOWN 重试和故障排查见
+[邮件通知接入与使用](../../docs/notification-email.md)。
+
 ## 发布
 
 `.github/workflows/publish-chart.yml` 在 GitHub Release 发布后或手动

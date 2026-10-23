@@ -14,6 +14,9 @@ import com.iflytek.skillhub.domain.user.UserStatus;
 import com.iflytek.skillhub.dto.AdminUserMutationResponse;
 import com.iflytek.skillhub.dto.AdminUserSummaryResponse;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.notification.email.NotificationEmailPolicyProvider;
+import com.iflytek.skillhub.notification.email.delivery.NotificationEmailCancellation;
+import com.iflytek.skillhub.notification.domain.NotificationCategory;
 import com.iflytek.skillhub.repository.AdminUserSearchRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -47,18 +50,27 @@ public class AdminUserAppService {
     private final UserRoleBindingRepository userRoleBindingRepository;
     private final RoleRepository roleRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final NotificationEmailPolicyProvider emailPolicy;
+    private final NotificationEmailCancellation emailCancellation;
+    private final com.iflytek.skillhub.notification.email.NotificationEmailAccountLifecycle emailLifecycle;
 
     public AdminUserAppService(
             AdminUserSearchRepository adminUserSearchRepository,
             UserAccountRepository userAccountRepository,
             UserRoleBindingRepository userRoleBindingRepository,
             RoleRepository roleRepository,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            NotificationEmailPolicyProvider emailPolicy,
+            NotificationEmailCancellation emailCancellation,
+            com.iflytek.skillhub.notification.email.NotificationEmailAccountLifecycle emailLifecycle) {
         this.adminUserSearchRepository = adminUserSearchRepository;
         this.userAccountRepository = userAccountRepository;
         this.userRoleBindingRepository = userRoleBindingRepository;
         this.roleRepository = roleRepository;
         this.eventPublisher = eventPublisher;
+        this.emailPolicy = emailPolicy;
+        this.emailCancellation = emailCancellation;
+        this.emailLifecycle = emailLifecycle;
     }
 
     @Transactional(readOnly = true)
@@ -111,13 +123,20 @@ public class AdminUserAppService {
 
     @Transactional
     public AdminUserMutationResponse updateUserStatus(String userId, String status) {
-        UserAccount user = loadUser(userId);
+        // Same lock order as email sending authorization, so disabling wins before authorization or follows it.
+        emailPolicy.lockCurrent();
+        UserAccount user = userAccountRepository.findLockedFreshById(userId)
+                .orElseThrow(() -> new DomainNotFoundException("error.admin.user.notFound", userId));
         rejectSystemAccountMutation(user);
         UserStatus nextStatus = parseManageableStatus(status);
         UserStatus previousStatus = user.getStatus();
         user.setStatus(nextStatus);
         userAccountRepository.save(user);
+        if (nextStatus != UserStatus.ACTIVE) {
+            emailCancellation.cancelCategories(userId, Set.of(NotificationCategory.values()));
+        }
         if (nextStatus == UserStatus.ACTIVE && previousStatus != UserStatus.ACTIVE) {
+            emailLifecycle.markActive(userId);
             eventPublisher.publishEvent(
                     new UserActivatedEvent(user.getId(), user.getDisplayName(), user.getEmail()));
         }

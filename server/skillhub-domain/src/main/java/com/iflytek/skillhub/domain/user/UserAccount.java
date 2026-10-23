@@ -17,6 +17,9 @@ public class UserAccount {
     @Column(length = 256)
     private String email;
 
+    @Column(name = "email_revision", nullable = false)
+    private long emailRevision;
+
     @Column(name = "avatar_url", length = 512)
     private String avatarUrl;
 
@@ -41,7 +44,7 @@ public class UserAccount {
     public UserAccount(String id, String displayName, String email, String avatarUrl) {
         this.id = id;
         this.displayName = displayName;
-        this.email = email;
+        this.email = normalizeEmail(email);
         this.avatarUrl = avatarUrl;
         this.status = UserStatus.ACTIVE;
     }
@@ -67,7 +70,17 @@ public class UserAccount {
     public String getDisplayName() { return displayName; }
     public void setDisplayName(String displayName) { this.displayName = displayName; }
     public String getEmail() { return email; }
-    public void setEmail(String email) { this.email = email; }
+    public long getEmailRevision() { return emailRevision; }
+    public void setEmail(String email) {
+        String normalized = normalizeEmail(email);
+        if (!java.util.Objects.equals(normalizeEmail(this.email), normalized)) {
+            emailRevision = Math.incrementExact(emailRevision);
+        }
+        this.email = normalized;
+    }
+    public static String normalizeEmail(String email) {
+        return email == null || email.isBlank() ? null : email.trim().toLowerCase(java.util.Locale.ROOT);
+    }
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
     public UserStatus getStatus() { return status; }
