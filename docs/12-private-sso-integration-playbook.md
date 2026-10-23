@@ -1,5 +1,10 @@
 # 私有 SSO 接入兼容层实施手册
 
+> 状态说明：本文是现有私有 SSO 兼容入口的历史实施手册。新接入应先遵循
+> [统一身份联邦设计](./21-unified-identity-federation-design.md)，由 Provider 返回协议
+> 验证结果，再由统一核心归一化为 `IdentityAssertion`；不得直接构造
+> `PlatformPrincipal`。本文中相反的代码示例只用于理解当前兼容实现。
+
 ## 1. 文档目的
 
 本文档面向两类读者：
