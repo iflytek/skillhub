@@ -376,10 +376,11 @@ func TestInteropProcessRepositoryPublicMultiSkill(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if task == nil || task.PlatformControlVersion == nil || task.TaskID != os.Getenv("SKILLHUB_INTEROP_TASK_ID") ||
+	// Java creates a TEAM source here; platform pause epochs apply only to @github.
+	if task == nil || task.PlatformControlVersion != nil || task.TaskID != os.Getenv("SKILLHUB_INTEROP_TASK_ID") ||
 		task.Repository == nil || task.Repository.RepositoryID != repositoryID ||
 		task.Repository.FixedCommitSHA != commitSHA || task.Mode != "FULL" {
-		t.Fatal("Java did not lease the expected fixed-commit repository task")
+		t.Fatal("Java did not lease the expected TEAM repository task without platform control")
 	}
 	if allTree && (task.MaxFilesPerPackage != 100 || task.MaxPackageBytes != 100<<20 ||
 		task.MaxUploadBytes != 100<<20) {

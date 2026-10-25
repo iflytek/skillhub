@@ -1755,6 +1755,8 @@ class GithubSyncHttpIngestionInteropTest {
     @Test
     @EnabledIfEnvironmentVariable(named = "SKILLHUB_GITHUB_SYNC_LIVE_INTERRUPT_INTEROP", matches = "1")
     void repositoryWorkerResumesAfterSigtermBetweenReceiptAndAcknowledgement() throws Exception {
+        long repositoryId = "1".equals(System.getenv("SKILLHUB_GITHUB_SYNC_LIVE_WORKER_REAL_TREE"))
+                ? 1103643573L : 987654350L;
         String namespaceSlug = "interop-interrupted-" + UUID.randomUUID().toString().substring(0, 8);
         long namespaceId = jdbc.queryForObject("""
                 INSERT INTO namespace (slug, display_name, type)
@@ -1769,10 +1771,10 @@ class GithubSyncHttpIngestionInteropTest {
                 INSERT INTO github_source_binding
                     (namespace_id, repository_id, owner_login, repository_name, visibility,
                      next_check_at)
-                VALUES (?, 987654350, 'openai', 'skills', 'NAMESPACE_ONLY',
+                VALUES (?, ?, 'openai', 'skills', 'NAMESPACE_ONLY',
                         CURRENT_TIMESTAMP + INTERVAL '1 day') RETURNING id
-                """, Long.class, namespaceId);
-        UUID taskId = createRepositoryTask(namespaceId, sourceId, 987654350L);
+                """, Long.class, namespaceId, repositoryId);
+        UUID taskId = createRepositoryTask(namespaceId, sourceId, repositoryId);
         Path tempRoot = Files.createTempDirectory("skillhub-github-interrupted-");
         try {
             ProcessBuilder builder = publicMultiSkillWorkerBuilder(taskId, false);
@@ -3070,7 +3072,10 @@ class GithubSyncHttpIngestionInteropTest {
     }
 
     private void awaitVersionStatus(Long versionId, String expected) throws InterruptedException {
-        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
+        // The opt-in external scanner does real analysis and may queue requests;
+        // the local HTTP fixture should still finish within the short budget.
+        long timeoutSeconds = scanner == null ? 180 : 15;
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(timeoutSeconds);
         String actual;
         do {
             actual = jdbc.queryForObject("SELECT status FROM skill_version WHERE id = ?",
@@ -3080,7 +3085,8 @@ class GithubSyncHttpIngestionInteropTest {
             }
             Thread.sleep(100);
         } while (System.nanoTime() < deadline);
-        assertThat(actual).isEqualTo(expected);
+        assertThat(actual).as("version %s status after %s seconds", versionId, timeoutSeconds)
+                .isEqualTo(expected);
     }
 
     private String baseUrl() {
