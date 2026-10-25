@@ -9,7 +9,7 @@ overrides:
   esbuild@<0.28.1: ^0.28.1
   js-yaml@<4.3.2: ^4.3.2
   browserslist@<4.28.7: ^4.28.7
-  undici@<7.29.1: ^7.29.1
+  undici@<7.30.1: ^7.30.1
   '@babel/core@<7.29.6': ^7.29.6
   postcss@<8.5.23: ^8.5.23
   postcss-selector-parser@<7.1.6: ^7.1.6
@@ -3253,8 +3253,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  undici@7.30.0:
-    resolution: {integrity: sha512-dkrQXeHSaoamnItlYbmzG0wFYrM0ZwDxCIg0A7aKjTyyhh9svRzCNFEzV+Vm05/yehjCzjDZ31KXfGEjYSztDQ==}
+  undici@7.30.1:
+    resolution: {integrity: sha512-03KrMbjIFDWQR5RNPrSw3bd1r12JpyFQl9/yxjUbJtqkjmllqC5lFjZh6ujeuJCKr8EOQvRW872Oy/az+nLYxg==}
     engines: {node: '>=20.18.1'}
 
   unified@11.0.5:
@@ -5745,7 +5745,7 @@ snapshots:
       saxes: 6.0.0
       symbol-tree: 3.2.4
       tough-cookie: 6.0.1
-      undici: 7.30.0
+      undici: 7.30.1
       w3c-xmlserializer: 5.0.0
       webidl-conversions: 8.0.1
       whatwg-mimetype: 5.0.0
@@ -6836,7 +6836,7 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  undici@7.30.0: {}
+  undici@7.30.1: {}
 
   unified@11.0.5:
     dependencies:
