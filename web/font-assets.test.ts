@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 const stylesheet = new URL('./public/fonts/fonts.css', import.meta.url)
 const css = readFileSync(stylesheet, 'utf8')
-const references = [...css.matchAll(/url\(['"]?([^'"\)]+)['"]?\)/g)].map(match => match[1])
+const references = [...css.matchAll(/url\(['"]?([^'")]+)['"]?\)/g)].map(match => match[1])
 
 describe('self-hosted font assets', () => {
   it('keeps every declared font backed by a real WOFF2 file', () => {
