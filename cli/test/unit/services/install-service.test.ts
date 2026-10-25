@@ -961,7 +961,8 @@ describe('installSkill', () => {
       namespace: 'global',
       slug: 'demo',
       targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
-      force: false
+      force: false,
+      home: join(rootDir, 'home')
     })).rejects.toThrow('download exceeds maximum package size')
   })
 })

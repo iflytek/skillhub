@@ -238,7 +238,11 @@ export class SkillHubClient {
   async downloadFromUrl(downloadUrl: string): Promise<Response> {
     let response: Response
     try {
-      response = await this.fetchImpl(new URL(downloadUrl, `${this.registry}/`).toString(), { headers: this.headers() })
+      // Resolve/namespace/Suite responses use application-relative /api paths.
+      // Keep the configured registry prefix, as direct download() does.
+      const relativeUrl = downloadUrl.startsWith('/api/') ? downloadUrl.slice(1) : downloadUrl
+      const registryBase = `${this.registry.replace(/\/+$/, '')}/`
+      response = await this.fetchImpl(new URL(relativeUrl, registryBase).toString(), { headers: this.headers() })
     } catch {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }

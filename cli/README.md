@@ -66,6 +66,10 @@ $env:SKILLHUB_REGISTRY="https://skillhub.example.com"
 set SKILLHUB_REGISTRY=https://skillhub.example.com
 ```
 
+For registries mounted below a URL prefix, include it in `--registry` (for example,
+`https://skillhub.example.com/skillhub`). Installation and namespace synchronization
+retain that prefix when following application-relative download URLs.
+
 ## 🔐 Authentication
 
 `skillhub login` uses OAuth Device Flow when no API token is supplied. Token resolution priority for

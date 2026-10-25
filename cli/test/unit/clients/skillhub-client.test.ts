@@ -4,6 +4,25 @@ import { CliError } from '../../../src/shared/errors'
 import { EXIT } from '../../../src/shared/constants'
 
 describe('SkillHubClient', () => {
+  test.each([
+    ['https://registry.test', '/api/v1/skills/team/skill/versions/1.0.0/download', 'https://registry.test/api/v1/skills/team/skill/versions/1.0.0/download'],
+    ['https://registry.test/skillhub', '/api/v1/skills/team/skill/versions/1.0.0/download', 'https://registry.test/skillhub/api/v1/skills/team/skill/versions/1.0.0/download'],
+    ['https://registry.test/nested/skillhub/', '/api/v1/skills/team/a%20b/versions/1.0.0/download', 'https://registry.test/nested/skillhub/api/v1/skills/team/a%20b/versions/1.0.0/download'],
+    ['https://registry.test/skillhub', 'api/v1/skills/team/skill/download', 'https://registry.test/skillhub/api/v1/skills/team/skill/download'],
+    ['https://registry.test/skillhub', '/skillhub/api/v1/skills/team/skill/download', 'https://registry.test/skillhub/api/v1/skills/team/skill/download'],
+    ['https://registry.test/skillhub', 'https://registry.test/skillhub/api/v1/skills/team/skill/download', 'https://registry.test/skillhub/api/v1/skills/team/skill/download']
+  ])('keeps registry scope when downloading %s -> %s', async (registry, downloadUrl, expected) => {
+    const requests: string[] = []
+    const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+      requests.push(String(input))
+      expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer test-token')
+      return new Response('package-bytes')
+    }) as unknown as typeof fetch
+    const client = new SkillHubClient(registry, 'test-token', fetchImpl)
+    expect(await (await client.downloadFromUrl(downloadUrl)).text()).toBe('package-bytes')
+    expect(requests).toEqual([expected])
+  })
+
   test('uses the provided multipart file name when publishing', async () => {
     const fetchImpl = (async (_input: URL | RequestInfo, init?: RequestInit) => {
       const formData = init?.body as FormData

@@ -159,6 +159,10 @@ export interface CapturedReview {
 // ---------------------------------------------------------------------------
 
 interface FakeRegistryOptions {
+  /** Mount the fake registry below a reverse-proxy prefix. */
+  basePath?: string
+  /** Match the application's /api/... download URL contract. */
+  applicationRelativeDownloads?: boolean
   token?: string
   user?: { handle: string; displayName: string; email?: string }
   searchItems?: Array<{ namespace: string; slug: string; latestVersion: string; summary: string }>
@@ -282,14 +286,17 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
 
   // Helper: build the download URL that resolve returns.
   function buildDownloadUrl(baseUrl: string, namespace: string, slug: string, version: string): string {
-    return `${baseUrl}/api/cli/v1/skills/${namespace}/${slug}/versions/${version}/download`
+    const origin = options.applicationRelativeDownloads ? '' : baseUrl + (options.basePath ?? '')
+    return `${origin}/api/cli/v1/skills/${namespace}/${slug}/versions/${version}/download`
   }
 
   const server = Bun.serve({
     port: 0,
     fetch(req) {
       const url = new URL(req.url)
-      const path = url.pathname
+      const prefix = options.basePath ?? ''
+      if (prefix && !url.pathname.startsWith(`${prefix}/`)) return new Response(null, { status: 404 })
+      const path = url.pathname.slice(prefix.length)
       const baseUrl = `${url.protocol}//${url.host}`
 
       // ------------------------------------------------------------------ //
@@ -584,7 +591,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
   })
 
   return {
-    url: `http://localhost:${server.port}`,
+    url: `http://localhost:${server.port}${options.basePath ?? ''}`,
     stop: () => server.stop(),
     /**
      * Inspect state captured from incoming requests.
