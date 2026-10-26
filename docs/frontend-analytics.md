@@ -262,6 +262,7 @@ must match configuration, name must match the ID shape (and Umami's 50-character
 limit), event must be click/submit/keydown. It returns null for pageviews (including
 unnamed `event` payloads), identify, performance and everything else. Hostname, URL,
 title, referrer, screen, language, tag, identity and extra data keys are removed.
+Values are read once, and only validated primitives are forwarded.
 The SDK still reads title/URL/referrer in-page before sanitizing; it also reads
 localStorage for its own `umami.disabled` switch. Those are SDK behaviors, not
 behaviors of the vendor-neutral helper.

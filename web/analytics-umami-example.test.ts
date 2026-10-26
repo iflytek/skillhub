@@ -50,9 +50,11 @@ describe('Umami v3.4.1 dispatch-time consent boundary', () => {
     let approved: unknown
     const win = {
       skillhubUmamiBeforeSend: undefined as unknown,
-      umami: { track: async (name: string, data: { event: string }) => {
+      umami: { track: async (name: string | object | (() => object), data?: { event: string }) => {
         const type = 'event', endpoint = '/_skillhub-umami/api/send'
-        let payload: unknown = { website, name, data, url: '/private', title: 'private' }
+        // Pinned track(object) shallow-copies; track(function) preserves its result's accessors.
+        let payload: unknown = typeof name === 'string' ? { website, name, data, url: '/private', title: 'private' }
+          : typeof name === 'function' ? name() : { ...name }
         const callback = (type: string, payload: unknown) => {
           approved = (win.skillhubUmamiBeforeSend as (type: string, payload: unknown) => unknown)(type, payload)
           return approved
@@ -68,8 +70,81 @@ describe('Umami v3.4.1 dispatch-time consent boundary', () => {
     }
     const adapter = createUmamiAdapter({ window: win, document, website })
     document.querySelector('script')!.dispatchEvent(new Event('load'))
-    return { adapter, fetch, approved: () => approved }
+    return { adapter, fetch, approved: () => approved, track: win.umami.track }
   }
+
+  it.each([
+    ['event', 'string'], ['event', 'toJSON'], ['name', 'string'], ['name', 'toJSON'],
+  ])('snapshots a changing %s getter before its second %s value can leak or stop then dispatch', async (field, mode) => {
+    let stopReturned = false, dispatchedAfterStop = false, reads = 0
+    const fetch = vi.fn(async () => { if (stopReturned) dispatchedAfterStop = true })
+    const { adapter, track } = platform(fetch)
+    const lateValue = mode === 'string' ? 'PRIVATE VALUE' : {
+      toJSON() { adapter.stop(); stopReturned = true; return { secret: 'PRIVATE VALUE' } },
+    }
+    const payload = { website, name: intent.id, data: { event: 'click' } }
+    Object.defineProperty(field === 'name' ? payload : payload.data, field, {
+      enumerable: true,
+      get() { return ++reads === 1 ? (field === 'name' ? intent.id : 'click') : lateValue },
+    })
+    try {
+      // Object path retains nested event accessors; function path retains name accessors.
+      await expect(track(field === 'name' ? () => payload : payload)).resolves.toBeUndefined()
+      expect(dispatchedAfterStop).toBe(false)
+      expect(fetch.mock.calls.length).toBeLessThanOrEqual(1)
+      for (const call of fetch.mock.calls as unknown as Array<[string, { body: string }]>) {
+        expect(call[1].body).toBe(JSON.stringify({ type: 'event', payload: { website, name: intent.id, data: { event: 'click' } } }))
+        expect(call[1].body).not.toContain('PRIVATE')
+      }
+      expect(reads).toBe(1)
+      adapter.stop(); stopReturned = true
+      await track(intent.id, { event: 'click' })
+      expect(dispatchedAfterStop).toBe(false)
+    } finally { adapter.stop() }
+  })
+
+  it.each(['website', 'name', 'data', 'event'])('drops a throwing %s getter without sending or unhandled rejection', async field => {
+    const { adapter, fetch, track } = platform()
+    const unhandled = vi.fn()
+    window.addEventListener('unhandledrejection', unhandled)
+    const payload = { website, name: intent.id, data: { event: 'click' } }
+    Object.defineProperty(field === 'event' ? payload.data : payload, field, {
+      get() { throw Error('unreadable payload') },
+    })
+    try {
+      expect(sanitizeUmamiPayload('event', payload, website)).toBeNull()
+      await expect(track(() => payload)).resolves.toBeUndefined()
+      await new Promise(resolve => window.setTimeout(resolve, 0))
+      expect(fetch).not.toHaveBeenCalled()
+      expect(unhandled).not.toHaveBeenCalled()
+    } finally {
+      adapter.stop()
+      window.removeEventListener('unhandledrejection', unhandled)
+    }
+  })
+
+  it('reads website/name/data/event once and serializes only captured primitives despite returned-object mutation', async () => {
+    const { adapter, fetch, track, approved } = platform()
+    const getters = {
+      website: vi.fn(() => website), name: vi.fn(() => intent.id), event: vi.fn(() => 'click'),
+      data: vi.fn(() => Object.defineProperty({}, 'event', { get: getters.event })),
+    }
+    const payload = Object.defineProperties({}, {
+      website: { get: getters.website }, name: { get: getters.name }, data: { get: getters.data },
+    })
+    try {
+      const pending = track(() => payload)
+      const guarded = approved() as object
+      for (const field of ['website', 'name', 'data']) {
+        Object.defineProperty(guarded, field, { get() { throw Error('must not re-read returned object') } })
+      }
+      await expect(pending).resolves.toBeUndefined()
+      expect(fetch).toHaveBeenCalledExactlyOnceWith('/_skillhub-umami/api/send', {
+        body: JSON.stringify({ type: 'event', payload: { website, name: intent.id, data: { event: 'click' } } }),
+      })
+      for (const getter of Object.values(getters)) expect(getter).toHaveBeenCalledTimes(1)
+    } finally { adapter.stop() }
+  })
 
   it('stop in the before-send/fetch microtask gap dispatches nothing and send resolves without unhandled rejection', async () => {
     const { adapter, fetch, approved } = platform()

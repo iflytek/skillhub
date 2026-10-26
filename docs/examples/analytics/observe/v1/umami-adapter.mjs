@@ -6,10 +6,16 @@ const events = ['click', 'submit', 'keydown']
 
 // Umami's before-send hook returns the inner payload, not the { type, payload } envelope.
 export function sanitizeUmamiPayload(type, payload, website) {
-  if (type !== 'event' || !websiteShape.test(website) || payload?.website !== website
-    || typeof payload?.name !== 'string' || !idShape.test(payload.name)
-    || payload.name.length > 50 || !events.includes(payload.data?.event)) return null
-  return { website, name: payload.name, data: { event: payload.data.event } }
+  let payloadWebsite, name, event
+  try {
+    payloadWebsite = payload?.website
+    name = payload?.name
+    event = payload?.data?.event
+  } catch { return null }
+  if (type !== 'event' || !websiteShape.test(website) || payloadWebsite !== website
+    || typeof name !== 'string' || !idShape.test(name) || name.length > 50
+    || typeof event !== 'string' || !events.includes(event)) return null
+  return { website: payloadWebsite, name, data: { event } }
 }
 
 export function createUmamiAdapter({ window: win = window, document: doc = document,
@@ -30,13 +36,14 @@ export function createUmamiAdapter({ window: win = window, document: doc = docum
     if (stopped) return null
     const sanitized = sanitizeUmamiPayload(type, payload, website)
     if (!sanitized) return null
+    const { website: validatedWebsite, name, data: { event } } = sanitized
     // Verified against pinned v3.4.1: serialization is synchronous at fetch dispatch,
     // inside the SDK's try/catch, after awaiting this hook. Re-verify on SDK upgrades.
     Object.defineProperty(sanitized, 'toJSON', {
       enumerable: false,
       value() {
         if (stopped) throw new Error('Analytics stopped before dispatch')
-        return { website: sanitized.website, name: sanitized.name, data: { event: sanitized.data.event } }
+        return { website: validatedWebsite, name, data: { event } }
       },
     })
     return sanitized
