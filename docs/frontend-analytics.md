@@ -173,9 +173,10 @@ const stop = observeSkillhubIntents({ root: document, rules: active, onIntent: s
 ```
 
 Omitting `rules` uses the defaults; passing it REPLACES them. Merge explicitly as
-above. Any category with three lowercase segments `domain.object.action` is valid;
-each segment starts with a letter and may contain letters, digits and underscores.
-Only finite rule types are supported:
+above. The example accepts the same grammar the product manifest enforces:
+`^[a-z]+(?:\.[a-z]+){2,}$` (at least three dot-separated segments, lowercase letters
+only; no digits or underscores). For example, `skill.command.skillhub.select`
+can reuse `click`. Only finite rule types are supported:
 
 - `click`: ordinary buttons/links. FORM, SELECT, TEXTAREA and non-button INPUT
   hosts are ignored (including file inputs).
@@ -240,10 +241,13 @@ v3.4.1 installs no pageview, history hook, click listener or performance observe
 `data-host-url` is the same-origin `/_skillhub-umami` prefix, and
 `data-before-send` names its sanitizer. Do not load another Umami tracker on the
 same page (the SDK/global hook are singletons). It calls `umami.track(id, { event })`;
-one intent may wait up to three seconds for the script, further concurrent intents
-are dropped, and tracking is time-bounded. Missing, blocked or rejecting trackers
-resolve silently. There is no retry or backlog; best-effort counts can undercount.
-A timeout cannot cancel an SDK fetch already in flight.
+at most 20 valid intents wait in memory for up to three seconds while the script
+loads (excess intents are dropped). They are released when ready, or dropped on
+load failure, timeout or `stop()`. Once ready, every valid intent calls the tracker
+independently: concurrent or hung requests do not block later intents. Each call's
+wait is time-bounded; missing, blocked, throwing or rejecting trackers resolve
+silently. There is no retry, durable queue or post-load backlog; best-effort counts
+can undercount. A timeout cannot cancel an SDK fetch already in flight.
 
 The sanitizer allowlists the FINAL SDK payload, not just the callback. Only
 `{ type: 'event', payload: { website, name, data: { event } } }` survives; website

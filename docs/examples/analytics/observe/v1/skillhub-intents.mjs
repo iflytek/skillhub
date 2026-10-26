@@ -1,7 +1,8 @@
 // Optional deployment example, NOT imported or started by SkillHub.
 const activeRoots = new WeakMap()
 const handledEvents = new WeakSet()
-const idShape = /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/
+// Same grammar as web/scripts/analytics-manifest.mjs; manifest parity is tested.
+const idShape = /^[a-z]+(?:\.[a-z]+){2,}$/
 export const DEFAULT_RULES = Object.freeze({
   'search.query.submit': 'submit',
   'skill.card.open': 'card',

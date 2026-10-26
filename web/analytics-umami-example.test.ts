@@ -1,10 +1,49 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createUmamiAdapter, sanitizeUmamiPayload } from '../docs/examples/analytics/observe/v1/umami-adapter.mjs'
+import { resolveRules } from '../docs/examples/analytics/observe/v1/skillhub-intents.mjs'
+import { readFileSync } from 'node:fs'
+
+const manifest = JSON.parse(readFileSync('../docs/frontend-analytics-manifest.json', 'utf8')) as {
+  counts: { uniqueIds: number }
+  sites: Array<{ ids?: string[] }>
+  definitions: Array<{ ids: string[] }>
+}
+const publishedIds = [...new Set([...manifest.sites.flatMap(site => site.ids ?? []), ...manifest.definitions.flatMap(site => site.ids)])]
 
 afterEach(() => { document.head.replaceChildren(); vi.useRealTimers(); vi.restoreAllMocks() })
 const website = '4398de8e-40df-4483-9eea-ed213643525f'
 const intent = { id: 'skill.example.open', event: 'click' }
+
+describe('product ID grammar parity', () => {
+  it.each([4, 5, 6])('accepts a published %i-segment ID in rules and the final payload', segments => {
+    const id = publishedIds.find(id => id.split('.').length === segments)!
+    expect(id).toBeTypeOf('string')
+    expect(resolveRules({ [id]: 'click' })).toEqual({ active: { [id]: 'click' }, skipped: [] })
+    expect(sanitizeUmamiPayload('event', { website, name: id, data: { event: 'click' } }, website))
+      .toEqual({ website, name: id, data: { event: 'click' } })
+  })
+  it.each(['skill2.example.open', 'skill.example_open.click', 'Skill.example.open', 'skill.open', '.skill.example.open', 'skill.example.open.'])('skips non-product grammar %s', id => {
+    expect(resolveRules({ [id]: 'click' })).toEqual({ active: {}, skipped: [{ id, reason: 'invalid id shape' }] })
+    expect(sanitizeUmamiPayload('event', { website, name: id, data: { event: 'click' } }, website)).toBeNull()
+  })
+  it('accepts EVERY published ID through both boundaries (not a closed runtime enum)', () => {
+    expect(publishedIds).toHaveLength(manifest.counts.uniqueIds)
+    const rules = Object.fromEntries(publishedIds.map(id => [id, 'click']))
+    expect(resolveRules(rules)).toEqual({ active: rules, skipped: [] })
+    for (const id of publishedIds) {
+      expect(sanitizeUmamiPayload('event', { website, name: id, data: { event: 'click' } }, website), id)
+        .toEqual({ website, name: id, data: { event: 'click' } })
+    }
+  })
+  it('keeps the Umami 50-character limit separate from the product grammar', () => {
+    const id = `skill.example.${'a'.repeat(37)}`
+    expect(id).toHaveLength(51)
+    expect(resolveRules({ [id]: 'click' }).skipped).toEqual([])
+    expect(sanitizeUmamiPayload('event', { website, name: id, data: { event: 'click' } }, website)).toBeNull()
+    expect(sanitizeUmamiPayload('event', { website, name: id.slice(0, 50), data: { event: 'click' } }, website)).not.toBeNull()
+  })
+})
 
 describe('Umami v3.4.1 adapter', () => {
   it('allowlists the FINAL payload, never SDK context or extra data', () => {
@@ -17,7 +56,7 @@ describe('Umami v3.4.1 adapter', () => {
   it.each(['pageview', 'identify', 'performance', 'unknown'])('drops %s', type => {
     expect(sanitizeUmamiPayload(type, { website, name: intent.id, data: { event: 'click' } }, website)).toBeNull()
   })
-  it.each(['bad', 'skill.bad-value.open', 'skill.example.open.extra', '', null, 42])('drops bad name %s', name => {
+  it.each(['bad', 'skill.bad-value.open', '', null, 42])('drops bad name %s', name => {
     expect(sanitizeUmamiPayload('event', { website, name, data: { event: 'click' } }, website)).toBeNull()
   })
   it('drops pageviews encoded as events, wrong websites and unknown native event kinds', () => {
@@ -52,15 +91,72 @@ describe('Umami v3.4.1 adapter', () => {
     await adapter.send(intent)
     expect((win.umami as { track: ReturnType<typeof vi.fn> }).track).not.toHaveBeenCalled()
   })
-  it('bounds waiting and drops concurrent intents rather than building a queue', async () => {
+  it('sends two rapid ready intents before either track settles', async () => {
+    const finish: Array<() => void> = []
+    const track = vi.fn<(id: string, data: { event: string }) => Promise<void>>(() => new Promise<void>(resolve => finish.push(resolve)))
+    const adapter = createUmamiAdapter({ window: { umami: { track } }, document, website })
+    document.querySelector('script')!.dispatchEvent(new Event('load'))
+    const first = adapter.send(intent), second = adapter.send({ ...intent, id: 'skill.command.copy' })
+    await vi.waitFor(() => expect(track).toHaveBeenCalledTimes(2))
+    expect(track.mock.calls.map(args => args[0])).toEqual([intent.id, 'skill.command.copy'])
+    finish.forEach(resolve => resolve())
+    await Promise.all([first, second])
+    adapter.stop()
+  })
+  it('does not let a hung track block a later send', async () => {
     vi.useFakeTimers()
-    const win = { umami: undefined as unknown }
-    const adapter = createUmamiAdapter({ window: win, document, website, timeoutMs: 20 })
+    const track = vi.fn().mockImplementationOnce(() => new Promise(() => {})).mockResolvedValue(undefined)
+    const adapter = createUmamiAdapter({ window: { umami: { track } }, document, website, timeoutMs: 20 })
+    document.querySelector('script')!.dispatchEvent(new Event('load'))
     const first = adapter.send(intent)
-    await expect(adapter.send(intent)).resolves.toBeUndefined()
+    await vi.advanceTimersByTimeAsync(0)
+    await adapter.send({ ...intent, id: 'skill.command.copy' })
+    expect(track).toHaveBeenCalledTimes(2)
     await vi.advanceTimersByTimeAsync(20)
     await expect(first).resolves.toBeUndefined()
     adapter.stop()
+  })
+  it('holds at most 20 intents only during loading and releases them in order', async () => {
+    const track = vi.fn().mockResolvedValue(undefined)
+    const adapter = createUmamiAdapter({ window: { umami: { track } }, document, website })
+    // Invalid payloads must not consume pending capacity.
+    await adapter.send({ id: 'bad', event: 'click' })
+    const ids = Array.from({ length: 20 }, (_, i) => `skill.example.${String.fromCharCode(97 + i)}`)
+    const pending = ids.map(id => adapter.send({ id, event: 'click' }))
+    await expect(adapter.send(intent)).resolves.toBeUndefined()
+    expect(track).not.toHaveBeenCalled()
+    document.querySelector('script')!.dispatchEvent(new Event('load'))
+    await Promise.all(pending)
+    expect(track.mock.calls).toEqual(ids.map(id => [id, { event: 'click' }]))
+    // The loading cap must not become a lifetime cap.
+    await adapter.send(intent)
+    expect(track).toHaveBeenCalledTimes(21)
+    adapter.stop()
+  })
+  it.each(['error', 'timeout', 'stop'])('drops all pending intents on %s, including a late load', async mode => {
+    vi.useFakeTimers()
+    const track = vi.fn().mockResolvedValue(undefined)
+    const adapter = createUmamiAdapter({ window: { umami: { track } }, document, website, timeoutMs: 20 })
+    const script = document.querySelector('script')!
+    const pending = Array.from({ length: 20 }, () => adapter.send(intent))
+    if (mode === 'stop') adapter.stop()
+    else if (mode === 'error') script.dispatchEvent(new Event('error'))
+    else await vi.advanceTimersByTimeAsync(20)
+    await Promise.all(pending)
+    script.dispatchEvent(new Event('load'))
+    await adapter.send(intent)
+    expect(track).not.toHaveBeenCalled()
+    adapter.stop()
+  })
+  it('stop denies payloads even with a previously ready tracker', async () => {
+    const win = { umami: { track: vi.fn().mockResolvedValue(undefined) }, skillhubUmamiBeforeSend: undefined as unknown }
+    const adapter = createUmamiAdapter({ window: win, document, website })
+    document.querySelector('script')!.dispatchEvent(new Event('load'))
+    adapter.stop()
+    await adapter.send(intent)
+    expect(win.umami.track).not.toHaveBeenCalled()
+    const hook = win.skillhubUmamiBeforeSend as (type: string, payload: unknown) => unknown
+    expect(hook('event', { website, name: intent.id, data: { event: 'click' } })).toBeNull()
   })
   it('resolves when tracker is absent after load, throws, rejects, or never settles', async () => {
     vi.useFakeTimers()

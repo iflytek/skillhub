@@ -1,5 +1,6 @@
 // Deployment-owned adapter for Umami v3.4.1 (MIT). No SDK in the product.
-const idShape = /^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$/
+// Same grammar as web/scripts/analytics-manifest.mjs; manifest parity is tested.
+const idShape = /^[a-z]+(?:\.[a-z]+){2,}$/
 const websiteShape = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const events = ['click', 'submit', 'keydown']
 
@@ -14,11 +15,13 @@ export function sanitizeUmamiPayload(type, payload, website) {
 export function createUmamiAdapter({ window: win = window, document: doc = document,
   website, prefix = '/_skillhub-umami', timeoutMs = 3000 } = {}) {
   if (!websiteShape.test(website)) return { send: async () => {}, stop() {} }
-  let stopped = false, busy = false, finishLoad
+  let stopped = false, loadState = 'loading', pending = 0, finishLoad
   const script = doc.createElement('script')
   const ready = new Promise(resolve => { finishLoad = resolve })
   let loadTimer
   const loaded = ok => {
+    if (loadState !== 'loading') return // Failure/timeout cannot be revived by a late load.
+    loadState = ok ? 'ready' : 'failed'
     clearTimeout(loadTimer)
     script.onload = script.onerror = null
     finishLoad(ok)
@@ -37,17 +40,24 @@ export function createUmamiAdapter({ window: win = window, document: doc = docum
 
   return {
     async send({ id, event } = {}) {
-      if (stopped || busy || !sanitizeUmamiPayload('event', { website, name: id, data: { event } }, website)) return
-      busy = true // At most one in-flight intent. No retry, backlog, or durable queue.
+      if (stopped || loadState === 'failed'
+        || !sanitizeUmamiPayload('event', { website, name: id, data: { event } }, website)) return
+      if (loadState === 'loading') {
+        if (pending >= 20) return // Bounded, memory-only wait for the script; no retry.
+        pending++
+        await ready
+        pending--
+      }
       let timer
       try {
-        if (!await ready || stopped || typeof win.umami?.track !== 'function') return
+        if (stopped || loadState !== 'ready' || typeof win.umami?.track !== 'function') return
+        // Each ready intent is independent, even if another SDK fetch never settles.
         await Promise.race([
           Promise.resolve().then(() => { if (!stopped) return win.umami.track(id, { event }) }),
           new Promise(resolve => { timer = setTimeout(resolve, timeoutMs) }),
         ])
       } catch { /* Missing/blocked/offline analytics must never reject into the app. */ }
-      finally { clearTimeout(timer); busy = false }
+      finally { clearTimeout(timer) }
     },
     stop() {
       stopped = true
