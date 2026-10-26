@@ -483,4 +483,26 @@ grep -Fq 'key: skillhub-storage-s3-access-key' "$TMP_DIR/storage-example.yaml" \
 grep -Fq 'key: skillhub-storage-s3-secret-key' "$TMP_DIR/storage-example.yaml" \
   || fail "Storage secret key Secret mapping changed"
 
+# Notification policy is opt-in; credentials are supplied with existing extraEnv Secret refs.
+grep -Fq 'notification-email-enabled: "false"' "$TMP_DIR/default.yaml" \
+  || fail "Notification email must stay off by default"
+render notification-email "$CHART_DIR" \
+  --set notificationEmail.enabled=true \
+  --set notificationEmail.digestWindowMinutes=60 \
+  --set notificationEmail.publicBaseUrl=https://skills.example.com/portal \
+  --set notificationEmail.fromAddress=notifications@example.com \
+  >"$TMP_DIR/notification-email.yaml"
+grep -Fq 'notification-email-window: "60"' "$TMP_DIR/notification-email.yaml" \
+  || fail "Notification digest window must reach the config map"
+grep -Fq 'notification-email-public-url: "https://skills.example.com/portal"' "$TMP_DIR/notification-email.yaml" \
+  || fail "Notification links must use the configured public URL"
+for key in ENABLED DIGEST_WINDOW_MINUTES PUBLIC_BASE_URL FROM_ADDRESS FROM_NAME; do
+  grep -Fq "name: SKILLHUB_NOTIFICATION_EMAIL_$key" "$TMP_DIR/notification-email.yaml" \
+    || fail "Missing notification email deployment environment: $key"
+done
+assert_rejected email-window-too-short --set notificationEmail.digestWindowMinutes=4
+assert_rejected email-window-too-long --set notificationEmail.digestWindowMinutes=1441
+assert_rejected email-url-query --set-string notificationEmail.publicBaseUrl=https://skills.example.com?ref=1
+assert_rejected email-unknown-config --set notificationEmail.password=invalid
+
 echo "Helm configuration contract tests passed"

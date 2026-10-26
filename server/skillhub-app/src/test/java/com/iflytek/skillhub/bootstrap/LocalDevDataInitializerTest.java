@@ -59,8 +59,8 @@ class LocalDevDataInitializerTest {
         setField(superAdminRole, "id", 1L);
         setField(superAdminRole, "code", "SUPER_ADMIN");
 
-        when(userAccountRepository.findById(LocalDevDataInitializer.LOCAL_USER_ID)).thenReturn(Optional.empty());
-        when(userAccountRepository.findById(LocalDevDataInitializer.LOCAL_ADMIN_ID)).thenReturn(Optional.empty());
+        when(userAccountRepository.findLockedFreshById(LocalDevDataInitializer.LOCAL_USER_ID)).thenReturn(Optional.empty());
+        when(userAccountRepository.findLockedFreshById(LocalDevDataInitializer.LOCAL_ADMIN_ID)).thenReturn(Optional.empty());
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(anyLong(), any())).thenReturn(Optional.empty());

@@ -20,7 +20,7 @@ import java.util.Optional;
  */
 @Repository
 public interface UserAccountJpaRepository
-        extends JpaRepository<UserAccount, String>, JpaSpecificationExecutor<UserAccount>, UserAccountRepository {
+        extends JpaRepository<UserAccount, String>, JpaSpecificationExecutor<UserAccount>, UserAccountRepository, UserAccountFreshLock {
 
     @Override
     @Lock(LockModeType.PESSIMISTIC_WRITE)

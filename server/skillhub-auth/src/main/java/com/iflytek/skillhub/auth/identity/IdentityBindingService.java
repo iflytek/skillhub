@@ -91,7 +91,7 @@ public class IdentityBindingService {
 
         UserAccount user;
         if (binding != null) {
-            user = userRepo.findById(binding.getUserId())
+            user = userRepo.findLockedFreshById(binding.getUserId())
                 .orElseThrow(() -> new IllegalStateException("User not found for binding"));
             ensureExternalLoginAllowed(user);
             user.setDisplayName(claims.providerLogin());
