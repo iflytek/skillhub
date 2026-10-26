@@ -26,7 +26,21 @@ export function createUmamiAdapter({ window: win = window, document: doc = docum
     script.onload = script.onerror = null
     finishLoad(ok)
   }
-  win.skillhubUmamiBeforeSend = (type, payload) => stopped ? null : sanitizeUmamiPayload(type, payload, website)
+  win.skillhubUmamiBeforeSend = (type, payload) => {
+    if (stopped) return null
+    const sanitized = sanitizeUmamiPayload(type, payload, website)
+    if (!sanitized) return null
+    // Verified against pinned v3.4.1: serialization is synchronous at fetch dispatch,
+    // inside the SDK's try/catch, after awaiting this hook. Re-verify on SDK upgrades.
+    Object.defineProperty(sanitized, 'toJSON', {
+      enumerable: false,
+      value() {
+        if (stopped) throw new Error('Analytics stopped before dispatch')
+        return { website: sanitized.website, name: sanitized.name, data: { event: sanitized.data.event } }
+      },
+    })
+    return sanitized
+  }
   script.src = `${prefix}/script.js`
   script.async = true
   script.setAttribute('data-website-id', website)
@@ -63,8 +77,8 @@ export function createUmamiAdapter({ window: win = window, document: doc = docum
       stopped = true
       loaded(false)
       script.remove()
-      // Keep a denying hook: a tracker already loaded cannot bypass consent withdrawal.
-      // Requests already handed to fetch cannot be recalled.
+      // Keep the denying hook and dispatch guard: no new request after stop returns.
+      // Only a request whose fetch already started cannot be recalled.
     },
   }
 }

@@ -247,7 +247,14 @@ load failure, timeout or `stop()`. Once ready, every valid intent calls the trac
 independently: concurrent or hung requests do not block later intents. Each call's
 wait is time-bounded; missing, blocked, throwing or rejecting trackers resolve
 silently. There is no retry, durable queue or post-load backlog; best-effort counts
-can undercount. A timeout cannot cancel an SDK fetch already in flight.
+can undercount. After `stop()` returns, no new request is dispatched; only a
+request whose fetch already started cannot be recalled (nor cancelled by a timeout).
+The before-send hook keeps its immediate stop check and adds a non-enumerable
+`toJSON` guard that re-checks consent when the SDK serializes at dispatch. In pinned
+v3.4.1 this runs synchronously in the fetch expression inside the SDK's try/catch:
+throwing on stop prevents fetch and is swallowed by the SDK. This relies on that
+ordering; a different Umami version must re-verify it with the dispatch-boundary
+regression tests in `web/analytics-umami-example.test.ts`.
 
 The sanitizer allowlists the FINAL SDK payload, not just the callback. Only
 `{ type: 'event', payload: { website, name, data: { event } } }` survives; website
@@ -280,8 +287,11 @@ analytics DB, persistent queue or multi-vendor SDK is introduced.
 
 No injection means zero collection. `enabled: false` in the deployer's entry is
 also inert: no helper initialization or tracker load. On consent withdrawal call
-`window.skillhubAnalytics.stop()`; it removes listeners and denies future SDK
-payloads (already-sent requests cannot be recalled). Resume only after approval
+`window.skillhubAnalytics.stop()`; it removes listeners and denies SDK payloads,
+including those awaiting dispatch. After it returns, no new request is dispatched;
+only a request whose fetch already started cannot be recalled. The dispatch guard
+relies on pinned v3.4.1 serializing at dispatch; re-run the adapter regression tests
+to re-verify this ordering for a different Umami version. Resume only after approval
 via `start()`. Platform-side disabling/deleting the website, Umami's local
 `umami.disabled` switch, or blocking the two ingestion routes are additional
 operator controls, not substitutes for consent. Removing injection and purging

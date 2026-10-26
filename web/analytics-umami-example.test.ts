@@ -45,6 +45,88 @@ describe('product ID grammar parity', () => {
   })
 })
 
+describe('Umami v3.4.1 dispatch-time consent boundary', () => {
+  function platform(fetch = vi.fn().mockResolvedValue(undefined)) {
+    let approved: unknown
+    const win = {
+      skillhubUmamiBeforeSend: undefined as unknown,
+      umami: { track: async (name: string, data: { event: string }) => {
+        const type = 'event', endpoint = '/_skillhub-umami/api/send'
+        let payload: unknown = { website, name, data, url: '/private', title: 'private' }
+        const callback = (type: string, payload: unknown) => {
+          approved = (win.skillhubUmamiBeforeSend as (type: string, payload: unknown) => unknown)(type, payload)
+          return approved
+        }
+        // Mirror pinned v3.4.1 send(): await before-send, null check, then
+        // serialize synchronously in the fetch expression inside its try/catch.
+        payload = await Promise.resolve(callback(type, payload))
+        if (!payload) return
+        try {
+          await fetch(endpoint, { body: JSON.stringify({ type, payload }) })
+        } catch { /* SDK swallows serialization and transport failures. */ }
+      } },
+    }
+    const adapter = createUmamiAdapter({ window: win, document, website })
+    document.querySelector('script')!.dispatchEvent(new Event('load'))
+    return { adapter, fetch, approved: () => approved }
+  }
+
+  it('stop in the before-send/fetch microtask gap dispatches nothing and send resolves without unhandled rejection', async () => {
+    const { adapter, fetch, approved } = platform()
+    const unhandled = vi.fn()
+    window.addEventListener('unhandledrejection', unhandled)
+    try {
+      const pending = adapter.send(intent)
+      await Promise.resolve()
+      expect(approved()).toEqual({ website, name: intent.id, data: { event: 'click' } })
+      expect(fetch).not.toHaveBeenCalled()
+      adapter.stop()
+      await expect(pending).resolves.toBeUndefined()
+      await new Promise(resolve => window.setTimeout(resolve, 0))
+      expect(fetch).not.toHaveBeenCalled()
+      expect(unhandled).not.toHaveBeenCalled()
+    } finally {
+      adapter.stop()
+      window.removeEventListener('unhandledrejection', unhandled)
+    }
+  })
+
+  it('stop in a later macrotask lets an already-started fetch complete but dispatches no more', async () => {
+    let complete!: () => void
+    const fetch = vi.fn(() => new Promise<void>(resolve => { complete = resolve }))
+    const { adapter } = platform(fetch)
+    try {
+      const pending = adapter.send(intent)
+      await new Promise(resolve => window.setTimeout(resolve, 0))
+      expect(fetch).toHaveBeenCalledTimes(1)
+      adapter.stop()
+      complete()
+      await expect(pending).resolves.toBeUndefined()
+      await expect(adapter.send(intent)).resolves.toBeUndefined()
+      expect(fetch).toHaveBeenCalledTimes(1)
+    } finally { adapter.stop() }
+  })
+
+  it('serializes the exact allowlisted envelope and keeps toJSON non-enumerable', async () => {
+    const { adapter, fetch, approved } = platform()
+    try {
+      await expect(adapter.send(intent)).resolves.toBeUndefined()
+      expect(fetch).toHaveBeenCalledExactlyOnceWith('/_skillhub-umami/api/send', {
+        body: `{"type":"event","payload":{"website":"${website}","name":"${intent.id}","data":{"event":"click"}}}`,
+      })
+      expect(Object.keys(approved() as object)).toEqual(['website', 'name', 'data'])
+      expect(Object.getOwnPropertyDescriptor(approved(), 'toJSON')).toMatchObject({ enumerable: false, value: expect.any(Function) })
+      const guarded = approved() as { toJSON: () => { data: object } }
+      const first = guarded.toJSON(), second = guarded.toJSON()
+      expect(first).toEqual({ website, name: intent.id, data: { event: 'click' } })
+      expect(Object.getPrototypeOf(first)).toBe(Object.prototype)
+      expect(first).not.toBe(second)
+      expect(first.data).not.toBe(second.data)
+      expect(Object.getOwnPropertyNames(first)).toEqual(['website', 'name', 'data'])
+    } finally { adapter.stop() }
+  })
+})
+
 describe('Umami v3.4.1 adapter', () => {
   it('allowlists the FINAL payload, never SDK context or extra data', () => {
     expect(sanitizeUmamiPayload('event', {
