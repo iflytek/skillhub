@@ -10,8 +10,24 @@ or a durable business-event feed.
 
 ## Contract and scope
 
-`data-analytics-id` identifies an observable action intent, not its result.
-Lowercase dotted names are independent of language, visible text and layout.
+`data-analytics-id` names an action category (what kind of action), not a unique
+event or instance ID, and describes intent, not its result. Many elements and
+many events share the same category. Lowercase dotted names are independent of
+language, visible text and layout.
+
+The example callback payload is `{ id, event }`: `id` is the matched category;
+`event` is the native DOM event type observed (`click`, `submit`, or `keydown`),
+not a business result. Evolution within this module version is additive only:
+new optional fields must be allowlisted static values, consumers ignore unknown
+keys, and existing field meanings never change. Breaking changes use a new
+versioned module path.
+
+Published IDs are frozen. A meaning change needs a new ID; rename/removal must be
+called out in the PR and release notes and visible in the generated manifest diff
+(the CI drift test checks source against that manifest). Deployers should diff
+the manifest between versions: configured IDs that disappear simply never fire;
+new IDs remain inert until explicitly configured. The manifest is not a runtime
+closed enum.
 Literal conditional branches distinguish finite business actions (for example,
 namespace freeze/unfreeze/archive/restore/delete and each confirmation/cancel).
 No resource, slug, version, user, provider, role, label instance or backend string
@@ -143,16 +159,52 @@ outbound adapter and CSP connect destinations. External JS has page privileges;
 serve reviewed versioned code, restrict access and treat compromise as a security
 incident. Vendor credentials and ingestion endpoints belong outside core.
 
-[The docs-only example](examples/skillhub-intents.mjs) exports
-`observeSkillhubIntents({ root, onIntent })`. Importing it does not start collection;
-without an explicit callback it installs no listeners. It has no network, identity,
-route patching or default output. Its intentionally small allowlist demonstrates
-click/submit/custom-card keydown only, not every manifest action, Select, crop,
-file change/drop or pageviews. The callback receives only ID and event kind; it
-must not enrich them with sensitive context. Initialization is idempotent per root,
-and the returned function removes listeners. It catches callback errors and never
-calls preventDefault/stopPropagation. Tests use synthetic data and are not browser
-or deployment acceptance.
+## Configure rules and add tags
+
+[The vendor-neutral helper](examples/analytics/observe/v1/skillhub-intents.mjs)
+exports `observeSkillhubIntents({ root, rules, onIntent })`, frozen `DEFAULT_RULES`
+(the original 12 categories), and pure `resolveRules(rules)`:
+
+```js
+import { DEFAULT_RULES, resolveRules, observeSkillhubIntents } from './skillhub-intents.mjs'
+const rules = { ...DEFAULT_RULES, 'skill.example.open': 'click' }
+const { active, skipped } = resolveRules(rules) // Inspect locally; do not send config diagnostics.
+const stop = observeSkillhubIntents({ root: document, rules: active, onIntent: sendIntent })
+```
+
+Omitting `rules` uses the defaults; passing it REPLACES them. Merge explicitly as
+above. Any category with three lowercase segments `domain.object.action` is valid;
+each segment starts with a letter and may contain letters, digits and underscores.
+Only finite rule types are supported:
+
+- `click`: ordinary buttons/links. FORM, SELECT, TEXTAREA and non-button INPUT
+  hosts are ignored (including file inputs).
+- `submit`: FORM only; button click and Enter converge on native submit.
+- `card`: DIV role=link with its existing Enter/Space handler, plus click. The
+  observer does not implement keyboard activation or synthesize clicks.
+
+Select/file/drop/crop and other special interactions need a future rule type;
+never configure them as `click`. Unknown/unconfigured actions, invalid IDs,
+non-string rules and unsupported rule types/hosts are skipped without affecting
+the page. `resolveRules(...).skipped` gives `{ id, reason }` for invalid entries;
+an invalid rules container yields an `id: null` diagnostic and an empty active map.
+It validates configuration, not the live DOM host.
+
+Importing the helper does nothing; without a callback it installs no listeners.
+The same root returns the existing stop function and keeps the FIRST config and
+callback. To change config, call `stop()` and initialize again. Nested observers
+from this module instance share event deduplication; only the nearest marked host
+is considered, never an ancestor behind an unmarked nested interactive control.
+Native-button keydown, repeated/IME/modifier card keydown are ignored. Sync throws
+and returned rejected promises from the callback are swallowed, with no retry or
+queue. No network, cookies, storage, identity or route patching occurs in the
+helper, and it never prevents defaults or stops propagation.
+
+To add a normal action: product owners add a literal `data-analytics-id` on the
+appropriate existing host, run `node web/scripts/analytics-manifest.mjs --write`,
+review the manifest diff and test the host/native behavior. Deployers then add one
+rule line. No product listener or SDK is needed. Download click is NOT download or
+installation success; publish submission is NOT publish success.
 
 The repository-integration test lives at `web/analytics-example.test.ts`, alongside
 the existing root-level web tests. Vitest discovers it with `pnpm -C web test`;
@@ -160,23 +212,98 @@ run it alone with `pnpm -C web test analytics-example.test.ts`. It stays outside
 the production TypeScript project's `src`/`test` inputs because the docs-only
 example is not present in the `web/` Docker build context.
 
+## Connect a platform: local Umami v3.4.1 demo
+
+[The Compose example](examples/analytics/compose.yaml) runs Umami v3.4.1 (MIT),
+Postgres 16 and an optional edge; SkillHub remains your existing web upstream.
+From the repository root:
+
+```sh
+docker compose -f docs/examples/analytics/compose.yaml config
+SKILLHUB_WEB_UPSTREAM=host.docker.internal:8080 docker compose -f docs/examples/analytics/compose.yaml up -d
+```
+
+This creates a demo network and ephemeral database, not production storage. Use
+an isolated local Docker environment with available network pools. Open
+`http://localhost:8300` for local setup only. Umami's default `admin` / `umami`
+credentials, the public DB password and app secret are DEMO ONLY: change them.
+Create a synthetic website in Umami, copy its UUID into
+[`observer.mjs`](examples/analytics/observe/v1/observer.mjs), then explicitly change
+`enabled` and the consent hook for your local policy. Open SkillHub through
+`http://localhost:8081` and exercise an enabled action; inspect the request to
+`/_skillhub-umami/api/send` and Umami's event view. Tear down the local demo with
+`docker compose -f docs/examples/analytics/compose.yaml down -v` (demo data is removed).
+
+[`umami-adapter.mjs`](examples/analytics/observe/v1/umami-adapter.mjs) is the only
+vendor-specific code. It loads `/script.js` with `data-auto-track="false"`, so
+v3.4.1 installs no pageview, history hook, click listener or performance observer.
+`data-host-url` is the same-origin `/_skillhub-umami` prefix, and
+`data-before-send` names its sanitizer. Do not load another Umami tracker on the
+same page (the SDK/global hook are singletons). It calls `umami.track(id, { event })`;
+one intent may wait up to three seconds for the script, further concurrent intents
+are dropped, and tracking is time-bounded. Missing, blocked or rejecting trackers
+resolve silently. There is no retry or backlog; best-effort counts can undercount.
+A timeout cannot cancel an SDK fetch already in flight.
+
+The sanitizer allowlists the FINAL SDK payload, not just the callback. Only
+`{ type: 'event', payload: { website, name, data: { event } } }` survives; website
+must match configuration, name must match the ID shape (and Umami's 50-character
+limit), event must be click/submit/keydown. It returns null for pageviews (including
+unnamed `event` payloads), identify, performance and everything else. Hostname, URL,
+title, referrer, screen, language, tag, identity and extra data keys are removed.
+The SDK still reads title/URL/referrer in-page before sanitizing; it also reads
+localStorage for its own `umami.disabled` switch. Those are SDK behaviors, not
+behaviors of the vendor-neutral helper.
+
+This is NOT anonymous transport or zero server processing: IP, User-Agent and
+Origin still leave the browser. Umami sends `x-umami-website-id`,
+`x-umami-hostname` (the actual hostname) and, after a response, `x-umami-cache`
+(a session cache token). They are NOT sanitized JSON. The edge tightens UI
+Referrer-Policy to `no-referrer` and strips Referer, Cookie and Authorization on
+collector proxying; otherwise same-origin Referer can expose paths/queries.
+Umami v3.4.1 hashes website/IP/User-Agent/salt into a server-side session and derives
+browser/OS/device/geo from transport metadata. Removing JSON screen/language does
+not disable these derivations; review access logs, retention, consent and local
+law. Its missing-URL fallback stores empty url_path and fallback hostname
+`localhost`, not the current page; url_query is an empty string (not SQL NULL in
+v3.4.1), while title/referrer/screen/language stay null.
+
+To replace the platform, replace the adapter and edge ingestion endpoints, keeping
+the helper and static payload contract. No admin configuration page, SkillHub
+analytics DB, persistent queue or multi-vendor SDK is introduced.
+
+## Turn collection off
+
+No injection means zero collection. `enabled: false` in the deployer's entry is
+also inert: no helper initialization or tracker load. On consent withdrawal call
+`window.skillhubAnalytics.stop()`; it removes listeners and denies future SDK
+payloads (already-sent requests cannot be recalled). Resume only after approval
+via `start()`. Platform-side disabling/deleting the website, Umami's local
+`umami.disabled` switch, or blocking the two ingestion routes are additional
+operator controls, not substitutes for consent. Removing injection and purging
+HTML is the deployment rollback; default SkillHub never loads any of this.
+
 ## Optional deployment-owned Nginx injection
 
 Prefer a separately maintained same-origin HTTPS module, optionally inserted by
 Nginx `sub_filter`, not an app entrypoint modification. Start with
-[the opt-in edge example](examples/nginx-analytics.conf). It is not loaded by the
-product. Its loopback HTTP ports and filesystem path are examples behind your
-existing HTTPS terminator; adapt upstream/listener/file path in isolation first.
-The operator must supply `skillhub-observer.v1.mjs`, which may import the example
-helper and call it with an explicit callback after consent. Delivering only the
-helper intentionally collects nothing. Do not place either script in the app bundle.
+[the opt-in edge template](examples/analytics/nginx.conf). It is not loaded by the
+product. Compose substitutes only the two upstream host:port variables. Publish
+its HTTP listener on loopback behind your HTTPS terminator. Serve the supplied
+`observer.mjs`, helper and adapter outside the app bundle; only enable the entry
+after configuring website/rules/consent.
 
 The sample filters only the UI fallback's default `text/html` type, once per
 response, inserting a module before `</head>`. Module loading is deferred and no
 application code depends on it; missing/failed JS must not stop SkillHub. The
-exact script location overrides SPA fallback, sets JavaScript MIME and nosniff,
-and returns 404 if absent. Never return index.html for missing collector/imports.
-Keep static code versioned and immutable; change the filename when bytes change.
+versioned prefix location overrides SPA fallback, sets JavaScript MIME and nosniff,
+and uses `try_files $uri =404` with directory listing off. The served directory
+contains only the three JS modules, never `.d.mts` or config. Missing modules are
+404, never index.html. Code is immutable: deploy changed bytes/config under a new
+version directory and update the injection path (breaking contracts need a new
+module version). The two exact Umami routes expose tracker and send only; all
+other paths under that prefix return 404. Same-origin script-src/connect-src are
+sufficient for this demo, subject to the existing policy below.
 
 Deployment checklist:
 
@@ -198,7 +325,7 @@ Deployment checklist:
    strict-dynamic policies). A per-response nonce or approved external hash/SRI
    policy needs deployment-specific coordination; otherwise do not enable injection.
    Never add unsafe-inline/unsafe-eval or broad wildcards. Any reporter needs an
-   explicitly permitted connect-src endpoint; no reporter exists in core/example.
+   explicitly permitted connect-src endpoint; this example uses same-origin only.
    Nginx add_header inheritance is location-sensitive: merge/repeat existing edge
    security headers as necessary; do not drop or hide upstream CSP to make it work.
 5. Test actual built SkillHub HTML, not just a synthetic HTML fixture: exactly one
@@ -218,9 +345,14 @@ rewriting; do not rewrite it a second time at the edge.
 Adapt the sample's UI `location /` to `location /skillhub/`; add an exact
 `/skillhub` redirect to `/skillhub/`; scope the bypass regex to
 `^/skillhub/(api/|oauth2/|login/oauth2/|\.well-known/|assets/|registry/|runtime-config\.js$|nginx-health)`.
-Change BOTH the exact script location and injected src to
-`/skillhub/_skillhub-observe/skillhub-observer.v1.mjs`, plus the matching 404 prefix.
-The alias filesystem path does not gain the URL prefix. Keep other site locations
+Change the versioned module prefix location and injected src to
+`/skillhub/_skillhub-observe/v1/` and
+`/skillhub/_skillhub-observe/v1/observer.mjs`, plus the matching deny prefix.
+With `root /srv`, install the three JS files under
+`/srv/skillhub/_skillhub-observe/v1/`; relative imports follow automatically.
+Also scope BOTH exact Umami endpoints and the deny prefix to
+`/skillhub/_skillhub-umami/`, and change the entry's adapter `prefix` accordingly;
+upstream `/script.js` and `/api/send` stay unchanged. Keep other site locations
 unchanged; do not put sub_filter at http/server scope. Use any supported validated
 base path consistently, preserving original request URIs. HTTPS/public registry,
 OAuth callbacks and generated asset URLs still need the normal deployment setup.
