@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import en from '@/i18n/locales/en.json'
+import ko from '@/i18n/locales/ko.json'
 import ru from '@/i18n/locales/ru.json'
 import zh from '@/i18n/locales/zh.json'
 
@@ -161,7 +162,7 @@ describe('skill reviews', () => {
   })
 
   it('keeps review interaction copy in every supported locale', () => {
-    for (const locale of [en, zh, ru]) {
+    for (const locale of [en, zh, ru, ko]) {
       expect(locale.skillReviews.ratingDisplay).toBeTruthy()
       expect(locale.skillReviews.ratingOption).toBeTruthy()
       expect(locale.skillReviews.reviewTextLabel).toBeTruthy()

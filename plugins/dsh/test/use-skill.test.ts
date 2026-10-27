@@ -384,3 +384,13 @@ test('modal handoff cannot bypass a session change, and final CAS still protects
   await Bun.sleep(0); g.controller.casePanel()!.finish({ locale: 'zh-CN', id: 'summary' }); await Bun.sleep(0);
   g.edit('保留核验期间编辑'); gate.resolve(); await expect(request).rejects.toThrow('草稿已被编辑'); expect(g.state().draft).toBe('保留核验期间编辑');
 });
+
+test('shadowed guidance does not invent the winning scope or silently choose another skill', async () => {
+  const f = fixture(); f.blocked('skill-shadowed');
+  await expect(f.use()).rejects.toThrow('另一份同名技能');
+  try { await f.use(); } catch (error) {
+    expect(String(error)).not.toContain('当前项目');
+    expect(String(error)).toContain('所选安装');
+  }
+  expect(f.state()).toBe(f.original); expect(f.counts().inserted).toBe(0);
+});

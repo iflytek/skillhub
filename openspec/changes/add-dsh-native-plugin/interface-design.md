@@ -107,8 +107,8 @@ interface SkillHubPluginConfig {
 | `listInstallTargets` | detailToken，可信 agent scope | hostInstanceId、targets（targetToken、scope）、unavailable（范围列表） | 只读；从 Agent 文件系统解析，来源/项目/详情变化时拒绝；不返回路径，不代表已授权写入 |
 | `checkUpdate` | sourceRevision,itemKey | 更新状态、当前/候选版本、checkedAt | 只读，不下载完整包 |
 | `checkVersionUpdate` | sourceRevision,itemKey,version | InstalledUpdateCheck | 按所选精确版本检查，不回退 latest |
-| `prepareVersionUpgrade` | sourceRevision,itemKey,version | UpgradePlanView | 固定精确候选，复用完整目标升级计划 |
-| `prepareUpgrade` | sourceRevision,itemKey | UpgradePlanView | 解析全部共享目标，仅允许当前用户/项目范围 |
+| `prepareVersionUpgrade` | sourceRevision,itemKey,version | UpgradePlanView | 固定精确候选，准备所选安装位置的升级计划 |
+| `prepareUpgrade` | sourceRevision,itemKey | UpgradePlanView | 只准备选中安装位置，核验当前用户/项目可信根 |
 | `prepareUninstall` | sourceRevision,itemKey | UninstallPlanView | 只解析一个目标；离线可用 |
 | `executePlan` | input：planId,requestKey；可信 agent scope | NativeOperation 或 null | 校验计划和精确 before，提交后不能复用 |
 | `getOperation` | operationId,hostInstanceId；可信 agent scope | NativeOperation 或 null | 只返回当前会话在指定 Host 上可见的操作；不存在或不属于该会话返回 null，Client 显示未知，不能视为成功 |
@@ -292,7 +292,7 @@ local-only 详情不能发起远端安装或升级，但可通过独立 prepareU
 
 ## 对话工具接口
 
-首期提供 astron_skillhub_search 与 astron_skillhub_install。模型仅提供关键词或技能坐标/范围；来源、可信目标、幂等键由 Host 适配层派生。具体输入、结果 envelope、历史操作绑定与错误语义见 [对话设计第 6 节](conversation-design.md#6-工具与服务契约)。页面与工具均复用本文 startInstall/getOperation，工具不接受任意文件路径或下载地址。用户未明确范围时省略 scope，工具仅返回 awaiting-confirmation（无 operationId），卡片经 openConversationDetail 和既有 InstallControl 选择范围后才调用 startInstall；该等待状态只固定候选版本，不固定指纹、不下载包、不创建安装事务，也不能由历史恢复自动重放。
+首期提供 astron_skillhub_search 与 astron_skillhub_install。模型仅提供关键词或技能坐标/范围；来源、可信目标、幂等键由 Host 适配层派生。具体输入、结果 envelope、历史操作绑定与错误语义见 [对话设计第 6 节](conversation-design.md#6-工具与服务契约)。页面与工具均复用本文 startInstall/getOperation，工具不接受任意文件路径或下载地址。用户明确安装但未指定范围时省略 scope，由 Host 默认当前用户；明确项目级时使用可信项目根，不自动回退。历史 awaiting-confirmation 仍允许通过现有 UI 选择，但不能自动恢复写入。
 
 
 ## 10. 已接受操作的查重顺序与历史快照
@@ -336,12 +336,11 @@ accepted 不表示安装完成。工具立即返回 accepted 及 operationId，�
 测试不使用当前来源写路径，不改变配置、sourceRevision、目录缓存或本地文件；不尝试下载或安装。Client取消旧请求并以请求代次隔离结果，防止地址变更后显示旧地址成功信息。mode为paged仅说明分页目录可读，limited仅说明基础搜索可读，二者均不证明写入或可选Tab能力。
 
 
-### 原生安装范围确认
+### 安装默认范围与管理确认
 
-安装工具省略 scope 时由 Host 使用可选的 `ctx.userQuestions.ask` 显示输入框旁的单选题，问题含固定版本、来源、实际可用范围及取消。回答必须匹配该问题的一条准确范围选项；取消、空、自定义或多个答案返回 `{schemaVersion:1,kind:"skillhub-install",status:"cancelled",toolCallId}`，不含操作 ID。用户回答后重新检查上下文，再复用现有安装事务。无服务或回答器时保留 `awaiting-confirmation` 卡片；该卡片直接打开确认弹窗，不打开详情抽屉。显式 scope 的原流程保留。
+新的对话安装调用省略 scope 时默认当前用户；项目级必须由用户明确选择，页面放在高级选项中。安装仍核验固定版本、来源和可信目标。历史待选择回执保持只读或显式确认，不自动重放。
 
-此能力是宿主可选 peer，不改变既有写入依赖基线。不使用新计时问题 API，不回放旧提问授权，不向模型发送目录或目标 token。问答取消与执行中止不转换成用户级安装。
-
+更新和卸载使用可选的 `ctx.userQuestions.ask` 发起真实确认，展示技能、版本变化与范围。只有对应问题的单个准确确认选项能执行；取消、跳过、自定义及多个答案均不授权。原生回答器不可用时返回对话确认卡；真实 Client 点击通过 Agent-scoped Remote 确认，模型无法提交 confirmed 标志。
 
 ### 安装进度与列表刷新边界
 
@@ -357,7 +356,7 @@ accepted 不表示安装完成。工具立即返回 accepted 及 operationId，�
 
 ### 选定版本升级
 
-保留 `checkUpdate` 与 `prepareUpgrade` 的原签名及“检查最新版”行为，新增 Agent-scoped `checkVersionUpdate(sourceRevision,itemKey,version,signal)` 和 `prepareVersionUpgrade(sourceRevision,itemKey,version,signal)`。两组接口共享当前库存重读、完整目标基线、版本比较、文件修改保护与确认计划；定向接口必须按指定 version 解析，响应版本不一致即拒绝，不使用 latest 替换不可用版本。执行仍只提交原 executePlan，无新文件写入接口或 SaaS 安装接口。
+保留 `checkUpdate` 与 `prepareUpgrade` 的原签名及“检查最新版”行为，新增 Agent-scoped `checkVersionUpdate(sourceRevision,itemKey,version,signal)` 和 `prepareVersionUpgrade(sourceRevision,itemKey,version,signal)`。两组接口共享当前库存重读、所选目标基线、版本比较、文件修改保护与确认计划；定向接口必须按指定 version 解析，响应版本不一致即拒绝，不使用 latest 替换不可用版本。执行仍只提交原 executePlan，无新文件写入接口或 SaaS 安装接口。
 
 详情按 source/session/itemKey/所选 version 隔离只读检查缓存，切换仅触发读取。较新且可核验的版本显示升级到该版本，相同版本不重复显示升级，旧版本或不可排序版本明确阻断。确认使用捕获的库存项与精确目标，不因后台库存刷新重建另一升级意图；升级完成使库存失效，旧 itemKey 的检查结果不会绑定到新记录。
 
@@ -384,3 +383,40 @@ Client 使用原生 `InputActions.captureInsertion()` 和 `insertText(text, span
 ## 固定技能案例协议
 
 案例直接随技能包分发，已安装使用读取 `.skillhub/examples.json`；不新增案例查询端点或数据库权威内容。现有精确版本 file 接口可返回原始文件流，不能按 ApiResponse.data 解析。prepareSkillUse 的 ready 返回值扩展有界案例投影，发布预检扩展可选识别摘要；精确定义和状态规则统一见 [案例实现设计](skill-examples-design.md#3-本地读取与原生草稿衔接)。既有 Remote 参数及不自动发送边界保持。扩展已在开源代码实现，旧 API 响应允许缺少预检字段并按未知处理；SaaS 需后续同步。
+
+## 对话管理扩展
+
+查询/检查更新/更新/卸载/操作结果工具使用显式可信会话上下文的 Host 内部服务，不伪造 Remote invocation。模型只提供有效选择引用与候选版本，不提供文件路径、下载 URL 或 confirmed 标志。每次更新/卸载由 Host 生成不可变计划并获取真人确认；缺少原生问题服务时返回待确认卡，不降级为自动执行。
+
+唯一安装直接定位，多份时选择；新安装省略范围由 Host 默认用户级。列表与操作响应包含真实目标范围和该位置版本，内部引用不展示给用户。工具由 management-tool.ts 注册并严格校验参数，契约如下。来源、会话、根目录、版本或基线变化均使旧确认失效。
+
+每次模型调用关联一个 Host 保存的 UUIDv4 请求键，不能把现有安装 UUIDv5 直接传给仅接受 v4 的确认计划；重复回执查询不创建新操作。工具和页面最终使用同一执行与恢复服务。完整产品范围见 conversation-management-design.md。
+
+
+| 模型工具 | 输入 | 结果种类 |
+| --- | --- | --- |
+| `astron_skillhub_list_installed` | 空对象 | `skillhub-installed`：items、complete、issues、unavailable 与 sourceRevision |
+| `astron_skillhub_check_update` | sourceRevision、itemKey、可选精确 version | `skillhub-update-check`：所选 item 与 check |
+| `astron_skillhub_upgrade` | sourceRevision、itemKey、可选精确 version | `skillhub-management`：blocked / awaiting-confirmation / cancelled / accepted |
+| `astron_skillhub_uninstall` | sourceRevision、itemKey | 同上，操作限于所选位置 |
+| `astron_skillhub_operation` | operationId、hostInstanceId | `skillhub-operation`：本会话原操作或 null |
+
+管理结果带 schemaVersion=1 和真实 toolCallId。工具拒绝未知参数；业务未确认返回 not-confirmed 与安全原因，不伪造成功。模型投影移除来源 URL、确认引用、原始诊断和路径；Client 通过 presentationMeta 获取经校验的展示状态。
+
+Client 的 `beginConversationManagement(sourceRevision,itemKey,action,version,requestKey,signal)` 只准备计划并返回确认卡，requestKey 必须是 UUIDv4；`confirmConversationManagement(confirmationRef,confirmed,signal)` 绑定当前 Agent、来源及原计划。二者均不是模型工具。接受后沿用 getOperation 查询，不重复提交。
+
+多个位置时通过原生问题（可用时）要求用户选定一个位置，随后再由 Host 确认操作。模型引导禁止推荐同时处理所有位置；本期不提供批量工具。Host 的确定性保证是精确引用、单位置计划和真实人工确认，不宣称能直接证明模型理解了用户自然语言。
+
+
+## 可用性诊断扩展
+
+正式行为见 [技能可用性诊断](skill-availability-design.md)。仅新增插件内部 RPC 与模型只读工具，不新增 Registry HTTP API。
+
+| 入口 | 输入 | 输出 |
+| --- | --- | --- |
+| Agent RPC `checkAvailability` | `sourceRevision`、`itemKey`、`AbortSignal` | `SkillAvailability` |
+| 模型工具 `astron_skillhub_check_availability` | 严格二选一：`{sourceRevision,itemKey}` 或 `{name}`；拒绝混用、未知字段和路径 | `schemaVersion:1`、`kind:skillhub-availability`、`diagnosis` |
+
+`SkillAvailability` 用独立字段表达 `integrity`（verified/changed/missing/unknown）、`discovery`（winner/shadowed/not-discovered/unknown）、`association`（managed-reference/not-associated）与可选 `invocation`（userInvocable/modelInvocable）。`checkedAt` 为检查时刻，`reason` 为受控原因。`name` 仅在实际技能名可核对时返回，不能用市场 slug 冒充调用名。托管目标的 `installation` 仅包含精确记录中的 namespace、slug、version、scope；顶层可选 scope 与该目标一致。即使缺少文件、无法解析调用名，也可据此显示被检查目标。按 name 查询不返回 installation 或 scope，不能从名称猜测来源。
+
+`managed-reference` 仅证明选中了当前来源管理记录，不代表文件完整或当前可调用；`not-associated` 表示此次按名观察没有建立管理归属，不能解释为已确认属于其他市场。未知状态不得转成未安装。结果不携带路径、原始宿主对象、文档正文或异常文本。所有只读结果均不授予修改权限。

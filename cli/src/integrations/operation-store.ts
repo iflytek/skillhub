@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
-import { chmod, lstat, mkdir, open, readdir, rename, rm } from 'node:fs/promises'
+import { chmod, lstat, mkdir, open, readdir, realpath, rename, rm } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join } from 'node:path'
-import { canonicalizeExistingPath } from '../platform/paths'
+import { canonicalizeExistingPath, pathsOverlap } from '../platform/paths'
 import { z } from 'zod'
 import { acquireSkillTargetLock } from '../services/skill-target-lock'
 import { recoveryAction, transactionEvent, transactionState } from './transaction-journal'
@@ -28,7 +28,7 @@ const status = z.object({ phase,
   recovery: z.enum(['not-needed', 'restored', 'incomplete', 'unknown']) }).strict()
 const existingInstallation = z.object({ fingerprint: text, versionId: z.number().int().positive(),
   inventoryDigest: z.string().regex(/^[a-f0-9]{64}$/) }).strict()
-const record = z.object({ schemaVersion: z.literal(1), operationId: id, ownerId: text,
+const record = z.object({ schemaVersion: z.union([z.literal(1), z.literal(2)]), operationId: id, ownerId: text,
   requestKey: id, requestDigest: z.string().regex(/^[a-f0-9]{64}$/), revision: z.number().int().nonnegative(),
   operation: input.omit({ context: true }).extend({ context, status }), transaction: transactionState.optional(),
   removal: removalJournal.optional(), existingInstallation: existingInstallation.optional() }).strict()
@@ -80,11 +80,11 @@ export class OperationStore {
       const duplicate = await this.findRequest(request)
       if (duplicate) return duplicate
       const now = new Date().toISOString()
-      const value: OperationRecord = { schemaVersion: 1, operationId: randomUUID(), ownerId: request.ownerId,
+      const value: OperationRecord = { schemaVersion: 2, operationId: randomUUID(), ownerId: request.ownerId,
         requestKey: request.requestKey, requestDigest: request.requestDigest, revision: 0,
         operation: { ...accepted, context: { ...accepted.context, hostInstanceId: this.hostInstanceId, createdAt: now, updatedAt: now },
           status: { phase: 'accepted', files: 'pending', discovery: 'unconfirmed', recovery: 'not-needed', warnings: [] } } }
-      await atomicWrite(this.path(value.operationId), record.parse(value))
+      await writeOperationRecord(this.path(value.operationId), record.parse(value))
       return value
     })
   }
@@ -107,6 +107,7 @@ export class OperationStore {
         || targets.length !== current.operation.targetPaths.length || targets.some(path => !current.operation.targetPaths!.includes(path))) {
         throw new OperationStoreError('INVALID_TRANSITION')
       }
+      const canonicalTargets = await Promise.all(targets.map(canonicalOperationTarget))
       for (const pending of await this.readAll()) {
         if (pending.operationId === current.operationId || !needsRecovery(pending)) continue
         const status = pending.operation.status
@@ -117,7 +118,11 @@ export class OperationStore {
         if (!mayHaveChangedFiles) continue
         const bound = pending.operation.targetPaths ?? pending.transaction?.moves.map(entry => entry.move.canonicalSkillDir)
         // Older/incomplete records without target identity cannot safely be scoped to one directory.
-        if (!bound?.length || bound.some(path => targets.includes(path))) throw new OperationStoreError('TARGET_RECOVERY_REQUIRED')
+        if (!bound?.length) throw new OperationStoreError('TARGET_RECOVERY_REQUIRED')
+        for (const path of bound) {
+          const canonical = await canonicalOperationTarget(path)
+          if (canonicalTargets.some(target => pathsOverlap(target, canonical))) throw new OperationStoreError('TARGET_RECOVERY_REQUIRED')
+        }
       }
     })
   }
@@ -131,7 +136,7 @@ export class OperationStore {
       assertTransition(current, parsed)
       const value: OperationRecord = { ...current, revision: revision + 1, operation: { ...current.operation,
         context: { ...current.operation.context, updatedAt: new Date().toISOString() }, status: parsed } }
-      await atomicWrite(this.path(operationId), value)
+      await writeOperationRecord(this.path(operationId), value)
       return value
     })
   }
@@ -154,7 +159,7 @@ export class OperationStore {
       const value: OperationRecord = { ...current, revision: revision + 1, existingInstallation: parsed,
         operation: { ...current.operation, status: next,
           context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await atomicWrite(this.path(operationId), record.parse(value))
+      await writeOperationRecord(this.path(operationId), record.parse(value))
       return value
     })
   }
@@ -242,7 +247,7 @@ export class OperationStore {
       const value: OperationRecord = { ...current, revision: revision + 1, transaction,
         operation: { ...current.operation, status: { ...current.operation.status, phase: nextPhase },
           context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await atomicWrite(this.path(operationId), record.parse(value))
+      await writeOperationRecord(this.path(operationId), record.parse(value))
       return value
     })
   }
@@ -270,7 +275,7 @@ export class OperationStore {
       const value: OperationRecord = { ...current, revision: revision + 1, transaction,
         operation: { ...current.operation, context: { ...current.operation.context, updatedAt: new Date().toISOString() },
           status: { ...current.operation.status, phase: 'completed', files, recovery: 'not-needed', warnings } } }
-      await atomicWrite(this.path(operationId), record.parse(value))
+      await writeOperationRecord(this.path(operationId), record.parse(value))
       return value
     })
   }
@@ -295,7 +300,7 @@ export class OperationStore {
       const value: OperationRecord = { ...current, revision: revision + 1, transaction,
         operation: { ...current.operation, status: { ...current.operation.status, warnings },
           context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await atomicWrite(this.path(operationId), record.parse(value))
+      await writeOperationRecord(this.path(operationId), record.parse(value))
       return value
     })
   }
@@ -326,7 +331,7 @@ export class OperationStore {
       transaction.recoveryActions = actions
       const value: OperationRecord = { ...current, transaction, revision: revision + 1,
         operation: { ...current.operation, context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await atomicWrite(this.path(operationId), record.parse(value))
+      await writeOperationRecord(this.path(operationId), record.parse(value))
       return value
     })
   }
@@ -344,7 +349,7 @@ export class OperationStore {
         operation: { ...current.operation, status: { ...current.operation.status,
           phase: parsed.type === 'beforeCommit' ? 'committing' : current.operation.status.phase },
         context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await atomicWrite(this.path(operationId), record.parse(value))
+      await writeOperationRecord(this.path(operationId), record.parse(value))
       return value
     })
   }
@@ -463,4 +468,40 @@ async function atomicWrite(path: string, value: unknown): Promise<void> {
       try { await directory.sync() } finally { await directory.close() }
     }
   } finally { await rm(temporary, { force: true }) }
+}
+
+/** Recovery may advance v1 status, but never rewrite the original serialized evidence. */
+async function writeOperationRecord(path: string, value: OperationRecord): Promise<void> {
+  if (value.schemaVersion !== 1) return atomicWrite(path, value)
+  const previous = await readJson(path) as OperationRecord | undefined
+  if (!previous || previous.schemaVersion !== 1) throw new Error('Legacy operation evidence missing')
+  const preserved = structuredClone(value)
+  if (preserved.transaction && previous.transaction) {
+    if (preserved.transaction.preparation && previous.transaction.preparation) {
+      preserved.transaction.preparation.before = previous.transaction.preparation.before
+    }
+    if (preserved.transaction.inventoryCommit && previous.transaction.inventoryCommit) {
+      preserved.transaction.inventoryCommit.before = previous.transaction.inventoryCommit.before
+      preserved.transaction.inventoryCommit.after = previous.transaction.inventoryCommit.after
+    }
+  }
+  if (preserved.removal && previous.removal) {
+    preserved.removal.intent = previous.removal.intent
+    if (preserved.removal.inventoryCommit && previous.removal.inventoryCommit) {
+      preserved.removal.inventoryCommit.before = previous.removal.inventoryCommit.before
+      preserved.removal.inventoryCommit.after = previous.removal.inventoryCommit.after
+    }
+  }
+  await atomicWrite(path, preserved)
+}
+
+/** A pending install may not exist yet; resolve the nearest existing ancestor. */
+async function canonicalOperationTarget(path: string): Promise<string> {
+  try { return await realpath(path) }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    const parent = dirname(path)
+    if (parent === path) throw error
+    return join(await canonicalOperationTarget(parent), basename(path))
+  }
 }

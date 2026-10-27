@@ -58,7 +58,7 @@ test('official slot declaration loss preserves catalog and independently removes
       const tools = slots.register({ name: 'test.tools', children: {
         'tool.call.toolview': { kind: 'keyed', scope: 'session' },
       } } as never, empty);
-      expect(slots.entriesOfSlot('tool.call.toolview')).toHaveLength(2);
+      expect(slots.entriesOfSlot('tool.call.toolview')).toHaveLength(8);
       tools(); await flush();
       expect(slots.entriesOfSlot('tool.call.toolview')).toHaveLength(0);
       expect(slots.entriesOfSlot('main')[0]?.component).toBe(catalog);

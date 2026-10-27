@@ -17,7 +17,7 @@ test.each(['uninstall', 'remove-stale-record'] as const)('executePlan routes %s 
     const identity = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1' };
     const target = { scope: 'project' as const, root, path: join(root, 'writer') };
     const inventoryItem = { ...identity, fingerprint: 'fp', targets: [{ agent: 'dsh', rootDir: root,
-      installDir: target.path, installedAt: '2026-10-14' }] };
+      installDir: target.path, installedAt: '2026-10-14', version: identity.version, fingerprint: 'fp' }] };
     const baseline: Extract<RemovalBaseline, { status: 'ready' }> = kind === 'uninstall'
       ? { status: 'ready', kind, inventoryItem, target: { ...target, metadata: identity, files: { 'SKILL.md': 'hash' } } }
       : { status: 'ready', kind, inventoryItem, target };
@@ -42,6 +42,7 @@ test.each(['uninstall', 'remove-stale-record'] as const)('executePlan routes %s 
     const context = { localRuntime: runtime, lifetime: new AbortController(), removalPlans: plans,
       selectionScope: () => scope, assertSource() {}, getContext: () => ({ registryUrl: identity.registry }),
       ctx: { invocation: { request: { args: { agentId: 'session', input } } }, get: () => ({ get: () => agent }) } };
+    Object.setPrototypeOf(context, SkillHubService.prototype);
     const execute = (request: typeof input) => {
       context.ctx.invocation.request.args.input = request;
       return Reflect.apply(SkillHubService.prototype.executePlan, context, [request, new AbortController().signal]);

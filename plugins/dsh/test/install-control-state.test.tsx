@@ -6,13 +6,14 @@ import { InstallationRequests } from '../src/client/installation-requests.js';
 import type { InstalledSkillList, SkillDetail } from '../src/host/types.js';
 
 const detail: SkillDetail = { namespace: 'global', slug: 'writer', title: '写作助手', summary: '', version: '1.2.0', detailToken: 'detail', versionId: 1, tabs: { versions: 'hidden', securityAudit: 'hidden', reviews: 'hidden' }, documentation: { state: 'ready', content: '# 写作助手' } };
-const record: InstalledSkillList['items'][number] = { itemKey: 'item', namespace: 'global', slug: 'writer', version: '1.2.0', scope: 'project', state: 'present' };
+const record: InstalledSkillList['items'][number] = { itemKey: 'item', namespace: 'global', slug: 'writer', version: '1.2.0', scope: 'user', state: 'present' };
 const inventory = (items: InstalledSkillList['items']): InstalledSkillList => ({ items, complete: true, issues: [], unavailable: [] });
 test('existing scope is preferred and another skill never changes the selection', () => {
   expect(preferredInstallationScope(inventory([{ ...record, scope: 'user' }]), detail, ['project', 'user'])).toBe('user');
-  expect(preferredInstallationScope(inventory([record, { ...record, scope: 'user' }]), detail, ['project', 'user'])).toBe('project');
-  expect(preferredInstallationScope(inventory([{ ...record, slug: 'other', scope: 'user' }]), detail, ['project', 'user'])).toBe('project');
+  expect(preferredInstallationScope(inventory([{ ...record, scope: 'project' }, record]), detail, ['project', 'user'])).toBe('project');
+  expect(preferredInstallationScope(inventory([{ ...record, slug: 'other', scope: 'user' }]), detail, ['project', 'user'])).toBe('user');
   expect(preferredInstallationScope(inventory([]), detail, ['user'])).toBe('user');
+  expect(preferredInstallationScope(inventory([]), detail, ['project'])).toBeUndefined();
   // Installed scopes remain viewable even if they are not currently writable.
   expect(preferredInstallationScope(inventory([{ ...record, scope: 'user' }]), detail, ['project'])).toBe('user');
 });
@@ -39,7 +40,8 @@ test('current inventory renders a removal action without a duplicate install act
 
 test('empty verified inventory renders an explicit scoped install action', () => {
   const html = render([]);
-  expect(html).toContain('>安装到此项目</button>');
+  expect(html).toContain('>安装到所有项目</button>');
+  expect(html).toContain('<summary>高级选项</summary>');
   expect(html).not.toContain('安装完成'); expect(html).not.toContain('重新安装到');
   expect(html).not.toContain('>卸载</button>');
 });

@@ -42,6 +42,7 @@ public class SkillSearchAppService {
     private final ComplianceSnapshotProjectionService complianceSnapshotProjectionService;
     private final RbacService rbacService;
     private final UserAccountRepository userAccountRepository;
+    private final SkillSuiteMembershipProjectionService suiteMembershipProjection;
 
     public SkillSearchAppService(
             SearchQueryService searchQueryService,
@@ -62,7 +63,6 @@ public class SkillSearchAppService {
         );
     }
 
-    @Autowired
     public SkillSearchAppService(
             SearchQueryService searchQueryService,
             SkillRepository skillRepository,
@@ -72,6 +72,23 @@ public class SkillSearchAppService {
             ComplianceSnapshotProjectionService complianceSnapshotProjectionService,
             RbacService rbacService,
             UserAccountRepository userAccountRepository) {
+        this(searchQueryService, skillRepository, namespaceRepository, namespaceService,
+                skillLifecycleProjectionService, complianceSnapshotProjectionService, rbacService,
+                userAccountRepository, null);
+    }
+
+    @Autowired
+    public SkillSearchAppService(
+            SearchQueryService searchQueryService,
+            SkillRepository skillRepository,
+            NamespaceRepository namespaceRepository,
+            NamespaceService namespaceService,
+            SkillLifecycleProjectionService skillLifecycleProjectionService,
+            ComplianceSnapshotProjectionService complianceSnapshotProjectionService,
+            RbacService rbacService,
+            UserAccountRepository userAccountRepository,
+            SkillSuiteMembershipProjectionService suiteMembershipProjection) {
+        this.suiteMembershipProjection = suiteMembershipProjection;
         this.searchQueryService = searchQueryService;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
@@ -188,6 +205,9 @@ public class SkillSearchAppService {
                 requireInstallableLatest
         ));
         List<SkillSummaryResponse> pageItems = mapVisibleSkillSummaries(result.skillIds(), scope.userId());
+        if (suiteMembershipProjection != null) {
+            pageItems = suiteMembershipProjection.enrich(pageItems, scope.userId());
+        }
         return new SearchResponse(pageItems, result.total(), page, size);
     }
 

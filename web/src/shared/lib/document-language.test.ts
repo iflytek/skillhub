@@ -20,6 +20,15 @@ describe('syncDocumentLanguage', () => {
     expect(document.getElementById('root')?.getAttribute('translate')).toBe('no')
   })
 
+  it('updates the document language when switching from Korean back to English', () => {
+    document.body.innerHTML = '<div id="root"></div>'
+    syncDocumentLanguage('ko-KR')
+    expect(document.documentElement.lang).toBe('ko')
+    syncDocumentLanguage('en')
+    expect(document.documentElement.lang).toBe('en')
+    expect(document.getElementById('root')?.getAttribute('translate')).toBe('no')
+  })
+
   it('uses the primary subtag for other locales', () => {
     document.body.innerHTML = '<div id="root"></div>'
     syncDocumentLanguage('ru-RU')

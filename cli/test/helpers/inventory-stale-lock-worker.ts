@@ -34,7 +34,7 @@ fs.stat = (path, callback) => stat(path, (error, info) => {
   } else callback(null, info)
 })
 await store.mutateAtomic(inventory => {
-  inventory.items.push({ registry: 'https://registry.example', namespace: 'global', slug: id, version: '1.0.0', targets: [] })
+  inventory.items.push({ registry: 'https://registry.example', namespace: 'global', slug: id, targets: [] })
 }, async () => {
   await writeFile(join(home, `${id}-entered`), '')
   await waitFor(`${id}-commit`)

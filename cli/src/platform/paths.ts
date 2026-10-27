@@ -1,3 +1,5 @@
+import { isAbsolute, relative, sep } from 'node:path'
+
 export function userStateDir(home = process.env.HOME || process.env.USERPROFILE || ''): string {
   if (!home) {
     throw new Error('Cannot resolve user home directory')
@@ -46,4 +48,13 @@ export async function applyCredentialPermissions(path: string): Promise<void> {
   if (process.platform === 'win32') return
   const { chmod } = await import('node:fs/promises')
   await chmod(path, 0o600)
+}
+
+/** Inputs must be canonical absolute paths. Compare segments, not string prefixes. */
+export function pathsOverlap(left: string, right: string): boolean {
+  const contains = (parent: string, child: string) => {
+    const rel = relative(parent, child)
+    return rel === '' || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`))
+  }
+  return contains(left, right) || contains(right, left)
 }

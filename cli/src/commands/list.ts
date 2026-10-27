@@ -36,7 +36,7 @@ export async function listCommand(options: ListCommandOptions): Promise<string> 
       flat.push({
         namespace: item.namespace,
         slug: item.slug,
-        version: item.version,
+        version: target.version,
         agent: target.agent,
         installDir: target.installDir,
         installedAt: target.installedAt,

@@ -11,12 +11,11 @@ test('installed projection preserves both scopes and fixed versions without scan
   try {
     const user = join(root, 'user')
     const project = join(root, 'project')
-    const item: InventoryItem = { registry: registry + '/', namespace: 'demo', slug: 'writer', version: '1.2.0',
-      fingerprint: 'original', targets: [user, project].map(rootDir => ({ agent: 'dsh', rootDir,
+    const item: InventoryItem = { registry: registry + '/', namespace: 'demo', slug: 'writer', targets: [user, project].map(rootDir => ({ version: '1.2.0', fingerprint: 'original', agent: 'dsh', rootDir,
         installDir: join(rootDir, 'writer'), installedAt: '2026-10-14T00:00:00Z' })) }
     for (const target of item.targets) {
       await mkdir(join(target.installDir, '.skillhub'), { recursive: true })
-      await writeFile(join(target.installDir, '.skillhub/metadata.json'), JSON.stringify({ ...item,
+      await writeFile(join(target.installDir, '.skillhub/metadata.json'), JSON.stringify({ ...item, version: target.version, fingerprint: target.fingerprint,
         agent: target.agent, installedAt: target.installedAt }))
       // No hash claim: local content may differ; presence alone is shown by this projection.
       await writeFile(join(target.installDir, 'SKILL.md'), 'locally edited')
@@ -48,8 +47,8 @@ test('inventory failure is partial and escaping targets are reported without rea
   const failed = await readInstalledProjection({ read: async () => { throw new Error('permission denied') } }, registry, [])
   expect(failed).toEqual({ items: [], complete: false, issues: ['inventory-unreadable'] })
   const trusted = resolve('/trusted')
-  const item: InventoryItem = { registry, namespace: 'demo', slug: 'writer', version: '1', targets: [
-    { agent: 'dsh', rootDir: trusted, installDir: resolve('/untrusted/secret'), installedAt: 'today' },
+  const item: InventoryItem = { registry, namespace: 'demo', slug: 'writer', targets: [
+    { version: '1', agent: 'dsh', rootDir: trusted, installDir: resolve('/untrusted/secret'), installedAt: 'today' },
   ] }
   const result = await readInstalledProjection({ read: async () => ({ items: [item, item] }) }, registry,
     [{ scope: 'project', root: trusted }])

@@ -101,6 +101,107 @@ class SuiteDiscoveryIntegrationTest {
     }
 
     @Test
+    void batchesVisibleMembershipFlagsForOrdinaryMembersWithoutDuplicates() {
+        Namespace namespace = entityManager.persistFlushFind(
+                new Namespace("badge-team", "Badge Team", "owner"));
+        PublishedSkill entry = publishedSkill(namespace, "entry", "owner", SkillVisibility.PUBLIC, "Entry");
+        PublishedSkill member = publishedSkill(namespace, "member", "owner", SkillVisibility.PUBLIC, "Member");
+        PublishedSkill standalone = publishedSkill(namespace, "standalone", "owner", SkillVisibility.PUBLIC, "Standalone");
+        for (int index = 0; index < 2; index++) {
+            SkillSuite suite = entityManager.persistFlushFind(new SkillSuite(
+                    namespace.getId(), "pack-" + index, "Pack", "owner"));
+            SkillSuiteVersion version = entityManager.persistFlushFind(new SkillSuiteVersion(
+                    suite.getId(), "1.0.0", SkillVisibility.PUBLIC, "owner"));
+            version.setStatus(SkillSuiteVersionStatus.PUBLISHED);
+            persistMember(version, entry, 0, true);
+            persistMember(version, member, 1, false);
+            suite.setLatestVersionId(version.getId());
+        }
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(
+                List.of(entry.skill().getId(), member.skill().getId(), standalone.skill().getId()),
+                null, Map.of(), Set.of()))
+                .containsExactlyInAnyOrder(entry.skill().getId(), member.skill().getId());
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(
+                List.of(), null, Map.of(), Set.of())).isEmpty();
+    }
+
+    @Test
+    void membershipFlagsApplyTheSamePrivateAndNamespaceVisibilityAsDetail() {
+        Namespace namespace = entityManager.persistFlushFind(
+                new Namespace("badge-visibility", "Badge Visibility", "owner"));
+        PublishedSkill privateMember = publishedSkill(
+                namespace, "private-pack-member", "owner", SkillVisibility.PUBLIC, "Private Pack Member");
+        PublishedSkill teamMember = publishedSkill(
+                namespace, "team-pack-member", "owner", SkillVisibility.PUBLIC, "Team Pack Member");
+        publishedSuite(namespace, "private-pack", "author", SkillVisibility.PRIVATE, privateMember);
+        publishedSuite(namespace, "team-pack", "author", SkillVisibility.NAMESPACE_ONLY, teamMember);
+        entityManager.flush();
+        entityManager.clear();
+        List<Long> ids = List.of(privateMember.skill().getId(), teamMember.skill().getId());
+
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(
+                ids, null, Map.of(), Set.of())).isEmpty();
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(
+                ids, "other-author", Map.of(), Set.of())).isEmpty();
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(
+                ids, "other-author", Map.of(namespace.getId(), NamespaceRole.MEMBER), Set.of()))
+                .containsExactly(teamMember.skill().getId());
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(
+                ids, "author", Map.of(namespace.getId(), NamespaceRole.MEMBER), Set.of()))
+                .containsExactlyInAnyOrderElementsOf(ids);
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(
+                ids, "author", Map.of(), Set.of())).isEmpty();
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(
+                ids, "owner", Map.of(namespace.getId(), NamespaceRole.ADMIN), Set.of()))
+                .containsExactlyInAnyOrderElementsOf(ids);
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(
+                ids, "owner", Map.of(), Set.of("SUPER_ADMIN")))
+                .containsExactlyInAnyOrderElementsOf(ids);
+    }
+
+    @Test
+    void membershipFlagsUseOnlyActiveVisibleSuitesAndCurrentPublishedSnapshot() {
+        Namespace namespace = entityManager.persistFlushFind(
+                new Namespace("badge-state", "Badge State", "owner"));
+        PublishedSkill member = publishedSkill(namespace, "member", "owner", SkillVisibility.PUBLIC, "Member");
+        PublishedSkill replacement = publishedSkill(namespace, "replacement", "owner", SkillVisibility.PUBLIC, "Replacement");
+        SkillSuite suite = publishedSuite(namespace, "pack", "owner", SkillVisibility.PUBLIC, member);
+        entityManager.flush();
+        List<Long> ids = List.of(member.skill().getId(), replacement.skill().getId());
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(ids, null, Map.of(), Set.of()))
+                .containsExactly(member.skill().getId());
+
+        suite.setHidden(true);
+        entityManager.flush();
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(ids, null, Map.of(), Set.of()))
+                .isEmpty();
+        suite.setHidden(false);
+        suite.setStatus(SkillSuiteStatus.ARCHIVED);
+        entityManager.flush();
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(ids, null, Map.of(), Set.of()))
+                .isEmpty();
+        suite.setStatus(SkillSuiteStatus.ACTIVE);
+        SkillSuiteVersion latest = entityManager.persistFlushFind(new SkillSuiteVersion(
+                suite.getId(), "2.0.0", SkillVisibility.PUBLIC, "owner"));
+        persistMember(latest, replacement, 0, true);
+        suite.setLatestVersionId(latest.getId());
+        entityManager.flush();
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(ids, null, Map.of(), Set.of()))
+                .isEmpty();
+        latest.setStatus(SkillSuiteVersionStatus.PUBLISHED);
+        entityManager.flush();
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(ids, null, Map.of(), Set.of()))
+                .containsExactly(replacement.skill().getId());
+        namespace.setStatus(com.iflytek.skillhub.domain.namespace.NamespaceStatus.FROZEN);
+        entityManager.flush();
+        assertThat(suiteReferenceRepository.findSkillIdsWithVisibleMemberships(ids, null, Map.of(), Set.of()))
+                .isEmpty();
+    }
+
+    @Test
     void returnsSkillAndSuiteWithTheSameCoordinateAsDistinctResourceTypes() {
         Namespace namespace = entityManager.persistFlushFind(
                 new Namespace("team-ai", "AI Team", "owner"));
@@ -539,6 +640,19 @@ class SuiteDiscoveryIntegrationTest {
                     assertThat(member.getSkillVersionId()).isEqualTo(secondVersion.getId());
                     assertThat(member.getSkillVersionSnapshot()).isEqualTo("2.0.0");
                 });
+    }
+
+    private SkillSuite publishedSuite(Namespace namespace, String slug, String ownerId,
+                                      SkillVisibility visibility, PublishedSkill member) {
+        SkillSuite suite = entityManager.persistFlushFind(
+                new SkillSuite(namespace.getId(), slug, slug, ownerId));
+        SkillSuiteVersion version = entityManager.persistFlushFind(new SkillSuiteVersion(
+                suite.getId(), "1.0.0", visibility, ownerId));
+        version.setStatus(SkillSuiteVersionStatus.PUBLISHED);
+        persistMember(version, member, 0, true);
+        suite.setLatestVersionId(version.getId());
+        entityManager.flush();
+        return suite;
     }
 
     private PublishedSkill publishedSkill(

@@ -6,7 +6,6 @@ import { lock } from 'proper-lockfile'
 import { SkillHubClient, type SuiteDetail, type SuiteInstallPlan } from '../clients/skillhub-client'
 import {
   InventoryStore,
-  installedBy,
   installedSuites,
   targetInstalledBy,
   type Inventory,
@@ -168,6 +167,7 @@ async function installSuiteTransaction(
   allowVersionReplacement = options.force
 ): Promise<SuiteInstallResult> {
   const store = new InventoryStore(options.home)
+  await store.ensureWritable()
   const before = await store.read()
   const previousSuite = installedSuites(before).find(candidate =>
     candidate.registry === options.registry && candidate.namespace === plan.namespace && candidate.slug === plan.slug)
@@ -394,6 +394,7 @@ export async function removeSuite(options: SuiteRemoveOptions): Promise<SuiteRem
 
 async function removeSuiteTransaction(options: SuiteRemoveOptions): Promise<SuiteRemoveResult> {
   const store = new InventoryStore(options.home)
+  await store.ensureWritable()
   const inventory = await store.read()
   const suite = findInstalledSuite(inventory, options.registry, options.namespace, options.slug)
   const source = suiteSource(suite.namespace, suite.slug, suite.version)
@@ -476,7 +477,6 @@ async function removeSuiteTransaction(options: SuiteRemoveOptions): Promise<Suit
               .filter(candidate => candidate !== source)
             return { ...target, installedBy: remainingSources.length > 0 ? remainingSources : ['direct'] }
           })
-        item.installedBy = Array.from(new Set(item.targets.flatMap(target => target.installedBy ?? [])))
       }
       current.items = current.items.filter(item => item.targets.length > 0)
     })
@@ -633,20 +633,6 @@ async function preflightExistingTargets(
   allowVersionReplacement: boolean
 ): Promise<void> {
   for (const member of plan.members) {
-    const selectedDirs = new Set(targets.map(target => join(resolve(target.rootDir), member.slug)))
-    const sameItem = inventory.items.find(item =>
-      item.registry === registry &&
-      item.namespace === member.namespace && item.slug === member.slug)
-    if (sameItem && sameItem.version !== member.version) {
-      const retained = sameItem.targets.filter(target => !selectedDirs.has(resolve(target.installDir)))
-      if (retained.length > 0) {
-        throw new CliError(`partial Suite install would split versions for @${member.namespace}/${member.slug}`, EXIT.validation, {
-          retainedTargets: retained.map(target => target.installDir),
-          next: 'select every installed target or keep the existing Suite version'
-        })
-      }
-    }
-
     for (const target of targets) {
       const installDir = join(resolve(target.rootDir), member.slug)
       const owner = inventory.items.find(item =>
@@ -666,22 +652,22 @@ async function preflightExistingTargets(
       const currentSuitePrefix = `suite:@${plan.namespace}/${plan.slug}@`
       const ownerTarget = owner?.targets.find(existing => resolve(existing.installDir) === installDir)
       if (owner && ownerTarget && !force && await pathExists(installDir)
-        && (await snapshotSkillDirectory(installDir)).fingerprint !== owner.fingerprint) {
+        && (await snapshotSkillDirectory(installDir)).fingerprint !== ownerTarget.fingerprint) {
         throw new CliError(`local changes detected at ${installDir}`, EXIT.validation, {
           path: installDir,
           next: 'pass --force only if replacing these local changes is intended'
         })
       }
-      if (owner && ownerTarget && owner.version !== member.version && targetInstalledBy(owner, ownerTarget).some(source =>
+      if (owner && ownerTarget && ownerTarget!.version !== member.version && targetInstalledBy(owner, ownerTarget).some(source =>
         source.startsWith('suite:') && !source.startsWith(currentSuitePrefix))) {
         throw new CliError(`shared Suite member @${member.namespace}/${member.slug} cannot change version in place`, EXIT.validation, {
           path: installDir,
           next: 'install the Suite into another target or upgrade the sharing Suite first'
         })
       }
-      if (owner && owner.version !== member.version && !allowVersionReplacement) {
+      if (owner && ownerTarget!.version !== member.version && !allowVersionReplacement) {
         throw new CliError(`different Skill version already installed at ${installDir}`, EXIT.validation, {
-          currentVersion: owner.version,
+          currentVersion: ownerTarget!.version,
           requestedVersion: member.version,
           next: 'pass --force only if replacing this same Skill is intended'
         })
@@ -698,8 +684,7 @@ async function isReusable(
 ): Promise<boolean> {
   const item = inventory.items.find(candidate =>
     candidate.registry === registry && candidate.namespace === member.namespace && candidate.slug === member.slug &&
-    candidate.version === member.version && candidate.fingerprint === member.fingerprint &&
-    candidate.targets.some(target => resolve(target.installDir) === installDir))
+    candidate.targets.some(target => resolve(target.installDir) === installDir && target.version === member.version && target.fingerprint === member.fingerprint))
   if (!item || !(await pathExists(installDir))) return false
   return (await snapshotSkillDirectory(installDir)).fingerprint === member.fingerprint
 }
@@ -720,7 +705,6 @@ function commitInventory(
         installedBy: targetInstalledBy(item, target)
           .filter(candidate => !candidate.startsWith(suitePrefix))
       }))
-      item.installedBy = Array.from(new Set(item.targets.flatMap(target => target.installedBy ?? [])))
     }
   }
   for (const member of plan.members) {
@@ -731,18 +715,13 @@ function commitInventory(
         registry,
         namespace: member.namespace,
         slug: member.slug,
-        version: member.version,
-        fingerprint: member.fingerprint,
-        installedBy: [source],
         targets: []
       }
       inventory.items.push(item)
     }
-    item.version = member.version
-    item.fingerprint = member.fingerprint
-    item.installedBy = Array.from(new Set([...installedBy(item), source]))
     for (const preparedTarget of prepared.filter(candidate => candidate.member === member)) {
       const target: InventoryTarget = {
+        version: member.version, fingerprint: member.fingerprint,
         agent: preparedTarget.target.agent,
         rootDir: preparedTarget.target.rootDir,
         installDir: preparedTarget.installDir,
@@ -759,7 +738,6 @@ function commitInventory(
       }
       else item.targets.push(target)
     }
-    item.installedBy = Array.from(new Set(item.targets.flatMap(target => target.installedBy ?? [])))
   }
 
   const suite: InventorySuite = {
@@ -792,7 +770,6 @@ function commitInventory(
         // preserved as user-owned instead of becoming eligible for a later automatic deletion.
         return { ...target, installedBy: ['direct'] }
       })
-    item.installedBy = Array.from(new Set(item.targets.flatMap(target => target.installedBy ?? [])))
   }
   inventory.items = inventory.items.filter(item => item.targets.length > 0)
 }

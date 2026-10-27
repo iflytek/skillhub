@@ -266,9 +266,9 @@ export function Layout() {
             <div>
               <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.project')}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><a data-analytics-id="navigation.license.open" href="https://github.com/iflytek/skillhub/blob/main/LICENSE" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>License</a></li>
-                <li><a data-analytics-id="navigation.contributing.open" href="https://github.com/iflytek/skillhub/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>Contributing</a></li>
-                <li><a data-analytics-id="navigation.changelog.open" href="https://github.com/iflytek/skillhub/releases" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>Changelog</a></li>
+                <li><a data-analytics-id="navigation.license.open" href="https://github.com/iflytek/skillhub/blob/main/LICENSE" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.license')}</a></li>
+                <li><a data-analytics-id="navigation.contributing.open" href="https://github.com/iflytek/skillhub/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.contributing')}</a></li>
+                <li><a data-analytics-id="navigation.changelog.open" href="https://github.com/iflytek/skillhub/releases" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.changelog')}</a></li>
                 <li><a data-analytics-id="navigation.conduct.open" href="https://github.com/iflytek/skillhub/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.codeOfConduct')}</a></li>
               </ul>
             </div>

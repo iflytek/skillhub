@@ -88,17 +88,17 @@ test('native removal replay survives restart and dispatches recovery without ins
     const options = { stateDirectory: join(root, 'operations'), inventoryHome: join(root, 'home') }
     const target = { scope: 'user' as const, root: join(root, 'skills') }
     await mkdir(target.root)
-    const item = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1.0.0', fingerprint: 'fp',
-      targets: [{ agent: 'dsh', rootDir: target.root, installDir: join(target.root, 'writer'), installedAt: '2026-10-14' }] }
+    const item = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer',
+      targets: [{ version: '1.0.0', fingerprint: 'fp', agent: 'dsh', rootDir: target.root, installDir: join(target.root, 'writer'), installedAt: '2026-10-14' }] }
     const inventory = new InventoryStore(options.inventoryHome)
     await inventory.writeAtomic({ items: [item] })
     const first = await openNativeRuntime(options)
-    const baseline = await first.inspectRemoval(item, target)
+    const baseline = await first.inspectRemoval({ ...item, version: item.targets[0]!.version }, target)
     if (baseline.status !== 'ready') throw new Error('Expected stale record')
     const request: NativeOperationRequest = { hostInstanceId: first.hostInstanceId, ownerId: 'session', requestKey: randomUUID(),
       mode: 'new', parameters: { planId: 'confirmed-plan' } }
     const accepted = (await first.acceptRemoval(request, async () => ({ kind: 'remove-stale-record',
-      namespace: item.namespace, slug: item.slug, version: item.version, targetLabel: 'User', targetPaths: [baseline.target.path],
+      namespace: item.namespace, slug: item.slug, version: item.targets[0]!.version, targetLabel: 'User', targetPaths: [baseline.target.path],
       context: { sourceIdentity: item.registry, sourceLabel: 'Registry', sourceRevision: 'revision', hostLabel: 'Host', initiatedFrom: 'plaza' } })))!
     const next = await openNativeRuntime(options)
     expect(await next.acceptRemoval(request, async () => { throw new Error('Expired plan must not run') })).toEqual(accepted)

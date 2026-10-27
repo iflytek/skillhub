@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { setEnglishLocale } from './helpers/auth-fixtures'
+import { setEnglishLocale, setUniqueClientIp } from './helpers/auth-fixtures'
 import {
   getSearchCard,
   getSearchCards,
@@ -93,6 +93,11 @@ async function waitForCards(page: Page) {
 let basicSeed: PreparedSearchSeed | undefined
 
 test.setTimeout(300_000)
+
+// Independent browser scenarios must not exhaust one anonymous search quota.
+test.beforeEach(async ({ page }, testInfo) => {
+  await setUniqueClientIp(page, testInfo.testId)
+})
 
 test.beforeAll(async ({ browser }, testInfo) => {
   test.setTimeout(300_000)
@@ -331,7 +336,6 @@ test.describe('Search Card Loading State (Real API)', () => {
 // ─── Responsive Layout ────────────────────────────────────────────────────────
 
 test.describe('Search Card Responsive Layout (Real API)', () => {
-  test.describe.configure({ retries: 2 })
   test.use({ hasTouch: true })
 
   test.beforeEach(async ({ page }) => {

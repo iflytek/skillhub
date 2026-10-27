@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const api = vi.hoisted(() => ({ status: vi.fn(), delete: vi.fn(), submit: vi.fn(), retry: vi.fn(), appeal: vi.fn() }))
 vi.mock('@/api/client', () => ({ skillAvatarApi: api, buildApiUrl: (url: string) => url }))
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string, options?: { time?: string }) => options?.time ? `${key}: ${options.time}` : key, i18n: { language: 'ko-KR', resolvedLanguage: 'ko' } }) }))
 import { SkillAvatarManager } from './skill-avatar-manager'
 
 describe('SkillAvatarManager appeal', () => {
@@ -26,13 +26,14 @@ describe('SkillAvatarManager appeal', () => {
   })
 
   it('disables paid retry during cooldown and explains when automatic retries stop', async () => {
+    const nextRetry = new Date(Date.now() + 3600000)
     api.status.mockResolvedValue({ avatarUrl: null, candidateId: 7, candidateStatus: 'PENDING',
       machineStatus: 'ERROR', reviewStatus: 'NOT_REQUIRED', candidateUrl: null, reviewReason: null,
-      machineNextRetryAt: new Date(Date.now() + 3600000).toISOString(), automaticRetryExhausted: true })
+      machineNextRetryAt: nextRetry.toISOString(), automaticRetryExhausted: true })
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(<QueryClientProvider client={client}><SkillAvatarManager namespace="team" slug="foo" /></QueryClientProvider>)
 
-    expect(await screen.findByText('skillAvatar.retryAfter')).toBeTruthy()
+    expect(await screen.findByText(`skillAvatar.retryAfter: ${nextRetry.toLocaleString('ko')}`)).toBeTruthy()
     expect(screen.getByText('skillAvatar.automaticRetryStopped')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'skillAvatar.retry' }).hasAttribute('disabled')).toBe(true)
   })

@@ -44,21 +44,19 @@ if (mode === 'recover') {
   const identity = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1.0.0' }
   const content = '# Removal crash fixture'
   const targets = []
-  let fingerprint = ''
   for (const scope of ['selected', 'retained']) {
     const rootDir = join(root, scope, 'skills')
     const installDir = join(rootDir, identity.slug)
     await mkdir(join(installDir, '.skillhub'), { recursive: true })
     await writeFile(join(installDir, 'SKILL.md'), content)
     const snapshot = await snapshotSkillDirectory(installDir)
-    fingerprint = snapshot.fingerprint
-    const target = { agent: 'dsh', rootDir, installDir, installedAt: '2026-10-14' }
+    const target = { version: identity.version, fingerprint: snapshot.fingerprint, agent: 'dsh', rootDir, installDir, installedAt: '2026-10-14' }
     targets.push(target)
     await writeFile(join(installDir, '.skillhub/metadata.json'), JSON.stringify({ ...identity, ...snapshot,
       agent: 'dsh', installedAt: target.installedAt }))
   }
   const inventory = new InventoryStore(join(root, 'home'))
-  const before = { items: [{ ...identity, fingerprint, targets }] }
+  const before = { items: [{ registry: identity.registry, namespace: identity.namespace, slug: identity.slug, targets }] }
   await inventory.writeAtomic(before)
   const selected = targets[0]!
   if (mode === 'stale') await rm(selected.installDir, { recursive: true })

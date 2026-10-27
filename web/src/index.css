@@ -167,6 +167,12 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* Keep Korean words together while allowing long identifiers to wrap. */
+  html:lang(ko) body {
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-sans);
     font-weight: 500;

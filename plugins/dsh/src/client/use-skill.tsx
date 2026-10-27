@@ -60,7 +60,7 @@ const blocked: Record<Extract<SkillUsePreparation, { status: 'blocked' }>['reaso
   'shared-installation': '此安装暂不支持直接使用，请在 DSH 中选择技能。',
   'files-changed': '本地技能文件已变化，请先核对安装。',
   'skill-unavailable': '当前会话尚未发现此技能，请稍后重试。',
-  'skill-shadowed': '当前会话有另一个同名技能，请先处理同名覆盖。',
+  'skill-shadowed': '当前会话实际使用的是另一份同名技能，无法直接使用所选安装。请检查安装位置，并选择当前会话生效的那份技能。',
   'user-invocation-disabled': '此技能不允许用户直接调用。',
   'unsupported-name': '此技能名称暂不支持原生调用。',
   'host-unavailable': 'DSH 技能服务暂不可用，请重新打开会话。',
@@ -319,16 +319,17 @@ export function SkillCaseChoices({ controller, sessionId }: { controller: SkillU
   </section>;
 }
 
-export function UseSkillButton({ services, revision, itemKey, resolve, onUsed, onHandoff }: {
+export function UseSkillButton({ services, revision, itemKey, resolve, onUsed, onHandoff, onError }: {
   services?: SkillUseServices; revision: string; itemKey?: string;
-  resolve?(signal: AbortSignal): Promise<string>; onUsed?(): void; onHandoff?(): void;
+  resolve?(signal: AbortSignal): Promise<string>; onUsed?(): void; onHandoff?(): void; onError?(message: string): void;
 }) {
   const ref = useRef<SkillUseButtonRequests>();
   if (!ref.current) ref.current = new SkillUseButtonRequests();
   const requests = ref.current;
   const { busy, error } = useSyncExternalStore(requests.subscribe, requests.getSnapshot, requests.getSnapshot);
   useLayoutEffect(() => { requests.reset(); return () => requests.reset(); }, [requests, services, revision, itemKey]);
+  useEffect(() => { onError?.(error); }, [error, onError]);
   return <span className="astron-sh-use-skill skillhub-controls"><Button size="sm" variant="default" disabled={busy || !services} onClick={() => {
     if (services) void requests.run(signal => services.useSkill(revision, itemKey, signal, resolve, undefined, onHandoff), onUsed);
-  }}>{busy ? '核验中…' : '使用此技能'}</Button>{error && <span role="alert">{error}</span>}</span>;
+  }}>{busy ? '核验中…' : '使用此技能'}</Button>{error && !onError && <span role="alert">{error}</span>}</span>;
 }

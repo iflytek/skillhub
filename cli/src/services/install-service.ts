@@ -1,15 +1,16 @@
+import { assertDirectTargetOwnership } from './inventory-ownership'
 import { captureInstallInventory } from './inventory-cas'
 import { randomUUID } from 'node:crypto'
 import type { InstallMove, InstallTransactionObserver, InstallTransactionWarning } from './install-transaction'
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { SkillHubClient } from '../clients/skillhub-client'
-import { InventoryStore, InventoryVersionConflictError, InventoryCommitUnknownError } from '../stores/inventory-store'
+import { InventoryStore, InventoryCommitUnknownError } from '../stores/inventory-store'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 import { extractZip } from '../platform/archive'
 import { readBoundedResponseBody } from '../platform/download'
-import { canonicalizeExistingPath, pathExists } from '../platform/paths'
+import { canonicalizeExistingPath, pathsOverlap, pathExists } from '../platform/paths'
 import { diffSkillFiles, snapshotSkillDirectory } from './skill-fingerprint'
 import {
   readInstalledSkillMetadata,
@@ -77,7 +78,8 @@ async function preflightInstallTargets(
     const rootDir = resolve(target.rootDir)
     const canonicalRootDir = await canonicalizeExistingPath(rootDir)
     const canonicalSkillDir = join(canonicalRootDir, identity.slug)
-    if (seenSkillDirs.has(canonicalSkillDir)) {
+    await assertDirectTargetOwnership(inventory, [canonicalSkillDir])
+    if ([...seenSkillDirs].some(path => pathsOverlap(path, canonicalSkillDir))) {
       throw new CliError(`multiple install targets resolve to ${canonicalSkillDir}`, EXIT.usage, {
         path: canonicalSkillDir,
         next: 'select only one target for this directory'
@@ -87,6 +89,12 @@ async function preflightInstallTargets(
 
     // Use the canonical path only as an internal identity. Persist the resolved
     // user path so macOS aliases and Windows short names remain stable in CLI output.
+    for (const item of inventory.items) for (const claimed of item.targets) {
+      const canonicalClaim = await canonicalInventoryInstallDir(claimed)
+      if (canonicalClaim !== canonicalSkillDir && pathsOverlap(canonicalClaim, canonicalSkillDir)) {
+        throw new CliError('install target overlaps another managed installation', EXIT.validation)
+      }
+    }
     const resolvedTarget = { ...target, rootDir }
     const skillDir = join(rootDir, identity.slug)
     const exists = await pathExists(skillDir)
@@ -107,20 +115,21 @@ async function preflightInstallTargets(
 
 export async function installSkill(options: InstallOptions): Promise<InstallResult> {
   const store = options.inventoryStore ?? new InventoryStore(options.home)
+  await store.ensureWritable()
   const expectedItem = options.expectedInventoryItem === undefined ? undefined : structuredClone(options.expectedInventoryItem)
   const inventory = await store.read()
   const identity = { registry: options.registry, namespace: options.namespace, slug: options.slug }
-  if (expectedItem !== undefined) {
-    if (expectedItem && !sameInstalledSkillSource(expectedItem, identity)) throw inventoryChangedError()
-    const expected = await captureInstallInventory({ items: expectedItem ? [expectedItem] : [] }, identity, new Set())
-    if (await captureInstallInventory(inventory, identity, new Set()) !== expected) throw inventoryChangedError()
-  }
   const preparedTargets = await preflightInstallTargets(options.targets, {
     registry: options.registry,
     namespace: options.namespace,
     slug: options.slug
   }, options.force, inventory)
   const canonicalDirs = new Set(preparedTargets.map(target => target.canonicalSkillDir))
+  if (expectedItem !== undefined) {
+    if (expectedItem && !sameInstalledSkillSource(expectedItem, identity)) throw inventoryChangedError()
+    const expected = await captureInstallInventory({ items: expectedItem ? [expectedItem] : [] }, identity, canonicalDirs)
+    if (await captureInstallInventory(inventory, identity, canonicalDirs) !== expected) throw inventoryChangedError()
+  }
   const baseline = await captureInstallInventory(inventory, identity, canonicalDirs)
   const assertInventoryCurrent = async (current: Inventory) => {
     if (await captureInstallInventory(current, identity, canonicalDirs) !== baseline) throw inventoryChangedError()
@@ -213,11 +222,6 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
         }
       }
       await assertInventoryCurrent(lockedInventory)
-      await assertNoPartialVersionChange(lockedInventory, staged, {
-        registry: options.registry,
-        namespace: options.namespace,
-        slug: options.slug
-      }, resolved)
 
       if (observer?.beforePreparation) {
         await store.withLockedSnapshot(async current => {
@@ -280,7 +284,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
         await observer?.afterMove?.({ ...move })
       }
 
-      try {
+      {
         const replacedInstallDirs = await findEquivalentInventoryInstallDirs(
           lockedInventory,
           new Set(staged.map(item => item.canonicalSkillDir))
@@ -304,15 +308,6 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
           }
         )
         inventoryCommitted = true
-      } catch (error) {
-        if (error instanceof InventoryVersionConflictError) {
-          throw new CliError(error.message, EXIT.validation, {
-            coordinate: `@${options.namespace}/${options.slug}`,
-            retainedTargets: error.retainedTargets.map(target => ({ agent: target.agent, dir: target.installDir })),
-            next: 'select all installed targets for the upgrade'
-          })
-        }
-        throw error
       }
 
       try { await observer?.afterInventoryCommit?.() }
@@ -423,30 +418,6 @@ function inventoryChangedError(): CliError {
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
-}
-
-async function assertNoPartialVersionChange(
-  inventory: Inventory,
-  staged: StagedInstall[],
-  identity: InstalledSkillIdentity,
-  resolved: ResolveResponse
-): Promise<void> {
-  const item = inventory.items.find(candidate => sameInstalledSkillSource(candidate, identity))
-  if (!item) return
-
-  const selectedInstallDirs = new Set(staged.map(candidate => candidate.canonicalSkillDir))
-  const retainedTargets: typeof item.targets = []
-  for (const target of item.targets) {
-    if (!selectedInstallDirs.has(await canonicalInventoryInstallDir(target))) retainedTargets.push(target)
-  }
-  if (retainedTargets.length === 0) return
-  if (item.version === resolved.version && item.fingerprint === resolved.fingerprint) return
-
-  throw new CliError('partial-target install would create inconsistent versions', EXIT.validation, {
-    coordinate: `@${identity.namespace}/${identity.slug}`,
-    retainedTargets: retainedTargets.map(target => ({ agent: target.agent, dir: target.installDir })),
-    next: 'select all installed targets for the upgrade'
-  })
 }
 
 async function assertReplaceableInstallation(

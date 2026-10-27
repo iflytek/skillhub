@@ -391,8 +391,8 @@ test.each(['legacy', 'fingerprint', 'versionId', 'digest', 'metadata', 'version'
       if (change === 'version' || change === 'ownership') {
         const inventoryPath = join(f.root, 'home/.skillhub/inventory.json')
         const inventory = JSON.parse(await readFile(inventoryPath, 'utf8'))
-        if (change === 'version') inventory.items[0].version = '2.0.0'
-        else inventory.items[0].targets[0].installedBy = ['pack:other']
+        if (change === 'version') inventory.records[0].targets[0].version = '2.0.0'
+        else inventory.records[0].targets[0].installedBy = ['pack:other']
         await writeFile(inventoryPath, JSON.stringify(inventory))
       }
       let calls = 0

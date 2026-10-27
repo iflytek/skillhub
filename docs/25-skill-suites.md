@@ -120,8 +120,15 @@ SMOKE_ADMIN_PASSWORD='<configured-password>' \
 - 原有 Skill 搜索接口继续只返回 Skill。
 
 类型化发现结果通过 `resourceType=SKILL|SUITE` 区分同名资源。Suite 详情返回固定版本、按顺序排列
-的成员快照、Entry Skill、实时可安装状态和阻塞原因。普通 Skill 详情会列出当前用户可见、以该 Skill
-作为 Entry 的最新已发布 SuiteVersion，并链接到完整 Suite；Skill 的独立安装能力保持不变。
+的成员快照、Entry Skill、实时可安装状态和阻塞原因。普通 Skill 详情会列出当前用户可见、包含该
+Skill 的最新已发布 SuiteVersion，区分 Entry 和普通成员，并链接到完整 Suite。
+
+市场、首页及收藏等复用技能卡片的列表通过 `hasVisibleSuites` 展示轻量的“关联套件”标识。
+该字段只依据当前用户可见、ACTIVE 且未隐藏的 Suite 当前已发布版本计算，以批量查询返回，
+不会为每张卡片单独请求套件详情。卡片仍进入原 Skill 详情，在详情中查看一个或多个关联套件及
+可见的配套成员；不可访问的套件不会产生标识。Suite 隐藏、归档或新发布版本移除该 Skill 后，
+重新读取列表时按最新关系计算。标识仅表示被套件收录，不代表强制依赖、唯一父套件或必须整套
+安装；Skill 的独立安装能力保持不变。
 
 ## 部署顺序
 

@@ -6,7 +6,7 @@ import { inspectRemovalBaseline } from '../../../src/integrations/removal-baseli
 import { snapshotSkillDirectory } from '../../../src/services/skill-fingerprint'
 import type { Inventory, InventoryItem } from '../../../src/stores/inventory-store'
 
-test('removal inspects one exact target while retaining all other targets in its baseline', async () => {
+test('removal inspects one exact target without binding unrelated targets in its baseline', async () => {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-removal-baseline-')))
   try {
     const target = { scope: 'project' as const, root: join(root, 'project/skills') }
@@ -15,8 +15,8 @@ test('removal inspects one exact target while retaining all other targets in its
     await writeFile(join(path, 'SKILL.md'), 'original')
     const snapshot = await snapshotSkillDirectory(path)
     const selected = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1.0.0' }
-    const entry = { agent: 'dsh', rootDir: target.root, installDir: path, installedAt: '2026-10-14T00:00:00Z' }
-    const item: InventoryItem = { ...selected, fingerprint: snapshot.fingerprint,
+    const entry = { version: selected.version, fingerprint: snapshot.fingerprint, agent: 'dsh', rootDir: target.root, installDir: path, installedAt: '2026-10-14T00:00:00Z' }
+    const item: InventoryItem = { registry: selected.registry, namespace: selected.namespace, slug: selected.slug,
       targets: [entry, { ...entry, agent: 'other-agent', rootDir: join(root, 'other'), installDir: join(root, 'other/writer') }] }
     await writeFile(join(path, '.skillhub/metadata.json'), JSON.stringify({ ...selected, ...snapshot, agent: 'dsh', installedAt: entry.installedAt }))
     let inventory: Inventory = { items: [structuredClone(item)] }
@@ -26,7 +26,7 @@ test('removal inspects one exact target while retaining all other targets in its
     expect(ready.status).toBe('ready')
     if (ready.status !== 'ready') throw new Error('Expected valid removal')
     expect(ready.kind).toBe('uninstall')
-    expect(ready.inventoryItem.targets).toHaveLength(2)
+    expect(ready.inventoryItem.targets).toHaveLength(1)
     expect(ready.target.path).toBe(path)
     expect(await readFile(join(path, 'SKILL.md'), 'utf8')).toBe('original')
     inventory.items[0]!.targets[0]!.installedBy = ['direct', 'suite:demo']
@@ -41,7 +41,7 @@ test('removal inspects one exact target while retaining all other targets in its
     inventory = { items: [structuredClone(item)] }
     let reads = 0
     expect(await inspectRemovalBaseline({ read: async () => {
-      reads++; return { items: [reads === 1 ? structuredClone(item) : { ...structuredClone(item), version: '2.0.0' }] }
+      reads++; return { items: [reads === 1 ? structuredClone(item) : { ...structuredClone(item), targets: item.targets.map(t => ({ ...t, version: '2.0.0' })) }] }
     } }, selected, target)).toEqual({ status: 'blocked', reason: 'record-changed' })
     reads = 0
     expect(await inspectRemovalBaseline({ read: async () => {

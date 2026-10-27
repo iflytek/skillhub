@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import en from './locales/en.json'
+import ko from './locales/ko.json'
 import ru from './locales/ru.json'
 import zh from './locales/zh.json'
 
@@ -8,6 +9,7 @@ describe('GitHub sync status locales', () => {
     const expected = Object.keys(zh.githubSync.codes).sort()
     expect(Object.keys(en.githubSync.codes).sort()).toEqual(expected)
     expect(Object.keys(ru.githubSync.codes).sort()).toEqual(expected)
+    expect(Object.keys(ko.githubSync.codes).sort()).toEqual(expected)
   })
 
   it('describes known acquisition and archive failures for administrators', () => {
@@ -20,6 +22,7 @@ describe('GitHub sync status locales', () => {
       expect(zh.githubSync.codes[code]).not.toBe(code)
       expect(en.githubSync.codes[code]).toBeTruthy()
       expect(ru.githubSync.codes[code]).toBeTruthy()
+      expect(ko.githubSync.codes[code]).toBeTruthy()
     }
   })
 })

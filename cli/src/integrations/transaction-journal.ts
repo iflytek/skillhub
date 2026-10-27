@@ -1,3 +1,4 @@
+import { inventoryMemorySchema, inventoryRecordSchema, legacyInventorySchema, parseInventory, type Inventory, type InventoryItem } from '../stores/inventory-store'
 import { z } from 'zod'
 import type { InstallTransactionObserver } from '../services/install-transaction'
 import type { OperationStore } from './operation-store'
@@ -7,16 +8,13 @@ const source = text.refine(value => {
   try { const url = new URL(value); return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash }
   catch { return false }
 }, 'Expected a credential-free registry identity')
-const target = z.object({ agent: text, rootDir: text, installDir: text, installedAt: text, installedBy: z.array(text).optional() }).strict()
-  .transform(({ installedBy, ...value }) => ({ ...value, ...(installedBy === undefined ? {} : { installedBy }) }))
-const item = z.object({ registry: source, namespace: text, slug: text, version: text, fingerprint: text.optional(),
-  installedBy: z.array(text).optional(), targets: z.array(target) }).strict()
-  .transform(({ installedBy, fingerprint, ...value }) => ({ ...value,
-    ...(installedBy === undefined ? {} : { installedBy }), ...(fingerprint === undefined ? {} : { fingerprint }) }))
-const member = z.object({ namespace: text, slug: text, version: text, fingerprint: text, installDirs: z.array(text) }).strict()
-const inventory = z.object({ items: z.array(item), suites: z.array(z.object({ registry: source, namespace: text, slug: text,
-  version: text, fingerprint: text, members: z.array(member) }).strict()).optional() }).strict()
-  .transform(({ suites, ...value }) => ({ ...value, ...(suites === undefined ? {} : { suites }) }))
+// Legacy snapshots remain raw on disk; normalization is only the recovery read projection.
+const inventory = z.union([inventoryMemorySchema, legacyInventorySchema.transform(value => parseInventory(value))])
+  .transform(value => value as Inventory)
+  .refine(value => [...value.items, ...value.suites ?? []].every(item => source.safeParse(item.registry).success), 'Unsafe snapshot source')
+const item = z.union([inventoryRecordSchema, legacyInventorySchema.shape.items.element.transform(value => parseInventory({ items: [value] }).items[0]!)])
+  .transform(value => value as InventoryItem)
+  .refine(value => source.safeParse(value.registry).success, 'Unsafe snapshot source')
 const move = z.object({ phase: z.enum(['backup', 'install']), index: z.number().int().nonnegative(), agent: text,
   canonicalSkillDir: text, stagingDir: text, backupDir: text.nullable(), from: text, to: text }).strict()
 const commit = z.object({ before: inventory, after: inventory }).strict()

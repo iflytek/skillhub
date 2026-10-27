@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto'
 import { expect, test } from '@playwright/test'
-import { setEnglishLocale } from './helpers/auth-fixtures'
+import { setEnglishLocale, setUniqueClientIp } from './helpers/auth-fixtures'
 
 test.describe('Auth Entry', () => {
   test.beforeEach(async ({ page }) => {
@@ -234,6 +234,7 @@ test.describe('Auth Entry', () => {
   test('logs in to an explicit local destination on the isolated runtime', async ({ browser, page }) => {
     test.skip(process.env.SKILLHUB_RUNTIME_E2E !== '1', 'Requires an isolated runtime with local registration enabled')
     test.setTimeout(90_000)
+    await setUniqueClientIp(page, 'auth-entry-runtime-registration')
 
     const suffix = randomBytes(6).toString('hex')
     const username = `pr901_${suffix}`

@@ -30,6 +30,7 @@ test('uninstall preparation remains local and distinguishes removal from stale-r
         runtime: { getStatus: () => ({ pendingOperations: pending, hostInstanceId: 'host' }),
           inspectRemoval: async () => { inspected++; return baseline; } } }),
     };
+    Object.setPrototypeOf(context, SkillHubService.prototype);
     const prepare = () => Reflect.apply(SkillHubService.prototype.prepareUninstall, context, ['source', 'item', new AbortController().signal]);
     const ready = await prepare();
     if (!ready.planId) throw new Error('Expected removal plan');

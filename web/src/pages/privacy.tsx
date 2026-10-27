@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
+import koLegal from '@/i18n/locales/ko-legal.json'
 import { LegalDocument } from '@/shared/components/legal-document'
 
 const privacyDocuments = {
+  ko: koLegal.privacy,
   zh: {
     eyebrow: '法律与隐私',
     title: '隐私政策',
@@ -152,7 +154,8 @@ const privacyDocuments = {
 
 export function PrivacyPolicyPage() {
   const { i18n } = useTranslation()
-  const language = i18n.resolvedLanguage?.split('-')[0] === 'zh' ? 'zh' : 'en'
+  const primaryLanguage = i18n.resolvedLanguage?.split('-')[0]
+  const language = primaryLanguage === 'zh' || primaryLanguage === 'ko' ? primaryLanguage : 'en'
 
   return <LegalDocument {...privacyDocuments[language]} />
 }

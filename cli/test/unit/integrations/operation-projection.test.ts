@@ -12,9 +12,9 @@ function record(): OperationRecord {
       status: { phase: 'completed', files: 'upgraded', discovery: 'unconfirmed', recovery: 'not-needed',
         warnings: ['Backup cleanup requires verification.', 'private exception /secret/path'] } },
     transaction: { moves: [], cleanup: [], inventoryCommit: { committed: true,
-      before: { items: [{ registry: 'https://other.example', namespace: 'team', slug: 'writer', version: '9.0.0', targets: [] },
-        { registry: 'https://registry.example', namespace: 'team', slug: 'writer', version: '1.0.0', targets: ['/private/user/writer', '/private/project/writer'].map(installDir =>
-          ({ agent: 'dsh', rootDir: installDir.slice(0, -7), installDir, installedAt: '2026-10-15T00:00:00Z' })) }] },
+      before: { items: [{ registry: 'https://other.example', namespace: 'team', slug: 'writer', targets: [] },
+        { registry: 'https://registry.example', namespace: 'team', slug: 'writer', targets: ['/private/user/writer', '/private/project/writer'].map(installDir =>
+          ({ version: '1.0.0', agent: 'dsh', rootDir: installDir.slice(0, -7), installDir, installedAt: '2026-10-15T00:00:00Z' })) }] },
       after: { items: [] } } } }
 }
 

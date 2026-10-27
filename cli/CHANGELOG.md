@@ -2,18 +2,44 @@
 
 All notable CLI behavior changes are documented in this file.
 
-## Unreleased
+## 0.2.0
 
 ### Added
 
-- Add the `zcode` agent profile, displayed as ZCode, with automatic detection of project-level
-  and user-level `.zcode/skills` directories.
-- Add the `dsh` agent profile, displayed as DeepSeek Harness, with automatic detection of
-  project-level and user-level `.dsh/skills` directories.
-- Add OAuth Device Flow to `skillhub login` when no API token is supplied, including best-effort
-  browser launch, a `--no-open` headless mode, bounded polling, and non-secret JSON progress output.
-- Add the `pi` agent profile, displayed as Pi, with `--agent pi`, project-level
-  `<project>/.pi/skills/`, and user-level `~/.pi/agent/skills/` support.
+- Add Skill Suite installation, checking, upgrade planning/execution and removal with exact
+  member versions, shared ownership and local-change protection. Suite commands require a
+  Registry implementing the Suite API; this release does not add that API to an existing server.
+- Add OAuth Device Flow to `skillhub login` when no API token is supplied, including browser
+  launch, `--no-open`, bounded polling and non-secret JSON progress.
+- Add `pi`, `dsh` and `zcode` agent profiles and their user/project directory detection.
+- Preserve authored `.skillhub/examples.json` with the skill package through publication,
+  installation, synchronization and upgrades. Invalid example declarations remain ordinary
+  files; only installer-owned `.skillhub/metadata.json` is excluded from directory publication.
+
+### Changed
+
+- Store installed versions per location in inventory schema v2. User and project copies can
+  have different versions; updates and removals preserve unselected locations and Suite owners.
+- Reading v1 inventory does not migrate it. Before the first successful v2 write, preserve a
+  byte-verified `inventory.v1.<sha256>.backup.json` alongside the inventory.
+- Upgrade all CLI clients sharing the inventory to `0.2.0` before using DSH plugin `0.4.0`.
+  Old CLI/new inventory mixed writes are unsupported. Inventory backup alone is not a rollback
+  of skill files, metadata or operation journals changed after migration.
+- Provide the shared native installation core used by the DSH plugin, with precise target,
+  confirmation, transaction recovery and local-change protection.
+
+### Fixed
+
+- Retain Registry URL prefixes when following application-relative download URLs, including
+  install and namespace synchronization.
+- Preserve numeric-looking version strings and reject repeated or conflicting version options.
+- Preserve authored `.skillhub` files in fingerprints and packages instead of excluding the
+  whole directory; normalize ZIP directory separators consistently.
+
+## Notes retained from 0.1.12 and earlier
+
+### Added
+
 - Add the user-level `astudio` agent profile, displayed as AStudio, with automatic detection of
   `~/.acode/skills` on Linux, macOS, and Windows.
 - Add repeatable `sync pull --skill <slug>` selection for non-interactive and JSON workflows, with

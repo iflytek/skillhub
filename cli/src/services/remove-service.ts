@@ -1,3 +1,6 @@
+import { assertDirectTargetOwnership } from './inventory-ownership'
+import { captureInstallInventory } from './inventory-cas'
+import { canonicalizeExistingPath } from '../platform/paths'
 import { rm, stat } from 'node:fs/promises'
 import { relative, isAbsolute } from 'node:path'
 import { InventoryStore } from '../stores/inventory-store'
@@ -29,6 +32,7 @@ export interface RemoveResult {
 
 export async function removeLocalSkill(options: RemoveLocalOptions): Promise<RemoveResult> {
   const store = new InventoryStore(options.home)
+  await store.ensureWritable()
   const inventory = await store.read()
 
   const items = inventory.items.filter(item =>
@@ -52,6 +56,9 @@ export async function removeLocalSkill(options: RemoveLocalOptions): Promise<Rem
     throw new CliError(`no matching targets for agents: ${options.agents?.join(', ')}`, EXIT.generic)
   }
 
+  const paths = await Promise.all(targetsToRemove.map(({ target }) => canonicalizeExistingPath(target.installDir)))
+  await assertDirectTargetOwnership(inventory, paths)
+  const baseline = await captureInstallInventory(inventory, items[0]!, new Set(paths))
   const removed: RemoveResult['removed'] = []
   const releases: Array<() => Promise<void>> = []
 
@@ -71,6 +78,11 @@ export async function removeLocalSkill(options: RemoveLocalOptions): Promise<Rem
       releases.push(await acquireSkillTargetLock(target.rootDir, options.slug))
     }
 
+    const current = await store.read()
+    await assertDirectTargetOwnership(current, paths)
+    if (await captureInstallInventory(current, items[0]!, new Set(paths)) !== baseline) {
+      throw new CliError('installed skill records changed before removal', EXIT.validation)
+    }
     for (const { item, target } of targetsToRemove) {
       let existed = true
       try {

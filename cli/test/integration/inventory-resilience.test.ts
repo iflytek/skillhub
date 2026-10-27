@@ -96,11 +96,11 @@ describe('inventory resilience', () => {
 
     const inventory = JSON.parse(
       await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')
-    ) as { items: Array<{ slug: string; targets: Array<{ installDir: string }> }> }
+    ) as { records: Array<{ slug: string; targets: Array<{ installDir: string }> }> }
 
-    const slugs = inventory.items.map(i => i.slug).sort()
+    const slugs = inventory.records.map(i => i.slug).sort()
     expect(slugs).toEqual(['one', 'two'])
-    for (const item of inventory.items) {
+    for (const item of inventory.records) {
       expect(item.targets.length).toBeGreaterThan(0)
     }
   })

@@ -24,6 +24,8 @@ export interface InstalledProjectionItem {
   /** Internal Host path, never a Remote field. */
   targetPath: string
   fingerprint?: string
+  /** Internal digest of this exact target's release, timestamp and ownership. */
+  recordRevision?: string
   state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'
 }
 export interface InstalledProjection {
@@ -75,9 +77,8 @@ export interface UpgradeSelection { registry: string; namespace: string; slug: s
 /** Private snapshot carried between the bundled core and Host, never supplied by the Client. */
 export type UpgradeBaseline =
   | { status: 'blocked'; reason: 'record-changed' | 'target-outside-context' | 'shared-target' | 'target-alias' | 'local-changes' | 'metadata-invalid' | 'target-unavailable' }
-  | { status: 'ready'; inventoryItem: UpgradeSelection & {
-    fingerprint?: string; installedBy?: string[];
-    targets: Array<{ agent: string; rootDir: string; installDir: string; installedAt: string; installedBy?: string[] }>
+  | { status: 'ready'; inventoryItem: Omit<UpgradeSelection, 'version'> & {
+    targets: Array<{ agent: string; rootDir: string; installDir: string; installedAt: string; version: string; fingerprint?: string; installedBy?: string[] }>
   }; targets: Array<{
     scope: 'user' | 'project'; root: string; path: string; files: Record<string, string>;
     metadata: UpgradeSelection & { schemaVersion?: number; versionId?: number; fingerprint?: string;

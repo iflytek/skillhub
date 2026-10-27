@@ -217,7 +217,7 @@ async function main() {
     const manifest = JSON.parse(await readFile(join(root, 'home/profiles/skillhub-m0/node_modules/@astron-team/skillhub-dsh/package.json'), 'utf8'));
     if (manifest.name !== '@astron-team/skillhub-dsh') throw new Error('Unexpected installed candidate identity.');
     const probeScript = fileURLToPath(new URL('./probe-host.mjs', import.meta.url));
-    for (const probe of ['runtime-baseline', 'plugin-lifecycle']) {
+    for (const probe of ['runtime-baseline', 'plugin-lifecycle', 'skill-availability']) {
       summary.stage = probe;
       await run(probe, [probeScript, '--root', root, '--probe', probe], 150000);
       const lines = (await readFile(join(root, 'logs', probe + '.log'), 'utf8')).trim().split('\n');
@@ -238,7 +238,7 @@ async function main() {
   } catch (error) {
     summary.failure = ['SPAWN_FAILED', 'DEADLINE_OR_CANCELLED', 'PROCESS_FAILED', 'CLEANUP_DEADLINE'].includes(error.code)
       ? error.code : 'INVALID_RESULT';
-    if (['runtime-baseline', 'plugin-lifecycle'].includes(summary.stage)) {
+    if (['runtime-baseline', 'plugin-lifecycle', 'skill-availability'].includes(summary.stage)) {
       const log = await readFile(join(root, 'logs', summary.stage + '.log'), 'utf8').catch(() => '');
       summary.probeFailure = safeProbeFailure(log, summary.stage);
     }

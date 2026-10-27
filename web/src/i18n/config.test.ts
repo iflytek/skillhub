@@ -29,6 +29,10 @@ vi.mock('./locales/zh.json', () => ({
   default: { greeting: '你好' },
 }))
 
+vi.mock('./locales/ko.json', () => ({
+  default: { greeting: '안녕하세요' },
+}))
+
 vi.mock('./locales/ru.json', () => ({
   default: { greeting: 'Привет' },
 }))
@@ -58,9 +62,10 @@ describe('i18n config', () => {
     expect(initOptions.detection.caches).toEqual(['localStorage'])
   })
 
-  it('registers english, russian and chinese resource bundles', () => {
+  it('registers english, korean, russian and chinese resource bundles', () => {
     const initOptions = initMock.mock.calls[0][0]
     expect(initOptions.resources).toHaveProperty('en')
+    expect(initOptions.resources.ko.translation).toEqual({ greeting: '안녕하세요' })
     expect(initOptions.resources).toHaveProperty('ru')
     expect(initOptions.resources).toHaveProperty('zh')
     expect(initOptions.resources.en).toHaveProperty('translation')

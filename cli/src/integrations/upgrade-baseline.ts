@@ -1,7 +1,8 @@
+import { captureInstallInventory } from '../services/inventory-cas'
 import { realpath } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
-import { canonicalizeExistingPath } from '../platform/paths'
+import { canonicalizeExistingPath, pathsOverlap } from '../platform/paths'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
 import { snapshotSkillDirectory } from '../services/skill-fingerprint'
 import { targetInstalledBy } from '../stores/inventory-store'
@@ -12,16 +13,17 @@ import { assertOwnedRegularTree } from './recovery-files'
 
 /** Read-only preparation. Execution must compare this complete snapshot again under mutation locks. */
 export async function inspectUpgradeBaseline(store: Pick<InventoryStore, 'read'>,
-  selected: Pick<InventoryItem, 'registry' | 'namespace' | 'slug' | 'version'>,
+  selected: Pick<InventoryItem, 'registry' | 'namespace' | 'slug'> & { version: string },
   approvedRoots: readonly InstalledProjectionTarget[]): Promise<UpgradeBaseline> {
   const inventory = structuredClone(await store.read())
   const matches = inventory.items.filter(item => sameInstalledSkillSource(item, selected))
-  const item = matches[0]
-  if (matches.length !== 1 || !item || item.version !== selected.version || !item.targets.length
+  const whole = matches[0]
+  const item = whole && { ...whole, targets: whole.targets.filter(target => approvedRoots.some(root => root.root === target.rootDir)) }
+  if (matches.length !== 1 || !item || item.targets.some(target => target.version !== selected.version) || !item.targets.length
     || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(item.slug)) return { status: 'blocked', reason: 'record-changed' }
   const targets: Extract<UpgradeBaseline, { status: 'ready' }>['targets'] = []
   const paths = new Set<string>()
-  // Check the entire shared target set before reading any skill content.
+  // Verify only the explicitly selected positions before reading their content.
   for (const target of item.targets) {
     const roots = approvedRoots.filter(root => isAbsolute(root.root) && root.root === resolve(root.root)
       && root.root === target.rootDir)
@@ -34,9 +36,18 @@ export async function inspectUpgradeBaseline(store: Pick<InventoryStore, 'read'>
     paths.add(target.installDir)
   }
   for (const other of inventory.items) {
-    if (other === item) continue
     for (const target of other.targets) {
-      if (paths.has(await canonicalizeExistingPath(target.installDir))) return { status: 'blocked', reason: 'shared-target' }
+      if (other === whole && item.targets.includes(target)) continue
+      const canonical = await canonicalizeExistingPath(target.installDir)
+      if ([...paths].some(path => pathsOverlap(path, canonical))) return { status: 'blocked', reason: 'shared-target' }
+    }
+  }
+  for (const suite of inventory.suites ?? []) {
+    for (const member of suite.members) {
+      for (const path of member.installDirs) {
+        const canonical = await canonicalizeExistingPath(path)
+        if ([...paths].some(selected => pathsOverlap(selected, canonical))) return { status: 'blocked', reason: 'shared-target' }
+      }
     }
   }
   for (const target of item.targets) {
@@ -48,21 +59,20 @@ export async function inspectUpgradeBaseline(store: Pick<InventoryStore, 'read'>
       const read = await readInstalledSkillMetadata(target.installDir)
       if (read.status !== 'valid') return { status: 'blocked', reason: 'metadata-invalid' }
       const metadata = read.metadata
-      if (!metadata.files || !item.fingerprint || !sameInstalledSkillSource(metadata, item)
-        || metadata.version !== item.version || metadata.fingerprint !== item.fingerprint
+      if (!metadata.files || !target.fingerprint || !sameInstalledSkillSource(metadata, item)
+        || metadata.version !== target.version || metadata.fingerprint !== target.fingerprint
         || metadata.agent !== 'dsh' || metadata.installedAt !== target.installedAt) {
         return { status: 'blocked', reason: 'metadata-invalid' }
       }
       const snapshot = await snapshotSkillDirectory(target.installDir)
-      if (snapshot.fingerprint !== item.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) {
+      if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) {
         return { status: 'blocked', reason: 'local-changes' }
       }
       targets.push({ scope: approvedRoots.find(root => root.root === target.rootDir)!.scope,
         root: target.rootDir, path: target.installDir, metadata, files: snapshot.files })
     } catch { return { status: 'blocked', reason: 'target-unavailable' } }
   }
-  const latest = (await store.read()).items.filter(entry => sameInstalledSkillSource(entry, selected)
-    || entry.targets.some(target => paths.has(target.installDir)))
-  if (!isDeepStrictEqual(latest, [item])) return { status: 'blocked', reason: 'record-changed' }
+  if (await captureInstallInventory(await store.read(), selected, paths)
+    !== await captureInstallInventory(inventory, selected, paths)) return { status: 'blocked', reason: 'record-changed' }
   return { status: 'ready', inventoryItem: item, targets }
 }

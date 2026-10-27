@@ -125,13 +125,13 @@ flowchart TD
 | astron_skillhub_search | q 字符串 | 来源快照、查询、items（含 Host 签发的 selectionRef）、total/returned/limit、展示类型和协议版本 | listSkills；只读，Host 注入来源 |
 | astron_skillhub_install | scope 可选 user/project；selectionRef 或明确新输入的 namespace、slug（二选一） | accepted：operationId、调用/主机标识、技能身份/固定版本、来源/目标标签及接收时间；awaiting-confirmation：候选身份/精确版本及 UI 选择引用；not-confirmed：调用标识与错误代码。文件和发现终态不包含在工具回执中 | getSkillDetail + startInstall；Client 另经 getOperation 查询终态 |
 
-工具名称与 schema 分别定义于插件的 search-tool.ts 和 install-tool.ts，注册时拒绝同名冲突；这些是 DSH Agent 工具，不是外部 HTTP API。scope 仅在用户明确指定当前用户或当前项目时传入；未指定时省略，工具返回 awaiting-confirmation，不默认写入当前用户。sourceRevision、targetToken、requestKey 由可信适配层生成，不能信任模型构造的 token 或历史卡片 HTML 属性。selectionRef 由 Host 签发并保存，绑定来源修订、会话、搜索条目坐标和项目上下文；搜索阶段可只有候选版本，详情打开后另签发绑定精确版本/fingerprint 的引用。引用不是模型可编辑的字段集合。基于搜索卡片、详情或“第二个”等历史选择安装必须提交 selectionRef；Host 保存搜索引用到最近一次成功展示所用详情快照的关联；有已展示快照时必须提升到该快照，没有已展示快照时由 Host 按搜索时精确版本核验并固定安装快照，两者均不得重新解析 latest。若同一搜索引用关联多个不同固定版本且无法确定用户所指，则阻断并重新选择。Host 校验归属、时效、来源、项目和已有固定版本，失败返回 CONTEXT_STALE，不回退到最新版本。只有用户在当前上下文明示一个新的完整坐标时才可走无引用入口；工具引导与适配上下文须区分新输入和引用选择，不能把缺失或过期的选择引用改写为新坐标安装。该解析歧义无法消除时先让用户重新选择。
+工具名称与 schema 分别定义于插件的 search-tool.ts 和 install-tool.ts，注册时拒绝同名冲突；这些是 DSH Agent 工具，不是外部 HTTP API。scope 仅在用户明确指定当前用户或当前项目时传入；用户明确安装且未指定范围时省略，由 Host 默认当前用户。sourceRevision、targetToken、requestKey 由可信适配层生成，不能信任模型构造的 token 或历史卡片 HTML 属性。selectionRef 由 Host 签发并保存，绑定来源修订、会话、搜索条目坐标和项目上下文；搜索阶段可只有候选版本，详情打开后另签发绑定精确版本/fingerprint 的引用。引用不是模型可编辑的字段集合。基于搜索卡片、详情或“第二个”等历史选择安装必须提交 selectionRef；Host 保存搜索引用到最近一次成功展示所用详情快照的关联；有已展示快照时必须提升到该快照，没有已展示快照时由 Host 按搜索时精确版本核验并固定安装快照，两者均不得重新解析 latest。若同一搜索引用关联多个不同固定版本且无法确定用户所指，则阻断并重新选择。Host 校验归属、时效、来源、项目和已有固定版本，失败返回 CONTEXT_STALE，不回退到最新版本。只有用户在当前上下文明示一个新的完整坐标时才可走无引用入口；工具引导与适配上下文须区分新输入和引用选择，不能把缺失或过期的选择引用改写为新坐标安装。该解析歧义无法消除时先让用户重新选择。
 
 展示数据以结构化 envelope 传递，搜索与安装使用各自的 schema，不假设字段相同。搜索结果包含 kind、schemaVersion、查询、来源标签/修订、创建时间、数量与候选快照；toolCallId 由宿主 ToolView props.callId 提供。安装结果使用 §9 的 accepted/awaiting-confirmation/cancelled/not-confirmed 四种互斥结构，只有 accepted 包含 operationId。Host 保留本地记录归属；Client 不接收带凭证 URL、内部下载 URL 或可执行命令。工具通过 output.presentationMeta 提供结构化结果；Client 在 tool.call.toolview 插槽按工具名注册，从 props.block.meta 解析并校验。无法识别的历史格式显示只读提示，不触发安装。
 
 工具适配层按持久 hostInstanceId、会话、toolCallId 映射稳定 requestKey（进程重启不改变 hostInstanceId）；相同工具调用重新等待不能重新写入。不同 toolCallId 的重复请求仍由共享目标锁、内容检查和 inventory 幂等处理，不能只做 UI 禁用。
 
-该映射使用持久 hostInstanceId 作为 UUID v5 命名空间，名称为 JSON 数组 `["skillhub-conversation-install-v1", sessionId, callId]`；通过结构化编码避免字段拼接歧义。模型不提供 requestKey。参数变化不能产生另一个键以绕开冲突检查：原始 selectionRef 或新坐标及显式 scope 必须参与日志参数摘要；已明确范围的安装先查已有接受记录，再解析可能过期的引用。未明确范围的请求仅保存在当前 Host 的等待选择缓存中，同调用参数变化直接拒绝，不创建 accepted 日志。请求键用于幂等关联，不作为授权凭证。
+该映射使用持久 hostInstanceId 作为 UUID v5 命名空间，名称为 JSON 数组 `["skillhub-conversation-install-v1", sessionId, callId]`；通过结构化编码避免字段拼接歧义。模型不提供 requestKey。参数变化不能产生另一个键以绕开冲突检查：原始 selectionRef 或新坐标及显式 scope 必须参与日志参数摘要；已明确范围的安装先查已有接受记录，再解析可能过期的引用。新安装省略范围时按用户级生成请求摘要；历史等待选择引用不能自动重放，同调用参数变化仍拒绝。请求键用于幂等关联，不作为授权凭证。
 
 ```mermaid
 sequenceDiagram
@@ -148,15 +148,9 @@ sequenceDiagram
     H-->>C: 已接收的历史快照
   else 用户未指定范围
     A->>H: install(selectionRef)，省略 scope
-    H-->>C: awaiting-confirmation，零写入
-    A-->>U: 请在卡片选择范围并确认
-    U->>C: 选择范围并安装
-    C->>H: openConversationDetail，读取精确版本
-    H-->>C: 详情与受控 token
-    U->>C: 选择当前项目/用户并确认
-    C->>H: startInstall，受控 token 与稳定请求键
-    H->>I: 真实安装事务
-    I-->>C: 操作引用
+    H->>I: 默认用户级，核验固定版本与可信目标
+    I-->>H: accepted / operationId
+    H-->>C: 展示用户级安装的原操作回执
   end
   C->>H: getOperation 查询文件与发现结果
   Note over C,I: 关闭或取消确认不提交安装；accepted 不表示安装完成
@@ -220,17 +214,11 @@ Host 从当前会话的持久日志读取匹配且唯一的成功搜索调用/�
 
 Agent 在下一次明确安装请求中仍可传原搜索引用，Host 根据关联解析到已查看版本，Client 无需向对话插入工具消息。不允许新版本发布导致重新 resolve latest。未成功展示的新快照不覆盖旧关联；一次来源/项目变化使整个引用链失效。历史快照的重新查看会展示新来源/版本，用户须重新发起安装。原引用关联多版本有歧义时返回 CONTEXT_STALE，由用户重新选择。
 
-### 未指定范围的原生选择与确认
+### 默认用户级与显式项目级
 
-用户说“安装第二个”等未明确范围时，模型保留搜索 selectionRef 并省略 scope。Host 固定候选版本，优先调用 DSH `ctx.userQuestions.ask`，在聊天输入框旁临时展示单选问题：当前项目、当前用户、取消安装。问题列明技能完整坐标、精确版本、来源和范围说明；提交选项即确认安装，不要求再次打开详情。只列出 Host 实际可用的范围；不标记推荐或默认提交。
+用户明确说“安装第二个”等请求时，模型保留有效 selectionRef。省略 scope 由 Host 默认当前用户；明确要求当前项目时使用 project，并核验可信工作区。项目不可用不改装用户级。页面默认用户级，项目级置于高级选项，确认前不安装。
 
-Host 可读取固定版本详情、指纹和目标供确认，但回答前不得创建操作、下载技能包或写入技能文件。仅识别对应问题的一条准确范围选项；取消、跳过、自定义答案、未知或多个答案均不提交。等待后重新校验来源、Agent 实例、会话、项目、运行实例、选择引用和目标凭据；不得重新解析 latest。重复同一调用共享一次问题和结果，同 callId 改参数仍拒绝。
-
-使用非计时原生问答，带真实调用 Agent 和 AbortSignal；关闭、取消或执行中止不授权安装。不使用异步迟到回答跨重启恢复写权限。`cancelled` 结果只表示未提交，不包含 operationId，也不自动重试。
-
-宿主没有服务或回答器时，降级为 `awaiting-confirmation` 卡片；该结果仍无操作。点击“选择范围并安装”直接打开紧凑确认弹窗，展示固定身份与版本、范围选择和取消/确认按钮，不打开完整详情。专用 pending 引用只用于 UI，不可直接作为工具安装凭据；来源、会话或运行实例变化后须重新搜索。后续用户在新消息中明确范围，可用原来仍有效的搜索引用发起新调用。
-
-当前项目仅当前工作区使用，不自动同步给协作者；当前用户可在该 DSH 主机用户的多个项目中发现，实际读取仍受会话权限限制。
+当前项目仅当前工作区使用，不自动同步给协作者；当前用户可在该 DSH 主机用户的多个项目中发现，实际读取仍受会话权限限制。历史 awaiting-confirmation/cancelled 回执继续可读，不自动重放。管理已有技能不能沿用安装默认范围猜测目标；多份安装先选择，更新和卸载始终需要真人确认，详见 conversation-management-design.md。
 
 ### 安装请求未确认的结果
 

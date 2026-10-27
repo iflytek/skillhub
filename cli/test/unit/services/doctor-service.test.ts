@@ -5,10 +5,9 @@ import { join } from 'node:path'
 import { runDoctor } from '../../../src/services/doctor-service'
 
 type InventoryFile = {
-  items: Array<{
+  records: Array<{
     slug: string
-    version: string
-    targets: unknown[]
+    targets: Array<{ version: string }>
   }>
 }
 
@@ -53,7 +52,7 @@ describe('doctor-service', () => {
     expect(result.skipped[0]!.reason).toBe('no .skillhub directory')
   })
 
-  test('detects version conflicts', async () => {
+  test('rebuilds distinct versions at different positions', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'doctor-test-'))
     const home = await mkdtemp(join(tmpdir(), 'doctor-home-'))
 
@@ -67,10 +66,10 @@ describe('doctor-service', () => {
     })
 
     const result = await runDoctor(cwd, home)
-    expect(result.itemsScanned).toBe(0)
-    expect(result.conflicts).toHaveLength(1)
-    expect(result.conflicts[0]!.versions).toContain('1.0.0')
-    expect(result.conflicts[0]!.versions).toContain('2.0.0')
+    expect(result.itemsScanned).toBe(1)
+    expect(result.conflicts).toHaveLength(0)
+    const disk = JSON.parse(await readFile(result.inventoryPath, 'utf8')) as InventoryFile
+    expect(disk.records[0]!.targets.map(target => target.version).sort()).toEqual(['1.0.0', '2.0.0'])
   })
 
   test('skips symlinked skill directories', async () => {
@@ -176,16 +175,16 @@ describe('doctor-service', () => {
     expect(result.conflicts).toHaveLength(0)
 
     const finalInventory = JSON.parse(await readFile(inventoryPath, 'utf-8')) as InventoryFile
-    expect(finalInventory.items).toHaveLength(2)
+    expect(finalInventory.records).toHaveLength(2)
 
-    const externalSkillItem = finalInventory.items.find(item => item.slug === 'external-skill')!
+    const externalSkillItem = finalInventory.records.find(item => item.slug === 'external-skill')!
     expect(externalSkillItem).toBeDefined()
-    expect(externalSkillItem.version).toBe('1.0.0')
+    expect(externalSkillItem.targets[0]!.version).toBe('1.0.0')
     expect(externalSkillItem.targets).toHaveLength(1)
 
-    const localSkillItem = finalInventory.items.find(item => item.slug === 'local-skill')!
+    const localSkillItem = finalInventory.records.find(item => item.slug === 'local-skill')!
     expect(localSkillItem).toBeDefined()
-    expect(localSkillItem.version).toBe('2.0.0')
+    expect(localSkillItem.targets[0]!.version).toBe('2.0.0')
     expect(localSkillItem.targets).toHaveLength(1)
   })
 
@@ -236,12 +235,12 @@ describe('doctor-service', () => {
 
     // Verify the inventory file has the updated version
     const finalInventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
-    expect(finalInventory.items).toHaveLength(1)
-    expect(finalInventory.items[0].version).toBe('2.0.0')
-    expect(finalInventory.items[0].targets).toHaveLength(1)
+    expect(finalInventory.records).toHaveLength(1)
+    expect(finalInventory.records[0].targets[0].version).toBe('2.0.0')
+    expect(finalInventory.records[0].targets).toHaveLength(1)
   })
 
-  test('conflict groups do not delete unrelated old items', async () => {
+  test('split version groups do not delete unrelated old items', async () => {
     const cwd = await mkdtemp(join(tmpdir(), 'doctor-test-'))
     const home = await mkdtemp(join(tmpdir(), 'doctor-home-'))
 
@@ -287,16 +286,14 @@ describe('doctor-service', () => {
 
     const result = await runDoctor(cwd, home)
 
-    // Should detect conflict
-    expect(result.conflicts).toHaveLength(1)
-    expect(result.conflicts[0]!.versions).toContain('1.0.0')
-    expect(result.conflicts[0]!.versions).toContain('2.0.0')
+    expect(result.conflicts).toHaveLength(0)
+    expect(result.targetsScanned).toBe(2)
 
     // Final inventory should still contain image-resizer
     const finalInventory = JSON.parse(await readFile(inventoryPath, 'utf-8')) as InventoryFile
-    const imageResizerItem = finalInventory.items.find(item => item.slug === 'image-resizer')!
+    const imageResizerItem = finalInventory.records.find(item => item.slug === 'image-resizer')!
     expect(imageResizerItem).toBeDefined()
-    expect(imageResizerItem.version).toBe('3.0.0')
+    expect(imageResizerItem.targets[0]!.version).toBe('3.0.0')
     expect(imageResizerItem.targets).toHaveLength(1)
   })
 })

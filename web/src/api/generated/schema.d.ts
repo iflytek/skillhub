@@ -9186,6 +9186,7 @@ export interface components {
             labels?: components["schemas"]["SkillLabelDto"][];
             avatarUrl?: string;
             managementState?: components["schemas"]["ManagementState"];
+            hasVisibleSuites?: boolean;
         };
         ApiResponseBoolean: {
             /** Format: int32 */

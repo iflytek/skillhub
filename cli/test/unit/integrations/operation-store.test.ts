@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { OperationStore, operationRequestDigest } from '../../../src/integrations/operation-store'
@@ -90,4 +90,27 @@ test('startup scan blocks unresolved target intents, permits unrelated paths and
   const old = (await reopened.get(pending.operationId, pending.ownerId))!
   await reopened.update(old.operationId, old.ownerId, old.revision, { ...old.operation.status, phase: 'failed', files: 'failed', recovery: 'restored' })
   await reopened.assertTargetsAvailable([target], current)
+}))
+
+
+test('pending journals block parent and child targets including aliases with missing descendants', () => fixture(async (store, root) => {
+  const target = join(root, 'skills/writer')
+  const pending = (await store.accept(request(store), async () => ({ ...accepted, targetPaths: [target] })))!
+  await store.update(pending.operationId, pending.ownerId, 0, { ...pending.operation.status, phase: 'unknown', recovery: 'unknown' })
+  await mkdir(join(root, 'skills'))
+  const candidates = [join(root, 'skills'), join(target, 'nested/child')]
+  if (process.platform !== 'win32') {
+    await symlink(join(root, 'skills'), join(root, 'alias'))
+    candidates.push(join(root, 'alias/writer/nested/child'))
+  }
+  for (const path of candidates) {
+    const current = (await store.accept(request(store), async () => ({ ...accepted, targetPaths: [path] })))!
+    await store.update(current.operationId, current.ownerId, 0, { ...current.operation.status, phase: 'staging' })
+    await expect(store.assertTargetsAvailable([path], current)).rejects.toMatchObject({ code: 'TARGET_RECOVERY_REQUIRED' })
+  }
+  const sibling = join(root, 'skills/writer-other')
+  const current = (await store.accept(request(store), async () => ({ ...accepted, targetPaths: [sibling] })))!
+  await store.update(current.operationId, current.ownerId, 0, { ...current.operation.status, phase: 'staging' })
+  await store.assertTargetsAvailable([sibling], current)
+  expect((await store.get(pending.operationId, pending.ownerId))!.operation.status.phase).toBe('unknown')
 }))

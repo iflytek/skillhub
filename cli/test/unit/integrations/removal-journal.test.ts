@@ -17,8 +17,8 @@ test.each(['uninstall', 'remove-stale-record'] as const)('durable %s journal enf
       context: { sourceIdentity: 'https://registry.example', sourceLabel: 'SkillHub', sourceRevision: 'revision',
         hostLabel: 'Host', initiatedFrom: 'plaza' } })))!
     record = await store.update(record.operationId, record.ownerId, record.revision, { ...record.operation.status, phase: 'revalidating' })
-    const item = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1.0.0', fingerprint: 'fp',
-      targets: [{ agent: 'dsh', rootDir: join(root, 'skills'), installDir: path, installedAt: '2026-10-14' }] }
+    const item = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer',
+      targets: [{ version: '1.0.0', fingerprint: 'fp', agent: 'dsh', rootDir: join(root, 'skills'), installDir: path, installedAt: '2026-10-14' }] }
     const intent = { inventoryItem: item, target: { root: join(root, 'skills'), path, scope: 'project' as const },
       quarantine: kind === 'uninstall' ? join(root, '.skillhub-trash', record.operationId) : null,
       files: kind === 'uninstall' ? { 'SKILL.md': 'hash' } : null }

@@ -1,3 +1,4 @@
+import { ManagementToolView, type ManagementViewServices } from './management-tool-view.js';
 import { SkillDraftRetentions } from './use-skill-drafts.js';
 import { newSkillConversation } from './use-skill-navigation.js';
 import type {} from '@deepseek-ai/dsh-client-locale/client';
@@ -136,6 +137,36 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
         operation: (id, host) => { assertCurrent(); return withSessionRemote(scope!, remote => remote.skillhub.getOperation(id, host)); },
         installed: (revision, signal) => { assertCurrent(); return withSessionRemote(scope!, remote => remote.skillhub.listInstalled(revision, signal)); },
       };
+    }
+    for (const name of ['astron_skillhub_check_availability', 'astron_skillhub_list_installed', 'astron_skillhub_check_update', 'astron_skillhub_upgrade', 'astron_skillhub_uninstall', 'astron_skillhub_operation']) {
+      ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({ name: 'tool.call.toolview', key: name,
+        inject: sessionId => {
+          const receipt = receiptReadsFor(sessionId);
+          const call = async <T,>(action: (remote: AgentContext['remote']) => Promise<T>): Promise<T> => {
+            receipt.assertCurrent();
+            if (!(ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.retainedBy.mainView ?? 0)) throw new Error('请回到原会话后重试。');
+            const scope = ctx.sessions.scope(SessionId(sessionId));
+            if (!scope) throw new Error('当前会话已关闭。');
+            return withSessionRemote(scope, action);
+          };
+          const services: ManagementViewServices = { client, installation: installationFor(sessionId), assertCurrent: receipt.assertCurrent,
+            refreshInstalled: signal => call(async remote => {
+              const source = await ctx.remote.skillhub.getContext();
+              if (!source.ok || !source.value.configured) throw new Error('当前技能来源不可用。');
+              receipt.assertCurrent();
+              const installed = await remote.skillhub.listInstalled(source.value.sourceRevision, signal);
+              if (!installed.ok) throw new Error('无法读取当前安装记录。');
+              receipt.assertCurrent();
+              return { sourceRevision: source.value.sourceRevision, list: installed.value };
+            }),
+            availability: (revision, itemKey, signal) => call(remote => remote.skillhub.checkAvailability(revision, itemKey, signal)),
+            check: (revision, itemKey, signal) => call(remote => remote.skillhub.checkUpdate(revision, itemKey, signal)),
+            begin: (revision, itemKey, action, version, requestKey, signal) => call(remote => remote.skillhub.beginConversationManagement(revision, itemKey, action, version, requestKey, signal)),
+            confirm: (reference, confirmed, signal) => call(remote => remote.skillhub.confirmConversationManagement(reference, confirmed, signal)),
+          };
+          return { services };
+        },
+      }, props => <SkillUseBinding controller={useSkills} sessionId={props.sessionId} actions={props.inputActions}><ManagementToolView {...props} /></SkillUseBinding>));
     }
     ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
       name: 'tool.call.toolview', key: 'astron_skillhub_install',

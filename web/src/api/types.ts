@@ -253,6 +253,7 @@ export interface BatchMemberResponse {
 
 // Skill types
 export interface SkillSummary {
+  hasVisibleSuites?: boolean
   managementState?: components['schemas']['ManagementState'] | null
   id: number
   slug: string

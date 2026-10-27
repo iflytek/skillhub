@@ -1,3 +1,5 @@
+import { assertDirectTargetOwnership } from './inventory-ownership'
+import { acquireSkillTargetLock } from './skill-target-lock'
 import { readdir, readFile, rename, rm, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import { SkillHubClient, type NamespaceSyncItem } from '../clients/skillhub-client'
@@ -194,6 +196,7 @@ export async function pullNamespace(options: {
     warnings: []
   }
   if (options.check) return result
+  await new InventoryStore().ensureWritable()
 
   const remoteBySlug = new Map(inspected.remoteItems.map(item => [item.slug, item]))
   for (const entry of inspected.entries) {
@@ -239,7 +242,10 @@ export async function pullNamespace(options: {
       }
       const installDir = join(options.rootDir, entry.slug)
       const backupDir = `${installDir}.skillhub-prune-${process.pid}-${Date.now()}`
+      let release: (() => Promise<void>) | undefined
       try {
+        release = await acquireSkillTargetLock(options.rootDir, entry.slug)
+        await assertDirectTargetOwnership(await new InventoryStore().read(), [installDir])
         await rename(installDir, backupDir)
         try {
           await new InventoryStore().removeTargetsByInstallDir(installDir)
@@ -254,7 +260,7 @@ export async function pullNamespace(options: {
           slug: entry.slug,
           message: error instanceof Error ? error.message : 'prune failed'
         })
-      }
+      } finally { if (release) await release() }
     }
   }
 

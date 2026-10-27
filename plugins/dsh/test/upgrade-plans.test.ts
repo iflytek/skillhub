@@ -5,7 +5,7 @@ import type { UpgradePlanSnapshot } from '../src/host/upgrade-plans.js';
 
 const context = { sessionId: 'session', cwd: '/project', sourceRevision: 'source' };
 const snapshot: UpgradePlanSnapshot = {
-  baseline: { status: 'ready', inventoryItem: { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1', targets: [] }, targets: [] },
+  baseline: { status: 'ready', inventoryItem: { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', targets: [] }, targets: [] },
   candidate: { namespace: 'demo', slug: 'writer', version: '2', versionId: 2, fingerprint: 'new', downloadUrl: '/download' },
 };
 

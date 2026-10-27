@@ -6,6 +6,7 @@
     "evidence": "Evidence"
   },
   "common": {
+    "loading": "Loading...",
     "expand": "Expand details",
     "collapse": "Collapse details"
   },
@@ -379,6 +380,7 @@
     "enterpriseContinue": "Log in with work account",
     "switchToPersonal": "Use personal account instead",
     "agreementPrefix": "By logging in, you agree to our",
+    "agreement": "By logging in, you agree to our <terms>Terms of Service</terms> and <privacy>Privacy Policy</privacy>",
     "terms": "Terms of Service",
     "and": "and",
     "privacy": "Privacy Policy"
@@ -2114,6 +2116,8 @@
     "subscribe": "Subscribe"
   },
   "skillCard": {
+    "relatedSuites": "Related suites",
+    "relatedSuitesHint": "This skill is included in suites you can access. Open its details to explore related skills.",
     "downloads": "{{value}} downloads",
     "stars": "{{count}} stars",
     "rating": "Rating {{rating}}",
@@ -2208,6 +2212,9 @@
     }
   },
   "footer": {
+    "license": "License",
+    "contributing": "Contributing",
+    "changelog": "Changelog",
     "product": "Product",
     "marketplace": "Skill marketplace",
     "publish": "Publish skill",
@@ -3240,5 +3247,57 @@
     "scanPASSED": "Security scan passed.",
     "scanFAILED": "Security scan did not pass. Current visibility is unchanged. Withdraw and retry or upload a fixed version.",
     "pending": "Pending visibility request: {{visibility}}. Complete or withdraw it in My review progress."
+  },
+  "relativeTime": {
+    "justNow": "just now",
+    "minutes": "{{count}}m",
+    "hours": "{{count}}h",
+    "days": "{{count}}d"
+  },
+  "notificationEvents": {
+    "REVIEW_SUBMITTED": {
+      "title": "Review submitted",
+      "description": "{{skillName}}{{versionSuffix}} was submitted for review."
+    },
+    "REVIEW_APPROVED": {
+      "title": "Review approved",
+      "description": "{{skillName}}{{versionSuffix}} was approved."
+    },
+    "REVIEW_REJECTED": {
+      "title": "Review rejected",
+      "description": "{{skillName}}{{versionSuffix}} was rejected."
+    },
+    "PROMOTION_SUBMITTED": {
+      "title": "Promotion submitted",
+      "description": "{{skillName}}{{versionSuffix}} was submitted for promotion."
+    },
+    "PROMOTION_APPROVED": {
+      "title": "Promotion approved",
+      "description": "{{skillName}}{{versionSuffix}} promotion was approved."
+    },
+    "PROMOTION_REJECTED": {
+      "title": "Promotion rejected",
+      "description": "{{skillName}}{{versionSuffix}} promotion was rejected."
+    },
+    "REPORT_SUBMITTED": {
+      "title": "Report submitted",
+      "description": "{{skillName}} received a new report."
+    },
+    "REPORT_RESOLVED": {
+      "title": "Report resolved",
+      "description": "{{skillName}} report has been resolved."
+    },
+    "SKILL_PUBLISHED": {
+      "title": "Skill published",
+      "description": "{{skillName}}{{versionSuffix}} was published."
+    },
+    "SUBSCRIPTION_NEW_VERSION": {
+      "title": "Subscribed skill updated",
+      "description": "{{skillName}}{{versionSuffix}} published a new version."
+    },
+    "SUBSCRIPTION_VERSION_YANKED": {
+      "title": "Subscribed skill version yanked",
+      "description": "{{skillName}}{{versionSuffix}} version was yanked."
+    }
   }
 }

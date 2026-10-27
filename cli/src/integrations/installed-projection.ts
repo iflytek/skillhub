@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { lstat, realpath } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
 import { z } from 'zod'
@@ -8,9 +9,8 @@ import type { InstalledProjection, InstalledProjectionItem, InstalledProjectionT
 export type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget } from './native-contract'
 
 const text = z.string().min(1)
-const itemSchema = z.object({ registry: text, namespace: text, slug: text, version: text,
-  fingerprint: z.string().optional(), targets: z.array(z.object({
-    agent: text, rootDir: text, installDir: text, installedAt: text,
+const itemSchema = z.object({ registry: text, namespace: text, slug: text, targets: z.array(z.object({
+    version: text, fingerprint: z.string().optional(), installedBy: z.array(text).optional(), agent: text, rootDir: text, installDir: text, installedAt: text,
   })) })
 
 /** Read only the selected Registry's DSH records in Host-approved roots; never repair or hash all files. */
@@ -43,7 +43,10 @@ export async function readInstalledProjection(inventory: Pick<InventoryStore, 'r
       for (const target of roots.filter(target => target.root === resolve(entry.rootDir))) {
         const path = join(target.root, item.slug)
         const projected: InstalledProjectionItem = { scope: target.scope, namespace: item.namespace,
-          slug: item.slug, version: item.version, ...(item.fingerprint ? { fingerprint: item.fingerprint } : {}), targetPath: path, state: 'present' }
+          slug: item.slug, version: entry.version, ...(entry.fingerprint ? { fingerprint: entry.fingerprint } : {}), targetPath: path, state: 'present',
+          recordRevision: createHash('sha256').update(JSON.stringify([item.registry.replace(/\/+$/, ''), item.namespace, item.slug,
+            entry.agent, entry.rootDir, entry.installDir, entry.version, entry.fingerprint ?? null, entry.installedAt,
+            [...new Set(entry.installedBy ?? ['direct'])].sort()])).digest('hex') }
         const key = JSON.stringify([target.scope, path, item.namespace, item.slug])
         const previous = seen.get(key)
         if (previous) { previous.state = 'mismatch'; issue('invalid-record'); continue }
@@ -70,8 +73,8 @@ export async function readInstalledProjection(inventory: Pick<InventoryStore, 'r
           const metadata = await readInstalledSkillMetadata(path)
           if (metadata.status !== 'valid') { projected.state = 'metadata-invalid'; issue('target-unreadable'); continue }
           const local = metadata.metadata
-          if (!sameInstalledSkillSource(local, item) || local.version !== item.version || local.agent !== 'dsh'
-            || local.installedAt !== entry.installedAt || local.fingerprint !== item.fingerprint) {
+          if (!sameInstalledSkillSource(local, item) || local.version !== entry.version || local.agent !== 'dsh'
+            || local.installedAt !== entry.installedAt || local.fingerprint !== entry.fingerprint) {
             projected.state = 'mismatch'; issue('invalid-record')
           }
           if (await realpath(path) !== path) throw new Error('Target changed')

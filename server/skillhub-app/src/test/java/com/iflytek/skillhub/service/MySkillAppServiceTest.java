@@ -108,7 +108,14 @@ class MySkillAppServiceTest {
         given(skillVersionRepository.findBySkillId(2L)).willReturn(List.of());
         given(namespaceRepository.findByIdIn(List.of(101L))).willReturn(List.of(new Namespace("team-ai", "Team AI", "user-1")));
 
+        var suiteProjection = org.mockito.Mockito.mock(SkillSuiteMembershipProjectionService.class);
+        ReflectionTestUtils.setField(service, "suiteMembershipProjection", suiteProjection);
+        given(suiteProjection.enrich(org.mockito.ArgumentMatchers.anyList(), eq("user-1")))
+                .willAnswer(invocation -> invocation.<List<com.iflytek.skillhub.dto.SkillSummaryResponse>>getArgument(0)
+                        .stream().map(item -> item.withVisibleSuites(true)).toList());
         var stars = service.listMyStars("user-1", 1, 1, Map.of(), Set.of());
+        assertThat(stars.items().getFirst().hasVisibleSuites()).isTrue();
+        org.mockito.Mockito.verify(suiteProjection).enrich(org.mockito.ArgumentMatchers.anyList(), eq("user-1"));
 
         assertThat(stars.total()).isEqualTo(2);
         assertThat(stars.page()).isEqualTo(1);

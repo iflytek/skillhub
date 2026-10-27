@@ -6,6 +6,7 @@
     "evidence": "证据"
   },
   "common": {
+    "loading": "加载中...",
     "expand": "展开详情",
     "collapse": "收起详情"
   },
@@ -379,6 +380,7 @@
     "enterpriseContinue": "通过企业账号登录",
     "switchToPersonal": "改用个人账号",
     "agreementPrefix": "登录即表示你同意我们的",
+    "agreement": "登录即表示你同意我们的<terms>服务条款</terms>和<privacy>隐私政策</privacy>",
     "terms": "服务条款",
     "and": "和",
     "privacy": "隐私政策"
@@ -2113,6 +2115,8 @@
     "subscribe": "订阅"
   },
   "skillCard": {
+    "relatedSuites": "关联套件",
+    "relatedSuitesHint": "此技能被你可见的套件收录，查看详情了解配套关系。",
     "downloads": "下载 {{value}}",
     "stars": "收藏 {{count}}",
     "rating": "评分 {{rating}}",
@@ -2207,6 +2211,9 @@
     }
   },
   "footer": {
+    "license": "许可证",
+    "contributing": "参与贡献",
+    "changelog": "更新日志",
     "product": "产品",
     "marketplace": "技能市场",
     "publish": "发布技能",
@@ -3239,5 +3246,57 @@
     "scanPASSED": "安全扫描已通过。",
     "scanFAILED": "安全扫描未通过，当前范围保持不变。请撤回后重试或上传修复版本。",
     "pending": "已有待审核范围申请：{{visibility}}。请到“我的审核进度”完成或撤回。"
+  },
+  "relativeTime": {
+    "justNow": "刚刚",
+    "minutes": "{{count}}分钟",
+    "hours": "{{count}}小时",
+    "days": "{{count}}天"
+  },
+  "notificationEvents": {
+    "REVIEW_SUBMITTED": {
+      "title": "技能审核提交",
+      "description": "{{skillName}}{{versionSuffix}} 已提交审核。"
+    },
+    "REVIEW_APPROVED": {
+      "title": "技能审核通过",
+      "description": "{{skillName}}{{versionSuffix}} 已审核通过。"
+    },
+    "REVIEW_REJECTED": {
+      "title": "技能审核驳回",
+      "description": "{{skillName}}{{versionSuffix}} 审核未通过。"
+    },
+    "PROMOTION_SUBMITTED": {
+      "title": "技能推广提交",
+      "description": "{{skillName}}{{versionSuffix}} 已提交推广。"
+    },
+    "PROMOTION_APPROVED": {
+      "title": "技能推广通过",
+      "description": "{{skillName}}{{versionSuffix}} 推广已通过。"
+    },
+    "PROMOTION_REJECTED": {
+      "title": "技能推广驳回",
+      "description": "{{skillName}}{{versionSuffix}} 推广未通过。"
+    },
+    "REPORT_SUBMITTED": {
+      "title": "技能举报提交",
+      "description": "{{skillName}} 收到新的举报。"
+    },
+    "REPORT_RESOLVED": {
+      "title": "技能举报已处理",
+      "description": "{{skillName}} 的举报已处理。"
+    },
+    "SKILL_PUBLISHED": {
+      "title": "技能发布成功",
+      "description": "{{skillName}}{{versionSuffix}} 已发布。"
+    },
+    "SUBSCRIPTION_NEW_VERSION": {
+      "title": "订阅技能更新",
+      "description": "{{skillName}}{{versionSuffix}} 发布了新版本。"
+    },
+    "SUBSCRIPTION_VERSION_YANKED": {
+      "title": "订阅技能版本撤回",
+      "description": "{{skillName}}{{versionSuffix}} 版本已撤回。"
+    }
   }
 }

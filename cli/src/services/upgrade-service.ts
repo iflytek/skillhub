@@ -1,3 +1,4 @@
+import { assertDirectTargetOwnership } from './inventory-ownership'
 import { isAbsolute, relative, resolve } from 'node:path'
 import { canonicalizeExistingPath, pathExists } from '../platform/paths'
 import { SkillHubClient, type ResolveResponse } from '../clients/skillhub-client'
@@ -81,12 +82,13 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
   const selected = selectInventoryItems(inventory.items, options)
   const items: UpgradePlanItem[] = []
 
-  for (const selection of selected) {
+  // Each row has one actual release baseline, even when a coordinate has split versions.
+  for (const selection of selected.flatMap(group => group.targets.map(target => ({ item: { ...group.item, targets: [target] }, targets: [target] })))) {
     const coordinate = `@${selection.item.namespace}/${selection.item.slug}`
     const base = {
       coordinate,
       registry: selection.item.registry,
-      currentVersion: selection.item.version,
+      currentVersion: selection.targets[0]!.version,
       changedFiles: [] as string[],
       targets: selection.targets.map(target => ({ agent: target.agent, dir: target.installDir })),
       inventoryItem: selection.item,
@@ -95,17 +97,9 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       allowTargetDrift: options.force
     }
 
-    if (selection.targets.length !== selection.item.targets.length) {
-      items.push({
-        ...base,
-        action: 'blocked',
-        reason: 'partial-target upgrades are not supported because one inventory item has one shared version'
-      })
-      continue
-    }
-
     let resolved: ResolveResponse
     try {
+      await assertDirectTargetOwnership(inventory, selection.targets.map(target => target.installDir))
       const token = await options.tokenForRegistry(selection.item.registry)
       resolved = await new SkillHubClient(selection.item.registry, token)
         .resolve(selection.item.namespace, selection.item.slug)
@@ -166,7 +160,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       continue
     }
 
-    const versionOrder = compareSkillVersions(selection.item.version, resolved.version)
+    const versionOrder = compareSkillVersions(selection.targets[0]!.version, resolved.version)
     if (versionOrder === 'remote-older') {
       items.push({
         ...base,
@@ -193,7 +187,7 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
     }
 
     const unchanged = versionOrder === 'same' &&
-      selection.item.fingerprint === resolved.fingerprint &&
+      selection.targets[0]!.fingerprint === resolved.fingerprint &&
       inspection.metadataCurrent
     if (versionOrder === 'same' && !unchanged) {
       items.push({
@@ -377,7 +371,7 @@ async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): 
         changedFiles.add(`${target.installDir}:${path}`)
       }
     }
-    if (result.metadata.version !== item.version || result.metadata.fingerprint !== item.fingerprint) {
+    if (result.metadata.version !== target.version || result.metadata.fingerprint !== target.fingerprint) {
       metadataCurrent = false
     }
   }

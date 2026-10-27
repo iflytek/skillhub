@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import en from './locales/en.json'
+import ko from './locales/ko.json'
 import zh from './locales/zh.json'
 import ru from './locales/ru.json'
 
@@ -15,6 +16,7 @@ describe('security audit locales', () => {
   })
 
   it('uses the precise safe verdict wording in all locales', () => {
+    expect(ko.securityAudit.verdict.SAFE).toBe('고위험 항목이 발견되지 않음')
     expect(en.securityAudit.verdict.SAFE).toBe('No high-risk findings')
     expect(zh.securityAudit.verdict.SAFE).toBe('未发现高风险问题')
     expect(ru.securityAudit.verdict.SAFE).toBe('Угроз высокого риска не обнаружено')
@@ -27,5 +29,6 @@ describe('security audit locales', () => {
     expect(Object.keys(en.securityAudit.verdict).sort()).toEqual(
       Object.keys(ru.securityAudit.verdict).sort(),
     )
+    expect(Object.keys(ko.securityAudit.verdict).sort()).toEqual(Object.keys(en.securityAudit.verdict).sort())
   })
 })

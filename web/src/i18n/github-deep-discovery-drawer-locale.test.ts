@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import en from './locales/en.json'
+import ko from './locales/ko.json'
 import ru from './locales/ru.json'
 import zh from './locales/zh.json'
 
@@ -10,7 +11,7 @@ const dispositionCodes = [
 
 describe('deep discovery drawer disposition', () => {
   it('describes every repository detail result in each locale', () => {
-    for (const locale of [zh, en, ru]) {
+    for (const locale of [zh, en, ru, ko]) {
       expect(locale.deepDiscovery.processingStatus).toBeTruthy()
       for (const code of dispositionCodes) {
         expect(locale.deepDiscovery.reason[code]).toBeTruthy()

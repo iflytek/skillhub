@@ -1,14 +1,17 @@
+import { isDeepStrictEqual } from 'node:util'
+import { acquireSkillTargetLock } from './skill-target-lock'
 import { lstat, readdir, writeFile, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
-import { InventoryStore, type Inventory, type InventoryItem, type InventoryTarget } from '../stores/inventory-store'
+import { InventoryStore, type InventoryItem, type InventoryTarget } from '../stores/inventory-store'
 
 interface MetadataJson {
   registry: string
   namespace: string
   slug: string
   version: string
+  fingerprint?: string
   agent: string
   installedAt: string
 }
@@ -42,14 +45,11 @@ export async function runDoctor(cwd: string, home?: string): Promise<DoctorResul
 
   // Build scanned items
   const scannedItems: InventoryItem[] = []
-  for (const [key, group] of groups) {
-    const versions = new Set(group.map(e => e.metadata.version))
-    if (versions.size > 1) {
-      conflicts.push({ key, versions: [...versions] })
-      continue
-    }
+  for (const group of groups.values()) {
     const first = group[0]!
     const targets: InventoryTarget[] = group.map(e => ({
+      version: e.metadata.version,
+      ...(e.metadata.fingerprint === undefined ? {} : { fingerprint: e.metadata.fingerprint }),
       agent: e.metadata.agent,
       rootDir: join(e.installDir, '..'),
       installDir: e.installDir,
@@ -59,18 +59,17 @@ export async function runDoctor(cwd: string, home?: string): Promise<DoctorResul
       registry: first.metadata.registry,
       namespace: first.metadata.namespace,
       slug: first.metadata.slug,
-      version: first.metadata.version,
       targets
     })
   }
 
-  // Read old inventory
-  let oldInventory: Inventory
-  try {
-    oldInventory = await store.read()
-  } catch {
-    oldInventory = { items: [] }
-  }
+  // Unknown/corrupt inventories are not repaired by discarding their records.
+  const oldInventory = await store.read()
+  const originalBytes = await readFile(store.path).catch(error => {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null
+    throw error
+  })
+  await store.ensureWritable()
 
   // Collect scanned installDirs
   const scannedInstallDirs = new Set<string>()
@@ -93,22 +92,37 @@ export async function runDoctor(cwd: string, home?: string): Promise<DoctorResul
     }
   }
 
-  // Merge scanned and preserved items
-  const items = [...scannedItems, ...preservedItems]
-
-  // Backup old inventory
   let backupPath: string | null = null
-  try {
-    const oldContent = await readFile(store.path, 'utf-8')
+  if (originalBytes !== null) {
     backupPath = `${store.path}.bak`
-    await writeFile(backupPath, oldContent)
-  } catch {
-    // No existing inventory to backup
+    await writeFile(backupPath, originalBytes)
   }
+  const releases: Array<() => Promise<void>> = []
+  try {
+    for (const item of scannedItems.flatMap(item => item.targets.map(target => ({ item, target })))
+      .sort((a, b) => a.target.installDir.localeCompare(b.target.installDir))) {
+      releases.push(await acquireSkillTargetLock(item.target.rootDir, item.item.slug))
+    }
+    const refreshed = await scanMetadata(cwd, [])
+    if (!isDeepStrictEqual(refreshed, entries)) throw new Error('Doctor scan changed; retry inspection')
+    await store.mutateAtomic(current => {
+      for (const scanned of scannedItems) {
+        let existing = current.items.find(item => item.registry === scanned.registry && item.namespace === scanned.namespace && item.slug === scanned.slug)
+        if (!existing) { existing = { ...scanned, targets: [] }; current.items.push(existing) }
+        for (const target of scanned.targets) {
+          const prior = oldInventory.items.flatMap(item => item.targets.filter(saved => saved.installDir === target.installDir).map(saved => ({ registry: item.registry, namespace: item.namespace, slug: item.slug, target: saved })))
+          const actual = current.items.flatMap(item => item.targets.filter(saved => saved.installDir === target.installDir).map(saved => ({ registry: item.registry, namespace: item.namespace, slug: item.slug, target: saved })))
+          if (!isDeepStrictEqual(prior, actual)) throw new Error('Doctor inventory changed; retry inspection')
+          if (actual.some(owner => owner.registry !== scanned.registry || owner.namespace !== scanned.namespace || owner.slug !== scanned.slug)) throw new Error('Doctor source ownership conflict')
+          const index = existing.targets.findIndex(saved => saved.installDir === target.installDir)
+          if (index >= 0) {
+            existing.targets[index] = { ...target, installedBy: existing.targets[index]!.installedBy ?? ['direct'] }
+          } else existing.targets.push({ ...target, installedBy: ['direct'] })
+        }
+      }
+    })
+  } finally { for (const release of releases.reverse()) await release() }
 
-  // Atomically write new inventory
-  const newInventory: Inventory = { items }
-  await store.writeAtomic(newInventory)
 
   return {
     inventoryPath: store.path,

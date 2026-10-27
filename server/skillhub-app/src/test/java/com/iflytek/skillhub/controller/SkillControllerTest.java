@@ -127,7 +127,7 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.components.schemas.CliResolveResponse.required.length()").value(6))
                 .andExpect(jsonPath("$.components.schemas.SkillVersionResponse.properties.changelog.nullable").value(true))
                 .andReturn().getResponse();
-        Files.writeString(Path.of("target", "registry-openapi.json"), response.getContentAsString());
+        Files.writeString(Path.of("target", "registry-openapi.json"), response.getContentAsString(StandardCharsets.UTF_8));
     }
 
     @Test

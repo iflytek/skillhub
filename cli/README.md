@@ -66,6 +66,10 @@ $env:SKILLHUB_REGISTRY="https://skillhub.example.com"
 set SKILLHUB_REGISTRY=https://skillhub.example.com
 ```
 
+For registries mounted below a URL prefix, include it in `--registry` (for example,
+`https://skillhub.example.com/skillhub`). Installation and namespace synchronization
+retain that prefix when following application-relative download URLs.
+
 ## 🔐 Authentication
 
 `skillhub login` uses OAuth Device Flow when no API token is supplied. Token resolution priority for
@@ -295,8 +299,8 @@ The source identity is `registry + namespace + slug`. `--force` may replace loca
 that full identity matches the installation metadata; it never overwrites an unmanaged directory or
 a Skill installed from another source.
 
-All targets in one inventory entry are upgraded together. A filter that selects only part of that
-entry is rejected because the current inventory format stores one shared version for all targets.
+Each selected installation position is upgraded independently. Filters can select one position;
+unselected positions keep their own versions and content. Plans and results report one row per position.
 The command also keeps the local files when the registry resolves to an older version.
 If a multi-Skill run fails after an earlier upgrade commits, execution stops and reports each item
 as `upgraded`, `failed`, or `not-attempted`; a committed upgrade is never rolled back implicitly.
@@ -600,3 +604,26 @@ actual outgoing archive for task examples. Human output reports the recognition 
 all declared languages. An unsupported declaration generates a nonblocking warning and is
 still uploaded unchanged; an unreadable archive produces an inspection warning and remains
 subject to the server's package validation.
+
+### Installation inventory compatibility
+
+The local installation inventory uses schema version 2. Each installation directory owns its
+version, fingerprint, timestamp and ownership, so a user installation and a project installation
+of the same skill can remain on different versions. `list --json` reports the actual version for
+each target. `upgrade --check --json` and upgrade results contain one row per selected installation
+position; the same coordinate can therefore occur more than once with different versions and
+`targets`. `--dir` or `--agent` selects positions without updating unselected siblings.
+Direct install/upgrade/remove and sync pruning refuse Suite-owned or shared positions, even
+with `--force`. Manage those positions through Suite commands; unrelated direct installations
+remain independently manageable.
+
+Reading a legacy inventory does not change it. The first mutation validates it, creates a
+byte-verified `inventory.v1.<sha256>.backup.json` beside `inventory.json`, and atomically writes
+v2 (`schemaVersion`, `records`, `suites`). Missing legacy fingerprint evidence stays missing.
+Unknown schemas and ambiguous ownership stop the operation before skill files are changed.
+
+Upgrade the CLI and DSH plugin together when they manage the same installation inventory. Stop
+old writers and allow each DSH host to finish pending recovery before the first v2 mutation;
+the CLI cannot discover every host's private operation directory. Old clients do not understand
+v2 and must not be used to mutate these installations. A saved v1 inventory is recovery evidence,
+not a rollback command: restoring it alone after targets diverged would misrepresent files on disk.

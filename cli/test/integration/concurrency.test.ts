@@ -70,8 +70,8 @@ describe('cross-process concurrency on inventory.json', () => {
 
     const inv = JSON.parse(
       await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')
-    ) as { items: Array<{ slug: string }> }
-    const slugs = inv.items.map(i => i.slug).sort()
+    ) as { records: Array<{ slug: string }> }
+    const slugs = inv.records.map(i => i.slug).sort()
     expect(slugs).toEqual(['first', 'second'])
     await expect(access(staleLockPath)).rejects.toThrow()
     expect((await readdir(join(env.home, '.skillhub')))
@@ -106,8 +106,8 @@ describe('cross-process concurrency on inventory.json', () => {
 
     const inv = JSON.parse(
       await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')
-    ) as { items: Array<{ slug: string; targets: Array<{ installDir: string }> }> }
-    const item = inv.items.find(i => i.slug === 'race')
+    ) as { records: Array<{ slug: string; targets: Array<{ installDir: string }> }> }
+    const item = inv.records.find(i => i.slug === 'race')
     expect(item).toBeDefined()
     expect(item!.targets).toHaveLength(1) // no duplicate targets
   })
@@ -140,7 +140,7 @@ describe('cross-process concurrency on inventory.json', () => {
 
     const inv = JSON.parse(
       await readFile(join(skillhubDir, 'inventory.json'), 'utf-8')
-    ) as { items: Array<{ slug: string }> }
-    expect(inv.items.find(i => i.slug === 'after-stale')).toBeDefined()
+    ) as { records: Array<{ slug: string }> }
+    expect(inv.records.find(i => i.slug === 'after-stale')).toBeDefined()
   })
 })

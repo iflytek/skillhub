@@ -109,7 +109,7 @@ test('unrelated inventory additions do not obscure commit evidence; before snaps
   const { root, options } = await fixture()
   try {
     const current = await options.inventory.read()
-    current.items.push({ ...identity, slug: 'other', version: '1.0.0', targets: [] })
+    current.items.push({ registry: identity.registry, namespace: identity.namespace, slug: 'other', targets: [] })
     await options.inventory.writeAtomic(current)
     expect((await inspectInstallRecovery(options)).outcome).toBe('committed')
     const record = (await options.operations.get(options.operationId, options.ownerId))!

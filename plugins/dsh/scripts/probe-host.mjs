@@ -16,6 +16,7 @@ const probes = {
   'runtime-baseline': 'runtime-baseline-result.json',
   'runtime-unsupported': 'runtime-unsupported-result.json',
   'installed-state': 'installed-state-result.json',
+  'skill-availability': 'skill-availability-result.json',
   'upgrade-candidate': 'upgrade-candidate-result.json',
   'upgrade-drift': 'upgrade-drift-result.json',
   'plan-context': 'plan-context-result.json',

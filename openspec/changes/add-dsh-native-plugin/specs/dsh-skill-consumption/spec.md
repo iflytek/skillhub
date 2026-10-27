@@ -140,13 +140,13 @@ The plugin SHALL check for updates only on user request and SHALL upgrade only t
 - **WHEN** the candidate is older, incomparable, or the same version with different content
 - **THEN** upgrade is blocked and local files remain unchanged; an identical current release is reported as unchanged
 
-#### Scenario: All shared targets are manageable
-- **WHEN** one inventory item has multiple targets entirely within trusted user and current-project scope with direct ownership
-- **THEN** the plan lists all affected targets and upgrades them together only after explicit confirmation of that complete set
+#### Scenario: Independent target releases
+- **WHEN** a skill is installed in user and project scopes and the user confirms an upgrade of the project installation
+- **THEN** only the project files and target release record change; user files, release, timestamps and ownership remain unchanged
 
-#### Scenario: Shared target outside scope
-- **WHEN** the item also has another Agent, another project, untrusted or shared-ownership target
-- **THEN** upgrade is blocked without expanding scope or partially changing the shared version
+#### Scenario: Unselected targets outside current context
+- **WHEN** the same source coordinate also has another project, Agent or Suite-owned installation
+- **THEN** that sibling is not included in the upgrade and is preserved; shared ownership or an alias of the selected physical target still blocks the operation
 
 #### Scenario: Local content modified or baseline missing
 - **WHEN** existing content differs from its recorded baseline or has no usable baseline
@@ -227,3 +227,35 @@ The plugin SHALL display instance-provided public filter labels and apply an exp
 #### Scenario: Change the source
 - **WHEN** the configured source revision changes
 - **THEN** the previous source's selected label and late responses cannot become the new source's active filter
+
+
+### Requirement: Read-only current-session availability diagnosis
+The plugin SHALL diagnose a selected managed installation or a named current-session skill without changing files, inventory, invocation policy or composer drafts. Diagnosis SHALL distinguish integrity, Host discovery and user/model invocation policy. See `../../skill-availability-design.md` for the interaction and bounded implementation scope.
+
+#### Scenario: A different installation wins the same name
+- **WHEN** the official Host resolves the selected skill name to a different resource identity
+- **THEN** the selected installation is reported as shadowed, and any winner scope is shown only when independently established; the plugin SHALL NOT switch the target or invoke the winner automatically
+
+#### Scenario: The same resource changed
+- **WHEN** the resource identity is unchanged but its content or policy differs from the checked local package
+- **THEN** the diagnosis reports changed or unverified state rather than claiming same-name shadowing
+
+#### Scenario: Incomplete Host or filesystem evidence
+- **WHEN** snapshot support is absent, a provider is incomplete, an approved root is unreadable, or context changes while checking
+- **THEN** the plugin reports unknown or a stale-context failure, never inferring uninstalled from an empty list
+
+#### Scenario: Skill has no current-source ownership
+- **WHEN** a named Host winner cannot be exactly associated with a current-source managed installation
+- **THEN** its source is described as unassociated and only observed invocation facts are exposed; the diagnosis SHALL NOT infer a registry, version or clean fingerprint, or offer mutation actions
+
+#### Scenario: Invocation policies differ
+- **WHEN** user invocation and model invocation have different values
+- **THEN** the result preserves both values without treating one disabled policy as total unavailability
+
+#### Scenario: Compact historical-card diagnosis
+- **WHEN** a user checks availability from an installed card
+- **THEN** the result belongs to that exact installation reference and selected scope; changing scope clears it, and a stale reference requires a fresh query rather than automatic rebinding
+
+#### Scenario: Path-free result
+- **WHEN** Host resources or errors contain paths, content, metadata or secrets
+- **THEN** only explicitly allowed diagnosis fields reach the model and UI, and no raw resource or error is serialized

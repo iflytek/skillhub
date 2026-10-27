@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { setEnglishLocale } from './helpers/auth-fixtures'
+import { setEnglishLocale, setUniqueClientIp } from './helpers/auth-fixtures'
 import {
   DEFAULT_SEARCH_KEYWORD,
   getSearchCards,
@@ -15,6 +15,11 @@ function searchUrl(query: string, sort = 'relevance', page = 0, starredOnly = fa
 let basicSeed: PreparedSearchSeed | undefined
 
 test.setTimeout(300_000)
+
+// Independent browser scenarios must not exhaust one anonymous search quota.
+test.beforeEach(async ({ page }, testInfo) => {
+  await setUniqueClientIp(page, testInfo.testId)
+})
 
 test.beforeAll(async ({ browser }, testInfo) => {
   test.setTimeout(300_000)

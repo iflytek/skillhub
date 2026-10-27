@@ -91,21 +91,21 @@ function renderUpgradePlan(
       const action = item.action === 'upgrade' && state.executed ? 'upgraded' : item.action
       const versions = item.remoteVersion ? ` ${item.currentVersion} -> ${item.remoteVersion}` : ''
       const reason = item.reason ? ` (${item.reason})` : ''
-      return `${action.padEnd(10)} ${item.coordinate}${versions}${reason}`
+      return `${action.padEnd(10)} ${item.coordinate}${versions}  ${item.targets.map(target => target.dir).join(', ')}${reason}`
     })
   ].join('\n')
 }
 
 export function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, json: boolean): string {
-  const executionByCoordinate = new Map(result.items.map(item => [item.coordinate, item]))
-  const items = plan.items.map(item => ({
+  // Execution returns one row per plan position, in order. Coordinates can repeat at different versions.
+  const items = plan.items.map((item, index) => ({
     coordinate: item.coordinate,
     registry: item.registry,
     currentVersion: item.currentVersion,
     remoteVersion: item.remoteVersion,
-    action: executionByCoordinate.get(item.coordinate)?.action ?? item.action,
-    reason: executionByCoordinate.get(item.coordinate)?.reason ?? item.reason,
-    warnings: executionByCoordinate.get(item.coordinate)?.warnings,
+    action: result.items[index]?.action ?? item.action,
+    reason: result.items[index]?.reason ?? item.reason,
+    warnings: result.items[index]?.warnings,
     changedFiles: item.changedFiles,
     targets: item.targets
   }))
@@ -130,7 +130,7 @@ export function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionR
       const versions = item.remoteVersion ? ` ${item.currentVersion} -> ${item.remoteVersion}` : ''
       const reason = item.reason ? ` (${item.reason})` : ''
       const warnings = item.warnings?.length ? ` [warning: ${item.warnings.join('; ')}]` : ''
-      return `${item.action.padEnd(13)} ${item.coordinate}${versions}${reason}${warnings}`
+      return `${item.action.padEnd(13)} ${item.coordinate}${versions}  ${item.targets.map(target => target.dir).join(', ')}${reason}${warnings}`
     })
   ].join('\n')
 }

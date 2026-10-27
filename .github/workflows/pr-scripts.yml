@@ -28,6 +28,7 @@ on:
       - '.github/workflows/pr-helm-chart.yml'
       - '.github/workflows/pr-tests.yml'
       - '.github/workflows/publish-chart.yml'
+      - '.github/workflows/publish-images.yml'
       - '.github/workflows/security.yml'
       - '.github/workflows/pr-scripts.yml'
       - '.github/workflows/migration-preflight.yml'

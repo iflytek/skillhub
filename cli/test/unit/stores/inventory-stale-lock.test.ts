@@ -58,8 +58,8 @@ test('a delayed stale-lock observer cannot delete a replacement inventory owner'
     expect(await Promise.all(processes.map(child => child.exited))).toEqual([0, 0])
     expect(secondObservedFresh).toBe(true)
     expect(secondEnteredEarly).toBe(false)
-    const inventory = JSON.parse(await readFile(join(home, '.skillhub/inventory.json'), 'utf8')) as { items: { slug: string }[] }
-    expect(inventory.items.map(item => item.slug).sort()).toEqual(['first', 'second'])
+    const inventory = JSON.parse(await readFile(join(home, '.skillhub/inventory.json'), 'utf8')) as { records: { slug: string }[] }
+    expect(inventory.records.map(item => item.slug).sort()).toEqual(['first', 'second'])
     expect(await exists(lockPath)).toBe(false)
     expect(await readdir(`${lockPath}.acquire`)).toEqual([])
   } finally { await rm(home, { recursive: true, force: true }) }

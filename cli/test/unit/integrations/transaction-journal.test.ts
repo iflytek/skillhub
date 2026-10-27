@@ -63,7 +63,7 @@ test('real installation persists move intent before rename and both inventory sn
     const saved = (await reopened.get(operation.operationId, ownerId))!
     expect(saved.transaction?.moves[0]?.completed).toBe(true)
     expect(saved.transaction?.inventoryCommit?.committed).toBe(true)
-    expect(saved.transaction?.inventoryCommit?.after.items[0]?.fingerprint).toBe(fingerprint)
+    expect(saved.transaction?.inventoryCommit?.after.items[0]?.targets[0]!.fingerprint).toBe(fingerprint)
     expect(await readFile(join(store.root, `${operation.operationId}.json`), 'utf8')).not.toContain('# Journal fixture')
     expect(saved.operation.status.phase).toBe('committing') // The runner must still verify/finalize the operation.
   } finally { await rm(root, { recursive: true, force: true }) }

@@ -119,9 +119,9 @@ async function oldMetadata(record: OperationRecord, path: string): Promise<Insta
     for (const target of item.targets) {
       const canonical = join(await realpath(dirname(target.installDir)), basename(target.installDir))
       if (canonical !== path) continue
-      if (!sameInstalledSkillSource(item, preparation.release) || !item.fingerprint
+      if (!sameInstalledSkillSource(item, preparation.release) || !target.fingerprint
         || !isDeepStrictEqual(targetInstalledBy(item, target), ['direct'])) throw new Error('Old target is shared or belongs to another source')
-      owners.push({ ...item, agent: target.agent, installedAt: target.installedAt })
+      owners.push({ ...item, version: target.version, fingerprint: target.fingerprint, agent: target.agent, installedAt: target.installedAt })
     }
   }
   if (owners.length > 1) throw new Error('Multiple records own the old target')

@@ -25,10 +25,10 @@ test('prepare upgrade stores a bounded plan only after baseline and version chec
     const context = {
       lifetime, upgradePlans: plans,
       selectionScope: () => scope, getContext: () => ({ registryUrl: identity.registry }),
-      readInstalledItem: async () => ({ item: { ...identity, state: 'present' }, valid() {},
+      readInstalledItem: async () => ({ item: { ...identity, state: 'present', scope: 'project', targetPath: join(root, 'writer') }, valid() {},
         agent: { session: { id: 'session', header: { cwd } }, ctx: { get: () => ({ resolve: () => ({ mode: 'danger-full-access' }) }) } },
         fs: { resolve: async (path: string) => path, processPath: (path: string) => path, processPathFromHostPath: (path: string) => path },
-        runtime: { getStatus: () => ({ pendingOperations: pending, hostInstanceId: '3e36f379-2d53-4d80-b72a-4fe3642c5181' }), inspectUpgrade: async () => baseline,
+        runtime: { getStatus: () => ({ pendingOperations: pending, hostInstanceId: '3e36f379-2d53-4d80-b72a-4fe3642c5181' }), inspectUpgrade: async (_identity: unknown, roots: { scope: string; root: string }[]) => { expect(roots.map(root => root.scope)).toEqual(['project']); return baseline; },
           assessUpdate: async () => ({ state: 'upgradable', reason: 'newer-version' }) } }),
       readSource: async (_revision: string, signal: AbortSignal, read: (registry: Pick<RegistryAdapter, 'resolve'>, signal: AbortSignal) => Promise<ResolvedSkill>) => read({ resolve: async (_namespace, _slug, version) => {
         resolves++; requested.push(version); return { namespace: 'demo', slug: 'writer', version: forceLatest ? '2.0.0' : version ?? '2.0.0', versionId: 2, fingerprint: 'new', downloadUrl: '/download' };

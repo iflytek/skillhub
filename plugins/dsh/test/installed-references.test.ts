@@ -100,3 +100,13 @@ test('opaque references expire with a Host restart or a different trusted target
     expect((await list()).items[0].itemKey).not.toBe(key);
   });
 });
+
+test('identical release reinstalled or ownership changed invalidates the old reference', async () => {
+  await fixture(async ({ records, home, list, read }) => {
+    records.push({ ...record(home, 0), recordRevision: 'first-target-snapshot' });
+    const key = (await list()).items[0]!.itemKey;
+    records[0]!.recordRevision = 'new-timestamp-or-owners';
+    await expect(read(key)).rejects.toThrow();
+    expect((await list()).items[0]!.itemKey).not.toBe(key);
+  });
+});

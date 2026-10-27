@@ -27,7 +27,7 @@ const blockers: Record<string, string> = {
   'unknown-order': '无法可靠比较版本，暂不能升级。',
   'same-version-content-changed': '相同版本的内容已变化，请核实来源。',
   'shared-target': '安装位置存在共享归属，暂不能升级。',
-  'target-outside-context': '完整安装记录包含当前会话无法管理的位置，不能只升级其中一部分。',
+  'target-outside-context': '所选安装位置不在当前会话范围内，请回到对应项目操作。',
   'target-alias': '安装位置重复或发生重定向，请先核对本地目录。',
   'local-changes': '本地文件已修改，升级会覆盖这些内容，本次已阻止。',
   'metadata-invalid': '缺少可靠的安装基线，请先核对本地记录。',
@@ -223,5 +223,5 @@ export function UpgradeConfirmationSummary({ item, plan, targetVersion }: {
 }) {
   return <><div className="astron-sh-removal-identity"><SkillAvatar namespace={item.namespace} slug={item.slug} /><div><strong>{item.slug}</strong><p>@{item.namespace}/{item.slug}</p></div></div>
     <div className="astron-sh-upgrade-versions"><span>v{plan?.currentVersion ?? item.version}</span><span aria-label="升级到">→</span><strong>{plan?.candidateVersion || targetVersion ? `v${plan?.candidateVersion ?? targetVersion}` : '检查新版本…'}</strong></div>
-    <p className="astron-sh-removal-impact">{plan?.targets.length ? `将同步更新：${plan.targets.map(target => target.scope === 'user' ? '所有项目（当前用户）' : '仅此项目').join('、')}` : '更新前会核验已安装文件。'}</p></>;
+    <p className="astron-sh-removal-impact">{plan?.targets.length ? `更新范围：${plan.targets.map(target => target.scope === 'user' ? '所有项目（当前用户）' : '仅此项目').join('、')}` : '更新前会核验已安装文件。'}</p></>;
 }

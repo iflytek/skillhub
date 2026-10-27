@@ -6,6 +6,7 @@
     "evidence": "Доказательства"
   },
   "common": {
+    "loading": "Загрузка...",
     "expand": "Развернуть подробности",
     "collapse": "Свернуть подробности"
   },
@@ -379,6 +380,7 @@
     "enterpriseContinue": "Войти с рабочим аккаунтом",
     "switchToPersonal": "Использовать личный аккаунт",
     "agreementPrefix": "Входя в систему, вы соглашаетесь с",
+    "agreement": "Входя в систему, вы соглашаетесь с <terms>Условиями использования</terms> и <privacy>Политикой конфиденциальности</privacy>",
     "terms": "Условиями использования",
     "and": "и",
     "privacy": "Политикой конфиденциальности"
@@ -2099,6 +2101,9 @@
     "title": "Файлы"
   },
   "footer": {
+    "license": "Лицензия",
+    "contributing": "Участие в проекте",
+    "changelog": "История изменений",
     "product": "Продукт",
     "marketplace": "Каталог скиллов",
     "publish": "Опубликовать скилл",
@@ -2484,6 +2489,8 @@
     }
   },
   "skillCard": {
+    "relatedSuites": "Связанные наборы",
+    "relatedSuitesHint": "Этот навык входит в доступные вам наборы. Откройте его страницу, чтобы узнать о связанных навыках.",
     "downloads": "Загрузки: {{value}}",
     "stars": "Звёзды: {{count}}",
     "rating": "Рейтинг {{rating}}",
@@ -3242,5 +3249,57 @@
     "scanPASSED": "Проверка безопасности пройдена.",
     "scanFAILED": "Проверка безопасности не пройдена. Доступ не изменён. Отзовите заявку и повторите попытку или загрузите исправленную версию.",
     "pending": "Ожидающая заявка: {{visibility}}. Завершите или отзовите её в разделе проверок."
+  },
+  "relativeTime": {
+    "justNow": "только что",
+    "minutes": "{{count}} мин",
+    "hours": "{{count}} ч",
+    "days": "{{count}} д"
+  },
+  "notificationEvents": {
+    "REVIEW_SUBMITTED": {
+      "title": "Проверка отправлена",
+      "description": "{{skillName}}{{versionSuffix}} отправлен на проверку."
+    },
+    "REVIEW_APPROVED": {
+      "title": "Проверка одобрена",
+      "description": "{{skillName}}{{versionSuffix}} одобрен."
+    },
+    "REVIEW_REJECTED": {
+      "title": "Проверка отклонена",
+      "description": "{{skillName}}{{versionSuffix}} отклонён."
+    },
+    "PROMOTION_SUBMITTED": {
+      "title": "Продвижение отправлено",
+      "description": "{{skillName}}{{versionSuffix}} отправлен на продвижение."
+    },
+    "PROMOTION_APPROVED": {
+      "title": "Продвижение одобрено",
+      "description": "Продвижение {{skillName}}{{versionSuffix}} одобрено."
+    },
+    "PROMOTION_REJECTED": {
+      "title": "Продвижение отклонено",
+      "description": "Продвижение {{skillName}}{{versionSuffix}} отклонено."
+    },
+    "REPORT_SUBMITTED": {
+      "title": "Жалоба на навык отправлена",
+      "description": "Получена новая жалоба на {{skillName}}."
+    },
+    "REPORT_RESOLVED": {
+      "title": "Жалоба обработана",
+      "description": "Жалоба на {{skillName}} обработана."
+    },
+    "SKILL_PUBLISHED": {
+      "title": "Навык опубликован",
+      "description": "{{skillName}}{{versionSuffix}} опубликован."
+    },
+    "SUBSCRIPTION_NEW_VERSION": {
+      "title": "Обновление подписанного навыка",
+      "description": "Опубликована новая версия {{skillName}}{{versionSuffix}}."
+    },
+    "SUBSCRIPTION_VERSION_YANKED": {
+      "title": "Версия подписанного навыка отозвана",
+      "description": "Версия {{skillName}}{{versionSuffix}} отозвана."
+    }
   }
 }

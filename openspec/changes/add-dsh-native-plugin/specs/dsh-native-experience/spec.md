@@ -5,7 +5,7 @@ The plugin SHALL enrich conversation search and plaza cards with read-only local
 
 #### Scenario: Installed candidates across scopes
 - **WHEN** a searched skill has matching user and project installation records
-- **THEN** cards and model-visible results preserve each recorded version and scope while retaining the market candidate version independently, without relaxing the shared core's cross-target version-conflict protection
+- **THEN** cards and model-visible results preserve each recorded version and scope while retaining the market candidate version independently, with release identity owned by each installed target and no inference that sibling targets share a version
 
 #### Scenario: Foreign or untracked skills
 - **WHEN** another Registry, namespace, manual copy or external provider supplies a same-name skill without a matching current-source managed record
@@ -107,10 +107,9 @@ The plugin SHALL provide an installation tool and a custom operation result card
 - **THEN** the Host resolves a fixed version and trusted scope, starts a shared installation operation, and presents separate file and discovery outcomes
 
 #### Scenario: Installation request without a specified scope
-- **WHEN** the user requests installation of an identified skill without specifying current project or current user
-- **THEN** the Host presents a native input-adjacent scope question bound to the selected exact version; it MAY read detail and available targets but SHALL NOT create an operation, download the skill archive or mutate installed files before an exact answer
-- **AND** the native question offers only available project/user targets plus cancellation; if the service or answerer is unavailable the result is awaiting-confirmation and a card opens a compact confirmation dialog without detail navigation
-- **AND** the model does not claim installation started before human confirmation or issuing another call to select a scope on the user's behalf; a later user message explicitly choosing a scope may initiate a new call with the original still-valid search reference, never the dedicated pending reference
+- **WHEN** the user explicitly requests installation of an unambiguously identified skill without specifying a scope
+- **THEN** the Host resolves the user-level target and exact selected version without asking a scope question
+- **AND** the model cannot select project scope on the user's behalf, and existing-target conflicts are not silently upgraded or overwritten
 
 #### Scenario: Pending confirmation is canceled or becomes stale
 - **WHEN** the user closes the confirmation or its source, conversation, project, Agent, runtime or Host changes
@@ -350,7 +349,7 @@ The market SHALL use an independent whole-card detail trigger and sibling instal
 
 
 ### Requirement: Direct market installation and safe native answers
-Clicking a market install action SHALL open a compact scope-confirmation dialog without navigating to the detail page. When current installation records exist, the default scope SHALL prefer an installed scope (project first when both exist); otherwise it SHALL be the trusted current project when available, then current user; a default selection SHALL NOT submit installation. The native conversation question SHALL carry the exact live Agent and cancellation signal. Only one exact supported scope answer SHALL allow a single transaction after all source/session/runtime/reference bindings are rechecked. Skipped, custom, cancelled, ambiguous or stale answers SHALL NOT install. Missing native providers SHALL retain the no-write pending-card fallback.
+Clicking a market install action SHALL open a compact confirmation dialog without navigating to the detail page. New installations SHALL default to current user. Project installation SHALL be available through advanced options and explicit user requests with a trusted project root. Existing installation management SHALL retain its actual scope rather than being silently redirected to the new-install default. A default selection SHALL NOT submit a page installation. When a native selection question is needed, it SHALL carry the exact live Agent and cancellation signal; skipped, custom, ambiguous or stale answers SHALL NOT authorize writes. Missing native providers SHALL retain a no-write confirmation-card fallback.
 
 #### Scenario: Native scope question is canceled
 - **WHEN** the user cancels or skips the question instead of selecting a supported scope
@@ -414,7 +413,7 @@ Selecting a version SHALL be read-only. For an installed skill, a newer verifiab
 - **WHEN** version 1.0 is installed, 1.2 is latest and the user selects 1.1
 - **THEN** checking and confirmation bind 1.1 and no execution occurs until confirmation
 - **AND** cancellation leaves files and inventory unchanged
-- **AND** confirmed execution uses the existing complete-target transaction and displays every affected scope
+- **AND** confirmed execution changes only the selected installation target, displays that scope, and preserves all sibling releases
 
 #### Scenario: Local file changes or unmanaged targets block upgrade
 - **WHEN** any required installed target cannot pass the existing baseline or ownership checks
@@ -552,3 +551,79 @@ Catalog skill-use entries SHALL create and activate a new conversation in the sa
 - **THEN** the detail remains open with an error
 - **WHEN** the user cancels case selection
 - **THEN** no draft is written and the detail is not reopened.
+
+### Requirement: Conversation management of current-source installations
+The plugin SHALL provide conversation tools and compact cards for listing current-source managed installations, checking latest or specified newer versions, requesting a single-target upgrade or removal, and querying owned operation outcomes. Tools SHALL use trusted session context and the shared lifecycle core, not shell commands. Model-provided confirmation booleans or arbitrary paths SHALL NOT authorize mutation.
+
+#### Scenario: Multiple installations need selection
+- **WHEN** a requested skill has multiple matching installed targets and the user has not specified which one
+- **THEN** the Host presents the available installations with versions and scopes and waits for selection rather than applying the new-install default
+
+#### Scenario: Mutation requires human confirmation
+- **WHEN** the target and target release are known
+- **THEN** the Host presents an input-adjacent confirmation or a no-write fallback card before any upgrade or removal starts
+- **AND** even an explicit scope in model arguments cannot bypass human confirmation
+
+#### Scenario: Compact operation result
+- **WHEN** the user confirms a ready plan
+- **THEN** its operation card shows actual progress and a concise outcome without full-page reload or mandatory detail navigation
+- **AND** repeated submissions reuse the operation, and historical receipts do not assert present installation state
+
+#### Scenario: Foreign or modified content
+- **WHEN** a target is not attributable to the current source or has changed local contents
+- **THEN** management refuses mutation with a relevant reason and does not offer a force action
+
+
+#### Scenario: Accepted management operation does not need another approval
+- **WHEN** a real human confirms an upgrade or removal and the Host returns accepted
+- **THEN** model-visible guidance states approval is complete and the action is submitted, directs operation-status queries, and prohibits asking for another approval or submitting a duplicate mutation
+- **AND** the Client continues to show the same operation rather than creating a new plan
+
+
+#### Scenario: Distinct compact management views
+- **WHEN** installed queries, update checks and mutation receipts appear in one conversation
+- **THEN** only installed queries use a multi-item list; update checks show version comparison and the relevant update action; mutation and status receipts show compact identity, scope and outcome without duplicate action toolbars
+- **AND** successful terminal receipts do not foreground status-query buttons
+
+#### Scenario: Historical installation buttons become stale
+- **WHEN** an installation reference no longer matches the current target or source
+- **THEN** no mutation or skill insertion is automatically redirected to a replacement reference
+- **AND** the Client replaces unusable actions with a clear explanation and an explicit read-only refresh entry, requiring a new deliberate action on refreshed records
+
+- **AND** explicit refresh replaces the tool card's visible body with a clearly labelled current result, rather than nesting another installation list inside a historical row; stored transcript metadata remains unchanged
+
+
+#### Scenario: Routine management results omit maintenance controls
+- **WHEN** an installation list is readable or an operation has completed successfully without warnings
+- **THEN** the view omits persistent refresh controls, technical detail disclosures, duplicate identities and repeated completion explanations
+- **AND** installation rows use compact identity, version, scope and relevant actions without nested item cards; small viewports wrap content without clipping
+- **WHEN** a historical reference is stale or a read is incomplete
+- **THEN** the view offers a contextual read-only query retry without replaying any mutation
+- **AND** warnings, recovery uncertainty and human confirmation remain visible when applicable
+
+
+#### Scenario: Group installations without merging management targets
+- **WHEN** current-source results contain multiple installations of one namespace and slug
+- **THEN** the Client shows the skill identity once with a compact installation selector, displaying the selected target version and actions
+- **AND** single installations show a scope label without an unnecessary selector; distinct targets sharing a scope are not dropped
+- **AND** each action retains the exact installation reference; changing the visible selection cannot redirect in-flight responses or confirmation to another target
+
+#### Scenario: Contextual controls in compact grouped cards
+- **WHEN** a normal installation is usable
+- **THEN** use is prominent and low-frequency check/update-removal management actions are available through a menu
+- **WHEN** a specific update check or confirmation is shown
+- **THEN** only relevant update or cancel/confirm actions appear, and confirmation locks its target
+- **AND** successful and cancelled receipts do not add routine refresh or retry controls; failures expose only applicable recovery actions
+- **AND** compact cards have a constrained desktop width and wrap on narrow screens without hiding target identity or scope
+
+
+#### Scenario: Button changes precede a new model turn
+- **WHEN** a UI action changes an installation after a tool result was recorded
+- **THEN** stored tool history remains a snapshot, and the button does not fabricate or send a model message
+- **AND** current installation answers use the freshly read official runtime-context snapshot or a fresh installed query, while new management mutations obtain current tool references rather than treating an old receipt as current state
+- **AND** stale target references continue to be rejected by the Host, and user-facing explanations do not quote internal reference values or prefixes as evidence
+
+#### Scenario: Multiple skill cards fit the conversation container
+- **WHEN** multiple grouped skills are shown in a wide tool container
+- **THEN** cards appear in at most two columns, each with its own installation selection and relevant actions
+- **AND** narrow containers use one column and a single skill stays compact; opened management controls remain visible and operable within their card

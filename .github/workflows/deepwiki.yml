@@ -20,12 +20,19 @@ jobs:
     env:
       CRAWLER_DIR: ${{ github.workspace }}/.deepwiki-crawler
       REPOSITORY: ${{ github.repository }}
-      MAX_CONCURRENCY: '3'
+      # The pinned crawler schedules extra workers before updating its active
+      # count. Use its sequential path to avoid an unbounded scheduling loop.
+      MAX_CONCURRENCY: '1'
       REQUEST_TIMEOUT: '30000'
       RETRY_ATTEMPTS: '3'
       USER_AGENT: DeepWiki-Crawler/1.0
 
     steps:
+      - name: Check out workflow helpers
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
       - name: Check out pinned crawler source
         uses: actions/checkout@v4
         with:
@@ -51,6 +58,4 @@ jobs:
         run: |
           set -euo pipefail
           [[ "$REPOSITORY" =~ ^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$ ]]
-          cd "$CRAWLER_DIR"
-          node scripts/check-deepwiki.js "$REPOSITORY"
-          node scripts/crawl-deepwiki.js "$REPOSITORY"
+          node "$GITHUB_WORKSPACE/scripts/run-deepwiki.cjs" "$CRAWLER_DIR" "$REPOSITORY"

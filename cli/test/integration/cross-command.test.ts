@@ -149,8 +149,8 @@ describe('cross-command — local lifecycle', () => {
     // Inventory has exactly one target, not two duplicates.
     const inv = JSON.parse(
       await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')
-    ) as { items: Array<{ slug: string; targets: Array<{ installDir: string }> }> }
-    const item = inv.items.find(i => i.slug === 'pdf-parser')
+    ) as { records: Array<{ slug: string; targets: Array<{ installDir: string }> }> }
+    const item = inv.records.find(i => i.slug === 'pdf-parser')
     expect(item?.targets).toHaveLength(1)
   })
 
@@ -277,8 +277,8 @@ describe('cross-command — filesystem drift', () => {
     // installDir was NOT in the (now-empty) scan result.
     const inv = JSON.parse(
       await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')
-    ) as { items: Array<{ slug: string }> }
-    expect(inv.items.find(i => i.slug === 'pdf-parser')).toBeDefined()
+    ) as { records: Array<{ slug: string }> }
+    expect(inv.records.find(i => i.slug === 'pdf-parser')).toBeDefined()
 
     // The user-facing surface for "this is gone on disk" is `list` — it
     // reports status="missing" by stat'ing the installDir at read time.

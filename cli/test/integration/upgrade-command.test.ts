@@ -108,7 +108,7 @@ describe('upgrade command', () => {
     })
     expect(Object.keys(metadata.files)).toContain('SKILL.md')
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: makeSkill('# v2').fingerprint })
+    expect(inventory.records[0].targets[0]).toMatchObject({ version: '1.1.0', fingerprint: makeSkill('# v2').fingerprint })
   })
 
   test('local changes block by default and --force replaces only the same source', async () => {
@@ -184,7 +184,7 @@ describe('upgrade command', () => {
     expect(await readFile(join(rootDir, 'late-edit', 'SKILL.md'), 'utf-8'))
       .toBe('# edited after planning')
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: makeSkill('# v1').fingerprint })
+    expect(inventory.records[0].targets[0]).toMatchObject({ version: '1.0.0', fingerprint: makeSkill('# v1').fingerprint })
   })
 
   test('a target removed after planning is not recreated by upgrade', async () => {
@@ -224,7 +224,7 @@ describe('upgrade command', () => {
     expect(result.items[0]?.reason).toContain('installed target disappeared before upgrade commit')
     expect(await exists(skillDir)).toBe(false)
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.0.0', fingerprint: makeSkill('# v1').fingerprint })
+    expect(inventory.records[0].targets[0]).toMatchObject({ version: '1.0.0', fingerprint: makeSkill('# v1').fingerprint })
   })
 
   test('new installs persist absolute targets and legacy relative targets are blocked safely', async () => {
@@ -245,16 +245,16 @@ describe('upgrade command', () => {
 
     const inventoryPath = join(env.home, '.skillhub', 'inventory.json')
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
-    expect(isAbsolute(inventory.items[0].targets[0].rootDir)).toBe(true)
-    expect(inventory.items[0].targets[0].installDir)
-      .toBe(join(inventory.items[0].targets[0].rootDir, 'portable'))
-    expect(await realpath(inventory.items[0].targets[0].rootDir))
+    expect(isAbsolute(inventory.records[0].targets[0].rootDir)).toBe(true)
+    expect(inventory.records[0].targets[0].installDir)
+      .toBe(join(inventory.records[0].targets[0].rootDir, 'portable'))
+    expect(await realpath(inventory.records[0].targets[0].rootDir))
       .toBe(await realpath(join(env.cwd, 'skills')))
-    expect(await realpath(inventory.items[0].targets[0].installDir))
+    expect(await realpath(inventory.records[0].targets[0].installDir))
       .toBe(await realpath(join(env.cwd, 'skills', 'portable')))
 
-    inventory.items[0].targets[0].rootDir = 'skills'
-    inventory.items[0].targets[0].installDir = join('skills', 'portable')
+    inventory.records[0].targets[0].rootDir = 'skills'
+    inventory.records[0].targets[0].installDir = join('skills', 'portable')
     await writeFile(inventoryPath, JSON.stringify(inventory))
     skill.version = '1.1.0'
     skill.versionId = 2
@@ -393,7 +393,7 @@ describe('upgrade command', () => {
     expect(registry.received.downloads).toBe(1)
   })
 
-  test('one resolved archive is reused for every managed target', async () => {
+  test('each managed position can be checked and upgraded independently', async () => {
     const env = await createTempHome()
     const skill = {
       namespace: 'global',
@@ -417,22 +417,33 @@ describe('upgrade command', () => {
     const partial = await runCli([
       'upgrade', '@global/shared', '--registry', registry.url, '--agent', 'codex', '--check', '--json'
     ], { HOME: env.home, USERPROFILE: env.home }, { cwd: env.cwd })
-    expect(partial.exitCode).toBe(6)
-    expect(JSON.parse(partial.stdout).items[0].reason).toContain('partial-target')
+    expect(partial.exitCode).toBe(0)
+    expect(JSON.parse(partial.stdout).items).toHaveLength(1)
+    expect(JSON.parse(partial.stdout).items[0]).toMatchObject({ action: 'upgrade', currentVersion: '1.0.0', remoteVersion: '1.1.0' })
     expect(registry.received.downloads).toBe(1)
+
+    const selected = await runCli(['upgrade', '@global/shared', '--registry', registry.url, '--agent', 'codex', '--json'], {
+      HOME: env.home, USERPROFILE: env.home
+    }, { cwd: env.cwd })
+    expect(selected.exitCode).toBe(0)
+    expect(JSON.parse(selected.stdout).items).toHaveLength(1)
+    expect(await readFile(join(env.home, '.codex', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
+    expect(await readFile(join(env.home, '.claude', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v1')
+    const split = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
+    expect(split.records[0].targets.map((target: { version: string }) => target.version).sort()).toEqual(['1.0.0', '1.1.0'])
 
     const upgraded = await runCli(['upgrade', '@global/shared', '--registry', registry.url], {
       HOME: env.home,
       USERPROFILE: env.home
     }, { cwd: env.cwd })
     expect(upgraded.exitCode).toBe(0)
-    expect(registry.received.resolves).toBe(2)
-    expect(registry.received.downloads).toBe(2)
+    expect(registry.received.resolves).toBe(5)
+    expect(registry.received.downloads).toBe(3)
     expect(await readFile(join(env.home, '.codex', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
     expect(await readFile(join(env.home, '.claude', 'skills', 'shared', 'SKILL.md'), 'utf-8')).toBe('# v2')
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: makeSkill('# v2').fingerprint })
-    expect(inventory.items[0].targets).toHaveLength(2)
+    expect(inventory.records[0].targets[0]).toMatchObject({ version: '1.1.0', fingerprint: makeSkill('# v2').fingerprint })
+    expect(inventory.records[0].targets).toHaveLength(2)
 
     const listed = await runCli(['list', '--json', '--registry', registry.url], {
       HOME: env.home,
@@ -573,9 +584,9 @@ describe('upgrade command', () => {
     expect(await readFile(join(rootDir, 'second', 'SKILL.md'), 'utf-8')).toBe('# second v1')
     expect(await readFile(join(rootDir, 'third', 'SKILL.md'), 'utf-8')).toBe('# third v1')
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items.find((item: { slug: string }) => item.slug === 'first').version).toBe('1.1.0')
-    expect(inventory.items.find((item: { slug: string }) => item.slug === 'second').version).toBe('1.0.0')
-    expect(inventory.items.find((item: { slug: string }) => item.slug === 'third').version).toBe('1.0.0')
+    expect(inventory.records.find((item: { slug: string }) => item.slug === 'first').targets[0].version).toBe('1.1.0')
+    expect(inventory.records.find((item: { slug: string }) => item.slug === 'second').targets[0].version).toBe('1.0.0')
+    expect(inventory.records.find((item: { slug: string }) => item.slug === 'third').targets[0].version).toBe('1.0.0')
     expect(registry.received.downloads).toBe(5)
   })
 
@@ -618,7 +629,7 @@ describe('upgrade command', () => {
     expect(renderUpgradeResult(plan, result, false)).toContain('[warning: target lock cleanup failed')
     expect(await readFile(join(rootDir, 'warned', 'SKILL.md'), 'utf-8')).toBe('# v2')
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '1.1.0', fingerprint: makeSkill('# v2').fingerprint })
+    expect(inventory.records[0].targets[0]).toMatchObject({ version: '1.1.0', fingerprint: makeSkill('# v2').fingerprint })
   })
 
   test('legacy metadata without a file baseline requires explicit force migration', async () => {

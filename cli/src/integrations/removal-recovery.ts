@@ -28,6 +28,7 @@ export async function recoverRemoval(options: RemovalRecoveryOptions): Promise<N
     || typeof options.authorizeMutation !== 'function') throw new Error('Expected an owned removal with Host authorization')
   const result = (outcome: NativeRecoveryResult['outcome'], reason: string): NativeRecoveryResult =>
     ({ operationId, revision: record!.revision, outcome, reason })
+  if (record.schemaVersion === 1 && await inventory.diskVersion() === 2) return result('unknown', 'legacy-journal-needs-v1-inventory')
   if (!isDeepStrictEqual(record.operation.targetPaths, [...options.trustedTargetPaths])
     || options.trustedTargetPaths.length !== 1) return result('unknown', 'target-binding-mismatch')
   const append = async (event: RemovalEvent) => {
@@ -85,10 +86,10 @@ export async function recoverRemoval(options: RemovalRecoveryOptions): Promise<N
         const snapshot = await snapshotSkillDirectory(path)
         const expected = item.targets.find(entry => entry.installDir === target.path)!
         if (metadata.status !== 'valid' || !sameInstalledSkillSource(metadata.metadata, item)
-          || metadata.metadata.version !== item.version || metadata.metadata.fingerprint !== item.fingerprint
+          || metadata.metadata.version !== expected.version || metadata.metadata.fingerprint !== expected.fingerprint
           || metadata.metadata.agent !== 'dsh' || metadata.metadata.installedAt !== expected.installedAt
           || !isDeepStrictEqual(metadata.metadata.files, intent.files)
-          || !isDeepStrictEqual(snapshot.files, intent.files) || snapshot.fingerprint !== item.fingerprint) {
+          || !isDeepStrictEqual(snapshot.files, intent.files) || snapshot.fingerprint !== expected.fingerprint) {
           throw new Error('Removal files changed')
         }
       }

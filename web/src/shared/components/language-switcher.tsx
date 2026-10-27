@@ -24,6 +24,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
   const languages = [
     { code: 'zh', name: '中文' },
     { code: 'en', name: 'English' },
+    { code: 'ko', name: '한국어' },
     { code: 'ru', name: 'Русский' },
   ]
 

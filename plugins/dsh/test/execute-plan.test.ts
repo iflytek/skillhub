@@ -33,6 +33,7 @@ test('executePlan accepts only a bound plan and guards every mutation against cu
     const context = { localRuntime: runtime, lifetime: new AbortController(), upgradePlans: plans, removalPlans: new RemovalPlans(),
       ctx: { invocation: { request: { args: { agentId: 'session', input } } }, get: () => ({ get: () => agent }) },
       selectionScope: () => scope, assertSource: () => {}, getContext: () => ({ registryUrl: identity.registry }) };
+    Object.setPrototypeOf(context, SkillHubService.prototype);
     const execute = (request: object) => {
       context.ctx.invocation.request.args.input = request as typeof input;
       return Reflect.apply(SkillHubService.prototype.executePlan, context, [request, new AbortController().signal]);

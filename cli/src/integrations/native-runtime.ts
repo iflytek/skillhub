@@ -19,6 +19,12 @@ import { acquireSkillTargetLock } from '../services/skill-target-lock'
 export async function openNativeRuntime(options: { stateDirectory: string; inventoryHome: string }): Promise<NativeRuntime> {
   const operations = await OperationStore.open(options.stateDirectory)
   const inventory = new InventoryStore(options.inventoryHome)
+  const ensureCompatible = async () => {
+    if ((await operations.listForRecovery()).some(record => record.schemaVersion === 1)) {
+      throw new OperationStoreError('TARGET_RECOVERY_REQUIRED')
+    }
+    await inventory.ensureWritable()
+  }
   return {
     hostInstanceId: operations.hostInstanceId,
     readSkillExamples,
@@ -47,7 +53,8 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
       if (conflict) throw conflict
       return undefined
     },
-    executeRemoval: request => {
+    executeRemoval: async request => {
+      await ensureCompatible()
       const snapshot = { ...request, baseline: structuredClone(request.baseline) }
       return withOperationLease(operations, snapshot.operationId, snapshot.ownerId,
         () => executeNativeRemoval(operations, inventory, snapshot))
@@ -63,7 +70,8 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
       return result ? projectOperation(result) : undefined
     },
     inspectRemoval: (selected, target) => inspectRemovalBaseline(inventory, { ...selected }, { ...target }),
-    executeUpgrade: request => {
+    executeUpgrade: async request => {
+      await ensureCompatible()
       const snapshot = { ...request, baseline: structuredClone(request.baseline) }
       return withOperationLease(operations, snapshot.operationId, snapshot.ownerId,
         () => executeNativeUpgrade(operations, inventory, snapshot))
@@ -77,7 +85,8 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
     assessUpdate: assessSkillUpdate,
     inspectUpgrade: (selected, targets) => inspectUpgradeBaseline(inventory, { ...selected }, targets.map(target => ({ ...target }))),
     listInstalled: (registry, targets) => readInstalledProjection(inventory, registry, targets.map(target => ({ ...target }))),
-    executeInstall: request => {
+    executeInstall: async request => {
+      await ensureCompatible()
       const snapshot = { ...request }
       return withOperationLease(operations, snapshot.operationId, snapshot.ownerId,
         () => executeNativeInstall(operations, inventory, snapshot))

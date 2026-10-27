@@ -60,6 +60,7 @@ async function inspectInstallation(options: InstallRecoveryOptions, mode: 'inspe
   if (!initial || !['install', 'upgrade'].includes(initial.operation.kind)) throw new Error('Expected an owned installation operation')
   const result = (outcome: InstallRecoveryInspection['outcome'], reason: string, revision = initial.revision): InstallRecoveryInspection =>
     ({ operationId, revision, outcome, reason })
+  if (initial.schemaVersion === 1 && await inventory.diskVersion() === 2) return result('unknown', 'legacy-journal-needs-v1-inventory')
   const bound = initial.operation.targetPaths
   // Native recovery owns the execution lease: no staging intent means content writes never began.
   const unstarted = !initial.transaction && !initial.existingInstallation && !initial.removal
@@ -112,7 +113,7 @@ async function inspectInstallation(options: InstallRecoveryOptions, mode: 'inspe
         if (actual === before) return result('inventory-before', 'inventory-matches-before')
         if (actual !== after) return result('unknown', 'inventory-conflict')
         const matches = commit.after.items.filter(item => sameInstalledSkillSource(item, identity))
-        if (matches.length !== 1 || matches[0]!.version !== current.operation.version || !matches[0]!.fingerprint) {
+        if (matches.length !== 1) {
           return result('unknown', 'invalid-committed-identity')
         }
         const item = matches[0]!
@@ -122,20 +123,20 @@ async function inspectInstallation(options: InstallRecoveryOptions, mode: 'inspe
           await assertOwnedRegularTree(path)
           const targets = []
           for (const target of item.targets) {
-            if (await realpath(target.installDir) === path) targets.push(target)
+            if (bound.includes(target.installDir) && await realpath(target.installDir) === path) targets.push(target)
           }
-          if (targets.length !== 1) return result('unknown', 'inventory-target-mismatch')
+          if (targets.length !== 1 || targets[0]!.version !== current.operation.version || !targets[0]!.fingerprint) return result('unknown', 'inventory-target-mismatch')
           const target = targets[0]!
           const read = await readInstalledSkillMetadata(path)
           if (read.status !== 'valid') return result('unknown', 'metadata-unavailable')
           const metadata = read.metadata
-          if (!sameInstalledSkillSource(metadata, identity) || metadata.version !== item.version
-            || metadata.fingerprint !== item.fingerprint || metadata.agent !== target.agent
+          if (!sameInstalledSkillSource(metadata, identity) || metadata.version !== target.version
+            || metadata.fingerprint !== target.fingerprint || metadata.agent !== target.agent
             || metadata.installedAt !== target.installedAt || metadata.source !== 'skillhub') {
             return result('unknown', 'metadata-conflict')
           }
           const snapshot = await snapshotSkillDirectory(path)
-          if (snapshot.fingerprint !== item.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) {
+          if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) {
             return result('unknown', 'installed-content-changed')
           }
         }
@@ -247,7 +248,7 @@ async function assertBackupContent(record: OperationRecord, move: InstallMove, p
   await assertOwnedRegularTree(path)
   const identity = { registry: record.operation.context.sourceIdentity, namespace: record.operation.namespace, slug: record.operation.slug }
   const items = record.transaction!.inventoryCommit!.before.items.filter(item => sameInstalledSkillSource(item, identity))
-  if (items.length !== 1 || !items[0]!.fingerprint) throw new Error('Backup baseline is unavailable')
+  if (items.length !== 1) throw new Error('Backup baseline is unavailable')
   const item = items[0]!
   const targets = []
   for (const target of item.targets) {
@@ -260,11 +261,11 @@ async function assertBackupContent(record: OperationRecord, move: InstallMove, p
   const read = await readInstalledSkillMetadata(path)
   if (read.status !== 'valid') throw new Error('Backup metadata is unavailable')
   const metadata = read.metadata
-  if (!sameInstalledSkillSource(metadata, identity) || metadata.version !== item.version
-    || metadata.fingerprint !== item.fingerprint || metadata.installedAt !== target.installedAt
+  if (!sameInstalledSkillSource(metadata, identity) || metadata.version !== target.version
+    || metadata.fingerprint !== target.fingerprint || metadata.installedAt !== target.installedAt
     || metadata.agent !== target.agent || metadata.source !== 'skillhub') throw new Error('Backup metadata does not match its baseline')
   const snapshot = await snapshotSkillDirectory(path)
-  if (snapshot.fingerprint !== item.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) throw new Error('Backup content was modified')
+  if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) throw new Error('Backup content was modified')
 }
 
 async function releaseLocks(releases: Array<() => Promise<void>>, operationError: unknown): Promise<void> {

@@ -73,7 +73,7 @@ test.skipIf(process.platform === 'win32')('real killed installers recover all pr
       else {
         const committed = await inventory.read()
         expect(committed).toEqual(saved.transaction!.inventoryCommit!.after)
-        expect(committed.items[0]!.version).toBe('2.0.0')
+        expect(committed.items[0]!.targets[0]!.version).toBe('2.0.0')
         expect(committed.items[0]!.targets).toHaveLength(2)
       }
       expect(await operations.listForRecovery()).toEqual([])

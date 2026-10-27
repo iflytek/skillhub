@@ -24,13 +24,13 @@ export async function executeNativeUpgrade(operations: OperationStore, inventory
     || operation.context.sourceIdentity !== request.registry || operation.namespace !== request.namespace
     || operation.slug !== request.slug || operation.version !== request.version
     || !sameInstalledSkillSource(baseline.inventoryItem, request) || !Number.isInteger(request.versionId) || request.versionId <= 0
-    || assessSkillUpdate(baseline.inventoryItem, request).state !== 'upgradable') throw new Error('Upgrade snapshot changed')
+    || baseline.inventoryItem.targets.some(target => assessSkillUpdate(target, request).state !== 'upgradable')) throw new Error('Upgrade snapshot changed')
   await operations.update(record.operationId, record.ownerId, record.revision, { ...operation.status, phase: 'staging' })
   let coreStarted = false
   const verifyBaseline = async () => {
     for (const target of baseline.targets) await request.authorize([target.root, target.path], 'staging')
     await operations.assertTargetsAvailable(paths, request)
-    const current = await inspectUpgradeBaseline(inventory, baseline.inventoryItem, baseline.targets)
+    const current = await inspectUpgradeBaseline(inventory, { ...baseline.inventoryItem, version: baseline.inventoryItem.targets[0]!.version }, baseline.targets)
     if (!isDeepStrictEqual(current, baseline)) throw new Error('Upgrade baseline changed')
   }
   try {

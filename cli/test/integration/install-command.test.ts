@@ -81,8 +81,8 @@ describe('install command — P0', () => {
     // --- inventory.json ---
     const inventoryPath = join(env.home, '.skillhub', 'inventory.json')
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
-    expect(inventory.items).toBeArray()
-    const item = inventory.items.find(
+    expect(inventory.records).toBeArray()
+    const item = inventory.records.find(
       (i: { namespace: string; slug: string }) => i.namespace === 'global' && i.slug === 'pdf-parser'
     )
     expect(item).toBeDefined()
@@ -759,9 +759,9 @@ describe('install command — multi-agent & auto-detect', () => {
     expect(JSON.parse(await readFile(metadataPath, 'utf-8')).agent).toBe('pi')
 
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')) as {
-      items: Array<{ targets: Array<{ agent: string; installDir: string }> }>
+      records: Array<{ targets: Array<{ agent: string; installDir: string }> }>
     }
-    expect(inventory.items[0]?.targets[0]).toMatchObject({ agent: 'pi', installDir })
+    expect(inventory.records[0]?.targets[0]).toMatchObject({ agent: 'pi', installDir })
   })
 
   test('auto-detects an existing Pi project skills directory end to end', async () => {
@@ -833,9 +833,9 @@ describe('install command — multi-agent & auto-detect', () => {
     expect(JSON.parse(await readFile(metadataPath, 'utf-8')).agent).toBe('astudio')
 
     const inventory = JSON.parse(await readFile(join(env.home, '.skillhub', 'inventory.json'), 'utf-8')) as {
-      items: Array<{ targets: Array<{ agent: string }> }>
+      records: Array<{ targets: Array<{ agent: string }> }>
     }
-    expect(inventory.items[0]?.targets[0]?.agent).toBe('astudio')
+    expect(inventory.records[0]?.targets[0]?.agent).toBe('astudio')
   })
 
   test('multi --agent installs the same skill into every specified user-level dir', async () => {

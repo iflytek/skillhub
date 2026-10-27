@@ -100,11 +100,11 @@ describe('version upgrade flow', () => {
     expect(finalBody).not.toContain('Version one body.')
 
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8')) as {
-      items: Array<{ namespace: string; slug: string; version: string; targets: Array<{ installDir: string }> }>
+      records: Array<{ namespace: string; slug: string; version: string; targets: Array<{ installDir: string; version: string }> }>
     }
-    const matching = inventory.items.filter(i => i.namespace === 'global' && i.slug === 'pdf-parser')
+    const matching = inventory.records.filter(i => i.namespace === 'global' && i.slug === 'pdf-parser')
     expect(matching).toHaveLength(1) // no duplicate v1 entry
-    expect(matching[0]?.version).toBe('2.0.0')
+    expect(matching[0]?.targets[0]?.version).toBe('2.0.0')
   })
 
   // -------------------------------------------------------------------------

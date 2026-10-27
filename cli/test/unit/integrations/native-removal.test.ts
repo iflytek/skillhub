@@ -20,9 +20,9 @@ test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-deni
       await writeFile(join(path, 'SKILL.md'), '# Original')
       const snapshot = await snapshotSkillDirectory(path)
       const selected = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1.0.0' }
-      const entry = { agent: 'dsh', rootDir: target.root, installDir: path, installedAt: '2026-10-14' }
+      const entry = { version: selected.version, fingerprint: snapshot.fingerprint, agent: 'dsh', rootDir: target.root, installDir: path, installedAt: '2026-10-14' }
       const retained = { ...entry, agent: 'other', rootDir: join(home, 'other'), installDir: join(home, 'other/writer') }
-      const item = { ...selected, fingerprint: snapshot.fingerprint, targets: [entry, retained] }
+      const item = { registry: selected.registry, namespace: selected.namespace, slug: selected.slug, targets: [entry, retained] }
       const inventory = new InventoryStore(home)
       await inventory.writeAtomic({ items: [item] })
       await writeFile(join(path, '.skillhub/metadata.json'), JSON.stringify({ ...selected, ...snapshot,
@@ -129,7 +129,7 @@ test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-deni
         const committedInventory = { items: [{ ...item, targets: [retained] }] }
         for (const conflict of ['version', 'ownership', 'foreign-source', 'occupied-path'] as const) {
           const conflictedInventory = conflict === 'version'
-            ? { items: [{ ...item, version: '9.0.0', targets: [retained] }] }
+            ? { items: [{ ...item, targets: [{ ...entry, version: '9.0.0' }, retained] }] }
             : conflict === 'ownership'
               ? { items: [{ ...item, targets: [{ ...entry, installedBy: ['suite:other'] }, retained] }] }
               : conflict === 'foreign-source'

@@ -56,7 +56,7 @@ test('native upgrade replaces the entire confirmed target set and persists its o
     expect(await f.runtime.executeUpgrade(f.request)).toMatchObject({ outcome: 'committed' })
     for (const target of f.roots) expect(await readFile(join(target.root, 'writer/SKILL.md'), 'utf8')).toBe('# Version 2.0.0')
     expect(await f.runtime.readSkillExamples(join(f.roots[0]!.root, 'writer'))).toMatchObject({ state: 'ready', items: { en: [{ title: '2.0.0' }] } })
-    expect((await f.inventory.read()).items[0]!.version).toBe('2.0.0')
+    expect((await f.inventory.read()).items[0]!.targets[0]!.version).toBe('2.0.0')
     expect((await f.runtime.getOperation(f.request.operationId, 'session'))?.files).toBe('upgraded')
     expect(await f.runtime.listPending()).toEqual([])
     const replay = await f.runtime.acceptUpgrade(f.acceptance, async () => { throw new Error('expired plan must not be resolved') })
@@ -72,7 +72,7 @@ test('native upgrade rejects edits made after confirmation without downloading',
     await writeFile(join(f.roots[0]!.root, 'writer/SKILL.md'), 'user edit')
     await expect(f.runtime.executeUpgrade(f.request)).rejects.toThrow('baseline changed')
     expect(f.downloads()).toBe(1)
-    expect((await f.inventory.read()).items[0]!.version).toBe('1.0.0')
+    expect((await f.inventory.read()).items[0]!.targets[0]!.version).toBe('1.0.0')
     expect((await f.runtime.getOperation(f.request.operationId, 'session'))?.phase).toBe('failed')
   } finally { await f.close() }
 })
@@ -85,7 +85,7 @@ test('native upgrade rechecks all targets after staging before replacing any tar
     } })).rejects.toThrow('baseline changed')
     expect(await readFile(join(f.roots[0]!.root, 'writer/SKILL.md'), 'utf8')).toBe('# Version 1.0.0')
     expect(await readFile(join(f.roots[1]!.root, 'writer/SKILL.md'), 'utf8')).toBe('concurrent edit')
-    expect((await f.inventory.read()).items[0]!.version).toBe('1.0.0')
+    expect((await f.inventory.read()).items[0]!.targets[0]!.version).toBe('1.0.0')
   } finally { await f.close() }
 })
 
@@ -98,7 +98,7 @@ test('failure after a target replacement restores both old targets and can be re
     } })).rejects.toThrow('injected second-target denial')
     expect(replacements).toBe(3)
     for (const target of f.roots) expect(await readFile(join(target.root, 'writer/SKILL.md'), 'utf8')).toBe('# Version 1.0.0')
-    expect((await f.inventory.read()).items[0]!.version).toBe('1.0.0')
+    expect((await f.inventory.read()).items[0]!.targets[0]!.version).toBe('1.0.0')
     const result = await f.runtime.recover(f.request.operationId, 'session',
       f.request.baseline.targets.map(target => target.path), async () => {})
     expect(result.outcome).toBe('restored')
@@ -108,7 +108,7 @@ test('failure after a target replacement restores both old targets and can be re
 
 for (const stage of ['before-download', 'after-staging'] as const) {
   test.each(['target-added', 'target-removed', 'ownership', 'version', 'fingerprint', 'metadata'] as const)(
-    `upgrade rejects %s drift ${stage} without overwriting either target`, async drift => {
+    `upgrade checks selected-target %s drift ${stage}`, async drift => {
       const f = await fixture()
       try {
         let changed = false
@@ -122,8 +122,8 @@ for (const stage of ['before-download', 'after-staging'] as const) {
             installDir: join(f.root, 'foreign/writer') })
           if (drift === 'target-removed') item.targets.pop()
           if (drift === 'ownership') item.targets[0]!.installedBy = ['direct', 'other-owner']
-          if (drift === 'version') item.version = '1.0.1'
-          if (drift === 'fingerprint') item.fingerprint = 'sha256:' + 'f'.repeat(64)
+          if (drift === 'version') item.targets[0]!.version = '1.0.1'
+          if (drift === 'fingerprint') item.targets[0]!.fingerprint = 'sha256:' + 'f'.repeat(64)
           if (drift === 'metadata') {
             const path = join(f.roots[1]!.root, 'writer/.skillhub/metadata.json')
             const metadata = JSON.parse(await readFile(path, 'utf8'))
@@ -133,9 +133,17 @@ for (const stage of ['before-download', 'after-staging'] as const) {
           expectedInventory = await f.inventory.read()
         }
         if (stage === 'before-download') await mutate()
-        await expect(f.runtime.executeUpgrade({ ...f.request,
+        const operation = f.runtime.executeUpgrade({ ...f.request,
           validateStaged: stage === 'after-staging' ? mutate : async () => {},
-        })).rejects.toThrow('baseline changed')
+        })
+        if (drift === 'target-added') {
+          expect(await operation).toMatchObject({ outcome: 'committed' })
+          const targets = (await f.inventory.read()).items[0]!.targets
+          expect(targets.find(target => target.rootDir === join(f.root, 'foreign'))).toEqual(expectedInventory.items[0]!.targets.find(target => target.rootDir === join(f.root, 'foreign')))
+          for (const target of f.roots) expect(await readFile(join(target.root, 'writer/SKILL.md'), 'utf8')).toBe('# Version 2.0.0')
+          return
+        }
+        await expect(operation).rejects.toThrow('baseline changed')
         expect(changed).toBe(true)
         expect(f.downloads()).toBe(stage === 'before-download' ? 1 : 2)
         expect(await f.inventory.read()).toEqual(expectedInventory)

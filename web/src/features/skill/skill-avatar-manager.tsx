@@ -5,7 +5,7 @@ import { buildApiUrl, skillAvatarApi } from '@/api/client'
 import { Button } from '@/shared/ui/button'
 
 export function SkillAvatarManager({ namespace, slug, disabled = false, previewOnly = false }: { namespace: string; slug: string; disabled?: boolean; previewOnly?: boolean }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const key = ['skill-avatar', namespace, slug]
   const status = useQuery({ queryKey: key, queryFn: () => skillAvatarApi.status(namespace, slug), enabled: !!namespace && !!slug, staleTime: 0 })
@@ -41,7 +41,7 @@ export function SkillAvatarManager({ namespace, slug, disabled = false, previewO
       </div>
       {candidate?.candidateStatus && <p role="status" className="text-sm">{t('skillAvatar.status')}: {t(`skillAvatar.states.${candidate.candidateStatus}`)}</p>}
       {candidate?.reviewReason && <p className="text-sm">{candidate.reviewReason}</p>}
-      {candidate?.machineStatus === 'ERROR' && retryCoolingDown && <p className="text-sm text-muted-foreground">{t('skillAvatar.retryAfter', { time: new Date(candidate.machineNextRetryAt!).toLocaleString() })}</p>}
+      {candidate?.machineStatus === 'ERROR' && retryCoolingDown && <p className="text-sm text-muted-foreground">{t('skillAvatar.retryAfter', { time: new Date(candidate.machineNextRetryAt!).toLocaleString(i18n.resolvedLanguage || i18n.language) })}</p>}
       {candidate?.machineStatus === 'ERROR' && candidate.automaticRetryExhausted && <p className="text-sm text-muted-foreground">{t('skillAvatar.automaticRetryStopped')}</p>}
       {!previewOnly && <div className="flex flex-wrap gap-2">
         {candidate?.candidateStatus === 'PENDING' && candidate.machineStatus === 'BLOCKED'

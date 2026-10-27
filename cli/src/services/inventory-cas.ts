@@ -1,8 +1,7 @@
 import { resolve, relative } from 'node:path'
-import { canonicalizeExistingPath } from '../platform/paths'
-import { installedBy, targetInstalledBy } from '../stores/inventory-store'
+import { canonicalizeExistingPath, pathsOverlap } from '../platform/paths'
+import { targetInstalledBy } from '../stores/inventory-store'
 import type { Inventory, InventoryItem } from '../stores/inventory-store'
-import { sameInstalledSkillSource } from './installed-skill-metadata'
 
 type Identity = Pick<InventoryItem, 'registry' | 'namespace' | 'slug'>
 
@@ -10,6 +9,7 @@ type Identity = Pick<InventoryItem, 'registry' | 'namespace' | 'slug'>
 export async function captureInstallInventory(
   inventory: Inventory, identity: Identity, canonicalDirs: ReadonlySet<string>
 ): Promise<string> {
+  void identity
   const records: string[] = []
   for (const item of inventory.items) {
     const targets = await Promise.all(item.targets.map(async target => {
@@ -17,13 +17,26 @@ export async function captureInstallInventory(
       const canonicalRoot = await canonicalizeExistingPath(root)
       return { agent: target.agent, rootDir: canonicalRoot,
         installDir: resolve(canonicalRoot, relative(root, resolve(target.installDir))),
-        installedAt: target.installedAt, installedBy: [...new Set(targetInstalledBy(item, target))].sort() }
+        version: target.version, fingerprint: target.fingerprint ?? null, installedAt: target.installedAt, installedBy: [...new Set(targetInstalledBy(item, target))].sort() }
     }))
-    if (!sameInstalledSkillSource(item, identity) && !targets.some(target => canonicalDirs.has(target.installDir))) continue
+    const selected = targets.filter(target => [...canonicalDirs].some(path => pathsOverlap(path, target.installDir)))
+    if (!selected.length) continue
     records.push(JSON.stringify({ registry: item.registry, namespace: item.namespace, slug: item.slug,
-      version: item.version, fingerprint: item.fingerprint ?? null,
-      installedBy: [...new Set(installedBy(item))].sort(),
-      targets: targets.map(target => JSON.stringify(target)).sort() }))
+      targets: selected.map(target => JSON.stringify(target)).sort() }))
   }
-  return JSON.stringify(records.sort())
+  const suites: string[] = []
+  for (const suite of inventory.suites ?? []) {
+    const members: string[] = []
+    for (const member of suite.members) {
+      const selected = []
+      for (const path of member.installDirs) {
+        const canonical = await canonicalizeExistingPath(path)
+        if ([...canonicalDirs].some(path => pathsOverlap(path, canonical))) selected.push(canonical)
+      }
+      if (selected.length) members.push(JSON.stringify({ ...member, installDirs: selected.sort() }))
+    }
+    if (members.length) suites.push(JSON.stringify({ registry: suite.registry, namespace: suite.namespace,
+      slug: suite.slug, version: suite.version, fingerprint: suite.fingerprint, members: members.sort() }))
+  }
+  return JSON.stringify({ records: records.sort(), suites: suites.sort() })
 }

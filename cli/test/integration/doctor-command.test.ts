@@ -93,19 +93,19 @@ describe('doctor command', () => {
 
     const inventoryPath = join(home, '.skillhub', 'inventory.json')
     const raw = await readFile(inventoryPath, 'utf-8')
-    const inventory = JSON.parse(raw) as { items: Array<{
+    const inventory = JSON.parse(raw) as { records: Array<{
       namespace: string
       slug: string
       version: string
       registry: string
     }> }
 
-    expect(inventory.items).toHaveLength(1)
-    expect(inventory.items[0]).toMatchObject({
+    expect(inventory.records).toHaveLength(1)
+    expect(inventory.records[0]).toMatchObject({
       registry: 'https://skill.xfyun.cn',
       namespace: 'global',
       slug: 'pdf-parser',
-      version: '1.2.0'
+      targets: [expect.objectContaining({ version: '1.2.0' })]
     })
   })
 
@@ -145,9 +145,9 @@ describe('doctor command', () => {
 
   // -------------------------------------------------------------------------
   // P1: same registry+namespace+slug appearing in two agent dirs with
-  // different versions surfaces in `conflicts` and is excluded from items.
+  // different versions remains one group with two target-owned releases.
   // -------------------------------------------------------------------------
-  test('doctor reports conflicts when two agent dirs disagree on version', async () => {
+  test('doctor preserves distinct target versions across two agent directories', async () => {
     const { home, cwd } = await createTempHome()
 
     // Two installs of the same global/pdf-parser with mismatched versions.
@@ -189,18 +189,15 @@ describe('doctor command', () => {
       conflicts: Array<{ key: string; versions: string[] }>
     }
     expect(json.ok).toBe(true)
-    // Conflicting group is dropped from items, recorded as a conflict.
-    expect(json.itemsScanned).toBe(0)
-    expect(json.targetsScanned).toBe(0)
-    expect(json.conflicts).toHaveLength(1)
-    expect(json.conflicts[0]?.key).toBe('https://skill.xfyun.cn|global|pdf-parser')
-    expect(json.conflicts[0]?.versions.sort()).toEqual(['1.0.0', '2.0.0'])
-
-    // The persisted inventory must mirror the JSON output: no items.
-    const inventory = JSON.parse(
-      await readFile(join(home, '.skillhub', 'inventory.json'), 'utf-8')
-    ) as { items: unknown[] }
-    expect(inventory.items).toHaveLength(0)
+    expect(json.itemsScanned).toBe(1)
+    expect(json.targetsScanned).toBe(2)
+    expect(json.conflicts).toHaveLength(0)
+    const inventory = JSON.parse(await readFile(join(home, '.skillhub', 'inventory.json'), 'utf-8')) as {
+      schemaVersion: number; records: Array<{ targets: Array<{ version: string }> }>
+    }
+    expect(inventory.schemaVersion).toBe(2)
+    expect(inventory.records).toHaveLength(1)
+    expect(inventory.records[0]!.targets.map(target => target.version).sort()).toEqual(['1.0.0', '2.0.0'])
   })
 
   // -------------------------------------------------------------------------
@@ -271,9 +268,9 @@ describe('doctor command', () => {
     expect(json.itemsScanned).toBe(1) // only good-skill
     const inventory = JSON.parse(
       await readFile(join(home, '.skillhub', 'inventory.json'), 'utf-8')
-    ) as { items: Array<{ slug: string }> }
-    expect(inventory.items).toHaveLength(1)
-    expect(inventory.items[0]?.slug).toBe('good-skill')
+    ) as { records: Array<{ slug: string }> }
+    expect(inventory.records).toHaveLength(1)
+    expect(inventory.records[0]?.slug).toBe('good-skill')
   })
 
   test('doctor backs up existing inventory.json and reports backupPath', async () => {
@@ -353,10 +350,10 @@ describe('doctor command', () => {
 
     const raw = await readFile(inventoryPath, 'utf-8')
     const inventory = JSON.parse(raw) as {
-      items: Array<{ slug: string }>
+      records: Array<{ slug: string }>
     }
 
-    expect(inventory.items.map(item => item.slug)).toEqual(
+    expect(inventory.records.map(item => item.slug)).toEqual(
       expect.arrayContaining(['external-skill', 'local-skill'])
     )
   })

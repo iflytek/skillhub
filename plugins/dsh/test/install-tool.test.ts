@@ -62,7 +62,7 @@ test('saved acceptance uses original operation identity and presentation never i
   expect(tool.output.presentationMeta!({}, saved)).toEqual(saved);
   const rendered = JSON.stringify(tool.output.render({}, saved));
   expect(rendered).toContain('not proof');
-  expect(rendered).toContain('No operation-query tool is available');
+  expect(rendered).toContain('Use astron_skillhub_operation');
   expect(rendered).toContain('result card automatically checks');
   expect(rendered).not.toContain('Query the operation');
   expect(called).toBe(1);

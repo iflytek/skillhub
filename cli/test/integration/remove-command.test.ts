@@ -390,9 +390,9 @@ describe('remove command — local remove (P1)', () => {
     expect(result.exitCode).toBe(0)
 
     const inv = JSON.parse(await Bun.file(`${env.home}/.skillhub/inventory.json`).text()) as {
-      items: Array<{ slug: string; targets: Array<{ agent: string }> }>
+      records: Array<{ slug: string; targets: Array<{ agent: string }> }>
     }
-    const survived = inv.items.find(i => i.slug === 'keep-others')
+    const survived = inv.records.find(i => i.slug === 'keep-others')
     expect(survived).toBeDefined()
     expect(survived!.targets.map(t => t.agent)).toEqual(['claude-code'])
   })
@@ -457,11 +457,11 @@ describe('remove command — local remove (P1)', () => {
     expect(await pathExists(otherDir)).toBe(true)
 
     const inv = JSON.parse(await Bun.file(`${env.home}/.skillhub/inventory.json`).text()) as {
-      items: Array<{ namespace: string; slug: string; targets: Array<{ installDir: string }> }>
+      records: Array<{ namespace: string; slug: string; targets: Array<{ installDir: string }> }>
     }
-    expect(inv.items.map(item => item.namespace).sort()).toEqual(['global', 'other'])
-    expect(inv.items.every(item => item.slug === 'shared-skill')).toBe(true)
-    expect(inv.items.map(item => item.targets[0]?.installDir).sort()).toEqual([globalDir, otherDir].sort())
+    expect(inv.records.map(item => item.namespace).sort()).toEqual(['global', 'other'])
+    expect(inv.records.every(item => item.slug === 'shared-skill')).toBe(true)
+    expect(inv.records.map(item => item.targets[0]?.installDir).sort()).toEqual([globalDir, otherDir].sort())
   })
 
   test('bare slug retains cross-namespace local removal compatibility', async () => {
@@ -520,8 +520,8 @@ describe('remove command — local remove (P1)', () => {
     expect(await pathExists(otherDir)).toBe(false)
 
     const inv = JSON.parse(await Bun.file(`${env.home}/.skillhub/inventory.json`).text()) as {
-      items: object[]
+      records: object[]
     }
-    expect(inv.items).toEqual([])
+    expect(inv.records).toEqual([])
   })
 })

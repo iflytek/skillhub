@@ -50,7 +50,7 @@ export async function verifyExistingInstallation(current: Inventory,
   }
   const owner = owners[0]
   if (owners.length !== 1 || !owner || !sameInstalledSkillSource(owner.item, request)
-    || owner.item.version !== request.version || owner.item.fingerprint !== request.fingerprint
+    || owner.entry.version !== request.version || owner.entry.fingerprint !== request.fingerprint
     || owner.entry.agent !== 'dsh' || !targetInstalledBy(owner.item, owner.entry).includes('direct')
     || await canonicalizeExistingPath(owner.entry.rootDir) !== request.root) throw new Error('Existing installation conflicts with the requested skill')
   const metadata = await readInstalledSkillMetadata(target)

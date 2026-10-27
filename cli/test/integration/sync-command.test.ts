@@ -1,3 +1,4 @@
+import { InventoryStore } from '../../src/stores/inventory-store'
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
@@ -25,6 +26,31 @@ async function makeLocalSkill(rootDir: string, slug = 'demo'): Promise<string> {
 }
 
 describe('sync command', () => {
+  test('install and sync preserve a registry sub-path for application-relative downloads', async () => {
+    const env = await createTempHome()
+    const registry = await startFakeRegistry({
+      token: 'prefix-token', basePath: '/skillhub', applicationRelativeDownloads: true,
+      skills: [{ namespace: 'team-a', slug: 'demo', ...makeSkill('# prefix download\n') }]
+    })
+    const shared = ['--registry', registry.url, '--token', 'prefix-token', '--json']
+    try {
+      const installDir = join(env.cwd, 'install')
+      const installed = await runCli(['install', '@team-a/demo', '--dir', installDir, ...shared], { HOME: env.home }, { cwd: env.cwd })
+      expect(installed.exitCode).toBe(0)
+      expect(await readFile(join(installDir, 'demo', 'SKILL.md'), 'utf8')).toBe('# prefix download\n')
+      const workspace = join(env.cwd, 'workspace')
+      const pulled = await runCli(['sync', 'pull', '--namespace', 'team-a', '--skill', 'demo', '--dir', workspace, ...shared], { HOME: env.home }, { cwd: env.cwd })
+      expect(pulled.exitCode).toBe(0)
+      expect(await readFile(join(workspace, 'demo', 'SKILL.md'), 'utf8')).toBe('# prefix download\n')
+      const status = await runCli(['sync', 'status', '--namespace', 'team-a', '--dir', workspace, ...shared], { HOME: env.home }, { cwd: env.cwd })
+      expect(status.exitCode).toBe(0)
+      expect(JSON.parse(status.stdout).items).toMatchObject([{ slug: 'demo', status: 'up-to-date' }])
+      expect(registry.received.downloads).toBe(2)
+    } finally {
+      registry.stop()
+    }
+  })
+
   test('mutating pull service rejects an empty selection before reading the namespace', async () => {
     const registry = await startFakeRegistry({
       token: 'token',
@@ -634,6 +660,41 @@ describe('sync command', () => {
       expect(pruned.exitCode).toBe(0)
       expect(JSON.parse(pruned.stdout).actions).toContainEqual({ slug: 'demo', action: 'pruned' })
       expect(await Bun.file(join(skillsDir, 'demo')).exists()).toBe(false)
+      expect(await Bun.file(join(skillsDir, 'keep', 'SKILL.md')).exists()).toBe(true)
+    } finally {
+      registry.stop()
+    }
+  })
+
+  test('force prune refuses Suite-owned orphans without deleting their files', async () => {
+    const env = await createTempHome()
+    const skillsDir = join(env.cwd, 'team-skills')
+    const fixture = makeSkill('---\nname: demo\ndescription: Demo\nversion: 1.0.0\n---\n')
+    const skills: FakeSkill[] = [
+      { namespace: 'team-a', slug: 'demo', ...fixture },
+      { namespace: 'team-a', slug: 'keep', ...makeSkill('# keep\n') }
+    ]
+    const registry = await startFakeRegistry({ token: 'token', skills })
+
+    try {
+      await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--skill', 'demo', '--skill', 'keep', '--dir', skillsDir,
+        '--registry', registry.url, '--token', 'token'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      const inventory = new InventoryStore(env.home)
+      await inventory.mutateAtomic(value => { value.items.find(item => item.slug === 'demo')!.targets[0]!.installedBy = ['suite:@team-a/set@1'] })
+      const before = await inventory.read()
+      skills.splice(0, skills.length)
+
+      const pruned = await runCli([
+        'sync', 'pull', '--namespace', 'team-a', '--skill', 'demo', '--dir', skillsDir, '--prune', '--force',
+        '--registry', registry.url, '--token', 'token', '--json'
+      ], { HOME: env.home }, { cwd: env.cwd })
+      expect(pruned.exitCode).not.toBe(0)
+      expect(JSON.parse(pruned.stdout).actions).toEqual([])
+      expect(JSON.parse(pruned.stdout).failures[0].message).toContain('shared or Suite-owned')
+      expect(await inventory.read()).toEqual(before)
+      expect(await readFile(join(skillsDir, 'demo/SKILL.md'), 'utf8')).toContain('name: demo')
       expect(await Bun.file(join(skillsDir, 'keep', 'SKILL.md')).exists()).toBe(true)
     } finally {
       registry.stop()

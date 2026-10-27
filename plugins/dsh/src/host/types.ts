@@ -1,3 +1,4 @@
+import type { NativeOperation } from './generated/native-contract.js';
 export type TabMode = 'auto' | 'show' | 'hide';
 export interface HostExecutePlanRequest { planId: string; requestKey: string }
 export interface HostRecoveryRequest { operationId: string; hostInstanceId: string }
@@ -164,4 +165,36 @@ export interface RegistryConnectionTest {
   reachable: true;
   mode: 'paged' | 'limited';
   elapsedMs: number;
+}
+
+/** Path-free conversation views; references bind a trusted Host snapshot, not user authority. */
+export interface ConversationInstalledResult extends InstalledSkillList {
+  schemaVersion: 1; kind: 'skillhub-installed'; toolCallId: string; sourceRevision: string; sourceLabel: string;
+}
+export interface ConversationUpdateResult {
+  schemaVersion: 1; kind: 'skillhub-update-check'; toolCallId: string; sourceRevision: string; sourceLabel: string;
+  item: InstalledSkillList['items'][number]; check: InstalledUpdateCheck;
+}
+export interface ConversationManagementResult {
+  schemaVersion: 1; kind: 'skillhub-management'; toolCallId: string;
+  action: 'upgrade' | 'uninstall'; sourceRevision: string; sourceLabel: string;
+  item: InstalledSkillList['items'][number];
+  status: 'awaiting-confirmation' | 'cancelled' | 'blocked' | 'accepted';
+  candidateVersion: string | null; reason: string;
+  confirmationRef: string | null; operation: NativeOperation | null;
+}
+
+/** Path-free, read-only observations at checkedAt; never execution authorization. */
+export interface SkillAvailability {
+  installation?: { namespace: string; slug: string; version: string; scope: 'user' | 'project' };
+  scope?: 'user' | 'project';
+  checkedAt: string;
+  name?: string;
+  association: 'managed-reference' | 'not-associated';
+  integrity: 'verified' | 'changed' | 'missing' | 'unknown';
+  discovery: 'winner' | 'shadowed' | 'not-discovered' | 'unknown';
+  invocation?: { userInvocable: boolean; modelInvocable: boolean };
+  reason: 'observed' | 'host-unavailable' | 'files-missing' | 'files-unreadable' | 'local-changes'
+    | 'baseline-unverified' | 'definition-unverified' | 'snapshot-unavailable' | 'snapshot-incomplete'
+    | 'observation-changed' | 'not-discovered' | 'same-name-winner' | 'definition-changed' | 'read-failed';
 }

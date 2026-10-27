@@ -1,6 +1,7 @@
 import { expect, type Page, type TestInfo } from '@playwright/test'
 import { randomUUID } from 'node:crypto'
 import { csrfHeaders } from './csrf'
+import { fixtureClientIp } from './auth-fixtures'
 
 const password = 'Passw0rd!123'
 const cachedUserByWorker = new Map<number, string>()
@@ -220,7 +221,7 @@ async function registerSessionOnce(page: Page, testInfo?: TestInfo, options?: Re
         password,
         email: `${username}@example.test`,
       },
-      headers: await csrfHeaders(page),
+      headers: await csrfHeaders(page, { 'X-Forwarded-For': fixtureClientIp(page) }),
       timeout: requestTimeoutMs,
     })
 
@@ -251,7 +252,7 @@ async function registerSessionOnce(page: Page, testInfo?: TestInfo, options?: Re
           password,
           email: `${uniqueUsername}@example.test`,
         },
-        headers: await csrfHeaders(page),
+        headers: await csrfHeaders(page, { 'X-Forwarded-For': fixtureClientIp(page) }),
         timeout: requestTimeoutMs,
       })
 
@@ -311,7 +312,7 @@ async function createFreshSessionOnce(page: Page, testInfo?: TestInfo) {
           password,
           email: `${uniqueUsername}@example.test`,
         },
-        headers: await csrfHeaders(page),
+        headers: await csrfHeaders(page, { 'X-Forwarded-For': fixtureClientIp(page) }),
         timeout: requestTimeoutMs,
       })
 

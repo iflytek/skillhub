@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { zipSync } from 'fflate'
 import type { InstallOptions } from '../../../src/services/install-service'
 import type { Inventory } from '../../../src/stores/inventory-store'
-import { InventoryStore } from '../../../src/stores/inventory-store'
+import { InventoryStore, parseInventory } from '../../../src/stores/inventory-store'
 import { installSkill } from '../../../src/services/install-service'
 import { planSkillUpgrades } from '../../../src/services/upgrade-service'
 import { removeLocalSkill } from '../../../src/services/remove-service'
@@ -247,12 +247,12 @@ describe('installSkill', () => {
         beforeInventoryCommit: async commit => {
           events.push('before:commit')
           expect(commit.before).toEqual(previous)
-          expect(commit.after.items[0]?.fingerprint).toBe(skillFingerprint({ 'SKILL.md': '# New' }))
+          expect(commit.after.items[0]?.targets[0]!.fingerprint).toBe(skillFingerprint({ 'SKILL.md': '# New' }))
           commit.after.items.length = 0 // Observers cannot mutate the actual pending inventory.
         },
         afterInventoryCommit: async () => {
           events.push('after:commit')
-          expect((await new InventoryStore(home).read()).items[0]?.fingerprint).toBe(skillFingerprint({ 'SKILL.md': '# New' }))
+          expect((await new InventoryStore(home).read()).items[0]?.targets[0]!.fingerprint).toBe(skillFingerprint({ 'SKILL.md': '# New' }))
           throw new Error('journal completion failed')
         },
         cleanupResult: async cleanup => {
@@ -294,14 +294,14 @@ describe('installSkill', () => {
       expect(result.transactionWarnings?.[0]).toMatchObject({ stage: 'backupCleanup', path: backup })
       expect(await exists(backup)).toBe(true)
       expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# New')
-      expect((await new InventoryStore(home).read()).items[0]?.fingerprint).toBe(skillFingerprint({ 'SKILL.md': '# New' }))
+      expect((await new InventoryStore(home).read()).items[0]?.targets[0]!.fingerprint).toBe(skillFingerprint({ 'SKILL.md': '# New' }))
     } finally {
       if (backup) await chmod(backup, 0o700).catch(() => {})
       await rm(root, { recursive: true, force: true })
     }
   })
 
-  test.each(['version', 'fingerprint', 'ownership', 'targets', 'source'] as const)('inventory CAS rejects %s drift introduced after moving files', async drift => {
+  test.each(['version', 'fingerprint', 'ownership', 'targets', 'source'] as const)('inventory CAS scopes %s drift introduced after moving files', async drift => {
     const root = await mkdtemp(join(tmpdir(), 'skillhub-cas-drift-'))
     const rootDir = join(root, 'skills')
     const home = join(root, 'home')
@@ -313,25 +313,34 @@ describe('installSkill', () => {
       globalThis.fetch = installFetch({ 'SKILL.md': '# Old' })
       await installSkill(options)
       globalThis.fetch = installFetch({ 'SKILL.md': drift === 'targets' ? '# Old' : '# New' })
-      await expect(installSkill({ ...options, force: true, transactionObserver: {
+      const operation = installSkill({ ...options, force: true, transactionObserver: {
         afterMove: async move => {
           if (move.phase !== 'install') return
           await store.mutateAtomic(inventory => {
             const item = inventory.items[0]!
-            if (drift === 'version') item.version = '9.0.0'
-            if (drift === 'fingerprint') item.fingerprint = 'changed'
+            if (drift === 'version') item.targets[0]!.version = '9.0.0'
+            if (drift === 'fingerprint') item.targets[0]!.fingerprint = 'changed'
             if (drift === 'ownership') item.targets[0]!.installedBy = ['suite:other']
             if (drift === 'targets') item.targets.push({ ...item.targets[0]!, rootDir: join(root, 'other'), installDir: join(root, 'other/demo') })
             if (drift === 'source') item.namespace = 'another'
           })
         },
         beforeInventoryCommit: async () => { loggedCommit = true }
-      } })).rejects.toThrow('installed skill records changed before commit')
+      } })
+      if (drift === 'targets') {
+        await operation
+        expect(loggedCommit).toBe(true)
+        expect((await store.read()).items[0]!.targets).toHaveLength(2)
+        expect((await store.read()).items[0]!.targets.find(target => target.rootDir === join(root, 'other'))).toBeDefined()
+        expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# Old')
+        return
+      }
+      await expect(operation).rejects.toThrow('installed skill records changed before commit')
       expect(loggedCommit).toBe(false)
       const changed = (await store.read()).items[0]!
-      expect(drift === 'version' ? changed.version : drift === 'fingerprint' ? changed.fingerprint
-        : drift === 'ownership' ? changed.targets[0]!.installedBy?.[0] : drift === 'targets' ? changed.targets.length : changed.namespace)
-        .toBe(drift === 'version' ? '9.0.0' : drift === 'fingerprint' ? 'changed' : drift === 'ownership' ? 'suite:other' : drift === 'targets' ? 2 : 'another')
+      expect(drift === 'version' ? changed.targets[0]!.version : drift === 'fingerprint' ? changed.targets[0]!.fingerprint
+        : drift === 'ownership' ? changed.targets[0]!.installedBy?.[0] : changed.namespace)
+        .toBe(drift === 'version' ? '9.0.0' : drift === 'fingerprint' ? 'changed' : drift === 'ownership' ? 'suite:other' : 'another')
       expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# Old')
     } finally { await rm(root, { recursive: true, force: true }) }
   })
@@ -347,7 +356,7 @@ describe('installSkill', () => {
       globalThis.fetch = installFetch({ 'SKILL.md': '# Old' })
       await installSkill(options)
       const plan = (await store.read()).items[0]!
-      await store.mutateAtomic(inventory => { inventory.items[0]!.version = '2.0.0' })
+      await store.mutateAtomic(inventory => { inventory.items[0]!.targets[0]!.version = '2.0.0' })
       globalThis.fetch = (() => { throw new Error('must not download') }) as unknown as typeof fetch
       await expect(installSkill({ ...options, force: true, expectedInventoryItem: plan })).rejects.toThrow('installed skill records changed')
       const current = (await store.read()).items[0]!
@@ -369,7 +378,7 @@ describe('installSkill', () => {
     class LostResponseStore extends InventoryStore {
       protected override async writeUnderLock(inventory: Inventory): Promise<void> {
         await super.writeUnderLock(inventory)
-        if (outcome === 'unknown') await this.write({ items: [{ ...inventory.items[0]!, version: 'unverifiable' }] })
+        if (outcome === 'unknown') await super.writeUnderLock({ items: [{ ...inventory.items[0]!, targets: inventory.items[0]!.targets.map(target => ({ ...target, version: 'unverifiable' })) }] })
         throw new Error('response lost after rename')
       }
     }
@@ -392,7 +401,7 @@ describe('installSkill', () => {
         const backups = (await readdir(rootDir)).filter(name => name.includes('.skillhub-backup-'))
         expect(backups).toHaveLength(1)
         expect(await readFile(join(rootDir, backups[0]!, 'SKILL.md'), 'utf8')).toBe('# Old')
-        expect((await new InventoryStore(home).read()).items[0]?.version).toBe('unverifiable')
+        expect((await new InventoryStore(home).read()).items[0]?.targets[0]!.version).toBe('unverifiable')
       }
       expect(await readFile(join(rootDir, 'demo/SKILL.md'), 'utf8')).toBe('# New')
     } finally { await rm(root, { recursive: true, force: true }) }
@@ -478,7 +487,9 @@ describe('installSkill', () => {
     })
 
     expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Existing')
-    expect(await readFile(inventoryPath, 'utf-8')).toBe(inventoryBefore)
+    expect(await new InventoryStore(home).read()).toEqual(parseInventory(JSON.parse(inventoryBefore)))
+    const backup = (await readdir(join(home, '.skillhub'))).find(name => name.startsWith('inventory.v1.'))!
+    expect(await readFile(join(home, '.skillhub', backup), 'utf8')).toBe(inventoryBefore)
     expect((await readdir(rootDir)).some(name => name.includes('.install-'))).toBe(false)
   })
 
@@ -553,8 +564,8 @@ describe('installSkill', () => {
     })
 
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
-    expect(inventory.items).toHaveLength(1)
-    expect(inventory.items[0].targets).toEqual([
+    expect(inventory.records).toHaveLength(1)
+    expect(inventory.records[0].targets).toEqual([
       expect.objectContaining({ rootDir: aliasRoot, installDir: aliasSkillDir })
     ])
 
@@ -574,7 +585,7 @@ describe('installSkill', () => {
       home
     })
     expect(await exists(realSkillDir)).toBe(false)
-    expect((JSON.parse(await readFile(inventoryPath, 'utf-8'))).items).toEqual([])
+    expect((JSON.parse(await readFile(inventoryPath, 'utf-8'))).records).toEqual([])
   })
 
   test('force replaces the old skill directory instead of overlaying files', async () => {
@@ -618,7 +629,7 @@ describe('installSkill', () => {
     expect(result.warnings).toEqual(['target lock cleanup failed: simulated release failure'])
     expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Committed')
     const inventory = JSON.parse(await readFile(join(home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({
+    expect(inventory.records[0].targets[0]).toMatchObject({
       version: '1.0.0',
       fingerprint: skillFingerprint({ 'SKILL.md': '# Committed' })
     })
@@ -659,10 +670,10 @@ describe('installSkill', () => {
     })).rejects.toThrow('source conflict')
 
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
-    expect(inventory.items).toHaveLength(1)
-    expect(inventory.items[0]).toMatchObject({ namespace: 'global', slug: 'demo' })
-    expect(inventory.items[0].targets).toHaveLength(1)
-    expect(inventory.items[0].targets[0].installDir).toBe(skillDir)
+    expect(inventory.records).toHaveLength(1)
+    expect(inventory.records[0]).toMatchObject({ namespace: 'global', slug: 'demo' })
+    expect(inventory.records[0].targets).toHaveLength(1)
+    expect(inventory.records[0].targets[0]!.installDir).toBe(skillDir)
     expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Global Demo')
   })
 
@@ -850,8 +861,8 @@ describe('installSkill', () => {
     expect(await readFile(join(firstSkillDir, 'SKILL.md'), 'utf-8')).toBe('# Old A')
     expect(await readFile(join(secondSkillDir, 'SKILL.md'), 'utf-8')).toBe('# Old B')
     const inventory = JSON.parse(await readFile(join(home, '.skillhub', 'inventory.json'), 'utf-8'))
-    expect(inventory.items[0]).toMatchObject({ version: '0.1.0' })
-    expect(inventory.items[0].targets).toHaveLength(2)
+    expect(inventory.records[0].targets[0]).toMatchObject({ version: '0.1.0' })
+    expect(inventory.records[0].targets).toHaveLength(2)
     for (const rootDir of [firstRoot, secondRoot]) {
       const entries = await readdir(rootDir)
       expect(entries.some(name => name.includes('skillhub-backup'))).toBe(false)
@@ -922,9 +933,10 @@ describe('installSkill', () => {
 
     expect(await readFile(join(skillDir, 'SKILL.md'), 'utf-8')).toBe('# Old')
     const inventory = JSON.parse(await readFile(inventoryPath, 'utf-8'))
-    expect(inventory.items).toHaveLength(1)
-    expect(inventory.items[0]).toMatchObject({ namespace: 'global', slug: 'demo', version: '0.1.0' })
-    expect(inventory.items[0].targets[0].installDir).toBe(skillDir)
+    expect(inventory.records).toHaveLength(1)
+    expect(inventory.records[0]).toMatchObject({ namespace: 'global', slug: 'demo' })
+    expect(inventory.records[0].targets[0].version).toBe('0.1.0')
+    expect(inventory.records[0].targets[0]!.installDir).toBe(skillDir)
   })
 
   test('force restores the old installation when inventory persistence fails', async () => {
@@ -961,7 +973,8 @@ describe('installSkill', () => {
       namespace: 'global',
       slug: 'demo',
       targets: [{ agent: 'codex', rootDir, scope: 'project', source: 'explicit' }],
-      force: false
+      force: false,
+      home: join(rootDir, 'home')
     })).rejects.toThrow('download exceeds maximum package size')
   })
 })

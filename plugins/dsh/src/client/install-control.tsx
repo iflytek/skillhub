@@ -37,7 +37,7 @@ export function InstallControl({ detail, sourceRevision, services, initiatedFrom
   const trigger = useRef<HTMLButtonElement>(null);
   const [confirmation, setConfirmation] = useState<{ key: string; targetToken: string; reinstall: boolean } | null>(null);
   const writableHost = useWritableHost(services);
-  const [scope, setScope] = useState<'project' | 'user'>('project');
+  const [scope, setScope] = useState<'project' | 'user'>('user');
   const [upgradeCandidate, setUpgradeCandidate] = useState<{ item: InstalledSkillList['items'][number]; version: string; source: string } | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const refreshedToken = useRef<string | null>(null);
@@ -110,9 +110,13 @@ export function InstallControl({ detail, sourceRevision, services, initiatedFrom
       services={services.upgrades} sourceRevision={sourceRevision} source={upgradeCandidate.source} item={upgradeCandidate.item}
       targetVersion={upgradeCandidate.version} onClosed={() => setUpgradeCandidate(null)} />}
     <HostWriteStatus state={writableHost} />
-    <label className="astron-sh-scope-field">安装范围 <SelectField label="安装范围" value={scope} disabled={attempt?.state === 'submitting'} onValueChange={value => { scopeChosen.current = true; setScope(value as 'project' | 'user'); }}
+    {records.length > 0 ? <label className="astron-sh-scope-field">安装范围 <SelectField label="安装范围" value={scope} disabled={attempt?.state === 'submitting'} onValueChange={value => { scopeChosen.current = true; setScope(value as 'project' | 'user'); }}
+      options={[{ value: 'project', label: '仅此项目', disabled: !targets.data?.targets.some(item => item.scope === 'project') && !records.some(item => item.scope === 'project') }, { value: 'user', label: '所有项目', disabled: !targets.data?.targets.some(item => item.scope === 'user') && !records.some(item => item.scope === 'user') }]} /></label> : <details className="astron-sh-install-advanced">
+      <summary>高级选项{scope === 'project' ? ' · 当前项目' : ''}</summary>
+      <label className="astron-sh-scope-field">安装范围 <SelectField label="安装范围" value={scope} disabled={attempt?.state === 'submitting'} onValueChange={value => { scopeChosen.current = true; setScope(value as 'project' | 'user'); }}
       options={[{ value: 'project', label: '仅此项目', disabled: !targets.data?.targets.some(item => item.scope === 'project') && !records.some(item => item.scope === 'project') }, { value: 'user', label: '所有项目', disabled: !targets.data?.targets.some(item => item.scope === 'user') && !records.some(item => item.scope === 'user') }]} /></label>
-    <p className="astron-sh-scope-help">{scope === 'project' ? '仅当前工作区可用' : '此用户的所有项目可用'}</p>
+    </details>}
+    <p className="astron-sh-scope-help">{scope === 'project' ? '仅当前项目可用' : '当前用户的所有项目可用'}</p>
     {targets.isError && <p role="alert">无法读取安装位置。<Button size="sm" onClick={() => { void targets.refetch(); }}>重试</Button></p>}
     {local.isPending || (!local.data && local.isFetching) ? <p role="status">正在读取安装状态…</p>
       : !isInventoryScopeVerified(local.data, scope) || local.isError ? <p role="alert">安装状态暂不可用。<Button size="sm" onClick={() => { void local.refetch(); }}>重试</Button></p>
@@ -156,7 +160,7 @@ class StaleTargetError extends Error {}
 export function preferredInstallationScope(inventory: InstalledSkillList, detail: Pick<SkillDetail, 'namespace' | 'slug'>, available: readonly ('user' | 'project')[]): 'user' | 'project' | undefined {
   const records = inventory.items.filter(item => item.namespace === detail.namespace && item.slug === detail.slug);
   return (['project', 'user'] as const).find(scope => records.some(item => item.scope === scope))
-    ?? (['project', 'user'] as const).find(scope => available.includes(scope));
+    ?? (available.includes('user') ? 'user' : undefined);
 }
 
 export function selectedVersionUpdateMessage(update: InstalledUpdateCheck): string {

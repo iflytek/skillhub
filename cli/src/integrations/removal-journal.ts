@@ -39,7 +39,7 @@ export function applyRemovalEvent(record: OperationRecord, event: RemovalEvent):
     if (record.removal || operation.status.phase !== 'revalidating'
       || !isDeepStrictEqual(operation.targetPaths, [value.target.path])
       || !sameInstalledSkillSource(item, { registry: operation.context.sourceIdentity, namespace: operation.namespace, slug: operation.slug })
-      || item.version !== operation.version || !item.fingerprint || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(item.slug)
+      || targets[0]?.version !== operation.version || !targets[0]?.fingerprint || !/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(item.slug)
       || join(value.target.root, item.slug) !== value.target.path
       || targets.length !== 1 || targets[0]!.agent !== 'dsh' || targets[0]!.rootDir !== value.target.root
       || !isDeepStrictEqual(targetInstalledBy(item, targets[0]!), ['direct'])) fail()
@@ -61,7 +61,7 @@ export function applyRemovalEvent(record: OperationRecord, event: RemovalEvent):
       const before = event.commit.before
       const expected = structuredClone(before)
       const matches = expected.items.filter(item => sameInstalledSkillSource(item, state.intent.inventoryItem))
-      if (!isDeepStrictEqual(matches, [state.intent.inventoryItem])) fail()
+      if (!isDeepStrictEqual(matches.map(item => ({ ...item, targets: item.targets.filter(target => target.installDir === state.intent.target.path) })), [{ ...state.intent.inventoryItem, targets: state.intent.inventoryItem.targets.filter(target => target.installDir === state.intent.target.path) }])) fail()
       const item = matches[0]!
       item.targets = item.targets.filter(target => target.installDir !== state.intent.target.path)
       if (!item.targets.length) expected.items = expected.items.filter(entry => entry !== item)

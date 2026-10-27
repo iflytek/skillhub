@@ -33,6 +33,31 @@ public class SkillSuiteReferenceQueryRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /** Page-bounded existence projection; shares the detail projection's visibility policy. */
+    @Transactional(readOnly = true)
+    public Set<Long> findSkillIdsWithVisibleMemberships(
+            List<Long> skillIds,
+            String userId,
+            Map<Long, NamespaceRole> namespaceRoles,
+            Set<String> platformRoles
+    ) {
+        if (skillIds.isEmpty()) {
+            return Set.of();
+        }
+        MapSqlParameterSource parameters = viewerParameters(null, userId, namespaceRoles, platformRoles)
+                .addValue("skillIds", skillIds);
+        return Set.copyOf(jdbcTemplate.queryForList("""
+                SELECT DISTINCT current_member.skill_id
+                FROM skill_suite suite
+                JOIN namespace suite_namespace ON suite_namespace.id = suite.namespace_id
+                JOIN skill_suite_version version ON version.id = suite.latest_version_id
+                JOIN skill_suite_version_member current_member
+                  ON current_member.suite_version_id = version.id
+                WHERE current_member.skill_id IN (:skillIds)
+                  AND %s
+                """.formatted(visibleSuitePredicate()), parameters, Long.class));
+    }
+
     /** Legacy entry-only projection retained for older clients. */
     @Transactional(readOnly = true)
     public List<SkillSuiteReferenceResponse> findVisibleEntryReferences(

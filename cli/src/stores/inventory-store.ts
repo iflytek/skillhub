@@ -1,16 +1,20 @@
+import { createHash } from 'node:crypto'
+import { z } from 'zod'
 import { isDeepStrictEqual } from 'node:util'
-import { readFile, rename, rm, writeFile } from 'node:fs/promises'
-import { dirname } from 'node:path'
+import { lstat, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { lock } from 'proper-lockfile'
 import { acquireAcquisitionGate } from '../services/skill-target-lock'
-import { joinPath, userStateDir, ensureDir } from '../platform/paths'
+import { canonicalizeExistingPath, pathsOverlap, joinPath, userStateDir, ensureDir } from '../platform/paths'
 
 export interface InventoryTarget {
   agent: string
   rootDir: string
   installDir: string
   installedAt: string
-  /** Sources that own this exact target. Missing values inherit the legacy item-level sources. */
+  version: string
+  fingerprint?: string
+  /** Sources owning this position; legacy inheritance is expanded by parseInventory. */
   installedBy?: string[]
 }
 
@@ -18,10 +22,6 @@ export interface InventoryItem {
   registry: string
   namespace: string
   slug: string
-  version: string
-  fingerprint?: string
-  /** Missing on legacy records and therefore interpreted as a direct install. */
-  installedBy?: string[]
   targets: InventoryTarget[]
 }
 
@@ -48,11 +48,12 @@ export interface Inventory {
 }
 
 export function installedBy(item: InventoryItem): string[] {
-  return item.installedBy ?? ['direct']
+  return [...new Set(item.targets.flatMap(target => target.installedBy ?? ['direct']))]
 }
 
 export function targetInstalledBy(item: InventoryItem, target: InventoryTarget): string[] {
-  return target.installedBy ?? installedBy(item)
+  void item
+  return target.installedBy ?? ['direct']
 }
 
 function addDirectSource(item: InventoryItem, target: InventoryTarget): InventoryTarget {
@@ -62,25 +63,63 @@ function addDirectSource(item: InventoryItem, target: InventoryTarget): Inventor
   }
 }
 
-function refreshItemSources(item: InventoryItem): void {
-  item.installedBy = Array.from(new Set(item.targets.flatMap(target => targetInstalledBy(item, target))))
-}
-
 export function installedSuites(inventory: Inventory): InventorySuite[] {
   return inventory.suites ?? []
-}
-
-export class InventoryVersionConflictError extends Error {
-  constructor(readonly retainedTargets: InventoryTarget[]) {
-    super('partial-target install would create inconsistent versions')
-    this.name = 'InventoryVersionConflictError'
-  }
 }
 
 export class InventoryCommitUnknownError extends Error {
   constructor(cause: unknown) {
     super('inventory commit outcome could not be verified', { cause })
     this.name = 'InventoryCommitUnknownError'
+  }
+}
+
+const text = z.string().min(1)
+const targetShape = { agent: text, rootDir: text, installDir: text, installedAt: text, installedBy: z.array(text).optional() }
+const identity = { registry: text, namespace: text, slug: text }
+const suiteSchema = z.object({ ...identity, version: text, fingerprint: text, members: z.array(z.object({
+  namespace: text, slug: text, version: text, fingerprint: text, installDirs: z.array(text)
+}).strict()) }).strict()
+export const inventoryTargetSchema = z.object({ ...targetShape, version: text, fingerprint: text.optional() }).strict()
+export const inventoryRecordSchema = z.object({ ...identity, targets: z.array(inventoryTargetSchema) }).strict()
+export const inventoryMemorySchema = z.object({ items: z.array(inventoryRecordSchema), suites: z.array(suiteSchema).optional() }).strict()
+export const legacyInventorySchema = z.object({ items: z.array(z.object({ ...identity, version: text,
+  fingerprint: text.optional(), installedBy: z.array(text).optional(), targets: z.array(z.object(targetShape).strict()) }).strict()),
+  suites: z.array(suiteSchema).optional() }).strict()
+const inventoryDiskSchema = z.object({ schemaVersion: z.literal(2), records: z.array(inventoryRecordSchema),
+  suites: z.array(suiteSchema).optional() }).strict()
+
+/** A legacy read is a projection only. Missing integrity evidence is never synthesized. */
+export function parseInventory(value: unknown): Inventory {
+  if (typeof value !== 'object' || value === null) throw new Error('Invalid inventory')
+  if ('schemaVersion' in value) {
+    const parsed = inventoryDiskSchema.parse(value)
+    return { items: parsed.records, ...(parsed.suites === undefined ? {} : { suites: parsed.suites }) } as Inventory
+  }
+  const legacy = legacyInventorySchema.parse(value)
+  return { items: legacy.items.map(item => ({ registry: item.registry, namespace: item.namespace, slug: item.slug,
+    targets: item.targets.map(target => ({ ...target, version: item.version,
+      ...(item.fingerprint === undefined ? {} : { fingerprint: item.fingerprint }),
+      installedBy: target.installedBy ?? item.installedBy ?? ['direct'] })) })),
+    ...(legacy.suites === undefined ? {} : { suites: legacy.suites }) } as Inventory
+}
+
+/** Validate ownership aliases before writing; content of unselected skills is not inspected. */
+async function validateInventoryClaims(inventory: Inventory): Promise<void> {
+  const sources = new Set<string>()
+  const paths = new Set<string>()
+  for (const item of inventory.items) {
+    const source = JSON.stringify([item.registry.replace(/\/+$/, ''), item.namespace, item.slug])
+    if (sources.has(source)) throw new Error('Duplicate inventory source identity')
+    sources.add(source)
+    for (const target of item.targets) {
+      if (!isAbsolute(target.rootDir) || !isAbsolute(target.installDir)) throw new Error('Inventory target paths must be absolute')
+      const rel = relative(resolve(target.rootDir), resolve(target.installDir))
+      if (!rel || rel === '..' || rel.startsWith('../') || rel.startsWith('..\\') || isAbsolute(rel)) throw new Error('Inventory target is outside its root')
+      const canonical = await canonicalizeExistingPath(target.installDir)
+      if ([...paths].some(path => pathsOverlap(path, canonical))) throw new Error('Ambiguous inventory target ownership')
+      paths.add(canonical)
+    }
   }
 }
 
@@ -92,16 +131,54 @@ export class InventoryStore {
   }
 
   async read(): Promise<Inventory> {
-    try { return JSON.parse(await readFile(this.path, 'utf-8')) as Inventory }
+    try { return parseInventory(JSON.parse(await readFile(this.path, 'utf-8'))) }
     catch (error) {
       if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { items: [] }
       throw error
     }
   }
 
-  async write(inventory: Inventory): Promise<void> {
+  async write(inventory: Inventory): Promise<void> { await this.writeAtomic(inventory) }
+
+  /** Call before any file mutation. Migration lock is released before target locks. */
+  async ensureWritable(): Promise<void> {
     await ensureDir(dirname(this.path))
-    await writeFile(this.path, JSON.stringify(inventory, null, 2))
+    const release = await this.acquireLock()
+    try { await this.migrateUnderLock() } finally { await release() }
+  }
+
+  async diskVersion(): Promise<1 | 2> {
+    try {
+      const value: unknown = JSON.parse(await readFile(this.path, 'utf8'))
+      parseInventory(value)
+      return typeof value === 'object' && value !== null && 'schemaVersion' in value ? 2 : 1
+    } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 2; throw error }
+  }
+
+  private async migrateUnderLock(): Promise<void> {
+    let raw: Buffer
+    try { raw = await readFile(this.path) } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return
+      throw error
+    }
+    const value: unknown = JSON.parse(raw.toString('utf8'))
+    const inventory = parseInventory(value)
+    await validateInventoryClaims(inventory)
+    if (typeof value === 'object' && value !== null && 'schemaVersion' in value) return
+    const digest = createHash('sha256').update(raw).digest('hex')
+    const backup = joinPath(dirname(this.path), `inventory.v1.${digest}.backup.json`)
+    try { await writeFile(backup, raw, { flag: 'wx', mode: 0o600 }) }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error }
+    const backupInfo = await lstat(backup)
+    if (!backupInfo.isFile() || backupInfo.isSymbolicLink()) throw new Error('Unsafe inventory migration backup')
+    if (!(await readFile(backup)).equals(raw)) throw new Error('Inventory migration backup mismatch')
+    try { await this.writeUnderLock(inventory) }
+    catch (error) {
+      try {
+        if (await this.diskVersion() === 2 && isDeepStrictEqual(await this.read(), inventory)) return
+      } catch { /* Preserve the original migration failure. */ }
+      throw error
+    }
   }
 
   async writeAtomic(inventory: Inventory): Promise<void> {
@@ -109,6 +186,7 @@ export class InventoryStore {
     let release: (() => Promise<void>) | null = null
     try {
       release = await this.acquireLock()
+      await this.migrateUnderLock()
       await this.writeUnderLock(inventory)
     } finally {
       if (release) await release().catch(() => {})
@@ -131,6 +209,7 @@ export class InventoryStore {
     let release: (() => Promise<void>) | null = null
     try {
       release = await this.acquireLock()
+      await this.migrateUnderLock()
       const inventory = await this.read()
       const before = structuredClone(inventory)
       const result = mutate(inventory)
@@ -152,12 +231,14 @@ export class InventoryStore {
   }
 
   protected async writeUnderLock(inventory: Inventory): Promise<void> {
-    const payload = JSON.stringify(inventory, null, 2)
-    JSON.parse(payload)
+    inventoryMemorySchema.parse(inventory)
+    await validateInventoryClaims(inventory)
+    const payload = JSON.stringify({ schemaVersion: 2, records: inventory.items, suites: inventory.suites }, null, 2)
+    parseInventory(JSON.parse(payload))
     const tmpPath = `${this.path}.${process.pid}.${Date.now()}.tmp`
     try {
       await writeFile(tmpPath, payload)
-      JSON.parse(await readFile(tmpPath, 'utf-8'))
+      parseInventory(JSON.parse(await readFile(tmpPath, 'utf-8')))
       await rename(tmpPath, this.path)
     } finally {
       await rm(tmpPath, { force: true }).catch(() => {})
@@ -206,29 +287,26 @@ export class InventoryStore {
     namespace: string,
     slug: string,
     version: string,
-    target: InventoryTarget,
+    target: Omit<InventoryTarget, 'version' | 'fingerprint'>,
     fingerprint?: string
   ): Promise<void> {
     await this.mutateAtomic(inventory => {
       const existing = inventory.items.find(
-        i => i.registry === registry && i.namespace === namespace && i.slug === slug
+        i => i.registry.replace(/\/+$/, '') === registry.replace(/\/+$/, '') && i.namespace === namespace && i.slug === slug
       )
-      const item: InventoryItem = existing ?? { registry, namespace, slug, version, targets: [] }
+      const item: InventoryItem = existing ?? { registry, namespace, slug, targets: [] }
       if (!existing) inventory.items.push(item)
-      item.version = version
-      if (fingerprint !== undefined) item.fingerprint = fingerprint
       const existingIdx = item.targets.findIndex(t => t.installDir === target.installDir)
-      const previous = existingIdx >= 0 ? item.targets[existingIdx]! : target
-      const next = addDirectSource(item, { ...target, installedBy: targetInstalledBy(item, previous) })
+      const previous = existingIdx >= 0 ? item.targets[existingIdx]! : { ...target, version, ...(fingerprint === undefined ? {} : { fingerprint }) }
+      const next = addDirectSource(item, { ...target, version, ...(fingerprint === undefined ? {} : { fingerprint }), installedBy: targetInstalledBy(item, previous) })
       if (existingIdx >= 0) item.targets[existingIdx] = next
       else item.targets.push(next)
-      refreshItemSources(item)
     })
   }
 
   async removeTarget(registry: string, namespace: string, slug: string, installDir: string): Promise<boolean> {
     return this.mutateAtomic(inventory => {
-      const item = inventory.items.find(i => i.registry === registry && i.namespace === namespace && i.slug === slug)
+      const item = inventory.items.find(i => i.registry.replace(/\/+$/, '') === registry.replace(/\/+$/, '') && i.namespace === namespace && i.slug === slug)
       if (!item) return false
       const idx = item.targets.findIndex(t => t.installDir === installDir)
       if (idx < 0) return false
@@ -256,7 +334,7 @@ export class InventoryStore {
     namespace: string,
     slug: string,
     version: string,
-    target: InventoryTarget,
+    target: Omit<InventoryTarget, 'version' | 'fingerprint'>,
     fingerprint?: string
   ): Promise<void> {
     await this.mutateAtomic(inventory => {
@@ -266,15 +344,12 @@ export class InventoryStore {
       inventory.items = inventory.items.filter(item => item.targets.length > 0)
 
       let item = inventory.items.find(candidate =>
-        candidate.registry === registry && candidate.namespace === namespace && candidate.slug === slug)
+        candidate.registry.replace(/\/+$/, '') === registry.replace(/\/+$/, '') && candidate.namespace === namespace && candidate.slug === slug)
       if (!item) {
-        item = { registry, namespace, slug, version, installedBy: ['direct'], targets: [] }
+        item = { registry, namespace, slug, targets: [] }
         inventory.items.push(item)
       }
-      item.version = version
-      if (fingerprint !== undefined) item.fingerprint = fingerprint
-      item.targets.push({ ...target, installedBy: ['direct'] })
-      refreshItemSources(item)
+      item.targets.push({ ...target, version, ...(fingerprint === undefined ? {} : { fingerprint }), installedBy: ['direct'] })
     })
   }
 
@@ -283,7 +358,7 @@ export class InventoryStore {
     namespace: string,
     slug: string,
     version: string,
-    targets: InventoryTarget[],
+    targets: Array<Omit<InventoryTarget, 'version' | 'fingerprint'>>,
     fingerprint?: string,
     replacedInstallDirs: string[] = [],
     beforeCommit?: (before: Inventory, after: Inventory) => Promise<void>
@@ -293,29 +368,18 @@ export class InventoryStore {
         ...targets.map(target => target.installDir),
         ...replacedInstallDirs
       ])
-      const existingItem = inventory.items.find(candidate =>
-        candidate.registry === registry && candidate.namespace === namespace && candidate.slug === slug)
-      const retainedTargets = existingItem?.targets.filter(target => !installDirs.has(target.installDir)) ?? []
-      if (existingItem && retainedTargets.length > 0 &&
-          (existingItem.version !== version || existingItem.fingerprint !== fingerprint)) {
-        throw new InventoryVersionConflictError(retainedTargets)
-      }
-
       for (const item of inventory.items) {
         item.targets = item.targets.filter(existing => !installDirs.has(existing.installDir))
       }
       inventory.items = inventory.items.filter(item => item.targets.length > 0)
 
       let item = inventory.items.find(candidate =>
-        candidate.registry === registry && candidate.namespace === namespace && candidate.slug === slug)
+        candidate.registry.replace(/\/+$/, '') === registry.replace(/\/+$/, '') && candidate.namespace === namespace && candidate.slug === slug)
       if (!item) {
-        item = { registry, namespace, slug, version, installedBy: ['direct'], targets: [] }
+        item = { registry, namespace, slug, targets: [] }
         inventory.items.push(item)
       }
-      item.version = version
-      if (fingerprint !== undefined) item.fingerprint = fingerprint
-      item.targets.push(...targets.map(target => ({ ...target, installedBy: ['direct'] })))
-      refreshItemSources(item)
+      item.targets.push(...targets.map(target => ({ ...target, version, ...(fingerprint === undefined ? {} : { fingerprint }), installedBy: ['direct'] })))
     }, beforeCommit)
   }
 }

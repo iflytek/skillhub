@@ -110,7 +110,14 @@ class SkillSearchAppServiceTest {
         when(userAccountRepository.findByIdIn(List.of("owner-1")))
                 .thenReturn(List.of(new UserAccount("owner-1", "Alice", "alice@example.com", null)));
 
+        var suiteProjection = org.mockito.Mockito.mock(SkillSuiteMembershipProjectionService.class);
+        setField(service, "suiteMembershipProjection", suiteProjection);
+        when(suiteProjection.enrich(anyList(), org.mockito.ArgumentMatchers.isNull()))
+                .thenAnswer(invocation -> invocation.<List<com.iflytek.skillhub.dto.SkillSummaryResponse>>getArgument(0)
+                        .stream().map(item -> item.withVisibleSuites(true)).toList());
         SkillSearchAppService.SearchResponse response = service.search("skill", null, "newest", 0, 1, null, null);
+        assertEquals(true, response.items().getFirst().hasVisibleSuites());
+        verify(suiteProjection, times(1)).enrich(anyList(), org.mockito.ArgumentMatchers.isNull());
 
         assertEquals(1, response.items().size());
         assertEquals("visible-skill", response.items().getFirst().slug());

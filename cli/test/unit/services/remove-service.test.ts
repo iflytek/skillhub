@@ -1,4 +1,4 @@
-import { access, mkdir, mkdtemp, symlink } from 'node:fs/promises'
+import { access, mkdir, mkdtemp, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, test } from 'bun:test'
@@ -31,15 +31,13 @@ describe('removeLocalSkill', () => {
           registry: 'https://skill.xfyun.cn',
           namespace: 'global',
           slug: 'demo',
-          version: '1.0.0',
-          targets: [{ agent: 'codex', rootDir: join(root, 'codex'), installDir: globalDir, installedAt: '2026-04-20T00:00:00Z' }]
+          targets: [{ version: '1.0.0', agent: 'codex', rootDir: join(root, 'codex'), installDir: globalDir, installedAt: '2026-04-20T00:00:00Z' }]
         },
         {
           registry: 'https://skill.xfyun.cn',
           namespace: 'team',
           slug: 'demo',
-          version: '1.0.0',
-          targets: [{ agent: 'claude-code', rootDir: join(root, 'claude'), installDir: teamDir, installedAt: '2026-04-20T00:00:00Z' }]
+          targets: [{ version: '1.0.0', agent: 'claude-code', rootDir: join(root, 'claude'), installDir: teamDir, installedAt: '2026-04-20T00:00:00Z' }]
         }
       ]
     })
@@ -67,15 +65,13 @@ describe('removeLocalSkill', () => {
           registry: 'https://skill.xfyun.cn',
           namespace: 'global',
           slug: 'demo',
-          version: '1.0.0',
-          targets: [{ agent: 'codex', rootDir: join(root, 'codex'), installDir: globalDir, installedAt: '2026-04-20T00:00:00Z' }]
+          targets: [{ version: '1.0.0', agent: 'codex', rootDir: join(root, 'codex'), installDir: globalDir, installedAt: '2026-04-20T00:00:00Z' }]
         },
         {
           registry: 'https://skill.xfyun.cn',
           namespace: 'team',
           slug: 'demo',
-          version: '1.0.0',
-          targets: [{ agent: 'claude-code', rootDir: join(root, 'claude'), installDir: teamDir, installedAt: '2026-04-20T00:00:00Z' }]
+          targets: [{ version: '1.0.0', agent: 'claude-code', rootDir: join(root, 'claude'), installDir: teamDir, installedAt: '2026-04-20T00:00:00Z' }]
         }
       ]
     })
@@ -104,8 +100,7 @@ describe('removeLocalSkill', () => {
         registry: 'https://skill.xfyun.cn',
         namespace: 'global',
         slug: 'demo',
-        version: '1.0.0',
-        targets: [{ agent: 'codex', rootDir, installDir: skillDir, installedAt: '2026-09-01T00:00:00Z' }]
+        targets: [{ version: '1.0.0', agent: 'codex', rootDir, installDir: skillDir, installedAt: '2026-09-01T00:00:00Z' }]
       }]
     })
 
@@ -142,8 +137,7 @@ describe('removeLocalSkill', () => {
         registry: 'https://skill.xfyun.cn',
         namespace: 'global',
         slug: 'demo',
-        version: '1.0.0',
-        targets: [{ agent: 'codex', rootDir: aliasRoot, installDir: aliasSkillDir, installedAt: '2026-09-01T00:00:00Z' }]
+        targets: [{ version: '1.0.0', agent: 'codex', rootDir: aliasRoot, installDir: aliasSkillDir, installedAt: '2026-09-01T00:00:00Z' }]
       }]
     })
 
@@ -172,8 +166,7 @@ describe('removeLocalSkill', () => {
         registry: 'https://skill.xfyun.cn',
         namespace: 'global',
         slug: 'demo',
-        version: '1.0.0',
-        targets: [{ agent: 'codex', rootDir, installDir: skillDir, installedAt: '2026-09-01T00:00:00Z' }]
+        targets: [{ version: '1.0.0', agent: 'codex', rootDir, installDir: skillDir, installedAt: '2026-09-01T00:00:00Z' }]
       }]
     })
 
@@ -189,20 +182,20 @@ describe('removeLocalSkill', () => {
     const home = await mkdtemp(join(tmpdir(), 'skillhub-remove-traversal-'))
 
     const store = new InventoryStore(home)
-    await store.write({
-      items: [
+    await mkdir(join(home, '.skillhub'), { recursive: true })
+    await writeFile(store.path, JSON.stringify({
+      schemaVersion: 2, records: [
         {
           registry: 'https://skill.xfyun.cn',
           namespace: 'global',
           slug: 'evil',
-          version: '1.0.0',
-          targets: [{ agent: 'codex', rootDir: '/safe/root', installDir: '/etc/passwd', installedAt: '2026-04-20T00:00:00Z' }]
+          targets: [{ version: '1.0.0', agent: 'codex', rootDir: '/safe/root', installDir: '/etc/passwd', installedAt: '2026-04-20T00:00:00Z' }]
         }
       ]
-    })
+    }))
 
     await expect(
       removeLocalSkill({ registry: 'https://skill.xfyun.cn', slug: 'evil', home })
-    ).rejects.toThrow('unsafe remove path')
+    ).rejects.toThrow('Inventory target is outside its root')
   })
 })

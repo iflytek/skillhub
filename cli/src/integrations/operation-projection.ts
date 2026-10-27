@@ -8,7 +8,9 @@ export function projectOperation(record: OperationRecord): NativeOperation {
     item.registry === operation.context.sourceIdentity && item.namespace === operation.namespace && item.slug === operation.slug)
   // A same-coordinate installation in another scope is not this operation's prior target.
   const beforeVersion = operation.targetPaths?.length && operation.targetPaths.every(path =>
-    before?.targets.some(target => target.installDir === path)) ? before?.version ?? null : null
+    before?.targets.some(target => target.installDir === path))
+    && new Set(before?.targets.filter(target => operation.targetPaths!.includes(target.installDir)).map(target => target.version)).size === 1
+    ? before?.targets.find(target => operation.targetPaths!.includes(target.installDir))?.version ?? null : null
   const completed = operation.status.phase === 'completed'
   const files = operation.status.files
   const outcome = completed && ['installed', 'already-installed', 'upgraded', 'removed', 'stale-record-removed'].includes(files)

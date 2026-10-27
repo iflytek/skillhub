@@ -28,10 +28,11 @@ export class ApiError extends Error {
 
 function isAccountDisabledError(error: ApiError): boolean {
   const accountDisabledMessages = [
-    i18n.t('apiError.auth.accountDisabled'),
-    i18n.getFixedT('en')('apiError.auth.accountDisabled'),
-    i18n.getFixedT('ru')('apiError.auth.accountDisabled'),
-    i18n.getFixedT('zh')('apiError.auth.accountDisabled'),
+    i18n.t('error.auth.local.accountDisabled'),
+    i18n.getFixedT('en')('error.auth.local.accountDisabled'),
+    i18n.getFixedT('ko')('error.auth.local.accountDisabled'),
+    i18n.getFixedT('ru')('error.auth.local.accountDisabled'),
+    i18n.getFixedT('zh')('error.auth.local.accountDisabled'),
   ]
   const normalizedServerMessage = (error.serverMessage ?? '').toLowerCase()
   const normalizedMessage = error.message.toLowerCase()

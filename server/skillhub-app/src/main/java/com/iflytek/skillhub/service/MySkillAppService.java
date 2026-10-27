@@ -46,6 +46,7 @@ public class MySkillAppService {
     private final HiddenSkillQueryRepository hiddenSkillQueryRepository;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
     private final NamespaceRepository namespaceRepository;
+    private final SkillSuiteMembershipProjectionService suiteMembershipProjection;
 
     public MySkillAppService(
             SkillOwnerAccessPolicy ownerAccess,
@@ -57,6 +58,24 @@ public class MySkillAppService {
             HiddenSkillQueryRepository hiddenSkillQueryRepository,
             SkillLifecycleProjectionService skillLifecycleProjectionService,
             NamespaceRepository namespaceRepository) {
+        this(ownerAccess, skillRepository, skillVersionRepository, starredSkillQueryRepository,
+                skillSubscriptionRepository, mySkillQueryRepository, hiddenSkillQueryRepository,
+                skillLifecycleProjectionService, namespaceRepository, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public MySkillAppService(
+            SkillOwnerAccessPolicy ownerAccess,
+            SkillRepository skillRepository,
+            SkillVersionRepository skillVersionRepository,
+            StarredSkillQueryRepository starredSkillQueryRepository,
+            SkillSubscriptionRepository skillSubscriptionRepository,
+            MySkillQueryRepository mySkillQueryRepository,
+            HiddenSkillQueryRepository hiddenSkillQueryRepository,
+            SkillLifecycleProjectionService skillLifecycleProjectionService,
+            NamespaceRepository namespaceRepository,
+            SkillSuiteMembershipProjectionService suiteMembershipProjection) {
+        this.suiteMembershipProjection = suiteMembershipProjection;
         this.ownerAccess = ownerAccess;
         this.skillRepository = skillRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -121,7 +140,11 @@ public class MySkillAppService {
                         state == null ? null : state.relatedSlug(), readOnly));
             }).toList();
         }
-        return new PageResponse<>(items, skillPage.getTotalElements(), skillPage.getNumber(), skillPage.getSize());
+        return new PageResponse<>(withSuiteMemberships(items, userId), skillPage.getTotalElements(), skillPage.getNumber(), skillPage.getSize());
+    }
+
+    private List<SkillSummaryResponse> withSuiteMemberships(List<SkillSummaryResponse> items, String userId) {
+        return suiteMembershipProjection == null ? items : suiteMembershipProjection.enrich(items, userId);
     }
 
     private Page<Skill> listHiddenSkills(int page,
@@ -143,7 +166,7 @@ public class MySkillAppService {
         Page<Skill> skills = starredSkillQueryRepository.findAccessible(
                 userId, namespaceRoles, platformRoles, PageRequest.of(page, size));
         List<SkillSummaryResponse> items = mySkillQueryRepository.getSkillSummaries(skills.getContent(), userId);
-        return new PageResponse<>(items, skills.getTotalElements(), skills.getNumber(), skills.getSize());
+        return new PageResponse<>(withSuiteMemberships(items, userId), skills.getTotalElements(), skills.getNumber(), skills.getSize());
     }
 
     public PageResponse<SkillSummaryResponse> listMySubscriptions(String userId, int page, int size) {
@@ -167,7 +190,7 @@ public class MySkillAppService {
                 .toList();
         List<SkillSummaryResponse> items = mySkillQueryRepository.getSkillSummaries(orderedSkills, userId);
 
-        return new PageResponse<>(items, subPage.getTotalElements(), subPage.getNumber(), subPage.getSize());
+        return new PageResponse<>(withSuiteMemberships(items, userId), subPage.getTotalElements(), subPage.getNumber(), subPage.getSize());
     }
 
     private Page<Skill> filterSkills(String userId,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import en from './locales/en.json'
+import ko from './locales/ko.json'
 import ru from './locales/ru.json'
 import zh from './locales/zh.json'
 
@@ -11,5 +12,7 @@ describe('suite locales', () => {
     expect(en.nav.suites).toBeTruthy()
     expect(ru.nav.suites).toBeTruthy()
     expect(zh.nav.suites).toBeTruthy()
+    expect(Object.keys(ko.suite).sort()).toEqual(expected)
+    expect(ko.nav.suites).toBeTruthy()
   })
 })

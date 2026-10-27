@@ -1,6 +1,6 @@
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { ArrowRight, Eye, EyeOff, LockKeyhole, UserRound } from 'lucide-react'
 import { getSessionBootstrapRuntimeConfig } from '@/api/client'
 import { AuthShell } from '@/features/auth/auth-shell'
@@ -20,7 +20,7 @@ import { resolveAuthReturnTo } from '@/shared/lib/auth-route'
  * preserving the route the user originally intended to visit.
  */
 export function LoginPage() {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const search = useSearch({ from: '/login' })
   const loginMutation = usePasswordLogin()
@@ -30,13 +30,12 @@ export function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loginMode, setLoginMode] = useState<'personal' | 'organization'>('personal')
   const [fieldErrors, setFieldErrors] = useState<{ username?: string, password?: string }>({})
-  const isChinese = i18n.resolvedLanguage?.split('-')[0] === 'zh'
   const returnTo = resolveAuthReturnTo(search.returnTo)
   const { data: authMethods, isLoading: authMethodsLoading } = useAuthMethods(returnTo)
   const { data: localCapabilities, isError: localCapabilitiesError } = useLocalAuthCapabilities()
   const passwordEnabled = localCapabilities?.passwordLoginEnabled === true
   const effectiveLoginMode = passwordEnabled ? loginMode : 'organization'
-  const disabledMessage = search.reason === 'accountDisabled' ? t('apiError.auth.accountDisabled') : null
+  const disabledMessage = search.reason === 'accountDisabled' ? t('error.auth.local.accountDisabled') : null
   const bootstrapMethod = authMethods?.find((method) => method.methodType === 'SESSION_BOOTSTRAP')
   const hasOrganizationMethod = bootstrapConfig.enabled
   const hasExternalMethods = authMethods?.some((method) => method.methodType === 'OAUTH_REDIRECT')
@@ -203,17 +202,14 @@ export function LoginPage() {
         </p> : null}
 
         <p className="mt-auto text-center text-xs text-muted-foreground">
-          {t('login.agreementPrefix')}
-          {isChinese ? null : ' '}
-          <Link data-analytics-id="navigation.terms.open" to="/terms" className="text-primary hover:underline">
-            {t('login.terms')}
-          </Link>
-          {isChinese ? null : ' '}
-          {t('login.and')}
-          {isChinese ? null : ' '}
-          <Link data-analytics-id="navigation.privacy.open" to="/privacy" className="text-primary hover:underline">
-            {t('login.privacy')}
-          </Link>
+          <Trans
+            t={t}
+            i18nKey="login.agreement"
+            components={{
+              terms: <Link data-analytics-id="navigation.terms.open" to="/terms" className="text-primary hover:underline" />,
+              privacy: <Link data-analytics-id="navigation.privacy.open" to="/privacy" className="text-primary hover:underline" />,
+            }}
+          />
         </p>
       </div>
     </AuthShell>

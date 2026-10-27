@@ -1,4 +1,5 @@
 import { lazy, Suspense, type ComponentType } from 'react'
+import { useTranslation } from 'react-i18next'
 import { createRouter, createRoute, createRootRoute, redirect } from '@tanstack/react-router'
 import { Layout } from './layout'
 import { getCurrentUser, type GithubSyncRepositoryQuery, type GithubSyncRunQuery } from '@/api/client'
@@ -23,9 +24,10 @@ captureInvitationFragment()
 export { ORIGINAL_URL_SEARCH }
 
 function RouteLoadingFallback() {
+  const { t } = useTranslation()
   return (
     <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
-      Loading...
+      {t('common.loading')}
     </div>
   )
 }

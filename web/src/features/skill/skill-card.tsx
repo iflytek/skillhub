@@ -8,7 +8,7 @@ import { SkillAvatar } from './skill-avatar'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { formatRelativeTime } from '@/shared/lib/format-relative-time'
-import { Bookmark, ShieldCheck, User, Clock } from 'lucide-react'
+import { Bookmark, Boxes, ShieldCheck, User, Clock } from 'lucide-react'
 
 interface SkillCardProps {
   analyticsId?: string
@@ -63,13 +63,22 @@ export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId
             >
               {skill.displayName}
             </h3>
-            <div className="mt-2 grid justify-items-start">
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
               <NamespaceBadge
                 className="block max-w-full truncate"
                 type="TEAM"
                 name={`@${skill.namespace}`}
                 title={`@${skill.namespace}`}
               />
+              {skill.hasVisibleSuites === true ? (
+                <span
+                  className="inline-flex max-w-full shrink-0 items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-xs font-medium text-secondary-foreground"
+                  title={t('skillCard.relatedSuitesHint')}
+                >
+                  <Boxes aria-hidden="true" className="h-3 w-3 shrink-0" />
+                  {t('skillCard.relatedSuites')}
+                </span>
+              ) : null}
             </div>
           </div>
         </div>

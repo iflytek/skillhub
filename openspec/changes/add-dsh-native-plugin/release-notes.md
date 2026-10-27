@@ -1,8 +1,32 @@
 # SkillHub DSH 原生插件发布说明
 
+
+## 0.5.0 技能可用性诊断
+
+- 技能卡片“更多 → 检查可用性”与对话工具 `astron_skillhub_check_availability` 提供只读诊断，区分文件完整性、同名覆盖、宿主未知及用户/模型调用策略（[#1023](https://github.com/iflytek/skillhub/pull/1023)）。
+- 按名查询不认领安装来源；精确引用绑定当前会话和安装位置。检查不修改文件、安装记录或草稿。
+- 保留 DSH 双 RC、Node 与 Cordis 兼容范围；不修改库存格式、默认 Registry 或 CLI 版本。既有 CLI 0.2.0 可继续共同管理库存。
+- 功能候选已完成540项本地测试、双RC宿主验收、浏览器组件及2轮真实模型对话；正式发布包仍单独检查完整性和安装结果。
+
 ## 版本与交付状态
 
-`@astron-team/skillhub-dsh@0.3.1` 已发布，独立标签为 `dsh-v0.3.1`。[发布准备 PR #995](https://github.com/iflytek/skillhub/pull/995) 已合并，[专用发布工作流](https://github.com/iflytek/skillhub/actions/runs/39556075587) 成功；[公开 npm 包](https://www.npmjs.com/package/@astron-team/skillhub-dsh/v/0.3.1) 与工作流产物逐字节一致，`latest` 指向 `0.3.1`。两版 Linux 的严格安装、原生探针及浏览器操作复验通过，测试工件与公开包字节一致，结果见 [验证摘要](verification.md)。历史已发布版本保持不变。
+当前准备版本为 `0.5.0`；上一公开版本为 `0.4.0`。发布状态以对应 npm 版本和发布工作流为准。
+
+`@astron-team/skillhub-dsh@0.3.1` 已发布，独立标签为 `dsh-v0.3.1`。[发布准备 PR #995](https://github.com/iflytek/skillhub/pull/995) 已合并，[专用发布工作流](https://github.com/iflytek/skillhub/actions/runs/39556075587) 成功；[公开 npm 包](https://www.npmjs.com/package/@astron-team/skillhub-dsh/v/0.3.1) 与工作流产物逐字节一致，发布时 `latest` 指向 `0.3.1`。两版 Linux 的严格安装、原生探针及浏览器操作复验通过，测试工件与公开包字节一致，结果见 [验证摘要](verification.md)。历史已发布版本保持不变。
+
+## 0.4.0 技能使用与对话管理
+
+`@astron-team/skillhub-dsh@0.4.0` 已发布，独立标签为 `dsh-v0.4.0`；配套共享库存的 CLI 为 `@astron-team/skillhub@0.2.0`。该版本的公开包验收独立于后续版本。
+
+- **使用技能与案例**：[PR #1007](https://github.com/iflytek/skillhub/pull/1007) 支持作者随包提供 `.skillhub/examples.json`，按语言选择案例；技能中心进入同工作区新对话，对话卡保留当前会话，在原生输入框上方选择案例并填入草稿，保留原文字、引用和附件，不自动发送。案例与技能版本共同安装和校验，无效声明按普通文件保留。
+- **对话管理**：[PR #1018](https://github.com/iflytek/skillhub/pull/1018) 支持当前来源的已安装查询、最新或指定较新版本检查、升级、卸载及原操作查询；多份安装明确选择位置，写入必须由真人确认。历史引用、本地修改、共享归属和同名覆盖继续阻止不安全动作。
+- **按位置维护版本**：同一技能的用户和项目副本可保持不同版本，更新或卸载不影响未选位置。库存 v1 只读不迁移，首次写入 v2 前保存字节核对备份；同机共享库存的 CLI 必须先升级到 `0.2.0`，旧 CLI 混写不受支持。回退不能只恢复旧库存而忽略已更新的文件和操作记录。
+- **紧凑交互与状态同步**：多技能两列卡片、组内位置选择、精简结果与独立错误行；通过官方运行时上下文提供当前安装快照，避免按钮操作后模型只引用旧历史。宿主禁用该上下文时仍须工具重查，快照不是写入授权。
+- **兼容与来源**：保留 `0.3.1` 的两版 DSH RC、Node 和 Cordis 约束，默认 Registry 仍为 `https://skill.xfyun.cn`。不新增登录、服务端文件操作或 SaaS 部署。
+
+功能分支完成 CLI/插件自动检查、双 RC Host/浏览器及指定模型真实对话验收；最终版本候选、发布工作流和公开 npm 包检查分别记录，不用历史结果代替公开包验证。优先发布配套 CLI，确认公开安装可用后再发布插件；具体顺序与回退限制见 [发布指南](release-guide.md)。
+
+完整变更：[DSH 0.3.1 → 0.4.0](https://github.com/iflytek/skillhub/compare/dsh-v0.3.1...dsh-v0.4.0)（新标签发布后可用）。
 
 ## 0.3.1 DSH 双 RC 兼容
 

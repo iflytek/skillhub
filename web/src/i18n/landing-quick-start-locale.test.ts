@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import skillGuideTemplate from '../docs/skill.md.template?raw'
 import en from './locales/en.json'
+import ko from './locales/ko.json'
 import ru from './locales/ru.json'
 import zh from './locales/zh.json'
 
@@ -25,6 +26,7 @@ describe('landing quick start locales', () => {
       zh.skillDetail.installForAgent.prompt,
       en.skillDetail.installForAgent.prompt,
       ru.skillDetail.installForAgent.prompt,
+      ko.skillDetail.installForAgent.prompt,
     ]) {
       expect(prompt).toContain('{{guideUrl}}')
       expect(prompt).toContain('{{skill}}')

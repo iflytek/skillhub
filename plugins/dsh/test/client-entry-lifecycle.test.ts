@@ -26,7 +26,7 @@ test('layout loss removes only catalog entries and preserves conversation regist
   const flush = async () => { await new Promise(resolve => setTimeout(resolve, 25)); };
   try {
     await plugin; await flush();
-    const tools = ['conversation.input.dock/skillhub-case-choices', 'conversation.input.left/skillhub-use-focus', 'tool.call.toolview/astron_skillhub_install', 'tool.call.toolview/astron_skillhub_search'];
+    const tools = ['conversation.input.dock/skillhub-case-choices', 'conversation.input.left/skillhub-use-focus', 'tool.call.toolview/astron_skillhub_check_availability', 'tool.call.toolview/astron_skillhub_check_update', 'tool.call.toolview/astron_skillhub_install', 'tool.call.toolview/astron_skillhub_list_installed', 'tool.call.toolview/astron_skillhub_operation', 'tool.call.toolview/astron_skillhub_search', 'tool.call.toolview/astron_skillhub_uninstall', 'tool.call.toolview/astron_skillhub_upgrade'];
     expect([...entries.keys()].sort()).toEqual(tools);
     const original = tools.map(key => entries.get(key));
     for (let cycle = 0; cycle < 2; cycle++) {

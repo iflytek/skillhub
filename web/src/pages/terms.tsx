@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
+import koLegal from '@/i18n/locales/ko-legal.json'
 import { LegalDocument } from '@/shared/components/legal-document'
 
 const termsDocuments = {
+  ko: koLegal.terms,
   zh: {
     eyebrow: '法律与政策',
     title: '服务条款',
@@ -168,7 +170,8 @@ const termsDocuments = {
 
 export function TermsOfServicePage() {
   const { i18n } = useTranslation()
-  const language = i18n.resolvedLanguage?.split('-')[0] === 'zh' ? 'zh' : 'en'
+  const primaryLanguage = i18n.resolvedLanguage?.split('-')[0]
+  const language = primaryLanguage === 'zh' || primaryLanguage === 'ko' ? primaryLanguage : 'en'
 
   return <LegalDocument {...termsDocuments[language]} />
 }

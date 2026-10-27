@@ -107,7 +107,7 @@ with the Skill's source and the problem it solves, or submit a PR by following t
   expand.
 - **Pluggable Storage** — Local filesystem for development, S3 /
   MinIO for production. Swap via config.
-- **Internationalization** — Multi-language support with i18next.
+- **Internationalization** — Multi-language support with i18next: English, Simplified Chinese, Russian, and Korean.
 
 ## Quick Start
 

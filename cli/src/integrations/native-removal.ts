@@ -17,12 +17,15 @@ export async function executeNativeRemoval(operations: OperationStore, inventory
   input: NativeRemovalExecution): Promise<NativeRecoveryResult> {
   const baseline = structuredClone(input.baseline)
   const { target, inventoryItem: item } = baseline
+  const releaseTarget = item.targets.find(entry => entry.installDir === target.path)
+  if (!releaseTarget) throw new Error('Removal target missing')
+  await inventory.ensureWritable()
   let record = await operations.get(input.operationId, input.ownerId)
   if (!record || record.operation.status.phase !== 'accepted' || record.operation.kind !== baseline.kind
     || !isDeepStrictEqual(record.operation.targetPaths, [target.path])
     || !sameInstalledSkillSource(item, { registry: record.operation.context.sourceIdentity,
       namespace: record.operation.namespace, slug: record.operation.slug })
-    || item.version !== record.operation.version) throw new Error('Removal is not owned and accepted')
+    || releaseTarget.version !== record.operation.version) throw new Error('Removal is not owned and accepted')
   record = await operations.update(record.operationId, record.ownerId, record.revision, { ...record.operation.status, phase: 'revalidating' })
   const authorize = (paths: readonly string[], phase: 'staging' | 'replace' | 'cleanup' | 'rollback') =>
     input.authorize(paths, phase, input.operationId)
@@ -35,7 +38,7 @@ export async function executeNativeRemoval(operations: OperationStore, inventory
     await authorize([target.root, target.path], 'staging')
     release = await acquireSkillTargetLock(target.root, item.slug)
     await operations.assertTargetsAvailable([target.path], input)
-    if (!isDeepStrictEqual(await inspectRemovalBaseline(inventory, item, target), baseline)) throw new Error('Removal baseline changed')
+    if (!isDeepStrictEqual(await inspectRemovalBaseline(inventory, { ...item, version: releaseTarget.version }, target), baseline)) throw new Error('Removal baseline changed')
     const quarantine = baseline.kind === 'uninstall'
       ? join(dirname(target.root), '.skillhub-trash', record.operationId) : null
     const verifyRoots = async () => {
@@ -49,7 +52,7 @@ export async function executeNativeRemoval(operations: OperationStore, inventory
       const metadata = await readInstalledSkillMetadata(quarantine)
       const snapshot = await snapshotSkillDirectory(quarantine)
       if (metadata.status !== 'valid' || !isDeepStrictEqual(metadata.metadata, baseline.target.metadata)
-        || snapshot.fingerprint !== item.fingerprint || !isDeepStrictEqual(snapshot.files, baseline.target.files)) {
+        || snapshot.fingerprint !== releaseTarget.fingerprint || !isDeepStrictEqual(snapshot.files, baseline.target.files)) {
         throw new Error('Isolated removal files changed')
       }
     }
@@ -73,7 +76,7 @@ export async function executeNativeRemoval(operations: OperationStore, inventory
     if (quarantine) {
       await authorize([target.path, quarantine], 'replace')
       await verifyRoots()
-      if (!isDeepStrictEqual(await inspectRemovalBaseline(inventory, item, target), baseline)) throw new Error('Removal baseline changed')
+      if (!isDeepStrictEqual(await inspectRemovalBaseline(inventory, { ...item, version: releaseTarget.version }, target), baseline)) throw new Error('Removal baseline changed')
       await assertMissing(quarantine)
       await rename(target.path, quarantine)
       await append({ type: 'isolated' })
