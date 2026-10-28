@@ -123,8 +123,10 @@ export async function inspectDisabledSkillAvailability(input: {
 }): Promise<SkillAvailability> {
   const result: SkillAvailability = { checkedAt: new Date().toISOString(), association: 'managed-reference',
     installationState: 'disabled', integrity: 'unknown', discovery: 'unknown', reason: 'installation-disabled' };
-  const deadline = AbortSignal.timeout(2000);
-  const signal = AbortSignal.any([input.signal, deadline]);
+  // A referenced timer also bounds readers that never settle on Windows Bun.
+  const deadline = new AbortController();
+  const timer = setTimeout(() => deadline.abort(), 2000);
+  const signal = AbortSignal.any([input.signal, deadline.signal]);
   const valid = () => { input.signal.throwIfAborted(); input.valid(); };
   let abort: (() => void) | undefined;
   try {
@@ -170,5 +172,5 @@ export async function inspectDisabledSkillAvailability(input: {
       if (signal.aborted) abort();
     })]);
   } catch { valid(); return { ...result, discovery: 'unknown', reason: 'read-failed' }; }
-  finally { if (abort) signal.removeEventListener('abort', abort); }
+  finally { clearTimeout(timer); if (abort) signal.removeEventListener('abort', abort); }
 }

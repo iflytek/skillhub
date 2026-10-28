@@ -1,16 +1,17 @@
+import { join } from 'node:path';
 import { expect, test } from 'bun:test';
 import { inspectDisabledSkillAvailability, installationEntryName } from '../src/host/skill-availability.js';
 import type { RemovalBaseline } from '../src/host/generated/native-contract.js';
 import type { LoadedSkill } from '../src/host/skill-discovery.js';
 
 function fixture() {
-  const directory = '/skills/market-slug';
+  const directory = join('/skills', 'market-slug');
   const baseline: RemovalBaseline = { status: 'ready', kind: 'uninstall', inventoryItem: {
     registry: 'https://registry.example', namespace: 'demo', slug: 'market-slug', targets: [{ agent: 'dsh', rootDir: '/skills',
       installDir: directory, installedAt: 'now', version: '1', fingerprint: 'fp', installationState: 'disabled' }] },
     target: { path: directory, root: '/skills', scope: 'project', files: {}, metadata: { registry: 'https://registry.example', namespace: 'demo', slug: 'market-slug', version: '1' } } };
   const winner: LoadedSkill = { name: 'actual-name', description: 'fixture', content: 'content', source: 'user-dsh', provider: 'filesystem',
-    invocation: { userInvocable: true, modelInvocable: true }, path: '/user/skills/copy/SKILL.md', resourceBase: { kind: 'directory', path: '/user/skills/copy' } };
+    invocation: { userInvocable: true, modelInvocable: true }, path: join('/user/skills/copy', 'SKILL.md'), resourceBase: { kind: 'directory', path: join('/user/skills', 'copy') } };
   const input = { directory, fingerprint: 'fp', signal: new AbortController().signal, valid() {},
     baseline: async () => baseline, entry: async () => '---\nname: actual-name\ndescription: fixture\n---\nbody',
     reader: { snapshot: async () => ({ complete: true, skills: [{ name: 'actual-name' }] }), get: async (name: string): Promise<LoadedSkill | undefined> => {
@@ -28,7 +29,7 @@ test('disabled diagnosis observes verified same-name fallback without authorizin
 
 test('watch-off cached selected winner remains observed separately from committed disabled state', async () => {
   const { input, winner } = fixture();
-  input.reader.get = async () => ({ ...winner, path: '/skills/market-slug/SKILL.md', resourceBase: { kind: 'directory', path: '/skills/market-slug' } });
+  input.reader.get = async () => ({ ...winner, path: join(input.directory, 'SKILL.md'), resourceBase: { kind: 'directory', path: input.directory } });
   expect(await inspectDisabledSkillAvailability(input)).toMatchObject({ installationState: 'disabled', discovery: 'winner', reason: 'installation-disabled' });
 });
 
@@ -48,13 +49,31 @@ test('routing-name extraction refuses ambiguous YAML and never substitutes the p
   }
 });
 
-test('a changed winner is unknown and an unresponsive reader is bounded', async () => {
+test('a changed winner is unknown', async () => {
   const { input, winner } = fixture();
   let calls = 0;
   input.reader.get = async () => ++calls === 1 ? winner : undefined;
   expect(await inspectDisabledSkillAvailability(input)).toMatchObject({ discovery: 'unknown', reason: 'observation-changed' });
+});
+
+test('an unresponsive reader is bounded', async () => {
+  const { input } = fixture();
   input.reader.snapshot = () => new Promise(() => {});
   const started = performance.now();
   expect(await inspectDisabledSkillAvailability(input)).toMatchObject({ installationState: 'disabled', discovery: 'unknown', reason: 'read-failed' });
   expect(performance.now() - started).toBeLessThan(3500);
 }, 5000);
+
+test('caller cancellation is propagated while a disabled reader is unresponsive', async () => {
+  const { input } = fixture();
+  const controller = new AbortController();
+  input.signal = controller.signal;
+  let started!: () => void;
+  const reading = new Promise<void>(resolve => { started = resolve; });
+  input.reader.snapshot = () => { started(); return new Promise(() => {}); };
+  const inspection = inspectDisabledSkillAvailability(input);
+  await reading;
+  const reason = new Error('caller cancelled');
+  controller.abort(reason);
+  await expect(inspection).rejects.toBe(reason);
+});
