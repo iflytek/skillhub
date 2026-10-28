@@ -14,6 +14,9 @@ import io.opentelemetry.sdk.logs.export.LogRecordExporter;
 import io.opentelemetry.sdk.resources.Resource;
 import java.time.Duration;
 import java.util.Collection;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -30,31 +33,49 @@ public final class BusinessLogsPipeline implements AutoCloseable {
     private final BusinessLogsMetrics metrics;
     private final Duration shutdownTimeout;
     private final AtomicBoolean accepting = new AtomicBoolean(true);
+    private final ScheduledThreadPoolExecutor exportDeadlines;
+    private final Set<CompletableResultCode> pendingExports = ConcurrentHashMap.newKeySet();
 
     BusinessLogsPipeline(BusinessLogsProperties properties, Resource resource,
                          LogRecordExporter exporter, BusinessLogsMetrics metrics) {
         this.exporter = exporter;
         this.metrics = metrics;
         this.shutdownTimeout = properties.getShutdownTimeout();
+        exportDeadlines = new ScheduledThreadPoolExecutor(1, task -> {
+            Thread thread = new Thread(task, "skillhub-business-logs-deadlines");
+            thread.setDaemon(true);
+            return thread;
+        });
+        exportDeadlines.setRemoveOnCancelPolicy(true);
         Semaphore capacity = new Semaphore(properties.getMaxQueueSize());
         LogRecordExporter measured = new LogRecordExporter() {
             @Override
             public CompletableResultCode export(Collection<LogRecordData> records) {
                 int count = records.size();
+                // Own the completion boundary: an SDK async callback can throw without completing
+                // its result (e.g. 1.31 reading a truncated error body). The first outcome wins;
+                // late completion cannot release permits or update counters a second time.
+                CompletableResultCode bounded = new CompletableResultCode();
+                pendingExports.add(bounded);
+                bounded.whenComplete(() -> {
+                    pendingExports.remove(bounded);
+                    capacity.release(count);
+                    if (bounded.isSuccess()) { metrics.exported.increment(count); }
+                    else { metrics.exportFailures.increment(); metrics.warn(); }
+                });
                 try {
+                    var deadline = exportDeadlines.schedule(bounded::fail,
+                            properties.exportBudget().toNanos(), TimeUnit.NANOSECONDS);
+                    bounded.whenComplete(() -> deadline.cancel(false));
                     CompletableResultCode result = exporter.export(records);
                     result.whenComplete(() -> {
-                        capacity.release(count);
-                        if (result.isSuccess()) { metrics.exported.increment(count); }
-                        else { metrics.exportFailures.increment(); metrics.warn(); }
+                        if (result.isSuccess()) { bounded.succeed(); }
+                        else { bounded.fail(); }
                     });
-                    return result;
                 } catch (RuntimeException ex) {
-                    capacity.release(count);
-                    metrics.exportFailures.increment();
-                    metrics.warn();
-                    return CompletableResultCode.ofFailure();
+                    bounded.fail();
                 }
+                return bounded;
             }
             @Override public CompletableResultCode flush() { return exporter.flush(); }
             @Override public CompletableResultCode shutdown() { return exporter.shutdown(); }
@@ -111,6 +132,11 @@ public final class BusinessLogsPipeline implements AutoCloseable {
             metrics.error();
             // Also cancel network work if shutdown itself unexpectedly fails.
             try { exporter.shutdown(); } catch (RuntimeException shutdownException) { metrics.error(); }
+        } finally {
+            // No deadline thread/tasks survive this lifecycle. A concurrent late export either
+            // appears here or is rejected by the stopped scheduler and fails its own guard.
+            exportDeadlines.shutdownNow();
+            pendingExports.forEach(CompletableResultCode::fail);
         }
     }
 }

@@ -13,6 +13,7 @@ import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.common.AttributeKey;
+import io.opentelemetry.api.baggage.Baggage;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanContext;
 import io.opentelemetry.api.trace.TraceFlags;
@@ -29,11 +30,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.datasource.DataSourceTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.transaction.TransactionDefinition;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -103,6 +106,79 @@ class BusinessLogsTransactionTest {
     }
 
     @Test
+    void nestedSavepointRollbackIsExplicitlyOutsideSuppressionContract() {
+        var dataSource = new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        var jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("create table nested_analytics_probe (id int primary key)");
+        var manager = new DataSourceTransactionManager(dataSource);
+        var outer = new TransactionTemplate(manager);
+        var nested = new TransactionTemplate(manager);
+        nested.setPropagationBehavior(TransactionDefinition.PROPAGATION_NESTED);
+        var exporter = new CapturingExporter();
+        var metrics = new BusinessLogsMetrics(new SimpleMeterRegistry());
+        var properties = new BusinessLogsProperties();
+        try (var pipeline = new BusinessLogsPipeline(properties, Resource.empty(), exporter, metrics)) {
+            var listener = new BusinessEventListener(new BusinessEventMapper(properties), pipeline, metrics);
+            outer.executeWithoutResult(status -> {
+                nested.executeWithoutResult(savepoint -> {
+                    assertThat(savepoint.hasSavepoint()).isTrue();
+                    jdbc.update("insert into nested_analytics_probe values (1)");
+                    listener.onEvent(new SkillPublishedEvent(1L, 2L, "approver", snapshot));
+                    savepoint.setRollbackOnly();
+                });
+                assertThat(jdbc.queryForObject("select count(*) from nested_analytics_probe", Integer.class)).isZero();
+                assertThat(metrics.enqueued.count()).isZero();
+            });
+            pipeline.forceFlush().join(5, TimeUnit.SECONDS);
+            assertThat(jdbc.queryForObject("select count(*) from nested_analytics_probe", Integer.class)).isZero();
+            // Synchronization follows the physical transaction, not the rolled-back savepoint.
+            assertThat(exporter.records).hasSize(1);
+        }
+    }
+
+    @Test
+    void requiresNewCommitExportsEvenWhenOuterTransactionRollsBack() {
+        var dataSource = new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
+        var jdbc = new JdbcTemplate(dataSource);
+        jdbc.execute("create table requires_new_analytics_probe (id int primary key)");
+        var manager = new DataSourceTransactionManager(dataSource);
+        var outer = new TransactionTemplate(manager);
+        var independent = new TransactionTemplate(manager);
+        independent.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        var exporter = new CapturingExporter();
+        var metrics = new BusinessLogsMetrics(new SimpleMeterRegistry());
+        var properties = new BusinessLogsProperties();
+        try (var pipeline = new BusinessLogsPipeline(properties, Resource.empty(), exporter, metrics)) {
+            var listener = new BusinessEventListener(new BusinessEventMapper(properties), pipeline, metrics);
+            outer.executeWithoutResult(status -> {
+                jdbc.update("insert into requires_new_analytics_probe values (1)");
+                listener.onEvent(new SkillPublishedEvent(1L, 2L, "approver", snapshot));
+                independent.executeWithoutResult(inner -> {
+                    jdbc.update("insert into requires_new_analytics_probe values (2)");
+                    listener.onEvent(new SkillPublishedEvent(3L, 4L, "approver", snapshot));
+                });
+                assertThat(metrics.enqueued.count()).isEqualTo(1);
+                status.setRollbackOnly();
+            });
+            pipeline.forceFlush().join(5, TimeUnit.SECONDS);
+            assertThat(jdbc.queryForList("select id from requires_new_analytics_probe", Integer.class)).containsExactly(2);
+            assertThat(exporter.records).hasSize(1);
+            assertThat(exporter.records.getFirst().getAttributes().get(AttributeKey.longKey("skillhub.skill.id"))).isEqualTo(3L);
+        }
+    }
+
+    @Test
+    void transactionDocumentationStatesSavepointExclusionAndIndependentCommit() throws Exception {
+        for (String path : List.of("docs/business-event-logs.md",
+                "openspec/changes/add-otlp-business-event-logs/design.md",
+                "openspec/changes/add-otlp-business-event-logs/specs/business-event-logs/spec.md",
+                "openspec/changes/add-otlp-business-event-logs/acceptance.md")) {
+            assertThat(java.nio.file.Files.readString(java.nio.file.Path.of("../..", path)))
+                    .as(path).contains("PROPAGATION_NESTED", "REQUIRES_NEW");
+        }
+    }
+
+    @Test
     void unsampledSpanCapturedBeforeCommitAndNoMdcOrBaggageExported() {
         var dataSource = new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());
         var transaction = new TransactionTemplate(new DataSourceTransactionManager(dataSource));
@@ -113,7 +189,11 @@ class BusinessLogsTransactionTest {
         try (var pipeline = new BusinessLogsPipeline(properties, Resource.empty(), exporter, metrics)) {
             var listener = new BusinessEventListener(new BusinessEventMapper(properties), pipeline, metrics);
             transaction.executeWithoutResult(status -> {
-                try (var ignored = Span.wrap(spanContext).makeCurrent()) {
+                try (var mdc = MDC.putCloseable("sensitive.mdc", "SYNTHETIC-1009-MDC-SECRET");
+                     var baggage = Baggage.builder().put("sensitive.baggage", "SYNTHETIC-1009-BAGGAGE-SECRET").build().makeCurrent();
+                     var ignored = Span.wrap(spanContext).makeCurrent()) {
+                    assertThat(MDC.get("sensitive.mdc")).isEqualTo("SYNTHETIC-1009-MDC-SECRET");
+                    assertThat(Baggage.current().getEntryValue("sensitive.baggage")).isEqualTo("SYNTHETIC-1009-BAGGAGE-SECRET");
                     listener.onEvent(new SkillPublishedEvent(1L, 2L, "approver", snapshot));
                 }
                 assertThat(Span.current().getSpanContext().isValid()).isFalse();
@@ -122,6 +202,12 @@ class BusinessLogsTransactionTest {
             assertThat(exporter.records).hasSize(1);
             assertThat(exporter.records.getFirst().getSpanContext()).isEqualTo(spanContext);
             assertThat(exporter.records.getFirst().getSpanContext().isSampled()).isFalse();
+            var exported = exporter.records.getFirst();
+            for (String value : List.of(exported.getAttributes().toString(), String.valueOf(exported.getBody().asString()),
+                    exported.getResource().getAttributes().toString())) {
+                assertThat(value).doesNotContain("sensitive.mdc", "sensitive.baggage",
+                        "SYNTHETIC-1009-MDC-SECRET", "SYNTHETIC-1009-BAGGAGE-SECRET");
+            }
         }
     }
 

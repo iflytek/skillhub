@@ -45,6 +45,12 @@
         <appender-ref ref="json-console"/>
     </appender>
 
+    <!-- SDK diagnostics may echo receiver bodies / transport exceptions containing credentials.
+         Keep raw details OFF; the business adapter supplies fixed-text warnings and metrics.
+         Explicit logging.level overrides are an operator opt-in to this disclosure risk. -->
+    <logger name="io.opentelemetry.exporter" level="OFF"/>
+    <logger name="io.opentelemetry.sdk.logs" level="OFF"/>
+
     <root level="INFO">
         <appender-ref ref="${activeAppender}"/>
     </root>

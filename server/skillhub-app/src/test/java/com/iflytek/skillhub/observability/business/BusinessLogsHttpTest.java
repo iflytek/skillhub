@@ -17,10 +17,49 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class BusinessLogsHttpTest {
+    @Test
+    void truncatedErrorBodyCannotPermanentlyExhaustAdmission() throws Exception {
+        try (var receiver = new BusinessLogsTestReceiver(
+                "HTTP/1.1 400 Bad Request\r\nContent-Length: 100\r\nConnection: close\r\n\r\nx")) {
+            new ApplicationContextRunner().withUserConfiguration(BusinessLogsConfiguration.class)
+                    .withBean(SimpleMeterRegistry.class, SimpleMeterRegistry::new)
+                    .withPropertyValues("skillhub.observability.business-logs.enabled=true",
+                            "skillhub.observability.business-logs.endpoint=" + receiver.endpoint(),
+                            "skillhub.observability.business-logs.max-queue-size=1",
+                            "skillhub.observability.business-logs.max-export-batch-size=1",
+                            "skillhub.observability.business-logs.timeout=100ms",
+                            "skillhub.observability.business-logs.retry-max-attempts=1",
+                            "skillhub.observability.business-logs.retry-max-backoff=1ms",
+                            "skillhub.observability.business-logs.retry-initial-backoff=1ms")
+                    .run(context -> {
+                        assertThat(context).hasNotFailed();
+                        var pipeline = context.getBean(BusinessLogsPipeline.class);
+                        var metrics = context.getBean(BusinessLogsMetrics.class);
+                        var snapshot = new BusinessEventSnapshot(7L, SkillVisibility.PUBLIC, "reviewer", "user", "review", Instant.now());
+                        var event = new SkillPublishedEvent(1L, 2L, "reviewer", snapshot);
+                        context.publishEvent(event);
+                        pipeline.forceFlush().join(5, TimeUnit.SECONDS);
+                        // Wait beyond the bounded export budget, not just the HTTP timeout.
+                        org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(5))
+                                .untilAsserted(() -> assertThat(metrics.exportFailures.count()).isEqualTo(1));
+                        for (int i = 0; i < 2; i++) {
+                            context.publishEvent(event);
+                            pipeline.forceFlush().join(5, TimeUnit.SECONDS);
+                        }
+                        assertThat(receiver.requests.get()).isEqualTo(3);
+                        assertThat(metrics.enqueued.count()).isEqualTo(3);
+                        assertThat(metrics.exported.count()).isEqualTo(2);
+                        assertThat(metrics.queueFull.count()).isZero();
+                        assertThat(metrics.exportFailures.count()).isEqualTo(1);
+                    });
+        }
+    }
+
     @Test
     void boundedRetryReusesIdenticalUidAndPayloadAndAuthenticationIsTransportOnly() throws Exception {
         var server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
