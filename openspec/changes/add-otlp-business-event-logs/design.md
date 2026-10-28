@@ -1,0 +1,39 @@
+## Architecture
+
+Domain records retain their original accessors and compatibility constructors, and gain an immutable `BusinessEventSnapshot` (namespace ID, visibility, opaque actor/type, fixed source, Instant). Every production publisher of the nine included event types supplies this snapshot. No domain OTel dependency is introduced. Notification/search listeners keep their existing semantics. Missing legacy snapshots are ignored, not enriched asynchronously. The promotion rejection path adds one scalar-source lookup because its old event/request lacks source namespace/visibility; it does not export reasons or submitters.
+
+The conditional app configuration owns a dedicated `SdkLoggerProvider`, BatchLogRecordProcessor and OTLP/HTTP Logs exporter. It exposes only the pipeline/listener as beans, not a global/provider bean that Boot might consume for Trace autoconfiguration. Resource is explicitly constructed from existing service settings, not detected. No application logs are bridged; no trace sampling/configuration is altered.
+
+## Commit and context boundary
+
+A synchronous Spring `@EventListener` maps fixed scalar data and captures only valid OTel SpanContext when the producer dispatches. It registers `TransactionSynchronization.afterCommit` for actual transactions, otherwise admits immediately. This is equivalent to AFTER_COMMIT + fallbackExecution but preserves the producer's span even if the span ends before commit. Each boundary catches telemetry RuntimeExceptions and counts them with bounded fixed-text diagnostics. No network IO, enrichment queries or space-waiting occurs in the listener. Disabled configuration creates no listener, provider, worker, exporter or OTel context objects.
+
+Occurrence is `Instant.now()` immediately before producer publication, not the independently clocked persisted publishedAt or commit time. Sources identify domain branch, not caller-controlled Web/CLI labels. Forced internal auto-publication is a system actor; privileged human auto-publication remains a human actor. Anonymous downloads have actor type user and no user.id (user means user-request origin, not proof of an identified human). Review and promotion use the actual approver, not owner/uploader. Promotion decisions use source skill/namespace; effective publication uses the derived target.
+
+## Bounds and observability
+
+Standard SDK batching is retained. A nonwaiting semaphore around processor admission conservatively bounds queued PLUS in-flight records to `max-queue-size`; SDK queue capacity is at least that large, so accepted records cannot hit its hidden overflow boundary. A measured exporter releases permits when the SDK result completes and counts exported records or failed batches. This supplies exact admission/full metrics without reflection or a custom network queue/retry engine. SDK MeterProvider is explicitly noop; exporter health uses the existing Micrometer registry without global registration.
+
+A single mapper allows only known event classes, fixed sources/actor types, scalar IDs, enums and bounded user ID. The SDK also limits 16 attributes and 256 code units. Three Resource strings are separately bounded. Configuration has hard count/duration/header/list bounds. Admitted pipeline memory is bounded by record count and fixed record shape, not a promised byte-accurate or zero-allocation budget. Before commit, transaction synchronizations retain one bounded mapped snapshot per dispatched event outside the SDK admission window; callers must not wrap unbounded bulk work in one transaction. This is not a process-wide heap cap. Saturation latency and receiver container limits are measured in tests; this is not a production throughput benchmark.
+
+## SDK compatibility verified against 1.31.0
+
+Boot remains 3.2.3, OTel remains BOM-managed 1.31.0. Only an explicit managed sdk-logs dependency is added. EventName API is absent: use custom `skillhub.event.name`. No global semconv schema is advertised; scope contract version is 1 and experimental log.record.uid semantics are documented locally.
+
+The public HTTP Logs exporter builder supports RetryPolicy; set explicit finite attempts/backoff, or leave retry disabled for attempts=1. No retry code is implemented here. Logs endpoint is explicit and used as-is. Builders do not read OTEL_* automatically. The SDK treats 2xx as success without inspecting partial-success counts; counters reflect that limitation and tests send a real protobuf partial-success response. Retry tests verify identical payload/UID and transport-only headers.
+
+The managed OkHttp sender uses its default redirect policy; the public 1.31 Logs builder has no redirect-policy customization. Do not fork the sender, use reflection or introduce an unrelated HTTP dependency: document nonredirecting receivers and enforce authorized destinations/TLS with deployment egress policy. This is an explicit limit relative to the draft RFC's redirect-validation aspiration, not a claim of full in-process SSRF prevention. Its retry interceptor bounds jittered backoff and does not honor Retry-After; SDK timeout/attempt limits may terminate before the configured maximum attempts.
+
+## Data and destination policy
+
+Private resource IDs are included by default only after instance operators opt in; empty namespace allowlist means all namespaces. No names/slugs/content are exported, avoiding entity serialization/enrichment and keeping governance facts available. IDs are linkable data, not anonymized. Namespace and exact event allowlists are startup-only. Credentials are deployment headers/Secrets only; endpoint userinfo/query/fragment and known metadata literal destinations are rejected without echoing input. Localhost/private receivers are allowed. Operators still own egress/DNS policy, TLS/truststore, retention and receiver access. Literal URL validation cannot prevent all metadata aliases/rebinding.
+
+## Reliability and RFC deviations
+
+Best-effort analytics only; commit-to-admission gaps, crashes, overflow, timeout, shutdown and receiver failures can lose data. No outbox/replay/exactly-once. Same SDK retry reuses mapped UID; a new domain dispatch gets a new UID. Approval and publication are intentionally distinct facts.
+
+No runtime hot-reload. On restart to disable, the old process gets a bounded graceful drain opportunity rather than the RFC draft's immediate unsent cancellation. New admission stops on close; provider shutdown is joined for shutdown-timeout and the exporter is canceled at deadline. Accepted receiver data cannot be withdrawn. An active external-agent JVM/plugin installation, TLS/mTLS deployment and browser/CLI end-to-end smoke are separate deployment verifications, not inferred from application mode tests.
+
+## Scope
+
+All nine existing facts are included. Metadata/avatar review decisions with no existing decision event, hide/unhide, promotion revocation, submission/withdrawal, Suite events, search/view, transfer completion, installation, durable delivery and historical backfill are deferred. Existing metadata-review effective visibility events ARE included. The event catalog and full operator configuration live in docs/business-event-logs.md; executed results and limitations live in acceptance.md and the worker report.

@@ -38,6 +38,15 @@ docker compose --env-file .env.release -f compose.release.yml logs --tail=100 se
 
 Suite 审核写入在单机 release Compose 中默认开启；Suite Bundle 确认默认关闭。需要批量导入时，按 [Bundle 导入](suite-bundle.md#部署开关)启用对应开关。滚动升级新旧后端共存时，另按[套装部署顺序](https://github.com/iflytek/skillhub/blob/main/docs/25-skill-suites.md#部署顺序)操作。
 
+## 可选的业务事件 OTLP Logs
+
+业务分析默认关闭，与三种 Trace 模式独立。对应版本官方镜像可通过
+`SKILLHUB_BUSINESS_LOGS_ENABLED=true` 和完整 `SKILLHUB_BUSINESS_LOGS_ENDPOINT` 启用；
+Collector 可选，请求头凭证使用部署 Secret。发布、下载准备、审核、提升、归档、可见性和 yank 的
+精确定义、私有 ID 范围、完整配置表、实收查询示例及丢失/重复/退出限制见
+[业务事件运行手册](https://github.com/iflytek/skillhub/blob/main/docs/business-event-logs.md)。
+下载准备不是下载完成或安装成功，不能用于审计、计费或可靠通知。
+
 ## 升级、停止与排障
 
 升级前保存当前镜像版本、配置，并备份数据库和技能对象存储。修改 `SKILLHUB_VERSION` 为目标发布版本，重新执行校验、`pull`、`up -d` 和业务验证。回退镜像不等于回退数据库；先检查目标迁移的兼容性。

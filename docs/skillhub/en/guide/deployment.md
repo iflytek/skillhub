@@ -38,6 +38,16 @@ Resolve validation errors before starting. Backend startup runs Flyway database 
 
 Suite review writes are enabled by default in the single-server release Compose topology; Suite Bundle confirmation is disabled by default. See [Bundle import](suite-bundle.md) for enabling it. For rolling upgrades where old and new backends coexist, follow the [Suite deployment order](https://github.com/iflytek/skillhub/blob/main/docs/25-skill-suites.md).
 
+## Optional business-event OTLP Logs
+
+Business analytics is disabled by default and independent of all three Trace modes. With the matching
+official server image, enable `SKILLHUB_BUSINESS_LOGS_ENABLED=true` and a full
+`SKILLHUB_BUSINESS_LOGS_ENDPOINT`; Collector is optional and authentication headers belong in deployment
+Secrets. See the [business-event operations guide](https://github.com/iflytek/skillhub/blob/main/docs/business-event-logs.md)
+for publication, download preparation, review, promotion, archive, visibility and yank semantics, private-ID
+scope, every setting, a real receive/query example and loss/duplicate/shutdown limits. Download preparation
+is not completion or installation; this lossy stream is not audit, billing or reliable notification.
+
 ## Upgrade, stop, and troubleshoot
 
 Before upgrading, record the current image version and configuration, and back up both the database and skill object storage. Set `SKILLHUB_VERSION` to the target release and repeat validation, `pull`, `up -d`, and workflow verification. Rolling back an image does not roll back the database; check migration compatibility first.

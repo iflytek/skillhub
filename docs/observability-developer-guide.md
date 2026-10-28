@@ -18,14 +18,18 @@
 
 通过 `SKILLHUB_TRACING_MODE` 选择一种模式，修改后重启应用：
 
-- `none`：默认模式。无应用内 OTel SDK 和 OTLP 导出，只保留 `request.id`。
+- `none`：默认 Trace 模式。无应用内 Trace SDK 和 Trace OTLP 导出，只保留 `request.id`；独立业务 Logs 开关不受此限制。
 - `otel-sdk`：使用 Micrometer Tracing + OTel Bridge；配置
   `MANAGEMENT_OTLP_TRACING_ENDPOINT` 后才向 Collector 导出。
 - `external-agent`：应用内 Tracer 为 NOOP，由部署环境提供唯一的外部 Agent。
   SkillHub 只能校验自身配置，不能识别任意 JVM Agent；唯一 Agent 是部署检查项。
 
-`none`/`external-agent` 不能配置 OTLP endpoint；`otel-sdk` 与外部 Tracing Agent
+`none`/`external-agent` 不能配置 TRACE OTLP endpoint；`otel-sdk` 与外部 Tracing Agent
 不得在同一进程中叠加。
+
+业务分析使用独立、默认关闭的 LoggerProvider，不桥接应用日志或更改 Trace 采样。
+生产点只增加领域快照，提交后才入队；事件与字段必须通过统一 mapper 白名单。
+开发/部署契约见[业务事件 Logs](./business-event-logs.md)，不要把审计或可靠通知改接为有损遥测。
 
 ## 3. 开发者接入方式
 
