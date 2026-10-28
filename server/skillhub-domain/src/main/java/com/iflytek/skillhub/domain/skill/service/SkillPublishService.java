@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.iflytek.skillhub.domain.event.BusinessEventSnapshot;
+
 import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.review.ReviewAvatarParticipant;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -900,7 +902,9 @@ public class SkillPublishService {
         skillRepository.save(skill);
 
         if (autoPublish) {
-            eventPublisher.publishEvent(new SkillPublishedEvent(skill.getId(), version.getId(), publisherId));
+            eventPublisher.publishEvent(new SkillPublishedEvent(skill.getId(), version.getId(), publisherId,
+                    BusinessEventSnapshot.capture(skill, publisherId,
+                            forceAutoPublish ? "system" : "user", "auto_publish")));
         }
 
         // 13. Return identifiers for the created version

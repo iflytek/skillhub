@@ -51,7 +51,12 @@ class SkillVisibilityServiceTest {
         assertThat(skill.getLatestVersionId()).isEqualTo(3L);
         verify(versions, never()).save(any());
         verify(reviews, never()).save(any());
-        verify(events).publishEvent(any(SkillVisibilityChangedEvent.class));
+        var event = org.mockito.ArgumentCaptor.forClass(SkillVisibilityChangedEvent.class);
+        verify(events).publishEvent(event.capture());
+        assertThat(event.getValue().snapshot().namespaceId()).isEqualTo(2L);
+        assertThat(event.getValue().snapshot().visibility()).isEqualTo(SkillVisibility.PRIVATE);
+        assertThat(event.getValue().snapshot().actorId()).isEqualTo("owner");
+        assertThat(event.getValue().previousVisibility()).isEqualTo(SkillVisibility.PUBLIC);
     }
 
     @Test
@@ -62,9 +67,13 @@ class SkillVisibilityServiceTest {
         assertThat(task.getRequestedVisibility()).isEqualTo(SkillVisibility.PUBLIC);
         assertThat(task.getVisibilityVersionId()).isEqualTo(3L);
         assertThat(task.getSkillVersionId()).isNull();
+        verifyNoInteractions(events);
         service.approve(task, "admin");
         assertThat(skill.getVisibility()).isEqualTo(SkillVisibility.PUBLIC);
         verify(versions, never()).save(any());
+        var event = org.mockito.ArgumentCaptor.forClass(SkillVisibilityChangedEvent.class);
+        verify(events).publishEvent(event.capture());
+        assertThat(event.getValue().snapshot().actorId()).isEqualTo("admin");
     }
 
     @Test

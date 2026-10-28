@@ -392,6 +392,14 @@ class ReviewServiceTest {
             assertEquals(SKILL_ID, event.skillId());
             assertEquals(SKILL_VERSION_ID, event.versionId());
             assertEquals(REVIEWER_ID, event.publisherId());
+            assertEquals(NAMESPACE_ID, event.snapshot().namespaceId());
+            assertEquals(REVIEWER_ID, event.snapshot().actorId());
+            assertEquals("review", event.snapshot().source());
+            ArgumentCaptor<com.iflytek.skillhub.domain.event.ReviewApprovedEvent> approved =
+                    ArgumentCaptor.forClass(com.iflytek.skillhub.domain.event.ReviewApprovedEvent.class);
+            verify(eventPublisher).publishEvent(approved.capture());
+            assertEquals(REVIEWER_ID, approved.getValue().snapshot().actorId());
+            assertNotNull(approved.getValue().snapshot().occurredAt());
         }
 
         @Test
