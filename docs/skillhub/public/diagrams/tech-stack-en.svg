@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 650" role="img" aria-labelledby="title desc"><title id="title">SkillHub technology stack</title>
+<desc id="desc">Four layers: frontend, backend, database and cache, and configurable skill file storage.</desc>
+<rect width="1080" height="650" fill="#fff"/>
+<style>text{font-family:Arial,"Noto Sans CJK SC","Microsoft YaHei",sans-serif;fill:#202124}.title{font-size:25px;font-weight:600}.head{font-size:19px;font-weight:600}.body{font-size:22px}.note{font-size:17px;fill:#4b5563}</style>
+<text x="36" y="43" class="title">SkillHub technology stack</text>
+<rect x="36" y="99" width="1008" height="105" rx="15" fill="#fff" stroke="#222" stroke-width="1.7"/>
+<rect x="52" y="86" width="290" height="34" rx="10" fill="#5c83ef"/>
+<text x="68" y="109" class="head">Frontend</text>
+<text x="60" y="154" class="body">React · Vite · Tailwind CSS</text>
+<text x="60" y="182" class="note">TanStack Router · TanStack Query</text>
+<rect x="36" y="229" width="1008" height="105" rx="15" fill="#fff" stroke="#222" stroke-width="1.7"/>
+<rect x="52" y="216" width="290" height="34" rx="10" fill="#5c83ef"/>
+<text x="68" y="239" class="head">Backend</text>
+<text x="60" y="284" class="body">Java 21 · Spring Boot</text>
+<text x="60" y="312" class="note">REST API</text>
+<rect x="36" y="359" width="1008" height="105" rx="15" fill="#fff" stroke="#222" stroke-width="1.7"/>
+<rect x="52" y="346" width="290" height="34" rx="10" fill="#5c83ef"/>
+<text x="68" y="369" class="head">Database and cache</text>
+<text x="60" y="414" class="body">PostgreSQL · Redis</text>
+<text x="60" y="442" class="note">Persistence and sessions</text>
+<rect x="36" y="489" width="1008" height="105" rx="15" fill="#fff" stroke="#222" stroke-width="1.7"/>
+<rect x="52" y="476" width="290" height="34" rx="10" fill="#5c83ef"/>
+<text x="68" y="499" class="head">Skill file storage</text>
+<text x="60" y="544" class="body">Local files / S3-compatible</text>
+<text x="60" y="572" class="note">Select a provider in deployment configuration</text>
+<text x="36" y="626" class="note">Components, not an execution sequence. Versions follow the repository manifests.</text></svg>
