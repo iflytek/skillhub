@@ -57,3 +57,12 @@ describe('source-aware installation badges', () => {
     expect(html).toContain('不代表当前仍然安装');
   });
 });
+
+test('disabled package keeps its version and selected scope without becoming missing', () => {
+  const html = render({ ...snapshot, records: [
+    { scope: 'user', version: '1.0.0', state: 'present', installationState: 'enabled' },
+    { scope: 'project', version: '2.0.0', state: 'present', installationState: 'disabled' },
+  ] });
+  expect(html).toContain('所有项目 · v1.0.0 · 已启用 / 仅此项目 · v2.0.0 · 已停用');
+  expect(html).not.toContain('安装目录缺失'); expect(html).not.toContain('安装记录异常');
+});

@@ -1,3 +1,4 @@
+import { assertEntryAbsent } from '../services/installed-skill-snapshot'
 import { createHash } from 'node:crypto'
 import { lstat, realpath } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
@@ -10,7 +11,7 @@ export type { InstalledProjection, InstalledProjectionItem, InstalledProjectionT
 
 const text = z.string().min(1)
 const itemSchema = z.object({ registry: text, namespace: text, slug: text, targets: z.array(z.object({
-    version: text, fingerprint: z.string().optional(), installedBy: z.array(text).optional(), agent: text, rootDir: text, installDir: text, installedAt: text,
+    installationState: z.enum(['enabled', 'disabled']).optional(), version: text, fingerprint: z.string().optional(), installedBy: z.array(text).optional(), agent: text, rootDir: text, installDir: text, installedAt: text,
   })) })
 
 /** Read only the selected Registry's DSH records in Host-approved roots; never repair or hash all files. */
@@ -43,9 +44,9 @@ export async function readInstalledProjection(inventory: Pick<InventoryStore, 'r
       for (const target of roots.filter(target => target.root === resolve(entry.rootDir))) {
         const path = join(target.root, item.slug)
         const projected: InstalledProjectionItem = { scope: target.scope, namespace: item.namespace,
-          slug: item.slug, version: entry.version, ...(entry.fingerprint ? { fingerprint: entry.fingerprint } : {}), targetPath: path, state: 'present',
+          slug: item.slug, installationState: entry.installationState ?? 'enabled', version: entry.version, ...(entry.fingerprint ? { fingerprint: entry.fingerprint } : {}), targetPath: path, state: 'present',
           recordRevision: createHash('sha256').update(JSON.stringify([item.registry.replace(/\/+$/, ''), item.namespace, item.slug,
-            entry.agent, entry.rootDir, entry.installDir, entry.version, entry.fingerprint ?? null, entry.installedAt,
+            entry.installationState ?? 'enabled', entry.agent, entry.rootDir, entry.installDir, entry.version, entry.fingerprint ?? null, entry.installedAt,
             [...new Set(entry.installedBy ?? ['direct'])].sort()])).digest('hex') }
         const key = JSON.stringify([target.scope, path, item.namespace, item.slug])
         const previous = seen.get(key)
@@ -66,10 +67,11 @@ export async function readInstalledProjection(inventory: Pick<InventoryStore, 'r
           if (!directory.isDirectory() || await realpath(path) !== path) {
             projected.state = 'mismatch'; issue('invalid-record'); continue
           }
-          for (const [file, kind] of [[join(path, '.skillhub'), 'directory'], [join(path, '.skillhub/metadata.json'), 'file'], [join(path, 'SKILL.md'), 'file']] as const) {
+          for (const [file, kind] of [[join(path, '.skillhub'), 'directory'], [join(path, '.skillhub/metadata.json'), 'file'], [join(path, entry.installationState === 'disabled' ? 'SKILL.md.disabled' : 'SKILL.md'), 'file']] as const) {
             const stat = await lstat(file)
             if (kind === 'directory' ? !stat.isDirectory() : !stat.isFile()) throw new Error('Unexpected local file type')
           }
+          if (entry.installationState === 'disabled') await assertEntryAbsent(join(path, 'SKILL.md'))
           const metadata = await readInstalledSkillMetadata(path)
           if (metadata.status !== 'valid') { projected.state = 'metadata-invalid'; issue('target-unreadable'); continue }
           const local = metadata.metadata

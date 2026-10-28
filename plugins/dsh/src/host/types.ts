@@ -63,6 +63,7 @@ export interface CatalogPageResult {
 
 /** Read-only fixed-version content; it is not an installation authorization. */
 export interface SkillDetail {
+  webUrl?: string | null;
   detailToken: string;
   title: string;
   summary: string;
@@ -90,15 +91,19 @@ export interface InstallationTargetList {
 /** Controlled, path-free reasons for refusing a native composer handoff. */
 export type SkillUseBlockReason = 'installation-unverified' | 'operation-pending' | 'shared-installation'
   | 'files-changed' | 'skill-unavailable' | 'skill-shadowed' | 'user-invocation-disabled'
-  | 'unsupported-name' | 'host-unavailable';
+  | 'unsupported-name' | 'host-unavailable' | 'installation-disabled';
 
 export type { SkillExamples, SkillExample } from './generated/native-contract.js';
 export type SkillUsePreparation = { status: 'ready'; name: string; version: string; scope: 'user' | 'project'; examples: import('./generated/native-contract.js').SkillExamples }
   | { status: 'blocked'; reason: SkillUseBlockReason };
 
+export type SkillUseSelection = { status: 'ready'; itemKey: string }
+  | { status: 'blocked'; reason: 'no-installation' | 'no-usable-installation' | 'selection-unverified'
+    | 'multiple-usable-installations' | 'selection-timeout' };
+
 export interface InstalledSkillList {
-  items: { itemKey: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
-    state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable' }[];
+  items: { itemKey: string; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
+    state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'; installationState?: 'enabled' | 'disabled' }[];
   /** Completeness of the inventory projection; unavailable roots are reported independently. */
   complete: boolean;
   issues: string[];
@@ -111,7 +116,7 @@ export interface SearchInstallationStatus {
   complete: boolean;
   unavailable: ('user' | 'project')[];
   records: { scope: 'user' | 'project'; version: string;
-    state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable' }[];
+    state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'; installationState?: 'enabled' | 'disabled' }[];
 }
 
 export interface InstalledSkillDetail {
@@ -177,7 +182,7 @@ export interface ConversationUpdateResult {
 }
 export interface ConversationManagementResult {
   schemaVersion: 1; kind: 'skillhub-management'; toolCallId: string;
-  action: 'upgrade' | 'uninstall'; sourceRevision: string; sourceLabel: string;
+  action: 'upgrade' | 'uninstall' | 'enable' | 'disable'; sourceRevision: string; sourceLabel: string;
   item: InstalledSkillList['items'][number];
   status: 'awaiting-confirmation' | 'cancelled' | 'blocked' | 'accepted';
   candidateVersion: string | null; reason: string;
@@ -186,6 +191,7 @@ export interface ConversationManagementResult {
 
 /** Path-free, read-only observations at checkedAt; never execution authorization. */
 export interface SkillAvailability {
+  installationState?: 'enabled' | 'disabled';
   installation?: { namespace: string; slug: string; version: string; scope: 'user' | 'project' };
   scope?: 'user' | 'project';
   checkedAt: string;
@@ -194,7 +200,19 @@ export interface SkillAvailability {
   integrity: 'verified' | 'changed' | 'missing' | 'unknown';
   discovery: 'winner' | 'shadowed' | 'not-discovered' | 'unknown';
   invocation?: { userInvocable: boolean; modelInvocable: boolean };
-  reason: 'observed' | 'host-unavailable' | 'files-missing' | 'files-unreadable' | 'local-changes'
+  reason: 'installation-disabled' | 'observed' | 'host-unavailable' | 'files-missing' | 'files-unreadable' | 'local-changes'
     | 'baseline-unverified' | 'definition-unverified' | 'snapshot-unavailable' | 'snapshot-incomplete'
     | 'observation-changed' | 'not-discovered' | 'same-name-winner' | 'definition-changed' | 'read-failed';
+}
+
+export interface TogglePlanView {
+  hostInstanceId: string;
+  status: 'ready' | 'unchanged' | 'blocked';
+  reason: string;
+  planId: string | null;
+  expiresAt: string | null;
+  currentVersion: string;
+  beforeState: 'enabled' | 'disabled';
+  afterState: 'enabled' | 'disabled';
+  target: { scope: 'user' | 'project'; path: string } | null;
 }

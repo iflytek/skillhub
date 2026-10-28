@@ -6,6 +6,7 @@ import { homedir } from 'node:os';
 import type { UpgradeSelection, UpgradeBaseline } from './generated/native-contract.js';
 import type { NativeUpgradeExecution } from './generated/native-contract.js';
 import type { RemovalBaseline, NativeRemovalExecution } from './generated/native-contract.js';
+import type { ToggleBaseline, NativeToggleExecution, InstallationState } from './generated/native-contract.js';
 import { join } from 'node:path';
 import type { NativeCore, NativeRuntime, NativeInstallExecution, NativeInstallAcceptance, NativeOperationRequest,
   NativeOperation, NativeRecoveryResult, NativePendingOperation } from './generated/native-contract.js';
@@ -29,6 +30,11 @@ export interface PreparedNativeUpgrade {
 export interface PreparedNativeRemoval {
   acceptance: NativeInstallAcceptance & { kind: 'uninstall' | 'remove-stale-record' };
   execution: Omit<NativeRemovalExecution, 'operationId' | 'ownerId'>;
+}
+
+export interface PreparedNativeToggle {
+  acceptance: NativeInstallAcceptance & { kind: 'enable' | 'disable' };
+  execution: Omit<NativeToggleExecution, 'operationId' | 'ownerId'>;
 }
 
 /** Host-only initialization; no Client path input and no automatic replay of historical writes. */
@@ -109,6 +115,14 @@ export class LocalRuntime {
   inspectRemoval(selected: UpgradeSelection, target: InstalledProjectionTarget): Promise<RemovalBaseline> {
     const identity = { ...selected }; const root = { ...target };
     return this.call(runtime => runtime.inspectRemoval(identity, root));
+  }
+
+  inspectToggle(selected: UpgradeSelection, target: InstalledProjectionTarget, desiredState: InstallationState): Promise<ToggleBaseline> {
+    return this.call(runtime => runtime.inspectToggle({ ...selected }, { ...target }, desiredState));
+  }
+
+  readInstallationEntry(selected: UpgradeSelection, target: InstalledProjectionTarget): Promise<string | undefined> {
+    return this.call(runtime => runtime.readInstallationEntry({ ...selected }, { ...target }));
   }
 
   readSkillExamples(directory: string): ReturnType<NativeRuntime['readSkillExamples']> {
@@ -213,6 +227,27 @@ export class LocalRuntime {
       if (!accepted || !prepared || accepted.phase !== 'accepted') return;
       const execution = { ...prepared.execution, operationId: accepted.operationId, ownerId: input.ownerId };
       await this.executeAccepted(accepted, () => runtime.executeRemoval(execution));
+    });
+    void workflow.catch(error => receipt.reject(error));
+    return receipt.promise;
+  }
+
+  submitToggle(request: NativeOperationRequest, prepare: () => Promise<PreparedNativeToggle>): Promise<NativeOperation | undefined> {
+    const receipt = Promise.withResolvers<NativeOperation | undefined>();
+    const input = { ...request, parameters: { ...request.parameters } };
+    const workflow = this.call(async runtime => {
+      let prepared: PreparedNativeToggle | undefined;
+      const accepted = await runtime.acceptToggle(input, async () => {
+        this.assertWritableHost();
+        const result = await prepare();
+        prepared = { acceptance: structuredClone(result.acceptance),
+          execution: { ...result.execution, baseline: structuredClone(result.execution.baseline) } };
+        return prepared.acceptance;
+      });
+      receipt.resolve(accepted);
+      if (!accepted || !prepared || accepted.phase !== 'accepted') return;
+      const execution = { ...prepared.execution, operationId: accepted.operationId, ownerId: input.ownerId };
+      await this.executeAccepted(accepted, () => runtime.executeToggle(execution));
     });
     void workflow.catch(error => receipt.reject(error));
     return receipt.promise;

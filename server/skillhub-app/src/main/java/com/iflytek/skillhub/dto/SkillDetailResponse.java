@@ -33,8 +33,45 @@ public record SkillDetailResponse(
         PageResponse<SkillSuiteReferenceResponse> memberOfSuites,
         String avatarUrl,
         boolean ownerReadOnly,
-        GithubSkillSourceResponse githubSource
+        GithubSkillSourceResponse githubSource,
+        @io.swagger.v3.oas.annotations.media.Schema(nullable = true, format = "uri", description = "Absolute public skill page URL, or null when no trusted public website is configured")
+        String webUrl
 ) {
+    public SkillDetailResponse(
+        Long id,
+        String slug,
+        String displayName,
+        String ownerId,
+        String ownerDisplayName,
+        String summary,
+        String visibility,
+        String status,
+        Long downloadCount,
+        Integer starCount,
+        Integer subscriptionCount,
+        BigDecimal ratingAvg,
+        Integer ratingCount,
+        boolean hidden,
+        String namespace,
+        List<SkillLabelDto> labels,
+        boolean canManageLifecycle,
+        boolean canSubmitPromotion,
+        boolean canInteract,
+        boolean canReport,
+        SkillLifecycleVersionResponse headlineVersion,
+        SkillLifecycleVersionResponse publishedVersion,
+        SkillLifecycleVersionResponse ownerPreviewVersion,
+        String ownerPreviewReviewComment,
+        String resolutionMode,
+        List<SkillSuiteReferenceResponse> entryForSuites,
+        PageResponse<SkillSuiteReferenceResponse> memberOfSuites,
+        String avatarUrl,
+        boolean ownerReadOnly,
+        GithubSkillSourceResponse githubSource
+    ) {
+        this(id, slug, displayName, ownerId, ownerDisplayName, summary, visibility, status, downloadCount, starCount, subscriptionCount, ratingAvg, ratingCount, hidden, namespace, labels, canManageLifecycle, canSubmitPromotion, canInteract, canReport, headlineVersion, publishedVersion, ownerPreviewVersion, ownerPreviewReviewComment, resolutionMode, entryForSuites, memberOfSuites, avatarUrl, ownerReadOnly, githubSource, null);
+    }
+
     public SkillDetailResponse(Long id,
         String slug,
         String displayName,

@@ -35,11 +35,11 @@ describe('native catalog service', () => {
     } finally { await fiber.dispose(); fetchSpy.mockRestore(); }
   });
 
-  test('detail pins both requests to the selected version and does not expose download addresses', async () => {
+  test.each([undefined, null, 'https://web.example/read/writer?version=1.2.0#examples'])('detail pins requests and preserves optional API page URL: %s', async webUrl => {
     const paths: string[] = [];
     const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch(request) {
       const url = new URL(request.url);
-      if (url.pathname === '/api/v1/skills/team/writer') return Response.json({ data: { id: 42, namespace: 'team', slug: 'writer', displayName: 'Writer', summary: '' } });
+      if (url.pathname === '/api/v1/skills/team/writer') return Response.json({ data: { id: 42, namespace: 'team', slug: 'writer', displayName: 'Writer', summary: '', webUrl } });
       if (url.pathname.endsWith('/versions') || url.pathname.endsWith('/reviews')) return Response.json({ data: { items: [], total: 0, page: 0, size: 1 } });
       paths.push(url.pathname + url.search);
       expect(request.headers.get('authorization')).toBeNull();
@@ -56,6 +56,7 @@ describe('native catalog service', () => {
         'team', 'writer', '1.2.0', new AbortController().signal);
       expect(detail).toMatchObject({ namespace: 'team', slug: 'writer', version: '1.2.0', versionId: 12,
         documentation: { state: 'ready', content: '# Writer\n\nUse resources/example.txt.' } });
+      expect(detail.webUrl).toBe(webUrl);
       expect(paths).toEqual(['/api/cli/v1/skills/team/writer/resolve?version=1.2.0',
         '/api/v1/skills/team/writer/versions/1.2.0/file?path=SKILL.md']);
     } finally { await fiber.dispose(); await server.stop(true); }

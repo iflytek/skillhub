@@ -60,8 +60,19 @@ export const TabsContent = TabsPrimitive.Content;
 export const Dialog = DialogPrimitive.Root;
 export const DialogTitle = DialogPrimitive.Title;
 export const DialogDescription = DialogPrimitive.Description;
+/** Keep modal layers outside card action stacking contexts, but inside an owning native dialog's top layer. */
 export function DialogContent({ container, children, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { container: HTMLElement | null }) {
-  return <DialogPrimitive.Portal container={container}>
+  const [layer, setLayer] = React.useState<HTMLDivElement | null>(null);
+  React.useLayoutEffect(() => {
+    if (!container) return;
+    const node = document.createElement('div');
+    node.className = 'skillhub-controls astron-sh-modal-layer';
+    (container.closest('dialog') ?? document.body).append(node);
+    setLayer(node);
+    return () => { node.remove(); };
+  }, [container]);
+  if (!layer) return null;
+  return <DialogPrimitive.Portal container={layer}>
     <DialogPrimitive.Overlay className="astron-sh-dialog-overlay" />
     <DialogPrimitive.Content className="astron-sh-dialog" {...props}>{children}</DialogPrimitive.Content>
   </DialogPrimitive.Portal>;
@@ -69,14 +80,14 @@ export function DialogContent({ container, children, ...props }: React.Component
 
 /** shadcn/ui Select (MIT), New York registry select.json; scoped CSS replaces utilities. */
 export const SelectField = React.forwardRef<HTMLButtonElement, {
-  label: string; value: string; onValueChange(value: string): void; disabled?: boolean;
+  label: string; value: string; placeholder?: string; onValueChange(value: string): void; disabled?: boolean;
   options: readonly { value: string; label: string; disabled?: boolean }[];
-}>(({ label, value, onValueChange, disabled, options }, ref) => {
+}>(({ label, value, onValueChange, disabled, options, placeholder }, ref) => {
   const [container, setContainer] = React.useState<HTMLSpanElement | null>(null);
   return <span className="astron-sh-select-root" ref={setContainer}>
     <SelectPrimitive.Root value={value} onValueChange={onValueChange} disabled={disabled}>
       <SelectPrimitive.Trigger ref={ref} aria-label={label} className="astron-sh-select-trigger">
-        <SelectPrimitive.Value /><SelectPrimitive.Icon asChild><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></SelectPrimitive.Icon>
+        <SelectPrimitive.Value placeholder={placeholder} /><SelectPrimitive.Icon asChild><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal container={container}>
         <SelectPrimitive.Content position="popper" sideOffset={5} className="astron-sh-select-content">

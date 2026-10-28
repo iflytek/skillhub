@@ -236,6 +236,17 @@ class SkillHubScannerAppTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(123456, module._router_stub.MAX_UPLOAD_SIZE_BYTES)
 
+    async def test_upload_limit_accepts_integral_scientific_notation(self):
+        module = _load_module({"SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES": "1.1010048e+08"})
+        self.addCleanup(shutil.rmtree, module._test_temp_parent)
+
+        self.assertEqual(110100480, module._router_stub.MAX_UPLOAD_SIZE_BYTES)
+
+    async def test_upload_limit_rejects_invalid_scientific_notation(self):
+        for value in ("1.5e+0", "1e-1", "1e+", "1e999999", "NaN", "Infinity"):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                self.module._parse_upload_size_bytes(value)
+
     async def test_upload_limit_is_at_least_one_byte(self):
         module = _load_module({"SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES": "0"})
         self.addCleanup(shutil.rmtree, module._test_temp_parent)

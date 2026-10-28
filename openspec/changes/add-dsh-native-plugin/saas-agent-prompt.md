@@ -125,3 +125,10 @@ bun run probe:registry --registry 'https://registry.example' --namespace 'demo' 
 - 版本列表接受 `downloadableOnly=true`，过滤在分页前执行，`total` 与过滤一致。
 - 公开版本全局按发布时间倒序排列；不改变缺省管理历史和技能访问政策。
 - 使用发布时间与创建顺序相反、多页、不可下载及撤回版本测试，再用发布插件独立验证；存储不可达与领域不可安装分开处理。
+
+
+## 官网链接字段交接（待SaaS实现）
+
+在现有匿名技能详情API添加可选`webUrl: string | null`，返回该技能在SaaS网站上的完整网页地址。复用SaaS自身可信Web公网配置及真实路由，不从Host/Forwarded等请求头或客户端参数生成。没有可用配置时返回null，不编造链接；无需数据库迁移，也不新增登录流程。遵循[官网链接契约](registry-api-contract.md#官网详情链接的开源接口增量)。
+
+DSH已移除websiteUrl设置及路由推测，空/缺失/无效会隐藏按钮。请验证非空准确跳转、null/省略/空白兼容、Unicode坐标及部署前缀、匿名详情权限不变、请求头伪造不会改变返回域名，并更新SaaS OpenAPI。现网未返回该字段时按钮隐藏是预期；开源本地验证不等于SaaS上线。

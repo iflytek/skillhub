@@ -98,7 +98,7 @@ function InstallationResult({ result, services, receipt, openInstalled }: {
     <header className="astron-sh-conversation-identity"><SkillAvatar slug={result.slug} namespace={result.namespace} /><div><h4>{result.slug}</h4><p>@{result.namespace}/{result.slug}</p></div><span className="astron-sh-install-badge" data-tone={presentation.tone}>{presentation.label}</span></header>
     <p className="astron-sh-conversation-caption">v{result.version} · {result.targetLabel}</p>
     <p className="astron-sh-install-outcome" role={presentation.tone === 'warning' ? 'alert' : 'status'}>{presentation.message}</p>
-    <div className="astron-sh-install-actions">{canInspectCurrent && operation?.phase === 'completed' && !context.isError && context.data && <UseSkillButton services={services.skillUse} revision={context.data.sourceRevision} resolve={async signal => {
+    <div className="astron-sh-install-actions">{canInspectCurrent && operation?.phase === 'completed' && !context.isError && context.data && entries.some(item => item.state === 'present' && item.installationState !== 'disabled' && item.version === result.version && (item.scope === 'user' ? '当前用户' : '当前项目') === operation.targetLabel) && <UseSkillButton services={services.skillUse} revision={context.data.sourceRevision} resolve={async signal => {
       const inventory = await readReceiptInventory(receipt, result, context.data!, signal);
       const scope = operation.targetLabel === '当前用户' ? 'user' : operation.targetLabel === '当前项目' ? 'project' : undefined;
       return scope ? exactInstalledSkill(inventory, { ...result, scope })?.itemKey ?? '' : '';
@@ -125,7 +125,7 @@ function InstallationResult({ result, services, receipt, openInstalled }: {
           : <>
             {!current.data.complete && <p role="alert">当前安装记录读取不完整，不能判断所有范围是否仍安装。</p>}
             {entries.length ? <ul>{entries.map(item => <li key={item.itemKey}>
-              {item.scope === 'project' ? '当前项目' : '当前用户'} · {item.version} · {item.state === 'present' ? '文件存在' : '本地状态异常，请前往已安装核验'}
+              {item.scope === 'project' ? '当前项目' : '当前用户'} · {item.version} · {item.installationState === 'disabled' ? '已停用' : item.state === 'present' ? '文件存在' : '本地状态异常，请前往已安装核验'}
             </li>)}</ul> : current.data.complete ? <p>当前会话可见范围内已无此技能的安装记录。</p> : null}
           </>}
     </section>}

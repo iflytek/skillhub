@@ -33,6 +33,7 @@ const resolveSchema = z.object({
   downloadUrl: z.string().min(1),
 });
 const metadataSchema = z.object({
+  webUrl: z.string().nullish().catch(undefined),
   id: z.number().int().positive(), namespace: z.string(), slug: z.string(),
   displayName: z.string().nullable(), summary: z.string().nullable(),
   ...publicMetrics,

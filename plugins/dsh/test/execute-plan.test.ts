@@ -4,7 +4,7 @@ import { realpath, mkdtemp, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import SkillHubService from '@astron-team/skillhub-dsh';
-import { UpgradePlans, RemovalPlans } from '../src/host/upgrade-plans.js';
+import { TogglePlans, UpgradePlans, RemovalPlans } from '../src/host/upgrade-plans.js';
 import type { PreparedNativeUpgrade } from '../src/host/local-runtime.js';
 
 test('executePlan accepts only a bound plan and guards every mutation against current Host policy', async () => {
@@ -30,7 +30,7 @@ test('executePlan accepts only a bound plan and guards every mutation against cu
         if (!replay) prepared = await prepare();
         return null;
       } };
-    const context = { localRuntime: runtime, lifetime: new AbortController(), upgradePlans: plans, removalPlans: new RemovalPlans(),
+    const context = { togglePlans: new TogglePlans(), localRuntime: runtime, lifetime: new AbortController(), upgradePlans: plans, removalPlans: new RemovalPlans(),
       ctx: { invocation: { request: { args: { agentId: 'session', input } } }, get: () => ({ get: () => agent }) },
       selectionScope: () => scope, assertSource: () => {}, getContext: () => ({ registryUrl: identity.registry }) };
     Object.setPrototypeOf(context, SkillHubService.prototype);

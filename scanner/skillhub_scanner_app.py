@@ -5,7 +5,9 @@ import inspect
 import logging
 import os
 import shutil
+import sys
 import tempfile
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 from importlib import import_module
 from pathlib import Path
@@ -15,6 +17,25 @@ from typing import NoReturn
 _RUNTIME_TEMP_ROOT = Path(
     os.getenv("SKILLHUB_SCANNER_RUNTIME_TEMP_ROOT", "/tmp/skillhub-scanner-runtime")
 )
+
+
+def _parse_upload_size_bytes(value: str) -> int:
+    """Accept exact integral scientific notation emitted by Helm for byte limits."""
+    try:
+        return max(1, int(value))
+    except ValueError:
+        if "e" not in value.lower():
+            raise
+
+    try:
+        amount = Decimal(value)
+    except InvalidOperation as exc:
+        raise ValueError("Scanner upload size must be an integer") from exc
+    if not amount.is_finite() or amount != amount.to_integral_value() or amount > sys.maxsize:
+        raise ValueError("Scanner upload size must be a finite supported integer")
+    if amount <= 1:
+        return 1
+    return int(amount)
 
 
 def _prepare_runtime_temp_root() -> None:
@@ -41,8 +62,8 @@ from skill_scanner.cli import cli as _upstream_cli
 _upstream_router = import_module("skill_scanner.api.router")
 _MAX_CONCURRENT_SCANS = max(1, int(os.getenv("SKILLHUB_SCANNER_MAX_CONCURRENT_SCANS", "1")))
 _HARD_TIMEOUT_SECONDS = max(1, int(os.getenv("SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS", "930")))
-_upstream_router.MAX_UPLOAD_SIZE_BYTES = max(
-    1, int(os.getenv("SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES", "110100480"))
+_upstream_router.MAX_UPLOAD_SIZE_BYTES = _parse_upload_size_bytes(
+    os.getenv("SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES", "110100480")
 )
 _active_scans = 0
 _active_scans_guard = asyncio.Lock()

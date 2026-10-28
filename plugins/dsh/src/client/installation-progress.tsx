@@ -19,9 +19,9 @@ export function installationProgressState(attempt: InstallationAttempt | undefin
   }
   if (!operation) return { label: '正在提交安装', message: '请稍候…', state: 'running' as const };
   if (operation.phase === 'completed') {
-    const warning = operation.warningCount > 0 || !!operation.resultDetails?.warnings.length;
+    const warning = operation.warningCount > 0 || !!operation.resultDetails?.warnings.length || ['incomplete', 'unknown'].includes(operation.recovery ?? '');
     return { label: warning ? '安装完成，需核验告警' : '安装完成',
-      message: warning ? '请在已安装中核验当前状态。' : operation.discovery === 'confirmed' ? '技能已就绪。' : '文件已安装，DSH 发现尚待确认。', state: 'complete' as const };
+      message: warning ? '请在已安装中核验当前状态。' : '', state: 'complete' as const };
   }
   if (operation.phase === 'failed') return { label: '安装未完成', message: '请核验当前状态后再处理。', state: 'stopped' as const };
   if (operation.phase === 'recovery-required' || operation.phase === 'unknown') return { label: '安装结果待核验', message: '操作需要恢复核验，请在已安装中处理。', state: 'stopped' as const };
@@ -38,8 +38,8 @@ export function InstallationProgressSummary({ attempt, operation, readFailed, on
     <strong role={view.state === 'stopped' ? 'alert' : 'status'}>{view.label}</strong>
     <div role="progressbar" aria-label="安装进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={view.state === 'complete' ? 100 : undefined} aria-valuetext={view.label}
       className="astron-sh-install-progress-track" data-state={view.state}><span /></div>
-    <p>{view.message}</p>
-    {onCheck && view.state !== 'running' && (view.state !== 'complete' || operation?.discovery !== 'confirmed' || !!operation.warningCount)
+    {view.message && <p>{view.message}</p>}
+    {onCheck && view.state !== 'running' && (view.state !== 'complete' || !!operation?.warningCount || ['incomplete', 'unknown'].includes(operation?.recovery ?? ''))
       && <Button size="sm" variant="ghost" onClick={onCheck}>核验状态</Button>}
   </div>;
 }
@@ -61,10 +61,10 @@ export function InstallationProgressPanel({ job, services, onUsed }: { job: Inst
     <header><SkillAvatar name={job.title} namespace={job.namespace} slug={job.slug} /><div><strong>{job.title}</strong><p>v{job.version} · {job.scope === 'project' ? '仅此项目' : '所有项目'}</p></div>
     </header>
     <InstallationProgressSummary attempt={attempt} operation={operation.data ?? attempt?.operation} readFailed={operation.isError || operation.data === null} onCheck={() => { void check(); }} />
-    {completed && <UseSkillButton services={services.skillUse} revision={job.sourceRevision} resolve={async signal => {
+    <div className="astron-sh-install-progress-actions">{completed && <UseSkillButton services={services.skillUse} revision={job.sourceRevision} resolve={async signal => {
       const inventory = await services.installed(job.sourceRevision, signal);
       if (!inventory.ok) throw new Error('无法核验当前安装，请在已安装中重试。');
       return exactInstalledSkill(inventory.value, job)?.itemKey ?? '';
-    }} onHandoff={onUsed} onUsed={onUsed} />}
+    }} onHandoff={onUsed} onUsed={onUsed} />}</div>
   </section>;
 }

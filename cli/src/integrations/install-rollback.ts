@@ -1,9 +1,9 @@
+import { snapshotJournalInstallation } from '../services/installed-skill-snapshot'
 import { lstat, realpath, rename, rm } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { captureInstallInventory } from '../services/inventory-cas'
 import { readInstalledSkillMetadata, sameInstalledSkillSource, type InstalledSkillMetadata } from '../services/installed-skill-metadata'
-import { snapshotSkillDirectory } from '../services/skill-fingerprint'
 import { targetInstalledBy } from '../stores/inventory-store'
 import type { InstallRecoveryInspection, InstallRecoveryOptions } from './install-recovery'
 import type { OperationRecord } from './operation-store'
@@ -87,16 +87,16 @@ async function planRestore(record: OperationRecord): Promise<RecoveryAction[]> {
     const backupExists = backup !== null && await exists(backup)
     if (backupExists) {
       if (!original) throw new Error('Backup has no old identity')
-      await assertContent(backup!, original)
+      await assertContent(record, backup!, original)
     }
     const stageExists = await exists(target.stagingDir)
-    if (stageExists) await assertContent(target.stagingDir, fresh)
+    if (stageExists) await assertContent(record, target.stagingDir, fresh)
     const targetExists = await exists(target.skillDir)
     let targetIsOld = false
     let targetIsFresh = false
     if (targetExists) {
-      if (original) targetIsOld = await matchesContent(target.skillDir, original)
-      targetIsFresh = await matchesContent(target.skillDir, fresh)
+      if (original) targetIsOld = await matchesContent(record, target.skillDir, original)
+      targetIsFresh = await matchesContent(record, target.skillDir, fresh)
       if (targetIsOld === targetIsFresh) throw new Error('Target identity is unknown or ambiguous')
     }
     if (targetIsFresh) {
@@ -133,17 +133,17 @@ async function exists(path: string): Promise<boolean> {
   catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false; throw error }
 }
 
-async function matchesContent(path: string, expected: InstalledSkillMetadata): Promise<boolean> {
-  try { await assertContent(path, expected); return true } catch { return false }
+async function matchesContent(record: OperationRecord, path: string, expected: InstalledSkillMetadata): Promise<boolean> {
+  try { await assertContent(record, path, expected); return true } catch { return false }
 }
 
-async function assertContent(path: string, expected: InstalledSkillMetadata): Promise<void> {
+async function assertContent(record: OperationRecord, path: string, expected: InstalledSkillMetadata): Promise<void> {
   await assertOwnedRegularTree(path)
   const read = await readInstalledSkillMetadata(path)
   if (read.status !== 'valid') throw new Error('Recovery metadata is unavailable')
   const value = read.metadata
   if (!sameInstalledSkillSource(value, expected) || value.source !== 'skillhub' || value.version !== expected.version
     || value.fingerprint !== expected.fingerprint || value.agent !== expected.agent || value.installedAt !== expected.installedAt) throw new Error('Recovery identity changed')
-  const snapshot = await snapshotSkillDirectory(path)
+  const snapshot = await snapshotJournalInstallation(record, path)
   if (snapshot.fingerprint !== expected.fingerprint || !isDeepStrictEqual(snapshot.files, value.files)) throw new Error('Recovery content changed')
 }

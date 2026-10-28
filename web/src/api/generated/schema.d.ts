@@ -9500,6 +9500,11 @@ export interface components {
             avatarUrl?: string;
             ownerReadOnly?: boolean;
             githubSource?: components["schemas"]["GithubSkillSourceResponse"];
+            /**
+             * Format: uri
+             * @description Absolute public skill page URL, or null when no trusted public website is configured
+             */
+            webUrl?: string | null;
         };
         ApiResponseReviewSkillDetailResponse: {
             /** Format: int32 */

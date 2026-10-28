@@ -50,7 +50,7 @@ if (mode === 'recover') {
     await mkdir(join(installDir, '.skillhub'), { recursive: true })
     await writeFile(join(installDir, 'SKILL.md'), content)
     const snapshot = await snapshotSkillDirectory(installDir)
-    const target = { version: identity.version, fingerprint: snapshot.fingerprint, agent: 'dsh', rootDir, installDir, installedAt: '2026-10-14' }
+    const target = { installationState: 'enabled' as const, version: identity.version, fingerprint: snapshot.fingerprint, agent: 'dsh', rootDir, installDir, installedAt: '2026-10-14' }
     targets.push(target)
     await writeFile(join(installDir, '.skillhub/metadata.json'), JSON.stringify({ ...identity, ...snapshot,
       agent: 'dsh', installedAt: target.installedAt }))

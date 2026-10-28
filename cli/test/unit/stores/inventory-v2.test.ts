@@ -58,7 +58,7 @@ test('v1 read preserves bytes and migration expands ownership without inventing 
     expect(backups).toHaveLength(1)
     expect(await readFile(join(dirname(f.store.path), backups[0]!), 'utf8')).toBe(bytes)
     const disk = JSON.parse(await readFile(f.store.path, 'utf8'))
-    expect(disk.schemaVersion).toBe(2); expect(disk).not.toHaveProperty('items'); expect(disk.records[0]).not.toHaveProperty('version')
+    expect(disk.schemaVersion).toBe(3); expect(disk).not.toHaveProperty('items'); expect(disk.records[0]).not.toHaveProperty('version')
     expect(await f.store.read()).toEqual(read)
   } finally { await f.close() }
 })
@@ -74,7 +74,7 @@ test.each(['before', 'after'] as const)('migration %s rename failure leaves one 
     const store = new FailingStore(join(f.root, 'home'))
     if (mode === 'before') await expect(store.ensureWritable()).rejects.toThrow('injected')
     else await store.ensureWritable()
-    expect(await store.diskVersion()).toBe(mode === 'before' ? 1 : 2)
+    expect(await store.diskVersion()).toBe(mode === 'before' ? 1 : 3)
     expect(await store.read()).toEqual({ items: [] })
     expect((await readdir(dirname(store.path))).filter(name => name.includes('.backup.json'))).toHaveLength(1)
   } finally { await f.close() }
@@ -153,7 +153,7 @@ test('v2 recovery preserves a sibling advanced after the failed selected update'
 function legacySnapshot(inventory: Inventory) {
   return { ...inventory, items: inventory.items.map(item => ({ ...item, version: item.targets[0]!.version,
     ...(item.targets[0]!.fingerprint ? { fingerprint: item.targets[0]!.fingerprint } : {}),
-    targets: item.targets.map(({ version, fingerprint, ...target }) => { void version; void fingerprint; return target }) })) }
+    targets: item.targets.map(({ version, fingerprint, installationState, ...target }) => { void version; void fingerprint; void installationState; return target }) })) }
 }
 
 test('pending v1 recovery refuses v2 inventory; on v1 it preserves original journal snapshots', async () => {
@@ -242,10 +242,10 @@ test('ancestor and descendant claims block writes but prefix siblings remain ind
       await expect(f.store.writeAtomic(overlapping)).rejects.toThrow('Ambiguous inventory target ownership')
       expect(await f.store.read()).toEqual(before)
       // Simulate a pre-existing or externally corrupted claim; read-only native previews must fail closed too.
-      await writeFile(f.store.path, JSON.stringify({ schemaVersion: 2, records: overlapping.items }))
+      await writeFile(f.store.path, JSON.stringify({ schemaVersion: 3, records: overlapping.items }))
       expect(await f.runtime.inspectRemoval({ ...f.identity, version: '1.0.0' }, f.roots[0]!)).toEqual({ status: 'blocked', reason: 'shared-target' })
       expect(await f.runtime.inspectUpgrade({ ...f.identity, version: '1.0.0' }, [f.roots[0]!])).toEqual({ status: 'blocked', reason: 'shared-target' })
-      await writeFile(f.store.path, JSON.stringify({ schemaVersion: 2, records: before.items }))
+      await writeFile(f.store.path, JSON.stringify({ schemaVersion: 3, records: before.items }))
       expect(await readFile(join(selected.installDir, 'SKILL.md'), 'utf8')).toBe('# Version 1.0.0')
     }
     const sibling = structuredClone(before)
@@ -286,5 +286,25 @@ test.each(['suite-only', 'shared', 'suite-claim'] as const)('direct CLI mutation
     expect((await executeSkillUpgradePlan(allowed, options)).upgraded).toBe(1)
     expect((await f.store.read()).items[0]!.targets.find(target => target.rootDir === f.roots[0]!.root)).toEqual(before.items[0]!.targets[0])
     expect(await readFile(join(f.roots[0]!.root, 'writer/SKILL.md'), 'utf8')).toBe('# Version 1.0.0')
+  } finally { await f.close() }
+})
+
+test('v2 read is byte-preserving; v3 migration backs up exact v2 bytes and makes target states explicit', async () => {
+  const f = await fixture()
+  try {
+    await f.install(0, '1.0.0')
+    const v3 = await f.store.read()
+    const v2 = { schemaVersion: 2, records: v3.items.map(item => ({ ...item,
+      targets: item.targets.map(({ installationState, ...target }) => { void installationState; return target }) })) }
+    const bytes = JSON.stringify(v2, null, 4)
+    await writeFile(f.store.path, bytes)
+    expect((await f.store.read()).items[0]!.targets[0]!.installationState).toBe('enabled')
+    expect(await readFile(f.store.path, 'utf8')).toBe(bytes)
+    await f.store.ensureWritable()
+    const digest = createHash('sha256').update(bytes).digest('hex')
+    expect(await readFile(join(dirname(f.store.path), `inventory.v2.${digest}.backup.json`), 'utf8')).toBe(bytes)
+    const disk = JSON.parse(await readFile(f.store.path, 'utf8'))
+    expect(disk.schemaVersion).toBe(3)
+    expect(disk.records).toEqual(v3.items)
   } finally { await f.close() }
 })

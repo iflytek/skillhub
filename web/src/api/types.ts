@@ -365,6 +365,7 @@ export interface GithubSkillSource {
 export type SkillDetail = Omit<
   RequiredGenerated<
     GeneratedSkillDetail,
+    | 'webUrl'
     | 'ownerId'
     | 'ownerDisplayName'
     | 'ownerReadOnly'

@@ -1,6 +1,6 @@
 import type { NativeOperation } from '../host/types.js';
 
-const outcomes = { installed: '安装完成', upgraded: '升级完成', removed: '已移除',
+const outcomes = { enabled: '已启用', disabled: '已停用', installed: '安装完成', upgraded: '升级完成', removed: '已移除',
   'stale-record-removed': '失效记录已清理', restored: '已恢复', unknown: '结果待核验' };
 const warnings = { 'backup-cleanup': '备份清理需要核验。', 'removal-cleanup': '卸载隔离文件清理需要核验。',
   'verification-required': '操作日志含有需要进一步核验的告警。' };

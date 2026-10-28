@@ -17,7 +17,7 @@ function snapshot(text: string) { return JSON.parse(text.slice(text.lastIndexOf(
 test('snapshot exposes bounded installation facts, not routing references, paths or integrity claims', () => {
   const text = installationContext(list);
   expect(snapshot(text)).toEqual({ source: 'currently configured SkillHub registry', complete: true, truncated: false, unavailable: [], totalRecords: 1,
-    items: [{ namespace: 'team', name: 'writer', version: '1.0.0', scope: 'project', state: 'present' }] });
+    items: [{ namespace: 'team', name: 'writer', version: '1.0.0', scope: 'project', state: 'present', installationState: 'enabled' }] });
   expect(text).not.toContain(item.itemKey); expect(text).not.toContain('/private');
   expect(text).toContain('Presence does not prove content integrity');
   const literal = installationContext({ ...list, items: [{ ...item, slug: '{{private_variable}}' }] });

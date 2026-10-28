@@ -20,7 +20,7 @@ test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-deni
       await writeFile(join(path, 'SKILL.md'), '# Original')
       const snapshot = await snapshotSkillDirectory(path)
       const selected = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1.0.0' }
-      const entry = { version: selected.version, fingerprint: snapshot.fingerprint, agent: 'dsh', rootDir: target.root, installDir: path, installedAt: '2026-10-14' }
+      const entry = { installationState: 'enabled' as const, version: selected.version, fingerprint: snapshot.fingerprint, agent: 'dsh', rootDir: target.root, installDir: path, installedAt: '2026-10-14' }
       const retained = { ...entry, agent: 'other', rootDir: join(home, 'other'), installDir: join(home, 'other/writer') }
       const item = { registry: selected.registry, namespace: selected.namespace, slug: selected.slug, targets: [entry, retained] }
       const inventory = new InventoryStore(home)

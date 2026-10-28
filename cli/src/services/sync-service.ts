@@ -1,7 +1,7 @@
 import { assertDirectTargetOwnership } from './inventory-ownership'
 import { acquireSkillTargetLock } from './skill-target-lock'
 import { readdir, readFile, rename, rm, stat } from 'node:fs/promises'
-import { basename, join } from 'node:path'
+import { basename, join, resolve } from 'node:path'
 import { SkillHubClient, type NamespaceSyncItem } from '../clients/skillhub-client'
 import { installSkill } from './install-service'
 import { diffSkillFiles, snapshotSkillDirectory } from './skill-fingerprint'
@@ -79,6 +79,11 @@ export async function inspectNamespaceWorkspace(options: {
 }): Promise<{ entries: SyncStatusEntry[]; remoteItems: NamespaceSyncItem[] }> {
   const remoteItems = options.remoteItems ?? await listAllNamespaceSkills(options.client, options.namespace)
   const managed = await scanManagedSkills(options.rootDir, options.registry, options.namespace)
+  const inventory = await new InventoryStore().read()
+  const isDisabled = (slug: string) => inventory.items.some(item => item.registry === options.registry
+    && item.namespace === options.namespace && item.slug === slug
+    && item.targets.some(target => resolve(target.installDir) === resolve(options.rootDir, slug)
+      && target.installationState === 'disabled'))
   const entries: SyncStatusEntry[] = []
   const remoteSlugs = new Set(remoteItems.map(item => item.slug))
 
@@ -94,6 +99,11 @@ export async function inspectNamespaceWorkspace(options: {
       continue
     }
 
+    if (isDisabled(remote.slug)) {
+      entries.push({ ...baseEntry(remote, 'blocked'), localVersion: metadata.version,
+        reason: 'installation is disabled; use explicit upgrade or enable it before namespace sync' })
+      continue
+    }
     const snapshot = await snapshotSkillDirectory(skillDir)
     const changedFiles = snapshot.fingerprint === metadata.fingerprint
       ? []
@@ -146,6 +156,11 @@ export async function inspectNamespaceWorkspace(options: {
 
   for (const [slug, metadata] of managed) {
     if (!remoteSlugs.has(slug)) {
+      if (isDisabled(slug)) {
+        entries.push({ namespace: options.namespace, slug, status: 'blocked', localVersion: metadata.version,
+          changedFiles: [], reason: 'disabled installation is retained; remove it explicitly instead of pruning' })
+        continue
+      }
       const snapshot = await snapshotSkillDirectory(join(options.rootDir, slug))
       const orphan: SyncStatusEntry = {
         namespace: options.namespace,

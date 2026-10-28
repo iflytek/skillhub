@@ -26,6 +26,7 @@ const schema = z.object({
       records: z.array(z.object({
         scope: z.enum(['user', 'project']), version: z.string().min(1),
         state: z.enum(['present', 'missing', 'metadata-invalid', 'mismatch', 'unreadable']),
+        installationState: z.enum(['enabled', 'disabled']).optional(),
       }).strict()),
     }).strict().optional(),
   }).strict()).max(20),

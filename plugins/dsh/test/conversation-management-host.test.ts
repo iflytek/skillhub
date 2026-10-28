@@ -20,6 +20,7 @@ function harness(answer?: { selected: string[]; custom?: string }, providerError
     assertSource: (source: string) => { if (source !== revision) throw new Error('stale'); },
     listInstalledForAgent: async (_id: string, source: string) => { if (source !== revision) throw new Error('stale'); return { items: [item], complete: true, issues: [], unavailable: [] }; },
     prepareUpgradeForVersion: async () => ({ status: 'ready', planId: 'plan', candidateVersion: '2.0.0', reason: 'newer-version' }),
+    prepareToggleForAgent: async () => ({ status: 'ready', planId: 'toggle-plan', reason: 'disabled' }),
     prepareUninstallForAgent: async () => ({ status: 'ready', planId: 'plan', reason: 'uninstall' }),
     readInstalledItem: async () => { reads++; return {}; },
     executePlanForAgent: async (_id: string, input: { requestKey: string }) => {
@@ -98,4 +99,29 @@ test('source changes during native human confirmation never submit', async () =>
     h.changeSource(); return { answers: [{ id: 'skillhub-management', selected: ['确认更新'] }] };
   } } : get(name)) as typeof get;
   await expect(h.run()).rejects.toThrow('stale'); expect(h.writes()).toBe(0);
+});
+
+for (const [action, label] of [['enable', '确认启用'], ['disable', '确认停用']]) {
+  test(`${action} requires exact real approval and does not replay duplicate confirmation`, async () => {
+    const h = harness();
+    const pending = await h.run(action);
+    expect(pending.action).toBe(action); expect(pending.status).toBe('awaiting-confirmation'); expect(h.writes()).toBe(0);
+    const [a, b] = await Promise.all([h.confirm(pending.confirmationRef, true), h.confirm(pending.confirmationRef, true)]);
+    expect(a).toEqual(b); expect(a.status).toBe('accepted'); expect(h.writes()).toBe(1);
+    const cancelled = harness({ selected: ['取消'] });
+    expect((await cancelled.run(action)).status).toBe('cancelled'); expect(cancelled.writes()).toBe(0);
+    const native = harness({ selected: [label] });
+    expect((await native.run(action)).status).toBe('accepted'); expect(native.writes()).toBe(1);
+    const stale = harness(); await expect(stale.run(action, { itemKey: 'old' })).rejects.toThrow('selection changed');
+    expect(stale.writes()).toBe(0);
+  });
+}
+
+test('toggle requests accept exact references only and never accept desired paths or authorization flags', () => {
+  for (const schema of [managementRequests.enable, managementRequests.disable]) {
+    expect(schema.safeParse({ sourceRevision: 'source', itemKey: 'key' }).success).toBe(true);
+    for (const extra of [{ confirmed: true }, { path: '/elsewhere' }, { version: '2' }, { scope: 'user' }]) {
+      expect(schema.safeParse({ sourceRevision: 'source', itemKey: 'key', ...extra }).success).toBe(false);
+    }
+  }
 });

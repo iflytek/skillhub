@@ -621,7 +621,7 @@ subject to the server's package validation.
 
 ### Installation inventory compatibility
 
-The local installation inventory uses schema version 2. Each installation directory owns its
+The local installation inventory uses schema version 3 in the unreleased enable/disable increment. Each installation directory owns its
 version, fingerprint, timestamp and ownership, so a user installation and a project installation
 of the same skill can remain on different versions. `list --json` reports the actual version for
 each target. `upgrade --check --json` and upgrade results contain one row per selected installation
@@ -631,13 +631,19 @@ Direct install/upgrade/remove and sync pruning refuse Suite-owned or shared posi
 with `--force`. Manage those positions through Suite commands; unrelated direct installations
 remain independently manageable.
 
-Reading a legacy inventory does not change it. The first mutation validates it, creates a
-byte-verified `inventory.v1.<sha256>.backup.json` beside `inventory.json`, and atomically writes
-v2 (`schemaVersion`, `records`, `suites`). Missing legacy fingerprint evidence stays missing.
-Unknown schemas and ambiguous ownership stop the operation before skill files are changed.
+Reading a v1/v2 inventory does not change it. The first mutation validates it, preserves its
+original bytes in an immutable digest-addressed backup beside `inventory.json`, and atomically
+writes v3 (`schemaVersion`, `records`, `suites`). Each target records `installationState`
+(`enabled` or `disabled`); legacy targets project to enabled without inventing missing integrity.
 
-Upgrade the CLI and DSH plugin together when they manage the same installation inventory. Stop
-old writers and allow each DSH host to finish pending recovery before the first v2 mutation;
-the CLI cannot discover every host's private operation directory. Old clients do not understand
-v2 and must not be used to mutate these installations. A saved v1 inventory is recovery evidence,
-not a rollback command: restoring it alone after targets diverged would misrepresent files on disk.
+Stop incompatible CLI writers and let DSH finish pending recovery before migration. Published
+CLI `0.2.0` and `0.1.12` must not share writes with v3. Protocol rejection is not a complete
+cross-process guard: historical commands have different read paths. Release the compatible CLI
+before exposing this plugin increment. Restoring old inventory alone is not a safe downgrade;
+verify entry names, package bytes, metadata and operation logs together.
+
+This CLI does not add enable/disable commands. Use DSH for explicit toggles and disabled updates;
+CLI upgrade refuses disabled targets even with `--force`. Namespace sync retains disabled
+installations without update/pruning, Suite cannot adopt them, and doctor preserves trusted
+records without claiming loose `.disabled` files. Standard publishing requires `SKILL.md`;
+restore the entry through the compatible manager before publishing a disabled installation.

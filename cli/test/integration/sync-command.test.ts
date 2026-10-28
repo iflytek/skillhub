@@ -1,6 +1,6 @@
 import { InventoryStore } from '../../src/stores/inventory-store'
 import { createHash } from 'node:crypto'
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { strToU8, zipSync } from 'fflate'
 import { describe, expect, test } from 'bun:test'
@@ -906,5 +906,29 @@ test.each(['ready', 'none'] as const)('sync push reports %s examples for raw ZIP
       if (json) expect(JSON.parse(result.stdout).items[0]).toMatchObject({ examplesStatus: state, examplesCount: state === 'ready' ? 1 : 0, warnings: [] })
       else expect(result.stdout).toContain(state === 'ready' ? 'Task examples: 1' : 'Task examples: none')
     }
+  } finally { registry.stop() }
+})
+
+
+test('namespace sync preserves a disabled installation even with force and prune', async () => {
+  const env = await createTempHome()
+  const skill = { namespace: 'team-a', slug: 'demo', ...makeSkill('# disabled fixture') }
+  const registry = await startFakeRegistry({ token: 'fixture-token', skills: [skill] })
+  const root = join(env.cwd, 'workspace')
+  const flags = ['--registry', registry.url, '--token', 'fixture-token', '--json']
+  try {
+    const installed = await runCli(['install', '@team-a/demo', '--dir', root, ...flags], { HOME: env.home }, { cwd: env.cwd })
+    expect(installed.exitCode).toBe(0)
+    const dir = join(root, 'demo')
+    await rename(join(dir, 'SKILL.md'), join(dir, 'SKILL.md.disabled'))
+    const store = new InventoryStore(env.home)
+    await store.mutateAtomic(inventory => { inventory.items[0]!.targets[0]!.installationState = 'disabled' })
+    const before = await readFile(store.path, 'utf8')
+    const result = await runCli(['sync', 'pull', '--namespace', 'team-a', '--skill', 'demo', '--dir', root,
+      '--force', '--prune', ...flags], { HOME: env.home }, { cwd: env.cwd })
+    expect(result.stdout + result.stderr).toContain('disabled')
+    expect(await readFile(store.path, 'utf8')).toBe(before)
+    expect(await readFile(join(dir, 'SKILL.md.disabled'), 'utf8')).toBe('# disabled fixture')
+    expect(await Bun.file(join(dir, 'SKILL.md')).exists()).toBe(false)
   } finally { registry.stop() }
 })

@@ -13,19 +13,23 @@ export function InstallationStatus({ installation, pending = false, snapshot = f
 }) {
   if (hideEmpty && !pending && installation?.complete && !installation.unavailable.length && !installation.records.length) return null;
   const present = installation?.records.filter(record => record.state === 'present') ?? [];
+  const hasDisabled = present.some(record => record.installationState === 'disabled');
+  const presentLabel = present.length === 1 && hasDisabled ? `已停用 · v${present[0]!.version} · ${scopeLabel[present[0]!.scope]}`
+    : hasDisabled ? present.map(record => `${scopeLabel[record.scope]} · v${record.version} · ${record.installationState === 'disabled' ? '已停用' : '已启用'}`).join(' / ')
+      : `已安装 ${present.map(record => `v${record.version} · ${scopeLabel[record.scope]}`).join(' / ')}`;
   const abnormal = installation?.records.filter(record => record.state !== 'present') ?? [];
   const partial = !installation?.complete || !!installation.unavailable.length;
   const label = pending ? '核对安装状态…' : !installation ? (snapshot ? '安装状态未记录' : '安装状态未知')
-    : present.length ? `已安装 ${present.map(record => `v${record.version} · ${scopeLabel[record.scope]}`).join(' / ')}${abnormal.length ? ' · 部分异常' : ''}${partial ? ' · 部分未知' : ''}`
+    : present.length ? `${presentLabel}${abnormal.length ? ' · 部分异常' : ''}${partial ? ' · 部分未知' : ''}`
       : abnormal.length ? '安装记录异常' : partial ? '安装状态未知' : '无本来源记录';
   const detail = pending ? '正在读取当前来源的本地安装记录。'
     : !installation ? '没有可核验的安装状态，不代表该技能未安装。'
       : [
-        ...installation.records.map(record => `${scopeLabel[record.scope]} · v${record.version} · ${stateLabel[record.state]}`),
+        ...installation.records.map(record => `${scopeLabel[record.scope]} · v${record.version} · ${stateLabel[record.state]}${record.installationState === 'disabled' ? ' · 已停用' : ''}`),
         partial ? '部分安装记录无法读取，不能排除其他安装位置。' : '',
         !installation.records.length && !partial ? '未发现本来源安装记录；不代表其他来源或手动安装的同名技能不存在。' : '',
         snapshot ? `查询时状态：${readableDate(installation.checkedAt, true)}；不代表当前仍然安装。` : '文件存在不代表 DSH 已启用或技能已执行。',
       ].filter(Boolean).join('；');
-  return <span className="astron-sh-installation-status" role="status" data-tone={pending || !installation ? 'neutral' : abnormal.length ? 'warning' : present.length ? 'success' : 'neutral'}
-    aria-label={`${label}。${detail}`} title={detail}>{label}</span>;
+  return <span className="astron-sh-installation-status" role="status" data-multiple={present.length > 1 || undefined} data-tone={pending || !installation ? 'neutral' : abnormal.length ? 'warning' : present.length && !hasDisabled ? 'success' : 'neutral'}
+    aria-label={`${label}。${detail}`} title={detail}>{present.length > 1 && !pending ? <>{present.map((record, index) => <span className="astron-sh-location-summary" key={index}>{scopeLabel[record.scope]} · v{record.version} · {record.installationState === 'disabled' ? '已停用' : '已启用'}</span>)}{(abnormal.length > 0 || partial) && <span className="astron-sh-location-summary">{[abnormal.length > 0 ? '部分异常' : '', partial ? '部分未知' : ''].filter(Boolean).join(' · ')}</span>}</> : label}</span>;
 }

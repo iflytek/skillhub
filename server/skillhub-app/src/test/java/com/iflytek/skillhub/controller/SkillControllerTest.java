@@ -85,6 +85,7 @@ class SkillControllerTest {
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
                 .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.webUrl").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.data.githubSource.ownerLogin").value("upstream"))
                 .andExpect(jsonPath("$.data.githubSource.skillPath").value("agents/demo"))
                 .andExpect(jsonPath("$.data.githubSource.commitSha").value("a".repeat(40)))
@@ -124,6 +125,8 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.paths['/api/v1/skills/{namespace}/{slug}/versions/{version}/file'].get.responses['200'].content['application/octet-stream'].schema.format").value("binary"))
                 .andExpect(jsonPath("$.paths['/api/v1/skills/{namespace}/{slug}/versions/{version}/download'].get.responses['200'].content['application/zip'].schema.format").value("binary"))
                 .andExpect(jsonPath("$.paths['/api/v1/skills/{namespace}/{slug}/versions/{version}/download'].get.responses['302'].headers.Location.schema.format").value("uri"))
+                .andExpect(jsonPath("$.components.schemas.SkillDetailResponse.properties.webUrl.nullable").value(true))
+                .andExpect(jsonPath("$.components.schemas.SkillDetailResponse.properties.webUrl.format").value("uri"))
                 .andExpect(jsonPath("$.components.schemas.CliResolveResponse.required.length()").value(6))
                 .andExpect(jsonPath("$.components.schemas.SkillVersionResponse.properties.changelog.nullable").value(true))
                 .andReturn().getResponse();

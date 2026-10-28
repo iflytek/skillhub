@@ -1,3 +1,5 @@
+import { isDeepStrictEqual } from 'node:util'
+import { toggleJournal, validateToggleJournal, type ToggleJournal } from './toggle-journal'
 import { createHash, randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
 import { chmod, lstat, mkdir, open, readdir, realpath, rename, rm } from 'node:fs/promises'
@@ -18,20 +20,20 @@ const phase = z.enum(['accepted', 'staging', 'revalidating', 'committing', 'reco
 const context = z.object({ hostInstanceId: id, hostLabel: text, sourceIdentity: text,
   sourceLabel: text, sourceRevision: text, initiatedFrom: z.enum(['plaza', 'conversation']),
   createdAt: z.string().datetime(), updatedAt: z.string().datetime() }).strict()
-const input = z.object({ kind: z.enum(['install', 'upgrade', 'uninstall', 'remove-stale-record']),
+const input = z.object({ kind: z.enum(['install', 'upgrade', 'uninstall', 'remove-stale-record', 'enable', 'disable']),
   namespace: text, slug: text, version: text, targetLabel: text,
   targetPaths: z.array(text.refine(isAbsolute, 'Expected a trusted canonical target path')).min(1).max(100).optional(),
   context: context.omit({ hostInstanceId: true, createdAt: true, updatedAt: true }) }).strict()
 const status = z.object({ phase,
-  files: z.enum(['pending', 'installed', 'already-installed', 'upgraded', 'removed', 'stale-record-removed', 'failed', 'unknown']),
+  files: z.enum(['pending', 'installed', 'already-installed', 'upgraded', 'removed', 'stale-record-removed', 'enabled', 'disabled', 'failed', 'unknown']),
   discovery: z.enum(['unconfirmed', 'confirmed', 'failed']), warnings: z.array(text).max(100),
   recovery: z.enum(['not-needed', 'restored', 'incomplete', 'unknown']) }).strict()
 const existingInstallation = z.object({ fingerprint: text, versionId: z.number().int().positive(),
   inventoryDigest: z.string().regex(/^[a-f0-9]{64}$/) }).strict()
-const record = z.object({ schemaVersion: z.union([z.literal(1), z.literal(2)]), operationId: id, ownerId: text,
+const record = z.object({ schemaVersion: z.union([z.literal(1), z.literal(2), z.literal(3)]), operationId: id, ownerId: text,
   requestKey: id, requestDigest: z.string().regex(/^[a-f0-9]{64}$/), revision: z.number().int().nonnegative(),
   operation: input.omit({ context: true }).extend({ context, status }), transaction: transactionState.optional(),
-  removal: removalJournal.optional(), existingInstallation: existingInstallation.optional() }).strict()
+  toggle: toggleJournal.optional(), removal: removalJournal.optional(), existingInstallation: existingInstallation.optional() }).strict()
 export type AcceptedOperationInput = z.infer<typeof input>
 export type OperationRecord = z.infer<typeof record>
 export type OperationStatus = z.infer<typeof status>
@@ -80,7 +82,7 @@ export class OperationStore {
       const duplicate = await this.findRequest(request)
       if (duplicate) return duplicate
       const now = new Date().toISOString()
-      const value: OperationRecord = { schemaVersion: 2, operationId: randomUUID(), ownerId: request.ownerId,
+      const value: OperationRecord = { schemaVersion: 3, operationId: randomUUID(), ownerId: request.ownerId,
         requestKey: request.requestKey, requestDigest: request.requestDigest, revision: 0,
         operation: { ...accepted, context: { ...accepted.context, hostInstanceId: this.hostInstanceId, createdAt: now, updatedAt: now },
           status: { phase: 'accepted', files: 'pending', discovery: 'unconfirmed', recovery: 'not-needed', warnings: [] } } }
@@ -112,7 +114,7 @@ export class OperationStore {
         if (pending.operationId === current.operationId || !needsRecovery(pending)) continue
         const status = pending.operation.status
         const mayHaveChangedFiles = !!pending.transaction?.moves.length
-          || !!pending.removal?.intent.quarantine
+          || !!pending.removal?.intent.quarantine || !!pending.toggle
           || ['committing', 'recovering', 'recovery-required', 'unknown'].includes(status.phase)
           || ['incomplete', 'unknown'].includes(status.recovery)
         if (!mayHaveChangedFiles) continue
@@ -354,6 +356,30 @@ export class OperationStore {
     })
   }
 
+  async recordToggle(operationId: string, ownerId: string, revision: number, journal: ToggleJournal): Promise<OperationRecord> {
+    return this.locked(async () => {
+      const current = await this.get(operationId, ownerId)
+      if (!current || current.revision !== revision) throw new OperationStoreError('REVISION_CONFLICT')
+      const parsed = toggleJournal.parse(journal)
+      validateToggleJournal(current, parsed)
+      if (!['revalidating', 'committing', 'recovering'].includes(current.operation.status.phase)) throw new OperationStoreError('INVALID_TRANSITION')
+      if (current.toggle && (!isDeepStrictEqual({ ...current.toggle, stage: parsed.stage }, parsed)
+        || current.toggle.stage === 'committed' || current.toggle.stage === 'restored')) throw new OperationStoreError('INVALID_TRANSITION')
+      if (!current.toggle && parsed.stage !== 'intent') throw new OperationStoreError('INVALID_TRANSITION')
+      const transitions: Record<ToggleJournal['stage'], ToggleJournal['stage'][]> = {
+        intent: ['linked', 'restored'], linked: ['moved', 'restoring', 'restored'], moved: ['committed', 'restoring', 'restored'],
+        restoring: ['restore-linked', 'restored'], 'restore-linked': ['restored'], committed: [], restored: []
+      }
+      if (current.toggle && !transitions[current.toggle.stage].includes(parsed.stage)) throw new OperationStoreError('INVALID_TRANSITION')
+      const value = record.parse({ ...current, toggle: parsed, revision: revision + 1,
+        operation: { ...current.operation, status: { ...current.operation.status,
+          phase: current.operation.status.phase === 'recovering' ? 'recovering' : parsed.stage === 'intent' ? 'revalidating' : 'committing' },
+          context: { ...current.operation.context, updatedAt: new Date().toISOString() } } })
+      await writeOperationRecord(this.path(operationId), value)
+      return value
+    })
+  }
+
   private validateRequest(request: OperationRequest): void {
     if (request.hostInstanceId !== this.hostInstanceId) throw new OperationStoreError('HOST_MISMATCH')
     text.parse(request.ownerId); id.parse(request.requestKey)
@@ -366,6 +392,8 @@ export class OperationStore {
     if (json === undefined) return undefined
     const parsed = record.safeParse(json)
     if (!parsed.success || parsed.data.operationId !== operationId || parsed.data.operation.context.hostInstanceId !== this.hostInstanceId) throw new OperationStoreError('CORRUPT_RECORD')
+    if (parsed.data.schemaVersion < 3 && (parsed.data.toggle || ['enable', 'disable'].includes(parsed.data.operation.kind))) throw new OperationStoreError('CORRUPT_RECORD')
+    if (parsed.data.toggle) validateToggleJournal(parsed.data, parsed.data.toggle)
     return parsed.data
   }
   private async findRequest(request: OperationRequest): Promise<OperationRecord | undefined> {
@@ -437,8 +465,9 @@ function assertTransition(current: OperationRecord, next: OperationStatus): void
   if (next.phase === 'completed') {
     if (['uninstall', 'remove-stale-record'].includes(current.operation.kind)
       && !current.removal?.inventoryCommit?.committed) throw new OperationStoreError('INVALID_TRANSITION')
+    if (['enable', 'disable'].includes(current.operation.kind) && current.toggle?.stage !== 'committed') throw new OperationStoreError('INVALID_TRANSITION')
     const outcomes = { install: ['installed', 'already-installed'], upgrade: ['upgraded', 'already-installed'],
-      uninstall: ['removed'], 'remove-stale-record': ['stale-record-removed'] }
+      uninstall: ['removed'], 'remove-stale-record': ['stale-record-removed'], enable: ['enabled'], disable: ['disabled'] }
     if (!outcomes[current.operation.kind].includes(next.files) || !['not-needed', 'restored'].includes(next.recovery)) throw new OperationStoreError('INVALID_TRANSITION')
     if (['accepted', 'revalidating'].includes(prior.phase) && next.files !== 'already-installed') throw new OperationStoreError('INVALID_TRANSITION')
   }
@@ -472,9 +501,9 @@ async function atomicWrite(path: string, value: unknown): Promise<void> {
 
 /** Recovery may advance v1 status, but never rewrite the original serialized evidence. */
 async function writeOperationRecord(path: string, value: OperationRecord): Promise<void> {
-  if (value.schemaVersion !== 1) return atomicWrite(path, value)
+  if (value.schemaVersion === 3) return atomicWrite(path, value)
   const previous = await readJson(path) as OperationRecord | undefined
-  if (!previous || previous.schemaVersion !== 1) throw new Error('Legacy operation evidence missing')
+  if (!previous || previous.schemaVersion !== value.schemaVersion) throw new Error('Legacy operation evidence missing')
   const preserved = structuredClone(value)
   if (preserved.transaction && previous.transaction) {
     if (preserved.transaction.preparation && previous.transaction.preparation) {

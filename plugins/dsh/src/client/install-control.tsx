@@ -1,3 +1,5 @@
+import { ToggleControl } from './toggle-control.js';
+import type { ManagementViewServices } from './management-tool-view.js';
 import { UseSkillButton, type SkillUseServices } from './use-skill.js';
 import { UpgradeControl, type UpgradeServices } from './upgrade-control.js';
 import { InstallationProgressSummary, type InstallationProgressJob } from './installation-progress.js';
@@ -14,6 +16,7 @@ import type { InstallationRequests } from './installation-requests.js';
 export interface InstallationServices extends CompatibilityServices {
   sessionId: string;
   skillUse?: SkillUseServices;
+  management?: ManagementViewServices;
   upgrades?: UpgradeServices;
   registryIdentity?(revision: string): Promise<string>;
   checkVersionUpdate?(revision: string, itemKey: string, version: string, signal: AbortSignal): Promise<RemoteResult<InstalledUpdateCheck>>;
@@ -110,30 +113,31 @@ export function InstallControl({ detail, sourceRevision, services, initiatedFrom
       services={services.upgrades} sourceRevision={sourceRevision} source={upgradeCandidate.source} item={upgradeCandidate.item}
       targetVersion={upgradeCandidate.version} onClosed={() => setUpgradeCandidate(null)} />}
     <HostWriteStatus state={writableHost} />
-    {records.length > 0 ? <label className="astron-sh-scope-field">安装范围 <SelectField label="安装范围" value={scope} disabled={attempt?.state === 'submitting'} onValueChange={value => { scopeChosen.current = true; setScope(value as 'project' | 'user'); }}
-      options={[{ value: 'project', label: '仅此项目', disabled: !targets.data?.targets.some(item => item.scope === 'project') && !records.some(item => item.scope === 'project') }, { value: 'user', label: '所有项目', disabled: !targets.data?.targets.some(item => item.scope === 'user') && !records.some(item => item.scope === 'user') }]} /></label> : <details className="astron-sh-install-advanced">
-      <summary>高级选项{scope === 'project' ? ' · 当前项目' : ''}</summary>
+    <div className="astron-sh-install-scope">
       <label className="astron-sh-scope-field">安装范围 <SelectField label="安装范围" value={scope} disabled={attempt?.state === 'submitting'} onValueChange={value => { scopeChosen.current = true; setScope(value as 'project' | 'user'); }}
       options={[{ value: 'project', label: '仅此项目', disabled: !targets.data?.targets.some(item => item.scope === 'project') && !records.some(item => item.scope === 'project') }, { value: 'user', label: '所有项目', disabled: !targets.data?.targets.some(item => item.scope === 'user') && !records.some(item => item.scope === 'user') }]} /></label>
-    </details>}
+    </div>
     <p className="astron-sh-scope-help">{scope === 'project' ? '仅当前项目可用' : '当前用户的所有项目可用'}</p>
     {targets.isError && <p role="alert">无法读取安装位置。<Button size="sm" onClick={() => { void targets.refetch(); }}>重试</Button></p>}
     {local.isPending || (!local.data && local.isFetching) ? <p role="status">正在读取安装状态…</p>
       : !isInventoryScopeVerified(local.data, scope) || local.isError ? <p role="alert">安装状态暂不可用。<Button size="sm" onClick={() => { void local.refetch(); }}>重试</Button></p>
-        : current ? <div className="astron-sh-current-install" data-state={current.state}>
-          <strong>{current.state === 'present' ? `已安装 v${current.version}` : '安装记录异常'}</strong>
+        : current ? <div className="astron-sh-current-install" data-state={current.state} data-installation-state={current.installationState}>
+          <strong>{current.state === 'present' ? `已安装 v${current.version}` : '安装记录异常'}</strong>{current.installationState === 'disabled' && <span className="astron-sh-disabled-label">已停用</span>}
           {(onManage || services.manageInstalled) && <Button size="sm" variant="destructive" disabled={!inventoryVerified} onClick={manage}>{current.state === 'present' ? '卸载' : '管理'}</Button>}
         </div> : records.length > 0 ? <p className="astron-sh-other-install">已安装：{records.map(item => `${item.scope === 'user' ? '所有项目' : '仅此项目'} v${item.version}`).join('、')}</p> : null}
     {upgradeSource.isError && <p role="alert">无法核验当前来源。<Button size="sm" onClick={() => { void upgradeSource.refetch(); }}>重试</Button></p>}
-    {current?.state === 'present' && current.version !== detail.version && services.checkVersionUpdate && <div className="astron-sh-version-action">
-      {versionUpdate.isFetching ? <p role="status">正在核对所选版本…</p> : versionUpdate.isError ? <p role="alert">无法核对所选版本。<Button size="sm" onClick={() => { void versionUpdate.refetch(); }}>重试</Button></p>
-        : versionUpdate.data?.state === 'upgradable' && versionUpdate.data.candidateVersion === detail.version ? <Button variant="default" disabled={!inventoryVerified || !writableHost.canWrite || !upgradeSource.data || upgradeSource.isError || upgradeSource.isFetching} onClick={() => { if (upgradeSource.data) setUpgradeCandidate({ item: current, version: detail.version, source: upgradeSource.data }); }}>升级到 v{detail.version}</Button>
-          : versionUpdate.data && <p role="status">{selectedVersionUpdateMessage(versionUpdate.data)}</p>}
-    </div>}
     {inventoryVerified && !current && (!attempt || completed) && <Button ref={trigger} variant="default" disabled={!writableHost.canWrite || !target || targets.isFetching}
       onClick={() => { if (!target) return; if (presentation === 'dialog') submit(completed); else setConfirmation({ key, targetToken: target.targetToken, reinstall: completed }); }}>
       {scope === 'project' ? '安装到此项目' : '安装到所有项目'}</Button>}
-    {inventoryVerified && current?.state === 'present' && current.version === detail.version && <UseSkillButton services={services.skillUse} revision={sourceRevision} itemKey={current.itemKey} onHandoff={onClose} onUsed={onClose} />}
+    <div className="astron-sh-install-actions">
+      {inventoryVerified && current?.state === 'present' && current.installationState !== 'disabled' && <UseSkillButton label={current.version === detail.version ? '使用此技能' : '使用已安装版本'} services={services.skillUse} revision={sourceRevision} itemKey={current.itemKey} onHandoff={onClose} onUsed={onClose} />}
+    {current?.state === 'present' && current.version !== detail.version && services.checkVersionUpdate && <div className="astron-sh-version-action">
+      {versionUpdate.isFetching ? <p role="status">正在核对所选版本…</p> : versionUpdate.isError ? <p role="alert">无法核对所选版本。<Button size="sm" onClick={() => { void versionUpdate.refetch(); }}>重试</Button></p>
+        : versionUpdate.data?.state === 'upgradable' && versionUpdate.data.candidateVersion === detail.version ? <Button size="sm" variant="outline" disabled={!inventoryVerified || !writableHost.canWrite || !upgradeSource.data || upgradeSource.isError || upgradeSource.isFetching} onClick={() => { if (upgradeSource.data) setUpgradeCandidate({ item: current, version: detail.version, source: upgradeSource.data }); }}>升级到 v{detail.version}</Button>
+          : versionUpdate.data && <p role="status">{selectedVersionUpdateMessage(versionUpdate.data)}</p>}
+    </div>}
+      {current?.state === 'present' && records.filter(item => item.scope === scope).length === 1 && <ToggleControl title={detail.title} presentation="button" eligible={inventoryVerified} services={services.management} revision={sourceRevision} item={current} />}
+    </div>
     {current && completed && (result.warningCount > 0 || !!result.resultDetails?.warnings.length) && <p role="alert">安装有告警，请在已安装中核验。</p>}
     {submissionError && <p role="alert">{submissionError}</p>}
     {progressVisible && attempt && <InstallationProgressSummary attempt={attempt} operation={operation.data ?? attempt.operation} readFailed={operation.isError || operation.data === null}

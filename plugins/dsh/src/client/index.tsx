@@ -95,6 +95,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
     ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'skillhub-case-choices' },
       props => <SkillUseBinding controller={useSkills} sessionId={props.sessionId} actions={props.inputActions}><SkillCaseChoices controller={useSkills} sessionId={props.sessionId} /></SkillUseBinding>));
     function installationFor(sessionId: string, catalog = false): InstallationServices {
+      let management: ManagementViewServices | undefined;
       const call = async <T,>(action: (remote: AgentContext['remote']) => Promise<T>): Promise<T> => {
         const scope = ctx.sessions.scope(SessionId(sessionId));
         if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');
@@ -107,13 +108,13 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
         operation: (id, host) => call(remote => remote.skillhub.getOperation(id, host)),
         recoverOperation: input => call(remote => remote.skillhub.recoverOperation(input)),
       };
-      return { sessionId, requests, upgrades, skillUse: catalog ? useSkills.catalogServices(sessionId) : useSkills.services(sessionId), registryIdentity: async revision => { const source = await ctx.remote.skillhub.getContext(); if (!source.ok || !source.value.configured || source.value.sourceRevision !== revision) throw new Error('来源已变化，请重新读取详情。'); return source.value.registryUrl; },
+      return { sessionId, requests, upgrades, get management() { return management ??= managementFor(sessionId); }, skillUse: catalog ? useSkills.catalogServices(sessionId) : useSkills.services(sessionId), registryIdentity: async revision => { const source = await ctx.remote.skillhub.getContext(); if (!source.ok || !source.value.configured || source.value.sourceRevision !== revision) throw new Error('来源已变化，请重新读取详情。'); return source.value.registryUrl; },
         checkVersionUpdate: (revision, itemKey, version, signal) => call(remote => remote.skillhub.checkVersionUpdate(revision, itemKey, version, signal)),
         manageInstalled: (sourceRevision, item) => {
         const layout = ctx.get('layout');
         if (!layout || !ctx.sessions.scope(SessionId(sessionId))) throw new Error('当前会话不可用。');
         const installed = installedNavigationFor(navigation, sessionId, sourceRevision);
-        Object.assign(installed, { scope: item.scope, keyword: '', selected: item, intent: 'remove', completed: null, removalCompleted: null, triggerKey: item.itemKey });
+        Object.assign(installed, { scope: item.scope, keyword: '', selected: item, intent: 'detail', completed: null, removalCompleted: null, triggerKey: item.itemKey });
         navigation.selected = null; navigation.tab = 'installed'; navigation.scrollTop = 0;
         navigation.installedOrigin = { sessionId, sourceRevision };
         layout.selectPanel(panelId);
@@ -138,33 +139,36 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
         installed: (revision, signal) => { assertCurrent(); return withSessionRemote(scope!, remote => remote.skillhub.listInstalled(revision, signal)); },
       };
     }
-    for (const name of ['astron_skillhub_check_availability', 'astron_skillhub_list_installed', 'astron_skillhub_check_update', 'astron_skillhub_upgrade', 'astron_skillhub_uninstall', 'astron_skillhub_operation']) {
+    function managementFor(sessionId: string): ManagementViewServices {
+      const receipt = receiptReadsFor(sessionId);
+      const call = async <T,>(action: (remote: AgentContext['remote']) => Promise<T>): Promise<T> => {
+        receipt.assertCurrent();
+        if (!(ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.retainedBy.mainView ?? 0)) throw new Error('请回到原会话后重试。');
+        const scope = ctx.sessions.scope(SessionId(sessionId));
+        if (!scope) throw new Error('当前会话已关闭。');
+        return withSessionRemote(scope, action);
+      };
+      const services: ManagementViewServices = { selectSkillUse: (revision, namespace, slug, signal) => call(remote => remote.skillhub.selectSkillUse(revision, namespace, slug, signal)), client, installation: installationFor(sessionId), assertCurrent: receipt.assertCurrent,
+        refreshInstalled: signal => call(async remote => {
+          const source = await ctx.remote.skillhub.getContext();
+          if (!source.ok || !source.value.configured) throw new Error('当前技能来源不可用。');
+          receipt.assertCurrent();
+          const installed = await remote.skillhub.listInstalled(source.value.sourceRevision, signal);
+          if (!installed.ok) throw new Error('无法读取当前安装记录。');
+          receipt.assertCurrent();
+          return { sourceRevision: source.value.sourceRevision, list: installed.value };
+        }),
+        availability: (revision, itemKey, signal) => call(remote => remote.skillhub.checkAvailability(revision, itemKey, signal)),
+        check: (revision, itemKey, signal) => call(remote => remote.skillhub.checkUpdate(revision, itemKey, signal)),
+        begin: (revision, itemKey, action, version, requestKey, signal) => call(remote => remote.skillhub.beginConversationManagement(revision, itemKey, action, version, requestKey, signal)),
+        confirm: (reference, confirmed, signal) => call(remote => remote.skillhub.confirmConversationManagement(reference, confirmed, signal)),
+      };
+      return services;
+    }
+    for (const name of ['astron_skillhub_check_availability', 'astron_skillhub_list_installed', 'astron_skillhub_check_update', 'astron_skillhub_upgrade', 'astron_skillhub_uninstall', 'astron_skillhub_enable', 'astron_skillhub_disable', 'astron_skillhub_operation']) {
       ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({ name: 'tool.call.toolview', key: name,
         inject: sessionId => {
-          const receipt = receiptReadsFor(sessionId);
-          const call = async <T,>(action: (remote: AgentContext['remote']) => Promise<T>): Promise<T> => {
-            receipt.assertCurrent();
-            if (!(ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.retainedBy.mainView ?? 0)) throw new Error('请回到原会话后重试。');
-            const scope = ctx.sessions.scope(SessionId(sessionId));
-            if (!scope) throw new Error('当前会话已关闭。');
-            return withSessionRemote(scope, action);
-          };
-          const services: ManagementViewServices = { client, installation: installationFor(sessionId), assertCurrent: receipt.assertCurrent,
-            refreshInstalled: signal => call(async remote => {
-              const source = await ctx.remote.skillhub.getContext();
-              if (!source.ok || !source.value.configured) throw new Error('当前技能来源不可用。');
-              receipt.assertCurrent();
-              const installed = await remote.skillhub.listInstalled(source.value.sourceRevision, signal);
-              if (!installed.ok) throw new Error('无法读取当前安装记录。');
-              receipt.assertCurrent();
-              return { sourceRevision: source.value.sourceRevision, list: installed.value };
-            }),
-            availability: (revision, itemKey, signal) => call(remote => remote.skillhub.checkAvailability(revision, itemKey, signal)),
-            check: (revision, itemKey, signal) => call(remote => remote.skillhub.checkUpdate(revision, itemKey, signal)),
-            begin: (revision, itemKey, action, version, requestKey, signal) => call(remote => remote.skillhub.beginConversationManagement(revision, itemKey, action, version, requestKey, signal)),
-            confirm: (reference, confirmed, signal) => call(remote => remote.skillhub.confirmConversationManagement(reference, confirmed, signal)),
-          };
-          return { services };
+          return { services: managementFor(sessionId) };
         },
       }, props => <SkillUseBinding controller={useSkills} sessionId={props.sessionId} actions={props.inputActions}><ManagementToolView {...props} /></SkillUseBinding>));
     }
@@ -251,7 +255,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       }, ({ renderSlot }) => renderSlot('skillhub.catalog', {})));
       ctx.slots.inject('skillhub.catalog', () => ctx.slots.register({ name: 'skillhub.catalog',
         inject: sessionId => ({ installation: sessionId ? installationFor(sessionId, true) : undefined,
-          installed: sessionId ? { sessionId, skillUse: useSkills.catalogServices(sessionId), upgradeRequests, removalRequests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
+          installed: sessionId ? { sessionId, management: managementFor(sessionId), skillUse: useSkills.catalogServices(sessionId), upgradeRequests, removalRequests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
             operation: installationFor(sessionId).operation,
             recoverOperation: async input => {
               const scope = ctx.sessions.scope(SessionId(sessionId));

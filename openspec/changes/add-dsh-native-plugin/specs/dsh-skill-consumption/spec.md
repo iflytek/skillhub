@@ -259,3 +259,180 @@ The plugin SHALL diagnose a selected managed installation or a named current-ses
 #### Scenario: Path-free result
 - **WHEN** Host resources or errors contain paths, content, metadata or secrets
 - **THEN** only explicitly allowed diagnosis fields reach the model and UI, and no raw resource or error is serialized
+
+### Requirement: Persistent managed-installation enablement
+The plugin SHALL enable or disable exactly one current-source managed DSH installation at a trusted user or current-project location. Disablement SHALL persist across sessions by renaming the exact SKILL.md entry to SKILL.md.disabled while preserving entry bytes, resource paths and invocation policy. It SHALL NOT implement this contract as a conversation-only filter or execute package scripts. See `../../skill-toggle-design.md` for the storage protocol and implementation gates.
+
+#### Scenario: Disable one of two installations
+- **WHEN** user and project installations exist and the user confirms disabling the project installation
+- **THEN** only that exact entry is renamed to the verified non-discovered alias, its inventory identity and version remain installed with disabled state, and user installation files and records remain unchanged
+
+#### Scenario: Default scope does not select a mutation target
+- **WHEN** a request to disable a skill matches multiple managed locations without an explicit location
+- **THEN** the Host requires a target selection before preparing confirmation; the user-scope default for new installation SHALL NOT select the target
+
+#### Scenario: Unmanaged or shared installation
+- **WHEN** a selected target has external, unknown, Suite/shared or overlapping physical ownership
+- **THEN** enabling or disabling is blocked without modifying files or claiming that installation
+
+#### Scenario: Already in requested state
+- **WHEN** the verified exact installation already has the requested enablement state
+- **THEN** the plugin reports unchanged without moving files or creating another successful mutation
+
+### Requirement: Enablement separate from discovery
+The plugin SHALL represent persistent enablement, package integrity, current-session discovery and invocation policies as separate facts. Disabled installations SHALL remain visible in installed queries and SHALL NOT be treated as missing merely because the standard entry is absent.
+
+#### Scenario: Same-name fallback after disablement
+- **WHEN** the selected installation is disabled and another location or provider wins the same skill name
+- **THEN** the result identifies only the selected location as disabled, reports a winner only from verified Host evidence, and neither disables nor silently uses the other installation
+
+#### Scenario: Watcher unavailable or stale
+- **WHEN** the filesystem transaction commits while watch is disabled, failed or discovery remains cached
+- **THEN** the result reports the committed installation state and unconfirmed or observed discovery separately, without claiming instantaneous revocation, restarting the Host or terminating running tasks
+
+#### Scenario: Custom discovery includes disabled entries
+- **WHEN** a custom provider can still supply the renamed entry or its content
+- **THEN** the plugin limits its disablement claim to the managed entry under the supported official filesystem provider, reports any verified current-session discovery separately, and never treats a filename convention or absent snapshot as proof of machine-wide exclusion
+
+#### Scenario: Enablement preserves invocation policy
+- **WHEN** a disabled package with restricted user or model invocation is successfully restored
+- **THEN** its bytes and restrictions are preserved and it is not reported callable until the exact resource and relevant policy are independently verified
+
+### Requirement: Confirmed exact enablement plans
+Enablement mutations SHALL use immutable Host plans, real user confirmation, trusted context, compatible locks and exact before-state revalidation. Page and conversation entry points SHALL use the shared core without launching a CLI process. A natural-language target reference SHALL NOT itself authorize execution.
+
+#### Scenario: Cancellation or changed context
+- **WHEN** the user cancels or the source, session, project root, services, installation state, version, content or ownership changes before acceptance
+- **THEN** the unaccepted plan cannot execute; changed context requires a fresh query and confirmation and cancellation leaves files and inventory unchanged
+
+#### Scenario: Repeated confirmation and lost response
+- **WHEN** an accepted toggle is retried with the same owner, request key and parameter digest after a response is lost
+- **THEN** the original operation is returned without another movement; different parameters are rejected and missing outcome evidence remains unknown rather than triggering a new request
+
+#### Scenario: Historical use action after disablement
+- **WHEN** a historical card requests use or another mutation after the selected installation's state changes
+- **THEN** the old reference is rejected without binding it to another location; a fresh query exposes the current state and disabled installations do not offer use
+
+### Requirement: Recoverable enablement file transactions
+The shared core SHALL persist entry-transition intent, validate both entry paths, acquire canonical target locks before the inventory lock and CAS only the selected target. Inventory commit SHALL determine logical success; recovery SHALL reconcile inventory and actual files without overwriting unrelated or conflicting content. Disabled installation directories SHALL remain reserved against other managed installations.
+
+#### Scenario: Standard entry occupied
+- **WHEN** enabling finds any existing content, link, conflicting claim or unreadable state at the standard entry path
+- **THEN** restoration is blocked, the disabled entry and package and disabled record remain intact, and no merge, overwrite or alternate destination is chosen
+
+#### Scenario: Disabled package drift
+- **WHEN** a disabled package is missing, modified or lacks a usable integrity baseline
+- **THEN** enabling and destructive mutations are blocked with an explicit integrity or unknown-state result rather than reconstructing or deleting content
+
+#### Scenario: Crash after movement before inventory commit
+- **WHEN** the entry has been renamed but the inventory still matches the before-state after interruption
+- **THEN** recovery reacquires compatible locks and restores only when the non-overwriting inverse transition and baseline are verified safe; conflicts preserve evidence and require recovery rather than reporting success
+
+#### Scenario: Inventory committed but completion journal failed
+- **WHEN** inventory matches the after-state and files match the committed entry name despite a failed terminal journal write
+- **THEN** reconciliation preserves the new state and reports the actual outcome with warning, never reverting files against committed inventory
+
+#### Scenario: Unknown commit or ambiguous files
+- **WHEN** CAS outcome is unknown or both standard and disabled entries exist or cannot be read reliably
+- **THEN** the core rereads state under compatible locks and retains unresolved evidence without replaying the toggle or allowing conflicting new mutations
+
+#### Scenario: Concurrent independent targets
+- **WHEN** different installations change concurrently while one is being disabled
+- **THEN** selected-target CAS preserves the other installation's latest version, state, ownership and files; an original path reserved by a disabled target is not treated as unclaimed
+
+### Requirement: Disabled installation lifecycle
+Disabled installations SHALL remain eligible for protected update checks, updates and exact local uninstall under the existing integrity and ownership rules. Updating SHALL preserve disabled state and SHALL NOT temporarily restore the standard discoverable entry.
+
+#### Scenario: Upgrade a disabled installation
+- **WHEN** the user confirms an eligible exact newer version for a disabled target
+- **THEN** the shared core replaces its package recoverably with the disabled entry prepared before commit, updates only its release baseline and preserves disabled state, installation-directory ownership and sibling installations
+
+#### Scenario: Uninstall a disabled installation offline
+- **WHEN** the Registry is unavailable and the user confirms uninstall of a disabled installation with trusted local identity and baseline
+- **THEN** its package files and exact record are removed through recoverable local deletion, its reservation is released, and other installations remain unchanged
+
+#### Scenario: Plugin itself is disabled
+- **WHEN** the SkillHub plugin is disabled or removed after a completed skill disablement
+- **THEN** it does not silently restore all disabled packages or discard their persistent recovery and storage information
+
+### Requirement: Explicit enablement protocol migration gate
+Enablement SHALL NOT be encoded by silently extending the existing strict inventory v2 schema or introducing a competing writable state authority. A reviewed explicit inventory and journal protocol, compatible shared consumers, migration and rollback procedures, and historical-consumer verification SHALL precede enablement implementation and release.
+
+#### Scenario: Read legacy inventory
+- **WHEN** a compatible new consumer reads v1 or v2 inventory before a mutation
+- **THEN** it projects logical enabled state without writing the source or inventing missing files or fingerprints; first-write migration preserves verified original bytes and unrelated records under compatible locks
+
+#### Scenario: Historical CLI consumer
+- **WHEN** a historical CLI reads or mutates a host with the proposed new inventory protocol
+- **THEN** verification records whether each relevant command rejects before touching files; schema rejection alone SHALL NOT be accepted as proof of safe mixed-version operation, and incompatible writers must be stopped before migration
+
+#### Scenario: Rollback with disabled packages
+- **WHEN** an operator attempts to return to a consumer without disabled-installation support
+- **THEN** the procedure requires stopped writers, verified package and destination state and a validated restoration or export path; restoring an old inventory backup alone SHALL NOT be reported as successful rollback
+
+### Requirement: State-aware canonical package integrity
+The shared core SHALL compute a disabled installation's canonical fingerprint by mapping only its exact recorded SKILL.md.disabled alias to SKILL.md, preserving bytes and all other package files. It SHALL NOT infer managed state from arbitrary disabled filenames. Publishing or export SHALL restore the canonical entry in the original or a validated export copy before producing a standard package.
+
+#### Scenario: Two entries or alias collision
+- **WHEN** both entry names exist, the alias is occupied by author content, either entry is an unsafe link, or the expected entry is absent
+- **THEN** toggle and destructive lifecycle operations are blocked without overwriting either entry or normalizing arbitrary files
+
+#### Scenario: Fingerprint remains canonical
+- **WHEN** a trusted installation is disabled by the entry rename
+- **THEN** the state-aware fingerprint equals the original canonical package fingerprint, and changing any entry bytes or resource bytes is still detected as local drift
+
+#### Scenario: Export a disabled package
+- **WHEN** export or publication uses a disabled installation
+- **THEN** it first restores the canonical entry or constructs a separately validated canonical export copy; it does not publish the disabled directory verbatim
+
+#### Scenario: Historical context and concurrent entry load
+- **WHEN** a conversation already loaded the skill or reads the entry concurrently with a rename
+- **THEN** resources retain their paths, loaded content is not claimed revoked, and a failed entry load is reported for fresh inspection without redirecting to another installation or claiming arbitrary external use has stopped
+
+#### Scenario: Upgrade candidate already contains the alias
+- **WHEN** a new package for a disabled installation already contains an author-supplied SKILL.md.disabled file
+- **THEN** the disabled upgrade is blocked before replacement without overwriting that resource or changing the ordinary upload contract; alias normalization requires both trusted disabled inventory state and matching exact installation identity
+
+#### Scenario: Exclusive entry transition interrupted between names
+- **WHEN** an authorized transition has exclusively linked its destination but has not yet removed its source
+- **THEN** recovery accepts the dual-entry state only with the matching journal phase, equal device/inode and verified canonical bytes; unrelated destination entries are preserved and block the transition
+
+#### Scenario: Disabled discovery cannot be verified
+- **WHEN** the trusted entry name cannot be safely parsed, the observation times out, or Host snapshot and definition disagree
+- **THEN** discovery remains unknown independently of disabled installation state, and the installation never receives invocation authorization from this diagnostic
+
+
+### Requirement: API-owned skill website links
+The plugin SHALL use only the detail API's optional webUrl for the website action. It SHALL NOT construct a website route, fall back to the Registry address, or require a plugin website setting.
+
+#### Scenario: Complete website URL provided
+- **WHEN** the current source returns a safe absolute HTTP(S) webUrl for the matching detail
+- **THEN** both detail entry points provide a new-tab link preserving that URL's page parameters, without appending local credentials or enabling opener access
+
+#### Scenario: Website URL absent or unsafe
+- **WHEN** webUrl is absent, null, blank, non-HTTP(S), credential-bearing or otherwise unsafe
+- **THEN** the website action is hidden and the remaining detail and installation features remain available
+
+#### Scenario: Server website identity
+- **WHEN** the open-source server constructs the detail website URL
+- **THEN** it uses only the configured trusted public website base and encoded skill coordinates, returns null without a valid base, and never trusts request Host or forwarding headers for this address
+
+
+### Requirement: Use-first daily surfaces
+Daily catalog, installed-skill groups, conversation inventory cards and default details SHALL foreground using a skill. Per-location maintenance SHALL remain available through secondary installation management, preserving exact location confirmation and existing lifecycle protections.
+
+#### Scenario: Daily skill card with multiple installations
+- **WHEN** a skill has multiple visible installation records
+- **THEN** its daily card is grouped by source and coordinates, does not require a scope selection before the use attempt, and exposes per-location management separately
+
+#### Scenario: Unique verified usable installation
+- **WHEN** the user invokes skill-level use
+- **THEN** the Host selects only a uniquely verified current-session usable managed installation, without ordering by scope, version or array position, and the existing new-session and draft-time checks still apply
+
+#### Scenario: Ambiguous or unverifiable use selection
+- **WHEN** several installations are usable, observations are incomplete, context changes, or selection times out
+- **THEN** no installation is guessed or changed, no draft is sent, and the UI provides a concise blocked result with access to installation management
+
+#### Scenario: Explicit installation management
+- **WHEN** the user selects a particular installation in secondary management or uses an exact operation receipt
+- **THEN** its exact reference remains authoritative for that request and is never silently replaced by the skill-level selector's winner

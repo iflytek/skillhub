@@ -15,6 +15,7 @@ function makeTarget(slug: string) {
     agent: 'claude',
     rootDir: `/projects/${slug}`,
     installDir: `/projects/${slug}/.skillhub/skills/${slug}`,
+    installationState: 'enabled' as const,
     installedAt: new Date().toISOString(),
   }
 }

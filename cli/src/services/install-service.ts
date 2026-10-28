@@ -1,7 +1,8 @@
+import { assertEntryAbsent, snapshotInstalledSkillDirectory, snapshotPreparedBackup } from './installed-skill-snapshot'
 import { assertDirectTargetOwnership } from './inventory-ownership'
 import { captureInstallInventory } from './inventory-cas'
 import { randomUUID } from 'node:crypto'
-import type { InstallMove, InstallTransactionObserver, InstallTransactionWarning } from './install-transaction'
+import type { InstallMove, InstallPreparation, InstallTransactionObserver, InstallTransactionWarning } from './install-transaction'
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises'
 import { join, relative, resolve } from 'node:path'
 import { SkillHubClient } from '../clients/skillhub-client'
@@ -61,6 +62,7 @@ interface StagedInstall {
   canonicalSkillDir: string
   tempDir: string
   installedAt: string
+  installationState: 'enabled' | 'disabled'
   backupDir: string | null
   movedIntoPlace: boolean
 }
@@ -91,6 +93,10 @@ async function preflightInstallTargets(
     // user path so macOS aliases and Windows short names remain stable in CLI output.
     for (const item of inventory.items) for (const claimed of item.targets) {
       const canonicalClaim = await canonicalInventoryInstallDir(claimed)
+      if (canonicalClaim === canonicalSkillDir && claimed.installationState === 'disabled'
+        && (claimed.rootDir !== rootDir || claimed.installDir !== join(rootDir, identity.slug))) {
+        throw new CliError('disabled installation path aliases cannot be replaced', EXIT.validation)
+      }
       if (canonicalClaim !== canonicalSkillDir && pathsOverlap(canonicalClaim, canonicalSkillDir)) {
         throw new CliError('install target overlaps another managed installation', EXIT.validation)
       }
@@ -124,6 +130,15 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
     namespace: options.namespace,
     slug: options.slug
   }, options.force, inventory)
+  const previousTarget = (path: string) => inventory.items.flatMap(item => item.targets.map(target => ({ item, target })))
+    .find(entry => entry.target.installDir === path)
+  for (const prepared of preparedTargets) {
+    const previous = previousTarget(prepared.skillDir)
+    if (previous?.target.installationState !== 'disabled') continue
+    if (!options.transactionObserver?.beforePreparation) throw new CliError('disabled installations require the native transactional upgrade manager', EXIT.validation)
+    const snapshot = await snapshotInstalledSkillDirectory(previous.item, previous.target)
+    if (snapshot.fingerprint !== previous.target.fingerprint) throw new CliError('disabled installation has local changes', EXIT.validation)
+  }
   const canonicalDirs = new Set(preparedTargets.map(target => target.canonicalSkillDir))
   if (expectedItem !== undefined) {
     if (expectedItem && !sameInstalledSkillSource(expectedItem, identity)) throw inventoryChangedError()
@@ -183,7 +198,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
           agent: target.agent,
           installedAt
         }, null, 2))
-        staged.push({ target, skillDir, canonicalSkillDir, tempDir, installedAt, backupDir: null, movedIntoPlace: false })
+        staged.push({ installationState: previousTarget(skillDir)?.target.installationState ?? 'enabled', target, skillDir, canonicalSkillDir, tempDir, installedAt, backupDir: null, movedIntoPlace: false })
       } catch (error) {
         try {
           await options.authorizeTargetMutation?.([tempDir], 'cleanup')
@@ -202,6 +217,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
       warnings.push(`${warning.stage}${warning.path ? ` at ${warning.path}` : ''}: ${warning.message}`)
     }
     let inventoryCommitted = false
+    let preparation: InstallPreparation | undefined
     const acquireTargetLock = options.acquireTargetLock ?? acquireSkillTargetLock
     try {
       for (const target of await orderSkillTargetLocks(staged.map(item => item.target), options.slug)) {
@@ -226,12 +242,21 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
       if (observer?.beforePreparation) {
         await store.withLockedSnapshot(async current => {
           await assertInventoryCurrent(current)
-          await observer.beforePreparation!({ before: structuredClone(current),
+          preparation = { before: structuredClone(current),
             release: { registry: options.registry, namespace: options.namespace, slug: options.slug,
               version: resolved.version, fingerprint: resolved.fingerprint },
             targets: staged.map(item => ({ agent: item.target.agent, canonicalSkillDir: item.canonicalSkillDir,
-              skillDir: item.skillDir, stagingDir: item.tempDir, installedAt: item.installedAt })) })
+              skillDir: item.skillDir, stagingDir: item.tempDir, installedAt: item.installedAt })) }
+          await observer.beforePreparation!(preparation)
         })
+      }
+
+      // The preparation journal now binds each candidate directory and immutable release.
+      for (const item of staged) {
+        if (item.installationState !== 'disabled') continue
+        await assertEntryAbsent(join(item.tempDir, 'SKILL.md.disabled'))
+        await options.authorizeTargetMutation?.([item.tempDir], 'replace')
+        await rename(join(item.tempDir, 'SKILL.md'), join(item.tempDir, 'SKILL.md.disabled'))
       }
 
       for (const [index, item] of staged.entries()) {
@@ -264,7 +289,10 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
           }, lockedInventory)
           const expectedFiles = options.expectedTargetFiles?.[item.skillDir]
           if (expectedFiles && !options.allowTargetDrift) {
-            const currentSnapshot = await snapshotSkillDirectory(item.backupDir)
+            const previous = previousTarget(item.skillDir)
+            const currentSnapshot = previous?.target.installationState === 'disabled'
+              ? await snapshotPreparedBackup(preparation!, move)
+              : await snapshotSkillDirectory(item.backupDir)
             const changedFiles = diffSkillFiles(expectedFiles, currentSnapshot.files)
             if (changedFiles.length > 0) {
               throw new CliError(`local changes detected after upgrade planning at ${item.skillDir}`, EXIT.validation, {
@@ -298,7 +326,8 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
             agent: item.target.agent,
             rootDir: item.target.rootDir,
             installDir: item.skillDir,
-            installedAt: item.installedAt
+            installedAt: item.installedAt,
+            installationState: item.installationState
           })),
           resolved.fingerprint,
           replacedInstallDirs,

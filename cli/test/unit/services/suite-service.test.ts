@@ -1136,3 +1136,23 @@ describe('Suite local lifecycle', () => {
     expect(inventory.items.find(item => item.slug === 'beta')).toMatchObject({ targets: [expect.objectContaining({ installedBy: ['direct'] })] })
   })
 })
+
+
+test('Suite cannot adopt a disabled direct installation even with force', async () => {
+  const home = await mkdtemp(join(tmpdir(), 'suite-disabled-home-'))
+  const rootDir = await mkdtemp(join(tmpdir(), 'suite-disabled-root-'))
+  const { plan, downloads } = makePlan()
+  const installDir = join(rootDir, 'alpha')
+  await mkdir(installDir)
+  await writeFile(join(installDir, 'SKILL.md.disabled'), '# Alpha')
+  const store = new InventoryStore(home)
+  await store.mutateAtomic(inventory => inventory.items.push({ registry, namespace: 'global', slug: 'alpha', targets: [{
+    agent: 'dsh', rootDir, installDir, installedAt: '2026-10-27T00:00:00Z', version: '1.0.0',
+    fingerprint: plan.members[0]!.fingerprint, installedBy: ['direct'], installationState: 'disabled'
+  }] }))
+  const before = await readFile(store.path, 'utf8')
+  await expect(installSuite({ client: clientFor(plan, downloads), registry, namespace: 'global', slug: 'starter-pack',
+    targets: [{ agent: 'dsh', rootDir, scope: 'user', source: 'explicit' }], force: true, home })).rejects.toThrow('disabled installation')
+  expect(await readFile(store.path, 'utf8')).toBe(before)
+  expect(await readFile(join(installDir, 'SKILL.md.disabled'), 'utf8')).toBe('# Alpha')
+})
