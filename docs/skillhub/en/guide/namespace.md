@@ -19,7 +19,7 @@ Namespaces are the core organizational unit in SkillHub. Each namespace represen
 |------|-------------|
 | **Owner** | Full control, including deleting the namespace and managing all members |
 | **Admin** | Manage members, review skill packages, modify settings |
-| **Member** | Publish skill packages, view private skill packages |
+| **Member** | Publish skills and view namespace-only content |
 
 **Namespace States**:
 
@@ -116,7 +116,7 @@ POST /api/v1/namespaces
 Content-Type: application/json
 
 {
-  "name": "iFlytek AI Team",
+  "displayName": "iFlytek AI Team",
   "slug": "iflytek",
   "description": "iFlytek's AI agent skills"
 }
@@ -125,9 +125,9 @@ Content-Type: application/json
 **Parameter Reference**:
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| name | string | Namespace name (required, 2-50 characters) |
+| displayName | string | Namespace name (required, up to 128 characters) |
 | slug | string | URL identifier (required, unique, 2-64 characters, lowercase letters, numbers, hyphens only) |
-| description | string | Description (optional, max 500 characters) |
+| description | string | Description (optional, max 512 characters) |
 
 **Get Namespace Details**:
 ```bash
@@ -140,7 +140,7 @@ PUT /api/v1/namespaces/{slug}
 Content-Type: application/json
 
 {
-  "name": "iFlytek AI Team (Updated)",
+  "displayName": "iFlytek AI Team (Updated)",
   "description": "Updated description"
 }
 ```
@@ -203,7 +203,7 @@ The history endpoint requires a browser session: `GET /api/v1/namespaces/{slug}/
 > **Slug Uniqueness**: Namespace slugs must be globally unique and cannot be changed after creation. Use a short identifier for your team or project.
 
 - **Owner Requirement**: Each namespace must have at least one Owner; the last Owner cannot be removed
-- **Role Inheritance**: Namespace members automatically have access to all skill packages in that namespace
+- **Role Inheritance**: Membership grants access to NAMESPACE_ONLY content, not every PRIVATE skill; private access is reserved for its owner and authorized administrators
 - **Freeze Mechanism**: Administrators can freeze a namespace; no new skill packages can be published while frozen
 - **Archive Mechanism**: Archived namespaces are hidden from search results, but existing skill packages remain accessible
 - **Audit Logs**: All member changes and permission adjustments are recorded in the audit log

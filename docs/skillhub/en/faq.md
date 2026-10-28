@@ -2,41 +2,15 @@
 
 ## Q: What is the difference between SkillHub and ClawHub?
 
-A: SkillHub is an enterprise-grade, self-hosted solution that provides stronger access control, review mechanisms, and governance capabilities. ClawHub is a public registry, similar to npm.
-
-**Key Differences**:
-
-| Feature | SkillHub | ClawHub |
-|------|----------|---------|
-| **Deployment** | Self-hosted | Public cloud |
-| **Access Control** | Namespace RBAC | Basic permissions |
-| **Review Mechanism** | Multi-level review | None |
-| **Security Scanning** | Built-in Skill Scanner | None |
-| **Data Sovereignty** | Fully self-managed | Hosted in the cloud |
-| **Use Case** | Enterprise internal | Public sharing |
+A: SkillHub provides a self-hosted registry, namespace permissions, publication review, scanning and audit. Third-party capabilities change; do not assume another service lacks review or scanning. See [OpenClaw integration](https://github.com/iflytek/skillhub/blob/main/docs/openclaw-integration-en.md) for compatibility.
 
 ## Q: How do I back up data?
 
-A: SkillHub stores data in PostgreSQL and object storage. Regularly backing up these two components is sufficient.
-
-**Back up PostgreSQL**:
-```bash
-pg_dump -h localhost -U postgres skillhub > backup.sql
-```
-
-**Back up Object Storage**:
-- If using MinIO, back up the MinIO data directory
-- If using S3, use the AWS CLI or an S3 backup tool
+A: Back up PostgreSQL, the configured skill storage, and deployment configuration. Release Compose defaults to local storage in the `skillhub_storage` volume; S3 deployments need the corresponding bucket/objects. Keep database and object snapshots consistent and verify restoration in an isolated environment. See [deployment](./guide/deployment.md).
 
 ## Q: What authentication methods are supported?
 
-A: SkillHub supports multiple authentication methods:
-
-- **OAuth2**: GitHub, Google, GitLab, etc.
-- **Local Accounts**: Username/password login (built-in administrator: admin / ChangeMe!2026)
-- **Enterprise SSO**: Integrates with LDAP, SAML, etc.
-
-Refer to the authentication configuration section in the project README for setup instructions.
+A: Local accounts and configured OAuth2 providers are supported. Preset registrations include GitHub, GitLab, Feishu, and DingTalk; the login page and `/api/v1/auth/methods` describe available methods on your instance. Extensibility does not mean LDAP/SAML are built in. See the [private SSO contract](https://github.com/iflytek/skillhub/blob/main/docs/11-auth-extensibility-and-private-sso.md).
 
 ## Q: Is there a size limit for skill packages?
 
@@ -49,60 +23,31 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+skillhub:
+  publish:
+    max-package-size: 104857600
 ```
+
+Also check proxy body and Scanner upload limits; multipart settings alone do not bypass package validation.
 
 ## Q: How do I use the CLI tool to manage skill packages?
 
-A: SkillHub is compatible with the OpenClaw CLI. Use the `npx clawhub` command to interact with it:
+A: Use the first-party CLI:
 
 ```bash
-# Configure the registry URL
-export CLAWHUB_REGISTRY=http://your-skillhub-host:8080
-
-# Search for skill packages
-npx clawhub search email
-
-# Install a skill package
-npx clawhub install my-skill
-
-# Publish a skill package (the ClawHub CLI publishing protocol is not compatible)
-export SKILLHUB_REGISTRY=http://your-skillhub-host:8080
-export SKILLHUB_TOKEN=YOUR_API_TOKEN
-npx @astron-team/skillhub@latest publish ./my-skill
+npm install -g @astron-team/skillhub
+skillhub search pdf
 ```
+
+Follow [Quick Start](./quickstart.md) to select a registry, scope, and Agent. Publishing and restricted resources require login. See [OpenClaw integration](https://github.com/iflytek/skillhub/blob/main/docs/openclaw-integration-en.md) for compatibility boundaries; do not mix its publish protocol with SkillHub CLI.
 
 ## Q: How do I configure HTTPS?
 
-A: For production environments, it is recommended to use Nginx or Traefik as a reverse proxy with SSL certificates.
-
-**Nginx Configuration Example**:
-```nginx
-server {
-    listen 443 ssl;
-    server_name skillhub.example.com;
-    
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
-    
-    location / {
-        proxy_pass http://localhost:3000;
-    }
-    
-    location /api {
-        proxy_pass http://localhost:8080;
-    }
-}
-```
+A: Terminate TLS at an external proxy forwarding to the published Web port (`WEB_PORT=80` by default in release Compose). Web already proxies backend routes. Set the real `SKILLHUB_PUBLIC_BASE_URL`, preserve the original Host and forwarded protocol, and validate login and cookies. See [deployment](./guide/deployment.md).
 
 ## Q: How do I monitor SkillHub?
 
-A: SkillHub provides several monitoring options:
-
-- **Health Check**: `GET /actuator/health`
-- **Scanner Health Check**: `GET http://localhost:8000/health`
-- **Metrics**: `GET /actuator/metrics` (Prometheus format)
-- **Audit Logs**: All critical operations are recorded in the audit log
-- **Application Logs**: Collect logs using ELK or Loki
+A: The base configuration exposes `/actuator/health` and `/actuator/info`. `/actuator/metrics` is not the Prometheus text endpoint; neither that endpoint nor Prometheus export is enabled by default in the base configuration. Correlate logs and audit events using `requestId`. See the [observability guide](https://github.com/iflytek/skillhub/blob/main/docs/observability-developer-guide.md) for explicit integration configuration.
 
 ## Q: Does it support multi-tenancy?
 
@@ -112,47 +57,19 @@ For physical isolation, you can deploy a separate SkillHub instance for each ten
 
 ## Q: How do I upgrade SkillHub?
 
-A: Use the curl command to upgrade:
-
-```bash
-# Pull the latest images and restart
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- pull
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- down
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
-
-# Or upgrade to a specific version
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version v0.2.0
-```
-
-> **Note**: It is recommended to back up the database and object storage before upgrading. Database migrations are handled automatically by Flyway. Upgrading does not wipe the database, so already-registered skill packages will not be lost.
+A: Follow the [deployment guide](./guide/deployment.md), select a target version, and back up the database, skill storage, and configuration. After upgrading, verify health, login, and representative skill operations. Flyway migrations mean that rolling back an image alone is not necessarily a database rollback.
 
 ## Q: Why can't administrators (admin) and regular users create namespaces?
 
-A: Older versions of SkillHub do not support creating namespaces, as this feature was introduced in later updates. Please upgrade your SkillHub instance to the latest version (`latest`).
-Upgrade command example:
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version latest
-```
+A: Inspect the actual error and `requestId`, then check permissions, name validation, and instance restrictions. Do not assume an old version is the cause. See [namespace management](./guide/namespace.md).
 
 ## Q: How do I search for or operate on a skill package within a specific namespace?
 
-A: When using the OpenClaw CLI, you can specify the namespace using the `<namespace>--<skill-name>` format for operations like search or installation. If you encounter issues finding it on the web interface, you can also manage it by exporting the skill package and importing it into your target namespace.
+A: Select the namespace in the UI. To install with the CLI, use `skillhub install @team/example-skill`, replacing the coordinate with a real resource. `skillhub search` searches skills; `skillhub suite install` installs suites. Exporting and reimporting is not a search troubleshooting step.
 
 ## Q: What is the recommended deployment method? Can I pull the images and deploy manually?
 
-A: We recommend the official one-line deployment script. Pulling images and deploying manually is not recommended because it is prone to database initialization, dependency-order, and login redirect issues. By default, dependencies come from public registries, and the SkillHub application images come from GHCR:
-
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
-```
-
-If GHCR is unreachable from China, use the Aliyun mirror:
-
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
-```
-
-The script performs a series of initialization steps. The generated runtime configuration is located at `/tmp/skillhub-runtime/` by default (containing `.env.release` and the docker-compose file).
+A: Official runtime scripts, release Compose, and Kubernetes/Helm are supported. Choose one and retain its configuration and data directories. See [Docker deployment](./guide/deployment.md) and [Kubernetes](./guide/kubernetes.md). Running an application image alone does not configure its database, Redis, storage, authentication, or proxy.
 
 ## Q: What Kubernetes version does the Kubernetes deployment require?
 
@@ -160,39 +77,23 @@ A: The official [Kubernetes deployment guide](./guide/kubernetes.md) requires Ku
 
 ## Q: After deployment, I enter the correct username and password but get redirected back to the login page?
 
-A: This is most commonly seen with **manual deployment** (caused by API errors or incomplete initialization). Suggestions:
-
-1. Switch to the one-line script above for deployment.
-2. If necessary, clear and recreate the PostgreSQL data volume, then log in again.
-3. If a reverse proxy is in front, verify that it forwards requests correctly.
+A: Inspect the login and subsequent identity requests in browser developer tools. Check the public URL, proxy forwarding, cookies, and backend session configuration, then correlate `requestId` with server logs. This symptom alone does not identify a password or database failure. Do not clear PostgreSQL volumes as a login troubleshooting step. See [deployment](./guide/deployment.md).
 
 ## Q: How do I change the admin password? Why don't my config changes take effect?
 
-A: Environment variables are injected when a container is created, so you must recreate the containers after changing them; `restart` alone does not re-inject environment variables.
-
-1. Edit `/tmp/skillhub-runtime/.env.release` in the runtime directory (refer to [.env.release.example](https://github.com/iflytek/skillhub/blob/main/.env.release.example)).
-2. Recreate the relevant containers:
-
-   ```bash
-   docker compose \
-     --env-file /tmp/skillhub-runtime/.env.release \
-     -f /tmp/skillhub-runtime/compose.release.yml \
-     up -d --force-recreate
-   ```
-
-3. If the password was already persisted to the database and the change still doesn't take effect, you may need to clear the corresponding data and re-initialize.
+A: `BOOTSTRAP_ADMIN_PASSWORD` initializes an account. `BootstrapAdminInitializer` preserves existing credentials, so changing this variable or recreating containers does not reset an existing password. Use the instance password-change/reset flow and configure SMTP for email verification. Do not delete users or database contents to reinitialize credentials.
 
 ## Q: Is an email verification code required to change / reset a password?
 
-A: Yes. By default, passwords are changed or reset via an email verification code, so SMTP must be configured first. See [docs/19-smtp-password-reset-email-setup.md](https://github.com/iflytek/skillhub/blob/main/docs/19-smtp-password-reset-email-setup.md). Administrators can also reset it via `.env.release`.
+A: The current password-change/reset flow uses email verification and requires [SMTP configuration](https://github.com/iflytek/skillhub/blob/main/docs/19-smtp-password-reset-email-setup.md). Bootstrap environment variables do not reset existing passwords.
 
 ## Q: Can a skill have a Chinese name?
 
-A: Skill names are generally in English; Chinese names are not currently supported (using a Chinese skill name in OpenClaw will cause an error).
+A: The `name`/slug remains a validated identifier. The user-facing display name supports Chinese through `metadata.display-name`. Changing it does not change the coordinate or installation directory. See [publishing](./guide/skill-publish.md).
 
 ## Q: Can unreviewed skills be downloaded?
 
-A: As long as you have permission to view it, it can generally be downloaded.
+A: Normal installation requires a published version that the caller can access. Visibility of a detail page does not grant downloads for every version state. Author/reviewer preview permissions differ from distribution permissions. See [review](./guide/review.md).
 
 ## Q: How do I hide or remove third-party SSO login options on the login page?
 
@@ -270,7 +171,7 @@ Recreate the containers for the change to take effect; `restart` alone does not 
 
 ## Q: Is there a server version requirement for using the CLI (publish / download, etc.)?
 
-A: A SkillHub server image of **v0.2.7 or later** is required for CLI features.
+A: Compatibility depends on the command. Basic CLI support does not imply support for Device Flow, Suites or sync. Check CLI version and target-server release notes. Suites require the server to advertise `skill-suite-v1`. See [CLI](./guide/cli.md).
 
 ## Q: Does SkillHub support MySQL?
 
@@ -369,21 +270,7 @@ A `USER_ADMIN` can manage user status and assign platform roles other than `SUPE
 
 ## Q: How do I install multiple skills in bulk?
 
-A: The CLI `install` command handles one skill at a time. Both examples below use `--dir` to install the skills under the same target root; each skill is placed in `$target_dir/<skill-slug>/`:
-
-```bash
-target_dir=/opt/skillhub-skills
-
-# install one by one
-for skill in skill-a skill-b skill-c; do
-  skillhub install "$skill" --dir "$target_dir"
-done
-
-# or read from a manifest file (one skill name per line)
-xargs -a skills.txt -I {} skillhub install "{}" --dir "$target_dir"
-```
-
-Since **SkillHub Server v0.2.12**, public skills support anonymous search and install. Note that an invalid bearer token now fails the command instead of falling back to anonymous access — update or remove the stale credential in that case.
+A: Use [Suites](./guide/skill-suites.md) and `skillhub suite install` for pinned members managed together, `skillhub sync pull` for team workspaces, or separate `skillhub install` commands for unrelated skills. Suite Bundle is an authoring import format, not a local installation command.
 
 ## Q: What should I do if I encounter issues?
 
@@ -452,7 +339,7 @@ java -version
 lsof -i :8080
 
 # Terminate the process
-kill -9 <PID>
+# Identify the process owner and stop it through its service manager
 ```
 
 ### 4. View detailed logs

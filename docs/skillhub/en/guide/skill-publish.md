@@ -134,13 +134,23 @@ visibility: PUBLIC
 
 After publishing, [Skill Scanner](/en/guide/scanner) automatically scans the skill package for potential security risks. Results appear on the skill package detail page.
 
-6. **Wait for Review** (if namespace has review enabled)
+6. **Wait for Review** (follow the returned status)
 
 Team admins receive review notifications and approve skill packages for official release.
 
 7. **Publish Success**
 
 Skill package can be discovered through search, others can download via CLI or Web UI.
+
+## Submission is not publication
+
+After uploading, inspect the returned status and the version in My Skills. For ordinary PUBLIC and NAMESPACE_ONLY submissions, scanning must be enabled: the version passes through `SCANNING` and then `PENDING_REVIEW`. Approval publishes it. A PRIVATE upload remains `UPLOADED` after any configured scan; use its publish confirmation action to publish it. Privileged automatic publishing follows a separate path.
+
+`SCAN_FAILED` means the scan could not complete, not that the package was proven unsafe. A completed scan can still contain findings. A successful upload, HTTP response, or CLI exit is not evidence of `PUBLISHED`. During an update, public readers continue to see the published version while authorized maintainers can preview the pending version.
+
+### Authoring drafts
+
+The authoring API supports private drafts, file editing and structural validation. It does not yet provide a web workbench or automatic publication. Passing validation does not execute the skill or prove its security. Do not confuse an authoring draft with an uploaded skill version awaiting review.
 
 ## Compliance Declarations
 
@@ -190,7 +200,7 @@ Content-Type: multipart/form-data
 
 # Parameters
 file: MultipartFile (required)
-visibility: PUBLIC | PRIVATE | INTERNAL (optional, default PUBLIC)
+visibility: PUBLIC | PRIVATE | NAMESPACE_ONLY (required)
 ```
 
 **Parameter Reference**:
@@ -198,7 +208,7 @@ visibility: PUBLIC | PRIVATE | INTERNAL (optional, default PUBLIC)
 |-----------|------|-------------|
 | namespace | string | Namespace slug (path parameter) |
 | file | MultipartFile | Skill package zip file |
-| visibility | enum | Visibility level: PUBLIC, PRIVATE, INTERNAL |
+| visibility | enum | Visibility level: PUBLIC, PRIVATE, NAMESPACE_ONLY |
 
 **Get Skill Details**:
 ```bash
@@ -236,7 +246,7 @@ GET /api/v1/skills/{namespace}/{slug}/resolve?version=^1.2.0
 
 - **First Publish**: Version should start from `0.1.0` or `1.0.0`
 - **Tag Management**: `latest` tag automatically points to the latest stable version
-- **Review Process**: If namespace has review enabled, new versions need admin approval
+- **Review Process**: Ordinary PUBLIC / NAMESPACE_ONLY uploads require scanning and review; PRIVATE uploads require publish confirmation
 - **File Size Limit**: Single skill package max 100MB (configurable)
 - **Naming Convention**: Skill slug supports lowercase letters, numbers, hyphens, and Unicode characters
 - **Version Immutability**: Published versions cannot be modified, only new versions can be published

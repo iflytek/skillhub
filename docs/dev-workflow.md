@@ -6,7 +6,8 @@ This document describes the recommended workflow for developing SkillHub locally
 
 - Docker Desktop (for dependency services and staging)
 - Java 21 (for running the backend locally)
-- Node.js 22 + pnpm (for running the frontend locally)
+- Node.js 22.13+ (22.x) or 24.x, and the pnpm version declared in `web/package.json` (frontend)
+- Bun for CLI development; see [`cli/README.md`](../cli/README.md)
 - `gh` CLI (for creating pull requests): https://cli.github.com/
 
 ## Stage 1: Local Development (fast iteration)
@@ -38,7 +39,7 @@ After editing backend code, restart the backend explicitly:
 make dev-server-restart
 ```
 
-If you are running the server in a foreground terminal instead of `make dev-all`, stop it and run `make dev-server` again. Expect a full restart in about 5-10 seconds, including rebuilding the backend modules.
+If you are running the server in a foreground terminal instead of `make dev-all`, stop it and run `make dev-server` again. This rebuilds the backend modules before restart; duration depends on the machine and dependency cache.
 
 ### Mock authentication
 
@@ -178,3 +179,16 @@ make staging          # regression test in Docker
 make staging-down     # stop staging
 make pr               # push + create PR
 ```
+
+## Documentation changes
+
+The bilingual user-facing site lives in `docs/skillhub`; architecture and operator references live directly under `docs`. Keep Chinese and English workflows aligned and update the VitePress navigation when adding pages. Verify commands against the current source, not only older guides.
+
+```bash
+# Install site dependencies from the repository lockfile
+npm --prefix docs/skillhub ci
+make docs-build
+make docs-preview
+```
+
+The site build checks internal links. Preview changed pages to check navigation, tables, and code blocks. Documentation-only changes do not require starting the application stack.

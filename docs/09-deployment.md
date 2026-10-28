@@ -4,7 +4,7 @@
 
 ## 1 运行模型
 
-当前仓库只保留两种运行方式：
+按用途选择运行方式；以下重点介绍源码开发和单机交付，Kubernetes 另见[部署指南](skillhub/guide/kubernetes.md)：
 
 - 开发环境：`make dev-all`
   - 前端和后端运行在宿主机
@@ -16,7 +16,7 @@
   `linux/riscv64`，`scanner` 暂保持 `linux/amd64` 与 `linux/arm64`
   - PostgreSQL、Redis 与应用容器一起通过 Compose 启动
 
-不再维护本地构建整套 demo 容器的中间模式，也不再保留 `docker-compose.prod.yml`。
+`make staging` 仍用于从源码构建的容器回归验证，见[开发工作流](dev-workflow.md)，不等同于正式交付。正式单机部署使用 `compose.release.yml`，不使用 `docker-compose.prod.yml`。
 
 ## 2 单机交付拓扑
 
@@ -110,6 +110,7 @@ make dev-github-sync
 
 ```bash
 cp .env.release.example .env.release
+# 编辑 .env.release：设置数据库/管理员密码、公开地址、存储和固定镜像版本
 make validate-release-config
 docker compose --env-file .env.release -f compose.release.yml up -d
 ```

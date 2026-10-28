@@ -35,6 +35,8 @@ deploy/k8s/
 
 ## Quick Start
 
+All relative paths below use `deploy/k8s` in the repository as the working directory. Configure the Secret, then inspect `kubectl kustomize overlays/with-infra/` locally; rendered output may contain secrets. Applying manifests creates resources and backend startup runs database migrations.
+
 ### 1. Create Namespace
 
 ```bash
@@ -44,10 +46,10 @@ kubectl create namespace skillhub
 ### 2. Configure Secret
 
 ```bash
-cd deploy/k8s/base
+cd deploy/k8s
 
 # Copy example file
-cp secret.yaml.example secret.yaml
+cp base/secret.yaml.example base/secret.yaml
 
 # Edit secret.yaml with your configuration
 ```
@@ -270,7 +272,7 @@ kubectl create secret docker-registry ghcr-secret \
 kubectl logs postgres-0 -n skillhub
 
 # Check Secret configuration
-kubectl get secret skillhub-secret -n skillhub -o yaml
+kubectl describe deployment skillhub-server -n skillhub
 ```
 
 ### View Logs
@@ -287,6 +289,8 @@ kubectl logs -l app.kubernetes.io/name=skillhub-scanner -n skillhub -f
 ```
 
 ## Cleanup
+
+Run only after retiring the instance and backing up its database and skill storage. Namespace deletion removes its resources and PVCs; underlying data retention depends on the storage reclaim policy.
 
 ```bash
 # Delete all resources

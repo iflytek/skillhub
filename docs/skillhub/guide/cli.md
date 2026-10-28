@@ -19,7 +19,7 @@ bun add -g @astron-team/skillhub
 
 ```bash
 # 登录
-skillhub login --token sk_xxx
+skillhub login
 
 # 搜索技能
 skillhub search pdf
@@ -72,6 +72,8 @@ Token 按以下优先级解析：
 3. `~/.skillhub/credentials.json` 中存储的 token（按 registry 区分）
 
 ### 登录
+
+未传入 token 时，`skillhub login` 使用 OAuth Device Flow：打开验证页面并显示用户码，完成浏览器授权后保存凭证。无浏览器终端可用 `skillhub login --no-open`；自动化使用 API token。
 
 ```bash
 # 使用 API token 登录
@@ -237,6 +239,31 @@ DeepSeek Harness 从最近的 Git 仓库根目录解析项目技能，而 SkillH
 }
 ```
 
+## 技能安装后的使用与套装
+
+安装命令只下载技能文件，不执行任务。打开目标项目并让 Agent 发现 `SKILL.md`，按技能说明配置依赖，再要求 Agent 使用该技能。套装请阅读[安装与使用指南](./skill-suites)。
+
+```bash
+# Replace with a real Suite coordinate
+skillhub suite install @team/example-suite --scope project --agent codex
+skillhub suite check @team/example-suite
+skillhub suite upgrade @team/example-suite --check
+skillhub suite upgrade @team/example-suite
+skillhub suite remove @team/example-suite
+```
+
+## 团队工作区同步
+
+`sync` 面向非 global 命名空间：pull 拉取选定技能，status/diff 检查变化，push 发布本地内容。默认工作区为当前目录的 `.agents/skills`。非交互 pull 必须显式选择 `--skill`；`--check` 只检查。
+
+```bash
+skillhub sync pull --namespace team --check
+skillhub sync pull --namespace team --skill example-skill
+skillhub sync status --namespace team
+skillhub sync diff --namespace team
+skillhub sync push --namespace team --all --dry-run
+```
+
 ## 本地管理
 
 ### 查看已安装技能
@@ -303,7 +330,7 @@ skillhub doctor
 3. 备份旧的 `inventory.json`（如果存在）
 4. 写入新的 `inventory.json`
 
-如果同一技能在不同目标中存在版本冲突，该技能会被跳过并报告。
+版本按安装目标记录。doctor 报告恢复问题，不会下载或升级技能。
 
 ## 发布
 
@@ -323,7 +350,7 @@ skillhub publish ./my-skill --namespace myspace --visibility private
 - `namespace-only` — 仅 namespace 成员可见
 - `private` — 仅自己可见
 
-发布成功后会输出技能详情页 URL。
+提交被服务端接受后会输出当前状态和技能详情页 URL。`SCANNING`、`PENDING_REVIEW` 表示异步处理尚未完成；请在详情页确认最终发布状态。
 
 ## 自更新
 
@@ -380,26 +407,7 @@ skillhub update
 
 ### inventory.json
 
-```json
-{
-  "items": [
-    {
-      "registry": "https://skill.xfyun.cn",
-      "namespace": "global",
-      "slug": "pdf-parser",
-      "version": "1.0.0",
-      "targets": [
-        {
-          "agent": "codex",
-          "rootDir": "/path/to/project/.codex/skills",
-          "installDir": "/path/to/project/.codex/skills/pdf-parser",
-          "installedAt": "2026-04-28T06:00:00.000Z"
-        }
-      ]
-    }
-  ]
-}
-```
+CLI 管理的安装记录，不应手工编辑。当前磁盘格式使用 `schemaVersion: 2`、`records` 和可选 `suites`；每个 target 分别记录版本、fingerprint 和 installedBy。CLI 可读取旧记录并在写入时迁移。
 
 ## JSON 输出
 
@@ -471,7 +479,7 @@ skillhub version --json
 ### login
 
 ```bash
-skillhub login --token <token> [--registry <url>] [--json]
+skillhub login [--no-open] [--token <token>] [--registry <url>] [--json]
 ```
 
 保存 token 和 registry 配置。
@@ -578,6 +586,22 @@ skillhub publish <path> [options]
 - `--token <token>` — API token
 - `--json` — JSON 输出
 
+### suite
+
+```bash
+skillhub suite <install|check|upgrade|remove> <coordinate> [options]
+```
+
+`install` 支持 `--version`、`--scope`、`--agent`、`--dir`；`install` 和 `upgrade` 支持 `--force`。`upgrade --check` 预览变更。各操作支持 `--registry`、`--token`、`--json`。详见[套装指南](./skill-suites)。
+
+### sync
+
+```bash
+skillhub sync <pull|status|diff|push> --namespace <slug> [options]
+```
+
+先运行 `skillhub help sync` 查看选择、工作区和发布参数；发布前使用 `push --dry-run` 验证。
+
 ### update
 
 ```bash
@@ -610,7 +634,7 @@ skillhub login --token sk_xxx
 
 ```bash
 # 检查 registry 是否可访问
-curl https://skill.xfyun.cn/api/cli/v1/skills/search?q=test&limit=1
+curl 'https://skill.xfyun.cn/api/cli/v1/skills/search?q=test&limit=1'
 
 # 使用其他 registry
 skillhub search test --registry https://skillhub.example.com

@@ -37,7 +37,7 @@ The first phase does not expose a standalone compliance API. Runtime can read th
 GET /api/v1/skills/{namespace}/{slug}/versions/{version}
 ```
 
-Key response fields:
+The example below shows fields inside the successful response’s `data`, not the full HTTP response. Check the outer business `code` before reading `data.id` and `data.complianceSnapshot`. Versions without declarations may have no snapshot; absence does not establish certification or an execution violation.
 
 ```json
 {

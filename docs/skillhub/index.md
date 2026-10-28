@@ -34,7 +34,7 @@ features:
     link: /guide/namespace
   - icon: ✅
     title: 审核与治理
-    details: 多级审核工作流，举报系统，确保技能包质量
+    details: 技能与套装审核流程，举报系统，确保技能包质量
     link: /guide/review
   - icon: ⭐
     title: 用户交互与社交

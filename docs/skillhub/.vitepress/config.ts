@@ -33,6 +33,7 @@ export default defineConfig({
             items: [
               { text: '项目简介', link: '/introduction' },
               { text: '快速开始', link: '/quickstart' },
+              { text: 'CLI 使用指南', link: '/guide/cli' },
             ],
           },
           {
@@ -40,6 +41,7 @@ export default defineConfig({
             items: [
               { text: 'Skill 发布与版本管理', link: '/guide/skill-publish' },
               { text: '技能头像与图片审核接入', link: '/guide/skill-avatars' },
+              { text: '技能套装：安装与使用', link: '/guide/skill-suites' },
               { text: 'Suite Bundle 批量导入', link: '/guide/suite-bundle' },
               { text: 'Skill 搜索与发现', link: '/guide/skill-discovery' },
               { text: '命名空间与团队管理', link: '/guide/namespace' },
@@ -52,6 +54,7 @@ export default defineConfig({
           {
             text: '更多',
             items: [
+              { text: 'Docker 部署与升级', link: '/guide/deployment' },
               { text: 'Kubernetes 部署', link: '/guide/kubernetes' },
               { text: '常见问题', link: '/faq' },
             ],
@@ -82,12 +85,14 @@ export default defineConfig({
             items: [
               { text: 'Introduction', link: '/en/introduction' },
               { text: 'Quick Start', link: '/en/quickstart' },
+              { text: 'CLI Guide', link: '/en/guide/cli' },
             ],
           },
           {
             text: 'Core Features',
             items: [
               { text: 'Skill Publishing & Versioning', link: '/en/guide/skill-publish' },
+              { text: 'Skill Suites: Install & Use', link: '/en/guide/skill-suites' },
               { text: 'Suite Bundle Import', link: '/en/guide/suite-bundle' },
               { text: 'Skill Search & Discovery', link: '/en/guide/skill-discovery' },
               { text: 'Namespace & Team Management', link: '/en/guide/namespace' },
@@ -100,6 +105,7 @@ export default defineConfig({
           {
             text: 'More',
             items: [
+              { text: 'Docker Deployment & Upgrades', link: '/en/guide/deployment' },
               { text: 'Kubernetes Deployment', link: '/en/guide/kubernetes' },
               { text: 'FAQ', link: '/en/faq' },
             ],

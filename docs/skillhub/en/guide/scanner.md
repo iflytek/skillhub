@@ -93,7 +93,7 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 ## Notes
 
-> **Scanning Does Not Block Publishing**: Security scanning runs asynchronously and does not block the skill package upload process. Scan results are updated on the skill package detail page once completed.
+> **Asynchronous upload is not publication**: Ordinary public and namespace-only submissions require scanning to be enabled. An unfinished scan does not establish publication. SCAN_FAILED means execution failure; findings and execution failures require different handling. Completing a scan does not imply review approval.
 
 - **Scan Duration**: Depending on the skill package size and the number of enabled engines, scanning may take from a few seconds to several minutes
 - **LLM Analysis Cost**: Enabling LLM analysis incurs API call charges; it is recommended to evaluate costs in production environments

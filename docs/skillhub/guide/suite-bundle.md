@@ -2,6 +2,8 @@
 
 Suite Bundle 用一次 ZIP 或文件夹上传，为 Suite 创建首个版本，或基于一个已发布版本创建新版本。系统先展示成员差异，只有用户明确确认后才进入成员 Skill 的正常发布和审核流程。
 
+安装和调用请先阅读[技能套装使用指南](./skill-suites)。本页面向批量导入内容的作者。`SUITE.yaml`（`kind: SkillSuiteBundle`）与套装设计中的 `suite.yaml`（`kind: SkillSuite`）不是同一种文件。
+
 ## 归档结构
 
 归档根目录必须且只能有一个 `SUITE.yaml`。每个携带包的成员使用独立目录，目录根部必须包含 `SKILL.md`。未声明的 `SKILL.md`、目录重叠、路径穿越、重复路径、超出大小或文件数限制都会阻止预览。
@@ -10,8 +12,6 @@ Suite Bundle 用一次 ZIP 或文件夹上传，为 Suite 创建首个版本，�
 SUITE.yaml
 skills/
   intake/
-    SKILL.md
-  summarizer/
     SKILL.md
 ```
 
@@ -28,7 +28,7 @@ spec:
   summary: 串联病历接收与摘要生成
   overview: |
     接收结构化病历，完成字段校验后生成摘要。
-    入口技能负责接收和分派，摘要技能负责输出最终结果。
+    入口技能使用共享词典完成字段校验。
   visibility: PUBLIC
   entry: "@global/intake"
   members:

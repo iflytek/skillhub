@@ -37,7 +37,7 @@ Runtime 在执行技能时，如果需要把执行链路与 SkillHub 的合规�
 GET /api/v1/skills/{namespace}/{slug}/versions/{version}
 ```
 
-响应中的关键字段：
+下面仅展示成功响应 `data` 内的关键字段，不是完整 HTTP 响应。先检查外层业务 `code`，再读取 `data.id` 和 `data.complianceSnapshot`；没有声明的版本可能没有快照，不应据此推断为已认证或执行违规。
 
 ```json
 {

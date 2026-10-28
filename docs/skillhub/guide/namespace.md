@@ -19,7 +19,7 @@
 |------|------|
 | **Owner** | 完全控制，包括删除命名空间、管理所有成员 |
 | **Admin** | 管理成员、审核技能包、修改设置 |
-| **Member** | 发布技能包、查看私有技能包 |
+| **Member** | 发布技能包、查看空间成员可见的技能包 |
 
 **命名空间状态**：
 
@@ -116,7 +116,7 @@ POST /api/v1/namespaces
 Content-Type: application/json
 
 {
-  "name": "iFlytek AI Team",
+  "displayName": "iFlytek AI Team",
   "slug": "iflytek",
   "description": "iFlytek's AI agent skills"
 }
@@ -125,9 +125,9 @@ Content-Type: application/json
 **参数说明**：
 | 参数 | 类型 | 说明 |
 |------|------|------|
-| name | string | 命名空间名称（必需，2-50 字符） |
+| displayName | string | 命名空间名称（必需，最多 128 字符） |
 | slug | string | URL 标识符（必需，唯一，2-64 字符，只能包含小写字母、数字、连字符） |
-| description | string | 描述（可选，最多 500 字符） |
+| description | string | 描述（可选，最多 512 字符） |
 
 **获取命名空间详情**：
 ```bash
@@ -140,7 +140,7 @@ PUT /api/v1/namespaces/{slug}
 Content-Type: application/json
 
 {
-  "name": "iFlytek AI Team (Updated)",
+  "displayName": "iFlytek AI Team (Updated)",
   "description": "Updated description"
 }
 ```
@@ -203,7 +203,7 @@ POST /api/v1/namespaces/{slug}/unfreeze
 > **Slug 唯一性**：命名空间 slug 在全局范围内必须唯一，且创建后不可修改。建议使用团队或项目的简短标识符。
 
 - **Owner 权限**：每个命名空间至少需要一个 Owner，最后一个 Owner 无法被移除
-- **角色继承**：命名空间成员自动拥有该命名空间下所有技能包的访问权限
+- **角色继承**：成员可访问 NAMESPACE_ONLY 内容；PRIVATE 内容仅所有者及有权管理员可访问，不向所有成员开放
 - **冻结机制**：管理员可以冻结命名空间，冻结后无法发布新技能包
 - **归档机制**：归档的命名空间会从搜索结果中隐藏，但已有技能包仍可访问
 - **审计日志**：所有成员变更、权限调整都会记录到审计日志

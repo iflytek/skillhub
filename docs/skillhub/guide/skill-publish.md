@@ -138,13 +138,23 @@ visibility: PUBLIC
 
 发布后，[Skill Scanner](/guide/scanner) 会自动扫描技能包，检测潜在的安全风险。扫描结果会显示在技能包详情页。
 
-6. **等待审核**（如果命名空间开启了审核）
+6. **等待审核**（以返回状态为准）
 
 团队管理员会收到审核通知，审核通过后技能包正式发布。
 
 7. **发布成功**
 
 技能包可以通过搜索发现，其他人可以通过 CLI 或 Web UI 下载使用。
+
+## 提交成功不等于发布成功
+
+上传后查看返回状态及“我的技能”中的本次版本。普通 PUBLIC 和 NAMESPACE_ONLY 上传要求扫描已启用，版本先进入 `SCANNING`，扫描完成后回到 `PENDING_REVIEW`，审核批准才发布。PRIVATE 上传在完成已配置的扫描后停留在 `UPLOADED`，还需通过确认发布操作发布。特权自动发布使用另一条路径。
+
+`SCAN_FAILED` 表示扫描执行失败，不代表已经判定包有害；扫描完成也可能有风险发现。上传成功、HTTP 成功或 CLI 正常退出，都不能单独证明版本已 `PUBLISHED`。更新审核期间，公众继续看到已发布版本，有权维护者可以预览待审版本。
+
+### 创作草稿的边界
+
+创作 API 支持私有草稿、文件编辑和结构校验，目前不包含网页创作工作台或自动发布。校验通过不代表执行过技能，也不代表安全检查通过。创作草稿与上传后等待审核的技能版本是不同对象。
 
 ## 合规声明
 
@@ -194,7 +204,7 @@ Content-Type: multipart/form-data
 
 # 参数
 file: MultipartFile (必需)
-visibility: PUBLIC | PRIVATE | INTERNAL (可选，默认 PUBLIC)
+visibility: PUBLIC | PRIVATE | NAMESPACE_ONLY (可选，默认 PUBLIC)
 ```
 
 **参数说明**：
@@ -202,7 +212,7 @@ visibility: PUBLIC | PRIVATE | INTERNAL (可选，默认 PUBLIC)
 |------|------|------|
 | namespace | string | 命名空间 slug（路径参数） |
 | file | MultipartFile | 技能包 zip 文件 |
-| visibility | enum | 可见性级别：PUBLIC（公开）、PRIVATE（私有）、INTERNAL（内部） |
+| visibility | enum | 可见性级别：PUBLIC（公开）、PRIVATE（私有）、NAMESPACE_ONLY（空间成员可见） |
 
 **获取 Skill 详情**：
 ```bash
@@ -240,7 +250,7 @@ GET /api/v1/skills/{namespace}/{slug}/resolve?version=^1.2.0
 
 - **首次发布**：版本号建议从 `0.1.0` 或 `1.0.0` 开始
 - **标签管理**：`latest` 标签会自动指向最新的稳定版本
-- **审核流程**：如果命名空间开启了审核，新版本需要等待管理员批准
+- **审核流程**：普通 PUBLIC / NAMESPACE_ONLY 上传需要扫描与审核；PRIVATE 上传后还需确认发布
 - **文件大小限制**：单个技能包不超过 100MB（可配置）
 - **命名规范**：Skill slug 支持小写字母、数字、连字符和 Unicode 字符
 - **版本不可变**：已发布的版本不能修改，只能发布新版本

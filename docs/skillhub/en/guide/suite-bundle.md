@@ -2,6 +2,8 @@
 
 A Suite Bundle uploads one ZIP or folder to create a Suite or create a new version from a published base. SkillHub first shows the member diff. Member publication and review start only after explicit confirmation.
 
+For installation and Agent usage, start with [Skill Suites](./skill-suites). This page is for authors importing content. `SUITE.yaml` (`kind: SkillSuiteBundle`) is distinct from the conceptual `suite.yaml` (`kind: SkillSuite`) definition.
+
 ## Archive format
 
 The archive root must contain exactly one `SUITE.yaml`. Every packaged member has its own directory with a root `SKILL.md`. Undeclared skills, overlapping directories, unsafe or duplicate paths, and configured file limits block preview.
@@ -17,7 +19,7 @@ spec:
   version: 1.0.0
   displayName: Clinical workflow
   summary: Validate intake data and produce a summary
-  overview: The entry Skill validates and dispatches input; the summary Skill produces the result.
+  overview: The entry Skill validates intake data using the shared dictionary.
   visibility: PUBLIC
   entry: "@global/intake"
   members:

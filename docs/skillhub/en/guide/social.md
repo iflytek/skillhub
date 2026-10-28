@@ -11,7 +11,7 @@ SkillHub provides a rich set of social features that allow team members to inter
 - **Star**: Bookmark your favorite skill packages for easy access later
 - **Rating**: Rate skill packages (1-5 stars) to help others assess quality
 - **Download Statistics**: Track download counts to highlight popular skill packages
-- **Notification System**: Receive timely notifications for review results, comment replies, and more
+- **Notification System**: Receive timely notifications for review and governance events, and more
 
 **Social Metrics**:
 
@@ -103,13 +103,6 @@ DELETE /api/v1/skills/{skillId}/star
 GET /api/v1/skills/{skillId}/star
 ```
 
-**Response Example**:
-```json
-{
-  "starred": true,
-  "starredAt": "2026-03-15T10:30:00Z"
-}
-```
 
 **Rate a Skill Package**:
 ```bash
@@ -124,7 +117,7 @@ Content-Type: application/json
 **Parameter Reference**:
 | Parameter | Type | Description |
 |------|------|------|
-| skillId | string | Skill package ID (path parameter) |
+| skillId | number | Skill package ID (path parameter) |
 | score | number | Rating (1-5, required) |
 
 **Get My Stars**:
@@ -155,13 +148,8 @@ POST /api/v1/admin/skill-reviews/{reviewId}/hide
 POST /api/v1/admin/skill-reviews/{reviewId}/restore
 ```
 
-**Response Example**:
-```json
-{
-  "score": 5,
-  "ratedAt": "2026-03-15T10:30:00Z"
-}
-```
+
+Responses use the standard API envelope. `GET .../star` returns a boolean in `data`; `GET .../rating` returns `score` and `rated`. Mutations return an empty `data`, not a rating timestamp. IDs are numeric.
 
 ## Notes
 
@@ -170,6 +158,6 @@ POST /api/v1/admin/skill-reviews/{reviewId}/restore
 > **Review Rules**: Only published skills can be reviewed, and the public list contains visible reviews only. Refresh and retry after a concurrent-update conflict.
 
 - **Star Count**: A skill package's star count is displayed in search results and on the detail page
-- **Average Rating**: A skill package's average rating affects search ranking
+- **Average Rating**: Average ratings help compare skills; the search page has no dedicated rating sort
 - **Notification Settings**: Users can disable certain notification types in their settings
 - **Download Statistics**: Each download increments the download counter, which is used for popularity ranking

@@ -37,6 +37,8 @@ deploy/k8s/
 
 ## 快速开始
 
+以下相对路径均以仓库的 `deploy/k8s` 为工作目录。先配置 Secret，再渲染检查 `kubectl kustomize overlays/with-infra/`；输出可能包含 Secret，不要公开粘贴。应用清单会创建资源并在后端启动时执行数据库迁移。
+
 ### 1. 创建命名空间
 
 ```bash
@@ -46,10 +48,10 @@ kubectl create namespace skillhub
 ### 2. 配置 Secret
 
 ```bash
-cd deploy/k8s/base
+cd deploy/k8s
 
 # 复制示例文件
-cp secret.yaml.example secret.yaml
+cp base/secret.yaml.example base/secret.yaml
 
 # 编辑 secret.yaml，修改敏感配置
 ```
@@ -272,7 +274,7 @@ kubectl create secret docker-registry ghcr-secret \
 kubectl logs postgres-0 -n skillhub
 
 # 检查 Secret 配置
-kubectl get secret skillhub-secret -n skillhub -o yaml
+kubectl describe deployment skillhub-server -n skillhub
 ```
 
 ### 查看日志
@@ -289,6 +291,8 @@ kubectl logs -l app.kubernetes.io/name=skillhub-scanner -n skillhub -f
 ```
 
 ## 清理
+
+仅在确认不再使用该实例并完成数据库、技能存储备份后执行。删除命名空间会删除其中的资源和 PVC；底层数据是否保留取决于存储回收策略。
 
 ```bash
 # 删除所有资源

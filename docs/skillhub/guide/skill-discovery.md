@@ -4,7 +4,7 @@
 
 SkillHub 提供了强大的全文搜索功能，让用户可以快速找到需要的技能包。
 
-搜索不仅支持关键词匹配，还支持按命名空间、标签、下载量、评分等多维度过滤和排序。
+搜索支持关键词、命名空间和标签筛选，以及相关性、下载量和最新排序。
 
 ![概念图](/diagrams/skill-discovery-concept.png)
 
@@ -12,9 +12,9 @@ SkillHub 提供了强大的全文搜索功能，让用户可以快速找到需�
 
 - **全文搜索**：搜索技能包名称、描述、标签、作者
 - **智能过滤**：按命名空间、标签、可见性过滤
-- **多种排序**：按相关性、下载量、评分、更新时间排序
+- **多种排序**：按相关性、下载量、最新排序
 - **权限感知**：只显示用户有权访问的技能包
-- **实时更新**：新发布的技能包立即出现在搜索结果中
+- **实时更新**：已发布且当前用户可见的技能可被搜索；索引刷新可能有延迟
 
 **搜索算法**：
 
@@ -49,16 +49,16 @@ SkillHub 使用 PostgreSQL 全文搜索，支持：
 
 ```bash
 # 配置注册中心
-export CLAWHUB_REGISTRY=http://localhost:8080
+export SKILLHUB_REGISTRY=http://localhost:8080
 
 # 搜索技能包
-npx clawhub search pdf
+npx @astron-team/skillhub@latest search pdf
 
 # 安装技能包
-npx clawhub install pdf-parser
+npx @astron-team/skillhub@latest install pdf-parser
 
 # 安装指定命名空间的技能包
-npx clawhub install my-team--pdf-parser
+npx @astron-team/skillhub@latest install my-team--pdf-parser
 ```
 
 ### 使用 Web UI 搜索
@@ -109,40 +109,16 @@ GET /api/web/skills?q=pdf&namespace=iflytek&label=data-processing&sort=downloads
 | q | string | 搜索关键词（可选） |
 | namespace | string | 命名空间过滤（可选） |
 | label | string[] | 标签过滤（可选，可多选） |
-| sort | enum | 排序方式：relevance（相关性）、downloads（下载量）、rating（评分）、updated（更新时间） |
+| sort | enum | 排序方式：relevance（相关性）、downloads（下载量）、newest（最新） |
 | page | number | 页码（从 0 开始） |
 | size | number | 每页数量（默认 20，最大 100） |
 
-**响应示例**：
-```json
-{
-  "content": [
-    {
-      "id": "skill-123",
-      "namespace": "iflytek",
-      "slug": "pdf-parser",
-      "name": "PDF Parser",
-      "description": "Extract text and metadata from PDF files",
-      "downloads": 1234,
-      "rating": 4.5,
-      "starCount": 56,
-      "latestVersion": "1.2.3",
-      "updatedAt": "2026-03-15T10:30:00Z",
-      "labels": ["data-processing", "pdf"]
-    }
-  ],
-  "totalElements": 42,
-  "totalPages": 3,
-  "number": 0,
-  "size": 20
-}
-```
+响应字段和分页封装以部署实例的 OpenAPI 为准。
 
 ## 注意事项
 
-> **权限控制**：搜索结果会根据用户权限自动过滤。PRIVATE 技能包只对命名空间成员可见，INTERNAL 技能包只对登录用户可见。
+> **权限控制**：搜索结果会根据用户权限自动过滤。NAMESPACE_ONLY 面向空间成员；PRIVATE 面向所有者及有权管理员，并非所有登录用户或所有空间成员。
 
 - **搜索性能**：SkillHub 使用 PostgreSQL 全文搜索，支持中英文分词
-- **实时更新**：新发布的技能包会立即出现在搜索结果中
+- **实时更新**：已发布且有权访问的技能在索引刷新后可被搜索
 - **标签规范**：建议使用统一的标签命名规范，便于过滤
-- **搜索提示**：支持搜索建议和自动补全（前端实现）

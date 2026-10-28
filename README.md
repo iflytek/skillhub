@@ -62,9 +62,13 @@ with the Skill's source and the problem it solves, or submit a PR by following t
 
 ## Documentation
 
-- 📖 **[User Guide](https://iflytek.github.io/skillhub/)** — Skill publishing, search, CLI usage and other user guides
-- 🛠️ **[Developer Docs](https://zread.ai/iflytek/skillhub)** — Architecture, API reference, local development, deployment and operations
-- 🐍 **[Python Examples](./examples/python)** — Search, download, and publish skills from Python via the REST API
+- **[User Guide](https://iflytek.github.io/skillhub/)** — [中文](docs/skillhub/quickstart.md) / [English](docs/skillhub/en/quickstart.md): find, install, and use skills in your agent
+- **[CLI reference](cli/README.md)** — Authentication, installation, upgrades, namespace synchronization, and local inventory
+- **[Skill Suites](docs/skillhub/en/guide/skill-suites.md)** — Install a versioned collection and use its entry skill; [Suite Bundle import](docs/skillhub/en/guide/suite-bundle.md) is the separate authoring workflow
+- **[Self-hosting](docs/skillhub/en/guide/deployment.md)** — Docker Compose configuration and upgrades; [Kubernetes](docs/skillhub/en/guide/kubernetes.md) for clusters
+- **[Developer workflow](docs/dev-workflow.md)** — Source development, checks, and documentation maintenance; [operations reference](docs/09-deployment.md) for deployment details
+- **[Generated code overview](https://zread.ai/iflytek/skillhub)** — Supplementary architecture exploration; repository source and versioned documentation define current behavior
+- **[Python Examples](./examples/python)** — Search, download, and publish skills via the REST API
 
 ## Governance and Safety
 
@@ -111,7 +115,7 @@ with the Skill's source and the problem it solves, or submit a PR by following t
 
 ## Quick Start
 
-Start the full local stack with:
+To host your own registry using release images, start with:
 
 ```bash
 curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
@@ -172,7 +176,9 @@ skillhub list
 
 ### Prerequisites
 
-- Docker & Docker Compose
+- Docker & Docker Compose for container dependencies and release deployments
+- For source development: Java 21, Node.js 22.13+ (22.x) or 24.x, and the pnpm version declared in `web/package.json`
+- For CLI development: Bun (see [`cli/README.md`](cli/README.md))
 
 ### Local Development
 
@@ -180,7 +186,7 @@ skillhub list
 make dev-all
 ```
 
-> **For developers in China**: If Maven dependency download times out, configure Aliyun mirror. See [Local Development Guide](https://iflytek.github.io/skillhub/quickstart.html#本地开发) for details.
+> **For developers in China**: If Maven dependency download times out, configure Aliyun mirror. See [Local Development Guide](docs/dev-workflow.md) for details.
 
 Then open:
 
@@ -208,7 +214,7 @@ Stop everything with:
 make dev-all-down
 ```
 
-Reset local dependencies and start from a clean slate with:
+Only when deliberately discarding local dependency data, reset with:
 
 ```bash
 make dev-all-reset
@@ -366,23 +372,18 @@ allowlist instead of appending to it.
 
 ### Monitoring
 
-A Prometheus + Grafana monitoring stack lives under [`monitoring/`](./monitoring).
-It scrapes the backend's Actuator Prometheus endpoint.
+The optional [`monitoring/`](./monitoring) directory provides Prometheus and Grafana deployment examples. It is not a ready-to-scrape backend configuration: the default application exposes only `health` and `info` Actuator endpoints. `/actuator/prometheus` also requires the `SUPER_ADMIN` or `AUDITOR` role under the current route policy, while the example scraper has no credentials configured.
 
-Start it with:
+Before enabling monitoring, configure metrics exposure and an authenticated access path appropriate to your deployment; verify that the scraper can actually read the endpoint. Do not make management endpoints public merely to satisfy the example. The example targets `host.docker.internal:8080`, which must resolve to your backend from the Prometheus container.
+
+After adapting that configuration, start the optional stack:
 
 ```bash
 cd monitoring
 docker compose -f docker-compose.monitoring.yml up -d
 ```
 
-Then open:
-
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3001` (`admin` / `admin`)
-
-By default Prometheus scrapes `http://host.docker.internal:8080/actuator/prometheus`,
-so start the backend locally on port `8080` first.
+Prometheus uses port `9090` and Grafana uses port `3001`. Replace the example Grafana administrator credentials before exposing it. Confirm scrape targets are healthy and metrics are present; starting the containers alone does not establish monitoring coverage. For tracing and request correlation, see the [observability developer guide](docs/observability-developer-guide.md).
 
 ## Kubernetes
 
