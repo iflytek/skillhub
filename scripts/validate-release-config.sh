@@ -315,6 +315,18 @@ validate_boolean SESSION_COOKIE_SECURE
 validate_boolean BOOTSTRAP_ADMIN_ENABLED
 validate_boolean SKILLHUB_TRUST_FORWARDED_PROTO
 validate_boolean SKILLHUB_BUILTIN_SKILLS_ENABLED
+validate_boolean SKILLHUB_BUSINESS_LOGS_ENABLED
+# Do not echo the endpoint or authentication headers. Full URL/budget validation is at startup.
+if [ "${SKILLHUB_BUSINESS_LOGS_ENABLED:-false}" = "true" ]; then
+  require_non_empty SKILLHUB_BUSINESS_LOGS_ENDPOINT
+  case "${SKILLHUB_BUSINESS_LOGS_ENDPOINT:-}" in
+    http://*|https://*) ;;
+    *) error "SKILLHUB_BUSINESS_LOGS_ENDPOINT requires an HTTP(S) Logs URL" ;;
+  esac
+  case "${SKILLHUB_BUSINESS_LOGS_ENDPOINT:-}" in
+    *'@'*|*'?'*|*'#'*) error "SKILLHUB_BUSINESS_LOGS_ENDPOINT must not contain credentials, query or fragment" ;;
+  esac
+fi
 validate_boolean SKILLHUB_STORAGE_S3_DISABLE_CHUNKED_ENCODING
 validate_boolean SKILLHUB_STORAGE_S3_FORCE_PATH_STYLE
 validate_boolean SKILLHUB_STORAGE_S3_AUTO_CREATE_BUCKET
