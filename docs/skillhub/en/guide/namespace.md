@@ -34,7 +34,7 @@ Namespaces are the core organizational unit in SkillHub. Each namespace represen
 
 | Role | Permissions |
 |------|-------------|
-| **Owner** | Full control, including deleting the namespace and managing all members |
+| **Owner** | Own the team namespace; manage members and transfer ownership subject to namespace state and server-side permissions |
 | **Admin** | Manage members, review skill packages, modify settings |
 | **Member** | Publish skills and view namespace-only content |
 

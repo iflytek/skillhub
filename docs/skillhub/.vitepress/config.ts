@@ -152,7 +152,7 @@ export default defineConfig({
             collapsed: false,
             items: [
               { text: 'Integrate a runtime', link: '/en/guide/runtime-integration' },
-              { text: 'Development handbook (中文)', link: 'https://github.com/iflytek/skillhub/blob/main/docs/dev-workflow.md' },
+            { text: 'Development handbook', link: 'https://github.com/iflytek/skillhub/blob/main/docs/dev-workflow.md' },
             ],
           },
         ],
