@@ -4,12 +4,16 @@ import type { NativeRuntime, NativeInstallExecution, NativeRecoveryResult, Nativ
 
 function native(): NativeRuntime {
   return {
+    readInstallationEntry: async () => undefined,
     readSkillExamples: async () => ({ state: 'none' }),
     observeInstallation: async () => false,
     hostInstanceId: 'fixture', listPending: async () => [], getOperation: async () => undefined,
     acceptInstall: async () => undefined,
     acceptUpgrade: async () => undefined,
     findPlanOperation: async () => undefined,
+    acceptToggle: async () => undefined,
+    inspectToggle: async () => { throw new Error('Unexpected toggle inspection'); },
+    executeToggle: async () => { throw new Error('Unexpected toggle'); },
     acceptRemoval: async () => undefined,
     executeRemoval: async () => { throw new Error('Unexpected removal execution'); },
     executeUpgrade: async () => { throw new Error('Unexpected upgrade'); },
@@ -38,6 +42,7 @@ test('an unverified Host blocks all new mutations but still queries and recovers
   core.acceptInstall = rejectNew;
   core.acceptUpgrade = rejectNew;
   core.acceptRemoval = rejectNew;
+  core.acceptToggle = rejectNew;
   core.getOperation = async () => accepted;
   const runtime = new LocalRuntime(async () => core, () => { throw new Error('Host dependency mismatch'); });
   await runtime.start();
@@ -47,6 +52,7 @@ test('an unverified Host blocks all new mutations but still queries and recovers
   await expect(runtime.submitInstall(input, prepare)).rejects.toThrow('Host dependency mismatch');
   await expect(runtime.submitUpgrade(input, prepare)).rejects.toThrow('Host dependency mismatch');
   await expect(runtime.submitRemoval(input, prepare)).rejects.toThrow('Host dependency mismatch');
+  await expect(runtime.submitToggle(input, prepare)).rejects.toThrow('Host dependency mismatch');
   expect(prepared).toBe(false);
   expect(await runtime.getOperation('operation', 'owner')).toEqual(accepted);
   core.acceptInstall = async () => accepted;

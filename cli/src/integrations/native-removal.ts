@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { acquireSkillTargetLock } from '../services/skill-target-lock'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
-import { snapshotSkillDirectory } from '../services/skill-fingerprint'
+import { snapshotJournalInstallation } from '../services/installed-skill-snapshot'
 import type { InventoryStore } from '../stores/inventory-store'
 import type { NativeRecoveryResult, NativeRemovalExecution } from './native-contract'
 import type { OperationStore } from './operation-store'
@@ -50,7 +50,7 @@ export async function executeNativeRemoval(operations: OperationStore, inventory
       if (!quarantine || baseline.kind !== 'uninstall') return
       await assertOwnedRegularTree(quarantine)
       const metadata = await readInstalledSkillMetadata(quarantine)
-      const snapshot = await snapshotSkillDirectory(quarantine)
+      const snapshot = await snapshotJournalInstallation(record!, quarantine)
       if (metadata.status !== 'valid' || !isDeepStrictEqual(metadata.metadata, baseline.target.metadata)
         || snapshot.fingerprint !== releaseTarget.fingerprint || !isDeepStrictEqual(snapshot.files, baseline.target.files)) {
         throw new Error('Isolated removal files changed')

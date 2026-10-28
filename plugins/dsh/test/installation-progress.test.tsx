@@ -24,15 +24,16 @@ test('progress follows actual phases and never fabricates intermediate percentag
   expect(installationProgressState({ ...attempt, state: 'submitting', operation: null }, null, false).state).toBe('running');
 });
 
-test('compact completion keeps essential discovery warning without exposing technical metadata', () => {
+test('normal completion is concise without discovery guidance or technical metadata', () => {
   const value = { ...operation, phase: 'completed' as const, discovery: 'confirmed' as const };
   const html = renderToStaticMarkup(<InstallationProgressSummary attempt={attempt} operation={value} readFailed={false} />);
   expect(html).toContain('安装完成');
-  expect(html).toContain('技能已就绪');
+  expect(html).not.toContain('技能已就绪'); expect(html).not.toContain('发现尚待确认');
   expect(html).toContain('aria-valuenow="100"');
   for (const text of ['registry.example', '2026-10-14', '原操作', '刷新发现状态', '操作 ID']) expect(html).not.toContain(text);
-  expect(installationProgressState(attempt, { ...value, discovery: 'unconfirmed' }, false).message).toContain('尚待确认');
+  expect(installationProgressState(attempt, { ...value, discovery: 'unconfirmed' }, false).message).toBe('');
   expect(installationProgressState(attempt, { ...value, warningCount: 1 }, false).label).toContain('告警');
+  expect(installationProgressState(attempt, { ...value, recovery: 'unknown' }, false).message).toContain('核验');
 });
 
 test('errors and uncertain results stop animation instead of claiming success', () => {

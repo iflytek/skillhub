@@ -58,6 +58,7 @@ const blocked: Record<Extract<SkillUsePreparation, { status: 'blocked' }>['reaso
   'installation-unverified': '安装记录已变化，请刷新已安装列表。',
   'operation-pending': '此技能仍有操作进行中，请完成后重试。',
   'shared-installation': '此安装暂不支持直接使用，请在 DSH 中选择技能。',
+  'installation-disabled': '该安装已停用，请先启用。',
   'files-changed': '本地技能文件已变化，请先核对安装。',
   'skill-unavailable': '当前会话尚未发现此技能，请稍后重试。',
   'skill-shadowed': '当前会话实际使用的是另一份同名技能，无法直接使用所选安装。请检查安装位置，并选择当前会话生效的那份技能。',
@@ -274,7 +275,8 @@ export function SkillUseFocus({ controller, sessionId }: { controller: SkillUseC
 
 export function exactInstalledSkill(inventory: InstalledSkillList, identity: Pick<Item, 'namespace' | 'slug' | 'version' | 'scope'>): Item | undefined {
   if (!inventory.complete || inventory.unavailable.includes(identity.scope)) return;
-  return inventory.items.find(item => item.namespace === identity.namespace && item.slug === identity.slug && item.version === identity.version && item.scope === identity.scope && item.state === 'present');
+  const matches = inventory.items.filter(item => item.namespace === identity.namespace && item.slug === identity.slug && item.version === identity.version && item.scope === identity.scope);
+  return matches.length === 1 && matches[0]?.state === 'present' && matches[0].installationState !== 'disabled' ? matches[0] : undefined;
 }
 
 /** Request ownership survives renders but is revoked when the entry's target changes. */
@@ -319,8 +321,10 @@ export function SkillCaseChoices({ controller, sessionId }: { controller: SkillU
   </section>;
 }
 
-export function UseSkillButton({ services, revision, itemKey, resolve, onUsed, onHandoff, onError }: {
-  services?: SkillUseServices; revision: string; itemKey?: string;
+export function UseSkillButton({ services, revision, itemKey, resolve, onUsed, onHandoff, onError, renderAction, label = '使用此技能' }: {
+  services?: SkillUseServices; revision: string; itemKey?: string; label?: string;
+  /** Keep the request owner mounted while a transient menu action closes. */
+  renderAction?(action: { disabled: boolean; run(): void }): React.ReactNode;
   resolve?(signal: AbortSignal): Promise<string>; onUsed?(): void; onHandoff?(): void; onError?(message: string): void;
 }) {
   const ref = useRef<SkillUseButtonRequests>();
@@ -329,7 +333,9 @@ export function UseSkillButton({ services, revision, itemKey, resolve, onUsed, o
   const { busy, error } = useSyncExternalStore(requests.subscribe, requests.getSnapshot, requests.getSnapshot);
   useLayoutEffect(() => { requests.reset(); return () => requests.reset(); }, [requests, services, revision, itemKey]);
   useEffect(() => { onError?.(error); }, [error, onError]);
-  return <span className="astron-sh-use-skill skillhub-controls"><Button size="sm" variant="default" disabled={busy || !services} onClick={() => {
+  const run = () => {
     if (services) void requests.run(signal => services.useSkill(revision, itemKey, signal, resolve, undefined, onHandoff), onUsed);
-  }}>{busy ? '核验中…' : '使用此技能'}</Button>{error && !onError && <span role="alert">{error}</span>}</span>;
+  };
+  if (renderAction) return <>{renderAction({ disabled: busy || !services, run })}{error && !onError && <span role="alert">{error}</span>}</>;
+  return <span className="astron-sh-use-skill skillhub-controls"><Button size="sm" variant="default" disabled={busy || !services} onClick={run}>{busy ? '核验中…' : label}</Button>{error && !onError && <span role="alert">{error}</span>}</span>;
 }

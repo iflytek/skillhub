@@ -4,7 +4,7 @@ import type { OperationRecord } from './operation-store'
 /** Project the original journal only, never the current inventory or raw error messages. */
 export function projectOperation(record: OperationRecord): NativeOperation {
   const { operation, transaction, removal } = record
-  const before = removal?.intent.inventoryItem ?? (transaction?.preparation?.before ?? transaction?.inventoryCommit?.before)?.items.find(item =>
+  const before = record.toggle?.inventoryItem ?? removal?.intent.inventoryItem ?? (transaction?.preparation?.before ?? transaction?.inventoryCommit?.before)?.items.find(item =>
     item.registry === operation.context.sourceIdentity && item.namespace === operation.namespace && item.slug === operation.slug)
   // A same-coordinate installation in another scope is not this operation's prior target.
   const beforeVersion = operation.targetPaths?.length && operation.targetPaths.every(path =>
@@ -13,8 +13,8 @@ export function projectOperation(record: OperationRecord): NativeOperation {
     ? before?.targets.find(target => operation.targetPaths!.includes(target.installDir))?.version ?? null : null
   const completed = operation.status.phase === 'completed'
   const files = operation.status.files
-  const outcome = completed && ['installed', 'already-installed', 'upgraded', 'removed', 'stale-record-removed'].includes(files)
-    ? files === 'already-installed' ? 'installed' : files as 'installed' | 'upgraded' | 'removed' | 'stale-record-removed'
+  const outcome = completed && ['installed', 'already-installed', 'upgraded', 'removed', 'stale-record-removed', 'enabled', 'disabled'].includes(files)
+    ? files === 'already-installed' ? 'installed' : files as 'installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'enabled' | 'disabled'
     : operation.status.phase === 'failed' && operation.status.recovery === 'restored' ? 'restored' : 'unknown'
   return { operationId: record.operationId, revision: record.revision, kind: operation.kind,
     namespace: operation.namespace, slug: operation.slug, version: operation.version, targetLabel: operation.targetLabel,
@@ -22,7 +22,7 @@ export function projectOperation(record: OperationRecord): NativeOperation {
     discovery: operation.status.discovery, recovery: operation.status.recovery, warningCount: operation.status.warnings.length,
     resultDetails: {
       beforeVersion: completed && files === 'already-installed' ? operation.version : beforeVersion,
-      afterVersion: completed && ['installed', 'already-installed', 'upgraded'].includes(files) ? operation.version : null,
+      afterVersion: completed && ['installed', 'already-installed', 'upgraded', 'enabled', 'disabled'].includes(files) ? operation.version : null,
       targets: (operation.targetPaths ?? []).map((_, index, targets) => ({
         label: targets.length === 1 ? operation.targetLabel : `目标 ${index + 1}（确认计划顺序）`, outcome
       })),

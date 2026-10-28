@@ -9,9 +9,10 @@ import { join } from 'node:path';
 import SkillHubService from '../src/host/index.js';
 import type { LoadedSkill } from '../src/host/skill-discovery.js';
 import type { InstalledProjectionItem, RemovalBaseline } from '../src/host/generated/native-contract.js';
-import type { SkillAvailability, SkillUsePreparation } from '../src/host/types.js';
+import type { SkillAvailability, SkillUsePreparation, SkillUseSelection } from '../src/host/types.js';
 
 async function fixture(run: (f: {
+  select(signal?: AbortSignal): Promise<SkillUseSelection>;
   availability(signal?: AbortSignal, key?: string): Promise<SkillAvailability>;
   named(signal?: AbortSignal): Promise<{ diagnosis: SkillAvailability }>;
   use(signal?: AbortSignal, key?: string): Promise<SkillUsePreparation>; key: string; directory: string;
@@ -65,7 +66,7 @@ async function fixture(run: (f: {
     let currentSkills: (typeof skills & { [symbols.original]?: object }) | undefined = skills;
     let currentAgent: typeof agent | undefined = agent;
     const item: InstalledProjectionItem = { namespace: 'demo', slug: 'market-slug', version: '1.2.0', scope: 'user',
-      state: 'present', fingerprint: 'fingerprint', targetPath: directory };
+      state: 'present', installationState: 'enabled', fingerprint: 'fingerprint', targetPath: directory };
     const items = [item];
     const baseline: RemovalBaseline = { status: 'ready', kind: 'uninstall', inventoryItem: {
       registry: 'https://registry.example', namespace: item.namespace, slug: item.slug,
@@ -95,7 +96,8 @@ async function fixture(run: (f: {
       getContext: () => ({ sourceRevision: revision, configured: true, registryUrl: 'https://registry.example' }),
     });
     const key = (await service.listInstalled('source', new AbortController().signal)).items[0].itemKey;
-    await run({ availability: (signal = new AbortController().signal, selected = key) => service.checkAvailability('source', selected, signal),
+    await run({ select: (signal = new AbortController().signal) => service.selectSkillUse('source', 'demo', 'market-slug', signal),
+      availability: (signal = new AbortController().signal, selected = key) => service.checkAvailability('source', selected, signal),
       named: (signal = new AbortController().signal) => service.manageConversation('availability', { name: 'actual-name' }, { sessionId: 'session-a', cwd, callId: 'call' }, signal),
       use: (signal = new AbortController().signal, selected = key) => service.prepareSkillUse('source', selected, signal),
       key, directory, observations: () => observations, setLookup: value => { lookup = value; },
@@ -406,4 +408,37 @@ test('missing managed definition preserves selected installation identity withou
     expect(result.reason).toBe('files-missing');
     expect((await f.named()).diagnosis.installation).toBeUndefined();
   });
+});
+
+
+test('coordinate selection observes the real native winner and rejects incomplete discovery', async () => {
+  await fixture(async f => {
+    expect(await f.select()).toEqual({ status: 'ready', itemKey: f.key });
+    f.change('incomplete');
+    expect(await f.select()).toEqual({ status: 'blocked', reason: 'selection-unverified' });
+  });
+});
+
+test('coordinate selection rejects external winners and context changes during native reads', async () => {
+  await fixture(async f => {
+    f.setLookup(async loaded => ({ ...loaded, resourceBase: { kind: 'directory', path: '/external' } }));
+    expect(await f.select()).toEqual({ status: 'blocked', reason: 'no-usable-installation' });
+    f.setLookup(async loaded => { f.change('skills'); return loaded; });
+    await expect(f.select()).rejects.toThrow('changed');
+  });
+});
+
+test('coordinate selection preserves session, source, filesystem and runtime identity fences', async () => {
+  for (const kind of ['source', 'session', 'cwd', 'agent', 'fs', 'skills', 'runtime', 'dispose']) {
+    await fixture(async f => {
+      f.setLookup(async loaded => { f.change(kind); return loaded; });
+      await expect(f.select()).rejects.toThrow();
+    });
+  }
+  for (const kind of ['record', 'version']) {
+    await fixture(async f => {
+      f.setLookup(async loaded => { f.change(kind); return loaded; });
+      expect(await f.select()).toEqual({ status: 'blocked', reason: 'selection-unverified' });
+    });
+  }
 });

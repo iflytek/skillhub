@@ -146,7 +146,7 @@ assert.equal((await readdir(root)).includes('node_modules'), false);
 // runtime must reject it without changing installed resources or inventory.
 const journalPath = join(root, 'state', operation.operationId + '.json');
 const journal = JSON.parse(await readFile(journalPath, 'utf8'));
-const futureBytes = JSON.stringify({ ...journal, schemaVersion: 3 });
+const futureBytes = JSON.stringify({ ...journal, schemaVersion: 4 });
 await writeFile(journalPath, futureBytes);
 const inventoryBefore = await new InventoryStore(home).read();
 const filesBefore = (await readdir(join(root, 'state'))).sort();

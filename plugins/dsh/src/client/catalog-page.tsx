@@ -1,8 +1,10 @@
+import { SkillWebsiteLink } from './skill-website-link.js';
 import { UpgradeControl } from './upgrade-control.js';
 import { RemovalControl } from './removal-control.js';
 import { SkillInstallDialog } from './install-dialog.js';
 import { readCacheOptions } from './read-cache.js';
 import { catalogLabel } from './catalog-label.js';
+import { InstallationManagement } from './management-tool-view.js';
 import { MarketCardActions } from './market-card-actions.js';
 import { CardSkeletons, CatalogSkeleton, DetailSkeleton } from './loading-layout.js';
 import { UiAvailabilityNotice, type UiAvailability } from './ui-availability.js';
@@ -15,14 +17,12 @@ import { installedNavigationFor, type InstalledNavigation } from './installed-na
 import { InstalledSkills } from './installed-skills.js';
 import type { InstalledServices } from './installed-skills.js';
 import { DetailContent } from './detail-content.js';
-import { InstallControl } from './install-control.js';
 import type { InstallationServices } from './install-control.js';
 import { SelectField, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger } from './ui.js';
 import { Icon, SkillAvatar, SkillCard, SkillMetrics } from './skill-card.js';
 import type { InfiniteData } from '@tanstack/react-query';
 import type { CatalogPageResult, SkillList, InstalledSkillList } from '../host/types.js';
-import { summarizeInstallation } from '../host/installation-summary.js';
-import { InstallationStatus } from './installation-status.js';
+import { skillInstallationSummary } from './skill-primary-actions.js';
 import '../../lib/typert.remote-client.js';
 
 type Item = SkillList['items'][number];
@@ -173,25 +173,32 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
           <Button variant="ghost" onClick={back}>← 返回技能广场</Button>
           <div className="astron-sh-detail-heading"><SkillAvatar name={sourceMatches ? detail.data?.title || selected.displayName : selected.displayName} slug={selected.slug} namespace={selected.namespace} />
             <div><h2 ref={heading} tabIndex={-1}>{sourceMatches ? detail.data?.title || selected.displayName || selected.slug : selected.displayName || selected.slug}</h2>
-              <p>@{selected.namespace}/{selected.slug} · {selected.latestVersion}</p></div></div>
+              <p>@{selected.namespace}/{selected.slug} · {selected.latestVersion}</p></div>
+            <SkillWebsiteLink webUrl={detail.data?.webUrl}
+              enabled={sourceMatches && !detail.isError && !!detail.data && detail.data.namespace === selected.namespace && detail.data.slug === selected.slug} /></div>
           <p className="astron-sh-detail-summary">{sourceMatches ? detail.data?.summary ?? selected.summary : selected.summary}</p>
           {!sourceMatches ? error('来源已变化，请返回技能广场重新选择。', back)
             : detail.isPending ? <DetailSkeleton />
               : detail.isError ? error(detail.error.message, () => { void detail.refetch(); })
-                : <><SkillMetrics item={detail.data} /><div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation" aria-label="技能说明">
+                 : <><SkillMetrics item={detail.data} />
+                  {installation && installed && <MarketCardActions label="使用已安装版本" records={inventory.data?.items.filter(item => item.namespace === selected.namespace && item.slug === selected.slug) ?? []}
+                    sourceRevision={revision!} services={installed} verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
+                    onInstall={() => setInstallCandidate({ item: selected, revision: revision! })} />}
+                  <div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation" aria-label="技能说明">
                   <DetailContent detail={detail.data} modes={context.data.detailTabs} remote={remote} retry={() => { void detail.refetch(); }}
                     cacheIdentity={JSON.stringify([installation?.sessionId ?? installed?.sessionId, revision, selected.namespace, selected.slug, selected.latestVersion])}
                     onContextStale={() => { void detail.refetch(); }}
                     onSelectVersion={version => { const next = { ...selected, latestVersion: version }; navigation.selected = next; setSelected(next); }} />
-                </article><aside aria-label="选择安装范围并安装" className="astron-sh-detail-aside">
-                  {installation ? <InstallControl key={installation.sessionId} detail={detail.data} sourceRevision={revision!} services={installation} initiatedFrom="plaza" onManage={item => manageSkill(item, 'remove')} onContextStale={() => { void detail.refetch(); }} />
-                    : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话，再选择安装范围。</p><Button onClick={onReturn}>前往会话</Button></div>}
+                </article><aside className="astron-sh-detail-aside">
+                  {installed?.management ? <InstallationManagement identity={selected} revision={revision!} services={installed.management} useSkill={installed.skillUse}
+                    onInstall={inventory.data?.items.some(item => item.namespace === selected.namespace && item.slug === selected.slug) ? () => setInstallCandidate({ item: selected, revision: revision! }) : undefined} />
+                    : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话。</p><Button onClick={onReturn}>前往会话</Button></div>}
                 </aside></div></>}
         </> : <>
           <Tabs value={tab} onValueChange={changeTab}><TabsList className="astron-sh-directory-tabs" aria-label="技能目录"><TabsTrigger value="browse">浏览技能</TabsTrigger><TabsTrigger value="installed" onClick={() => { navigation.installedOrigin = undefined; setInstalledOrigin(undefined); }}>已安装</TabsTrigger></TabsList>
           <TabsContent value="installed">{installedOrigin && (installedOrigin.sessionId !== installed?.sessionId || installedOrigin.sourceRevision !== revision)
             ? <p role="alert">会话或来源已变化，请点击“已安装”查看当前上下文的记录。</p>
-            : installed ? <InstalledSkills key={`${installed.sessionId}:${revision}`} services={installed} onRemove={item => manageSkill(item, 'remove')} onUpgrade={item => manageSkill(item, 'upgrade')} navigation={installedNavigation!} source={context.data.registryUrl} sourceRevision={revision!} remote={remote} modes={context.data.detailTabs} scrollContainer={scroller} />
+            : installed ? <InstalledSkills key={`${installed.sessionId}:${revision}`} services={installed} onInstall={item => setInstallCandidate({ item: { namespace: item.namespace, slug: item.slug, latestVersion: item.version, summary: '' }, revision: revision! })} onRemove={item => manageSkill(item, 'remove')} onUpgrade={item => manageSkill(item, 'upgrade')} navigation={installedNavigation!} source={context.data.registryUrl} sourceRevision={revision!} remote={remote} modes={context.data.detailTabs} scrollContainer={scroller} />
               : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话，再查看该用户和项目的安装记录。</p><Button onClick={onReturn}>前往会话</Button></div>
             }</TabsContent><TabsContent value="browse">
               <form className="astron-sh-search-form" onSubmit={event => { event.preventDefault(); search(draft.trim()); }}>
@@ -215,11 +222,11 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
                   : <div className="astron-sh-card-grid">{items.map(item => <SkillCard key={`${item.namespace}/${item.slug}`} item={item} version={item.latestVersion}
                     status={inventory.data && !inventory.isError
                       && inventory.data.items.some(record => record.namespace === item.namespace && record.slug === item.slug)
-                      ? <InstallationStatus hideEmpty installation={summarizeInstallation(item, inventory.data, new Date(inventory.dataUpdatedAt).toISOString())} /> : undefined}
+                      ? <span>{skillInstallationSummary(inventory.data.items.filter(record => record.namespace === item.namespace && record.slug === item.slug))}</span> : undefined}
                     actions={<MarketCardActions records={inventory.data?.items.filter(record => record.namespace === item.namespace && record.slug === item.slug) ?? []}
                       services={installed} sourceRevision={revision!}
                       verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
-                      onInstall={() => revision && setInstallCandidate({ item, revision })} onManage={manageSkill} />}
+                      onInstall={() => revision && setInstallCandidate({ item, revision })} onManage={() => openSkill(item)} />}
                     ref={node => { if (lastSelected.current?.namespace === item.namespace && lastSelected.current?.slug === item.slug) lastCard.current = node; }}
                     onOpen={event => openSkill(item, event.currentTarget)} />)}</div>}
                 {listing.isRefetchError && <div role="alert" className="astron-sh-error"><p>刷新失败，当前保留上次加载的结果，尚未确认是否为最新内容。{listing.error.message}</p><Button disabled={listing.isFetching} onClick={() => { void listing.refetch(); }}>重新刷新</Button></div>}

@@ -2,7 +2,7 @@
 export interface NativePendingOperation {
   operationId: string
   ownerId: string
-  kind: 'install' | 'upgrade' | 'uninstall' | 'remove-stale-record'
+  kind: 'install' | 'upgrade' | 'uninstall' | 'remove-stale-record' | 'enable' | 'disable'
   namespace: string
   slug: string
   targetPaths: string[]
@@ -26,6 +26,7 @@ export interface InstalledProjectionItem {
   fingerprint?: string
   /** Internal digest of this exact target's release, timestamp and ownership. */
   recordRevision?: string
+  installationState: InstallationState
   state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'
 }
 export interface InstalledProjection {
@@ -48,7 +49,24 @@ export type SkillExamples =
   | { state: 'invalid' }
   | { state: 'unavailable'; retryable: boolean }
 
+export type InstallationState = 'enabled' | 'disabled'
+export type ToggleBaseline = Extract<UpgradeBaseline, { status: 'blocked' }>
+  | { status: 'unchanged'; installationState: InstallationState }
+  | { status: 'ready'; inventoryItem: Extract<UpgradeBaseline, { status: 'ready' }>['inventoryItem'];
+      target: Extract<UpgradeBaseline, { status: 'ready' }>['targets'][number];
+      beforeState: InstallationState; afterState: InstallationState }
+export interface NativeToggleExecution {
+  operationId: string
+  ownerId: string
+  baseline: Extract<ToggleBaseline, { status: 'ready' }>
+  authorize: NativeRemovalExecution['authorize']
+}
 export interface NativeRuntime {
+  /** Host-only verified raw entry, including disabled entries; never accept a Client path. */
+  readInstallationEntry(selected: UpgradeSelection, target: InstalledProjectionTarget): Promise<string | undefined>
+  inspectToggle(selected: UpgradeSelection, target: InstalledProjectionTarget, desiredState: InstallationState): Promise<ToggleBaseline>
+  acceptToggle(request: NativeOperationRequest, validateNew: () => Promise<NativeInstallAcceptance & { kind: 'enable' | 'disable' }>): Promise<NativeOperation | undefined>
+  executeToggle(request: NativeToggleExecution): Promise<NativeRecoveryResult>
   /** Host-only fixed-path read after installation verification; never a Remote path argument. */
   readSkillExamples(directory: string): Promise<SkillExamples>
   /** Host-only, read-only evidence; the callback must verify the actual scoped DSH content and resource directory. */
@@ -76,9 +94,9 @@ export interface NativeRuntime {
 export interface UpgradeSelection { registry: string; namespace: string; slug: string; version: string }
 /** Private snapshot carried between the bundled core and Host, never supplied by the Client. */
 export type UpgradeBaseline =
-  | { status: 'blocked'; reason: 'record-changed' | 'target-outside-context' | 'shared-target' | 'target-alias' | 'local-changes' | 'metadata-invalid' | 'target-unavailable' }
+  | { status: 'blocked'; reason: 'record-changed' | 'target-outside-context' | 'shared-target' | 'target-alias' | 'local-changes' | 'metadata-invalid' | 'target-unavailable' | 'entry-conflict' }
   | { status: 'ready'; inventoryItem: Omit<UpgradeSelection, 'version'> & {
-    targets: Array<{ agent: string; rootDir: string; installDir: string; installedAt: string; version: string; fingerprint?: string; installedBy?: string[] }>
+    targets: Array<{ agent: string; rootDir: string; installDir: string; installedAt: string; version: string; fingerprint?: string; installedBy?: string[]; installationState?: InstallationState }>
   }; targets: Array<{
     scope: 'user' | 'project'; root: string; path: string; files: Record<string, string>;
     metadata: UpgradeSelection & { schemaVersion?: number; versionId?: number; fingerprint?: string;
@@ -113,14 +131,14 @@ export interface NativeInstallAcceptance {
 export interface NativeOperation {
   operationId: string
   revision: number
-  kind: 'install' | 'upgrade' | 'uninstall' | 'remove-stale-record'
+  kind: 'install' | 'upgrade' | 'uninstall' | 'remove-stale-record' | 'enable' | 'disable'
   namespace: string
   slug: string
   version: string
   targetLabel: string
   context: NativeInstallAcceptance['context'] & { hostInstanceId: string; createdAt: string; updatedAt: string }
   phase: 'accepted' | 'staging' | 'revalidating' | 'committing' | 'recovering' | 'completed' | 'failed' | 'recovery-required' | 'unknown'
-  files: 'pending' | 'installed' | 'already-installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'failed' | 'unknown'
+  files: 'pending' | 'installed' | 'already-installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'enabled' | 'disabled' | 'failed' | 'unknown'
   discovery: 'unconfirmed' | 'confirmed' | 'failed'
   recovery: 'not-needed' | 'restored' | 'incomplete' | 'unknown'
   warningCount: number
@@ -128,7 +146,7 @@ export interface NativeOperation {
   resultDetails?: {
     beforeVersion: string | null
     afterVersion: string | null
-    targets: { label: string; outcome: 'installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'restored' | 'unknown' }[]
+    targets: { label: string; outcome: 'installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'enabled' | 'disabled' | 'restored' | 'unknown' }[]
     warnings: ('backup-cleanup' | 'removal-cleanup' | 'verification-required')[]
   }
 }

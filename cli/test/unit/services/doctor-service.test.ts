@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import { mkdtemp, mkdir, writeFile, symlink, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { InventoryStore } from '../../../src/stores/inventory-store'
 import { runDoctor } from '../../../src/services/doctor-service'
 
 type InventoryFile = {
@@ -296,4 +297,24 @@ describe('doctor-service', () => {
     expect(imageResizerItem.targets[0]!.version).toBe('3.0.0')
     expect(imageResizerItem.targets).toHaveLength(1)
   })
+})
+
+
+test('doctor preserves a trusted disabled record and does not adopt a loose disabled entry', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'doctor-disabled-'))
+  const home = await mkdtemp(join(tmpdir(), 'doctor-disabled-home-'))
+  const metadata = { registry: 'https://example.test', namespace: 'global', slug: 'kept',
+    version: '1.0.0', agent: 'dsh', installedAt: '2026-10-27T00:00:00Z' }
+  const dir = await setupSkillDir(cwd, '.dsh', 'kept', metadata)
+  const loose = await setupSkillDir(cwd, '.dsh', 'loose', { ...metadata, slug: 'loose' })
+  await writeFile(join(dir, 'SKILL.md.disabled'), 'unchanged')
+  await writeFile(join(loose, 'SKILL.md.disabled'), 'unclaimed')
+  const store = new InventoryStore(home)
+  await store.mutateAtomic(inventory => inventory.items.push({ registry: metadata.registry,
+    namespace: metadata.namespace, slug: metadata.slug, targets: [{ agent: 'dsh', rootDir: join(dir, '..'),
+      installDir: dir, installedAt: metadata.installedAt, version: '1.0.0', installationState: 'disabled' }] }))
+  const before = await store.read()
+  await runDoctor(cwd, home)
+  expect(await store.read()).toEqual(before)
+  expect(await readFile(join(dir, 'SKILL.md.disabled'), 'utf8')).toBe('unchanged')
 })

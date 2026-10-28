@@ -45,7 +45,7 @@ async function fixture(run: (fixture: {
 }
 
 function record(home: string, index: number): InstalledProjectionItem {
-  return { namespace: 'demo', slug: `helper-${index}`, version: '1.0', scope: 'user', state: 'present',
+  return { namespace: 'demo', slug: `helper-${index}`, version: '1.0', scope: 'user', state: 'present', installationState: 'enabled',
     fingerprint: 'fingerprint', targetPath: join(home, 'skills', `helper-${index}`) };
 }
 
@@ -108,5 +108,20 @@ test('identical release reinstalled or ownership changed invalidates the old ref
     records[0]!.recordRevision = 'new-timestamp-or-owners';
     await expect(read(key)).rejects.toThrow();
     expect((await list()).items[0]!.itemKey).not.toBe(key);
+  });
+});
+
+
+test('toggle invalidates old action references but preserves exact location identity', async () => {
+  await fixture(async ({ records, home, list, read }) => {
+    records.push(record(home, 0));
+    const before = (await list()).items[0];
+    records[0].installationState = 'disabled';
+    const after = (await list()).items[0];
+    expect(after.installationState).toBe('disabled');
+    expect(after.locationKey).toBe(before.locationKey);
+    expect(after.itemKey).not.toBe(before.itemKey);
+    await expect(read(before.itemKey)).rejects.toThrow();
+    await read(after.itemKey);
   });
 });

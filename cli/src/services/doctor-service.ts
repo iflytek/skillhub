@@ -116,7 +116,8 @@ export async function runDoctor(cwd: string, home?: string): Promise<DoctorResul
           if (actual.some(owner => owner.registry !== scanned.registry || owner.namespace !== scanned.namespace || owner.slug !== scanned.slug)) throw new Error('Doctor source ownership conflict')
           const index = existing.targets.findIndex(saved => saved.installDir === target.installDir)
           if (index >= 0) {
-            existing.targets[index] = { ...target, installedBy: existing.targets[index]!.installedBy ?? ['direct'] }
+            existing.targets[index] = { ...target, installationState: existing.targets[index]!.installationState ?? 'enabled',
+              installedBy: existing.targets[index]!.installedBy ?? ['direct'] }
           } else existing.targets.push({ ...target, installedBy: ['direct'] })
         }
       }
@@ -178,6 +179,17 @@ async function scanMetadata(cwd: string, skipped: DoctorResult['skipped']): Prom
       } catch {
         skipped.push({ path: slugPath, reason: 'cannot stat' })
         continue
+      }
+      // A renamed entry is never sufficient evidence to reconstruct disabled ownership.
+      try {
+        await lstat(join(slugPath, 'SKILL.md.disabled'))
+        skipped.push({ path: slugPath, reason: 'disabled entry requires its existing inventory record' })
+        continue
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+          skipped.push({ path: slugPath, reason: 'cannot verify disabled entry' })
+          continue
+        }
       }
       const skillhubDir = join(slugPath, '.skillhub')
       try {

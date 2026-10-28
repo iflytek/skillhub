@@ -17,6 +17,8 @@ const probes = {
   'runtime-unsupported': 'runtime-unsupported-result.json',
   'installed-state': 'installed-state-result.json',
   'skill-availability': 'skill-availability-result.json',
+  'skill-toggle': 'skill-toggle-result.json',
+  'skill-toggle-watch-off': 'skill-toggle-result.json',
   'upgrade-candidate': 'upgrade-candidate-result.json',
   'upgrade-drift': 'upgrade-drift-result.json',
   'plan-context': 'plan-context-result.json',
@@ -78,14 +80,14 @@ const observer = join(run, 'observer.mjs');
 observerStatusFile = join(run, 'observer-status.json');
 dependencyStatusFile = join(run, 'dependency-status.json');
 const runtimeProbe = values.probe === 'runtime-baseline' || values.probe === 'runtime-unsupported';
-const source = await readFile(join(fixtureRoot, runtimeProbe ? 'runtime-baseline-probe.mjs' : values.probe === 'plugin-coexistence' ? 'plugin-lifecycle-fixture.mjs' : `${values.probe}-fixture.mjs`), 'utf8');
+const source = await readFile(join(fixtureRoot, runtimeProbe ? 'runtime-baseline-probe.mjs' : values.probe === 'plugin-coexistence' ? 'plugin-lifecycle-fixture.mjs' : `${values.probe === 'skill-toggle-watch-off' ? 'skill-toggle' : values.probe}-fixture.mjs`), 'utf8');
 await writeFile(observer, source.replaceAll(probes[values.probe], resultName), { flag: 'wx', mode: 0o600 });
 const state = join(run, 'update-state.txt');
 const downloads = join(run, 'download-state.txt');
 await writeFile(state, 'current');
 await writeFile(downloads, 'normal');
 const patch = join(run, 'observer.yml');
-const config = { root, ...(['plugin-lifecycle', 'plugin-coexistence'].includes(values.probe) ? { bundle: true } : {}),
+const config = { root, ...(values.probe === 'skill-toggle-watch-off' ? { watchOff: true } : {}), ...(['plugin-lifecycle', 'plugin-coexistence'].includes(values.probe) ? { bundle: true } : {}),
   ...(values.probe === 'plugin-coexistence' ? { referencePackage: '@cocofhu/skillhub' } : {}) };
 if (runtimeProbe) {
   const installedPackage = join(root, 'home/profiles/skillhub-m0/node_modules/@astron-team/skillhub-dsh');
@@ -113,7 +115,7 @@ export function apply(ctx) {
 }
 const referencePatch = values.probe === 'plugin-coexistence'
   ? '- id: skillhub\n  config:\n    apiBase: http://127.0.0.1:43219\n    webBase: http://127.0.0.1:43219\n    timeoutMs: 1000\n' : '';
-await writeFile(patch, `${diagnosticPatch}${referencePatch}- id: m0-observer\n  disabled: true\n- id: skillhub-local-runtime-probe\n  disabled: true\n- id: ${installedLoaderId}\n  config:\n    registryUrl: http://127.0.0.1:43219\n- insert:\n    - id: skillhub-probe-${id}\n      name: ${JSON.stringify(observer)}\n      config: ${JSON.stringify(config)}\n`);
+await writeFile(patch, `${values.probe === 'skill-toggle-watch-off' ? '- id: skill-filesystem\n  config:\n    watch: false\n' : ''}${diagnosticPatch}${referencePatch}- id: m0-observer\n  disabled: true\n- id: skillhub-local-runtime-probe\n  disabled: true\n- id: ${installedLoaderId}\n  config:\n    registryUrl: http://127.0.0.1:43219\n- insert:\n    - id: skillhub-probe-${id}\n      name: ${JSON.stringify(observer)}\n      config: ${JSON.stringify(config)}\n`);
 // Pin every spelling used by Node to the parent-validated temporary directory.
 // Windows process.env is case-insensitive in the main thread, but not in Workers.
 const inherited = Object.fromEntries(Object.entries(process.env)

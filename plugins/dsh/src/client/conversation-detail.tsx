@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { QueryClientProvider, useMutation, useQuery } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 import type { RemoteResult, TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol';
@@ -6,7 +6,11 @@ import type { ConversationDetail as ConversationDetailData } from '../host/types
 import { NativeControlStyles } from './native-control-styles.js';
 import { SkillAvatar, SkillMetrics } from './skill-card.js';
 import { DetailContent } from './detail-content.js';
-import { InstallControl } from './install-control.js';
+import { SkillInstallDialog } from './install-dialog.js';
+import { SkillPrimaryActions } from './skill-primary-actions.js';
+import { InstallationManagement } from './management-tool-view.js';
+import { SkillWebsiteLink } from './skill-website-link.js';
+import { Button } from './ui.js';
 import type { InstallationServices } from './install-control.js';
 import '../../lib/typert.remote-client.js';
 import type { ConversationSearchResult } from '../host/search-result.js';
@@ -37,7 +41,7 @@ export function ConversationDetail({ reference, callId, originalSource, services
     return () => { element.close(); if (previous instanceof HTMLElement && previous.isConnected) previous.focus(); };
   }, []);
   return <dialog ref={dialog} className="skillhub-controls astron-sh-detail-drawer" aria-label="技能详情" onCancel={event => { event.preventDefault(); close(); }}
-    style={{ margin: '0 0 0 auto', height: '100dvh', maxHeight: '100dvh', width: 'min(720px, 100vw)', maxWidth: '100vw', boxSizing: 'border-box', border: '1px solid #8885', padding: 24, overflowY: 'auto', font: 'inherit', lineHeight: 1.6, overflowWrap: 'anywhere' }}>
+    style={{ margin: '0 0 0 auto', height: '100dvh', maxHeight: '100dvh', width: 'min(1080px, 100vw)', maxWidth: '100vw', boxSizing: 'border-box', border: '1px solid #8885', padding: 24, overflowY: 'auto', font: 'inherit', lineHeight: 1.6, overflowWrap: 'anywhere' }}>
     <NativeControlStyles />
     <button autoFocus onClick={close} style={{ float: 'right', minHeight: 40 }} aria-label="关闭技能详情">关闭</button>
     <QueryClientProvider client={services.client}><Content reference={reference} callId={callId} originalSource={originalSource} services={services} close={close} browseVersions={browseVersions} allowHistoricalReopen={allowHistoricalReopen} /></QueryClientProvider>
@@ -62,11 +66,33 @@ function Content({ reference, callId, originalSource, services, close, browseVer
   const { context, detail } = query.data;
   return <>
     {reopening && <p role="status">已重新核验详情。安装需要另行确认。</p>}
-    <div className="astron-sh-detail-heading"><SkillAvatar name={detail.title} slug={detail.slug} namespace={detail.namespace} /><div><h2>{detail.title}</h2><p>@{detail.namespace}/{detail.slug} · {detail.version}</p></div></div><p>{detail.summary}</p><SkillMetrics item={detail} />
+    <div className="astron-sh-detail-heading"><SkillAvatar name={detail.title} slug={detail.slug} namespace={detail.namespace} /><div><h2>{detail.title}</h2><p>@{detail.namespace}/{detail.slug} · {detail.version}</p></div><SkillWebsiteLink webUrl={detail.webUrl} enabled={context.configured} /></div><p>{detail.summary}</p><SkillMetrics item={detail} />
     <Acknowledgment key={detail.detailToken} reference={detail.selectionRef} token={detail.detailToken} acknowledge={services.acknowledgeDetail} />
-    <InstallControl detail={detail} sourceRevision={context.sourceRevision} services={services.installation} initiatedFrom="conversation" onClose={close} onContextStale={() => { void query.refetch(); }} />
-    <article className="astron-sh-documentation"><DetailContent detail={detail} modes={context.detailTabs} remote={services.remote} retry={() => { void query.refetch(); }} cacheIdentity={JSON.stringify([services.installation.sessionId, context.sourceRevision, detail.namespace, detail.slug, detail.version])} onContextStale={() => { void query.refetch(); }} onSelectVersion={browseVersions} versionActionLabel="前往广场选择版本" /></article>
+    <ConversationSkillActions detail={detail} revision={context.sourceRevision} services={services} close={close}>
+    <article className="astron-sh-documentation"><DetailContent detail={detail} modes={context.detailTabs} remote={services.remote} retry={() => { void query.refetch(); }} cacheIdentity={JSON.stringify([services.installation.sessionId, context.sourceRevision, detail.namespace, detail.slug, detail.version])} onContextStale={() => { void query.refetch(); }} onSelectVersion={browseVersions} versionActionLabel="前往广场选择版本" /></article></ConversationSkillActions>
     <details className="astron-sh-conversation-provenance"><summary>来源信息</summary><p>原搜索来源：{originalSource}</p><p>当前详情来源：{context.registryUrl}</p></details>
+  </>;
+}
+function ConversationSkillActions({ detail, revision, services, close, children }: { detail: ConversationDetailData; revision: string; services: SearchViewServices; close(): void; children: ReactNode }) {
+  const [install, setInstall] = useState(false);
+  const inventory = useQuery({ queryKey: ['skillhub-installed', services.installation.sessionId, revision], retry: false,
+    queryFn: async ({ signal }) => value(await services.installation.installed(revision, signal)) });
+  const records = inventory.data?.items.filter(item => item.namespace === detail.namespace && item.slug === detail.slug) ?? [];
+  const verified = !!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length;
+  return <>
+    {records.length ? <SkillPrimaryActions items={records} revision={revision} verified={verified} select={services.installation.management?.selectSkillUse}
+      useSkill={services.installation.skillUse} label="使用已安装版本" onUsed={close} />
+      : <Button disabled={!verified} onClick={() => setInstall(true)}>安装</Button>}
+    <div className="astron-sh-detail-layout"><div className="astron-sh-detail-main">{children}</div><aside className="astron-sh-detail-aside">
+      {services.installation.management && <InstallationManagement identity={detail} revision={revision} services={services.installation.management} onUsed={close}
+        onInstall={records.length ? () => setInstall(true) : undefined} />}
+    </aside></div>
+    {install && <SkillInstallDialog client={services.client} identity={detail.detailToken} services={services.installation} initiatedFrom="conversation" close={() => setInstall(false)}
+      load={async signal => {
+        const context = value(await services.remote.getContext());
+        if (context.sourceRevision !== revision) throw new Error('来源已变化，请重新打开详情。');
+        return { detail: value(await services.openDetail(detail.selectionRef, signal)), sourceRevision: revision };
+      }} />}
   </>;
 }
 function Acknowledgment({ reference, token, acknowledge }: {

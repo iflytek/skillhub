@@ -4,7 +4,7 @@ import { isAbsolute, join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { canonicalizeExistingPath, pathsOverlap } from '../platform/paths'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
-import { snapshotSkillDirectory } from '../services/skill-fingerprint'
+import { snapshotInstalledSkillDirectory } from '../services/installed-skill-snapshot'
 import { targetInstalledBy } from '../stores/inventory-store'
 import type { InventoryItem, InventoryStore } from '../stores/inventory-store'
 import type { InstalledProjectionTarget, UpgradeBaseline } from './native-contract'
@@ -64,7 +64,7 @@ export async function inspectUpgradeBaseline(store: Pick<InventoryStore, 'read'>
         || metadata.agent !== 'dsh' || metadata.installedAt !== target.installedAt) {
         return { status: 'blocked', reason: 'metadata-invalid' }
       }
-      const snapshot = await snapshotSkillDirectory(target.installDir)
+      const snapshot = await snapshotInstalledSkillDirectory(item, target)
       if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) {
         return { status: 'blocked', reason: 'local-changes' }
       }

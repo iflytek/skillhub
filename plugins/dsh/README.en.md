@@ -14,7 +14,9 @@ Version `0.4.0` uses the independent `dsh-v0.4.0` tag. It adds versioned example
 
 ## Use an installed skill
 
-Choose “使用此技能” on an installed card, matching installed-version detail or completed installation result. Catalog entries open a new conversation in the same workspace; conversation entries keep their current session. After installation verification, examples appear above the native composer. Confirm an example or choose a custom task to insert an editable invocation. The original conversation is preserved, and in-conversation use retains its existing text, references and attachments. Complete the task and send it yourself; this action does not submit messages, call a model or install files.
+Market, installed and everyday conversation lists show one card per skill. “使用技能” asks the Host to verify the unique installation actually usable in the current session. Catalog use creates a conversation in the same workspace; conversation use keeps the current session. Choose an example or custom task to insert an editable draft. This never sends a message, invokes a model or overwrites the original draft.
+
+“管理安装” opens skill details, where the inline installation panel shows each location’s version, state and explicit use/update/enable/disable/removal actions. Disabled or unverified skills lead to management. Installation scope remains in advanced confirmation options, with the current-user default unchanged.
 
 An active session is required. Shadowed skills, modified files, disabled user invocation or changed context are reported without modifying the draft. Historical receipts are not proof of current installation. This feature is available from `0.4.0`.
 
@@ -136,7 +138,7 @@ Each visibility setting accepts `auto`, `show` or `hide`. Auto detects actual an
 
 - Browse supports search, server sorting, real labels and explicit **Load more**, normally 12 results per page. A first-page 404/405 can fall back to bounded legacy search, with an explicit pagination/sorting limitation. A failed label filter never silently returns unfiltered results.
 - Details show fixed-version documentation and optional tabs. Select a downloadable version before confirming installation. Existing-target protection remains; skill downgrades are not supported.
-- Installed records can be filtered by source, scope and keyword. The right-side version card contains detail refresh and update checks. Upgrade and removal affect only the selected location; other locations retain their versions. Missing directories have a separate stale-record cleanup action.
+- Installed skills are grouped by identity and support keyword filtering. Open “管理安装” for independent location rows and precise confirmed operations; missing directories retain stale-record cleanup.
 - `astron_skillhub_search` only searches. Result cards provide a detail action; the drawer offers explicit installation confirmation.
 - An explicit request to install a uniquely selected result does not require opening the drawer first. `astron_skillhub_install` verifies the search-time version and content snapshot. It accepts a `selectionRef` or a full coordinate, exclusively, and a `user`/`project` scope. Expired or ambiguous references are rejected without switching to current latest.
 
@@ -194,11 +196,11 @@ See the [release guide](../../openspec/changes/add-dsh-native-plugin/release-gui
 
 ### Marketplace interaction and installation management
 
-Market cards open details and offer separate installation-management actions. Multiple installed scopes require a selected target. After an explicit install request, an omitted scope defaults to current user; project scope must be explicitly selected. Market install actions open the same dialog without detail-page navigation. Current user is preselected, with project scope in advanced options; the dialog never submits automatically. A later explicit user scope may start a new call. Details omit complete leading frontmatter and reuse public reads for 60 seconds without bypassing write validation. The versions tab requests `downloadableOnly=true`, requiring the updated open-source backend; SaaS synchronization and acceptance remain separate.
+Market cards prioritize skill use. Their management action opens details with a separate inline section for each installation location. Explicit management actions retain their exact target. After an explicit install request, an omitted scope defaults to current user; project scope must be explicitly selected. Market install actions open the same dialog without detail-page navigation. Current user is preselected, with project scope in advanced options; the dialog never submits automatically. A later explicit user scope may start a new call. Details omit complete leading frontmatter and reuse public reads for 60 seconds without bypassing write validation. The versions tab requests `downloadableOnly=true`, requiring the updated open-source backend; SaaS synchronization and acceptance remain separate.
 
 After confirmation, the installation dialog expands to the right, keeping the skill, version, and scope on the left and concise real progress on the right. Narrow screens stack the sections. Progress remains indeterminate until completion; closing the dialog does not cancel a submitted installation.
 
-Installation controls use current inventory rather than historical success receipts. An existing installation selects its scope and offers removal. Project-only scope uses the project directory; all-project scope uses the current user directory on this Host. Changing scope never installs automatically; a removed installation may be explicitly installed again.
+Management reads current inventory, not historical success. Project scope is the current project directory; all-project scope is this Host’s current user directory. “安装其他位置” opens installation confirmation; changing scope never installs automatically.
 
 Removal from market cards, installed rows, and detail controls opens an in-place confirmation. It shows the skill, version, selected scope, and impact. Opening only prepares a plan; confirmation executes it. Cancel and Escape never remove files, and existing expiry, identity, and local-file checks still apply.
 
@@ -214,6 +216,25 @@ New conversational installs default to user scope after an explicit install requ
 
 ### Skill availability diagnosis (0.5.0)
 
-Choose “更多 → 检查可用性” on a conversational installed-skill card to inspect its selected location. A conversation can also use the read-only `astron_skillhub_check_availability` tool to explain why a skill cannot be used.
+Choose “管理安装 → 检查可用性” on a conversational installed-skill card to inspect its selected location. A conversation can also use the read-only `astron_skillhub_check_availability` tool to explain why a skill cannot be used.
 
 The result distinguishes local integrity, current-session discovery, and user/model invocation policies. Shadowing, local modifications and unknown Host state are separate outcomes. A name-only lookup reports Host observations without proving installation ownership or integrity. Diagnosis never modifies, removes or enables/disables a skill, edits a draft, or sends a message. A historical result is not a guarantee about a later invocation.
+
+
+## Managed skill enable/disable (unreleased increment)
+
+Open “管理安装” and choose enable or disable on the explicit location row. User and project copies are independent: disabling the user copy does not disable a project copy. UI and conversation mutations require real human confirmation. `astron_skillhub_disable` / `astron_skillhub_enable` accept fresh installation references, never arbitrary paths.
+
+Disabling changes only the entry from `SKILL.md` to `SKILL.md.disabled`, keeping directory, resources and version. Enabling restores the entry without overwriting an occupied destination. Modified, shared or untrusted installations are blocked. DSH can still check, update or uninstall a disabled installation; updates preserve disabled state.
+
+This does not revoke loaded conversation content or stop tasks. Another same-named installation can remain available. Unverified Host cache observations remain unknown; the older RC may need a new session to observe a fallback copy. Removing this plugin does not enable its disabled installations.
+
+The increment writes inventory v3 with per-location `installationState`. Reading v1/v2 is non-mutating; migration preserves the original bytes and a digest-addressed backup. The plugin bundles its compatible core and does not invoke an external CLI. Stop old writers and use the matching compatible CLI build before sharing inventory: published CLI `0.2.0` and `0.1.12` are incompatible. Release versions and order are not assigned yet. An old inventory backup alone is not a downgrade procedure. Native Windows/macOS entry conversion still requires acceptance before release.
+
+The detail-header website link uses only the detail API’s optional `webUrl`. Missing, null, blank or unsafe values hide the action without breaking skill details or installation. There is no plugin website setting, route construction or Registry fallback; legacy `websiteUrl` settings are ignored. The open-source server uses its trusted `SKILLHUB_PUBLIC_BASE_URL` to supply an absolute link, or null when no valid website base is configured. SaaS must provide this additive API field separately.
+
+Installation locations in the detail view expose secondary actions through a More menu. Disabled locations retain Enable. The menu supports arrow keys and Escape without expanding the location card. Closing it preserves the selected installation’s in-flight use request.
+
+Detail installation checks use a dismissible top-right notification. Ordinary success expires after five seconds; conflicts and failures remain dismissible. Repeated checks replace the notification, and leaving the skill clears it. Upgrade candidates and safety blocks stay in the installation row.
+
+Check notifications use a scope/version heading and one concise conclusion. Installation scope is directly visible without an advanced disclosure. Confirmation, progress and completion share a stable two-column layout (stacked on narrow screens), with a separate use action after completion. Default scope selection is unchanged.

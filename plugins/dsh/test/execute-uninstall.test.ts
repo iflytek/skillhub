@@ -4,7 +4,7 @@ import { realpath, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import SkillHubService from '@astron-team/skillhub-dsh';
-import { RemovalPlans } from '../src/host/upgrade-plans.js';
+import { TogglePlans, RemovalPlans } from '../src/host/upgrade-plans.js';
 import type { PreparedNativeRemoval } from '../src/host/local-runtime.js';
 import type { NativeOperation, RemovalBaseline } from '../src/host/generated/native-contract.js';
 
@@ -39,7 +39,7 @@ test.each(['uninstall', 'remove-stale-record'] as const)('executePlan routes %s 
     const runtime = { getStatus: () => ({ hostInstanceId }), findPlanOperation: async () => replay ? receipt : undefined,
       submitRemoval: async (_request: unknown, prepare: () => Promise<PreparedNativeRemoval>) => { prepared = await prepare(); return receipt; },
       submitUpgrade: async () => { throw new Error('Removal must not execute an upgrade'); } };
-    const context = { localRuntime: runtime, lifetime: new AbortController(), removalPlans: plans,
+    const context = { togglePlans: new TogglePlans(), localRuntime: runtime, lifetime: new AbortController(), removalPlans: plans,
       selectionScope: () => scope, assertSource() {}, getContext: () => ({ registryUrl: identity.registry }),
       ctx: { invocation: { request: { args: { agentId: 'session', input } } }, get: () => ({ get: () => agent }) } };
     Object.setPrototypeOf(context, SkillHubService.prototype);

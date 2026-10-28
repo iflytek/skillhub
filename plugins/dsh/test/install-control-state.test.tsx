@@ -18,7 +18,7 @@ test('existing scope is preferred and another skill never changes the selection'
   expect(preferredInstallationScope(inventory([{ ...record, scope: 'user' }]), detail, ['project'])).toBe('user');
 });
 
-function render(items: InstalledSkillList['items']) {
+function render(items: InstalledSkillList['items'], upgradable = false) {
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } });
   const requests = new InstallationRequests();
   client.setQueryData(['skillhub-install-targets', 'session', 'detail'], { hostInstanceId: 'host', targets: [{ scope: 'project', targetToken: 'target' }, { scope: 'user', targetToken: 'user' }], unavailable: [] });
@@ -26,6 +26,13 @@ function render(items: InstalledSkillList['items']) {
   client.setQueryData(['skillhub-compatibility'], { dependencyBaseline: 'matched', localWritesAllowed: true });
   const unexpected = async () => { throw new Error('SSR must not call transport'); };
   const services: InstallationServices = { sessionId: 'session', skillUse: { useSkill: unexpected }, requests, targets: unexpected, installed: unexpected, start: unexpected, operation: unexpected, compatibility: unexpected, manageInstalled: () => {} };
+  if (upgradable) {
+    services.upgrades = {} as NonNullable<InstallationServices['upgrades']>;
+    services.registryIdentity = unexpected; services.checkVersionUpdate = unexpected;
+    client.setQueryData(['skillhub-upgrade-source', 'session', 'source'], 'registry');
+    client.setQueryData(['skillhub-update-check', 'session', 'source', 'item', '1.2.0'], { state: 'upgradable', candidateVersion: '1.2.0' });
+  }
+  services.management = { client, installation: services, assertCurrent() {}, refreshInstalled: unexpected, check: unexpected, begin: unexpected, confirm: unexpected };
   try { return renderToStaticMarkup(<QueryClientProvider client={client}><InstallControl detail={detail} sourceRevision="source" services={services} initiatedFrom="plaza" /></QueryClientProvider>); }
   finally { client.clear(); requests.dispose(); }
 }
@@ -41,13 +48,37 @@ test('current inventory renders a removal action without a duplicate install act
 test('empty verified inventory renders an explicit scoped install action', () => {
   const html = render([]);
   expect(html).toContain('>安装到所有项目</button>');
-  expect(html).toContain('<summary>高级选项</summary>');
+  expect(html).not.toContain('<details'); expect(html).toContain('aria-label="安装范围"');
   expect(html).not.toContain('安装完成'); expect(html).not.toContain('重新安装到');
   expect(html).not.toContain('>卸载</button>');
 });
 
 test('use entry belongs to the installed version and never a different viewed version or invalid record', () => {
-  for (const item of [{ ...record, version: '1.1.0' }, { ...record, state: 'missing' as const }, { ...record, state: 'mismatch' as const }]) {
+  for (const item of [{ ...record, state: 'missing' as const }, { ...record, state: 'mismatch' as const }]) {
     expect(render([item])).not.toContain('>使用此技能</button>');
   }
+});
+
+test('detail actions offer a clear secondary disable and primary enable without a separate menu', () => {
+  const enabled = render([record]);
+  expect(enabled).toContain('astron-sh-install-actions');
+  expect(enabled).toMatch(/astron-sh-button-ghost[^>]*>停用<\/button>/);
+  expect(enabled).toContain('>使用此技能</button>');
+  expect(enabled).not.toContain('更多操作');
+  const disabled = render([{ ...record, installationState: 'disabled' }]);
+  expect(disabled).toContain('已停用');
+  expect(disabled).toMatch(/astron-sh-button-default[^>]*>启用<\/button>/);
+  expect(disabled).not.toContain('>使用此技能</button>');
+  expect(disabled).not.toContain('>停用</button>');
+});
+
+test('newer viewed version retains use of the explicitly installed item', () => {
+  expect(render([{ ...record, version: '1.1.0' }])).toContain('>使用已安装版本</button>');
+});
+
+test.each(['enabled', 'disabled'] as const)('available upgrade is secondary beside the %s installation action', installationState => {
+  const html = render([{ ...record, version: '1.1.0', installationState }], true);
+  expect(html).toMatch(/astron-sh-button-outline[^>]*>升级到 v1.2.0<\/button>/);
+  expect(html.match(/astron-sh-button-default/g)?.length).toBe(1);
+  expect(html).toContain(installationState === 'disabled' ? '>启用</button>' : '>使用已安装版本</button>');
 });

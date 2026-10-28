@@ -7,6 +7,7 @@ import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 import { hasExplicitNamespace, parseSkillName, resolveSkillName } from '../shared/skill-name-parser'
 import { diffSkillFiles, snapshotSkillDirectory } from './skill-fingerprint'
+import { snapshotInstalledSkillDirectory } from './installed-skill-snapshot'
 import { installSkill } from './install-service'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from './installed-skill-metadata'
 import { compareSkillVersions } from './skill-version-order'
@@ -365,7 +366,9 @@ async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): 
     if (!result.metadata.files) {
       baselineMissing = true
     } else {
-      const snapshot = await snapshotSkillDirectory(installDir)
+      const snapshot = target.installationState === 'disabled'
+        ? await snapshotInstalledSkillDirectory(item, target)
+        : await snapshotSkillDirectory(installDir)
       currentFiles[target.installDir] = snapshot.files
       for (const path of diffSkillFiles(result.metadata.files, snapshot.files)) {
         changedFiles.add(`${target.installDir}:${path}`)

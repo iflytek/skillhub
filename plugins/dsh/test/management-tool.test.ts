@@ -16,7 +16,7 @@ test('management registration preserves occupied tools and strict parameters rej
   const dispose = registerManagementTools(tools, async () => { calls++; return {}; });
   const tool = tools.get(MANAGEMENT_TOOLS.upgrade)!;
   expect(() => registerManagementTools(tools, async () => ({}))).toThrow('already registered');
-  expect(tools.entries.size).toBe(6);
+  expect(tools.entries.size).toBe(8);
   for (const extra of [{ confirmed: true }, { planId: 'plan' }, { path: '/forged' }]) {
     await expect(tool.execute({ sourceRevision: 'source', itemKey: 'item', ...extra }, context)).rejects.toThrow();
   }

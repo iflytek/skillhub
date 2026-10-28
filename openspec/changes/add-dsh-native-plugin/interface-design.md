@@ -420,3 +420,13 @@ Client 的 `beginConversationManagement(sourceRevision,itemKey,action,version,re
 `SkillAvailability` 用独立字段表达 `integrity`（verified/changed/missing/unknown）、`discovery`（winner/shadowed/not-discovered/unknown）、`association`（managed-reference/not-associated）与可选 `invocation`（userInvocable/modelInvocable）。`checkedAt` 为检查时刻，`reason` 为受控原因。`name` 仅在实际技能名可核对时返回，不能用市场 slug 冒充调用名。托管目标的 `installation` 仅包含精确记录中的 namespace、slug、version、scope；顶层可选 scope 与该目标一致。即使缺少文件、无法解析调用名，也可据此显示被检查目标。按 name 查询不返回 installation 或 scope，不能从名称猜测来源。
 
 `managed-reference` 仅证明选中了当前来源管理记录，不代表文件完整或当前可调用；`not-associated` 表示此次按名观察没有建立管理归属，不能解释为已确认属于其他市场。未知状态不得转成未安装。结果不携带路径、原始宿主对象、文档正文或异常文本。所有只读结果均不授予修改权限。
+
+
+### 官网链接字段
+
+技能详情API和私有Host SkillDetail新增可选`webUrl`，完整URL由服务端返回；空/缺失/非法隐藏按钮，无插件拼接或默认回退。具体接口、可信配置和兼容语义以[官网链接契约](registry-api-contract.md#官网详情链接的开源接口增量)为准。
+
+
+### 按技能使用的私有接口
+
+`selectSkillUse(sourceRevision, namespace, slug, signal): SkillUseSelection`只读返回唯一实际可用安装的itemKey或blocked原因，不产生安装/草稿/模型副作用，不新增Registry HTTP或LLM工具。返回引用仍须经过原新会话/填入前预检。契约与竞态边界见[使用优先设计](skill-use-first-design.md)。

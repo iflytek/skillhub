@@ -9,15 +9,18 @@ import { InventoryStore } from '../../../src/stores/inventory-store'
 import { openNativeRuntime } from '../../../src/integrations/native-runtime'
 import type { NativeUpgradeExecution } from '../../../src/integrations/native-contract'
 
-async function fixture(downloadFailure = false) {
+async function fixture(downloadFailure = false, entryCollision = false) {
   const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-native-upgrade-')))
   const versions = ['1.0.0', '2.0.0'].map((version, index) => {
     const content = `# Version ${version}`
     const examples = JSON.stringify({ schemaVersion: 1, defaultLocale: 'en', examples: { en: [{ id: 'one', title: version, prompt: 'Use {{skill}} ' + version }] } })
-    const fingerprint = 'sha256:' + createHash('sha256')
+    const collision = entryCollision && index === 1
+    const aggregate = createHash('sha256')
       .update('.skillhub/examples.json:' + createHash('sha256').update(examples).digest('hex') + '\n')
-      .update('SKILL.md:' + createHash('sha256').update(content).digest('hex') + '\n').digest('hex')
-    return { version, versionId: index + 1, content, examples, fingerprint }
+      .update('SKILL.md:' + createHash('sha256').update(content).digest('hex') + '\n')
+    if (collision) aggregate.update('SKILL.md.disabled:' + createHash('sha256').update('authored alias').digest('hex') + '\n')
+    const fingerprint = 'sha256:' + aggregate.digest('hex')
+    return { version, versionId: index + 1, content, examples, fingerprint, collision }
   })
   let downloads = 0
   const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch(request) {
@@ -29,7 +32,7 @@ async function fixture(downloadFailure = false) {
     } })
     downloads++
     if (downloadFailure && version.version === '2.0.0') return new Response('missing', { status: 404 })
-    return new Response(new Uint8Array(zipSync({ 'SKILL.md': new TextEncoder().encode(version.content), '.skillhub/examples.json': new TextEncoder().encode(version.examples) })).buffer)
+    return new Response(new Uint8Array(zipSync({ 'SKILL.md': new TextEncoder().encode(version.content), '.skillhub/examples.json': new TextEncoder().encode(version.examples), ...(version.collision ? { 'SKILL.md.disabled': new TextEncoder().encode('authored alias') } : {}) })).buffer)
   } })
   const registry = server.url.origin
   const inventory = new InventoryStore(join(root, 'home'))
@@ -187,5 +190,39 @@ test('upgrade download failure before staging ends without a recovery requiremen
       expect(await readFile(join(target.path, 'SKILL.md'), 'utf8')).toBe('# Version 1.0.0')
     }
     expect(await f.runtime.listPending()).toEqual([])
+  } finally { await f.close() }
+})
+
+test.each(['success', 'replace-denied', 'entry-collision'] as const)('disabled upgrade retains its entry state through %s', async mode => {
+  const f = await fixture(false, mode === 'entry-collision')
+  try {
+    const root = f.roots[0]!
+    const selection = { registry: f.request.registry, namespace: 'demo', slug: 'writer', version: '1.0.0' }
+    const toggle = await f.runtime.inspectToggle(selection, root, 'disabled')
+    if (toggle.status !== 'ready') throw new Error(JSON.stringify(toggle))
+    const context = { sourceIdentity: selection.registry, sourceLabel: 'Fixture', sourceRevision: 'source', hostLabel: 'Host', initiatedFrom: 'plaza' as const }
+    const disable = await f.runtime.acceptToggle({ hostInstanceId: f.runtime.hostInstanceId, ownerId: 'session', requestKey: randomUUID(), mode: 'new', parameters: { disable: true } },
+      async () => ({ kind: 'disable', namespace: 'demo', slug: 'writer', version: '1.0.0', targetLabel: 'User', targetPaths: [toggle.target.path], context }))
+    await f.runtime.executeToggle({ operationId: disable!.operationId, ownerId: 'session', baseline: toggle, authorize: async () => {} })
+    const baseline = await f.runtime.inspectUpgrade(selection, [root])
+    if (baseline.status !== 'ready') throw new Error(JSON.stringify(baseline))
+    const accepted = await f.runtime.acceptUpgrade({ hostInstanceId: f.runtime.hostInstanceId, ownerId: 'session', requestKey: randomUUID(), mode: 'new', parameters: { disabledUpdate: true } },
+      async () => ({ namespace: 'demo', slug: 'writer', version: '2.0.0', targetLabel: 'User', targetPaths: [toggle.target.path], context }))
+    let replacing = 0
+    const run = () => f.runtime.executeUpgrade({ ...f.request, operationId: accepted!.operationId, baseline,
+      authorize: async (paths, phase) => {
+        if (phase === 'replace' && paths.includes(toggle.target.path) && ++replacing === 2 && mode === 'replace-denied') throw new Error('Injected disabled update failure')
+      } })
+    if (mode === 'success') expect((await run()).outcome).toBe('committed')
+    else {
+      await expect(run()).rejects.toThrow(mode === 'entry-collision' ? 'entry destination is occupied' : 'Injected disabled update failure')
+      expect((await f.runtime.recover(accepted!.operationId, 'session', [toggle.target.path], async () => {})).outcome).toBe('restored')
+    }
+    const installed = (await f.inventory.read()).items[0]!.targets.find(target => target.rootDir === root.root)!
+    expect(installed.installationState).toBe('disabled')
+    expect(installed.version).toBe(mode === 'success' ? '2.0.0' : '1.0.0')
+    expect(await readFile(join(root.root, 'writer/SKILL.md.disabled'), 'utf8')).toBe(`# Version ${installed.version}`)
+    await expect(readFile(join(root.root, 'writer/SKILL.md'))).rejects.toMatchObject({ code: 'ENOENT' })
+    expect(await readFile(join(f.roots[1]!.root, 'writer/SKILL.md'), 'utf8')).toBe('# Version 1.0.0')
   } finally { await f.close() }
 })

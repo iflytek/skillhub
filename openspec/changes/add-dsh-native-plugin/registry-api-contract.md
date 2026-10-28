@@ -189,3 +189,19 @@ sequenceDiagram
 ### 选定版本升级的 Registry 复用
 
 定向升级仍使用现有 `GET /api/cli/v1/skills/{namespace}/{slug}/resolve?version={精确版本}` 与固定版本下载路径，不新增 SaaS 文件安装或升级 API。插件新增的 checkVersionUpdate、prepareVersionUpgrade 是本地 DSH Host 的 Agent-scoped 类型化方法，不是 SaaS HTTP 接口。resolve 返回其他版本时拒绝；不可用候选不重新请求无 version 的 latest。原最新版检查/计划方法继续使用无 version 的解析。
+
+
+## 官网详情链接的开源接口增量
+
+`GET /api/v1/skills/{namespace}/{slug}`（既有 `/api/web/skills/{namespace}/{slug}` 别名一致）的详情响应新增可选 `webUrl: string | null`，示例：
+
+```json
+{"namespace":"global","slug":"example","webUrl":"https://skill.example.com/space/global/example"}
+```
+
+- API提供完整网页地址；该字段不是下载URL或作者仓库，不要求插件知道网站路由。
+- 未配置可信网站地址时返回null；旧来源可不返回字段。缺失、null、空串、仅空白或无效地址时，DSH隐藏官网按钮，不影响其余功能。
+- 插件仅接受绝对HTTP(S)，拒绝userinfo、控制字符、反斜杠及危险协议；合法页面query/fragment保留，不附加本地认证信息。新标签页使用noopener/noreferrer，详情必须仍匹配当前来源。
+- 开源实现复用 `skillhub.public.base-url` / `SKILLHUB_PUBLIC_BASE_URL`，支持部署前缀；基址仅来自部署配置，无合法配置则null。不读取客户端地址、请求Host或Forwarded等头构造公网链接。不新增数据库列。
+- 插件不再有websiteUrl设置、本地拼路由或Registry默认回退；上轮网站配置方案被本契约取代。已保存旧配置可忽略。
+- `webUrl`是兼容增量，非必需字段；SaaS未同步前按钮隐藏属于预期。配置网站基址只影响链接，不改变Registry下载、安装路径或安装来源。

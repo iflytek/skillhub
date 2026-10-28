@@ -1,13 +1,14 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { isDeepStrictEqual } from 'node:util'
-import { lstat, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { lstat, open, readFile, rename, rm } from 'node:fs/promises'
 import { dirname, isAbsolute, relative, resolve } from 'node:path'
 import { lock } from 'proper-lockfile'
 import { acquireAcquisitionGate } from '../services/skill-target-lock'
 import { canonicalizeExistingPath, pathsOverlap, joinPath, userStateDir, ensureDir } from '../platform/paths'
 
 export interface InventoryTarget {
+  installationState?: 'enabled' | 'disabled'
   agent: string
   rootDir: string
   installDir: string
@@ -80,25 +81,29 @@ const identity = { registry: text, namespace: text, slug: text }
 const suiteSchema = z.object({ ...identity, version: text, fingerprint: text, members: z.array(z.object({
   namespace: text, slug: text, version: text, fingerprint: text, installDirs: z.array(text)
 }).strict()) }).strict()
-export const inventoryTargetSchema = z.object({ ...targetShape, version: text, fingerprint: text.optional() }).strict()
+const v2TargetSchema = z.object({ ...targetShape, version: text, fingerprint: text.optional() }).strict()
+export const inventoryTargetSchema = v2TargetSchema.extend({ installationState: z.enum(['enabled', 'disabled']).optional() }).strict()
+const v3TargetSchema = inventoryTargetSchema.extend({ installationState: z.enum(['enabled', 'disabled']) })
 export const inventoryRecordSchema = z.object({ ...identity, targets: z.array(inventoryTargetSchema) }).strict()
 export const inventoryMemorySchema = z.object({ items: z.array(inventoryRecordSchema), suites: z.array(suiteSchema).optional() }).strict()
 export const legacyInventorySchema = z.object({ items: z.array(z.object({ ...identity, version: text,
   fingerprint: text.optional(), installedBy: z.array(text).optional(), targets: z.array(z.object(targetShape).strict()) }).strict()),
   suites: z.array(suiteSchema).optional() }).strict()
-const inventoryDiskSchema = z.object({ schemaVersion: z.literal(2), records: z.array(inventoryRecordSchema),
+const inventoryDiskSchema = z.object({ schemaVersion: z.literal(2), records: z.array(z.object({ ...identity, targets: z.array(v2TargetSchema) }).strict()),
   suites: z.array(suiteSchema).optional() }).strict()
+
+const inventoryV3Schema = z.object({ schemaVersion: z.literal(3), records: z.array(z.object({ ...identity, targets: z.array(v3TargetSchema) }).strict()), suites: z.array(suiteSchema).optional() }).strict()
 
 /** A legacy read is a projection only. Missing integrity evidence is never synthesized. */
 export function parseInventory(value: unknown): Inventory {
   if (typeof value !== 'object' || value === null) throw new Error('Invalid inventory')
   if ('schemaVersion' in value) {
-    const parsed = inventoryDiskSchema.parse(value)
-    return { items: parsed.records, ...(parsed.suites === undefined ? {} : { suites: parsed.suites }) } as Inventory
+    const parsed = (value.schemaVersion === 3 ? inventoryV3Schema : inventoryDiskSchema).parse(value)
+    return { items: parsed.records.map(item => ({ ...item, targets: item.targets.map(target => ({ installationState: 'enabled' as const, ...target })) })), ...(parsed.suites === undefined ? {} : { suites: parsed.suites }) } as Inventory
   }
   const legacy = legacyInventorySchema.parse(value)
   return { items: legacy.items.map(item => ({ registry: item.registry, namespace: item.namespace, slug: item.slug,
-    targets: item.targets.map(target => ({ ...target, version: item.version,
+    targets: item.targets.map(target => ({ ...target, installationState: 'enabled', version: item.version,
       ...(item.fingerprint === undefined ? {} : { fingerprint: item.fingerprint }),
       installedBy: target.installedBy ?? item.installedBy ?? ['direct'] })) })),
     ...(legacy.suites === undefined ? {} : { suites: legacy.suites }) } as Inventory
@@ -147,12 +152,12 @@ export class InventoryStore {
     try { await this.migrateUnderLock() } finally { await release() }
   }
 
-  async diskVersion(): Promise<1 | 2> {
+  async diskVersion(): Promise<1 | 2 | 3> {
     try {
       const value: unknown = JSON.parse(await readFile(this.path, 'utf8'))
       parseInventory(value)
-      return typeof value === 'object' && value !== null && 'schemaVersion' in value ? 2 : 1
-    } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 2; throw error }
+      return typeof value === 'object' && value !== null && 'schemaVersion' in value ? value.schemaVersion as 2 | 3 : 1
+    } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 3; throw error }
   }
 
   private async migrateUnderLock(): Promise<void> {
@@ -164,10 +169,13 @@ export class InventoryStore {
     const value: unknown = JSON.parse(raw.toString('utf8'))
     const inventory = parseInventory(value)
     await validateInventoryClaims(inventory)
-    if (typeof value === 'object' && value !== null && 'schemaVersion' in value) return
+    if (typeof value === 'object' && value !== null && 'schemaVersion' in value && value.schemaVersion === 3) return
     const digest = createHash('sha256').update(raw).digest('hex')
-    const backup = joinPath(dirname(this.path), `inventory.v1.${digest}.backup.json`)
-    try { await writeFile(backup, raw, { flag: 'wx', mode: 0o600 }) }
+    const backup = joinPath(dirname(this.path), `inventory.v${typeof value === 'object' && value !== null && 'schemaVersion' in value ? 2 : 1}.${digest}.backup.json`)
+    try {
+      const file = await open(backup, 'wx', 0o600)
+      try { await file.writeFile(raw); await file.sync() } finally { await file.close() }
+    }
     catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error }
     const backupInfo = await lstat(backup)
     if (!backupInfo.isFile() || backupInfo.isSymbolicLink()) throw new Error('Unsafe inventory migration backup')
@@ -175,7 +183,7 @@ export class InventoryStore {
     try { await this.writeUnderLock(inventory) }
     catch (error) {
       try {
-        if (await this.diskVersion() === 2 && isDeepStrictEqual(await this.read(), inventory)) return
+        if (await this.diskVersion() === 3 && isDeepStrictEqual(await this.read(), inventory)) return
       } catch { /* Preserve the original migration failure. */ }
       throw error
     }
@@ -213,6 +221,7 @@ export class InventoryStore {
       const inventory = await this.read()
       const before = structuredClone(inventory)
       const result = mutate(inventory)
+      for (const item of inventory.items) for (const target of item.targets) target.installationState ??= 'enabled'
       if (beforeCommit) await beforeCommit(structuredClone(before), structuredClone(inventory))
       try { await this.writeUnderLock(inventory) }
       catch (writeError) {
@@ -233,13 +242,18 @@ export class InventoryStore {
   protected async writeUnderLock(inventory: Inventory): Promise<void> {
     inventoryMemorySchema.parse(inventory)
     await validateInventoryClaims(inventory)
-    const payload = JSON.stringify({ schemaVersion: 2, records: inventory.items, suites: inventory.suites }, null, 2)
+    const payload = JSON.stringify(inventoryV3Schema.parse({ schemaVersion: 3, records: inventory.items.map(item => ({ ...item, targets: item.targets.map(target => ({ ...target, installationState: target.installationState ?? 'enabled' })) })), suites: inventory.suites }), null, 2)
     parseInventory(JSON.parse(payload))
     const tmpPath = `${this.path}.${process.pid}.${Date.now()}.tmp`
     try {
-      await writeFile(tmpPath, payload)
+      const file = await open(tmpPath, 'wx', 0o600)
+      try { await file.writeFile(payload); await file.sync() } finally { await file.close() }
       parseInventory(JSON.parse(await readFile(tmpPath, 'utf-8')))
       await rename(tmpPath, this.path)
+      if (process.platform !== 'win32') {
+        const directory = await open(dirname(this.path), 'r')
+        try { await directory.sync() } finally { await directory.close() }
+      }
     } finally {
       await rm(tmpPath, { force: true }).catch(() => {})
     }

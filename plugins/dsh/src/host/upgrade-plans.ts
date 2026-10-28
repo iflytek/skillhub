@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { RemoteError } from '@deepseek-ai/dsh-typert-protocol';
 import type { SelectionScope } from './conversation-selections.js';
-import type { UpgradeBaseline, RemovalBaseline } from './generated/native-contract.js';
+import type { UpgradeBaseline, RemovalBaseline, ToggleBaseline } from './generated/native-contract.js';
 import type { ResolvedSkill } from './registry-adapter.js';
 
 export interface UpgradePlanSnapshot {
@@ -62,3 +62,5 @@ class ConfirmationPlans<Snapshot> {
 
 export class UpgradePlans extends ConfirmationPlans<UpgradePlanSnapshot> {}
 export class RemovalPlans extends ConfirmationPlans<Extract<RemovalBaseline, { status: 'ready' }>> {}
+
+export class TogglePlans extends ConfirmationPlans<Extract<ToggleBaseline, { status: 'ready' }>> {}

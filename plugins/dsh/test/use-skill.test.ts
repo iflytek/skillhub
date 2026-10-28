@@ -394,3 +394,35 @@ test('shadowed guidance does not invent the winning scope or silently choose ano
   }
   expect(f.state()).toBe(f.original); expect(f.counts().inserted).toBe(0);
 });
+
+test('historical use never falls back from a disabled location to a same-scope sibling', () => {
+  const item = { itemKey: 'old', namespace: 'global', slug: 'notes', version: '1.0.0', scope: 'user' as const, state: 'present' as const, installationState: 'disabled' as const };
+  const inventory = { items: [item], complete: true, unavailable: [], issues: [] };
+  expect(exactInstalledSkill(inventory, item)).toBeUndefined();
+  expect(exactInstalledSkill({ ...inventory, items: [item, { ...item, itemKey: 'other', installationState: 'enabled' }] }, item)).toBeUndefined();
+});
+
+// Skill-level entry resolves only on the Host, then follows the existing strict handoff.
+for (const reason of ['no-installation', 'no-usable-installation', 'selection-unverified', 'multiple-usable-installations', 'selection-timeout'] as const) {
+  test(`skill selector ${reason} never creates a conversation or edits a draft`, async () => {
+    const { selectSkillItem } = await import('../src/client/skill-primary-actions.js');
+    let created = 0;
+    const f = fixture({ newConversation: async () => { created++; throw new Error('must not create'); } });
+    await expect(f.controller.catalogServices('session').useSkill('source', undefined, new AbortController().signal,
+      signal => selectSkillItem(async () => ({ ok: true, value: { status: 'blocked', reason } }), 'source', 'demo', 'skill', signal))).rejects.toThrow();
+    expect(created).toBe(0); expect(f.state()).toBe(f.original); f.controller.dispose();
+  });
+}
+test('skill selector ready passes its exact key into handoff and still rechecks before offering a task', async () => {
+  const { selectSkillItem } = await import('../src/client/skill-primary-actions.js');
+  const selected: string[] = [], prepared: string[] = [];
+  const f = fixture({ newConversation: async (_session, _revision, key) => { selected.push(key); return { sessionId: 'fresh', itemKey: 'rebound-exact-key' }; },
+    prepare: async (_session, _revision, key) => { prepared.push(key); return { ok: true, value: caseReady() }; } });
+  f.controller.bind('fresh', f.actions);
+  const use = f.controller.catalogServices('session').useSkill('source', undefined, new AbortController().signal,
+    signal => selectSkillItem(async () => ({ ok: true, value: { status: 'ready', itemKey: 'host-unique-key' } }), 'source', 'demo', 'skill', signal));
+  await Bun.sleep(0);
+  expect(selected).toEqual(['host-unique-key']); expect(prepared).toEqual(['rebound-exact-key']);
+  f.controller.casePanel()!.finish(); await expect(use).rejects.toThrow('取消');
+  expect(f.state()).toBe(f.original); expect(f.counts().inserted).toBe(0); f.controller.dispose();
+});

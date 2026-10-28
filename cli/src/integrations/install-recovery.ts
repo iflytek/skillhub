@@ -1,9 +1,9 @@
+import { snapshotInstalledSkillDirectory, snapshotJournalInstallation } from '../services/installed-skill-snapshot'
 import { lstat, realpath, rm } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { captureInstallInventory } from '../services/inventory-cas'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
-import { snapshotSkillDirectory } from '../services/skill-fingerprint'
 import { acquireSkillTargetLock, orderSkillTargetLocks } from '../services/skill-target-lock'
 import { targetInstalledBy, type InventoryStore } from '../stores/inventory-store'
 import type { OperationRecord, OperationStore } from './operation-store'
@@ -60,7 +60,7 @@ async function inspectInstallation(options: InstallRecoveryOptions, mode: 'inspe
   if (!initial || !['install', 'upgrade'].includes(initial.operation.kind)) throw new Error('Expected an owned installation operation')
   const result = (outcome: InstallRecoveryInspection['outcome'], reason: string, revision = initial.revision): InstallRecoveryInspection =>
     ({ operationId, revision, outcome, reason })
-  if (initial.schemaVersion === 1 && await inventory.diskVersion() === 2) return result('unknown', 'legacy-journal-needs-v1-inventory')
+  if (initial.schemaVersion === 1 && await inventory.diskVersion() >= 2) return result('unknown', 'legacy-journal-needs-v1-inventory')
   const bound = initial.operation.targetPaths
   // Native recovery owns the execution lease: no staging intent means content writes never began.
   const unstarted = !initial.transaction && !initial.existingInstallation && !initial.removal
@@ -135,7 +135,7 @@ async function inspectInstallation(options: InstallRecoveryOptions, mode: 'inspe
             || metadata.installedAt !== target.installedAt || metadata.source !== 'skillhub') {
             return result('unknown', 'metadata-conflict')
           }
-          const snapshot = await snapshotSkillDirectory(path)
+          const snapshot = await snapshotInstalledSkillDirectory(item, target)
           if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) {
             return result('unknown', 'installed-content-changed')
           }
@@ -264,7 +264,7 @@ async function assertBackupContent(record: OperationRecord, move: InstallMove, p
   if (!sameInstalledSkillSource(metadata, identity) || metadata.version !== target.version
     || metadata.fingerprint !== target.fingerprint || metadata.installedAt !== target.installedAt
     || metadata.agent !== target.agent || metadata.source !== 'skillhub') throw new Error('Backup metadata does not match its baseline')
-  const snapshot = await snapshotSkillDirectory(path)
+  const snapshot = await snapshotJournalInstallation(record, path)
   if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) throw new Error('Backup content was modified')
 }
 

@@ -27,6 +27,8 @@ import com.iflytek.skillhub.metrics.SkillHubMetrics;
 import com.iflytek.skillhub.ratelimit.RateLimit;
 import com.iflytek.skillhub.service.SkillLabelAppService;
 import com.iflytek.skillhub.service.SkillAvatarUrls;
+import com.iflytek.skillhub.service.SkillWebUrls;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.service.ComplianceSnapshotProjectionService;
 import com.iflytek.skillhub.service.SkillSuiteAppService;
@@ -68,6 +70,8 @@ public class SkillController extends BaseApiController {
     private final SkillHubMetrics metrics;
     private final GithubSkillSourceQueryRepository githubSkillSourceQueryRepository;
 
+    private final SkillWebUrls skillWebUrls;
+
     public SkillController(
             SkillQueryService skillQueryService,
             SkillDownloadService skillDownloadService,
@@ -77,7 +81,24 @@ public class SkillController extends BaseApiController {
             SkillHubMetrics metrics,
             GithubSkillSourceQueryRepository githubSkillSourceQueryRepository,
             ApiResponseFactory responseFactory) {
+        this(skillQueryService, skillDownloadService, skillLabelAppService, complianceSnapshotProjectionService,
+                skillSuiteAppService, metrics, githubSkillSourceQueryRepository, responseFactory,
+                new SkillWebUrls(""));
+    }
+
+    @Autowired
+    public SkillController(
+            SkillQueryService skillQueryService,
+            SkillDownloadService skillDownloadService,
+            SkillLabelAppService skillLabelAppService,
+            ComplianceSnapshotProjectionService complianceSnapshotProjectionService,
+            SkillSuiteAppService skillSuiteAppService,
+            SkillHubMetrics metrics,
+            GithubSkillSourceQueryRepository githubSkillSourceQueryRepository,
+            ApiResponseFactory responseFactory,
+            SkillWebUrls skillWebUrls) {
         super(responseFactory);
+        this.skillWebUrls = skillWebUrls;
         this.skillQueryService = skillQueryService;
         this.skillDownloadService = skillDownloadService;
         this.skillLabelAppService = skillLabelAppService;
@@ -145,7 +166,8 @@ public class SkillController extends BaseApiController {
                 detail.ownerReadOnly(),
                 detail.publishedVersion() == null ? null
                         : githubSkillSourceQueryRepository.findPublishedVersion(detail.publishedVersion().id())
-                                .orElse(null)
+                                .orElse(null),
+                skillWebUrls.detail(namespace, detail.slug())
         );
 
         return ok("response.success.read", response);

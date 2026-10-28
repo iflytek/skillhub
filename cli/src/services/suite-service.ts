@@ -651,6 +651,11 @@ async function preflightExistingTargets(
       }
       const currentSuitePrefix = `suite:@${plan.namespace}/${plan.slug}@`
       const ownerTarget = owner?.targets.find(existing => resolve(existing.installDir) === installDir)
+      if (ownerTarget?.installationState === 'disabled') {
+        throw new CliError(`disabled installation cannot be adopted by a Suite: ${installDir}`, EXIT.validation, {
+          next: 'enable the installation explicitly before adding Suite ownership'
+        })
+      }
       if (owner && ownerTarget && !force && await pathExists(installDir)
         && (await snapshotSkillDirectory(installDir)).fingerprint !== ownerTarget.fingerprint) {
         throw new CliError(`local changes detected at ${installDir}`, EXIT.validation, {

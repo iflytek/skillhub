@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { captureInstallInventory } from '../services/inventory-cas'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
-import { snapshotSkillDirectory } from '../services/skill-fingerprint'
+import { snapshotJournalInstallation } from '../services/installed-skill-snapshot'
 import { acquireSkillTargetLock } from '../services/skill-target-lock'
 import type { InventoryStore } from '../stores/inventory-store'
 import type { NativeRecoveryResult } from './native-contract'
@@ -28,7 +28,7 @@ export async function recoverRemoval(options: RemovalRecoveryOptions): Promise<N
     || typeof options.authorizeMutation !== 'function') throw new Error('Expected an owned removal with Host authorization')
   const result = (outcome: NativeRecoveryResult['outcome'], reason: string): NativeRecoveryResult =>
     ({ operationId, revision: record!.revision, outcome, reason })
-  if (record.schemaVersion === 1 && await inventory.diskVersion() === 2) return result('unknown', 'legacy-journal-needs-v1-inventory')
+  if (record.schemaVersion === 1 && await inventory.diskVersion() >= 2) return result('unknown', 'legacy-journal-needs-v1-inventory')
   if (!isDeepStrictEqual(record.operation.targetPaths, [...options.trustedTargetPaths])
     || options.trustedTargetPaths.length !== 1) return result('unknown', 'target-binding-mismatch')
   const append = async (event: RemovalEvent) => {
@@ -83,8 +83,8 @@ export async function recoverRemoval(options: RemovalRecoveryOptions): Promise<N
       const verifyFiles = async (path: string) => {
         await assertOwnedRegularTree(path)
         const metadata = await readInstalledSkillMetadata(path)
-        const snapshot = await snapshotSkillDirectory(path)
         const expected = item.targets.find(entry => entry.installDir === target.path)!
+        const snapshot = await snapshotJournalInstallation(record!, path)
         if (metadata.status !== 'valid' || !sameInstalledSkillSource(metadata.metadata, item)
           || metadata.metadata.version !== expected.version || metadata.metadata.fingerprint !== expected.fingerprint
           || metadata.metadata.agent !== 'dsh' || metadata.metadata.installedAt !== expected.installedAt

@@ -1,3 +1,8 @@
+import { createHash } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
+import { inspectToggle, executeNativeToggle, recoverToggle } from './native-toggle'
 import { readSkillExamples } from '../services/skill-examples'
 import { observeInstallationDiscovery } from './install-discovery'
 import { readInstalledProjection } from './installed-projection'
@@ -20,13 +25,39 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
   const operations = await OperationStore.open(options.stateDirectory)
   const inventory = new InventoryStore(options.inventoryHome)
   const ensureCompatible = async () => {
-    if ((await operations.listForRecovery()).some(record => record.schemaVersion === 1)) {
+    if ((await operations.listForRecovery()).some(record => record.schemaVersion < 3)) {
       throw new OperationStoreError('TARGET_RECOVERY_REQUIRED')
     }
     await inventory.ensureWritable()
   }
   return {
     hostInstanceId: operations.hostInstanceId,
+    readInstallationEntry: async (selected, target) => {
+      const baseline = await inspectUpgradeBaseline(inventory, { ...selected }, [{ ...target }])
+      if (baseline.status !== 'ready' || baseline.targets.length !== 1) return undefined
+      const entry = baseline.inventoryItem.targets[0]!
+      const content = await readFile(join(entry.installDir, entry.installationState === 'disabled' ? 'SKILL.md.disabled' : 'SKILL.md'))
+      if (createHash('sha256').update(content).digest('hex') !== baseline.targets[0]!.files['SKILL.md']
+        || !isDeepStrictEqual(baseline, await inspectUpgradeBaseline(inventory, { ...selected }, [{ ...target }]))) return undefined
+      return content.toString('utf8')
+    },
+    inspectToggle: (selected, target, desiredState) => inspectToggle(inventory, { ...selected }, { ...target }, desiredState),
+    acceptToggle: async (request, validateNew) => {
+      const result = await operations.accept({ hostInstanceId: request.hostInstanceId, ownerId: request.ownerId,
+        requestKey: request.requestKey, mode: request.mode, requestDigest: operationRequestDigest({ ...request.parameters, kind: 'toggle' }) },
+      async () => {
+        const input = await validateNew()
+        if (!['enable', 'disable'].includes(input.kind)) throw new Error('Expected toggle acceptance')
+        return input
+      })
+      return result ? projectOperation(result) : undefined
+    },
+    executeToggle: async request => {
+      await ensureCompatible()
+      const snapshot = { ...request, baseline: structuredClone(request.baseline) }
+      return withOperationLease(operations, snapshot.operationId, snapshot.ownerId,
+        () => executeNativeToggle(operations, inventory, snapshot))
+    },
     readSkillExamples,
     observeInstallation: (operationId, ownerId, trustedRoots, observe) => observeInstallationDiscovery({
       operations, inventory, operationId, ownerId, trustedRoots, observe
@@ -34,7 +65,7 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
     findPlanOperation: async request => {
       let conflict: OperationStoreError | undefined
       // Preserve existing per-kind digests, including operations accepted by earlier plugin builds.
-      for (const kind of ['upgrade', 'removal'] as const) {
+      for (const kind of ['upgrade', 'removal', 'toggle'] as const) {
         try {
           const result = await operations.accept({ hostInstanceId: request.hostInstanceId, ownerId: request.ownerId,
             requestKey: request.requestKey, mode: 'retry',
@@ -42,7 +73,7 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
           async () => { throw new Error('Plan lookup cannot accept new work') })
           if (result) {
             if (kind === 'upgrade' ? result.operation.kind !== 'upgrade'
-              : !['uninstall', 'remove-stale-record'].includes(result.operation.kind)) throw new Error('Plan operation kind mismatch')
+              : kind === 'toggle' ? !['enable', 'disable'].includes(result.operation.kind) : !['uninstall', 'remove-stale-record'].includes(result.operation.kind)) throw new Error('Plan operation kind mismatch')
             return projectOperation(result)
           }
         } catch (error) {
@@ -111,6 +142,7 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
       const result = await withOperationLease(operations, operationId, ownerId, async () => {
         const record = await operations.get(operationId, ownerId)
         const input = { operations, inventory, operationId, ownerId, trustedTargetPaths: paths, authorizeMutation: authorize }
+        if (record && ['enable', 'disable'].includes(record.operation.kind)) return recoverToggle(operations, inventory, operationId, ownerId, paths, authorize)
         return record && ['uninstall', 'remove-stale-record'].includes(record.operation.kind)
           ? recoverRemoval(input) : recoverInstallation(input)
       })

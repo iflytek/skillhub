@@ -195,7 +195,7 @@ describe('doctor command', () => {
     const inventory = JSON.parse(await readFile(join(home, '.skillhub', 'inventory.json'), 'utf-8')) as {
       schemaVersion: number; records: Array<{ targets: Array<{ version: string }> }>
     }
-    expect(inventory.schemaVersion).toBe(2)
+    expect(inventory.schemaVersion).toBe(3)
     expect(inventory.records).toHaveLength(1)
     expect(inventory.records[0]!.targets.map(target => target.version).sort()).toEqual(['1.0.0', '2.0.0'])
   })

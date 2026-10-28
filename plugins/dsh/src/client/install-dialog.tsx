@@ -13,17 +13,16 @@ export function SkillInstallDialog({ client, identity, load, services, initiated
   services: InstallationServices; initiatedFrom: HostInstallRequest['initiatedFrom']; close(): void; onManage?(item: InstalledSkillList['items'][number]): void;
 }) {
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
-  const [expanded, setExpanded] = useState(false);
   const opener = useRef(typeof document === 'undefined' ? null : document.activeElement);
   return <div ref={setContainer} className="skillhub-controls"><NativeControlStyles />{container && <Dialog open onOpenChange={open => { if (!open) close(); }}>
-    <DialogContent className={`astron-sh-dialog${expanded ? ' astron-sh-dialog-expanded' : ''}`} container={container} onCloseAutoFocus={event => { event.preventDefault(); if (opener.current instanceof HTMLElement && opener.current.isConnected) opener.current.focus(); }}>
+    <DialogContent className="astron-sh-dialog astron-sh-dialog-expanded" container={container} onCloseAutoFocus={event => { event.preventDefault(); if (opener.current instanceof HTMLElement && opener.current.isConnected) opener.current.focus(); }}>
       <DialogTitle>安装技能</DialogTitle><DialogDescription>选择技能的可用范围</DialogDescription>
-      <QueryClientProvider client={client}><Content identity={identity} load={load} services={services} initiatedFrom={initiatedFrom} close={close} onManage={onManage} expand={() => setExpanded(true)} /></QueryClientProvider>
+      <QueryClientProvider client={client}><Content identity={identity} load={load} services={services} initiatedFrom={initiatedFrom} close={close} onManage={onManage} /></QueryClientProvider>
     </DialogContent>
   </Dialog>}</div>;
 }
-function Content({ identity, load, services, initiatedFrom, close, expand, onManage }: {
-  identity: string; expand(): void; load(signal: AbortSignal): Promise<{ detail: SkillDetail; sourceRevision: string }>;
+function Content({ identity, load, services, initiatedFrom, close, onManage }: {
+  identity: string; load(signal: AbortSignal): Promise<{ detail: SkillDetail; sourceRevision: string }>;
   services: InstallationServices; initiatedFrom: HostInstallRequest['initiatedFrom']; close(): void; onManage?(item: InstalledSkillList['items'][number]): void;
 }) {
   const [job, setJob] = useState<InstallationProgressJob | null>(null);
@@ -37,7 +36,7 @@ function Content({ identity, load, services, initiatedFrom, close, expand, onMan
     {job ? <><dl className="astron-sh-install-confirmed-scope"><dt>安装范围</dt><dd>{job.scope === 'project' ? '仅此项目' : '所有项目'}</dd></dl>
       <p className="astron-sh-install-close-note">关闭窗口不会取消已提交的安装。</p><Button autoFocus onClick={close}>关闭</Button></>
       : <InstallControl key={result.data.sourceRevision} detail={result.data.detail} sourceRevision={result.data.sourceRevision} services={services} initiatedFrom={initiatedFrom}
-        presentation="dialog" onClose={close} onManage={onManage} onSubmitted={value => { setJob(value); expand(); }} onContextStale={() => { void result.refetch(); }} />}
-    </div>{job && <aside aria-label="安装进度"><InstallationProgressPanel job={job} services={services} onUsed={close} /></aside>}
+        presentation="dialog" onClose={close} onManage={onManage} onSubmitted={value => { setJob(value); }} onContextStale={() => { void result.refetch(); }} />}
+    </div><aside aria-label="安装进度">{job ? <InstallationProgressPanel job={job} services={services} onUsed={close} /> : <section className="astron-sh-install-progress-item"><header><SkillAvatar name={result.data.detail.title} namespace={result.data.detail.namespace} slug={result.data.detail.slug} /><div><strong>{result.data.detail.title}</strong><p>v{result.data.detail.version}</p></div></header><div className="astron-sh-install-progress"><strong>等待确认安装</strong><p>确认范围后，安装进度将显示在这里。</p></div></section>}</aside>
   </div>;
 }

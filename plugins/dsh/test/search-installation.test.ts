@@ -20,7 +20,7 @@ test('summary matches full coordinates, preserves scopes and abnormal records, a
     { ...item, scope: 'project', state: 'missing', version: '0.9.0' }] };
   const value = summarizeInstallation(item, inventory, checkedAt);
   expect(value).toEqual({ checkedAt, complete: true, unavailable: [], records: [
-    { scope: 'user', state: 'present', version: '1.0.0' }, { scope: 'project', state: 'missing', version: '0.9.0' }] });
+    { scope: 'user', state: 'present', version: '1.0.0', installationState: 'enabled' }, { scope: 'project', state: 'missing', version: '0.9.0', installationState: 'enabled' }] });
   expect(JSON.stringify(value)).not.toContain('private-key');
   expect(summarizeInstallation(item, { ...inventory, unavailable: ['project'] }, checkedAt).complete).toBe(false);
   expect(summarizeInstallation(item, undefined, checkedAt)).toEqual({ checkedAt, complete: false, unavailable: ['user', 'project'], records: [] });
