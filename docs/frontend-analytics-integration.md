@@ -40,10 +40,11 @@ docker compose -f docs/examples/analytics/compose.yaml config
 docker compose -f docs/examples/analytics/compose.yaml up -d
 ```
 
-默认上游是 `host.docker.internal:80`，对应 release Compose 的 `WEB_PORT` 默认 80。这里是容器访问宿主机的 Web 入口，不是后端端口，也不是 edge 自己的 8081。若 Web 实际发布在 18080，使用：
+默认上游是 `host.docker.internal:80`，对应 release Compose 的 `WEB_PORT` 默认 80。这里是容器访问宿主机的 Web 入口，不是后端端口，也不是 edge 自己的 8081。若 Web 实际发布在其他端口（比如 18080），先在当前终端导出，再启动。后面所有 compose 命令都要在这个终端里执行，否则重建 edge 时会回到默认的 80：
 
 ```sh
-SKILLHUB_WEB_UPSTREAM=host.docker.internal:18080 docker compose -f docs/examples/analytics/compose.yaml up -d
+export SKILLHUB_WEB_UPSTREAM=host.docker.internal:18080
+docker compose -f docs/examples/analytics/compose.yaml up -d
 ```
 
 原生 Linux Docker 需要 `host.docker.internal` 映射，示例 edge 已包含 `extra_hosts: ["host.docker.internal:host-gateway"]`。Docker Desktop／OrbStack 已提供这个名字。宿主机 Web 必须监听容器可达的地址；如果防火墙或仅回环监听阻止访问，先调整可达性，或填写容器可以访问的其他 `host:port`。不要填写 `http://` 或 URL 路径。
@@ -65,7 +66,9 @@ docker compose -f docs/examples/analytics/compose.yaml exec edge nginx -t
 docker compose -f docs/examples/analytics/compose.yaml exec edge nginx -T
 ```
 
-打开 `http://localhost:8081`，不要从原 Web 入口验收注入。本地演示可以修改 v1 文件；正式交付中同一路径的模块是 immutable 缓存，修改内容必须发布到新的版本目录并同步注入路径，不能覆盖旧版本字节。
+打开 `http://localhost:8081`，不要从原 Web 入口验收注入。
+
+注意缓存：模块按 immutable 长期缓存，浏览器会一直用第一次拿到的 `observer.mjs`。本地演示每次改完入口文件，都要在开发者工具 Network 勾选「Disable cache」后再刷新，或者用一个新的无痕窗口打开。正式交付中不能原地改文件，要发布到新的版本目录（如 `v2`）并同步注入路径，不能覆盖旧版本字节。
 
 ## 3. 配置规则和增加动作
 
@@ -145,7 +148,7 @@ curl -I http://localhost:8081/skills
 
 第一个应为 200、JavaScript MIME、nosniff 和 immutable。第二个应为非 HTML 的 404。第三个应为 200、Cache-Control: no-store，并保留原 CSP（若原部署配置了 CSP）。
 
-2. 打开 edge 的 SkillHub 页面，在开发者工具 Network 勾选保留日志，筛选 `/_skillhub-umami/`。刷新后应加载 script.js，但没有自动 pageview 或 send。
+2. 打开 edge 的 SkillHub 页面，在开发者工具 Network 勾选「Preserve log」和「Disable cache」，筛选 `/_skillhub-umami/`。刷新后应加载 script.js，但没有自动 pageview 或 send。
 3. 搜索框输入任意本地测试文字，点击搜索。应恰好有一条 `/_skillhub-umami/api/send` POST，响应 200。再按 Enter 搜索一次，应新增一条，不是两条。切换 Network 的 Payload 查看真正出站 JSON，不要只看回调。
 4. JSON 只能包含 `{ type: 'event', payload: { website, name, data: { event } } }`。website 是配置的 UUID；搜索 name 为 search.query.submit，event 为 submit。不得出现搜索词、完整 URL、标题、referrer、身份或额外 data 字段。
 5. 打开 Umami 网站事件页，选择当前时间范围，应看到 search.query.submit 和对应数量。平台处理可能稍有延迟；不能把 HTTP 200 单独当作入库证明。
@@ -157,7 +160,7 @@ window.skillhubAnalytics.stop()
 
 stop 不能撤回已开始的 fetch。重新获准后才可调用 start()；同一个 root 重复初始化保留第一次规则和回调，修改规则需要先 stop 再初始化。
 
-7. 将入口恢复 `enabled: false`，重新创建 edge 并刷新新页面，再搜索：不得加载 script.js、产生采集回调或 send。完全不注入时也应零采集。最后在隔离演示中停止 Umami，再打开新页面搜索和打开技能卡片，应仍正常，无统计依赖导致的页面错误：
+7. 将入口恢复 `enabled: false`，重新创建 edge。保持「Disable cache」勾选（或换一个新的无痕窗口），刷新页面后再搜索：不得加载 script.js、产生采集回调或 send。完全不注入时也应零采集。最后在隔离演示中停止 Umami，再打开新页面搜索和打开技能卡片，应仍正常，无统计依赖导致的页面错误：
 
 ```sh
 docker compose -f docs/examples/analytics/compose.yaml stop umami
