@@ -74,7 +74,9 @@ A user reports an inappropriate skill package, and an administrator investigates
    - Download the full package for local testing
    - Review the compliance snapshot and the diff from the previous published version
 
-![Flow Diagram](/diagrams/review-flow.png)
+![Scan and review in the ordinary publication path](/diagrams/skill-publish-lifecycle-en.svg)
+
+The review section follows the PUBLIC / NAMESPACE_ONLY branch: scanning completes before the version waits for a review decision.
 
 4. Make a decision:
    - **Approve**: The skill package is officially published and the developer is notified

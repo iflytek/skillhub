@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 480" role="img" aria-labelledby="title desc">
+<title id="title">技能套装：安装成员，再使用入口技能</title><desc id="desc">固定版本套装安装为独立成员目录，用户再请求 Agent 使用入口技能。</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#222" stroke-width="1.5"/></marker></defs>
+<rect width="1080" height="480" fill="#fff"/>
+<style>text{font-family:Arial,"Noto Sans CJK SC","Microsoft YaHei",sans-serif;fill:#202124}.title{font-size:25px;font-weight:600}.head{font-size:18px;font-weight:600}.body{font-size:16px}.note{font-size:15px;fill:#4b5563}.card{fill:#fff;stroke:#222;stroke-width:1.7}.line{fill:none;stroke:#222;stroke-width:1.6;marker-end:url(#arrow)}</style>
+<text x="36" y="42" class="title">技能套装：安装成员，再使用入口技能</text>
+<text x="36" y="80" class="note">注册中心与 CLI 管理分发，Agent 根据已安装的技能说明处理任务。</text>
+<rect x="36" y="135" width="229" height="112" rx="15" class="card"/><rect x="48" y="122" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="59" y="145" class="head">1. 选择套装</text>
+<text x="52" y="188" class="body">固定成员版本</text>
+<text x="52" y="213" class="body">指定一个入口成员</text>
+<rect x="295" y="135" width="229" height="112" rx="15" class="card"/><rect x="307" y="122" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="318" y="145" class="head">2. 安装成员</text>
+<text x="311" y="188" class="body">skillhub suite install</text>
+<text x="311" y="213" class="body">下载并校验成员</text>
+<rect x="554" y="135" width="229" height="112" rx="15" class="card"/><rect x="566" y="122" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="577" y="145" class="head">3. 独立技能目录</text>
+<text x="570" y="188" class="body">entry-skill/SKILL.md</text>
+<text x="570" y="213" class="body">member-a/SKILL.md</text>
+<rect x="813" y="135" width="229" height="112" rx="15" class="card"/><rect x="825" y="122" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="836" y="145" class="head">4. 请求 Agent 使用</text>
+<text x="829" y="188" class="body">确认入口可被发现</text>
+<text x="829" y="213" class="body">提供具体任务</text>
+<path d="M265 190 L295 190" class="line"/>
+<path d="M524 190 L554 190" class="line"/>
+<path d="M783 190 L813 190" class="line"/>
+<rect x="36" y="298" width="1006" height="132" rx="15" fill="#f4f7ff" stroke="#222" stroke-width="1.5"/>
+<text x="56" y="329" class="head">使用边界</text>
+<text x="56" y="359" class="body">入口仍是普通 Skill，其他成员也可以独立使用。</text>
+<text x="56" y="385" class="body">成员如何协作由 SKILL.md 决定；安装不会自动执行工作流。</text>
+<text x="56" y="411" class="body">工具和凭据按技能说明配置；SkillHub 没有通用的 suite run 命令。</text>
+</svg>

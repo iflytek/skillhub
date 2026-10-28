@@ -128,7 +128,9 @@ file: skill-package.zip
 visibility: PUBLIC
 ```
 
-![Flow Diagram](/diagrams/skill-publish-flow.png)
+![Ordinary public and private publication paths](/diagrams/skill-publish-lifecycle-en.svg)
+
+The diagram covers ordinary uploads; scan failures, review rejection and privileged publishing are described below.
 
 5. **Security Scan**
 

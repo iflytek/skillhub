@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 510" role="img" aria-labelledby="title desc">
+<title id="title">Skill publication: ordinary upload paths</title><desc id="desc">Public submissions require scan and review; private submissions require publication confirmation.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#222" stroke-width="1.5"/></marker></defs>
+<rect width="1080" height="510" fill="#fff"/>
+<style>text{font-family:Arial,"Noto Sans CJK SC","Microsoft YaHei",sans-serif;fill:#202124}.title{font-size:25px;font-weight:600}.head{font-size:18px;font-weight:600}.body{font-size:16px}.note{font-size:15px;fill:#4b5563}.card{fill:#fff;stroke:#222;stroke-width:1.7}.line{fill:none;stroke:#222;stroke-width:1.6;marker-end:url(#arrow)}</style>
+<text x="36" y="42" class="title">Skill publication: ordinary upload paths</text>
+<text x="36" y="80" class="note">Submission accepted ≠ published. Follow the version status.</text>
+<text x="36" y="122" class="head">PUBLIC / NAMESPACE_ONLY</text>
+<rect x="36" y="151" width="229" height="112" rx="15" class="card"/><rect x="48" y="138" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="59" y="161" class="head">Upload</text>
+<text x="52" y="204" class="body">SKILL.md + files</text>
+<text x="52" y="229" class="body">Validate package</text>
+<rect x="295" y="151" width="229" height="112" rx="15" class="card"/><rect x="307" y="138" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="318" y="161" class="head">Scan</text>
+<text x="311" y="204" class="body">SCANNING</text>
+<text x="311" y="229" class="body">Scanning required</text>
+<rect x="554" y="151" width="229" height="112" rx="15" class="card"/><rect x="566" y="138" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="577" y="161" class="head">Review</text>
+<text x="570" y="204" class="body">PENDING_REVIEW</text>
+<text x="570" y="229" class="body">Approval required</text>
+<rect x="813" y="151" width="229" height="112" rx="15" class="card"/><rect x="825" y="138" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="836" y="161" class="head">Published</text>
+<text x="829" y="204" class="body">PUBLISHED</text>
+<text x="829" y="229" class="body">Audience rules apply</text>
+<path d="M265 206 L295 206" class="line"/>
+<path d="M524 206 L554 206" class="line"/>
+<path d="M783 206 L813 206" class="line"/>
+<text x="36" y="307" class="head">PRIVATE</text>
+<rect x="36" y="336" width="229" height="112" rx="15" class="card"/><rect x="48" y="323" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="59" y="346" class="head">Upload</text>
+<text x="52" y="389" class="body">SKILL.md + files</text>
+<text x="52" y="414" class="body">Validate package</text>
+<rect x="295" y="336" width="229" height="112" rx="15" class="card"/><rect x="307" y="323" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="318" y="346" class="head">Configured scan</text>
+<text x="311" y="389" class="body">SCANNING if enabled</text>
+<text x="311" y="414" class="body">Otherwise skip</text>
+<rect x="554" y="336" width="229" height="112" rx="15" class="card"/><rect x="566" y="323" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="577" y="346" class="head">Confirm publish</text>
+<text x="570" y="389" class="body">UPLOADED</text>
+<text x="570" y="414" class="body">Explicit confirmation</text>
+<rect x="813" y="336" width="229" height="112" rx="15" class="card"/><rect x="825" y="323" width="205" height="33" rx="10" fill="#5c83ef"/>
+<text x="836" y="346" class="head">Published</text>
+<text x="829" y="389" class="body">PUBLISHED</text>
+<text x="829" y="414" class="body">Private access only</text>
+<path d="M265 391 L295 391" class="line"/>
+<path d="M524 391 L554 391" class="line"/>
+<path d="M783 391 L813 391" class="line"/>
+<text x="36" y="480" class="note">Scan failure or rejection stops these paths. Privileged auto-publish is a separate path.</text>
+</svg>

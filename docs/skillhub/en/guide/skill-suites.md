@@ -12,6 +12,10 @@ A Skill Suite is a separately versioned collection of exact published Skill vers
 
 A [Bundle](./suite-bundle) is an authoring format. A Suite is not a workflow runtime: coordination depends on the entry and member instructions. A Skill can still be installed independently.
 
+![Suite installation and entry-skill usage](/diagrams/skill-suite-usage-en.svg)
+
+Installation ends at separate member files. Agent usage starts with an explicit task.
+
 ## Install a Suite
 
 Follow the related Suites on a Skill detail page to inspect the entry, pinned members and installability. A related-Suite badge denotes membership, not a mandatory dependency. Ordinary `skillhub search` searches Skills, and same-named Suites require the explicit `suite` command.

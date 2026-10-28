@@ -132,7 +132,9 @@ file: skill-package.zip
 visibility: PUBLIC
 ```
 
-![流程图](/diagrams/skill-publish-flow.png)
+![公开与私有技能的普通发布路径](/diagrams/skill-publish-lifecycle-zh.svg)
+
+图示覆盖普通上传；扫描失败、审核拒绝及特权发布的区别见下文。
 
 5. **安全扫描**
 
