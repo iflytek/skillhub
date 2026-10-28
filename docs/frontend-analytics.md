@@ -1,8 +1,13 @@
 # Passive frontend analytics attributes
 
+For step-by-step setup, see the [Chinese integration guide](frontend-analytics-integration.md).
+This document is the English contract reference. Configuration-only deployment is
+planned in [PR-2](../openspec/changes/add-configurable-frontend-analytics/proposal.md);
+the current examples remain deployment-owned and opt-in.
+
 SkillHub exposes semantic HTML attributes for separately maintained, optional
 collectors. It does not collect or send analytics by default. There is no SDK,
-DataFinder dependency, vendor token, network reporter, app script loader or
+vendor dependency, vendor token, network reporter, app script loader or
 telemetry configuration switch. The application entrypoint and production Nginx
 configuration are unchanged. Deployment owners control consent, script delivery,
 retention, transport and compliance; this is not an official vendor integration
@@ -221,8 +226,16 @@ From the repository root:
 
 ```sh
 docker compose -f docs/examples/analytics/compose.yaml config
-SKILLHUB_WEB_UPSTREAM=host.docker.internal:8080 docker compose -f docs/examples/analytics/compose.yaml up -d
+docker compose -f docs/examples/analytics/compose.yaml up -d
 ```
+
+The default Web upstream is `host.docker.internal:80`, matching the release
+Compose `WEB_PORT` default of 80. Override `SKILLHUB_WEB_UPSTREAM` with the actual
+reachable host:port if different. The edge's `extra_hosts` maps this hostname to
+`host-gateway` on native Linux; Docker Desktop/OrbStack already provide it. The
+host Web listener must be reachable from containers. The edge inherits the standard
+server-level `client_max_body_size 100M` for application proxying (100 MiB); it does
+not reduce uploads to Nginx's default 1 MiB.
 
 This creates a demo network and ephemeral database, not production storage. Use
 an isolated local Docker environment with available network pools. Open

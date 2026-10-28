@@ -2,6 +2,29 @@
 
 本变更在 PR #1010 上保留原贡献历史并合入最新 main，保留 footer 翻译及 Trans 登录协议。使用已有运行时配置比 Nginx HTML 注入更易自动交付；完整标签管理平台增加额外服务与权限体系，本期不采用。
 
+## 分阶段交付与接口对齐
+
+PR-1（#1010）仅完成被动标签、厂商中立 helper 与示例 adapter、edge 示例问题修正和中文接入指南。它不修改产品入口或部署开关，手工接入方式继续明确标为可选示例。PR-2 独立交付配置化加载、产品模块、runtime-config、同源代理和 Compose／Helm。两者可分别合并，Issue #989 仅在 PR-2 完成并验证后关闭。
+
+PR-2 必须采用 PR-1 实际交付的接口，不能另起一套不兼容协议：
+
+| PR-1 接口 | PR-2 采用方式 |
+| --- | --- |
+| `data-analytics-id` 匹配 `^[a-z]+(?:\.[a-z]+){2,}$`，由 manifest 索引 | 保持已发布 ID 含义冻结；manifest 不是运行时封闭枚举，不插值资源／身份信息 |
+| `observeSkillhubIntents({ root, rules, onIntent }) -> stop` | controller 按授权安装委托观察；不改变页面原生事件和业务处理 |
+| 冻结的 `DEFAULT_RULES`（12 条） | rules 省略用默认值，显式提供为替换，空对象不采集；增加默认规则需显式合并 |
+| `resolveRules(rules) -> { active, skipped: [{ id, reason }] }` | 使用相同纯校验；非法容器的 id 为 null；诊断只留本地，不发送原配置 |
+| 有限类型 `click`／`submit`／`card` | 保持宿主限制和原生事件边界；未知类型／ID 格式／不支持宿主跳过，不猜测选择、文件、拖放或裁剪事件 |
+| intent 仅 `{ id, event }` | event 为原生 click／submit／keydown，不表示业务成功；同版本只允许增加可选的静态白名单字段，消费者忽略未知字段；破坏性变更另版本 |
+| adapter `send(intent) -> Promise<void>`、`stop()` | send 消化异常、永不 reject；平台参数只归 adapter；停止后不得派发新请求，已开始 fetch 不可撤回 |
+| 同 root 重复初始化保留第一次 config／callback 并返回相同 stop | 改配置先 stop 再初始化；旧 stop 不得撤掉新安装，stop 可重复调用；嵌套观察共享事件去重 |
+
+配置映射：enabled=false 不安装观察、不加载 SDK；consent=denied 同样禁止初始化。enabled 与 consent 的联合判断由通用 controller 管理，不放进业务组件。rules 原样通过 resolveRules，保留 active／skipped 语义。adapter 仅选择静态注册 factory；adapterConfig 只交给所选适配层校验，不把 websiteId 等厂商字段提升到通用配置。PR-1 示例的 website／prefix 对应 PR-2 Umami 的 adapterConfig.websiteId／部署生成的同源前缀；PR-1 的 hasConsent hook 对应 PR-2 consent 和动态 start／stop。PR-2 新增默认关闭的模块加载边界，不能声称 PR-1 示例已具备产品配置化加载。
+
+PR-2 将 helper 迁入 `web/src/features/analytics` 的单一产品源码，迁移而非复制，保留 PR-1 测试的全部断言，包括 grammar、有限规则、生命周期、隐私和 dispatch 边界。示例 adapter 仍不是任意远程 JS 插件机制。
+
+## PR-2 产品设计（下列能力尚未在 PR-1 实现）
+
 ### 1. Stable configuration contract
 
 - `SKILLHUB_WEB_ANALYTICS_CONFIG`：可选 JSON 对象，空值等同关闭。字段为 enabled（boolean，默认 false）、adapter（注册适配器名）、consent（`denied`/`granted`，默认 denied）、rules（可选动作→有限规则对象，省略沿用默认规则，显式空对象不采集）、adapterConfig（平台自有公开参数对象）。
