@@ -96,6 +96,61 @@ class BusinessLogsDiagnosticsTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"text", "json"})
+    void malformedChunkedUnauthorizedCannotPrintUncaughtExceptionAndLaterExportRecovers(
+            String format, CapturedOutput output) throws Exception {
+        configureShippedLogging(format);
+        try (var receiver = new BusinessLogsTestReceiver(
+                "HTTP/1.1 401 Unauthorized\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n"
+                        + "1 Bearer " + CREDENTIAL + "\r\nx\r\n0\r\n\r\n")) {
+            var previousHandler = Thread.getDefaultUncaughtExceptionHandler();
+            var ownedGroups = new java.util.HashSet<ThreadGroup>();
+            new ApplicationContextRunner().withUserConfiguration(BusinessLogsConfiguration.class)
+                    .withBean(SimpleMeterRegistry.class, SimpleMeterRegistry::new)
+                    .withPropertyValues("skillhub.observability.business-logs.enabled=true",
+                            "skillhub.observability.business-logs.endpoint=" + receiver.endpoint(),
+                            "skillhub.observability.business-logs.headers=Authorization=Bearer%20" + CREDENTIAL,
+                            "skillhub.observability.business-logs.retry-max-attempts=1",
+                            "skillhub.observability.business-logs.timeout=100ms",
+                            "skillhub.observability.business-logs.retry-initial-backoff=100ms",
+                            "skillhub.observability.business-logs.retry-max-backoff=100ms",
+                            "skillhub.observability.business-logs.max-queue-size=1",
+                            "skillhub.observability.business-logs.max-export-batch-size=1")
+                    .run(context -> {
+                        assertThat(context).hasNotFailed();
+                        var snapshot = new BusinessEventSnapshot(7L, SkillVisibility.PUBLIC, "reviewer", "user", "review", Instant.now());
+                        var event = new SkillPublishedEvent(1L, 2L, "reviewer", snapshot);
+                        var pipeline = context.getBean(BusinessLogsPipeline.class);
+                        var metrics = context.getBean(BusinessLogsMetrics.class);
+                        context.publishEvent(event);
+                        pipeline.forceFlush().join(5, TimeUnit.SECONDS);
+                        org.awaitility.Awaitility.await().untilAsserted(() -> assertThat(metrics.exportFailures.count()).isEqualTo(1));
+                        context.publishEvent(event);
+                        pipeline.forceFlush().join(5, TimeUnit.SECONDS);
+                        org.awaitility.Awaitility.await().untilAsserted(() -> assertThat(metrics.exported.count()).isEqualTo(1));
+                        assertThat(metrics.enqueued.count()).isEqualTo(2);
+                        assertThat(metrics.queueFull.count()).isZero();
+                        assertThat(metrics.exportFailures.count()).isEqualTo(1);
+                        assertThat(receiver.requests.get()).isEqualTo(2);
+                        assertThat(metrics.errors.count()).isEqualTo(1);
+                        Thread.getAllStackTraces().keySet().stream()
+                                .filter(thread -> thread.getName().startsWith("okhttp-dispatch-"))
+                                .map(Thread::getThreadGroup)
+                                .filter(group -> group instanceof BusinessLogsExporterBoundary).forEach(ownedGroups::add);
+                        assertThat(ownedGroups).hasSize(1);
+                        assertThat(Thread.getDefaultUncaughtExceptionHandler()).isSameAs(previousHandler);
+                    });
+            org.awaitility.Awaitility.await().untilAsserted(() -> assertThat(Thread.getAllStackTraces().keySet())
+                    .noneMatch(thread -> ownedGroups.contains(thread.getThreadGroup()) && thread.getName().startsWith("okhttp-dispatch-")));
+            assertThat(Thread.getDefaultUncaughtExceptionHandler()).isSameAs(previousHandler);
+            org.awaitility.Awaitility.await().untilAsserted(() -> assertThat(output.getAll()).contains("Business Logs telemetry failed"));
+            // OutputCapture covers System.out/System.err, including the shipped text/async JSON appenders.
+            assertThat(output.getOut()).doesNotContain(CREDENTIAL, "Exception in thread", "ProtocolException", "IllegalStateException");
+            assertThat(output.getErr()).doesNotContain(CREDENTIAL, "Exception in thread", "ProtocolException", "IllegalStateException");
+        }
+    }
+
     private static void exportFailure(String endpoint) {
         new ApplicationContextRunner().withUserConfiguration(BusinessLogsConfiguration.class)
                 .withBean(SimpleMeterRegistry.class, SimpleMeterRegistry::new)

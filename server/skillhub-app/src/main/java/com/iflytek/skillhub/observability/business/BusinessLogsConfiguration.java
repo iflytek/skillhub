@@ -38,7 +38,13 @@ public class BusinessLogsConfiguration {
                 .put("service.version", BusinessEventMapper.bounded(environment.getProperty("skillhub.observability.service-version", "unknown")))
                 .put("deployment.environment", BusinessEventMapper.bounded(environment.getProperty("skillhub.observability.service-environment", "local")))
                 .build());
-        return new BusinessLogsPipeline(properties, resource, builder.build(), metrics);
+        var exporter = BusinessLogsExporterBoundary.build(builder::build, metrics);
+        try {
+            return new BusinessLogsPipeline(properties, resource, exporter, metrics);
+        } catch (RuntimeException ex) {
+            try { exporter.shutdown(); } catch (RuntimeException shutdownException) { metrics.error(); }
+            throw new IllegalStateException("Business Logs pipeline initialization failed");
+        }
     }
 
     @Bean

@@ -34,6 +34,11 @@ The event catalog in `docs/business-event-logs.md` SHALL define all included eve
 - **THEN** one download-prepared record is admitted
 - **AND** a rejected request, preview/review package, Suite plan or metadata poll emits no such record
 
+#### Scenario: Promotion identities and namespace filters
+- **WHEN** an initial or update promotion approval commits
+- **THEN** publication SHALL identify the derived target skill/version/namespace, and the promotion decision SHALL identify the source skill/namespace with no invented version field
+- **AND** a source-only namespace allowlist SHALL retain only the decision; a target-only allowlist SHALL retain only publication
+
 ### Requirement: Export SHALL have bounded, nonblocking business-thread cost
 
 The adapter SHALL use asynchronous SDK batching and standard bounded exporter retry, never caller-runs network IO. Record count, batch size, attribute count/length, timeout, retry attempts/backoff and shutdown wait SHALL be bounded. Telemetry exceptions SHALL NOT propagate into business calls; failures SHALL be counted with bounded diagnostic logging.
@@ -74,6 +79,14 @@ A single mapper SHALL export only fixed documented scalar fields, including IDs 
 - **THEN** shipped logging SHALL suppress raw `io.opentelemetry.exporter` and `io.opentelemetry.sdk.logs` diagnostics, including child loggers, by default
 - **AND** fixed-text rate-bounded SkillHub diagnostics and counters SHALL remain available
 - **AND** operator documentation SHALL warn that explicitly raising SDK logging opts into possible credential disclosure
+
+#### Scenario: Uncaught asynchronous exporter failure
+- **WHEN** the dedicated managed business exporter throws from an asynchronous response callback, including HTTP 401 with a malformed chunk-size line containing synthetic credential text
+- **THEN** its private dispatcher exception boundary SHALL prevent raw throwable text from reaching stdout, stderr or application logs with the shipped logging defaults
+- **AND** the adapter error counter and fixed warning SHALL remain available; the completion deadline SHALL count one failed batch and recover capacity for a later successful event
+- **AND** the boundary SHALL exist before export and remain on late callbacks through dispatcher shutdown, without changing the JVM default uncaught handler
+- **AND** unrelated threads (even same-named threads outside the private group) and non-dispatcher group members SHALL delegate unchanged to their previous parent/default handling
+- **AND** documentation SHALL scope this guarantee to the verified managed business sender and logging defaults, excluding unrelated exporters/application failures, explicit logging/SDK overrides, exception-intercepting agents, heap dumps and receiver logs
 
 ### Requirement: Deployment and delivery limitations SHALL be explicit
 

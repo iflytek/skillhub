@@ -2,6 +2,7 @@ package com.iflytek.skillhub.observability.business;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.event.SkillBusinessEvent;
 import com.iflytek.skillhub.domain.governance.GovernanceNotificationService;
 import com.iflytek.skillhub.domain.namespace.*;
 import com.iflytek.skillhub.domain.review.*;
@@ -17,6 +18,7 @@ import com.iflytek.skillhub.storage.ObjectStorageService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.opentelemetry.api.common.AttributeKey;
 import io.opentelemetry.sdk.resources.Resource;
+import io.opentelemetry.sdk.logs.data.LogRecordData;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -92,6 +94,15 @@ class BusinessLogsProducerPostgresTest {
         @Bean BusinessEventListener listener(BusinessLogsPipeline pipeline, BusinessLogsMetrics metrics) {
             return new BusinessEventListener(new BusinessEventMapper(new BusinessLogsProperties()), pipeline, metrics);
         }
+        @Bean PromotionFilterProbe promotionFilterProbe() { return new PromotionFilterProbe(); }
+    }
+
+    static class PromotionFilterProbe {
+        private BusinessEventListener delegate;
+        @org.springframework.context.event.EventListener
+        public void onEvent(SkillBusinessEvent event) {
+            if (delegate != null) { delegate.onEvent(event); }
+        }
     }
 
     @MockBean SecurityScanService scanner;
@@ -121,6 +132,7 @@ class BusinessLogsProducerPostgresTest {
     @Autowired PlatformTransactionManager transactions;
     @Autowired BusinessLogsPipeline pipeline;
     @Autowired BusinessLogsTransactionTest.CapturingExporter exporter;
+    @Autowired PromotionFilterProbe filterProbe;
 
     @BeforeEach
     void setup() {
@@ -172,6 +184,7 @@ class BusinessLogsProducerPostgresTest {
                 .containsExactlyInAnyOrderElementsOf(rollback ? List.of() : expected);
         if (!rollback) {
             for (var record : exporter.records) {
+                assertExportedIdentity(path, fixture, record);
                 assertThat(record.getAttributes().toString()).doesNotContain("private reason", "not-exported", "secret", "business-probe", "Never export");
                 String actor = record.getAttributes().get(AttributeKey.stringKey("user.id"));
                 if (path.equals("download")) { assertThat(actor).isNull(); }
@@ -180,7 +193,8 @@ class BusinessLogsProducerPostgresTest {
                 } else { assertThat(actor).isEqualTo(fixture.owner()); }
             }
         }
-        // Persistent state independently proves rollback, not just listener suppression.
+        // These two representative paths additionally prove persistent rollback state;
+        // all matrix rows above prove listener suppression, not every database mutation.
         if (path.equals("private")) {
             assertThat(((SkillVersionRepository) versions).findById(fixture.uploadedId()).orElseThrow().getStatus())
                     .isEqualTo(rollback ? SkillVersionStatus.UPLOADED : SkillVersionStatus.PUBLISHED);
@@ -190,6 +204,89 @@ class BusinessLogsProducerPostgresTest {
                     .isEqualTo(rollback ? ReviewTaskStatus.PENDING : ReviewTaskStatus.APPROVED);
         }
         System.out.printf("BUSINESS_LOGS producer=%s rollback=%s received=%d expected=%d%n", path, rollback, exporter.records.size(), rollback ? 0 : expected.size());
+    }
+
+    private void assertExportedIdentity(String path, Fixture fixture, LogRecordData record) {
+        var attributes = record.getAttributes();
+        String name = attributes.get(AttributeKey.stringKey("skillhub.event.name"));
+        Long skillId = fixture.skillId();
+        Long namespaceId = ((SkillRepository) skills).findById(skillId).orElseThrow().getNamespaceId();
+        Long versionId = switch (path) {
+            case "auto" -> versions.findBySkillIdAndVersion(skillId, "3.0.0").orElseThrow().getId();
+            case "private", "review-approved", "review-rejected" -> fixture.uploadedId();
+            case "download", "yank" -> fixture.publishedId();
+            default -> null;
+        };
+        if (path.startsWith("promotion") && name.equals("skill.publication.effective")) {
+            PromotionRequest request = ((PromotionRequestRepository) promotions).findById(fixture.promotionId()).orElseThrow();
+            skillId = request.getTargetSkillId();
+            versionId = request.getTargetVersionId();
+            assertThat(skillId).isNotNull().isNotEqualTo(fixture.skillId());
+            assertThat(versionId).isNotNull().isNotEqualTo(fixture.publishedId());
+            assertThat(request.getTargetNamespaceId()).isNotEqualTo(namespaceId);
+            namespaceId = request.getTargetNamespaceId();
+            assertThat(((SkillRepository) skills).findById(skillId).orElseThrow().getNamespaceId()).isEqualTo(namespaceId);
+            assertThat(((SkillVersionRepository) versions).findById(versionId).orElseThrow().getSkillId()).isEqualTo(skillId);
+        }
+        assertThat(attributes.get(AttributeKey.longKey("skillhub.skill.id"))).as("%s skill", name).isEqualTo(skillId);
+        assertThat(attributes.get(AttributeKey.longKey("skillhub.namespace.id"))).as("%s namespace", name).isEqualTo(namespaceId);
+        assertThat(attributes.get(AttributeKey.longKey("skillhub.version.id"))).as("%s version (or absent)", name).isEqualTo(versionId);
+        assertThat(attributes.get(AttributeKey.longKey("skillhub.review.id")))
+                .isEqualTo(name.startsWith("skill.review.") ? fixture.reviewId() : null);
+        assertThat(attributes.get(AttributeKey.longKey("skillhub.promotion.id")))
+                .isEqualTo(name.startsWith("skill.promotion.") ? fixture.promotionId() : null);
+        String source = switch (path) {
+            case "auto" -> "auto_publish";
+            case "private" -> "private_confirm";
+            case "review-approved", "review-rejected" -> "review";
+            case "promotion-initial", "promotion-update", "promotion-rejected" -> "promotion";
+            case "archive", "unarchive", "yank" -> "governance";
+            case "visibility-narrow", "visibility-expanded" -> "visibility";
+            case "download" -> "download";
+            default -> throw new AssertionError(path);
+        };
+        assertThat(attributes.get(AttributeKey.stringKey("skillhub.source"))).isEqualTo(source);
+        assertThat(attributes.get(AttributeKey.stringKey("skillhub.visibility")))
+                .isEqualTo(path.equals("private") || path.equals("visibility-narrow") ? "PRIVATE" : "PUBLIC");
+        assertThat(attributes.get(AttributeKey.stringKey("skillhub.status.old")))
+                .isEqualTo(path.equals("archive") ? "ACTIVE" : path.equals("unarchive") ? "ARCHIVED" : null);
+        assertThat(attributes.get(AttributeKey.stringKey("skillhub.status.new")))
+                .isEqualTo(path.equals("archive") ? "ARCHIVED" : path.equals("unarchive") ? "ACTIVE" : null);
+        assertThat(attributes.get(AttributeKey.stringKey("skillhub.visibility.old")))
+                .isEqualTo(path.equals("visibility-narrow") ? "PUBLIC" : path.equals("visibility-expanded") ? "PRIVATE" : null);
+        assertThat(attributes.get(AttributeKey.stringKey("skillhub.visibility.new")))
+                .isEqualTo(path.equals("visibility-narrow") ? "PRIVATE" : path.equals("visibility-expanded") ? "PUBLIC" : null);
+    }
+
+    static Stream<Arguments> promotionFilters() {
+        return Stream.of("promotion-initial", "promotion-update")
+                .flatMap(path -> Stream.of(Arguments.of(path, true), Arguments.of(path, false)));
+    }
+
+    @ParameterizedTest(name = "{0}, sourceOnly={1}")
+    @MethodSource("promotionFilters")
+    void promotionNamespaceFilterRetainsOnlySourceDecisionOrTargetPublication(String path, boolean sourceOnly) {
+        Fixture fixture = fixture(path);
+        PromotionRequest request = ((PromotionRequestRepository) promotions).findById(fixture.promotionId()).orElseThrow();
+        Long sourceNamespace = ((SkillRepository) skills).findById(fixture.skillId()).orElseThrow().getNamespaceId();
+        assertThat(request.getTargetNamespaceId()).isNotEqualTo(sourceNamespace);
+        var properties = new BusinessLogsProperties();
+        properties.setNamespaceAllowlist(Set.of(sourceOnly ? sourceNamespace : request.getTargetNamespaceId()));
+        var captured = new BusinessLogsTransactionTest.CapturingExporter();
+        var metrics = new BusinessLogsMetrics(new SimpleMeterRegistry());
+        try (var filtered = new BusinessLogsPipeline(properties, Resource.empty(), captured, metrics)) {
+            filterProbe.delegate = new BusinessEventListener(new BusinessEventMapper(properties), filtered, metrics);
+            new TransactionTemplate(transactions).executeWithoutResult(status -> {
+                promoting.approvePromotion(fixture.promotionId(), fixture.reviewer(), "checked", Set.of("SUPER_ADMIN"), Set.of());
+                assertThat(captured.records).isEmpty();
+            });
+            filtered.forceFlush().join(5, TimeUnit.SECONDS);
+            assertThat(captured.records).singleElement().satisfies(record -> {
+                assertThat(record.getAttributes().get(AttributeKey.stringKey("skillhub.event.name")))
+                        .isEqualTo(sourceOnly ? "skill.promotion.approved" : "skill.publication.effective");
+                assertExportedIdentity(path, fixture, record);
+            });
+        } finally { filterProbe.delegate = null; }
     }
 
     private List<String> expected(String path) {

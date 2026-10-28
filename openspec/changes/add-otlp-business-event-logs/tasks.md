@@ -34,3 +34,14 @@ See acceptance.md for final executed results and explicit unverified deployment 
 - [x] Retain RED/GREEN evidence and rerun full focused command: 299 tests green; deployment contracts: 4 Python cases plus Helm/release shell suites green.
 
 Repair 1 results and intermediate failures are recorded in acceptance.md and the appended worker report; earlier broad-suite/site-build limitations remain explicit.
+
+## Repair 2
+
+- [x] Save runtime RED for malformed-chunked 401 response-body exceptions in both shipped logging formats, including captured stderr disclosure despite permit recovery.
+- [x] Verify actual managed 1.31 builder API and dispatcher factory; contain only owned dispatcher uncaught failures with a private ThreadGroup, no global default-handler mutation or BOM upgrade.
+- [x] Verify fixed diagnostics, errors/failure accounting, permit recovery, later successful export, lifecycle shutdown and unchanged previous handling of unrelated threads.
+- [x] Assert complete exported identities/source/visibility/old-new fields for every committed producer row; add four real-producer initial/update source-only/target-only promotion filter cases; narrow persistent rollback claim.
+- [x] Update operator guide/design/spec with the exact safe-diagnostics scope and residual risks; retain evidence of intermediate fixture failures.
+- [x] Rerun full focused selector/environment: 307 tests green (81 business); real Collector query 27/9/27; deployment contracts 4/4 plus Helm/release shell suites green; diff and scoped cleanup checked.
+
+Repair 2 exact commands/counts/evidence and proposed fixup are appended to the worker report. No commit/push/comment was performed.
