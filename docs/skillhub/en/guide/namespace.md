@@ -1,4 +1,21 @@
-# Namespace & Team Management
+# Manage Namespaces
+
+The team-namespace creation action is shown to platform SKILL_ADMIN / SUPER_ADMIN roles. Other users should ask an authorized creator to create the space and invite them. Team ownership does not grant a platform role.
+
+## A Team Onboarding Sequence
+
+1. Create a team namespace in My Namespaces with a stable slug and a readable display name. The slug is part of installation coordinates and cannot change with the team name.
+2. Add existing accounts or generate an invitation. Ordinary role selection offers MEMBER / ADMIN; ownership transfer is a separate action, not an Owner option in the role selector.
+3. Select this namespace when publishing. Choose NAMESPACE_ONLY for team sharing; PRIVATE does not mean all team members can read it.
+4. Administrators review submissions; authors track versions in My Skills.
+5. Arrange maintenance responsibilities before removing a member. Removal does not transfer skill ownership.
+
+### Why Available Actions Differ
+
+The page uses namespace type, state and server-provided capabilities to display freeze, unfreeze, archive, restore and delete actions. Owner or Admin is not an unconditional grant for every action. Owners and Admins can edit an ACTIVE team namespace; authorized Owners have a separate ownership transfer action. Frozen or archived namespaces make membership management read-only, while eligible administrators can still read invitation history.
+
+Freezing temporarily stops writes; unfreezing restores them. Archiving and permanent deletion are distinct. Check the target and impact in the confirmation, then verify the resulting namespace state and member page instead of relying only on a successful request.
+
 
 ## Overview
 
@@ -70,7 +87,7 @@ Discover a security issue in the namespace and temporarily freeze all publish op
 2. Click the "Members" tab
 3. Click "Add Member"
 4. Search for users (supports searching by username, email)
-5. Select a role (Owner / Admin / Member)
+5. Select Admin or Member; ownership transfer is a separate flow
 6. Confirm to add
 
 **Invite with a link**:

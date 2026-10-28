@@ -19,7 +19,7 @@ SkillHub solves this problem. It provides a **private, controllable, and easy-to
 
 ## Tech Stack
 
-![Frontend, backend, data and storage components](/diagrams/tech-stack-en.svg)
+![Frontend, backend, data and storage components](/diagrams/tech-stack-sketch.png)
 
 Storage can use local files or an S3-compatible provider; select it explicitly for your deployment.
 

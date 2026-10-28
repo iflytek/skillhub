@@ -85,7 +85,7 @@ A: `BOOTSTRAP_ADMIN_PASSWORD` initializes an account. `BootstrapAdminInitializer
 
 ## Q: Is an email verification code required to change / reset a password?
 
-A: The current password-change/reset flow uses email verification and requires [SMTP configuration](https://github.com/iflytek/skillhub/blob/main/docs/19-smtp-password-reset-email-setup.md). Bootstrap environment variables do not reset existing passwords.
+A: The web password-reset flow uses email verification; the authenticated change-password endpoint uses the current password instead. Email reset requires [SMTP configuration](https://github.com/iflytek/skillhub/blob/main/docs/19-smtp-password-reset-email-setup.md). Bootstrap environment variables do not reset existing passwords.
 
 ## Q: Can a skill have a Chinese name?
 

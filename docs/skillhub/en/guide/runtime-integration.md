@@ -1,4 +1,4 @@
-# Runtime Integration Contract
+# Runtime Integration: Version Resolution, Downloads, and Compliance Snapshots
 
 ## Responsibility Boundary
 
@@ -20,7 +20,7 @@ When Runtime needs to connect an execution trace with SkillHub compliance declar
 | `registryUrl` | Runtime configuration | SkillHub registry URL |
 | `namespace` | SkillHub coordinate | Skill namespace, such as `global` or a team slug |
 | `skillSlug` | SkillHub coordinate | Skill slug |
-| `requestedVersion` | Runtime request | User-requested version, tag, or range |
+| `requestedVersion` | Runtime request | User-requested exact version or tag |
 | `resolvedVersion` | SkillHub response | Exact resolved version |
 | `skillVersionId` | Version `id` from SkillHub response | Immutable version ID and the primary audit join key |
 | `complianceSnapshotDigest` | `complianceSnapshot.digest` | Stable digest of the version-level compliance declaration snapshot |
@@ -90,12 +90,46 @@ An audit system can then start from the Runtime trace, locate the exact executio
 - Do not treat SkillHub compliance declarations as third-party certification.
 - Do not require SkillHub to record model inputs and outputs; that belongs to the Runtime audit boundary.
 
-## Possible Future API
+## Resolve, inspect, then download
 
-If a clear consumer appears, such as Runtime needing only the compliance snapshot without full skill details, SkillHub can add an immutable version-level endpoint:
+Choose the registry, skill coordinate and caller identity first. These are HTTP request examples, not shell commands; replace the example coordinate with a real resource.
 
-```text
-GET /api/skill-versions/{skillVersionId}/compliance
+```http
+GET /api/v1/skills/global/example-skill/resolve?version=1.2.0
+GET /api/v1/skills/global/example-skill/versions/1.2.0
+GET /api/v1/skills/global/example-skill/versions/1.2.0/download
 ```
 
-For now, reuse the version detail response to avoid designing multiple APIs before the caller contract is stable.
+`version` is exact; use `tag` for a tag, and do not supply both. This endpoint does not resolve ranges such as `^1.2.0`. Resolution returns `skillId`, `namespace`, `slug`, `version`, `versionId`, `fingerprint`, `matched`, and `downloadUrl`. Use that exact version for subsequent requests rather than resolving `latest` again before execution.
+
+Version details use the common response envelope. This illustrative example omits some detail fields:
+
+```json
+{
+  "code": 0,
+  "msg": "success",
+  "data": {
+    "id": 123,
+    "version": "1.2.0",
+    "status": "PUBLISHED",
+    "fileCount": 2,
+    "totalSize": 2048,
+    "complianceSnapshot": null
+  },
+  "timestamp": "2026-01-01T00:00:00Z",
+  "requestId": "example-request-id"
+}
+```
+
+A null snapshot can mean no declaration or historical metadata that cannot be projected. Do not invent a digest. The registry package `fingerprint` and compliance snapshot `digest` identify different content. If you hash the downloaded ZIP yourself, record its algorithm and object separately; do not assume it equals the registry fingerprint.
+
+Downloads return either ZIP bytes or a `302` with an object-storage `Location`. Do not forward registry credentials to the storage host when following a redirect. The CLI provides an existing installation and validation flow. A temporary download URL is not a durable resource identifier.
+
+## Permissions and failure handling
+
+- Anonymous callers can read visible public published resources. Restricted resources still require the appropriate identity, namespace membership or ownership; an anonymously accessible route does not make every resource public.
+- Version details support authorized maintainer previews. Readability does not imply installability: resolution requires an installable version. Record and check `status`; do not treat pending preview content as a published release.
+- Stop on missing, inaccessible or unavailable versions. Do not silently substitute another skill, registry or latest version.
+- Retain request IDs and redacted errors for investigation, not tokens, signed URLs or secrets from runtime inputs.
+
+Verify at least public resolution and download, anonymous rejection of restricted resources, explicit failure for unavailable versions, null snapshots, and credential-safe redirects. Execution traces remain in the runtime's own system; these endpoints do not accept execution results.

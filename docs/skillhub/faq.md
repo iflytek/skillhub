@@ -85,7 +85,7 @@ A: `BOOTSTRAP_ADMIN_PASSWORD` 用于初始化账号。`BootstrapAdminInitializer
 
 ## Q: 修改 / 找回密码必须使用邮箱验证码吗？
 
-A: 当前修改/找回密码流程使用邮箱验证码，需先配置 [SMTP](https://github.com/iflytek/skillhub/blob/main/docs/19-smtp-password-reset-email-setup.md)。修改 bootstrap 环境变量不能重置已经初始化的密码。
+A: 网页找回密码使用邮箱验证码；已登录且知道原密码的修改接口不使用该验证码。找回流程需先配置 [SMTP](https://github.com/iflytek/skillhub/blob/main/docs/19-smtp-password-reset-email-setup.md)。修改 bootstrap 环境变量不能重置已经初始化的密码。
 
 ## Q: skill 可以起中文名吗？
 

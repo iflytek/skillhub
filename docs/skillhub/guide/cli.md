@@ -1,6 +1,27 @@
-# SkillHub CLI
+# CLI 使用参考
 
 SkillHub CLI 是 SkillHub 的第一方命令行工具，用于搜索、安装、管理和发布 Agent 技能包。
+
+## 选择正确的管理对象
+
+| 目标 | 命令 | 影响范围 |
+| --- | --- | --- |
+| 安装单个远端 Skill | install | 选定 Agent / scope / 自定义目录 |
+| 更新已安装单个技能 | upgrade | 显式选择的坐标及目标，不隐式升级全部 |
+| 管理固定版本集合 | suite | 套装安装记录及成员来源 |
+| 同步团队创作工作区 | sync | 非 global 空间与工作区，不等于套装管理 |
+| 更新 CLI 程序本身 | update | 本机 CLI 安装，不更新技能 |
+| 修复本地记录 | doctor | 扫描项目元数据并重建 inventory，不代替远端升级 |
+
+## 自动化和错误处理
+
+自动化安装明确给出 `--scope` 与 `--agent`，或单独使用 `--dir`，避免依赖工作目录中的自动发现结果。`--dir` 不与 scope/agent 混用。先使用 `version` 和 `help <command>` 核对本机命令；文档对应当前代码，不保证老版本全部支持。
+
+同一工作流的搜索、登录、安装和检查应指向同一 Registry。显式 `--registry` 适合单次操作；环境变量适合当前进程树。凭证按 Registry 保存，切换地址后使用 `whoami` 核对身份。
+
+`--json` 用于机器读取，不要在自动化中假设会出现交互提示。捕获退出码和输出；遇到结构化服务端错误保留公开消息与 requestId。Suite 检查的 `ok: false` 可以只是发现变化，需继续读取结果字段。`--check` 是相应升级/同步操作的预览能力，不是所有命令的通用参数。
+
+遇到同名目录冲突时先检查来源：`--force` 只对允许覆盖的受管理目标有效，不会接管未知目录或其他来源。恢复记录前保留本地文件与 metadata；不要删除整个 `~/.skillhub`，其中还存有其他实例凭证和安装记录。
 
 ## 安装
 
@@ -73,7 +94,7 @@ Token 按以下优先级解析：
 
 ### 登录
 
-未传入 token 时，`skillhub login` 使用 OAuth Device Flow：打开验证页面并显示用户码，完成浏览器授权后保存凭证。无浏览器终端可用 `skillhub login --no-open`；自动化使用 API token。
+没有从命令行、环境变量或该注册中心保存记录读取到 Token 时，`skillhub login` 才使用 OAuth Device Flow；读取到无效 Token 时不会自动回退：打开验证页面并显示用户码，完成浏览器授权后保存凭证。无浏览器终端可用 `skillhub login --no-open`；自动化使用 API token。
 
 ```bash
 # 使用 API token 登录
@@ -407,7 +428,9 @@ skillhub update
 
 ### inventory.json
 
-CLI 管理的安装记录，不应手工编辑。当前磁盘格式使用 `schemaVersion: 2`、`records` 和可选 `suites`；每个 target 分别记录版本、fingerprint 和 installedBy。CLI 可读取旧记录并在写入时迁移。
+CLI 管理的安装记录，不应手工编辑。每个安装目标分别记录版本、fingerprint 和来源；兼容客户端在需要时迁移旧记录。备份用于恢复核查，不代表可以直接覆盖更新后的 inventory。
+
+当前主分支代码包含使用 inventory v3 的 DSH 启用/停用能力。不要假设已发布 CLI 已支持，也不要混用不兼容写入端。CLI 没有 enable/disable 命令；该增量中，CLI `--force` 不能升级停用目标，doctor 也不会仅凭孤立的 `SKILL.md.disabled` 重建停用来源。启停由兼容版本的 DSH 管理，使用时以配套发行说明为准。
 
 ## JSON 输出
 
@@ -455,6 +478,7 @@ skillhub doctor --json
 | 3 | 网络错误 |
 | 4 | 文件系统错误 |
 | 5 | 参数错误 |
+| 6 | 校验或安装来源冲突 |
 
 ## 命令参考
 

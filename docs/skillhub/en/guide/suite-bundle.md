@@ -1,8 +1,28 @@
-# Suite Bundle Import
+# Import Skill Suites with Bundles
 
 A Suite Bundle uploads one ZIP or folder to create a Suite or create a new version from a published base. SkillHub first shows the member diff. Member publication and review start only after explicit confirmation.
 
 For installation and Agent usage, start with [Skill Suites](./skill-suites). This page is for authors importing content. `SUITE.yaml` (`kind: SkillSuiteBundle`) is distinct from the conceptual `suite.yaml` (`kind: SkillSuite`) definition.
+
+## Audience and Prerequisites
+
+This page is for Suite authors. Consumers should read [Skill Suites](/en/guide/skill-suites) and do not need a Bundle. Prepare write access to the target namespace, a complete member list, an entry member, and a valid `SKILL.md` for each packaged member. Referenced members must already be published and accessible.
+
+Import publishes member versions and creates a Suite draft. It neither installs into a local Agent nor skips member review. For creation, ensure the Suite coordinate is unused. For updates, record the base version and provide the full new member list, not just a delta.
+
+## Recovering an Interrupted Import
+
+| Operation status | Meaning and next step |
+| --- | --- |
+| `RUNNING` | Member publication is in progress; inspect member rows |
+| `WAITING_FOR_MEMBERS` | Follow member links to their publication or review state |
+| `BLOCKED_RETRYABLE` | Inspect the affected member; scan failures and publication failures have different retry prompts. Restore permissions or namespace state first when blocked by authorization |
+| `REPREVIEW_REQUIRED` | The plan or base changed; upload and preview again instead of confirming the old plan |
+| `SUITE_DRAFT_CREATED` | Open the generated draft to continue Suite review and publication; the Suite is not yet published |
+| `CANCELLED` | Suite creation has stopped; existing member versions and reviews are not automatically withdrawn and remain accessible through member links |
+
+After refreshing, return to the same persistent operation. Do not create another Suite merely to resume. If the completed operation cannot open its draft, retain its operation ID for investigation; completion alone does not prove every result is accessible.
+
 
 ## Archive format
 

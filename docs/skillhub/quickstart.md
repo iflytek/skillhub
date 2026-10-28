@@ -1,15 +1,14 @@
-# 快速开始
+# 快速开始：安装并使用技能
 
-先选择你的目标：使用已有技能不需要部署 SkillHub；团队自托管和源码开发使用不同入口。
+安装第一个技能，并在 Agent 中使用。本页使用已有的注册中心，不需要先部署 SkillHub 服务。
 
-| 目标 | 从这里开始 |
-| --- | --- |
-| 搜索、安装并使用技能 | 本页的安装流程 |
-| 使用一组配套技能 | [技能套装](./guide/skill-suites.md) |
-| 发布自己的技能 | [发布与版本管理](./guide/skill-publish.md) |
-| 批量上传套装和成员 | [Suite Bundle 导入](./guide/suite-bundle.md) |
-| 部署团队注册中心 | [Docker 部署](./guide/deployment.md) / [Kubernetes](./guide/kubernetes.md) |
-| 修改 SkillHub 源码 | [开发手册](https://github.com/iflytek/skillhub/blob/main/docs/dev-workflow.md) |
+## 开始前准备
+
+- 一个支持技能目录的 Agent，例如 Codex 或 Claude Code。
+- Node.js 18 或更新版本，以及可用的 npm；可用 `node --version` 确认版本。
+- 一个准备使用技能的项目目录，以及能访问的 SkillHub 注册中心地址。
+
+本页命令使用终端运行，`@team/example-skill` 是占位坐标，不是保证存在的公共技能。选择实际搜索结果后再替换。项目级安装前，先切换到准备让 Agent 打开的项目根目录。
 
 ## 1. 安装 CLI，选择注册中心
 
@@ -24,6 +23,14 @@ skillhub version
 export SKILLHUB_REGISTRY=https://skillhub.example.com
 ```
 
+PowerShell 中设置注册中心使用：
+
+```powershell
+$env:SKILLHUB_REGISTRY="https://skillhub.example.com"
+```
+
+只想临时使用另一个实例时，可以在命令后添加 `--registry https://skillhub.example.com`。搜索、登录和安装应使用同一个注册中心；不同实例中的同名技能不是同一安装来源。
+
 公开技能可匿名搜索和安装。发布、访问受限资源等操作需要登录：
 
 ```bash
@@ -31,7 +38,7 @@ skillhub login
 skillhub whoami
 ```
 
-按终端提示在浏览器完成登录和设备码确认。远程终端可用 `skillhub login --no-open`。账号是否可以注册、使用哪些登录方式，由实例配置决定。
+没有从命令行、环境变量或该注册中心的保存记录读取到 Token 时，CLI 会进入设备授权；按终端提示在浏览器完成登录和设备码确认。已有 Token 时先用该 Token 验证身份，不会自动重新选账号。远程终端可用 `skillhub login --no-open`。账号是否可以注册、使用哪些登录方式，由实例配置决定。
 
 ## 2. 找到技能并安装
 
@@ -50,6 +57,12 @@ skillhub list --agent codex
 
 Claude Code 用户改用 `--agent claude-code`。希望多个项目共用时，使用 `--scope user`。
 项目级 Codex 安装目录为 `.codex/skills/<slug>/`，Claude Code 为 `.claude/skills/<slug>/`；用户级路径位于用户主目录。
+
+### 确认安装到了哪里
+
+查看安装命令输出的目标路径，再查看 `skillhub list --agent codex` 的记录：坐标、版本、Agent、目录和状态应符合刚才选择的目标。`list` 按当前注册中心过滤；切换注册中心后列表变化不代表本地文件被删除。
+
+状态 `missing` 表示记录对应的目录不存在；`ok` 只表示目录存在，不代表 Agent 已加载或技能已执行成功。进入实际目录检查 `SKILL.md`，再继续下一步。
 
 ## 3. 在 Agent 中使用
 
@@ -71,26 +84,15 @@ skillhub upgrade @team/example-skill
 
 检查计划后再更新。保留需要的本地修改；不要把 `--force` 当作默认参数。卸载、同步团队工作区和完整命令说明见 [CLI 指南](./guide/cli.md)。
 
-## 5. 发布自己的技能
+## 常见问题与处理
 
-技能包根目录必须包含大写 `SKILL.md`，最小内容如下：
+| 现象 | 先检查什么 | 下一步 |
+| --- | --- | --- |
+| 搜索不到目标技能 | 当前注册中心、拼写、登录身份和资源可见性 | 在网页确认坐标和版本是否已发布，见[搜索与安装](./guide/skill-discovery.md) |
+| 安装时报同名目录冲突 | 输出的目标目录是否来自另一来源或包含自己的文件 | 先保留所需内容，不直接使用 `--force` 覆盖未知目录，见[CLI 参考](./guide/cli.md) |
+| 安装成功但 Agent 看不到 | Agent 类型、项目根目录、user/project 范围 | 对照安装输出路径，按 Agent 的发现方式重载或重开会话 |
+| Agent 已加载但执行失败 | 技能说明所需的工具、输入和凭据 | 按 `SKILL.md` 配置运行环境；注册中心不会代为执行这些步骤 |
 
-```markdown
----
-name: example-skill
-description: Describe when to use this skill and what it does.
----
+## 下一步
 
-# Example skill
-
-Explain the inputs, steps, expected output, and required tools.
-```
-
-可以按需添加 `scripts/`、`references/` 和 `assets/`；不要求 `package.json`。
-先在 Web 创建或加入有发布权限的命名空间，再按照 [发布指南](./guide/skill-publish.md) 准备版本并上传：
-
-```bash
-skillhub publish ./example-skill --namespace my-team
-```
-
-命令提交成功不代表版本已发布。查看返回的详情地址，跟踪扫描、审核和最终状态；只有满足发布条件的版本才进入正常安装流程。
+需要配套技能时，阅读[技能套装](./guide/skill-suites.md)；需要更多命令时，查阅 [CLI 指南](./guide/cli.md)。发布技能、管理团队、自托管和源码开发，请从[文档导航](./guide/index.md)选择对应任务。

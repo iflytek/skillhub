@@ -1,4 +1,44 @@
-# Skill Publishing & Version Management
+# Publish and Update Skills
+
+## From Local Files to an Installable Version
+
+A single-skill upload has one root `SKILL.md`. For multiple skills, use [Suite import](/en/guide/suite-bundle); do not place unrelated skills in one single-skill ZIP.
+
+1. Exercise the instructions, scripts and relative references in your local Agent, then prepare a standalone directory.
+2. Choose a writable namespace and PUBLIC, NAMESPACE_ONLY or PRIVATE visibility. Document dependencies: publishing does not distribute your local environment.
+3. Check the package preview, version, summary and warnings before submitting. Fix blocking errors; acknowledging a warning does not prove the package passed every check.
+4. Follow the submitted version in My Skills through scanning, review or private publication confirmation.
+5. Check access as an intended recipient, install in the target Agent and invoke it. Registry publication does not establish task effectiveness.
+
+### Package Layout and Version Choice
+
+```text
+my-skill/
+├── SKILL.md
+├── scripts/       # Only when the skill needs scripts
+└── references/    # Only when instructions reference these files
+```
+
+Relative references must resolve inside the package. Exclude credentials, caches and unrelated project files. `version` is optional: the server generates a time-based version when absent. Set it explicitly, for example `1.0.0` then `1.0.1`, for predictable releases. Top-level `version` takes precedence over `metadata.version`; do not supply conflicting values.
+
+### Updating an Existing Skill
+
+Use Update in My Skills or publish again to the same namespace and skill name. Verify the coordinate: changing `name` may create a different skill. Published versions cannot be overwritten; use a new version for normal updates. While it awaits review, public users retain the previously published version. After approval, check the displayed version, title and summary.
+
+Existing local installations do not update automatically. Consumers explicitly upgrade through the CLI. Suite members remain pinned until a new Suite version is published.
+
+### Recovering from Submission Problems
+
+| Symptom | Next step |
+| --- | --- |
+| Invalid frontmatter | Fix YAML and required fields, then preview again |
+| Suspected secret or disallowed file | Remove sensitive content or fix the package; warning confirmation cannot bypass blocking errors |
+| Version already exists | Inspect the existing version and use a new version for a normal update |
+| Scan in progress | Wait for its status instead of repeatedly uploading the same version |
+| `SCAN_FAILED` | Read the failure and use the retry action offered by the page; ask an operator to resolve infrastructure failures |
+| Review rejected | Read the decision, revise the package and use the supported resubmission flow |
+| Frozen namespace or removed membership | Restore legitimate write access first; a previously installed copy grants no publishing rights |
+
 
 ## Overview
 
@@ -21,7 +61,7 @@ SkillHub provides an npm-like publishing experience with enterprise-grade permis
 - **Semantic Versioning**: Supports `major.minor.patch` version specification
 - **Tag System**: `latest`, `beta`, `stable` and custom tags
 - **Multi-version Coexistence**: Same skill package can retain multiple historical versions
-- **Version Resolution**: Smart parsing of version selectors (e.g., `^1.2.0`, `~2.0.0`)
+- **Version Resolution**: Resolve exact versions, tags or fingerprints; `^` / `~` ranges are not supported
 - **File Browsing**: Browse skill package file structure online
 - **Download Distribution**: Download by version or tag
 
@@ -128,7 +168,7 @@ file: skill-package.zip
 visibility: PUBLIC
 ```
 
-![Ordinary public and private publication paths](/diagrams/skill-publish-lifecycle-en.svg)
+![Ordinary public and private publication paths](/diagrams/skill-publish-lifecycle-sketch.png)
 
 The diagram covers ordinary uploads; scan failures, review rejection and privileged publishing are described below.
 
@@ -239,15 +279,15 @@ GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download
 
 **Version Resolution**:
 ```bash
-GET /api/v1/skills/{namespace}/{slug}/resolve?version=^1.2.0
+GET /api/v1/skills/{namespace}/{slug}/resolve?version=1.2.0
 ```
 
 ## Notes
 
-> **Version Specification**: SkillHub uses Semantic Versioning. Version format is `major.minor.patch`, e.g., `1.2.3`.
+> **Version Specification**: Use explicit `major.minor.patch` versions such as `1.2.3` for predictable releases; omission produces a server-generated time version.
 
 - **First Publish**: Version should start from `0.1.0` or `1.0.0`
-- **Tag Management**: `latest` tag automatically points to the latest stable version
+- **Tag Management**: `latest` follows publication state and the published pointer, not client-side selection of the highest SemVer
 - **Review Process**: Ordinary PUBLIC / NAMESPACE_ONLY uploads require scanning and review; PRIVATE uploads require publish confirmation
 - **File Size Limit**: Single skill package max 100MB (configurable)
 - **Naming Convention**: Skill slug supports lowercase letters, numbers, hyphens, and Unicode characters

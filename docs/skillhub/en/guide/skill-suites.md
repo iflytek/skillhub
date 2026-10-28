@@ -1,4 +1,4 @@
-# Skill Suites: install and use
+# Manage Skill Suites
 
 A Skill Suite is a separately versioned collection of exact published Skill versions with one Entry Skill. Each member remains an independent Skill after installation.
 
@@ -12,7 +12,7 @@ A Skill Suite is a separately versioned collection of exact published Skill vers
 
 A [Bundle](./suite-bundle) is an authoring format. A Suite is not a workflow runtime: coordination depends on the entry and member instructions. A Skill can still be installed independently.
 
-![Suite installation and entry-skill usage](/diagrams/skill-suite-usage-en.svg)
+![Suite installation and entry-skill usage](/diagrams/skill-suite-usage-sketch.png)
 
 Installation ends at separate member files. Agent usage starts with an explicit task.
 
@@ -72,3 +72,26 @@ skillhub suite remove @team/example-suite
 Use the Web editor to select published members and an entry, or import a [Suite Bundle](./suite-bundle) to upload local members. PUBLIC and NAMESPACE_ONLY Suites require Suite-level review; PRIVATE Suites can publish directly. Member Skills retain their own scan and review workflows.
 
 A version supports up to 100 distinct members and requires one member as entry. Nested Suites, version ranges and external-registry members are unsupported. The CLI manages installations; it does not provide `suite publish` or import authoring manifests.
+
+## Read local check results
+
+`skillhub suite check` reads inventory and remote Suite state; it is not fully offline. Member `ok` means directory content matches the pinned fingerprint, `missing` means the directory is absent, and `modified` means content changed. The whole Suite is `current` only when the remote latest version matches, the installed version remains installable, and every member is `ok`.
+
+JSON `ok: false` can indicate detected changes rather than a thrown command error. Automation should inspect member and remote state, not just the process exit code.
+
+## Shared members and upgrade decisions
+
+Suites may reuse a member directory with the same source and content. If another Suite owns that target, upgrading this Suite cannot replace its version in place. `--force` does not bypass shared-source protection. Inspect both plans and choose compatible versions or separate installation targets.
+
+Install and upgrade download and verify all members before committing directories and inventory. A mid-commit failure attempts to restore replaced directories. Preserve the error and run `check` again; do not edit inventory to manufacture success.
+
+## Troubleshooting
+
+| Symptom | Action |
+| --- | --- |
+| Unknown Suite action | Supported actions are install, check, upgrade and remove, not run/publish |
+| Server capability missing | Verify registry and server version; ordinary install does not install a Suite |
+| Modified member | Preserve needed edits before deciding whether to replace them |
+| Member withdrawn or access narrowed | Historical pins remain, but the plan blocks installation; ask the maintainer for an installable release |
+| Removal says Preserved | Inspect shared, modified or missing reason; retention does not itself mean failure |
+| Agent option rejected for check/remove | Target options belong to install; later actions use the saved Suite record |

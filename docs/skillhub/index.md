@@ -13,8 +13,8 @@ hero:
       text: 快速开始
       link: /quickstart
     - theme: alt
-      text: 功能指南
-      link: /guide/skill-publish
+      text: 文档导航
+      link: /guide/
     - theme: alt
       text: GitHub
       link: https://github.com/iflytek/skillhub

@@ -72,7 +72,7 @@ retain that prefix when following application-relative download URLs.
 
 ## 🔐 Authentication
 
-`skillhub login` uses OAuth Device Flow when no API token is supplied. Token resolution priority for
+`skillhub login` uses OAuth Device Flow only when no API token is resolved from arguments, environment variables, or saved credentials for the selected registry. An invalid resolved token does not automatically fall back to Device Flow. Token resolution priority for
 explicit token-based login and all other authenticated commands is:
 
 1. `--token <token>` command-line argument

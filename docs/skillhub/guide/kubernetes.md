@@ -1,4 +1,4 @@
-# Kubernetes 部署指南
+# Kubernetes 部署：Kustomize 配置与验收
 
 对象存储可选部署、凭证和迁移说明见[对象存储手册（GitHub）](https://github.com/iflytek/skillhub/blob/main/docs/object-storage.md)。
 
@@ -69,6 +69,14 @@ cp base/secret.yaml.example base/secret.yaml
 | skill-scanner-llm-api-key | LLM API 密钥 | 否 |
 | skill-scanner-llm-base-url | 本地/自定义 LLM 服务地址 | 否 |
 | skill-scanner-llm-model | Scanner 使用的 LLM 模型名 | 否 |
+
+完成填写后单独创建 Secret；当前 Kustomization 不包含 `base/secret.yaml`，只复制文件不会把它部署进集群：
+
+```bash
+kubectl apply -n skillhub -f base/secret.yaml
+```
+
+还需在自己的部署覆盖层为后端补充公开地址与匿名下载签名密钥，见下文“部署前补齐环境配置”。
 
 ### 3. 选择部署方式
 
@@ -301,3 +309,33 @@ kubectl delete -k overlays/with-infra/  # 或 overlays/external/
 # 删除命名空间
 kubectl delete namespace skillhub
 ```
+
+## 部署前补齐环境配置
+
+当前基础清单未自动透传所有应用设置。为自己的覆盖层中的 `skillhub-server` Deployment、`server` 容器添加所需 `env`（核对容器名，勿误加到扫描器）：
+
+```yaml
+- name: SKILLHUB_PUBLIC_BASE_URL
+  value: https://skills.example.com
+- name: SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: skillhub-secret
+      key: download-anon-cookie-secret
+```
+
+在私有 `base/secret.yaml` 的 `stringData` 中增加 `download-anon-cookie-secret`，填入至少 32 字符的随机值。替换公开地址为实际入口。应用启动会拒绝匿名下载密钥的默认占位值。公开地址、Ingress 域名、TLS 和安全 Cookie 配置应一致；Ingress 不会自动替你签发证书。
+
+S3 模式除了 endpoint、bucket、region，还必须把 Secret 中的 `skillhub-storage-s3-access-key`、`skillhub-storage-s3-secret-key` 分别通过 `secretKeyRef` 映射到 `SKILLHUB_STORAGE_S3_ACCESS_KEY`、`SKILLHUB_STORAGE_S3_SECRET_KEY`。只添加 Secret 键不会注入进程。使用基础清单没有声明的开关（例如 Suite 审核、Bundle 确认）同样需要显式透传，不能套用 Compose 的默认值。
+
+## 升级与验收
+
+1. 固定 `base/kustomization.yaml` 中应用镜像的 `newTag`，保存旧版本与覆盖层；备份数据库、存储和私有 Secret。
+2. 先本地渲染所选 overlay，确认镜像、环境引用、Ingress、PVC 与目标 namespace；不要公开渲染后的 Secret。
+3. 应用配置后等待 `kubectl rollout status deployment/skillhub-server -n skillhub` 完成，检查 Pod 事件和日志。ConfigMap/Secret 修改并不自动更新已运行进程的环境，必要时在维护窗口滚动重启受影响 Deployment。
+4. 从实际入口登录、搜索、发布测试版本、跟踪扫描审核并下载固定版本。Pod Ready 仅说明探针通过。
+5. 升级失败先检查迁移/依赖日志；回退镜像前确认数据库兼容性，保留 PVC，不把删除 namespace 当作重试方式。
+
+遇到 `CreateContainerConfigError`，优先检查引用的 Secret 是否创建、必需键是否存在；`CrashLoopBackOff` 查看后端启动日志；`Pending` 检查 PVC 和资源调度。不要输出 Secret 数据作为排障材料。
+
+仓库还提供独立的 [Helm Chart](https://github.com/iflytek/skillhub/tree/main/charts/skillhub)。它的 values、Secret 和依赖配置应按 Chart README 操作，不与本页 Kustomize 路径混用。

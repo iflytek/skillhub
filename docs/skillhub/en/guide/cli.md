@@ -1,6 +1,27 @@
-# SkillHub CLI
+# CLI reference
 
 SkillHub CLI is the official command-line tool for SkillHub, designed for searching, installing, managing, and publishing Agent skill packages.
+
+## Choose the object you are managing
+
+| Goal | Command | Scope |
+| --- | --- | --- |
+| Install a remote Skill | install | Selected Agent, scope or custom directory |
+| Update installed skills | upgrade | Explicit coordinates and targets; no implicit upgrade-all |
+| Manage pinned collections | suite | Suite inventory and member ownership |
+| Sync team authoring files | sync | Non-global namespace workspace, not Suite lifecycle |
+| Update the CLI executable | update | CLI installation, not installed skills |
+| Recover local records | doctor | Project metadata and inventory, not remote upgrades |
+
+## Automation and failure handling
+
+Specify `--scope` and `--agent`, or use `--dir` alone, for deterministic installation targets. Do not combine custom directory with scope/agent. Check `version` and `help <command>` against the installed CLI; older releases may not provide every documented capability.
+
+Keep search, login, install and check on the same registry. Use explicit `--registry` for individual commands or an environment variable for the process tree. Credentials are registry-specific; verify identity with `whoami` after changing endpoints.
+
+Use `--json` for machine-readable output and do not expect interactive prompts. Capture status and output; retain public error messages and requestId for registry errors. Suite check's `ok: false` may simply indicate changes, so inspect its fields. `--check` is a preview option on applicable upgrade/sync commands, not a universal option.
+
+For directory conflicts, inspect source ownership before using `--force`: it does not take over unmanaged or different-source targets. Preserve files and metadata before recovering inventory. Do not delete all of `~/.skillhub`; it also holds other registry credentials and installation records.
 
 ## Installation
 
@@ -73,7 +94,7 @@ Token resolution priority:
 
 ### Login
 
-Without a token, `skillhub login` uses OAuth Device Flow: follow the verification URL and user code to authorize in a browser. Use `skillhub login --no-open` on headless terminals, or an API token for automation.
+When no token is resolved from arguments, environment variables, or saved registry credentials, `skillhub login` uses OAuth Device Flow; an invalid resolved token does not automatically fall back: follow the verification URL and user code to authorize in a browser. Use `skillhub login --no-open` on headless terminals, or an API token for automation.
 
 ```bash
 # Login with API token
@@ -443,7 +464,9 @@ Update mechanism:
 
 ### inventory.json
 
-CLI-managed installation state; do not hand-edit it. The current disk format uses `schemaVersion: 2`, `records` and optional `suites`. Each target records its version, fingerprint and installedBy sources. Legacy records are read compatibly and migrated on write.
+CLI-managed installation records, not a file to hand-edit. Each target tracks its own version, fingerprint and ownership; compatible writers migrate legacy records when needed. A backup is recovery evidence, not permission to overwrite a newer inventory.
+
+Current main contains DSH enable/disable support using inventory v3. Do not assume your published CLI supports it or mix incompatible writers. There are no CLI enable/disable commands. In that increment, disabled targets cannot be upgraded with CLI `--force`, and doctor does not reconstruct disabled ownership from a loose `SKILL.md.disabled` file. Manage activation through a compatible DSH version and follow the matched release instructions.
 
 ## JSON Output
 
@@ -491,6 +514,7 @@ Error response format:
 | 3 | Network error |
 | 4 | File system error |
 | 5 | Parameter error |
+| 6 | Validation or installation ownership conflict |
 
 ## Command Reference
 

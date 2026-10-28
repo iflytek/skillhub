@@ -19,7 +19,7 @@ SkillHub 解决了这个问题。它提供了一个**私有、可控、易用**�
 
 ## 技术栈
 
-![前端、后端、数据与存储技术组成](/diagrams/tech-stack-zh.svg)
+![前端、后端、数据与存储技术组成](/diagrams/tech-stack-sketch.png)
 
 存储可选择本地文件或 S3 兼容后端；按部署需求显式配置。
 

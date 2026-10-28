@@ -1,4 +1,18 @@
-# Review & Governance
+# Review Skills and Suites
+
+## Reviewer Checklist
+
+1. Verify the subject, submitter and target version. A skill version, profile/avatar change and Suite version require different checks.
+2. Read the submitted files and changes, not only the current public version. The previous published version may remain downloadable during review.
+3. Inspect scan status and findings. Execution failure, detected risk and an unconfigured analyzer are different; an empty report is not a security conclusion.
+4. Check visibility and intended audience, including every Suite member and its entry role. Member approval does not approve the Suite.
+5. Before approval, ensure current data is still valid. For rejection, identify files, problems and required changes. After a failed decision request, reload status before trying again.
+6. Verify the decision history and resulting published version. Review success does not test skill execution in a local Agent.
+
+### Tracking and Revising as an Author
+
+Use My Submissions to read status and decisions. Pending requests can be withdrawn when authorized. Withdrawal stops that review; it does not delete the prior published version or undo an approved global promotion. After rejection, revise according to the comments and use the supported resubmission action. A successful upload does not by itself reopen review.
+
 
 ## Overview
 
@@ -74,7 +88,7 @@ A user reports an inappropriate skill package, and an administrator investigates
    - Download the full package for local testing
    - Review the compliance snapshot and the diff from the previous published version
 
-![Scan and review in the ordinary publication path](/diagrams/skill-publish-lifecycle-en.svg)
+![Scan and review in the ordinary publication path](/diagrams/skill-publish-lifecycle-sketch.png)
 
 The review section follows the PUBLIC / NAMESPACE_ONLY branch: scanning completes before the version waits for a review decision.
 
