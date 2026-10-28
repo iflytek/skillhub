@@ -49,7 +49,7 @@ export default defineConfig({
           },
           {
             text: '创作与发布',
-            collapsed: true,
+            collapsed: false,
             items: [
               { text: '发布与更新技能', link: '/guide/skill-publish' },
               { text: 'Bundle 导入', link: '/guide/suite-bundle' },
@@ -57,7 +57,7 @@ export default defineConfig({
           },
           {
             text: '团队与治理',
-            collapsed: true,
+            collapsed: false,
             items: [
               { text: '管理命名空间', link: '/guide/namespace' },
               { text: '审核技能与套装', link: '/guide/review' },
@@ -66,7 +66,7 @@ export default defineConfig({
           },
           {
             text: '部署与运维',
-            collapsed: true,
+            collapsed: false,
             items: [
               { text: 'Docker 部署', link: '/guide/deployment' },
               { text: 'Kubernetes 部署', link: '/guide/kubernetes' },
@@ -75,7 +75,7 @@ export default defineConfig({
           },
           {
             text: '开发与集成',
-            collapsed: true,
+            collapsed: false,
             items: [
               { text: 'Runtime 集成参考', link: '/guide/runtime-integration' },
               { text: '源码开发手册', link: 'https://github.com/iflytek/skillhub/blob/main/docs/dev-workflow.md' },
@@ -123,7 +123,7 @@ export default defineConfig({
           },
           {
             text: 'Author skills',
-            collapsed: true,
+            collapsed: false,
             items: [
               { text: 'Publish and update skills', link: '/en/guide/skill-publish' },
               { text: 'Import a bundle', link: '/en/guide/suite-bundle' },
@@ -131,7 +131,7 @@ export default defineConfig({
           },
           {
             text: 'Team governance',
-            collapsed: true,
+            collapsed: false,
             items: [
               { text: 'Manage namespaces', link: '/en/guide/namespace' },
               { text: 'Review submissions', link: '/en/guide/review' },
@@ -140,7 +140,7 @@ export default defineConfig({
           },
           {
             text: 'Deploy and operate',
-            collapsed: true,
+            collapsed: false,
             items: [
               { text: 'Deploy with Docker', link: '/en/guide/deployment' },
               { text: 'Deploy on Kubernetes', link: '/en/guide/kubernetes' },
@@ -149,7 +149,7 @@ export default defineConfig({
           },
           {
             text: 'Develop and integrate',
-            collapsed: true,
+            collapsed: false,
             items: [
               { text: 'Integrate a runtime', link: '/en/guide/runtime-integration' },
               { text: 'Development handbook (中文)', link: 'https://github.com/iflytek/skillhub/blob/main/docs/dev-workflow.md' },
