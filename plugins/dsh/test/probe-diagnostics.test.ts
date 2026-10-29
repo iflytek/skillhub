@@ -61,3 +61,22 @@ test('both toggle probes expose only bounded fixture locations and fixed labels'
     expect(safeProbeFailure(JSON.stringify({ ...base, probe: 'runtime-baseline' }), 'runtime-baseline').location).toBeUndefined();
   }
 });
+
+test('operation observations and Host codes whitelist every field without revealing operation bodies', async () => {
+  // @ts-expect-error Development-only Node script has no declarations.
+  const { knownHostFailureCodes } = await import('../scripts/smoke-native-host.mjs');
+  expect(knownHostFailureCodes('private /path EPERM code=EBUSY arbitrary-secret NOT_EIO EPERM')).toEqual(['EPERM', 'EBUSY']);
+  for (const probe of ['skill-availability', 'skill-toggle', 'skill-toggle-watch-off']) {
+    const base = { passed: false, probe, stage: 'host-assertion', failureCode: 'HOST_ASSERTION_FAILED', diagnostics: {
+      operation: { phase: 'failed', files: 'failed', recovery: 'restored', discovery: 'unconfirmed', deadlineReached: false,
+        operationId: 'secret', targetLabel: '/private', reason: 'private-secret', code: 'SECRET', error: 'raw-secret' },
+      observedHostCodes: ['EPERM', '/private', 'EBUSY', 'EPERM', 'SECRET'],
+    } };
+    const safe = safeProbeFailure(JSON.stringify(base), probe);
+    expect(safe.operation).toEqual({ phase: 'failed', files: 'failed', recovery: 'restored', discovery: 'unconfirmed', deadlineReached: false });
+    expect(safe.observedHostCodes).toEqual(['EPERM', 'EBUSY']);
+    expect(JSON.stringify(safe)).not.toMatch(/private|secret|SECRET|operationId|targetLabel|reason/);
+    expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { operation: { phase: '/secret', files: '/secret', discovery: '/secret', recovery: '/secret', deadlineReached: 'secret' }, observedHostCodes: 'EPERM' } }), probe).operation).toBeUndefined();
+    expect(safeProbeFailure(JSON.stringify({ ...base, probe: 'runtime-baseline' }), 'runtime-baseline').operation).toBeUndefined();
+  }
+});

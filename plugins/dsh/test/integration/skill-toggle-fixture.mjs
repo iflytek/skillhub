@@ -25,7 +25,7 @@ export function apply(ctx, config) {
       const frame = String(error.stack ?? '').split('\n').filter(line => line.includes(fileURLToPath(import.meta.url)) || line.includes(import.meta.url)).at(-1);
       const line = Number(/:(\d+):\d+\)?$/.exec(frame ?? '')?.[1]);
       const location = Number.isInteger(line) && line >= 1 && line <= 10000 ? { fixture: 'skill-toggle-fixture.mjs', line } : undefined;
-      return { passed: false, error: error.message, checkpoint, location };
+      return { passed: false, error: error.message, checkpoint, location, operation: checkpoint.operation };
     })
       .then(result => writeFile(join(root, 'skill-toggle-result.json'), JSON.stringify(result, null, 2))).catch(() => {});
   }, 1000);
@@ -70,14 +70,18 @@ async function run(ctx, root, signal, watchOff, checkpoint) {
   const target = targets.targets.find(item => item.scope === 'project'); checked(target);
   const operations = [];
   async function complete(receipt) {
+    checkpoint.operation = { deadlineReached: false };
     checkpoint.assertion = 'operation';
     checked(receipt); const deadline = Date.now() + 20000;
     while (Date.now() < deadline) {
       const operation = await invoke('getOperation', { operationId: receipt.operationId, hostInstanceId: receipt.context.hostInstanceId });
+      checkpoint.operation = { phase: operation?.phase, files: operation?.files, recovery: operation?.recovery,
+        discovery: operation?.discovery, deadlineReached: Date.now() >= deadline };
       if (operation.phase === 'completed') { operations.push({ kind: operation.kind, files: operation.files, discovery: operation.discovery }); return operation; }
       checked(!['failed', 'recovery-required', 'unknown'].includes(operation.phase), JSON.stringify(operation));
       await delay(50, undefined, { signal });
     }
+    checkpoint.operation.deadlineReached = true;
     throw new Error('Operation timed out');
   }
   checkpoint.scenario = 'install';

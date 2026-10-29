@@ -15,7 +15,7 @@ export function apply(ctx, config) {
   const checkpoint = { scenario: 'setup', checkpoint: 'setup', assertion: 'none' };
   const abort = new AbortController();
   const timer = setTimeout(() => run(ctx, root, AbortSignal.any([abort.signal, AbortSignal.timeout(70000)]), checkpoint)
-    .catch(error => writeFile(join(root, 'skill-availability-result.json'), JSON.stringify({ passed: false, error: error.message, checkpoint }))), 1000);
+    .catch(error => writeFile(join(root, 'skill-availability-result.json'), JSON.stringify({ passed: false, error: error.message, checkpoint, operation: checkpoint.operation }))), 1000);
   return () => { clearTimeout(timer); abort.abort(); };
 }
 
@@ -94,6 +94,7 @@ async function run(ctx, root, signal, checkpoint) {
     return result.value.diagnosis;
   }
   async function install(scope) {
+    checkpoint.operation = { deadlineReached: false };
     mark('install');
     const result = await execute('astron_skillhub_install', { namespace, slug: 'document-helper', scope });
     mark('assertion', 'isError');
@@ -105,9 +106,12 @@ async function run(ctx, root, signal, checkpoint) {
     mark('install-poll');
     while (Date.now() < deadline) {
       operation = await ctx.skillhub.getInstallationOperation(created.sessionId, result.value.operationId);
+      checkpoint.operation = { phase: operation?.phase, files: operation?.files, recovery: operation?.recovery,
+        discovery: operation?.discovery, deadlineReached: Date.now() >= deadline };
       if (['completed', 'failed', 'unknown', 'recovery-required'].includes(operation?.phase)) break;
       await delay(100, undefined, { signal });
     }
+    checkpoint.operation.deadlineReached = Date.now() >= deadline;
     mark('assertion', 'completed');
     assert.equal(operation?.phase, 'completed');
   }

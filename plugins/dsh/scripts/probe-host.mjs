@@ -1,7 +1,7 @@
-import { safeAvailabilityCheckpoint, safeToggleCheckpoint, safeFixtureLocation } from './smoke-native-host.mjs';
+import { safeAvailabilityCheckpoint, safeToggleCheckpoint, safeFixtureLocation, safeOperationObservation, knownHostFailureCodes } from './smoke-native-host.mjs';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, realpath, writeFile, access } from 'node:fs/promises';
+import { mkdir, readFile, realpath, writeFile, access, open } from 'node:fs/promises';
 import { openSync, closeSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -32,6 +32,8 @@ let dependencyStatusFile;
 let availabilityCheckpoint;
 let toggleCheckpoint;
 let fixtureLocation;
+let operationObservation;
+let hostLogFile;
 let failureCode = 'PROBE_FAILED';
 function fail(code, message) { failureCode = code; throw new Error(message); }
 async function main() {
@@ -81,6 +83,7 @@ await mkdir(run, { mode: 0o700 });
 const resultName = `probe-${id}-result.json`;
 const resultFile = join(root, resultName);
 const observer = join(run, 'observer.mjs');
+hostLogFile = join(run, 'host.log');
 observerStatusFile = join(run, 'observer-status.json');
 dependencyStatusFile = join(run, 'dependency-status.json');
 const runtimeProbe = values.probe === 'runtime-baseline' || values.probe === 'runtime-unsupported';
@@ -182,6 +185,7 @@ try {
     catch (error) { if (error.code !== 'ENOENT' && !(error instanceof SyntaxError)) throw error; }
     if (report) {
       if (report.passed !== true) {
+        if (['skill-availability', 'skill-toggle', 'skill-toggle-watch-off'].includes(values.probe)) operationObservation = safeOperationObservation(report.operation);
         if (values.probe === 'skill-availability') availabilityCheckpoint = safeAvailabilityCheckpoint(report.checkpoint);
         if (['skill-toggle', 'skill-toggle-watch-off'].includes(values.probe)) {
           toggleCheckpoint = safeToggleCheckpoint(report.checkpoint);
@@ -216,6 +220,18 @@ main().catch(async () => {
   if (availabilityCheckpoint) diagnostics.availability = availabilityCheckpoint;
   if (toggleCheckpoint) diagnostics.toggle = toggleCheckpoint;
   if (fixtureLocation) diagnostics.location = fixtureLocation;
+  if (operationObservation) diagnostics.operation = operationObservation;
+  if (hostLogFile && ['skill-availability', 'skill-toggle', 'skill-toggle-watch-off'].includes(selectedProbe)) {
+    let file;
+    try {
+      file = await open(hostLogFile, 'r');
+      const { size } = await file.stat();
+      const bytes = Buffer.alloc(Math.min(size, 1024 * 1024));
+      const { bytesRead } = await file.read(bytes, 0, bytes.length, Math.max(0, size - bytes.length));
+      diagnostics.observedHostCodes = knownHostFailureCodes(bytes.subarray(0, bytesRead).toString('utf8'));
+    } catch { /* Diagnostics must not replace the original failure. */ }
+    finally { await file?.close().catch(() => {}); }
+  }
   for (const [key, file] of [['observer', observerStatusFile], ['dependencies', dependencyStatusFile]]) {
     if (!file) continue;
     try { diagnostics[key] = JSON.parse(await readFile(file, 'utf8')); } catch { /* Missing marker is itself diagnostic. */ }

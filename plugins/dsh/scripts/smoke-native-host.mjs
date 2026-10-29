@@ -141,6 +141,28 @@ export function safeFixtureLocation(value) {
   return { fixture: value.fixture, line: value.line };
 }
 
+export function safeOperationObservation(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const fields = {
+    phase: ['accepted', 'staging', 'revalidating', 'committing', 'recovering', 'completed', 'failed', 'recovery-required', 'unknown'],
+    files: ['pending', 'installed', 'already-installed', 'upgraded', 'removed', 'stale-record-removed', 'enabled', 'disabled', 'failed', 'unknown'],
+    discovery: ['unconfirmed', 'confirmed', 'failed'], recovery: ['not-needed', 'restored', 'incomplete', 'unknown'],
+  };
+  const safe = {};
+  for (const [name, allowed] of Object.entries(fields)) if (allowed.includes(value[name])) safe[name] = value[name];
+  if (typeof value.deadlineReached === 'boolean') safe.deadlineReached = value.deadlineReached;
+  return Object.keys(safe).length ? safe : undefined;
+}
+
+const diagnosticCodes = ['EACCES', 'EPERM', 'ENOENT', 'EEXIST', 'ENOSPC', 'EBUSY', 'EXDEV', 'ENOTEMPTY', 'EIO', 'ELOCKED', 'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'AUTHORIZATION', 'NETWORK', 'FILESYSTEM', 'INVALID_INPUT', 'VALIDATION', 'UNCLASSIFIED'];
+export function safeHostFailureCodes(value) {
+  return Array.isArray(value) ? diagnosticCodes.filter(code => value.includes(code)) : [];
+}
+export function knownHostFailureCodes(log) {
+  // Observed codes are diagnostic hints, not attribution of the assertion's cause.
+  return diagnosticCodes.filter(code => new RegExp('\\b' + code + '\\b').test(log));
+}
+
 export function safeProbeFailure(log, probe) {
   const stages = ['setup', 'validate-root', 'prepare-fixture', 'fixture-ports', 'registry-ready', 'host-result', 'host-assertion'];
   const codes = ['PROBE_FAILED', 'REGISTRY_EXITED', 'REGISTRY_TIMEOUT', 'CHILD_EXITED', 'HOST_ASSERTION_FAILED', 'HOST_RESULT_TIMEOUT'];
@@ -165,6 +187,12 @@ export function safeProbeFailure(log, probe) {
           const location = safeFixtureLocation(result.diagnostics.location);
           if (toggle) safe.toggle = toggle;
           if (location) safe.location = location;
+        }
+        if (['skill-availability', 'skill-toggle', 'skill-toggle-watch-off'].includes(probe)) {
+          const operation = safeOperationObservation(result.diagnostics.operation);
+          if (operation) safe.operation = operation;
+          const codes = safeHostFailureCodes(result.diagnostics.observedHostCodes);
+          if (codes.length) safe.observedHostCodes = codes;
         }
         safe.dependencies = {};
         for (const name of ['loader', 'pluginPackages', 'clientModules', 'skillhub']) {
