@@ -27,6 +27,7 @@ async function fixture(count: number, run: (inventory: InventoryStore, targets: 
   } finally { await fs.rm(root, { recursive: true, force: true }) }
 }
 
+// The timeout includes fixture creation and cleanup; performance is asserted by I/O counts, not wall time.
 for (const size of [10, 100, 500]) test(`snapshot ${size} real filesystem targets has linear reads`, async () => {
   await fixture(size, async (inventory, targets) => {
     const read = spyOn(inventory, 'read')
@@ -46,7 +47,7 @@ for (const size of [10, 100, 500]) test(`snapshot ${size} real filesystem target
       console.info(JSON.stringify({ targets: size, inventoryReads: read.mock.calls.length, metadataReads, inventoryStats, elapsedMs: Math.round(performance.now() - started) }))
     } finally { read.mockRestore(); files.mockRestore(); stats.mockRestore() }
   })
-})
+}, 30_000)
 
 test('snapshot rejects inventory ABA, atomic replacement and target metadata changes', async () => {
   await fixture(2, async (inventory, targets) => {
