@@ -36,13 +36,81 @@ class BusinessLogsDiagnosticsTest {
         environment.getPropertySources().addFirst(new MapPropertySource("diagnostic-test",
                 java.util.Map.of("skillhub.observability.log-format", format)));
         logging.initialize(new LoggingInitializationContext(environment), "classpath:logback-spring.xml", null);
-        for (String name : java.util.List.of("io.opentelemetry.exporter.internal.http.HttpExporter",
-                "io.opentelemetry.exporter.sender.okhttp.internal.OkHttpHttpSender",
-                "io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor")) {
-            org.slf4j.LoggerFactory.getLogger(name);
-            assertThat(logging.getLoggerConfiguration(name).getEffectiveLevel())
-                    .isEqualTo(org.springframework.boot.logging.LogLevel.OFF);
+        String processor = "io.opentelemetry.sdk.logs.export.BatchLogRecordProcessor";
+        org.slf4j.LoggerFactory.getLogger(processor);
+        assertThat(logging.getLoggerConfiguration(processor).getEffectiveLevel())
+                .isEqualTo(org.springframework.boot.logging.LogLevel.OFF);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"text", "json"})
+    void businessLogsDisabledKeepsExistingTraceExportFailureDiagnostics(String format, CapturedOutput output)
+            throws Exception {
+        configureShippedLogging(format);
+        try (var receiver = new UnauthorizedReceiver("/v1/traces")) {
+            exportSpanFailure(receiver.endpoint());
+            assertThat(receiver.requests.get()).isEqualTo(1);
+            org.awaitility.Awaitility.await().untilAsserted(() -> assertThat(output.getAll())
+                    .contains("Failed to export spans", "401", "trace-receiver-rejected"));
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"text", "json"})
+    void businessLogsEnabledKeepsTraceDiagnosticsAndHidesBusinessReceiverResponse(String format,
+                                                                                 CapturedOutput output) throws Exception {
+        configureShippedLogging(format);
+        try (var traces = new UnauthorizedReceiver("/v1/traces");
+             var logs = new UnauthorizedReceiver("/v1/logs")) {
+            exportFailure(logs.endpoint());
+            exportSpanFailure(traces.endpoint());
+            assertThat(logs.requests.get()).isEqualTo(1);
+            assertThat(traces.requests.get()).isEqualTo(1);
+            org.awaitility.Awaitility.await().untilAsserted(() -> assertThat(output.getAll())
+                    .contains("Business Logs telemetry failed", "Failed to export spans"));
+            assertThat(output.getAll()).doesNotContain(CREDENTIAL, "Failed to export logs");
+        }
+    }
+
+    private static void exportSpanFailure(String endpoint) {
+        var exporter = io.opentelemetry.exporter.otlp.http.trace.OtlpHttpSpanExporter.builder()
+                .setEndpoint(endpoint).setTimeout(java.time.Duration.ofSeconds(2)).build();
+        var provider = io.opentelemetry.sdk.trace.SdkTracerProvider.builder()
+                .addSpanProcessor(io.opentelemetry.sdk.trace.export.SimpleSpanProcessor.create(exporter)).build();
+        try {
+            provider.get("trace-diagnostics-test").spanBuilder("trace-401").startSpan().end();
+            assertThat(provider.forceFlush().join(5, TimeUnit.SECONDS).isSuccess()).isFalse();
+        } finally { provider.shutdown().join(5, TimeUnit.SECONDS); }
+    }
+
+    /** Receiver that rejects with 401 and echoes a marker (the synthetic credential for /v1/logs). */
+    private static final class UnauthorizedReceiver implements AutoCloseable {
+        private final HttpServer server;
+        private final String path;
+        final java.util.concurrent.atomic.AtomicInteger requests = new java.util.concurrent.atomic.AtomicInteger();
+
+        UnauthorizedReceiver(String path) throws java.io.IOException {
+            this.path = path;
+            server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            server.createContext(path, exchange -> {
+                exchange.getRequestBody().readAllBytes();
+                requests.incrementAndGet();
+                String echoed = path.endsWith("/logs") ? CREDENTIAL : "trace-receiver-rejected";
+                byte[] text = ("auth failed for Bearer " + echoed).getBytes(StandardCharsets.UTF_8);
+                byte[] body = new byte[text.length + 4];
+                body[0] = 0x08; body[1] = 0x10; body[2] = 0x12; body[3] = (byte) text.length;
+                System.arraycopy(text, 0, body, 4, text.length);
+                exchange.getResponseHeaders().add("Content-Type", "application/x-protobuf");
+                exchange.sendResponseHeaders(401, body.length);
+                exchange.getResponseBody().write(body);
+                exchange.close();
+            });
+            server.start();
+        }
+
+        String endpoint() { return "http://127.0.0.1:" + server.getAddress().getPort() + path; }
+
+        @Override public void close() { server.stop(0); }
     }
 
     @AfterEach

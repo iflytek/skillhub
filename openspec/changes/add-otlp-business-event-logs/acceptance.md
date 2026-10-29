@@ -86,6 +86,20 @@ An initial RED fixture run (`red-chunked-diagnostics.log`) failed 2 startup asse
 
 Scope: containment is private to this verified managed business sender, with shipped SDK logger OFF defaults. Non-dispatcher housekeeping delegates unchanged; its inert group may remain alive but weakly references metrics. No global handler is installed/restored; containment lasts through owned callback exit. Unrelated exporters/application failures, explicit logging/SDK overrides, exception-intercepting agents, heap dumps and receiver logs remain outside the guarantee. SDK upgrades require revalidation. Broad backend/base comparisons, packaging and docs-site build were not rerun in Repair 2; previous limitations below remain unchanged. `git diff --check` passes; owned containers/networks/volumes are cleaned up. / 隔离非全 JVM 脱敏，版本与默认日志范围及剩余部署责任详见设计和运维文档；本轮未重跑全量后端、打包或文档站构建，不冒称消除既有环境限制。
 
+## Repair 3 — maintainer review (PR #1029, `bd30ac1`)
+
+Finding: the global `io.opentelemetry.exporter = OFF` rule also hid existing Trace exporter errors when business Logs were disabled (reviewer reproduced 2 Trace 401s with 0 error lines vs. 2 `Failed to export spans` on main's logback config). / 维护者复现：全局 OFF 在业务 Logs 关闭时也屏蔽了既有 Trace 导出错误。
+
+Change: removed the global exporter OFF; added `BusinessLogsDiagnosticsFilter` (Logback TurboFilter) that drops `io.opentelemetry.*` / `okhttp3.*` events only on threads of the business exporter's private `BusinessLogsExporterBoundary` group; kept `io.opentelemetry.sdk.logs` OFF (business pipeline only). / 去掉全局 OFF，改为只在业务 exporter 私有线程组上过滤 SDK 诊断。
+
+| Scenario | Assertion | RED → GREEN |
+| --- | --- | --- |
+| Logs disabled + Trace 401 | Real `OtlpHttpSpanExporter` → local receiver returns 401 on `/v1/traces`; captured output contains `Failed to export spans`, `401` and the receiver message, text and JSON formats | RED with `bd30ac1` logback (await timeout, 0 lines); GREEN |
+| Logs enabled + Trace 401 coexist | Business Logs 401 echoing synthetic credential and Trace 401 in one logging setup: Trace diagnostic present; credential and `Failed to export logs` absent; fixed business warning present | RED with `bd30ac1` logback (Trace line missing); GREEN |
+| Sensitivity of the filter | Same tests with the global OFF removed but no filter: existing credential tests fail (6 failures: credential / `Failed to export logs` printed) | Proves the filter, not the logger level, provides the business containment |
+
+Focused command (Repair 1 set, JDK 21): **311 tests, 0 failures, 0 errors, 0 skips** (adds 4 Trace-coexistence cases). Broad suite, deployment contracts and real Collector run were not rerun in Repair 3; no deployment setting changed. / 定向 311 项全部通过；本轮未重跑全量与部署契约。
+
 ## Broad suite and environment limits
 
 Broad `make test-backend` runs are NOT green. Initial candidate: 2732 tests, 2 failures, 1 error, 30 skips. Final candidate broad run: 2762 tests, 3 failures, 11 errors, 30 skips. Frozen base: 2712 tests, 2 failures, 2 errors, 30 skips. Failures are in GitHub integration tests; exact failing methods are retained in the count JSONs. Four methods occur in both the final candidate's and base's broad failure sets (Go executor, credential privacy, two budget cases), but the full failure sets and error modes vary. Do NOT infer that every candidate failure was proven pre-existing. Subsequent identical five-class GitHub focused commands PASS all 37 tests on BOTH the candidate and frozen base. An independent SQL/host clock probe found the Docker database clock ahead of the host in every sample, consistent with timing-sensitive eligibility checks, but it is NOT asserted as the proven cause of every failure. No clock/global configuration was changed. The authorized detached base worktree was removed. / 全量检查不是绿色；基线与 candidate 有四个相同失败方法，但集合及错误形式不同，不冒称全部故障已证实为基线问题。随后相同五类 GitHub 定向测试在两边均 37 项通过。独立探测发现 Docker 数据库时钟领先宿主机，与时间筛选类故障相符，但未证明所有故障根因；未改系统时钟/全局配置。基线临时工作树已移除。

@@ -76,7 +76,8 @@ A single mapper SHALL export only fixed documented scalar fields, including IDs 
 - **WHEN** MDC and OTel Baggage contain distinct sensitive sentinels
 - **THEN** neither keys nor values SHALL appear in exported attributes, body or resource
 - **WHEN** receiver Status messages or transport exceptions echo transport credentials
-- **THEN** shipped logging SHALL suppress raw `io.opentelemetry.exporter` and `io.opentelemetry.sdk.logs` diagnostics, including child loggers, by default
+- **THEN** shipped logging SHALL suppress raw OTel/OkHttp diagnostics emitted on the business exporter's own threads and `io.opentelemetry.sdk.logs` diagnostics by default
+- **AND** existing Trace exporter diagnostics SHALL remain unchanged whether business Logs are disabled or enabled
 - **AND** fixed-text rate-bounded SkillHub diagnostics and counters SHALL remain available
 - **AND** operator documentation SHALL warn that explicitly raising SDK logging opts into possible credential disclosure
 
