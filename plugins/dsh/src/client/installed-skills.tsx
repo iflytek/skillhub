@@ -1,3 +1,4 @@
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { checkInstalledUpdates, updateFailed, type UpdateResult } from './update-overview.js';
 import { SkillWebsiteLink } from './skill-website-link.js';
 import { groupManagementItems, InstallationManagement, type ManagementViewServices } from './management-tool-view.js';
@@ -14,7 +15,7 @@ import { DetailContent } from './detail-content.js';
 import { RemovalHistory, type RemovalServices } from './removal-control.js';
 import { InstalledStyles } from './installed-styles.js';
 import type { InstalledNavigation } from './installed-navigation.js';
-import { Badge, Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui.js';
+import { Badge, Button, Card, CardHeader, CardTitle, CardDescription } from './ui.js';
 import { SkillAvatar } from './skill-card.js';
 
 export interface InstalledServices extends UpgradeServices, RemovalServices {
@@ -47,6 +48,10 @@ export function installedCardVersions(items: Item[]) {
   return { label: versions.length === 1 ? `v${versions[0]}` : `多个版本 · ${versions.map(version => `v${version}`).join(' / ')}`,
     title: items.map(item => `${item.scope === 'user' ? '所有项目' : '仅此项目'} · v${item.version}`).join('；') };
 }
+export function installedUpdateKeys(inventory: Item[], results: Record<string, UpdateResult>, retry: boolean, group?: Item[]) {
+  return inventory.filter(item => !group || group.some(target => target.itemKey === item.itemKey))
+    .map(item => item.itemKey).filter(key => !retry || updateFailed(results[key]));
+}
 const noContext = { getSnapshot: () => 0, subscribe: () => () => {} };
 export function InstalledSkills({ services, sourceRevision, source, remote, modes, scrollContainer, navigation, onInstall }: {
   services: InstalledServices; sourceRevision: string; source: string; remote: TypertRemoteNamespaceMap['skillhub']; modes: SkillHubConfig['detailTabs'];
@@ -62,6 +67,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
   const refreshButton = useRef<HTMLButtonElement>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const triggerKey = useRef<string | null>(null);
+  const menuNavigating = useRef(false);
   const listScroll = useRef(navigation.listScroll);
   useLayoutEffect(() => { Object.assign(navigation, { scope: 'all', keyword, selected, intent: 'detail', listScroll: listScroll.current }); });
   useLayoutEffect(() => {
@@ -106,9 +112,9 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
   useLayoutEffect(() => {
     if (selected) { scan.current?.abort(); scan.current = null; setProgress(previous => ({ ...previous, running: false })); }
   }, [selected]);
-  const startCheck = (retry = false) => {
+  const startCheck = (retry = false, group?: Item[]) => {
     if (scan.current || query.isFetching || query.isError) return;
-    const keys = (query.data?.items ?? []).map(item => item.itemKey).filter(key => !retry || updateFailed(results[key]));
+    const keys = installedUpdateKeys(query.data?.items ?? [], results, retry, group);
     if (!keys.length) return;
     const controller = new AbortController(); scan.current = controller;
     const scanGeneration = context.getSnapshot();
@@ -205,15 +211,30 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
                 listScroll.current = scrollContainer.current?.scrollTop ?? 0;
                 triggerKey.current = key; trigger.current = event.currentTarget; setSelected(identity);
               }} />
-            <CardHeader className="astron-sh-skill-heading"><SkillAvatar name={displayName} slug={identity.slug} namespace={identity.namespace} /><div className="skillhub-installed-identity"><CardTitle title={displayName}>{displayName}</CardTitle><CardDescription title={`@${identity.namespace}/${identity.slug}`}>@{identity.namespace}/{identity.slug}</CardDescription></div>
+            <SkillAvatar name={displayName} slug={identity.slug} namespace={identity.namespace} />
+            <CardHeader className="skillhub-installed-identity">
+              <CardTitle title={displayName}>{displayName}</CardTitle>
+              <p className="skillhub-installed-description" title={presentation.summary}>{presentation.summary || '暂无摘要'}</p>
+              <CardDescription className="skillhub-installed-version" title={`@${identity.namespace}/${identity.slug} · ${versions.title}`}>{versions.label} · @{identity.namespace}/{identity.slug}</CardDescription>
+            </CardHeader>
+            <div className="skillhub-installed-side">
               <div className="skillhub-installed-badges">{installedCardBadges(items, results, verified).map(badge =>
                 <Badge key={badge.label} variant={badge.tone}>{badge.label}</Badge>)}</div>
-            </CardHeader>
-            <CardContent className="astron-sh-skill-body">
-              <p className="astron-sh-skill-summary" title={presentation.summary}>{presentation.summary || '暂无摘要'}</p>
-              <div className="astron-sh-skill-meta"><span title={versions.title}>{versions.label}</span></div>
-            </CardContent>
-            <CardFooter className="skillhub-installed-actions">{usable && <div className="astron-sh-card-actions">{actions(items)}</div>}</CardFooter>
+              <div className="skillhub-installed-actions astron-sh-card-actions">
+                {usable && actions(items)}
+                <DropdownMenu.Root modal={false}>
+                  <DropdownMenu.Trigger asChild><Button size="sm" variant="ghost" aria-label={`${displayName} 更多操作`}>···</Button></DropdownMenu.Trigger>
+                  <DropdownMenu.Portal><DropdownMenu.Content className="skillhub-controls astron-sh-position-menu" align="end" sideOffset={4} collisionPadding={8}
+                    onCloseAutoFocus={event => { if (menuNavigating.current) { event.preventDefault(); menuNavigating.current = false; } }}>
+                    <DropdownMenu.Item onSelect={() => {
+                      listScroll.current = scrollContainer.current?.scrollTop ?? 0;
+                      menuNavigating.current = true; triggerKey.current = key; trigger.current = null; setSelected(identity);
+                    }}>管理安装</DropdownMenu.Item>
+                    <DropdownMenu.Item disabled={progress.running || query.isFetching || query.isError} onSelect={() => startCheck(false, items)}>检查更新</DropdownMenu.Item>
+                  </DropdownMenu.Content></DropdownMenu.Portal>
+                </DropdownMenu.Root>
+              </div>
+            </div>
           </Card>;
         })}</div>}
     </>}

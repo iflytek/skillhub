@@ -13,23 +13,25 @@ export function InstalledStyles() {
     .skillhub-installed .skillhub-installed-filters { display:flex;gap:4px; }
     .skillhub-installed .skillhub-installed-filters button { margin:0; }
     .skillhub-installed .skillhub-installed-note { font-size:13px;color:var(--astron-sh-muted);margin-block:16px; }
-    .skillhub-installed .astron-sh-installed-card { display:flex;flex-direction:column;position:relative;min-width:0;container-type:inline-size; }
-    .skillhub-installed .astron-sh-installed-card .astron-sh-skill-heading { display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:start;padding:15px 16px 10px;gap:11px; }
-    .skillhub-installed .skillhub-installed-identity { min-width:0; }
-    .skillhub-installed .skillhub-installed-badges { display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:112px; }
-    .skillhub-installed .skillhub-installed-badges:empty { display:none; }
+    .skillhub-installed .astron-sh-card-grid { grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
+    .skillhub-installed .astron-sh-installed-card { display:grid;grid-template-columns:38px minmax(0,1fr) auto;align-items:start;gap:12px;padding:16px;position:relative;min-width:0; }
+    .skillhub-installed .skillhub-installed-identity { padding:0;min-width:0; }
+    .skillhub-installed .skillhub-installed-identity h3 { font-size:15px;line-height:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .skillhub-installed .skillhub-installed-description { margin:5px 0 0;font-size:13px;line-height:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .skillhub-installed .skillhub-installed-version { margin:5px 0 0;font-size:12px;line-height:18px;color:var(--astron-sh-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+    .skillhub-installed .skillhub-installed-side { display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;align-self:stretch;gap:10px;max-width:140px; }
+    .skillhub-installed .skillhub-installed-badges { display:flex;flex-wrap:wrap;justify-content:flex-end;gap:4px;max-width:140px; }
     .skillhub-installed .skillhub-installed-badges .astron-sh-badge { text-align:right; }
-    .skillhub-installed .astron-sh-installed-card .astron-sh-skill-heading h3 { font-size:15px;line-height:22px; }
-    .skillhub-installed .astron-sh-installed-card .astron-sh-skill-body { padding:0 16px 12px; }
-    .skillhub-installed .astron-sh-installed-card .astron-sh-skill-meta { min-height:18px;margin-top:10px; }
-    .skillhub-installed .skillhub-installed-actions { display:flex;justify-content:flex-end;align-items:center;min-height:48px;padding:7px 16px;margin-top:auto;border-top:1px solid var(--astron-sh-border); }
-    .skillhub-installed .skillhub-installed-actions button { margin:0;font-size:12px;min-height:32px;height:auto;padding:5px 10px; }
+    .skillhub-installed .skillhub-installed-actions { margin-top:auto;flex-wrap:nowrap;gap:4px; }
+    .skillhub-installed .skillhub-installed-actions button { margin:0;font-size:12px;min-height:30px;height:auto;padding:4px 8px; }
     .skillhub-installed .skillhub-installed-actions .astron-sh-primary-actions { margin:0; }
-    @container (max-width:330px) {
-      .skillhub-installed .astron-sh-installed-card .astron-sh-skill-heading { grid-template-columns:38px minmax(0,1fr); }
-      .skillhub-installed .skillhub-installed-badges { grid-column:1 / -1;justify-self:end;flex-direction:row;flex-wrap:wrap;max-width:100%; }
+    @container (max-width:800px) { .skillhub-installed .astron-sh-card-grid { grid-template-columns:1fr; } }
+    @container (max-width:380px) {
+      .skillhub-installed .astron-sh-installed-card { grid-template-columns:32px minmax(0,1fr);gap:10px;padding:12px; }
+      .skillhub-installed .astron-sh-installed-card>.astron-sh-avatar { width:32px;height:32px; }
+      .skillhub-installed .skillhub-installed-side { grid-column:2;flex-direction:row;align-items:center;max-width:none; }
+      .skillhub-installed .skillhub-installed-actions { margin-top:0;margin-left:auto; }
     }
-    .skillhub-installed .skillhub-installed-coordinate { display:block;font-size:12px;line-height:18px;color:var(--astron-sh-muted);margin-top:4px;overflow-wrap:anywhere; }
     .skillhub-installed .skillhub-installed-empty { padding:32px 16px;text-align:center;border:1px dashed var(--astron-sh-border);border-radius:12px; }
     .skillhub-installed .astron-sh-version-update { font-size:13px;line-height:20px; }
     .skillhub-installed .astron-sh-version-update .astron-sh-card-header { padding:14px 16px 8px; }
