@@ -476,9 +476,15 @@ assert_rejected subpath-reserved-analytics-nested --set-string web.basePath=/_sk
 
 render analytics-default "$CHART_DIR" >"$TMP_DIR/analytics-default.yaml"
 grep -Fq 'web-analytics-config: ""' "$TMP_DIR/analytics-default.yaml" || fail "analytics must default off"
-render analytics-enabled "$CHART_DIR" \
-  --set-string web.analytics.config='{"enabled":true}' \
-  --set-string web.analytics.upstream=https://stats.example.com >"$TMP_DIR/analytics-enabled.yaml"
+# --set treats {...} as a list, so pass the JSON string through a values file,
+# the same way the operator guide documents it.
+cat >"$TMP_DIR/analytics-values.yaml" <<'VALUES'
+web:
+  analytics:
+    config: '{"enabled":true,"adapter":"umami","consent":"granted","adapterConfig":{"websiteId":"4398de8e-40df-4483-9eea-ed213643525f"}}'
+    upstream: https://stats.example.com
+VALUES
+render analytics-enabled "$CHART_DIR" -f "$TMP_DIR/analytics-values.yaml" >"$TMP_DIR/analytics-enabled.yaml"
 for key in SKILLHUB_WEB_ANALYTICS_CONFIG SKILLHUB_WEB_ANALYTICS_UPSTREAM; do
   grep -Fq "name: $key" "$TMP_DIR/analytics-enabled.yaml" || fail "missing analytics environment"
 done
