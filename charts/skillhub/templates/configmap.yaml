@@ -49,7 +49,7 @@ data:
   public-base-url: {{ .Values.publicBaseUrl | quote }}
   {{- $deviceAuthVerificationUri := .Values.deviceAuthVerificationUri }}
   {{- if and (not $deviceAuthVerificationUri) .Values.publicBaseUrl }}
-  {{- $deviceAuthVerificationUri = printf "%s/cli/auth" (trimSuffix "/" .Values.publicBaseUrl) }}
+  {{- $deviceAuthVerificationUri = printf "%s/device" (trimSuffix "/" .Values.publicBaseUrl) }}
   {{- end }}
   device-auth-verification-uri: {{ $deviceAuthVerificationUri | quote }}
   auth-direct-enabled: {{ .Values.auth.direct.enabled | quote }}

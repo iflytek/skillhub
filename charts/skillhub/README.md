@@ -48,7 +48,8 @@ helm -n skillhub upgrade -i skillhub ./charts/skillhub \
 ```
 
 未显式设置 `deviceAuthVerificationUri` 时，Chart 使用
-`<publicBaseUrl>/cli/auth`。所有 values 会先经过 `values.schema.json` 和跨字段校验，
+`<publicBaseUrl>/device`，保留部署子路径。`/cli/auth` 是旧版 loopback 回调入口，
+需要客户端提供回调参数，不能作为设备码授权地址。所有 values 会先经过 `values.schema.json` 和跨字段校验，
 无效的组件、Ingress、HPA 与存储组合会在安装前失败。
 
 首次安装可通过 `auth.initialSettings.passwordLoginEnabled` 和

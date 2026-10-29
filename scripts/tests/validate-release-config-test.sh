@@ -95,6 +95,24 @@ SKILLHUB_PUBLIC_BASE_URL=https://skillhub.example.com \
 grep -Fq 'https://skillhub.example.com/login/oauth2/code/feishu' "$compose_default_redirect" \
   || fail "compose must derive the default Feishu redirect URI from SKILLHUB_PUBLIC_BASE_URL"
 
+# Preserve empty device overrides so the backend derives /device from the public
+# URL, including a deployment sub-path, rather than forcing a root-level route.
+for device_override in '' ' ' 'https://login.example.com/custom/device'; do
+  DEVICE_AUTH_VERIFICATION_URI="$device_override" \
+  SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET=release-download-secret-32-bytes-minimum \
+  SKILLHUB_PUBLIC_BASE_URL=https://skillhub.example.com/portal \
+    docker compose -f "$REPO_ROOT/compose.release.yml" config --format json \
+    >"$tmp/compose-device.json"
+  python3 - "$tmp/compose-device.json" "$device_override" <<'PY'
+import json
+import sys
+with open(sys.argv[1]) as source:
+    environment = json.load(source)["services"]["server"]["environment"]
+assert environment["DEVICE_AUTH_VERIFICATION_URI"] == sys.argv[2]
+assert environment["SKILLHUB_PUBLIC_BASE_URL"] == "https://skillhub.example.com/portal"
+PY
+done
+
 valid_feishu_env="$tmp/valid-feishu.env"
 write_env "$valid_feishu_env" "release-download-secret-32-bytes-minimum"
 cat >>"$valid_feishu_env" <<'EOF'

@@ -277,7 +277,7 @@ skillhub:
         editable: false
         requires-review: false
   device-auth:
-    verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:${skillhub.public.base-url:}/device}
+    verification-uri: ${DEVICE_AUTH_VERIFICATION_URI:}
   security:
     scanner:
       enabled: ${SKILLHUB_SECURITY_SCANNER_ENABLED:true}
