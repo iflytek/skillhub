@@ -17,7 +17,7 @@ export async function probeInstalledUpdateContext(page) {
   await page.evaluate(() => window.fixture.workspace('B'));
   await page.waitForFunction(() => !document.querySelector('.skillhub-installed-summary')?.textContent.includes('已检查'));
   await scan();
-  await page.locator('.astron-sh-installed-card').first().getByRole('button', { name: '查看更新', exact: true }).click();
+  await page.locator('.astron-sh-installed-card').first().getByRole('button', { name: /^查看 .* 详情$/ }).click();
   const detail = page.getByRole('region', { name: '已安装技能详情', exact: true });
   await detail.getByRole('button', { name: '更新', exact: true }).waitFor();
   await detail.getByRole('button', { name: '更新', exact: true }).click();

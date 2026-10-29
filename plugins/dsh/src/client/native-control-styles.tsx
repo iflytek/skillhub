@@ -44,6 +44,10 @@ export function NativeControlStyles() {
 .skillhub-controls .astron-sh-button-default:not(:disabled):hover{background:color-mix(in srgb,var(--astron-sh-accent) 88%,var(--astron-sh-fg))}
 .skillhub-controls .astron-sh-button-ghost{border-color:transparent;background:transparent;box-shadow:none}
 .skillhub-controls .astron-sh-button-destructive,.skillhub-controls .skillhub-danger{color:light-dark(#b42318,#ffb4ab)}
+.skillhub-controls .astron-sh-badge{display:inline-flex;align-items:center;max-width:100%;border:1px solid transparent;border-radius:5px;padding:1px 7px;font-size:11px;line-height:18px;font-weight:500;overflow-wrap:anywhere}
+.skillhub-controls .astron-sh-badge-info{color:light-dark(#175b98,#9bd0ff);background:light-dark(#eaf4ff,#112e48);border-color:light-dark(#bfdbfe,#24517a)}
+.skillhub-controls .astron-sh-badge-neutral{color:light-dark(#525866,#c5c8d0);background:light-dark(#f1f2f4,#2a2c31);border-color:light-dark(#dce0e6,#42464e)}
+.skillhub-controls .astron-sh-badge-warning{color:light-dark(#945414,#f0c27c);background:light-dark(#fff3df,#3e3020);border-color:light-dark(#edd7ab,#635033)}
 .skillhub-controls .astron-sh-input{height:40px;min-width:0;background:var(--astron-sh-soft)}
 .skillhub-controls .astron-sh-catalog-header{display:flex;align-items:start;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap}
 .skillhub-controls .astron-sh-catalog-header h1{margin:0 0 6px}.skillhub-controls .astron-sh-source{font-size:12px;color:var(--astron-sh-muted);overflow-wrap:anywhere;margin:0}

@@ -44,6 +44,7 @@ import type { NativeRecoveryResult } from './generated/native-contract.js';
 import type { InstallationTargetList } from './types.js';
 import type { LocalRuntimeStatus } from './local-runtime.js';
 import type { InstalledSkillList, InstalledSkillDetail, InstalledUpdateCheck, SkillUsePreparation, SkillUseSelection } from './types.js';
+import { readInstalledPresentations } from './installed-presentation.js';
 import { installationFailureCode } from './installation-failure.js';
 import type { InstalledProjectionItem } from './generated/native-contract.js';
 
@@ -312,6 +313,7 @@ export class SkillHubService extends TypertRemoteService {
     const outcome = await runtime.listInstalled(source.registryUrl, roots).then(
       result => ({ result, error: undefined }), error => ({ result: undefined, error }),
     );
+    const presentation = outcome.result ? await readInstalledPresentations(outcome.result.items, roots, combined) : [];
     combined.throwIfAborted();
     this.assertSource(sourceRevision);
     if (agent.session.header.cwd !== cwd || serviceIdentity(agent.ctx.get('fs')) !== serviceIdentity(fs)
@@ -333,10 +335,10 @@ export class SkillHubService extends TypertRemoteService {
     if (!outcome.result) throw outcome.error;
     const result = outcome.result;
     const unavailable = targets.filter(entry => !entry.target).map(entry => entry.scope);
-    const items = result.items.map(item => {
+    const items = result.items.map((item, index) => {
       const itemKey = this.installedItemKey(agent.session.id, cwd, sourceRevision, item);
       const locationKey = createHmac('sha256', this.installedReferenceKey).update(JSON.stringify([agent.session.id, cwd, sourceRevision, item.namespace, item.slug, item.scope, item.targetPath])).digest('base64url');
-      return { itemKey, locationKey, installationState: item.installationState ?? 'enabled', namespace: item.namespace, slug: item.slug, version: item.version, scope: item.scope, state: item.state };
+      return { ...presentation[index], itemKey, locationKey, installationState: item.installationState ?? 'enabled', namespace: item.namespace, slug: item.slug, version: item.version, scope: item.scope, state: item.state };
     });
     return { items, complete: result.complete, issues: result.issues, unavailable };
   }

@@ -14,7 +14,7 @@ import { DetailContent } from './detail-content.js';
 import { RemovalHistory, type RemovalServices } from './removal-control.js';
 import { InstalledStyles } from './installed-styles.js';
 import type { InstalledNavigation } from './installed-navigation.js';
-import { Button, Card, CardHeader, CardContent, CardFooter } from './ui.js';
+import { Badge, Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './ui.js';
 import { SkillAvatar } from './skill-card.js';
 
 export interface InstalledServices extends UpgradeServices, RemovalServices {
@@ -30,6 +30,23 @@ export interface InstalledServices extends UpgradeServices, RemovalServices {
   checkUpdate(sourceRevision: string, itemKey: string, signal: AbortSignal): Promise<RemoteResult<InstalledUpdateCheck>>;
 }
 type Item = InstalledSkillList['items'][number];
+export function installedCardBadges(items: Item[], results: Record<string, UpdateResult>, verified: boolean) {
+  const badges: { label: string; tone: 'neutral' | 'warning' | 'info' }[] = [];
+  const summary = verified ? skillInstallationSummary(items) : '安装待核验';
+  if (summary !== '已安装') badges.push({ label: summary, tone: summary === '已停用' ? 'neutral' : 'warning' });
+  if (items.some(item => updateFailed(results[item.itemKey]))) badges.push({ label: '检查失败', tone: 'warning' });
+  else if (items.some(item => results[item.itemKey]?.state === 'blocked')) badges.push({ label: '更新需处理', tone: 'warning' });
+  else if (items.some(item => results[item.itemKey]?.state === 'upgradable')) {
+    const result = results[items[0]!.itemKey];
+    badges.push({ label: items.length > 1 ? '可更新' : `可更新至 ${result && 'candidateVersion' in result ? result.candidateVersion ?? '新版本' : '新版本'}`, tone: 'info' });
+  }
+  return badges;
+}
+export function installedCardVersions(items: Item[]) {
+  const versions = [...new Set(items.map(item => item.version))];
+  return { label: versions.length === 1 ? `v${versions[0]}` : `多个版本 · ${versions.map(version => `v${version}`).join(' / ')}`,
+    title: items.map(item => `${item.scope === 'user' ? '所有项目' : '仅此项目'} · v${item.version}`).join('；') };
+}
 const noContext = { getSnapshot: () => 0, subscribe: () => () => {} };
 export function InstalledSkills({ services, sourceRevision, source, remote, modes, scrollContainer, navigation, onInstall }: {
   services: InstalledServices; sourceRevision: string; source: string; remote: TypertRemoteNamespaceMap['skillhub']; modes: SkillHubConfig['detailTabs'];
@@ -44,6 +61,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
   const heading = useRef<HTMLHeadingElement>(null);
   const refreshButton = useRef<HTMLButtonElement>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
+  const triggerKey = useRef<string | null>(null);
   const listScroll = useRef(navigation.listScroll);
   useLayoutEffect(() => { Object.assign(navigation, { scope: 'all', keyword, selected, intent: 'detail', listScroll: listScroll.current }); });
   useLayoutEffect(() => {
@@ -69,7 +87,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
   const verified = !!query.data && !query.isError && query.data.complete && !query.data.unavailable.length;
   const records = (identity: Item) => query.data?.items.filter(item => item.namespace === identity.namespace && item.slug === identity.slug) ?? [identity];
   const actions = (items: Item[], label?: string) => <SkillPrimaryActions items={items} revision={sourceRevision} verified={verified}
-    select={services.management?.selectSkillUse} useSkill={services.skillUse} onManage={!label ? () => { const identity = items[0]; if (identity) { listScroll.current = scrollContainer.current?.scrollTop ?? 0; setSelected(identity); } } : undefined} label={label} summaryVisible={!label} />;
+    select={services.management?.selectSkillUse} useSkill={services.skillUse} label={label} summaryVisible={!label} />;
 
   const [results, setResults] = useState<Record<string, UpdateResult>>({});
   const [filter, setFilter] = useState('all');
@@ -153,7 +171,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
     </article><aside className="astron-sh-detail-aside">{services.management && <InstallationManagement identity={selected} revision={sourceRevision} services={services.management} updateChecks={Object.fromEntries(Object.entries(results).filter((entry): entry is [string, InstalledUpdateCheck] => entry[1].state !== 'failed'))} useSkill={services.skillUse} onInstall={onInstall ? () => onInstall(selected) : undefined} />}</aside></div>
   </section>;
   const term = keyword.trim().toLocaleLowerCase();
-  const groups = allGroups.filter(items => filter === 'all' || items.some(item => filter === 'updates' ? results[item.itemKey]?.state === 'upgradable' : updateFailed(results[item.itemKey]))).filter(items => !term || items.some(item => `@${item.namespace}/${item.slug} ${item.version}`.toLocaleLowerCase().includes(term)));
+  const groups = allGroups.filter(items => filter === 'all' || items.some(item => filter === 'updates' ? results[item.itemKey]?.state === 'upgradable' : updateFailed(results[item.itemKey]))).filter(items => !term || items.some(item => `@${item.namespace}/${item.slug} ${item.displayName ?? ''} ${item.version}`.toLocaleLowerCase().includes(term)));
   return <section className="skillhub-installed skillhub-controls" aria-label="已安装技能">
     <InstalledStyles />
     <div className="skillhub-installed-toolbar"><label className="skillhub-installed-search">
@@ -175,17 +193,27 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
       {!groups.length ? <p className="skillhub-installed-empty">{term || filter !== 'all' ? '没有匹配的技能。' : verified ? '当前来源暂无已安装技能。' : '暂未读取到安装记录。'}</p>
         : <div className="astron-sh-card-grid" aria-label="已安装技能列表">{groups.map(items => {
           const identity = items[0]!;
-          return <Card className="astron-sh-installed-card" key={JSON.stringify([identity.namespace, identity.slug])}>
-            <CardHeader className="astron-sh-skill-heading"><SkillAvatar slug={identity.slug} namespace={identity.namespace} /><div><h3>{identity.slug}</h3><span>@{identity.namespace}/{identity.slug}</span></div></CardHeader>
-            <CardContent><span>{skillInstallationSummary(items)}</span>
-              {items.some(item => results[item.itemKey]?.state === 'upgradable') && <p>{items.length > 1 ? '多位置安装有更新' : `可更新至 ${(() => { const result = results[identity.itemKey]; return result && 'candidateVersion' in result ? result.candidateVersion ?? '新版本' : '新版本'; })()}`}</p>}
-              {items.some(item => results[item.itemKey]?.state === 'blocked') && <p>更新需处理，请查看安装状态。</p>}
-              {items.some(item => updateFailed(results[item.itemKey])) && <p>部分安装位置检查失败，可重试。</p>}
+          const key = JSON.stringify([identity.namespace, identity.slug]);
+          const presentation = items.find(item => item.summary) ?? identity;
+          const displayName = presentation.displayName || identity.slug;
+          const versions = installedCardVersions(items);
+          const usable = verified && services.management?.selectSkillUse && items.some(item => item.state === 'present' && item.installationState !== 'disabled');
+          return <Card className="astron-sh-installed-card" key={key}>
+            <button type="button" className="astron-sh-card-open" aria-label={`查看 ${displayName} @${identity.namespace}/${identity.slug} 详情`}
+              ref={node => { if (triggerKey.current === key) trigger.current = node; }} onClick={event => {
+                // This record selects documentation only; use resolves the actual winner on the Host.
+                listScroll.current = scrollContainer.current?.scrollTop ?? 0;
+                triggerKey.current = key; trigger.current = event.currentTarget; setSelected(identity);
+              }} />
+            <CardHeader className="astron-sh-skill-heading"><SkillAvatar name={displayName} slug={identity.slug} namespace={identity.namespace} /><div className="skillhub-installed-identity"><CardTitle title={displayName}>{displayName}</CardTitle><CardDescription title={`@${identity.namespace}/${identity.slug}`}>@{identity.namespace}/{identity.slug}</CardDescription></div>
+              <div className="skillhub-installed-badges">{installedCardBadges(items, results, verified).map(badge =>
+                <Badge key={badge.label} variant={badge.tone}>{badge.label}</Badge>)}</div>
+            </CardHeader>
+            <CardContent className="astron-sh-skill-body">
+              <p className="astron-sh-skill-summary" title={presentation.summary}>{presentation.summary || '暂无摘要'}</p>
+              <div className="astron-sh-skill-meta"><span title={versions.title}>{versions.label}</span></div>
             </CardContent>
-            <CardFooter className="skillhub-installed-actions">{actions(items)}<Button variant="ghost" onClick={event => {
-              // This record selects documentation only; use always resolves the actual winner on the Host.
-              listScroll.current = scrollContainer.current?.scrollTop ?? 0; trigger.current = event.currentTarget; setSelected(identity);
-            }}>{items.some(item => results[item.itemKey]?.state === 'upgradable') ? '查看更新' : '详情'}</Button></CardFooter>
+            <CardFooter className="skillhub-installed-actions">{usable && <div className="astron-sh-card-actions">{actions(items)}</div>}</CardFooter>
           </Card>;
         })}</div>}
     </>}

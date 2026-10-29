@@ -23,6 +23,14 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(({ classN
   return <Component ref={ref} type={type} className={classes(buttonVariants({ variant, size }), className)} {...props} />;
 });
 Button.displayName = 'Button';
+/** shadcn/ui Badge composition with scoped semantic colors for light and dark DSH themes. */
+const badgeVariants = cva('astron-sh-badge', {
+  variants: { variant: { info: 'astron-sh-badge-info', neutral: 'astron-sh-badge-neutral', warning: 'astron-sh-badge-warning' } },
+  defaultVariants: { variant: 'neutral' },
+});
+export function Badge({ className, variant, ...props }: React.HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>) {
+  return <span className={classes(badgeVariants({ variant }), className)} {...props} />;
+}
 export const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(({ className, ...props }, ref) =>
   <input ref={ref} className={classes('astron-sh-input', className)} {...props} />);
 Input.displayName = 'Input';

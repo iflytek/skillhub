@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { randomBytes } from 'node:crypto';
-import { mkdtemp, mkdir, realpath, rm, symlink } from 'node:fs/promises';
+import { mkdtemp, mkdir, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import SkillHubService from '../src/host/index.js';
@@ -10,7 +10,7 @@ import type { InstalledSkillList } from '../src/host/types.js';
 async function fixture(run: (fixture: {
   list(): Promise<InstalledSkillList>; read(key: string): Promise<unknown>;
   records: InstalledProjectionItem[]; session: { id: string; header: { cwd: string } };
-  setComplete(value: boolean): void; revision(value: string): void; restartHost(): void; project: string; home: string;
+  listReads(): number; setComplete(value: boolean): void; revision(value: string): void; restartHost(): void; project: string; home: string;
 }) => Promise<void>) {
   // Match the Host's canonical roots (macOS /var aliases and Windows short temp paths).
   const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-installed-references-')));
@@ -23,20 +23,20 @@ async function fixture(run: (fixture: {
     const session = { id: 'session-a', header: { cwd: project } };
     const agent = { session, ctx: { get: () => fs } };
     const records: InstalledProjectionItem[] = [];
-    let complete = true; let revision = 'source';
+    let complete = true; let revision = 'source'; let listReads = 0;
     const service = Object.assign(Object.create(SkillHubService.prototype), {
       lifetime: new AbortController(), installedReferenceKey: randomBytes(32),
-      localRuntime: { listInstalled: async (_registry: string, roots: { scope: string; root: string }[]) => ({
+      localRuntime: { listInstalled: async (_registry: string, roots: { scope: string; root: string }[]) => { listReads++; return {
         items: records.filter(item => roots.some(target => target.scope === item.scope && join(target.root, item.slug) === item.targetPath)),
         complete, issues: complete ? [] : ['inventory-unreadable'],
-      }) },
+      }; } },
       ctx: { invocation: { request: { args: { agentId: 'session-a' } } }, get: () => ({ get: () => agent }) },
       assertSource: (value: string) => { if (value !== revision) throw new Error('source changed'); },
       getContext: () => ({ configured: true, registryUrl: 'https://registry.example' }),
     });
     await run({ list: () => service.listInstalled('source', new AbortController().signal),
       read: key => service.readInstalledItem('source', key, new AbortController().signal), records, session,
-      setComplete: value => { complete = value; }, revision: value => { revision = value; },
+      listReads: () => listReads, setComplete: value => { complete = value; }, revision: value => { revision = value; },
       restartHost: () => { service.installedReferenceKey = randomBytes(32); }, project, home });
   } finally {
     if (previousHome === undefined) delete process.env.DSH_HOME; else process.env.DSH_HOME = previousHome;
@@ -123,5 +123,21 @@ test('toggle invalidates old action references but preserves exact location iden
     expect(after.itemKey).not.toBe(before.itemKey);
     await expect(read(before.itemKey)).rejects.toThrow();
     await read(after.itemKey);
+  });
+});
+
+
+test('local presentation keeps reference identity and uses a single inventory projection per list', async () => {
+  await fixture(async ({ records, home, list, read, listReads }) => {
+    const item = record(home, 0); records.push(item);
+    const before = (await list()).items[0]; expect(listReads()).toBe(1);
+    await mkdir(item.targetPath, { recursive: true });
+    await writeFile(join(item.targetPath, 'SKILL.md'), '---\nname: authored-name\ndescription: 本地真实说明\n---\nPRIVATE BODY');
+    const after = (await list()).items[0]; expect(listReads()).toBe(2);
+    expect(after).toEqual({ ...before, displayName: 'authored-name', summary: '本地真实说明' });
+    await read(after.itemKey);
+    await writeFile(join(item.targetPath, 'SKILL.md'), '---\nname: renamed-display\ndescription: 修改展示文字\n---');
+    expect((await list()).items[0].itemKey).toBe(before.itemKey);
+    expect(records[0]).toEqual(item);
   });
 });

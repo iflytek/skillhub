@@ -48,8 +48,9 @@ export async function probeInstalledUpdateOverview(page, screenshot) {
   assert.equal(realScanRpc.filter(path => path.endsWith('/checkInstalledUpdateScan')).length, items.length);
   assert(!realScanRpc.some(path => path.endsWith('/checkUpdate')));
   assert.equal(rpc.slice(realStart).filter(path => path.endsWith('/endInstalledUpdateScan')).length, 1);
-  const actualUpdate = list.locator('.astron-sh-installed-card').filter({ has: page.getByRole('button', { name: '查看更新', exact: true }) }).first();
-  await actualUpdate.getByRole('button', { name: '查看更新', exact: true }).click();
+  const actualUpdate = list.locator('.astron-sh-installed-card').filter({ has: page.locator('.skillhub-installed-badges .astron-sh-badge-info') }).first();
+  await actualUpdate.getByRole('button', { name: /^查看 .* 详情$/ }).focus();
+  await page.keyboard.press('Enter');
   const realDetail = page.getByRole('region', { name: '已安装技能详情', exact: true });
   await realDetail.getByRole('button', { name: '更新', exact: true }).first().click();
   await page.getByRole('button', { name: '确认更新', exact: true }).waitFor();
@@ -57,6 +58,7 @@ export async function probeInstalledUpdateOverview(page, screenshot) {
   await page.getByRole('button', { name: '取消', exact: true }).click();
   await page.getByRole('button', { name: '确认更新', exact: true }).waitFor({ state: 'hidden' });
   await realDetail.getByRole('button', { name: '← 返回已安装', exact: true }).click();
+  assert(await actualUpdate.getByRole('button', { name: /^查看 .* 详情$/ }).evaluate(button => button === document.activeElement), 'Return restores card focus');
   // Stable fixtures are real installed records; overwrite read-only responses to cover mixed outcomes.
   const multi = items.find(item => items.filter(other => other.slug === item.slug).length > 1);
   assert(multi, 'Needs a multi-location installation');
@@ -89,8 +91,8 @@ export async function probeInstalledUpdateOverview(page, screenshot) {
   await screenshot('progress');
   await page.getByText(`已检查 ${items.length}/${items.length} · 1 个技能可更新 · 1 处检查失败`, { exact: true }).waitFor();
   assert.equal(peak, 3); assert.equal(calls.length, items.length);
-  assert(await list.getByText('多位置安装有更新').count() === 1);
-  assert(await list.getByText('更新需处理，请查看安装状态。').count() >= 1);
+  assert(await list.locator('.skillhub-installed-badges').getByText('可更新', { exact: true }).count() === 1);
+  assert(await list.getByText('更新需处理').count() >= 1);
   await screenshot('mixed-light');
   const filter = list.getByLabel('更新筛选');
   await filter.getByRole('button', { name: '可更新', exact: true }).click();
@@ -99,7 +101,7 @@ export async function probeInstalledUpdateOverview(page, screenshot) {
   await keyword.fill('does-not-exist');
   await list.getByText('没有匹配的技能。', { exact: true }).waitFor();
   await keyword.fill(multi.slug);
-  await list.getByRole('button', { name: '查看更新', exact: true }).click();
+  await list.getByRole('button', { name: /^查看 .* 详情$/ }).click();
   const detail = page.getByRole('region', { name: '已安装技能详情', exact: true });
   await detail.getByRole('button', { name: '更新', exact: true }).first().waitFor();
   assert.equal(await detail.getByRole('button', { name: '更新', exact: true }).count(), items.filter(item => item.slug === multi.slug).length);

@@ -103,6 +103,8 @@ export type SkillUseSelection = { status: 'ready'; itemKey: string }
 
 export interface InstalledSkillList {
   items: { itemKey: string; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
+    /** Optional local frontmatter for display only; never used for selection or authorization. */
+    displayName?: string; summary?: string;
     state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'; installationState?: 'enabled' | 'disabled' }[];
   /** Completeness of the inventory projection; unavailable roots are reported independently. */
   complete: boolean;

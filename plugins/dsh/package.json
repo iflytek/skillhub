@@ -100,6 +100,7 @@
     "class-variance-authority": "0.7.1",
     "react-markdown": "10.1.0",
     "rehype-sanitize": "6.0.0",
+    "yaml": "2.9.1",
     "zod": "4.4.3"
   },
   "devDependencies": {
