@@ -12,25 +12,25 @@
 - [ ] 2.7 Independent parent review and publication; keep Issue #989 open.
 
 ## 3. PR-2 (follow-up): optional frontend capability
-- [ ] 3.1 Move helper/adapter to a single product source under web/src/features/analytics and preserve all PR-1 assertions.
-- [ ] 3.2 Add default-closed runtime loader and vendor-neutral controller/registry; register Umami as the first adapter.
-- [ ] 3.3 Cover consent, validation, duplicate init, async stop races and adapter failures.
+- [x] 3.1 Move helper/adapter to a single product source under web/src/features/analytics and preserve all PR-1 assertions.
+- [x] 3.2 Add default-closed runtime loader and vendor-neutral controller/registry; register Umami as the first adapter.
+- [x] 3.3 Cover consent, validation, duplicate init, async stop races and adapter failures.
 - [ ] 3.4 Validate this OpenSpec change with the CLI when available and bind the follow-up PR/task.
 
 ## 4. PR-2 (follow-up): deployment
-- [ ] 4.1 Safely serialize and validate configuration without breaking existing runtime config.
-- [ ] 4.2 Add isolated proxy snippets with request-time DNS, certificate validation and exact endpoints.
-- [ ] 4.3 Wire Docker/Compose/Helm defaults and reserved sub-path validation.
-- [ ] 4.4 Provide optional persistent self-hosted Compose combination without another Nginx.
+- [x] 4.1 Safely serialize and validate configuration without breaking existing runtime config.
+- [x] 4.2 Add isolated proxy snippets with request-time DNS, certificate validation and exact endpoints.
+- [ ] 4.3 Wire Docker/Compose/Helm defaults and reserved sub-path validation. (Implemented; Compose/runtime checks passed. Helm CLI rendering remains unverified.)
+- [x] 4.4 Provide optional persistent self-hosted Compose combination without another Nginx.
 
 ## 5. PR-2 (follow-up): documentation
-- [ ] 5.1 Replace source-editing quickstart with configuration-only production paths for supported platforms; distinguish custom adapter development.
-- [ ] 5.2 Document fields, platform prerequisites, initialization, verification, troubleshooting, upgrade and shutdown.
-- [ ] 5.3 Link deployment entry points and document adapter extension and actual privacy boundaries.
+- [x] 5.1 Replace source-editing quickstart with configuration-only production paths for supported platforms; distinguish custom adapter development.
+- [x] 5.2 Document fields, platform prerequisites, initialization, verification, troubleshooting, upgrade and shutdown.
+- [x] 5.3 Link deployment entry points and document adapter extension and actual privacy boundaries.
 
 ## 6. PR-2 (follow-up): quality gates
 - [ ] 6.1 Consolidated independent implementation review, fixes and final base checkpoint.
-- [ ] 6.2 Reviewed requirement/scenario/test matrix and targeted source/deployment checks.
-- [ ] 6.3 Exact-SHA release Compose S3/auth smoke and Chromium normal/changed/failure scenarios, including default zero module/SDK/request and root/sub-path upload/login/download/CSP/cache compatibility.
+- [ ] 6.2 Reviewed requirement/scenario/test matrix and targeted source/deployment checks. (Worker matrix and local checks complete; independent review and Helm execution pending.)
+- [ ] 6.3 Exact-SHA release Compose S3/auth smoke and Chromium normal/changed/failure scenarios, including default zero module/SDK/request and root/sub-path upload/login/download/CSP/cache compatibility. (Local browser/real-collector and HTTP proxy checks passed; full backend S3/auth smoke remains pending.)
 - [ ] 6.4 CI/privacy/readiness, one validation report and retained preview for human acceptance.
 - [ ] 6.5 Close Issue #989 only after configuration-only deployment is complete and verified, not when PR-1 merges.

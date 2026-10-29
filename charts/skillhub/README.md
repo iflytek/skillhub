@@ -105,6 +105,13 @@ PVC UID 与绑定 PV 在升级前后保持不变。四个场景分别覆盖默�
 Sentinel、实际 MinIO S3 连接，以及由 Kubernetes API 接受的 TLS Ingress 路由。
 默认清理自己创建的 namespace；设置 `KEEP_HELM_SMOKE=true` 可保留现场用于排查。
 
+### 可选前端动作统计
+
+默认关闭。`web.analytics.config` 接受 JSON 字符串，`web.analytics.upstream` 接受仅部署可见的
+HTTP(S) origin。支持 Umami，不需要编辑 JS 或 Nginx；先在平台创建网站并取得 UUID。
+配置变更触发 Web 滚动更新，旧标签页不会自动更新。字段、授权接口、初始化、隐私及验收见
+[前端动作统计接入指南](../../docs/frontend-analytics-integration.md)。
+
 ### 高可用模式
 
 ```bash
