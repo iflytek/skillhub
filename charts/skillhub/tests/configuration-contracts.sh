@@ -297,7 +297,18 @@ grep -Fq 'bootstrap-admin-display-name: "Ops: Admin"' "$TMP_DIR/special.yaml"
 render device "$CHART_DIR" \
   --set publicBaseUrl=https://skills.example.com \
   --show-only templates/configmap.yaml >"$TMP_DIR/device.yaml"
-grep -Fq 'device-auth-verification-uri: "https://skills.example.com/cli/auth"' "$TMP_DIR/device.yaml"
+grep -Fq 'device-auth-verification-uri: "https://skills.example.com/device"' "$TMP_DIR/device.yaml"
+
+render device-subpath "$CHART_DIR" \
+  --set publicBaseUrl=https://skills.example.com/portal/ \
+  --show-only templates/configmap.yaml >"$TMP_DIR/device-subpath.yaml"
+grep -Fq 'device-auth-verification-uri: "https://skills.example.com/portal/device"' "$TMP_DIR/device-subpath.yaml"
+
+render device-override "$CHART_DIR" \
+  --set publicBaseUrl=https://skills.example.com \
+  --set-string 'deviceAuthVerificationUri=https://login.example.com/custom/device?source=cli' \
+  --show-only templates/configmap.yaml >"$TMP_DIR/device-override.yaml"
+grep -Fq 'device-auth-verification-uri: "https://login.example.com/custom/device?source=cli"' "$TMP_DIR/device-override.yaml"
 
 render tls "$CHART_DIR" \
   --set ingress.enabled=true \

@@ -2,6 +2,26 @@
 
 对象存储可选部署、凭证和迁移说明见[对象存储手册](object-storage.md)。
 
+### CLI 设备授权地址
+
+`skillhub login --no-open --registry https://skills.example.com` 使用设备码授权：
+CLI 请求 `/api/v1/auth/device/code`，用户打开返回的 `/device` 页面并登录、确认授权，
+CLI 再轮询兑换 Token。完成后用 `skillhub whoami --registry https://skills.example.com`
+确认登录身份；不要分享设备码、用户码或 Token。
+
+- `DEVICE_AUTH_VERIFICATION_URI` 未设置、为空或仅含空白时，服务端使用
+  `SKILLHUB_PUBLIC_BASE_URL` 加 `/device`，保留子路径并移除末尾重复斜杠。
+  例如 `https://skills.example.com/portal/` 对应 `https://skills.example.com/portal/device`。
+- 若公开地址也未设置，保留兼容的 `/device` 相对地址，由 CLI 按 registry 的源解析。
+  正式部署、子路径部署或 Web/API 分离部署应设置正确的 Web 公开地址。
+- 显式指定有效的 HTTP(S) 地址或根相对路径时原样使用，支持自定义页面和查询参数。
+  非法地址会阻止服务启动，错误提示只包含配置项名称，不回显配置值。修改后需重启服务。
+- Compose 的空配置交由后端处理；Helm 的 `deviceAuthVerificationUri` 默认对应
+  `<publicBaseUrl>/device`，也可显式覆盖。
+
+`/cli/auth` 是旧版浏览器 loopback 回调入口，需要客户端附带回调参数；它不是输入设备码的页面。
+不要将设备授权地址设成这个旧入口。此次配置保护不改变旧客户端回调流程。
+
 ## 1 运行模型
 
 按用途选择运行方式；以下重点介绍源码开发和单机交付，Kubernetes 另见[部署指南](skillhub/guide/kubernetes.md)：
