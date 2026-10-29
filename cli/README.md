@@ -621,7 +621,7 @@ subject to the server's package validation.
 
 ### Installation inventory compatibility
 
-The `0.3.0` release candidate uses installation inventory schema version 3. Each installation directory owns its
+Version `0.3.0` uses installation inventory schema version 3. Each installation directory owns its
 version, fingerprint, timestamp and ownership, so a user installation and a project installation
 of the same skill can remain on different versions. `list --json` reports the actual version for
 each target. `upgrade --check --json` and upgrade results contain one row per selected installation

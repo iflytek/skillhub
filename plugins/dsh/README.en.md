@@ -12,7 +12,7 @@ Version `0.4.0` uses the independent `dsh-v0.4.0` tag. It adds versioned example
 
 `0.5.0` adds read-only skill availability diagnosis in installed cards and conversations, with separate integrity, discovery and invocation-policy results. It retains the compatibility and inventory format of `0.4.0`.
 
-`0.6.0` is the current release candidate. It includes managed enable/disable, unified read-only update checks, and compact horizontal installed cards with a More menu. The first mutation uses inventory v3. CLI `0.3.0` is the companion candidate for shared inventory; the planned release order is CLI first, then DSH. Candidate versions do not imply public availability or completed final-package/platform acceptance.
+`0.6.0` includes managed enable/disable, unified read-only update checks, and compact horizontal installed cards with a More menu. The first mutation uses inventory v3. CLI `0.3.0` is the companion version for shared inventory; the release order is CLI first, then DSH. Check npm for public availability; final-package and platform acceptance are recorded separately.
 
 ## Use an installed skill
 
@@ -87,7 +87,7 @@ Replace `skillhub-test` with the intended Web Profile; initial creation is docum
 
 ## Upgrade from an older version
 
-The `0.6.0` candidate uses inventory v3 with per-location activation state. Its compatible core is bundled; it does not invoke CLI commands, and plugin-only users need no CLI. If the same user shares inventory with CLI, stop old scheduled/background writers and finish pending recovery first. Confirm `npm view @astron-team/skillhub@0.3.0 version`, install `npm install -g @astron-team/skillhub@0.3.0`, verify `skillhub version`, and then upgrade the plugin. Before publication, use local candidate tarballs; do not substitute old incompatible packages when the new public version is unavailable.
+Version `0.6.0` uses inventory v3 with per-location activation state. Its compatible core is bundled; it does not invoke CLI commands, and plugin-only users need no CLI. If the same user shares inventory with CLI, stop old scheduled/background writers and finish pending recovery first. Confirm `npm view @astron-team/skillhub@0.3.0 version`, install `npm install -g @astron-team/skillhub@0.3.0`, verify `skillhub version`, and then upgrade the plugin. Before publication, use local candidate tarballs; do not substitute old incompatible packages when the new public version is unavailable.
 
 Reading v1/v2 inventory does not migrate it. Before the first successful v3 write, preserve the original inventory bytes and a digest-addressed backup. CLI `0.2.0` does not support v3; its rejection of v3 is neither a usable rollback nor a cross-process mixed-writer guard. Stop all writers and reconcile `SKILL.md` / `SKILL.md.disabled`, package contents, installation metadata and operation journals before considering a downgrade. Restoring inventory alone is insufficient.
 
@@ -223,7 +223,7 @@ Choose “管理安装 → 检查可用性” on a conversational installed-skil
 The result distinguishes local integrity, current-session discovery, and user/model invocation policies. Shadowing, local modifications and unknown Host state are separate outcomes. A name-only lookup reports Host observations without proving installation ownership or integrity. Diagnosis never modifies, removes or enables/disables a skill, edits a draft, or sends a message. A historical result is not a guarantee about a later invocation.
 
 
-## Managed skill enable/disable (0.6.0 candidate)
+## Managed skill enable/disable (0.6.0)
 
 Open “管理安装” and choose enable or disable on the explicit location row. User and project copies are independent: disabling the user copy does not disable a project copy. UI and conversation mutations require real human confirmation. `astron_skillhub_disable` / `astron_skillhub_enable` accept fresh installation references, never arbitrary paths.
 
@@ -231,7 +231,7 @@ Disabling changes only the entry from `SKILL.md` to `SKILL.md.disabled`, keeping
 
 This does not revoke loaded conversation content or stop tasks. Another same-named installation can remain available. Unverified Host cache observations remain unknown; the older RC may need a new session to observe a fallback copy. Removing this plugin does not enable its disabled installations.
 
-The increment writes inventory v3 with per-location `installationState`. Reading v1/v2 is non-mutating; migration preserves the original bytes and a digest-addressed backup. The plugin bundles its compatible core and does not invoke an external CLI. Stop old writers and use the matching compatible CLI build before sharing inventory: published CLI `0.2.0` and `0.1.12` are incompatible. The companion candidate is CLI `0.3.0`; publish and verify it before DSH `0.6.0`. Old-package rejection of v3 does not mean rollback is supported. An old inventory backup alone is not a downgrade procedure. Native Windows/macOS entry conversion still requires acceptance before release.
+The increment writes inventory v3 with per-location `installationState`. Reading v1/v2 is non-mutating; migration preserves the original bytes and a digest-addressed backup. The plugin bundles its compatible core and does not invoke an external CLI. Stop old writers and use the matching compatible CLI build before sharing inventory: published CLI `0.2.0` and `0.1.12` are incompatible. The companion version is CLI `0.3.0`; publish and verify it before DSH `0.6.0`. Old-package rejection of v3 does not mean rollback is supported. An old inventory backup alone is not a downgrade procedure. Native Windows/macOS entry conversion still requires acceptance before release.
 
 The detail-header website link uses only the detail API’s optional `webUrl`. Missing, null, blank or unsafe values hide the action without breaking skill details or installation. There is no plugin website setting, route construction or Registry fallback; legacy `websiteUrl` settings are ignored. The open-source server uses its trusted `SKILLHUB_PUBLIC_BASE_URL` to supply an absolute link, or null when no valid website base is configured. SaaS must provide this additive API field separately.
 
