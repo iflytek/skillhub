@@ -26,7 +26,7 @@ export interface InstalledProjectionItem {
   fingerprint?: string
   /** Internal digest of this exact target's release, timestamp and ownership. */
   recordRevision?: string
-  installationState: InstallationState
+  installationState?: InstallationState
   state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'
 }
 export interface InstalledProjection {

@@ -15,12 +15,12 @@ import type { InstalledSkillList } from '../src/host/types.js';
 const item = { itemKey: 'private-key', namespace: 'team', slug: 'writer', version: '1.0.0', scope: 'user', state: 'present' } as const;
 const checkedAt = '2026-10-19T00:00:00.000Z';
 test('summary matches full coordinates, preserves scopes and abnormal records, and strips private fields', () => {
-  const inventory: InstalledSkillList = { complete: true, issues: [], unavailable: [], items: [item,
+  const inventory: InstalledSkillList = { complete: true, issues: [], unavailable: [], items: [{ ...item, installationState: 'enabled' },
     { ...item, namespace: 'other' }, { ...item, slug: 'other' },
     { ...item, scope: 'project', state: 'missing', version: '0.9.0' }] };
   const value = summarizeInstallation(item, inventory, checkedAt);
   expect(value).toEqual({ checkedAt, complete: true, unavailable: [], records: [
-    { scope: 'user', state: 'present', version: '1.0.0', installationState: 'enabled' }, { scope: 'project', state: 'missing', version: '0.9.0', installationState: 'enabled' }] });
+    { scope: 'user', state: 'present', version: '1.0.0', installationState: 'enabled' }, { scope: 'project', state: 'missing', version: '0.9.0', installationState: undefined }] });
   expect(JSON.stringify(value)).not.toContain('private-key');
   expect(summarizeInstallation(item, { ...inventory, unavailable: ['project'] }, checkedAt).complete).toBe(false);
   expect(summarizeInstallation(item, undefined, checkedAt)).toEqual({ checkedAt, complete: false, unavailable: ['user', 'project'], records: [] });

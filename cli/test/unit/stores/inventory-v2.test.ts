@@ -58,7 +58,7 @@ test('v1 read preserves bytes and migration expands ownership without inventing 
     expect(backups).toHaveLength(1)
     expect(await readFile(join(dirname(f.store.path), backups[0]!), 'utf8')).toBe(bytes)
     const disk = JSON.parse(await readFile(f.store.path, 'utf8'))
-    expect(disk.schemaVersion).toBe(3); expect(disk).not.toHaveProperty('items'); expect(disk.records[0]).not.toHaveProperty('version')
+    expect(disk.schemaVersion).toBe(2); expect(disk).not.toHaveProperty('items'); expect(disk.records[0]).not.toHaveProperty('version')
     expect(await f.store.read()).toEqual(read)
   } finally { await f.close() }
 })
@@ -74,7 +74,7 @@ test.each(['before', 'after'] as const)('migration %s rename failure leaves one 
     const store = new FailingStore(join(f.root, 'home'))
     if (mode === 'before') await expect(store.ensureWritable()).rejects.toThrow('injected')
     else await store.ensureWritable()
-    expect(await store.diskVersion()).toBe(mode === 'before' ? 1 : 3)
+    expect(await store.diskVersion()).toBe(mode === 'before' ? 1 : 2)
     expect(await store.read()).toEqual({ items: [] })
     expect((await readdir(dirname(store.path))).filter(name => name.includes('.backup.json'))).toHaveLength(1)
   } finally { await f.close() }
@@ -289,7 +289,7 @@ test.each(['suite-only', 'shared', 'suite-claim'] as const)('direct CLI mutation
   } finally { await f.close() }
 })
 
-test('v2 read is byte-preserving; v3 migration backs up exact v2 bytes and makes target states explicit', async () => {
+test('v2 read and writable checks preserve exact compatible bytes', async () => {
   const f = await fixture()
   try {
     await f.install(0, '1.0.0')
@@ -301,10 +301,29 @@ test('v2 read is byte-preserving; v3 migration backs up exact v2 bytes and makes
     expect((await f.store.read()).items[0]!.targets[0]!.installationState).toBe('enabled')
     expect(await readFile(f.store.path, 'utf8')).toBe(bytes)
     await f.store.ensureWritable()
-    const digest = createHash('sha256').update(bytes).digest('hex')
-    expect(await readFile(join(dirname(f.store.path), `inventory.v2.${digest}.backup.json`), 'utf8')).toBe(bytes)
+    expect(await readFile(f.store.path, 'utf8')).toBe(bytes)
     const disk = JSON.parse(await readFile(f.store.path, 'utf8'))
-    expect(disk.schemaVersion).toBe(3)
-    expect(disk.records).toEqual(v3.items)
+    expect(disk.schemaVersion).toBe(2)
+    expect(disk.records).toEqual(v2.records)
+  } finally { await f.close() }
+})
+
+ test.each(['matching', 'conflict'] as const)('v3 conversion verifies files and preserves original bytes: %s', async mode => {
+  const f = await fixture()
+  try {
+    await f.install(0, '1.0.0')
+    const inventory = await f.store.read()
+    if (mode === 'conflict') inventory.items[0]!.targets[0]!.installationState = 'disabled'
+    const bytes = JSON.stringify({ schemaVersion: 3, records: inventory.items })
+    await writeFile(f.store.path, bytes)
+    if (mode === 'conflict') {
+      await expect(f.store.ensureWritable()).rejects.toThrow('requires recovery')
+      expect(await readFile(f.store.path, 'utf8')).toBe(bytes)
+    } else {
+      await f.store.ensureWritable()
+      expect(await f.store.diskVersion()).toBe(2)
+      expect(await readFile(join(dirname(f.store.path), `inventory.v3.${createHash('sha256').update(bytes).digest('hex')}.backup.json`), 'utf8')).toBe(bytes)
+      expect(JSON.parse(await readFile(f.store.path, 'utf8')).records[0].targets[0]).not.toHaveProperty('installationState')
+    }
   } finally { await f.close() }
 })

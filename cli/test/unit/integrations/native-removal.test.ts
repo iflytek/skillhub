@@ -7,7 +7,7 @@ import { executeNativeRemoval } from '../../../src/integrations/native-removal'
 import { recoverRemoval } from '../../../src/integrations/removal-recovery'
 import { inspectRemovalBaseline } from '../../../src/integrations/removal-baseline'
 import { OperationStore, operationRequestDigest } from '../../../src/integrations/operation-store'
-import { InventoryStore } from '../../../src/stores/inventory-store'
+import { inventoryWithoutState, InventoryStore } from '../../../src/stores/inventory-store'
 import { snapshotSkillDirectory } from '../../../src/services/skill-fingerprint'
 
 test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-denied', 'cleanup-denied', 'commit-ack-lost', 'commit-log-failed', 'inventory-response-lost'] as const)(
@@ -75,21 +75,21 @@ test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-deni
         } })
       if (scenario === 'stale-root-file') {
         await expect(execute()).rejects.toThrow('Removal root changed')
-        expect(await inventory.read()).toEqual({ items: [item] })
+        expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState({ items: [item] }))
         const recover = () => recoverRemoval({ operations, inventory, operationId: record.operationId,
           ownerId: 'session', trustedTargetPaths: [path], authorizeMutation: async () => {} })
         expect((await recover()).outcome).toBe('unknown')
         expect(await readFile(target.root, 'utf8')).toBe('Concurrent root replacement')
-        expect(await inventory.read()).toEqual({ items: [item] })
+        expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState({ items: [item] }))
         await rm(target.root)
         await mkdir(target.root)
         expect((await recover()).outcome).toBe('restored')
-        expect(await inventory.read()).toEqual({ items: [item] })
+        expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState({ items: [item] }))
         return
       }
       if (scenario === 'commit-ack-lost' || scenario === 'commit-log-failed' || scenario === 'inventory-response-lost') {
         await expect(execute()).rejects.toThrow('Commit acknowledgment lost')
-        expect(await inventory.read()).toEqual({ items: [{ ...item, targets: [retained] }] })
+        expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState({ items: [{ ...item, targets: [retained] }] }))
         await expect(readFile(join(path, 'SKILL.md'))).rejects.toMatchObject({ code: 'ENOENT' })
         expect(await readFile(join(quarantine, 'SKILL.md'), 'utf8')).toBe('# Original')
         const saved = (await operations.get(record.operationId, 'session'))!
@@ -97,7 +97,7 @@ test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-deni
         expect(saved.removal?.inventoryCommit?.committed).toBe(scenario === 'commit-ack-lost')
       } else if (scenario === 'local-change' || scenario === 'commit-denied') {
         await expect(execute()).rejects.toThrow(scenario === 'local-change' ? 'baseline changed' : 'Commit denied')
-        expect(await inventory.read()).toEqual({ items: [item] })
+        expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState({ items: [item] }))
         if (scenario === 'local-change') {
           expect(await readFile(join(path, 'SKILL.md'), 'utf8')).toBe('# User edit')
           expect((await operations.get(record.operationId, 'session'))?.operation.status.phase).toBe('failed')
@@ -108,7 +108,7 @@ test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-deni
         }
       } else {
         expect((await execute()).outcome).toBe('committed')
-        expect(await inventory.read()).toEqual({ items: [{ ...item, targets: [retained] }] })
+        expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState({ items: [{ ...item, targets: [retained] }] }))
         await expect(readFile(join(path, 'SKILL.md'))).rejects.toMatchObject({ code: 'ENOENT' })
         const saved = (await operations.get(record.operationId, 'session'))!
         expect(saved.operation.status.phase).toBe('completed')
@@ -146,7 +146,7 @@ test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-deni
               operationId: record.operationId, ownerId: 'session', trustedTargetPaths: [path], authorizeMutation: async () => {},
             })
             expect(outcome.outcome).toBe('unknown')
-            expect(await inventory.read()).toEqual(conflictedInventory)
+            expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState(conflictedInventory))
             expect(await readFile(join(quarantine, 'SKILL.md'), 'utf8')).toBe('# Original')
             if (conflict === 'occupied-path') {
               expect(await readFile(join(path, 'SKILL.md'), 'utf8')).toBe('# New occupant after commit')
@@ -178,7 +178,7 @@ test.each(['uninstall', 'stale', 'stale-root-file', 'local-change', 'commit-deni
       expect((await recover()).outcome).toBe(recovered.outcome)
       if (scenario === 'commit-denied') {
         expect(await readFile(join(path, 'SKILL.md'), 'utf8')).toBe('# Original')
-        expect(await inventory.read()).toEqual({ items: [item] })
+        expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState({ items: [item] }))
       }
       expect(await operations.listForRecovery()).toEqual([])
     } finally { await rm(home, { recursive: true, force: true }) }

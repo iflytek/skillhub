@@ -6,9 +6,8 @@ All notable CLI behavior changes are documented in this file.
 
 ### Changed
 
-- Read inventory v1/v2 without migrating it; the first successful mutation writes v3 with
-  per-location `installationState`, preserving an immutable, byte-verified backup of the old
-  inventory. Existing targets remain enabled unless explicitly disabled through DSH.
+- Retain strict inventory v2 and derive activation from trusted entry files, without a second
+  persisted activation state. Preserve normal published CLI 0.2.0 interoperability.
 - Preserve disabled installations across namespace synchronization and doctor reconciliation.
   CLI upgrade refuses disabled targets, including with `--force`; Suite operations cannot adopt
   disabled positions. This release does not add CLI enable/disable commands.
@@ -17,11 +16,12 @@ All notable CLI behavior changes are documented in this file.
 
 ### Upgrade and rollback
 
-- For users sharing inventory between CLI and DSH, stop old writers, finish pending recovery,
-  upgrade CLI to `0.3.0`, and then upgrade DSH to `0.6.0`. Plugin-only users need no separate CLI.
-- CLI `0.2.0` does not support v3. Old clients rejecting v3 are not a usable rollback and do not
-  make mixed-version writers safe. Do not restore only `inventory.json`: reconcile entry names,
-  skill files, metadata and operation journals before considering a downgrade.
+- No coordinated CLI upgrade is required for shared inventory. Historical explicit force
+  install/upgrade/sync may overwrite disabled entries; explicit remove may delete them.
+  New readers must reflect the resulting files; default paths must not unintentionally enable.
+- Unpublished v3 inventories require validated, locked conversion with original-byte backup.
+  Compatibility implementation and real old-package acceptance are in progress; publication
+  remains blocked until they pass.
 - Candidate versions are not a publication claim. Final package integrity, clean installation
   and migration acceptance must be recorded separately for the published packages.
 

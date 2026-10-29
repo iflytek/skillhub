@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { installedCardBadges, installedCardVersions, installedUpdateKeys, InstalledSkills, type InstalledServices } from '../src/client/installed-skills.js';
 import { installedNavigationFor } from '../src/client/installed-navigation.js';
 import { UpgradeRequests, RemovalRequests } from '../src/client/upgrade-requests.js';
-import { selectSkillItem } from '../src/client/skill-primary-actions.js';
+import { selectSkillItem, SkillPrimaryActions } from '../src/client/skill-primary-actions.js';
 import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol';
 
 const item = { itemKey: 'user', namespace: 'demo', slug: 'writer', scope: 'user' as const, version: '1', state: 'present' as const, installationState: 'disabled' as const };
@@ -79,4 +79,13 @@ test('card update check limits the existing read-only scan to current exact inst
   expect(installedUpdateKeys([project, other], {}, false, [item])).toEqual([]);
   expect(installedUpdateKeys([item, project, other], { project: { state: 'failed' } }, true)).toEqual(['project']);
   expect(installedUpdateKeys([item, project, other], {}, false)).toEqual(['user', 'project', 'other']);
+});
+
+
+test('unreadable entry projection never offers use or invents an enabled summary', () => {
+  const html = renderToStaticMarkup(<SkillPrimaryActions items={[{ ...item, state: 'unreadable', installationState: undefined }]}
+    revision="revision" verified={false} select={async () => { throw new Error('must not select'); }} onManage={() => {}} />);
+  expect(html).not.toContain('使用技能');
+  expect(html).toContain('安装状态待核验');
+  expect(html).toContain('管理安装');
 });

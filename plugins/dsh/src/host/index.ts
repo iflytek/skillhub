@@ -338,7 +338,7 @@ export class SkillHubService extends TypertRemoteService {
     const items = result.items.map((item, index) => {
       const itemKey = this.installedItemKey(agent.session.id, cwd, sourceRevision, item);
       const locationKey = createHmac('sha256', this.installedReferenceKey).update(JSON.stringify([agent.session.id, cwd, sourceRevision, item.namespace, item.slug, item.scope, item.targetPath])).digest('base64url');
-      return { ...presentation[index], itemKey, locationKey, installationState: item.installationState ?? 'enabled', namespace: item.namespace, slug: item.slug, version: item.version, scope: item.scope, state: item.state };
+      return { ...presentation[index], itemKey, locationKey, installationState: item.installationState, namespace: item.namespace, slug: item.slug, version: item.version, scope: item.scope, state: item.state };
     });
     return { items, complete: result.complete, issues: result.issues, unavailable };
   }
@@ -404,7 +404,7 @@ export class SkillHubService extends TypertRemoteService {
             namespace: selected.item.namespace, slug: selected.item.slug, version: selected.item.version }, target);
         } } : undefined });
     valid();
-    return { ...diagnosis, ...(selected ? { installationState: selected.item.installationState ?? 'enabled' } : {}), ...(selected ? { scope: selected.item.scope, installation: { namespace: selected.item.namespace,
+    return { ...diagnosis, ...(selected ? { installationState: selected.item.installationState } : {}), ...(selected ? { scope: selected.item.scope, installation: { namespace: selected.item.namespace,
       slug: selected.item.slug, version: selected.item.version, scope: selected.item.scope } } : {}) };
   }
 

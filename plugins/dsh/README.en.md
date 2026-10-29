@@ -12,7 +12,7 @@ Version `0.4.0` uses the independent `dsh-v0.4.0` tag. It adds versioned example
 
 `0.5.0` adds read-only skill availability diagnosis in installed cards and conversations, with separate integrity, discovery and invocation-policy results. It retains the compatibility and inventory format of `0.4.0`.
 
-`0.6.0` includes managed enable/disable, unified read-only update checks, and compact horizontal installed cards with a More menu. The first mutation uses inventory v3. CLI `0.3.0` is the companion version for shared inventory; the release order is CLI first, then DSH. Check npm for public availability; final-package and platform acceptance are recorded separately.
+`0.6.0` includes managed enable/disable, unified read-only update checks, and compact horizontal installed cards with a More menu. Shared inventory remains v2 without a coordinated CLI upgrade. Compatibility fixes and real historical-package acceptance are in progress; release remains blocked until they pass. Check npm for public availability.
 
 ## Use an installed skill
 
@@ -87,9 +87,9 @@ Replace `skillhub-test` with the intended Web Profile; initial creation is docum
 
 ## Upgrade from an older version
 
-Version `0.6.0` uses inventory v3 with per-location activation state. Its compatible core is bundled; it does not invoke CLI commands, and plugin-only users need no CLI. If the same user shares inventory with CLI, stop old scheduled/background writers and finish pending recovery first. Confirm `npm view @astron-team/skillhub@0.3.0 version`, install `npm install -g @astron-team/skillhub@0.3.0`, verify `skillhub version`, and then upgrade the plugin. Before publication, use local candidate tarballs; do not substitute old incompatible packages when the new public version is unavailable.
+Shared inventory remains strict v2 without a persisted `installationState`; activation is derived from trusted `SKILL.md` / `SKILL.md.disabled` entries. A coordinated CLI upgrade is not required. Published CLI `0.2.0` must retain normal queries and ordinary-target management; default update, sync and Suite paths must not unintentionally enable disabled targets. Historical explicit force install, upgrade and sync retain their overwrite semantics and may restore the standard entry; explicit remove retains deletion semantics. New readers must reflect these actual file changes.
 
-Reading v1/v2 inventory does not migrate it. Before the first successful v3 write, preserve the original inventory bytes and a digest-addressed backup. CLI `0.2.0` does not support v3; its rejection of v3 is neither a usable rollback nor a cross-process mixed-writer guard. Stop all writers and reconcile `SKILL.md` / `SKILL.md.disabled`, package contents, installation metadata and operation journals before considering a downgrade. Restoring inventory alone is insufficient.
+Reading v1/v2 does not migrate it. Any v3 inventory from unpublished builds requires identity, entry and pending-transaction validation, an original-byte backup under the same lock, and safe conversion to v2. Never restore a stale backup over newer records. Ordinary journals remain readable by historical DSH; toggle journals isolate compatibility impact. Compatibility implementation and real historical-package acceptance are in progress; release remains blocked until they pass.
 
 Authors provide examples at the fixed `.skillhub/examples.json` path inside each skill package. The file keeps its location after installation and follows the skill's version and fingerprint; no separate global example copy is created. Skills without examples use a custom task; invalid declarations remain ordinary files without exposing invalid examples.
 
@@ -213,7 +213,7 @@ Version selection is read-only. A verifiable newer selected version offers an ex
 
 `astron_skillhub_list_installed` lists current-source managed records in the current user/project roots, not every skill on the machine. `astron_skillhub_check_update` checks the latest or an explicitly requested newer version. `astron_skillhub_upgrade` and `astron_skillhub_uninstall` require an exact installed reference and real human confirmation, including explicitly selected scopes. Without a native question provider they return a confirmation card. Models cannot authorize operations using paths, plan IDs or confirmation flags. `astron_skillhub_operation` reads the original session-owned receipt without resubmitting a mutation.
 
-New conversational installs default to user scope after an explicit install request. Project installation is explicit/advanced. Updating one location preserves other locations' versions. Local edits and stale references block mutations. CLI installations sharing this inventory must be upgraded together; old CLI/new inventory mixed writes are unsupported.
+New conversational installs default to user scope after an explicit install request. Project installation is explicit/advanced. Updating one location preserves other locations' versions. Local edits and stale references block mutations. Shared inventory remains compatible with published CLI 0.2.0; historical explicit overwrite and removal retain their original semantics.
 
 
 ### Skill availability diagnosis (0.5.0)
@@ -231,7 +231,7 @@ Disabling changes only the entry from `SKILL.md` to `SKILL.md.disabled`, keeping
 
 This does not revoke loaded conversation content or stop tasks. Another same-named installation can remain available. Unverified Host cache observations remain unknown; the older RC may need a new session to observe a fallback copy. Removing this plugin does not enable its disabled installations.
 
-The increment writes inventory v3 with per-location `installationState`. Reading v1/v2 is non-mutating; migration preserves the original bytes and a digest-addressed backup. The plugin bundles its compatible core and does not invoke an external CLI. Stop old writers and use the matching compatible CLI build before sharing inventory: published CLI `0.2.0` and `0.1.12` are incompatible. The companion version is CLI `0.3.0`; publish and verify it before DSH `0.6.0`. Old-package rejection of v3 does not mean rollback is supported. An old inventory backup alone is not a downgrade procedure. Native Windows/macOS entry conversion still requires acceptance before release.
+Protocol and real historical-package interoperability remain release gates; see above.
 
 The detail-header website link uses only the detail API’s optional `webUrl`. Missing, null, blank or unsafe values hide the action without breaking skill details or installation. There is no plugin website setting, route construction or Registry fallback; legacy `websiteUrl` settings are ignored. The open-source server uses its trusted `SKILLHUB_PUBLIC_BASE_URL` to supply an absolute link, or null when no valid website base is configured. SaaS must provide this additive API field separately.
 

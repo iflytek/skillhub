@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { lstat, realpath } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
 import { z } from 'zod'
-import type { InventoryStore } from '../stores/inventory-store'
+import { readInstallationState, type InventoryStore } from '../stores/inventory-store'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
 
 import type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget } from './native-contract'
@@ -49,7 +49,7 @@ export async function readInstalledProjectionRecords(records: readonly unknown[]
       for (const target of roots.filter(target => target.root === resolve(entry.rootDir))) {
         const path = join(target.root, item.slug)
         const projected: InstalledProjectionItem = { scope: target.scope, namespace: item.namespace,
-          slug: item.slug, installationState: entry.installationState ?? 'enabled', version: entry.version, ...(entry.fingerprint ? { fingerprint: entry.fingerprint } : {}), targetPath: path, state: 'present',
+          slug: item.slug, version: entry.version, ...(entry.fingerprint ? { fingerprint: entry.fingerprint } : {}), targetPath: path, state: 'present',
           recordRevision: createHash('sha256').update(JSON.stringify([item.registry.replace(/\/+$/, ''), item.namespace, item.slug,
             entry.installationState ?? 'enabled', entry.agent, entry.rootDir, entry.installDir, entry.version, entry.fingerprint ?? null, entry.installedAt,
             [...new Set(entry.installedBy ?? ['direct'])].sort()])).digest('hex') }
@@ -72,11 +72,14 @@ export async function readInstalledProjectionRecords(records: readonly unknown[]
           if (!directory.isDirectory() || await realpath(path) !== path) {
             projected.state = 'mismatch'; issue('invalid-record'); continue
           }
-          for (const [file, kind] of [[join(path, '.skillhub'), 'directory'], [join(path, '.skillhub/metadata.json'), 'file'], [join(path, entry.installationState === 'disabled' ? 'SKILL.md.disabled' : 'SKILL.md'), 'file']] as const) {
+          const installationState = await readInstallationState(path)
+          if (!installationState) { projected.state = 'unreadable'; issue('target-unreadable'); continue }
+          projected.installationState = installationState
+          for (const [file, kind] of [[join(path, '.skillhub'), 'directory'], [join(path, '.skillhub/metadata.json'), 'file'], [join(path, installationState === 'disabled' ? 'SKILL.md.disabled' : 'SKILL.md'), 'file']] as const) {
             const stat = await lstat(file)
             if (kind === 'directory' ? !stat.isDirectory() : !stat.isFile()) throw new Error('Unexpected local file type')
           }
-          if (entry.installationState === 'disabled') await assertEntryAbsent(join(path, 'SKILL.md'))
+          await assertEntryAbsent(join(path, installationState === 'disabled' ? 'SKILL.md' : 'SKILL.md.disabled'))
           const metadata = await readInstalledSkillMetadata(path)
           if (metadata.status !== 'valid') { projected.state = 'metadata-invalid'; issue('target-unreadable'); continue }
           const local = metadata.metadata

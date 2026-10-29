@@ -25,7 +25,7 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
   const operations = await OperationStore.open(options.stateDirectory)
   const inventory = new InventoryStore(options.inventoryHome)
   const ensureCompatible = async () => {
-    if ((await operations.listForRecovery()).some(record => record.schemaVersion < 3)) {
+    if (await inventory.diskVersion() === 3 && (await operations.listForRecovery()).length) {
       throw new OperationStoreError('TARGET_RECOVERY_REQUIRED')
     }
     await inventory.ensureWritable()

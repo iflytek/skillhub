@@ -17,7 +17,7 @@ export async function captureInstallInventory(
       const canonicalRoot = await canonicalizeExistingPath(root)
       return { agent: target.agent, rootDir: canonicalRoot,
         installDir: resolve(canonicalRoot, relative(root, resolve(target.installDir))),
-        installationState: target.installationState ?? 'enabled', version: target.version, fingerprint: target.fingerprint ?? null, installedAt: target.installedAt, installedBy: [...new Set(targetInstalledBy(item, target))].sort() }
+        version: target.version, fingerprint: target.fingerprint ?? null, installedAt: target.installedAt, installedBy: [...new Set(targetInstalledBy(item, target))].sort() }
     }))
     const selected = targets.filter(target => [...canonicalDirs].some(path => pathsOverlap(path, target.installDir)))
     if (!selected.length) continue

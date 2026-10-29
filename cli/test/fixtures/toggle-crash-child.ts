@@ -13,6 +13,7 @@ const baseline = await inspectToggle(inventory, { registry: 'https://registry.ex
 if (baseline.status !== 'ready') throw new Error('Fixture baseline unavailable')
 const append = operations.recordToggle.bind(operations)
 operations.recordToggle = async (...args) => {
+  if (boundary === 'restore-linked' && args[3].stage === 'committed') throw new Error('Injected commit rejection')
   const saved = await append(...args)
   if (args[3].stage === boundary) {
     await writeFile(readyFile!, boundary, { flag: 'wx' })
@@ -21,6 +22,5 @@ operations.recordToggle = async (...args) => {
   }
   return saved
 }
-if (boundary === 'restore-linked') inventory.mutateAtomic = async () => { throw new Error('Injected CAS rejection') }
 await executeNativeToggle(operations, inventory, { operationId, ownerId: 'owner', baseline, authorize: async () => {} })
 throw new Error('Crash boundary was not reached')

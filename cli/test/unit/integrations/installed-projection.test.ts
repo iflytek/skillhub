@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test'
-import { realpath, mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises'
+import { realpath, mkdtemp, mkdir, rm, rename, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { readInstalledProjection } from '../../../src/integrations/installed-projection'
@@ -56,4 +56,31 @@ test('inventory failure is partial and escaping targets are reported without rea
   expect(result.items).toHaveLength(1)
   expect(result.items[0]!.state).toBe('mismatch')
   expect(result.items[0]!.targetPath).toBe(join(trusted, 'writer'))
+})
+
+
+test('entry projection rejects missing, ambiguous and unsafe entries without inventing enabled state', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-projection-entry-')))
+  try {
+    const path = join(root, 'writer')
+    const target = { version: '1.2.0', fingerprint: 'original', agent: 'dsh', rootDir: root,
+      installDir: path, installedAt: '2026-10-14T00:00:00Z' }
+    const item: InventoryItem = { registry, namespace: 'demo', slug: 'writer', targets: [target] }
+    await mkdir(join(path, '.skillhub'), { recursive: true })
+    await writeFile(join(path, '.skillhub/metadata.json'), JSON.stringify({ ...item, ...target }))
+    const inventory = { read: async () => ({ items: [item] }) }
+    const read = () => readInstalledProjection(inventory, registry, [{ scope: 'project', root }])
+    for (const mode of ['missing', 'enabled', 'both', 'disabled', 'symlink'] as const) {
+      if (mode === 'enabled') await writeFile(join(path, 'SKILL.md'), 'content')
+      if (mode === 'both') await writeFile(join(path, 'SKILL.md.disabled'), 'content')
+      if (mode === 'disabled') await rm(join(path, 'SKILL.md'))
+      if (mode === 'symlink') { await rename(join(path, 'SKILL.md.disabled'), join(path, 'other.md')); await symlink(join(path, 'other.md'), join(path, 'SKILL.md')) }
+      const result = await read()
+      const valid = mode === 'enabled' || mode === 'disabled'
+      expect(result.complete).toBe(valid)
+      expect(result.items[0]!.state).toBe(valid ? 'present' : 'unreadable')
+      expect(result.items[0]!.installationState).toBe(valid ? mode : undefined)
+      expect(result.issues).toEqual(valid ? [] : ['target-unreadable'])
+    }
+  } finally { await rm(root, { recursive: true, force: true }) }
 })

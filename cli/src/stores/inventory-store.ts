@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { isDeepStrictEqual } from 'node:util'
 import { lstat, open, readFile, rename, rm } from 'node:fs/promises'
-import { dirname, isAbsolute, relative, resolve } from 'node:path'
+import { dirname, isAbsolute, relative, resolve, join } from 'node:path'
 import { lock } from 'proper-lockfile'
 import { acquireAcquisitionGate } from '../services/skill-target-lock'
 import { canonicalizeExistingPath, pathsOverlap, joinPath, userStateDir, ensureDir } from '../platform/paths'
@@ -109,6 +109,28 @@ export function parseInventory(value: unknown): Inventory {
     ...(legacy.suites === undefined ? {} : { suites: legacy.suites }) } as Inventory
 }
 
+/** Persisted ownership excludes the independently observed entry state. */
+export function inventoryWithoutState(inventory: Inventory): Inventory {
+  return { ...inventory, items: inventory.items.map(item => ({ ...item, targets: item.targets.map(target => {
+    const stored = { ...target }
+    delete stored.installationState
+    return stored
+  }) })) }
+}
+
+/** Ambiguous, missing and unsafe entries have no usable state. */
+export async function readInstallationState(directory: string): Promise<'enabled' | 'disabled' | undefined> {
+  const inspect = async (name: string) => {
+    try { const stat = await lstat(join(directory, name)); return stat.isFile() && !stat.isSymbolicLink() ? 'file' : 'unsafe' }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 'missing'; return 'unsafe' }
+  }
+  const enabled = await inspect('SKILL.md')
+  const disabled = await inspect('SKILL.md.disabled')
+  if (enabled === 'file' && disabled === 'missing') return 'enabled'
+  if (disabled === 'file' && enabled === 'missing') return 'disabled'
+  return undefined
+}
+
 /** Validate ownership aliases before writing; content of unselected skills is not inspected. */
 async function validateInventoryClaims(inventory: Inventory): Promise<void> {
   const sources = new Set<string>()
@@ -135,12 +157,20 @@ export class InventoryStore {
     this.path = joinPath(userStateDir(home), 'inventory.json')
   }
 
-  async read(): Promise<Inventory> {
+  /** Raw legacy evidence, used only while reconciling an existing v3 transaction. */
+  async readPersisted(): Promise<Inventory> {
     try { return parseInventory(JSON.parse(await readFile(this.path, 'utf-8'))) }
-    catch (error) {
-      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { items: [] }
-      throw error
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return { items: [] }; throw error }
+  }
+
+  async read(): Promise<Inventory> {
+    const inventory = await this.readPersisted()
+    for (const item of inventory.items) for (const target of item.targets) {
+      const state = await readInstallationState(target.installDir)
+      if (state) target.installationState = state
+      else delete target.installationState
     }
+    return inventory
   }
 
   async write(inventory: Inventory): Promise<void> { await this.writeAtomic(inventory) }
@@ -157,7 +187,7 @@ export class InventoryStore {
       const value: unknown = JSON.parse(await readFile(this.path, 'utf8'))
       parseInventory(value)
       return typeof value === 'object' && value !== null && 'schemaVersion' in value ? value.schemaVersion as 2 | 3 : 1
-    } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 3; throw error }
+    } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return 2; throw error }
   }
 
   private async migrateUnderLock(): Promise<void> {
@@ -169,9 +199,16 @@ export class InventoryStore {
     const value: unknown = JSON.parse(raw.toString('utf8'))
     const inventory = parseInventory(value)
     await validateInventoryClaims(inventory)
-    if (typeof value === 'object' && value !== null && 'schemaVersion' in value && value.schemaVersion === 3) return
+    if (typeof value === 'object' && value !== null && 'schemaVersion' in value && value.schemaVersion === 2) return
+    if (typeof value === 'object' && value !== null && 'schemaVersion' in value && value.schemaVersion === 3) {
+      const { snapshotInstalledSkillDirectory } = await import('../services/installed-skill-snapshot')
+      for (const item of inventory.items) for (const target of item.targets) {
+        if (await readInstallationState(target.installDir) !== target.installationState) throw new Error('Inventory v3 entry state requires recovery')
+        if ((await snapshotInstalledSkillDirectory(item, target)).fingerprint !== target.fingerprint) throw new Error('Inventory v3 content requires verification')
+      }
+    }
     const digest = createHash('sha256').update(raw).digest('hex')
-    const backup = joinPath(dirname(this.path), `inventory.v${typeof value === 'object' && value !== null && 'schemaVersion' in value ? 2 : 1}.${digest}.backup.json`)
+    const backup = joinPath(dirname(this.path), `inventory.v${typeof value === 'object' && value !== null && 'schemaVersion' in value ? value.schemaVersion : 1}.${digest}.backup.json`)
     try {
       const file = await open(backup, 'wx', 0o600)
       try { await file.writeFile(raw); await file.sync() } finally { await file.close() }
@@ -183,7 +220,7 @@ export class InventoryStore {
     try { await this.writeUnderLock(inventory) }
     catch (error) {
       try {
-        if (await this.diskVersion() === 3 && isDeepStrictEqual(await this.read(), inventory)) return
+        if (await this.diskVersion() === 2 && isDeepStrictEqual(inventoryWithoutState(await this.read()), inventoryWithoutState(inventory))) return
       } catch { /* Preserve the original migration failure. */ }
       throw error
     }
@@ -221,7 +258,6 @@ export class InventoryStore {
       const inventory = await this.read()
       const before = structuredClone(inventory)
       const result = mutate(inventory)
-      for (const item of inventory.items) for (const target of item.targets) target.installationState ??= 'enabled'
       if (beforeCommit) await beforeCommit(structuredClone(before), structuredClone(inventory))
       try { await this.writeUnderLock(inventory) }
       catch (writeError) {
@@ -229,8 +265,8 @@ export class InventoryStore {
         try { actual = await this.read() }
         catch (readError) { throw new InventoryCommitUnknownError(new AggregateError([writeError, readError])) }
         // Still holding the inventory lock: a failed transport response is not proof of failed rename.
-        if (isDeepStrictEqual(actual, inventory)) return result
-        if (!isDeepStrictEqual(actual, before)) throw new InventoryCommitUnknownError(writeError)
+        if (isDeepStrictEqual(inventoryWithoutState(actual), inventoryWithoutState(inventory))) return result
+        if (!isDeepStrictEqual(inventoryWithoutState(actual), inventoryWithoutState(before))) throw new InventoryCommitUnknownError(writeError)
         throw writeError
       }
       return result
@@ -242,7 +278,7 @@ export class InventoryStore {
   protected async writeUnderLock(inventory: Inventory): Promise<void> {
     inventoryMemorySchema.parse(inventory)
     await validateInventoryClaims(inventory)
-    const payload = JSON.stringify(inventoryV3Schema.parse({ schemaVersion: 3, records: inventory.items.map(item => ({ ...item, targets: item.targets.map(target => ({ ...target, installationState: target.installationState ?? 'enabled' })) })), suites: inventory.suites }), null, 2)
+    const payload = JSON.stringify(inventoryDiskSchema.parse({ schemaVersion: 2, records: inventoryWithoutState(inventory).items, suites: inventory.suites }), null, 2)
     parseInventory(JSON.parse(payload))
     const tmpPath = `${this.path}.${process.pid}.${Date.now()}.tmp`
     try {

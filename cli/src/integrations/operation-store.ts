@@ -1,8 +1,9 @@
+import { inventoryWithoutState, type Inventory } from '../stores/inventory-store'
 import { isDeepStrictEqual } from 'node:util'
 import { toggleJournal, validateToggleJournal, type ToggleJournal } from './toggle-journal'
 import { createHash, randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
-import { chmod, lstat, mkdir, open, readdir, realpath, rename, rm } from 'node:fs/promises'
+import { chmod, link, lstat, mkdir, open, readdir, readFile, realpath, rename, rm, unlink } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join } from 'node:path'
 import { canonicalizeExistingPath, pathsOverlap } from '../platform/paths'
 import { z } from 'zod'
@@ -66,7 +67,9 @@ export class OperationStore {
       const saved = await readJson(path)
       const hostInstanceId = saved === undefined ? randomUUID() : z.object({ hostInstanceId: id }).strict().parse(saved).hostInstanceId
       if (saved === undefined) await atomicWrite(path, { hostInstanceId })
-      return new OperationStore(root, hostInstanceId)
+      const store = new OperationStore(root, hostInstanceId)
+      await store.isolateExtendedRecords()
+      return store
     })
   }
 
@@ -82,11 +85,11 @@ export class OperationStore {
       const duplicate = await this.findRequest(request)
       if (duplicate) return duplicate
       const now = new Date().toISOString()
-      const value: OperationRecord = { schemaVersion: 3, operationId: randomUUID(), ownerId: request.ownerId,
+      const value: OperationRecord = { schemaVersion: ['enable', 'disable'].includes(accepted.kind) ? 3 : 2, operationId: randomUUID(), ownerId: request.ownerId,
         requestKey: request.requestKey, requestDigest: request.requestDigest, revision: 0,
         operation: { ...accepted, context: { ...accepted.context, hostInstanceId: this.hostInstanceId, createdAt: now, updatedAt: now },
           status: { phase: 'accepted', files: 'pending', discovery: 'unconfirmed', recovery: 'not-needed', warnings: [] } } }
-      await writeOperationRecord(this.path(value.operationId), record.parse(value))
+      await this.writeRecord(record.parse(value))
       return value
     })
   }
@@ -138,7 +141,7 @@ export class OperationStore {
       assertTransition(current, parsed)
       const value: OperationRecord = { ...current, revision: revision + 1, operation: { ...current.operation,
         context: { ...current.operation.context, updatedAt: new Date().toISOString() }, status: parsed } }
-      await writeOperationRecord(this.path(operationId), value)
+      await this.writeRecord(value)
       return value
     })
   }
@@ -161,7 +164,7 @@ export class OperationStore {
       const value: OperationRecord = { ...current, revision: revision + 1, existingInstallation: parsed,
         operation: { ...current.operation, status: next,
           context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await writeOperationRecord(this.path(operationId), record.parse(value))
+      await this.writeRecord(record.parse(value))
       return value
     })
   }
@@ -249,7 +252,7 @@ export class OperationStore {
       const value: OperationRecord = { ...current, revision: revision + 1, transaction,
         operation: { ...current.operation, status: { ...current.operation.status, phase: nextPhase },
           context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await writeOperationRecord(this.path(operationId), record.parse(value))
+      await this.writeRecord(record.parse(value))
       return value
     })
   }
@@ -277,7 +280,7 @@ export class OperationStore {
       const value: OperationRecord = { ...current, revision: revision + 1, transaction,
         operation: { ...current.operation, context: { ...current.operation.context, updatedAt: new Date().toISOString() },
           status: { ...current.operation.status, phase: 'completed', files, recovery: 'not-needed', warnings } } }
-      await writeOperationRecord(this.path(operationId), record.parse(value))
+      await this.writeRecord(record.parse(value))
       return value
     })
   }
@@ -302,7 +305,7 @@ export class OperationStore {
       const value: OperationRecord = { ...current, revision: revision + 1, transaction,
         operation: { ...current.operation, status: { ...current.operation.status, warnings },
           context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await writeOperationRecord(this.path(operationId), record.parse(value))
+      await this.writeRecord(record.parse(value))
       return value
     })
   }
@@ -333,7 +336,7 @@ export class OperationStore {
       transaction.recoveryActions = actions
       const value: OperationRecord = { ...current, transaction, revision: revision + 1,
         operation: { ...current.operation, context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await writeOperationRecord(this.path(operationId), record.parse(value))
+      await this.writeRecord(record.parse(value))
       return value
     })
   }
@@ -351,7 +354,7 @@ export class OperationStore {
         operation: { ...current.operation, status: { ...current.operation.status,
           phase: parsed.type === 'beforeCommit' ? 'committing' : current.operation.status.phase },
         context: { ...current.operation.context, updatedAt: new Date().toISOString() } } }
-      await writeOperationRecord(this.path(operationId), record.parse(value))
+      await this.writeRecord(record.parse(value))
       return value
     })
   }
@@ -375,7 +378,7 @@ export class OperationStore {
         operation: { ...current.operation, status: { ...current.operation.status,
           phase: current.operation.status.phase === 'recovering' ? 'recovering' : parsed.stage === 'intent' ? 'revalidating' : 'committing' },
           context: { ...current.operation.context, updatedAt: new Date().toISOString() } } })
-      await writeOperationRecord(this.path(operationId), value)
+      await this.writeRecord(value)
       return value
     })
   }
@@ -388,7 +391,11 @@ export class OperationStore {
   }
   private path(operationId: string): string { return join(this.root, `${id.parse(operationId)}.json`) }
   private async read(operationId: string): Promise<OperationRecord | undefined> {
-    const json = await readJson(this.path(operationId))
+    await this.validateExtendedDirectory()
+    const extended = await readJson(this.extendedPath(operationId))
+    const ordinary = await readJson(this.path(operationId))
+    if (extended !== undefined && ordinary !== undefined && !isDeepStrictEqual(extended, ordinary)) throw new OperationStoreError('CORRUPT_RECORD')
+    const json = extended ?? ordinary
     if (json === undefined) return undefined
     const parsed = record.safeParse(json)
     if (!parsed.success || parsed.data.operationId !== operationId || parsed.data.operation.context.hostInstanceId !== this.hostInstanceId) throw new OperationStoreError('CORRUPT_RECORD')
@@ -408,13 +415,92 @@ export class OperationStore {
   }
   private async readAll(): Promise<OperationRecord[]> {
     const values: OperationRecord[] = []
-    for (const name of (await readdir(this.root)).sort()) {
+    await this.validateExtendedDirectory()
+    const extended = await readdir(join(this.root, 'activation')).catch((error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return []; throw error })
+    for (const name of [...new Set([...(await readdir(this.root)), ...extended])].sort()) {
       if (name === 'host.json' || !name.endsWith('.json')) continue
       const value = await this.read(name.slice(0, -5))
       if (!value) throw new OperationStoreError('CORRUPT_RECORD')
       values.push(value)
     }
     return values
+  }
+
+  private extendedPath(operationId: string): string { return join(this.root, 'activation', `${id.parse(operationId)}.json`) }
+
+  private async validateExtendedDirectory(): Promise<void> {
+    try {
+      const info = await lstat(join(this.root, 'activation'))
+      if (!info.isDirectory() || info.isSymbolicLink() || (process.getuid && info.uid !== process.getuid())) throw new OperationStoreError('CORRUPT_RECORD')
+    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
+  }
+
+  private async prepareExtendedDirectory(): Promise<void> {
+    const path = join(this.root, 'activation')
+    await mkdir(path, { recursive: true, mode: 0o700 })
+    const info = await lstat(path)
+    if (!info.isDirectory() || info.isSymbolicLink() || (process.getuid && info.uid !== process.getuid())) throw new OperationStoreError('CORRUPT_RECORD')
+  }
+
+  /** The intermediate duplicate must be identical; never prefer a competing revision. */
+  private async isolateRecord(operationId: string): Promise<void> {
+    await this.prepareExtendedDirectory()
+    const source = this.path(operationId)
+    const destination = this.extendedPath(operationId)
+    const original = await readJson(source)
+    if (original === undefined) return
+    await this.read(operationId)
+    const bytes = await readFile(source)
+    const backup = join(this.root, 'activation', `${operationId}.${createHash('sha256').update(bytes).digest('hex')}.backup`)
+    try {
+      const file = await open(backup, 'wx', 0o600)
+      try { await file.writeFile(bytes); await file.sync() } finally { await file.close() }
+    } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error }
+    const info = await lstat(backup)
+    if (!info.isFile() || info.isSymbolicLink() || !(await readFile(backup)).equals(bytes)) throw new OperationStoreError('CORRUPT_RECORD')
+    try { await link(source, destination) }
+    catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST' || !isDeepStrictEqual(await readJson(destination), original)) throw error
+    }
+    await syncJournalDirectory(join(this.root, 'activation'))
+    await unlink(source)
+    await syncJournalDirectory(this.root)
+  }
+
+  /** Preserve original extended evidence while keeping legacy readers' root scan usable. */
+  private async isolateExtendedRecords(): Promise<void> {
+    await this.validateExtendedDirectory()
+    for (const name of await readdir(this.root)) {
+      if (name === 'host.json' || !name.endsWith('.json')) continue
+      const operationId = name.slice(0, -5)
+      const raw = await readJson(this.path(operationId)) as OperationRecord | undefined
+      if (raw?.schemaVersion === 3 || await readJson(this.extendedPath(operationId)) !== undefined) await this.isolateRecord(operationId)
+    }
+  }
+
+  private async writeRecord(value: OperationRecord): Promise<void> {
+    const extended = value.schemaVersion === 3 || await readJson(this.extendedPath(value.operationId)) !== undefined || operationSnapshots(value).some(snapshot => snapshot.items.some(item => item.targets.some(target => target.installationState === 'disabled')))
+    if (extended) {
+      await this.prepareExtendedDirectory()
+      await this.isolateRecord(value.operationId)
+      await writeOperationRecord(this.extendedPath(value.operationId), { ...value, schemaVersion: 3 })
+      return
+    }
+    // v2 snapshots contain ownership only, exactly as consumed by published clients.
+    const compatible = structuredClone(value)
+    if (compatible.transaction?.preparation) compatible.transaction.preparation.before = inventoryWithoutState(compatible.transaction.preparation.before)
+    if (compatible.transaction?.inventoryCommit) {
+      compatible.transaction.inventoryCommit.before = inventoryWithoutState(compatible.transaction.inventoryCommit.before)
+      compatible.transaction.inventoryCommit.after = inventoryWithoutState(compatible.transaction.inventoryCommit.after)
+    }
+    if (compatible.removal) {
+      compatible.removal.intent.inventoryItem = inventoryWithoutState({ items: [compatible.removal.intent.inventoryItem] }).items[0]!
+      if (compatible.removal.inventoryCommit) {
+        compatible.removal.inventoryCommit.before = inventoryWithoutState(compatible.removal.inventoryCommit.before)
+        compatible.removal.inventoryCommit.after = inventoryWithoutState(compatible.removal.inventoryCommit.after)
+      }
+    }
+    await writeOperationRecord(this.path(value.operationId), compatible)
   }
 
   private async locked<T>(run: () => Promise<T>): Promise<T> {
@@ -499,10 +585,23 @@ async function atomicWrite(path: string, value: unknown): Promise<void> {
   } finally { await rm(temporary, { force: true }) }
 }
 
+function operationSnapshots(value: OperationRecord): Inventory[] {
+  return [value.transaction?.preparation?.before, value.transaction?.inventoryCommit?.before,
+    value.transaction?.inventoryCommit?.after, value.removal ? { items: [value.removal.intent.inventoryItem] } : undefined,
+    value.removal?.inventoryCommit?.before, value.removal?.inventoryCommit?.after].filter((snapshot): snapshot is Inventory => snapshot !== undefined)
+}
+
+async function syncJournalDirectory(path: string): Promise<void> {
+  if (process.platform === 'win32') return
+  const directory = await open(path, 'r')
+  try { await directory.sync() } finally { await directory.close() }
+}
+
 /** Recovery may advance v1 status, but never rewrite the original serialized evidence. */
 async function writeOperationRecord(path: string, value: OperationRecord): Promise<void> {
   if (value.schemaVersion === 3) return atomicWrite(path, value)
   const previous = await readJson(path) as OperationRecord | undefined
+  if (!previous && value.schemaVersion === 2) return atomicWrite(path, value)
   if (!previous || previous.schemaVersion !== value.schemaVersion) throw new Error('Legacy operation evidence missing')
   const preserved = structuredClone(value)
   if (preserved.transaction && previous.transaction) {

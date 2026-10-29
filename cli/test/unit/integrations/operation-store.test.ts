@@ -114,3 +114,45 @@ test('pending journals block parent and child targets including aliases with mis
   await store.assertTargetsAvailable([sibling], current)
   expect((await store.get(pending.operationId, pending.ownerId))!.operation.status.phase).toBe('unknown')
 }))
+
+test('ordinary journals remain v2 while activation journals are isolated and replayable', () => fixture(async (store, root) => {
+  const ordinary = (await store.accept(request(store), async () => accepted))!
+  const key = request(store)
+  const activation = (await store.accept(key, async () => ({ ...accepted, kind: 'disable' })))!
+  expect(JSON.parse(await readFile(join(root, `${ordinary.operationId}.json`), 'utf8')).schemaVersion).toBe(2)
+  expect(JSON.parse(await readFile(join(root, 'activation', `${activation.operationId}.json`), 'utf8')).schemaVersion).toBe(3)
+  expect((await readdir(root)).filter(name => name.endsWith('.json')).sort()).toEqual([`${ordinary.operationId}.json`, 'host.json'].sort())
+  const reopened = await OperationStore.open(root)
+  expect((await reopened.accept({ ...key, mode: 'retry' }, async () => { throw new Error('No replay mutation') }))?.operationId).toBe(activation.operationId)
+  expect((await reopened.listForRecovery()).map(record => record.operationId)).toContain(activation.operationId)
+  expect((await reopened.accept(request(reopened), async () => accepted))?.schemaVersion).toBe(2)
+}))
+
+test('existing root v3 journal is moved byte-for-byte outside legacy scan', () => fixture(async (store, root) => {
+  const ordinary = (await store.accept(request(store), async () => accepted))!
+  const bytes = JSON.stringify({ ...ordinary, schemaVersion: 3 }, null, 3)
+  await writeFile(join(root, `${ordinary.operationId}.json`), bytes)
+  const reopened = await OperationStore.open(root)
+  expect(await readFile(join(root, 'activation', `${ordinary.operationId}.json`), 'utf8')).toBe(bytes)
+  expect(await readdir(root)).not.toContain(`${ordinary.operationId}.json`)
+  expect((await reopened.get(ordinary.operationId, ordinary.ownerId))?.schemaVersion).toBe(3)
+}))
+
+test.each(['identical', 'changed'] as const)('interrupted journal isolation handles %s duplicate without hiding evidence', mode => fixture(async (store, root) => {
+  const ordinary = (await store.accept(request(store), async () => accepted))!
+  const path = join(root, `${ordinary.operationId}.json`)
+  await mkdir(join(root, 'activation'))
+  await writeFile(join(root, 'activation', `${ordinary.operationId}.json`), await readFile(path))
+  if (mode === 'changed') {
+    await writeFile(path, JSON.stringify({ ...ordinary, revision: 1 }))
+    await expect(OperationStore.open(root)).rejects.toMatchObject({ code: 'CORRUPT_RECORD' })
+    expect(JSON.parse(await readFile(path, 'utf8')).revision).toBe(1)
+    expect(JSON.parse(await readFile(join(root, 'activation', `${ordinary.operationId}.json`), 'utf8')).revision).toBe(0)
+  } else {
+    const reopened = await OperationStore.open(root)
+    expect(await readdir(root)).not.toContain(`${ordinary.operationId}.json`)
+    await reopened.update(ordinary.operationId, ordinary.ownerId, 0, { ...ordinary.operation.status, phase: 'staging' })
+    expect((await reopened.get(ordinary.operationId, ordinary.ownerId))?.revision).toBe(1)
+    expect(await readdir(root)).not.toContain(`${ordinary.operationId}.json`)
+  }
+}))

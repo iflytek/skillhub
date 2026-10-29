@@ -458,3 +458,22 @@ The installed view SHALL check current managed installations only on explicit us
 - **WHEN** a user checks many installations, including several locations of the same skill
 - **THEN** a bounded Host-owned scan reads and indexes the trusted inventory once, validates only the requested target and inventory revision per result, and shares remote version resolution for the same source and skill within that scan
 - **AND** inventory or context changes invalidate the scan, scan resources expire or are released on cancellation, and mutation preparation retains its independent full validation
+
+### Requirement: Shared state remains compatible with released consumers
+New lifecycle operations SHALL retain the strict v2 shared inventory format readable by released CLI 0.2.0. Activation state SHALL be derived from the verified entry file of the exact managed installation, without an additional writable activation authority. Ordinary operation journals SHALL remain readable by released DSH 0.5.0; activation-specific journals SHALL NOT prevent unrelated ordinary operations in that consumer.
+
+#### Scenario: Old and new consumers alternate ordinary operations
+- **WHEN** a new consumer installs, updates, removes, synchronizes or repairs an ordinary installation
+- **THEN** the old CLI can still list the same inventory and manage unrelated ordinary installations
+- **AND** the operation does not upgrade the shared inventory to an unreadable schema
+
+#### Scenario: Released consumer explicitly replaces a disabled installation
+- **WHEN** the old CLI explicitly force-replaces or removes a disabled installation under its existing overwrite or removal contract
+- **THEN** the new consumer observes the resulting real entry, contents and ownership on its next read
+- **AND** it does not apply stale disabled state to replacement contents or claim that a removed installation remains present
+- **AND** default update, sync and Suite operations are separately tested for unintended re-enablement
+
+#### Scenario: Activation interruption or ambiguous entry files
+- **WHEN** activation is interrupted or both entry names, neither entry, or untrusted entry contents are observed
+- **THEN** exact target identity, durable journal stages and verified files govern recovery under the existing lock domain
+- **AND** ambiguous contents are not reported as a usable installation or overwritten to make the state appear consistent

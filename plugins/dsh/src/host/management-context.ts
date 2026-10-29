@@ -18,8 +18,8 @@ export function installationContext(list: InstalledSkillList): string {
   const items: { namespace: string; name: string; scope: string; version: string; state: string }[] = [];
   let truncated = false;
   for (const item of list.items) {
-    const entry = { namespace: item.namespace, name: item.slug, scope: item.scope, version: item.version, state: item.state, installationState: item.installationState ?? 'enabled' };
-    if (Object.values(entry).some(value => value.length > 200)) { truncated = true; continue; }
+    const entry = { namespace: item.namespace, name: item.slug, scope: item.scope, version: item.version, state: item.state, installationState: item.installationState };
+    if (Object.values(entry).some(value => value !== undefined && value.length > 200)) { truncated = true; continue; }
     if (items.length >= MAX_ITEMS || contextJson([...items, entry]).length > MAX_JSON_LENGTH) { truncated = true; break; }
     items.push(entry);
   }
