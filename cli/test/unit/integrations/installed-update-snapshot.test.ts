@@ -1,6 +1,6 @@
 import { expect, spyOn, test } from 'bun:test'
 import * as fs from 'node:fs/promises'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { InventoryStore } from '../../../src/stores/inventory-store'
 import { openInstalledProjectionSnapshot } from '../../../src/integrations/installed-projection'
@@ -38,7 +38,7 @@ for (const size of [10, 100, 500]) test(`snapshot ${size} real filesystem target
       expect(snapshot.projection.items).toHaveLength(size)
       expect(snapshot.projection.complete).toBe(true)
       for (const item of snapshot.projection.items) { await snapshot.read(item); await snapshot.read(item) }
-      const metadataReads = files.mock.calls.filter(([path]) => String(path).endsWith('/metadata.json')).length
+      const metadataReads = files.mock.calls.filter(([path]) => basename(String(path)) === 'metadata.json').length
       const inventoryStats = stats.mock.calls.filter(([path]) => path === inventory.path).length
       expect(read).toHaveBeenCalledTimes(1)
       expect(metadataReads).toBe(size * 3)
