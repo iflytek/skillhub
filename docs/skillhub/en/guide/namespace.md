@@ -1,4 +1,21 @@
-# Namespace & Team Management
+# Manage Namespaces
+
+The team-namespace creation action is shown to platform SKILL_ADMIN / SUPER_ADMIN roles. Other users should ask an authorized creator to create the space and invite them. Team ownership does not grant a platform role.
+
+## A Team Onboarding Sequence
+
+1. Create a team namespace in My Namespaces with a stable slug and a readable display name. The slug is part of installation coordinates and cannot change with the team name.
+2. Add existing accounts or generate an invitation. Ordinary role selection offers MEMBER / ADMIN; ownership transfer is a separate action, not an Owner option in the role selector.
+3. Select this namespace when publishing. Choose NAMESPACE_ONLY for team sharing; PRIVATE does not mean all team members can read it.
+4. Administrators review submissions; authors track versions in My Skills.
+5. Arrange maintenance responsibilities before removing a member. Removal does not transfer skill ownership.
+
+### Why Available Actions Differ
+
+The page uses namespace type, state and server-provided capabilities to display freeze, unfreeze, archive, restore and delete actions. Owner or Admin is not an unconditional grant for every action. Owners and Admins can edit an ACTIVE team namespace; authorized Owners have a separate ownership transfer action. Frozen or archived namespaces make membership management read-only, while eligible administrators can still read invitation history.
+
+Freezing temporarily stops writes; unfreezing restores them. Archiving and permanent deletion are distinct. Check the target and impact in the confirmation, then verify the resulting namespace state and member page instead of relying only on a successful request.
+
 
 ## Overview
 
@@ -17,9 +34,9 @@ Namespaces are the core organizational unit in SkillHub. Each namespace represen
 
 | Role | Permissions |
 |------|-------------|
-| **Owner** | Full control, including deleting the namespace and managing all members |
+| **Owner** | Own the team namespace; manage members and transfer ownership subject to namespace state and server-side permissions |
 | **Admin** | Manage members, review skill packages, modify settings |
-| **Member** | Publish skill packages, view private skill packages |
+| **Member** | Publish skills and view namespace-only content |
 
 **Namespace States**:
 
@@ -70,7 +87,7 @@ Discover a security issue in the namespace and temporarily freeze all publish op
 2. Click the "Members" tab
 3. Click "Add Member"
 4. Search for users (supports searching by username, email)
-5. Select a role (Owner / Admin / Member)
+5. Select Admin or Member; ownership transfer is a separate flow
 6. Confirm to add
 
 **Invite with a link**:
@@ -116,7 +133,7 @@ POST /api/v1/namespaces
 Content-Type: application/json
 
 {
-  "name": "iFlytek AI Team",
+  "displayName": "iFlytek AI Team",
   "slug": "iflytek",
   "description": "iFlytek's AI agent skills"
 }
@@ -125,9 +142,9 @@ Content-Type: application/json
 **Parameter Reference**:
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| name | string | Namespace name (required, 2-50 characters) |
+| displayName | string | Namespace name (required, up to 128 characters) |
 | slug | string | URL identifier (required, unique, 2-64 characters, lowercase letters, numbers, hyphens only) |
-| description | string | Description (optional, max 500 characters) |
+| description | string | Description (optional, max 512 characters) |
 
 **Get Namespace Details**:
 ```bash
@@ -140,7 +157,7 @@ PUT /api/v1/namespaces/{slug}
 Content-Type: application/json
 
 {
-  "name": "iFlytek AI Team (Updated)",
+  "displayName": "iFlytek AI Team (Updated)",
   "description": "Updated description"
 }
 ```
@@ -203,7 +220,7 @@ The history endpoint requires a browser session: `GET /api/v1/namespaces/{slug}/
 > **Slug Uniqueness**: Namespace slugs must be globally unique and cannot be changed after creation. Use a short identifier for your team or project.
 
 - **Owner Requirement**: Each namespace must have at least one Owner; the last Owner cannot be removed
-- **Role Inheritance**: Namespace members automatically have access to all skill packages in that namespace
+- **Role Inheritance**: Membership grants access to NAMESPACE_ONLY content, not every PRIVATE skill; private access is reserved for its owner and authorized administrators
 - **Freeze Mechanism**: Administrators can freeze a namespace; no new skill packages can be published while frozen
 - **Archive Mechanism**: Archived namespaces are hidden from search results, but existing skill packages remain accessible
 - **Audit Logs**: All member changes and permission adjustments are recorded in the audit log

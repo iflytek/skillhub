@@ -1,143 +1,74 @@
-# Skill Search & Discovery
+# Find and install skills
 
-## Overview
+Find a skill in an existing registry, inspect an available version, then install it for your Agent. Search results, Web details, and local installation are separate stages: seeing a card does not mean the skill is installed.
 
-SkillHub provides powerful full-text search functionality, enabling users to quickly find the skill packages they need.
+## Before you start
 
-Search supports not only keyword matching but also multi-dimensional filtering and sorting by namespace, tag, downloads, rating, and more.
+Public skills can be browsed anonymously. For team or private resources, sign in to the correct instance and confirm namespace permissions. See [Quick Start](../quickstart.md) for CLI and Agent setup. Paths below are relative to your deployment, not a fixed development port.
+
+## Search in the Web UI
+
+1. Use the homepage search box or open `/search`; enter a task keyword such as `pdf`.
+2. Restrict to a namespace with `@team pdf`, or browse it with `@team`. Replace `team` with a real namespace slug.
+3. Select a label to narrow results; select it again to clear it. The current Web selector allows one label at a time.
+4. Sort by relevance, downloads, or newest. The Web default is newest; rating is not a separate sort option.
+5. Open a card and inspect the coordinate, instructions, versions and files before installing.
+
+Query, namespace, label, sort and page are retained in the URL, so links can be shared and results revisited. Queries are limited to their first 50 characters; reduce a long task description to keywords.
+
+## Search only your stars
+
+Enable the starred-only filter after signing in; anonymous users are directed to login. This mode matches names, summaries, namespaces and slugs within fetched starred skills rather than running the ordinary full-text search. It supports namespace filtering and download sorting; relevance and newest both sort by update time. The current starred branch does not apply label filtering: turn it off before searching by label.
+
+`/dashboard/stars` provides paginated browsing. See [Stars, ratings and notifications](./social.md).
+
+## Decide what to install
+
+Read the instructions and check required scripts, tools and services. Install with `@namespace/slug`; a display-name change does not change this coordinate.
+
+A related-Suite badge means the skill belongs to a Suite visible to you. Details distinguish entry and ordinary members and show companion skills. One skill can belong to multiple Suites. Use the [Suite guide](./skill-suites.md) for the collection, or install the skill independently.
+
+## Install and verify with the CLI
+
+Replace the example coordinate with a real search result. Keep the default registry and your private instance distinct.
+
+```bash
+skillhub search pdf
+# Run from the target project root
+skillhub install @team/example-skill --scope project --agent codex
+skillhub list --agent codex
+# Pin a specific release when needed
+skillhub install @team/example-skill --version 1.0.0 --scope project --agent codex
+```
+
+Ordinary CLI search returns Skills, not Suites. It does not expose all Web filters; check `skillhub help search`. Add `--registry https://skillhub.example.com` for a self-hosted instance.
+
+Check the reported destination and its `SKILL.md`, let your Agent discover the skill, then provide a task. Downloading a ZIP only obtains files; it does not place them in an Agent directory. See [CLI reference](./cli.md) for upgrades, conflicts and removal.
+
+## Troubleshooting
+
+| Symptom | Check and action |
+| --- | --- |
+| No results | Clear label, namespace and starred-only filters; try a shorter keyword and verify the registry |
+| A colleague can see it | Verify identity and namespace permissions; PRIVATE is not shared with every member |
+| A new submission is missing | Check its scan/review state in My Skills; accepted is not published, and indexing may lag |
+| Visible card, failed download | Reopen details and check the version, permissions and current resource state; retain the error and requestId |
+| Agent does not discover the installation | Check project root, scope, agent and SKILL.md against CLI output; reload using the Agent's mechanism |
+
+Search rank is not a safety or quality certification. Read instructions and scan results before choosing.
+
+## Search API boundaries
+
+```text
+GET /api/web/skills?q=pdf&namespace=team&label=data-processing&sort=downloads&page=0&size=20
+```
+
+`q`, `namespace` and `label` are optional. The API accepts repeated labels, while the Web selector is single-select. Sort values are `relevance`, `downloads` and `newest`; pages start at zero. API pages default to 20 items; the Web page uses 12. Results include `items`, `total`, `page` and `size`, filtered for the current identity. Consult the instance OpenAPI for the response envelope.
+
+## Visual walkthrough
 
 ![Concept Diagram](/diagrams/skill-discovery-concept.png)
 
-**Core Features**:
-
-- **Full-text Search**: Search skill package names, descriptions, tags, authors
-- **Smart Filters**: Filter by namespace, tag, visibility
-- **Multiple Sorting**: Sort by relevance, downloads, rating, update time
-- **Permission-aware**: Only show skill packages user has access to
-- **Real-time Updates**: Newly published skill packages appear immediately in search results
-
-**Search Algorithm**:
-
-SkillHub uses PostgreSQL full-text search, supporting:
-- Chinese and English word segmentation
-- Fuzzy matching
-- Weighted ranking (title weight > description weight > tag weight)
-
-## Use Cases
-
-**Case 1: New Member Exploration**
-
-New developer joins the team and wants to know what skill packages are available.
-
 ![Screenshot](/screenshots/skill-discovery-search.png)
 
-**Case 2: On-Demand Search**
-
-Developer needs a PDF processing skill package, searches for "pdf" keyword.
-
-**Case 3: Browse Popular**
-
-View skill packages with highest downloads and best ratings in the team, learn best practices.
-
-**Case 4: Filter by Tag**
-
-Only view skill packages with `data-processing` tag.
-
-## Steps
-
-### Using CLI to Search and Install (Recommended)
-
-```bash
-# Configure registry
-export CLAWHUB_REGISTRY=http://localhost:8080
-
-# Search skill packages
-npx clawhub search pdf
-
-# Install skill package
-npx clawhub install pdf-parser
-
-# Install skill package from specific namespace
-npx clawhub install my-team--pdf-parser
-```
-
-### Using Web UI to Search
-
-1. **Access Search Page**
-
-Visit `http://localhost:3000/search` or use the search box on the homepage.
-
-2. **Enter Keywords**
-
-Enter keywords in the search box, e.g., "pdf parser".
-
-3. **Apply Filters**
-
-- Select namespace (e.g., only `iflytek` namespace)
-- Select tag (e.g., `data-processing`)
-- Select sort order (e.g., by downloads descending)
-
 ![Flow Diagram](/diagrams/skill-discovery-flow.png)
-
-4. **View Results**
-
-Search results update in real-time, showing matching skill package list.
-
-5. **View Details**
-
-Click skill package card to view detailed information, version history, file list.
-
-6. **Install**
-
-After finding the right skill package, use CLI command to install or click "Download" button.
-
-## API Reference
-
-**Search Skill Packages**:
-```bash
-GET /api/web/skills?q=pdf&namespace=iflytek&label=data-processing&sort=downloads&page=0&size=20
-```
-
-**Parameter Reference**:
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| q | string | Search keyword (optional) |
-| namespace | string | Namespace filter (optional) |
-| label | string[] | Tag filter (optional, multiple allowed) |
-| sort | enum | Sort by: relevance, downloads, rating, updated |
-| page | number | Page number (starts from 0) |
-| size | number | Page size (default 20, max 100) |
-
-**Response Example**:
-```json
-{
-  "content": [
-    {
-      "id": "skill-123",
-      "namespace": "iflytek",
-      "slug": "pdf-parser",
-      "name": "PDF Parser",
-      "description": "Extract text and metadata from PDF files",
-      "downloads": 1234,
-      "rating": 4.5,
-      "starCount": 56,
-      "latestVersion": "1.2.3",
-      "updatedAt": "2026-03-15T10:30:00Z",
-      "labels": ["data-processing", "pdf"]
-    }
-  ],
-  "totalElements": 42,
-  "totalPages": 3,
-  "number": 0,
-  "size": 20
-}
-```
-
-## Notes
-
-> **Permission Control**: Search results are automatically filtered by user permissions. PRIVATE skill packages are only visible to namespace members, INTERNAL skill packages are only visible to logged-in users.
-
-- **Search Performance**: SkillHub uses PostgreSQL full-text search with Chinese and English word segmentation
-- **Real-time Updates**: Newly published skill packages appear immediately in search results
-- **Tag Convention**: Recommend using consistent tag naming conventions for easier filtering
-- **Search Suggestions**: Supports search suggestions and autocomplete (frontend implementation)

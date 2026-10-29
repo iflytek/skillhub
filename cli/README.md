@@ -72,7 +72,7 @@ retain that prefix when following application-relative download URLs.
 
 ## 🔐 Authentication
 
-`skillhub login` uses OAuth Device Flow when no API token is supplied. Token resolution priority for
+`skillhub login` uses OAuth Device Flow only when no API token is resolved from arguments, environment variables, or saved credentials for the selected registry. An invalid resolved token does not automatically fall back to Device Flow. Token resolution priority for
 explicit token-based login and all other authenticated commands is:
 
 1. `--token <token>` command-line argument
@@ -354,6 +354,19 @@ Workspace push is non-overwriting: an existing namespace/slug/version is reporte
 
 Namespace sync writes `.skillhub/namespace-sync.json` in the workspace and per-skill `.skillhub/metadata.json` files. These files contain the registry coordinate, published version, aggregate fingerprint, and file hashes used by `status` and `diff`.
 
+## Using installed skills and Suites
+
+Installation downloads Skill files; it does not execute a task. Open the target project in your Agent, verify it discovers `SKILL.md`, configure the documented dependencies, and ask it to use the Skill. See the [Suite usage guide](../docs/skillhub/en/guide/skill-suites.md).
+
+```bash
+# Replace with a real Suite coordinate
+skillhub suite install @team/example-suite --scope project --agent codex
+skillhub suite check @team/example-suite
+skillhub suite upgrade @team/example-suite --check
+skillhub suite upgrade @team/example-suite
+skillhub suite remove @team/example-suite
+```
+
 ## 📋 Local Management
 
 ### List Installed Skills
@@ -420,7 +433,7 @@ skillhub doctor
 3. Backs up old `inventory.json` (if exists)
 4. Writes new `inventory.json`
 
-If the same skill has version conflicts across different targets, that skill will be skipped and reported.
+Versions are tracked per target. Doctor reports recovery problems; it does not download or upgrade skills.
 
 ## 🚢 Publishing
 
@@ -494,6 +507,7 @@ Update mechanism:
 | `skillhub publish <path> [--namespace <slug>] [--visibility <v>] [--registry <url>] [--token <token>] [--json]` | Publish a skill |
 | `skillhub sync pull --namespace <slug> [--skill <slug>]... [options]` | Pull explicitly selected skills from a non-global namespace |
 | `skillhub sync <status\|diff\|push> --namespace <slug> [options]` | Inspect or push a non-global namespace workspace |
+| `skillhub suite <install\|check\|upgrade\|remove> <coordinate> [options]` | Manage a pinned Skill Suite installation |
 | `skillhub update [--check] [--json]` | Check or execute CLI self-update |
 
 ## 🔒 Security Notes
@@ -528,7 +542,7 @@ request ID when asking a registry operator to investigate.
 
 ```bash
 # Check if registry is accessible
-curl https://skill.xfyun.cn/api/cli/v1/skills/search?q=test&limit=1
+curl 'https://skill.xfyun.cn/api/cli/v1/skills/search?q=test&limit=1'
 
 # Use alternative registry
 skillhub search test --registry https://skillhub.example.com

@@ -1,4 +1,18 @@
-# Review & Governance
+# Review Skills and Suites
+
+## Reviewer Checklist
+
+1. Verify the subject, submitter and target version. A skill version, profile/avatar change and Suite version require different checks.
+2. Read the submitted files and changes, not only the current public version. The previous published version may remain downloadable during review.
+3. Inspect scan status and findings. Execution failure, detected risk and an unconfigured analyzer are different; an empty report is not a security conclusion.
+4. Check visibility and intended audience, including every Suite member and its entry role. Member approval does not approve the Suite.
+5. Before approval, ensure current data is still valid. For rejection, identify files, problems and required changes. After a failed decision request, reload status before trying again.
+6. Verify the decision history and resulting published version. Review success does not test skill execution in a local Agent.
+
+### Tracking and Revising as an Author
+
+Use My Submissions to read status and decisions. Pending requests can be withdrawn when authorized. Withdrawal stops that review; it does not delete the prior published version or undo an approved global promotion. After rejection, revise according to the comments and use the supported resubmission action. A successful upload does not by itself reopen review.
+
 
 ## Overview
 
@@ -29,10 +43,14 @@ The review mechanism operates on two levels:
 
 **Governance Features**:
 
-- **Review Workflow**: Multi-level review, batch review
+- **Review Workflow**: Per-item review of versions, profile changes, and Suites
 - **Reporting System**: Users can report inappropriate skill packages
 - **Promotion Management**: Promote namespace skill packages to the global scope
 - **Audit Logs**: All governance actions are recorded
+
+## Identify what is being reviewed
+
+Review-task status and skill-version status are different: a task can be PENDING while the uploaded version is still SCANNING. Wait for scanning and inspect findings before deciding. Approval of a skill version does not approve a Suite that references it. Suites have their own review, while Bundle import first completes member publishing and then creates a Suite draft. See [Skill Suites](/en/guide/skill-suites) and [Bundle import](/en/guide/suite-bundle).
 
 ## Use Cases
 
@@ -50,15 +68,12 @@ A platform administrator reviews skill packages being promoted from a namespace 
 
 A user reports an inappropriate skill package, and an administrator investigates and takes action.
 
-**Case 4: Batch Review**
-
-An administrator batch-approves multiple skill packages that meet the standards.
 
 ## Step-by-Step Guide
 
 **Submitting for Review**:
 
-1. When a skill package is published, the system automatically creates a review task
+1. Ordinary PUBLIC / NAMESPACE_ONLY uploads create review tasks; PRIVATE uploads require confirmation or a separate review submission
 2. The developer can check the review status under "My Submissions"
 3. Wait for an administrator to review
 
@@ -73,7 +88,9 @@ An administrator batch-approves multiple skill packages that meet the standards.
    - Download the full package for local testing
    - Review the compliance snapshot and the diff from the previous published version
 
-![Flow Diagram](/diagrams/review-flow.png)
+![Scan and review in the ordinary publication path](/diagrams/skill-publish-lifecycle-sketch.png)
+
+The review section follows the PUBLIC / NAMESPACE_ONLY branch: scanning completes before the version waits for a review decision.
 
 4. Make a decision:
    - **Approve**: The skill package is officially published and the developer is notified
@@ -136,7 +153,7 @@ POST /api/v1/reviews
 Content-Type: application/json
 
 {
-  "skillVersionId": "version-123"
+  "skillVersionId": 123
 }
 ```
 
@@ -163,12 +180,12 @@ Content-Type: application/json
 **Parameter Reference**:
 | Parameter | Type | Description |
 |------|------|------|
-| id | string | Review task ID (path parameter) |
-| comment | string | Review comment (optional, max 1000 characters) |
+| id | number | Review task ID (path parameter) |
+| comment | string | Review comment (optional for approval; provide a clear reason for rejection) |
 
 **List Pending Reviews**:
 ```bash
-GET /api/v1/reviews/pending?namespaceId=ns-123&page=0&size=20
+GET /api/v1/reviews/pending?namespaceId=123&page=0&size=20
 ```
 
 **List My Submissions**:
@@ -209,11 +226,10 @@ Content-Type: application/json
 
 ## Notes
 
-> **Review Permissions**: Only namespace Admins and Owners can review skill packages within their namespace. Platform administrators can review all skill packages.
+> **Review Permissions**: Team namespace Admins and Owners review their space; SKILL_ADMIN and SUPER_ADMIN have platform review roles. Personal spaces and self-review have additional rules; a generic administrator label is not sufficient.
 
 - **Review Turnaround**: It is recommended to complete reviews within 24 hours to avoid blocking developers
 - **Review Records**: All review actions are recorded in the audit log
 - **Compliance Audit**: Compliance declarations are recorded as version snapshots. Approval or rejection should consider the diff summary, but Agent execution traces are not recorded by SkillHub
-- **Batch Review**: Administrators can batch-approve multiple skill packages
 - **Review Comments**: When rejecting, it is recommended to provide detailed improvement suggestions
 - **Withdrawal Restrictions**: Only skill packages in the pending review state can be withdrawn

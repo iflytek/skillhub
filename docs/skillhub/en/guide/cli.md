@@ -1,6 +1,27 @@
-# SkillHub CLI
+# CLI reference
 
 SkillHub CLI is the official command-line tool for SkillHub, designed for searching, installing, managing, and publishing Agent skill packages.
+
+## Choose the object you are managing
+
+| Goal | Command | Scope |
+| --- | --- | --- |
+| Install a remote Skill | install | Selected Agent, scope or custom directory |
+| Update installed skills | upgrade | Explicit coordinates and targets; no implicit upgrade-all |
+| Manage pinned collections | suite | Suite inventory and member ownership |
+| Sync team authoring files | sync | Non-global namespace workspace, not Suite lifecycle |
+| Update the CLI executable | update | CLI installation, not installed skills |
+| Recover local records | doctor | Project metadata and inventory, not remote upgrades |
+
+## Automation and failure handling
+
+Specify `--scope` and `--agent`, or use `--dir` alone, for deterministic installation targets. Do not combine custom directory with scope/agent. Check `version` and `help <command>` against the installed CLI; older releases may not provide every documented capability.
+
+Keep search, login, install and check on the same registry. Use explicit `--registry` for individual commands or an environment variable for the process tree. Credentials are registry-specific; verify identity with `whoami` after changing endpoints.
+
+Use `--json` for machine-readable output and do not expect interactive prompts. Capture status and output; retain public error messages and requestId for registry errors. Suite check's `ok: false` may simply indicate changes, so inspect its fields. `--check` is a preview option on applicable upgrade/sync commands, not a universal option.
+
+For directory conflicts, inspect source ownership before using `--force`: it does not take over unmanaged or different-source targets. Preserve files and metadata before recovering inventory. Do not delete all of `~/.skillhub`; it also holds other registry credentials and installation records.
 
 ## Installation
 
@@ -19,7 +40,7 @@ bun add -g @astron-team/skillhub
 
 ```bash
 # Login
-skillhub login --token sk_xxx
+skillhub login
 
 # Search skills
 skillhub search pdf
@@ -72,6 +93,8 @@ Token resolution priority:
 3. Token stored in `~/.skillhub/credentials.json` (per registry)
 
 ### Login
+
+When no token is resolved from arguments, environment variables, or saved registry credentials, `skillhub login` uses OAuth Device Flow; an invalid resolved token does not automatically fall back: follow the verification URL and user code to authorize in a browser. Use `skillhub login --no-open` on headless terminals, or an API token for automation.
 
 ```bash
 # Login with API token
@@ -266,13 +289,37 @@ skillhub upgrade @team/code-review --check --json
 `--force`; it only replaces a managed installation whose full `registry + namespace + slug` source
 matches.
 
-All targets in one inventory entry are upgraded together. A filter that selects only part of that
-entry is rejected because the current inventory format stores one shared version for all targets.
+Versions are tracked per target. `--agent` and `--dir` select installed targets; Suite-owned targets are protected from direct upgrade and should use `suite upgrade`.
 The command also keeps the local files when the registry resolves to an older version.
 If a multi-Skill run fails after an earlier upgrade commits, execution stops and reports each item
 as `upgraded`, `failed`, or `not-attempted`; a committed upgrade is never rolled back implicitly.
 New installations store absolute target paths. Reinstall an older entry that still contains relative
 target paths before upgrading it; the CLI cannot safely infer the original working directory.
+
+## Using installed skills and Suites
+
+Installation downloads Skill files; it does not execute a task. Open the target project in your Agent, verify it discovers `SKILL.md`, configure the documented dependencies, and ask it to use the Skill. See the [Suite usage guide](./skill-suites).
+
+```bash
+# Replace with a real Suite coordinate
+skillhub suite install @team/example-suite --scope project --agent codex
+skillhub suite check @team/example-suite
+skillhub suite upgrade @team/example-suite --check
+skillhub suite upgrade @team/example-suite
+skillhub suite remove @team/example-suite
+```
+
+## Team workspace sync
+
+`sync` operates on non-global namespaces: pull selected skills, inspect status/diff, then push local content. The default workspace is `.agents/skills` in the current directory. Non-interactive pull requires explicit `--skill` selections; `--check` only inspects.
+
+```bash
+skillhub sync pull --namespace team --check
+skillhub sync pull --namespace team --skill example-skill
+skillhub sync status --namespace team
+skillhub sync diff --namespace team
+skillhub sync push --namespace team --all --dry-run
+```
 
 ## Local Management
 
@@ -340,7 +387,7 @@ skillhub doctor
 3. Backs up old `inventory.json` (if exists)
 4. Writes new `inventory.json`
 
-If the same skill has version conflicts across different targets, that skill will be skipped and reported.
+Versions are tracked per target. Doctor reports recovery problems; it does not download or upgrade skills.
 
 ## Publishing
 
@@ -360,7 +407,7 @@ Visibility options:
 - `namespace-only` — Visible to namespace members only
 - `private` — Visible to yourself only
 
-After successful publication, the skill detail page URL will be displayed.
+After the server accepts the submission, the CLI shows its current status and detail URL. `SCANNING` and `PENDING_REVIEW` are asynchronous states, not final publication; check the detail page for completion.
 
 ## Self-Update
 
@@ -417,26 +464,9 @@ Update mechanism:
 
 ### inventory.json
 
-```json
-{
-  "items": [
-    {
-      "registry": "https://skill.xfyun.cn",
-      "namespace": "global",
-      "slug": "pdf-parser",
-      "version": "1.0.0",
-      "targets": [
-        {
-          "agent": "codex",
-          "rootDir": "/path/to/project/.codex/skills",
-          "installDir": "/path/to/project/.codex/skills/pdf-parser",
-          "installedAt": "2026-04-28T06:00:00.000Z"
-        }
-      ]
-    }
-  ]
-}
-```
+CLI-managed installation records, not a file to hand-edit. Each target tracks its own version, fingerprint and ownership; compatible writers migrate legacy records when needed. A backup is recovery evidence, not permission to overwrite a newer inventory.
+
+Current main contains DSH enable/disable support using inventory v3. Do not assume your published CLI supports it or mix incompatible writers. There are no CLI enable/disable commands. In that increment, disabled targets cannot be upgraded with CLI `--force`, and doctor does not reconstruct disabled ownership from a loose `SKILL.md.disabled` file. Manage activation through a compatible DSH version and follow the matched release instructions.
 
 ## JSON Output
 
@@ -484,6 +514,7 @@ Error response format:
 | 3 | Network error |
 | 4 | File system error |
 | 5 | Parameter error |
+| 6 | Validation or installation ownership conflict |
 
 ## Command Reference
 
@@ -508,10 +539,10 @@ Display CLI version.
 ### login
 
 ```bash
-skillhub login --token <token> [--registry <url>] [--json]
+skillhub login [--no-open] [--token <token>] [--registry <url>] [--json]
 ```
 
-Save token and registry configuration.
+Authenticate with Device Flow or a supplied API token, then save credentials and registry configuration.
 
 The CLI preserves unknown fields in the shared configuration and credentials documents when it
 updates its own `registry` and `tokens` fields.
@@ -632,6 +663,22 @@ Options:
 - `--token <token>` — API token
 - `--json` — JSON output
 
+### suite
+
+```bash
+skillhub suite <install|check|upgrade|remove> <coordinate> [options]
+```
+
+`install` supports `--version`, `--scope`, `--agent`, and `--dir`; `install` and `upgrade` support `--force`. `upgrade --check` previews changes. All actions support `--registry`, `--token`, and `--json`. See [Suites](./skill-suites).
+
+### sync
+
+```bash
+skillhub sync <pull|status|diff|push> --namespace <slug> [options]
+```
+
+Run `skillhub help sync` for selection, workspace and publishing options. Validate with `push --dry-run` before publishing.
+
 ### update
 
 ```bash
@@ -664,7 +711,7 @@ skillhub login --token sk_xxx
 
 ```bash
 # Check if registry is accessible
-curl https://skill.xfyun.cn/api/cli/v1/skills/search?q=test&limit=1
+curl 'https://skill.xfyun.cn/api/cli/v1/skills/search?q=test&limit=1'
 
 # Use alternative registry
 skillhub search test --registry https://skillhub.example.com

@@ -1,10 +1,27 @@
-# Skill Scanner Security Scanning
+# Configure and Inspect Security Scans
+
+## Reading a Report as an Author or Reviewer
+
+Open the submitted version in skill details or review. Verify its version before inspecting severity, affected files and explanations; a prior version's report does not cover new files.
+
+- `SCANNING`: unfinished; ordinary submissions cannot be approved on that basis.
+- `SCAN_FAILED`: execution failed; investigate and retry. It does not mean the skill was found malicious.
+- Completed with findings: assess findings and policy separately from execution failure; human review still applies.
+- Disabled or missing report: not a zero-risk verdict. PRIVATE uploads can run without scanning, while ordinary PUBLIC / NAMESPACE_ONLY submissions require it enabled.
+
+### Operator Troubleshooting Order
+
+1. Check the effective Scanner URL and mode. The table below lists application defaults; release Compose uses `upload`. A container's localhost is not the host's localhost.
+2. Check `/health` from the backend's network, then inspect actual scan requests and responses. Health alone does not prove a package was scanned.
+3. Correlate version, request time and backend/Scanner logs. Distinguish temporary connectivity failures from analysis errors. Temporary unavailability can leave work pending for reclaim; waiting alone does not prove failure.
+4. After repairing service or configuration, follow the original task. Retain version ID, status and error details for investigation without exposing package secrets or credentials.
+
 
 ## Overview
 
 SkillHub includes a built-in **Skill Scanner** security scanning service that automatically detects potential security risks when skill packages are published. This serves as a critical line of defense for ensuring the security of skill packages within an enterprise.
 
-Every skill package undergoes a security scan after publication. The scan results inform review decisions and help administrators quickly assess whether a skill package is safe and reliable.
+Uploads with scanning enabled undergo a security scan. The scan results inform review decisions and help administrators quickly assess whether a skill package is safe and reliable.
 
 **Key Features**:
 
@@ -18,8 +35,8 @@ Every skill package undergoes a security scan after publication. The scan result
 
 | Engine | Description | Default Status |
 |------|------|----------|
-| **Metadata Analysis** | Checks package structure, file types, sizes, etc. | Enabled |
-| **Behavioral Analysis** | Analyzes code behavior patterns to detect malicious operations | Optional |
+| **Metadata Analysis** | Metadata analysis, separate from upload structure validation | Disabled by default |
+| **Behavioral Analysis** | Analyzes code behavior patterns to detect malicious operations | Enabled by default |
 | **LLM Analysis** | Uses large language models to analyze code security | Optional |
 | **AI Defense** | Cisco AI Defense integration | Optional |
 | **VirusTotal** | VirusTotal virus scanning | Optional |
@@ -93,7 +110,7 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 
 ## Notes
 
-> **Scanning Does Not Block Publishing**: Security scanning runs asynchronously and does not block the skill package upload process. Scan results are updated on the skill package detail page once completed.
+> **Asynchronous upload is not publication**: Ordinary public and namespace-only submissions require scanning to be enabled. An unfinished scan does not establish publication. SCAN_FAILED means execution failure; findings and execution failures require different handling. Completing a scan does not imply review approval.
 
 - **Scan Duration**: Depending on the skill package size and the number of enabled engines, scanning may take from a few seconds to several minutes
 - **LLM Analysis Cost**: Enabling LLM analysis incurs API call charges; it is recommended to evaluate costs in production environments

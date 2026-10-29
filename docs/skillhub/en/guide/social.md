@@ -1,4 +1,4 @@
-# User Interaction & Social Features
+# Stars, ratings and notifications
 
 ## Overview
 
@@ -11,7 +11,7 @@ SkillHub provides a rich set of social features that allow team members to inter
 - **Star**: Bookmark your favorite skill packages for easy access later
 - **Rating**: Rate skill packages (1-5 stars) to help others assess quality
 - **Download Statistics**: Track download counts to highlight popular skill packages
-- **Notification System**: Receive timely notifications for review results, comment replies, and more
+- **Notification System**: Receive timely notifications for review and governance events, and more
 
 **Social Metrics**:
 
@@ -20,7 +20,7 @@ SkillHub provides a rich set of social features that allow team members to inter
 | **Star Count** | Number of users who have bookmarked the skill package |
 | **Average Rating** | Mean score across all user ratings |
 | **Download Count** | Total number of downloads |
-| **Activity** | Last updated time, release frequency |
+| **Updated time** | Update time shown in the current list |
 
 ## Use Cases
 
@@ -36,7 +36,7 @@ After using a skill package, a developer gives it a rating and review to help ot
 
 **Case 3: Viewing Notifications**
 
-A developer receives a notification that their submission has been approved, or someone has commented on their skill package.
+A developer receives a notification that their submission has been approved, or another supported governance event occurs.
 
 ![Screenshot](/screenshots/notifications.png)
 
@@ -83,8 +83,29 @@ been removed. Custom clients should poll `GET /api/v1/notifications` and
 
 1. Navigate to `/dashboard/stars`
 2. View all starred skill packages
-3. Sort by star date or last updated date
+3. Browse pages; use the search page for the starred-only filter
 4. Quickly access frequently used skill packages
+
+## Confirm your identity first
+
+Stars, ratings and notifications belong to the signed-in account. Anonymous star/rating actions prompt for login; recheck state after switching accounts. A star does not install a skill, and removing a star does not delete local files. Rating buttons are disabled while submitting; successful requests refresh the personal rating and skill data. Hovered stars are only a preview.
+
+## Manage notifications and follow up
+
+Open `/notifications` and filter by all, publish, review, promotion or report; pages contain up to 20 items. Clicking an unread item marks it read and opens its target. Reading a notification does not approve a review: complete that action on the target page.
+
+You can mark all notifications read; deletion is available only for read items. At `/settings/notifications`, toggle categories for in-app delivery. This form configures `IN_APP`, not email or SMS subscriptions; categories default to enabled when no preference is stored.
+
+## Verify results and troubleshoot
+
+| Action or symptom | Observable result / next step |
+| --- | --- |
+| Star saved | The button changes to starred; confirm it in My Stars |
+| Rating changed | Wait for completion and check your rating; hover is not submission |
+| Review cleared | Text is removed but the score remains; this is separate from unstarring |
+| Your review is absent publicly | Check whether it is hidden; author edits do not restore visibility |
+| Unread count looks stale | Wait for polling or refocus the window, then check requests and login if it persists |
+| Notification target is inaccessible | Recheck current resource state and permissions; historical notifications do not restore access |
 
 ## API Reference
 
@@ -103,13 +124,6 @@ DELETE /api/v1/skills/{skillId}/star
 GET /api/v1/skills/{skillId}/star
 ```
 
-**Response Example**:
-```json
-{
-  "starred": true,
-  "starredAt": "2026-03-15T10:30:00Z"
-}
-```
 
 **Rate a Skill Package**:
 ```bash
@@ -124,7 +138,7 @@ Content-Type: application/json
 **Parameter Reference**:
 | Parameter | Type | Description |
 |------|------|------|
-| skillId | string | Skill package ID (path parameter) |
+| skillId | number | Skill package ID (path parameter) |
 | score | number | Rating (1-5, required) |
 
 **Get My Stars**:
@@ -155,13 +169,8 @@ POST /api/v1/admin/skill-reviews/{reviewId}/hide
 POST /api/v1/admin/skill-reviews/{reviewId}/restore
 ```
 
-**Response Example**:
-```json
-{
-  "score": 5,
-  "ratedAt": "2026-03-15T10:30:00Z"
-}
-```
+
+Responses use the standard API envelope. `GET .../star` returns a boolean in `data`; `GET .../rating` returns `score` and `rated`. Mutations return an empty `data`, not a rating timestamp. IDs are numeric.
 
 ## Notes
 
@@ -170,6 +179,6 @@ POST /api/v1/admin/skill-reviews/{reviewId}/restore
 > **Review Rules**: Only published skills can be reviewed, and the public list contains visible reviews only. Refresh and retry after a concurrent-update conflict.
 
 - **Star Count**: A skill package's star count is displayed in search results and on the detail page
-- **Average Rating**: A skill package's average rating affects search ranking
+- **Average Rating**: Average ratings help compare skills; the search page has no dedicated rating sort
 - **Notification Settings**: Users can disable certain notification types in their settings
-- **Download Statistics**: Each download increments the download counter, which is used for popularity ranking
+- **Download Statistics**: Published-version downloads record counts; review-preview downloads do not count as public downloads

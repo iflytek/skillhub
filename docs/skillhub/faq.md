@@ -2,41 +2,15 @@
 
 ## Q: SkillHub 和 ClawHub 有什么区别？
 
-A: SkillHub 是企业级的自托管方案，提供了更强的权限控制、审核机制和治理能力。ClawHub 是公共注册中心，类似 npm。
-
-**主要区别**：
-
-| 特性 | SkillHub | ClawHub |
-|------|----------|---------|
-| **部署方式** | 自托管 | 公共云 |
-| **权限控制** | 命名空间 RBAC | 基础权限 |
-| **审核机制** | 多级审核 | 无 |
-| **安全扫描** | 内置 Skill Scanner | 无 |
-| **数据主权** | 完全自主 | 托管在云端 |
-| **适用场景** | 企业内部 | 公开分享 |
+A: SkillHub 提供自托管注册中心、命名空间权限、发布审核、安全扫描和审计。第三方服务的能力会变化，不应将“无审核/无扫描”作为固定比较结论。兼容范围见 [OpenClaw 集成](https://github.com/iflytek/skillhub/blob/main/docs/openclaw-integration.md)。
 
 ## Q: 如何备份数据？
 
-A: SkillHub 的数据存储在 PostgreSQL 和对象存储中。定期备份这两部分即可。
-
-**备份 PostgreSQL**：
-```bash
-pg_dump -h localhost -U postgres skillhub > backup.sql
-```
-
-**备份对象存储**：
-- 如果使用 MinIO，备份 MinIO 数据目录
-- 如果使用 S3，使用 AWS CLI 或 S3 备份工具
+A: 备份 PostgreSQL、实际使用的存储后端及部署配置。默认 release Compose 使用本地文件存储，需要备份 `skillhub_storage` 数据卷；使用 S3 时备份对应 bucket/对象。数据库和技能文件需要来自一致的备份窗口。操作步骤见 [部署指南](./guide/deployment.md)，恢复能力应通过独立环境演练验证。
 
 ## Q: 支持哪些认证方式？
 
-A: SkillHub 支持多种认证方式：
-
-- **OAuth2**：GitHub、Google、GitLab 等
-- **本地账号**：用户名密码登录（内置管理员：admin / ChangeMe!2026）
-- **企业 SSO**：可以集成 LDAP、SAML 等
-
-配置方式参考项目 README 中的认证配置章节。
+A: 支持本地账号及已配置的 OAuth2 登录入口。当前预置注册包括 GitHub、GitLab、飞书和钉钉；实际入口以登录页和 `/api/v1/auth/methods` 为准。企业 SSO 需要按接入契约配置，不能把可扩展性当成已经内置 LDAP/SAML。参见 [认证与私有 SSO](https://github.com/iflytek/skillhub/blob/main/docs/11-auth-extensibility-and-private-sso.md)。
 
 ## Q: 技能包大小有限制吗？
 
@@ -49,60 +23,31 @@ spring:
     multipart:
       max-file-size: 100MB
       max-request-size: 100MB
+skillhub:
+  publish:
+    max-package-size: 104857600
 ```
+
+还需核对代理请求体和 Scanner 上传限制；只调 multipart 不会绕过包校验。
 
 ## Q: 如何使用 CLI 工具管理技能包？
 
-A: SkillHub 兼容 OpenClaw CLI，使用 `npx clawhub` 命令即可操作：
+A: 优先使用第一方 CLI：
 
 ```bash
-# 配置注册中心地址
-export CLAWHUB_REGISTRY=http://your-skillhub-host:8080
-
-# 搜索技能包
-npx clawhub search email
-
-# 安装技能包
-npx clawhub install my-skill
-
-# 发布技能包（ClawHub CLI 的发布协议不兼容 SkillHub）
-export SKILLHUB_REGISTRY=http://your-skillhub-host:8080
-export SKILLHUB_TOKEN=YOUR_API_TOKEN
-npx @astron-team/skillhub@latest publish ./my-skill
+npm install -g @astron-team/skillhub
+skillhub search pdf
 ```
+
+按 [快速开始](./quickstart.md) 选择注册中心、安装位置和 Agent。发布和受限资源访问需要登录。ClawHub 兼容接口的范围见 [集成说明](https://github.com/iflytek/skillhub/blob/main/docs/openclaw-integration.md)，不要将其发布协议与 SkillHub CLI 混用。
 
 ## Q: 如何配置 HTTPS？
 
-A: 生产环境建议使用 Nginx 或 Traefik 作为反向代理，配置 SSL 证书。
-
-**Nginx 配置示例**：
-```nginx
-server {
-    listen 443 ssl;
-    server_name skillhub.example.com;
-    
-    ssl_certificate /path/to/cert.pem;
-    ssl_certificate_key /path/to/key.pem;
-    
-    location / {
-        proxy_pass http://localhost:3000;
-    }
-    
-    location /api {
-        proxy_pass http://localhost:8080;
-    }
-}
-```
+A: 在外部代理终止 TLS，并转发到实际映射的 Web 端口（release Compose 默认 `WEB_PORT=80`），Web 已代理后端路由。设置真实 `SKILLHUB_PUBLIC_BASE_URL`，正确传递原始 Host 和代理协议头，并验证登录与 Cookie。见 [部署指南](./guide/deployment.md)。
 
 ## Q: 如何监控 SkillHub？
 
-A: SkillHub 提供了多种监控方式：
-
-- **健康检查**：`GET /actuator/health`
-- **Scanner 健康检查**：`GET http://localhost:8000/health`
-- **指标监控**：`GET /actuator/metrics`（Prometheus 格式）
-- **审计日志**：所有关键操作都会记录到审计日志
-- **应用日志**：使用 ELK 或 Loki 收集日志
+A: 默认配置暴露 `/actuator/health` 和 `/actuator/info`。`/actuator/metrics` 不是 Prometheus 文本接口，当前基础配置也未默认暴露它或启用 Prometheus 导出。结合服务日志、审计记录和请求的 `requestId` 排查；监控接入需要单独核对部署配置，见 [可观测性指南](https://github.com/iflytek/skillhub/blob/main/docs/observability-developer-guide.md)。
 
 ## Q: 支持多租户吗？
 
@@ -112,47 +57,19 @@ A: SkillHub 通过命名空间实现了逻辑上的多租户隔离。每个命�
 
 ## Q: 如何升级 SkillHub？
 
-A: 使用 curl 命令升级：
-
-```bash
-# 拉取最新镜像并重启
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- pull
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- down
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
-
-# 或直接指定版本升级
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version v0.2.0
-```
-
-> **注意**：升级前建议先备份数据库和对象存储。数据库迁移由 Flyway 自动执行。升级不会清空数据库，已录入的技能包不会丢失。
+A: 按 [部署与升级指南](./guide/deployment.md) 选择目标版本，先备份数据库、技能存储和配置，再升级并验证健康、登录及代表性技能操作。Flyway 会执行数据库迁移；不能仅凭容器启动成功认定升级成功，也不能假设降级镜像即可回滚数据库。
 
 ## Q: 为什么管理员（admin）和普通用户都无法创建命名空间？
 
-A: 较旧版本的 SkillHub 不支持创建命名空间。该功能是在后续版本迭代中添加的。请将您的 SkillHub 升级到最新版本（latest）。
-升级命令示例：
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version latest
-```
+A: 先查看页面或接口的错误信息和 `requestId`，核对当前账号权限、名称校验及实例限制。不要直接推断为版本太旧；管理员身份也不能绕过全部业务规则。参见 [命名空间管理](./guide/namespace.md)。
 
 ## Q: 如何搜索或操作指定命名空间中的技能包（Skill）？
 
-A: 使用 OpenClaw CLI 命令行工具时，可以通过 `<namespace>--<skill-name>` 的格式来指定命名空间进行操作（例如搜索、安装）。如果在网页端搜索遇到问题，也可以尝试通过先导出技能、再导入到目标命名空间的方式来完成跨空间操作。
+A: 在网页中选择命名空间；CLI 安装可使用 `skillhub install @team/example-skill`，其中坐标应替换成真实资源。`skillhub search` 搜索技能，`skillhub suite install` 安装套装。命名空间迁移与搜索不是同一操作，不需要通过导出再导入来解决搜索问题。
 
 ## Q: 推荐的部署方式是什么？可以自己拉镜像手动部署吗？
 
-A: 推荐使用官方一键部署脚本，不建议自己拉取镜像手动部署（手动部署容易出现数据库初始化、依赖顺序或登录后跳回登录页等问题）。默认从公共镜像仓库拉取依赖，其中 SkillHub 应用镜像来自 GHCR：
-
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --public-url https://skillhub.your-company.com
-```
-
-国内网络无法访问 GHCR 时，使用阿里云镜像：
-
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun --public-url https://skillhub.your-company.com --version latest
-```
-
-脚本会执行一系列初始化操作，生成的运行时配置默认位于 `/tmp/skillhub-runtime/`（包含 `.env.release` 和 docker-compose 文件）。
+A: 支持官方 runtime 脚本、release Compose 和 Kubernetes/Helm。选择一种方式并保留对应的配置与数据目录，参见 [Docker 部署](./guide/deployment.md) 和 [Kubernetes 部署](./guide/kubernetes.md)。手动部署需要正确配置数据库、Redis、存储、认证和代理，不能只启动应用镜像。
 
 ## Q: 用 Kubernetes 部署对集群版本有要求吗？
 
@@ -160,39 +77,23 @@ A: 官方 [Kubernetes 部署指南](./guide/kubernetes.md) 要求 Kubernetes **v
 
 ## Q: 部署后输入正确的账号密码，却又跳回登录页？
 
-A: 该现象多见于「手动部署」场景（接口异常或初始化未完成导致）。建议：
-
-1. 改用上面的一键脚本部署。
-2. 必要时清空 PostgreSQL 数据卷后重建再登录。
-3. 若前置了反向代理，检查代理配置是否正确转发。
+A: 先在浏览器网络面板检查登录请求及后续身份请求的状态，核对实例公网 URL、代理转发、Cookie 和后端会话配置，并关联服务端 `requestId` 与日志。此现象本身不能确定是密码错误或数据库问题。不要清空 PostgreSQL 数据卷来尝试修复登录。部署参数见 [部署指南](./guide/deployment.md)。
 
 ## Q: 如何修改 admin 密码？修改配置后不生效？
 
-A: 环境变量在容器创建时注入，修改后必须重新创建容器才会生效；仅执行 `restart` 不会重新注入环境变量。
-
-1. 修改运行时目录下的 `/tmp/skillhub-runtime/.env.release`（参考仓库 [.env.release.example](https://github.com/iflytek/skillhub/blob/main/.env.release.example)）。
-2. 重新创建相关容器：
-
-   ```bash
-   docker compose \
-     --env-file /tmp/skillhub-runtime/.env.release \
-     -f /tmp/skillhub-runtime/compose.release.yml \
-     up -d --force-recreate
-   ```
-
-3. 若此前密码已写入数据库导致仍不生效，可能需要清理对应数据后重新初始化。
+A: `BOOTSTRAP_ADMIN_PASSWORD` 用于初始化账号。`BootstrapAdminInitializer` 在本地凭证已存在时保留原密码，因此修改环境变量或重建容器不会重置已有账号密码。使用实例提供的修改/找回密码流程；邮件验证码需要正确配置 SMTP。不要删除用户或数据库重新初始化。
 
 ## Q: 修改 / 找回密码必须使用邮箱验证码吗？
 
-A: 是的，默认通过邮箱验证码修改或找回密码，因此需要先配置 SMTP。配置方法参考 [docs/19-smtp-password-reset-email-setup.md](https://github.com/iflytek/skillhub/blob/main/docs/19-smtp-password-reset-email-setup.md)。管理员也可在 `.env.release` 中进行重置。
+A: 网页找回密码使用邮箱验证码；已登录且知道原密码的修改接口不使用该验证码。找回流程需先配置 [SMTP](https://github.com/iflytek/skillhub/blob/main/docs/19-smtp-password-reset-email-setup.md)。修改 bootstrap 环境变量不能重置已经初始化的密码。
 
 ## Q: skill 可以起中文名吗？
 
-A: skill name 一般使用英文，目前不支持中文名（在 OpenClaw 中使用中文 skill 名会报错）。
+A: 技能标识 `name` / slug 使用符合校验规则的名称；面向用户的展示名支持中文，可通过 `metadata.display-name` 配置。展示名不改变安装坐标或目录名。见 [发布指南](./guide/skill-publish.md)。
 
 ## Q: 未审核的 skill 可以下载吗？
 
-A: 只要拥有可查看的权限，一般都可以下载。
+A: 正常安装面向已发布且当前用户可访问的版本。能查看详情不等于能下载任意状态的版本；作者或审核人员的预览权限与公开分发权限不同。见 [审核与治理](./guide/review.md)。
 
 ## Q: 如何隐藏或删除登录页的第三方 SSO 登录方式？
 
@@ -273,7 +174,7 @@ SKILLHUB_PUBLISH_MAX_FILE_COUNT=500
 
 ## Q: 使用 CLI（发布 / 下载等）对服务端版本有要求吗？
 
-A: 需要 SkillHub 服务端镜像 **v0.2.7 及以上** 才支持 CLI 功能。
+A: 兼容性取决于具体命令。旧版本支持基础 CLI 不代表支持 Device Flow、Suite 或同步；请核对 CLI 版本与目标服务端发行说明。Suite 要求服务端声明 `skill-suite-v1`。见 [CLI 指南](./guide/cli.md)。
 
 ## Q: SkillHub 支持 MySQL 数据库吗？
 
@@ -372,21 +273,7 @@ A: OAuth 首次登录创建的是普通用户。需要由已有的 `SUPER_ADMIN`
 
 ## Q: 如何批量安装多个技能包？
 
-A: CLI 的 `install` 一次处理一个技能包。下面两个示例都通过 `--dir` 将技能批量安装到同一个目标根目录；每个技能实际位于 `$target_dir/<skill-slug>/`：
-
-```bash
-target_dir=/opt/skillhub-skills
-
-# 逐个安装
-for skill in skill-a skill-b skill-c; do
-  skillhub install "$skill" --dir "$target_dir"
-done
-
-# 或从清单文件读取（每行一个技能名）
-xargs -a skills.txt -I {} skillhub install "{}" --dir "$target_dir"
-```
-
-自 **SkillHub Server v0.2.12** 起，公开技能支持匿名搜索与安装；如果配置了无效的 Bearer Token，命令会直接失败而不再回退匿名访问，遇到这种情况请更新凭据或先移除无效 Token。
+A: 需要固定成员版本并统一升级时，使用 [技能套装](./guide/skill-suites.md) 的 `skillhub suite install`。同步团队命名空间工作区时，使用 [CLI](./guide/cli.md) 的 `skillhub sync pull`。若只是独立安装几个无关技能，可分别运行 `skillhub install`；Suite Bundle 是发布者的导入格式，不是本地安装命令。
 
 ## Q: 遇到问题怎么办？
 
@@ -455,7 +342,7 @@ java -version
 lsof -i :8080
 
 # 终止进程
-kill -9 <PID>
+# 确认进程用途后，通过其启动工具停止服务
 ```
 
 ### 4. 查看详细日志

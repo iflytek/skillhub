@@ -13,8 +13,8 @@ hero:
       text: 快速开始
       link: /quickstart
     - theme: alt
-      text: 功能指南
-      link: /guide/skill-publish
+      text: 文档导航
+      link: /guide/
     - theme: alt
       text: GitHub
       link: https://github.com/iflytek/skillhub
@@ -34,7 +34,7 @@ features:
     link: /guide/namespace
   - icon: ✅
     title: 审核与治理
-    details: 多级审核工作流，举报系统，确保技能包质量
+    details: 技能与套装审核流程，举报系统，确保技能包质量
     link: /guide/review
   - icon: ⭐
     title: 用户交互与社交

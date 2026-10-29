@@ -1,234 +1,98 @@
-# 快速开始
+# 快速开始：安装并使用技能
 
-## 一键部署
+安装第一个技能，并在 Agent 中使用。本页使用已有的注册中心，不需要先部署 SkillHub 服务。
 
-使用 curl 命令快速部署 SkillHub（包含所有服务：Web UI、Backend API、PostgreSQL、Redis、MinIO、Skill Scanner）：
+## 开始前准备
 
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
-```
+- 一个支持技能目录的 Agent，例如 Codex 或 Claude Code。
+- Node.js 18 或更新版本，以及可用的 npm；可用 `node --version` 确认版本。
+- 一个准备使用技能的项目目录，以及能访问的 SkillHub 注册中心地址。
 
-**国内用户（阿里云镜像）：**
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --aliyun
-```
+本页命令使用终端运行，`@team/example-skill` 是占位坐标，不是保证存在的公共技能。选择实际搜索结果后再替换。项目级安装前，先切换到准备让 Agent 打开的项目根目录。
 
-**自定义参数**：
-```bash
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up \
-  --version v0.2.0 \
-  --home /opt/skillhub \
-  --aliyun
-```
-
-**参数说明**：
-| 参数 | 说明 | 示例 |
-|------|------|------|
-| `--version <tag>` | 指定版本 | `--version v0.2.0` |
-| `--aliyun` | 使用阿里云镜像（国内推荐） | `--aliyun` |
-| `--home <dir>` | 指定安装目录 | `--home /opt/skillhub` |
-| `--no-scanner` | 禁用安全扫描服务 | `--no-scanner` |
-| `--mirror-registry <url>` | 自定义镜像仓库 | `--mirror-registry registry.example.com` |
-
-**其他命令**：
-```bash
-# 停止服务
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- down
-
-# 查看服务状态
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- ps
-
-# 查看日志
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- logs
-
-# 清理所有数据
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- clean
-```
-
-部署成功后访问：
-- **Web UI**: http://localhost:3000
-- **Backend API**: http://localhost:8080
-- **API 文档**: http://localhost:8080/swagger-ui.html
-- **Skill Scanner**: http://localhost:8000
-
-## 本地开发
-
-如果需要从源码启动开发环境：
+## 1. 安装 CLI，选择注册中心
 
 ```bash
-# 克隆仓库
-git clone https://github.com/iflytek/skillhub.git
-cd skillhub
-
-# 启动所有服务（包含 Scanner）
-make dev-all
-```
-
-### 国内开发者注意事项
-
-如果 `make dev-all` 后端启动失败，常见原因：
-
-1. **Maven 依赖下载超时**
-
-   项目已内置阿里云镜像配置（`server/.mvn/settings.xml`），但 Maven 不会自动读取项目级配置。需要手动配置：
-
-   ```bash
-   # 方式一：复制到用户目录（推荐）
-   mkdir -p ~/.m2
-   cp server/.mvn/settings.xml ~/.m2/settings.xml
-
-   # 方式二：每次构建时指定
-   cd server && ./mvnw -s .mvn/settings.xml package
-   ```
-
-2. **Java 版本不匹配**
-
-   SkillHub 要求 Java 21+：
-   ```bash
-   java -version
-   ```
-
-3. **端口冲突**
-
-   检查 8080 端口是否被占用：
-   ```bash
-   lsof -i :8080
-   ```
-
-详细的错误排查步骤，请查看 [常见问题](faq.md#本地开发启动失败)。
-
-## 登录系统
-
-### 方式一：使用内置管理员账号
-
-SkillHub 内置了一个超级管理员账号，可以直接登录：
-
-- **用户名**：`admin`
-- **密码**：`ChangeMe!2026`
-
-> **安全提示**：生产环境部署后，请立即修改默认密码。
-
-### 方式二：注册新账号
-
-访问 http://localhost:3000/register 注册新账号。
-
-### 方式三：使用 Mock 用户（仅本地开发）
-
-本地开发时，可以使用 Mock 用户头快速登录：
-
-```bash
-# 普通用户
-curl -H "X-Mock-User-Id: local-user" http://localhost:8080/api/v1/auth/me
-
-# 超级管理员
-curl -H "X-Mock-User-Id: local-admin" http://localhost:8080/api/v1/auth/me
-```
-
-在浏览器中，可以通过浏览器插件（如 ModHeader）添加 `X-Mock-User-Id` 请求头。
-
-## 安装 CLI 工具
-
-推荐使用第一方 SkillHub CLI 管理技能包：
-
-```bash
-# 安装并配置 SkillHub 注册中心地址
 npm install -g @astron-team/skillhub
-export SKILLHUB_REGISTRY=http://localhost:8080
-
-# 搜索技能包
-skillhub search email
-
-# 安装技能包
-skillhub install my-skill
-
-# 发布技能包
-skillhub publish ./my-skill --namespace my-team
+skillhub version
 ```
 
-已有 ClawHub 工作流仍可通过兼容层进行搜索和安装；新流程及发布操作优先使用 SkillHub CLI。
-
-## 发布第一个技能包
-
-### 使用 CLI 工具发布（推荐）
-
-1. **准备技能包**
-
-创建一个简单的技能包目录：
-
-```
-my-skill/
-├── skill.md          # 技能描述
-├── package.json      # 元数据
-└── scripts/          # 脚本文件
-    └── main.py
-```
-
-2. **使用 CLI 发布**
+默认使用 `https://skill.xfyun.cn`。使用自托管实例时，在当前终端设置实际地址：
 
 ```bash
-# 配置注册中心
-export SKILLHUB_REGISTRY=http://localhost:8080
-
-# 发布到指定命名空间
-skillhub publish ./my-skill --namespace my-team
+export SKILLHUB_REGISTRY=https://skillhub.example.com
 ```
 
-3. **等待安全扫描**
+PowerShell 中设置注册中心使用：
 
-发布后，Skill Scanner 会自动扫描技能包，检测潜在的安全问题：
-- 恶意代码检测
-- 敏感信息泄露
-- 依赖漏洞扫描
-- 行为分析
+```powershell
+$env:SKILLHUB_REGISTRY="https://skillhub.example.com"
+```
 
-扫描结果会显示在技能包详情页。
+只想临时使用另一个实例时，可以在命令后添加 `--registry https://skillhub.example.com`。搜索、登录和安装应使用同一个注册中心；不同实例中的同名技能不是同一安装来源。
 
-4. **等待审核**（如果命名空间开启了审核）
-
-管理员会收到通知，审核通过后技能包正式发布。
-
-### 使用 Web UI 发布
-
-1. 访问 http://localhost:3000/dashboard/publish
-2. 选择命名空间（如果没有，先创建一个）
-3. 上传 zip 文件
-4. 选择可见性（PUBLIC / PRIVATE / INTERNAL）
-5. 点击「发布」
-
-## 搜索和下载技能包
-
-### 使用 CLI 工具
+公开技能可匿名搜索和安装。发布、访问受限资源等操作需要登录：
 
 ```bash
-# 搜索技能包
+skillhub login
+skillhub whoami
+```
+
+没有从命令行、环境变量或该注册中心的保存记录读取到 Token 时，CLI 会进入设备授权；按终端提示在浏览器完成登录和设备码确认。已有 Token 时先用该 Token 验证身份，不会自动重新选账号。远程终端可用 `skillhub login --no-open`。账号是否可以注册、使用哪些登录方式，由实例配置决定。
+
+## 2. 找到技能并安装
+
+```bash
 skillhub search pdf
-
-# 安装技能包
-skillhub install pdf-parser
-
-# 安装指定命名空间的技能包
-skillhub install pdf-parser --namespace my-team
 ```
 
-### 使用 Web UI
+在网页详情确认用途、版本、可见性及使用说明，然后复制真实坐标。下面的 `@team/example-skill` 是占位示例，必须替换成搜索结果中的坐标。
 
-1. 访问 http://localhost:3000/search
-2. 输入关键词搜索
-3. 点击技能包查看详情
-4. 点击「下载」或复制安装命令
-
-## 升级 SkillHub
-
-使用 curl 命令升级到最新版本：
+在目标项目根目录执行：
 
 ```bash
-# 升级到最新版本
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- pull
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- down
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up
-
-# 升级到指定版本
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --version v0.2.0
+skillhub install @team/example-skill --scope project --agent codex
+skillhub list --agent codex
 ```
 
-> **注意**：升级前建议备份数据库和对象存储。
+Claude Code 用户改用 `--agent claude-code`。希望多个项目共用时，使用 `--scope user`。
+项目级 Codex 安装目录为 `.codex/skills/<slug>/`，Claude Code 为 `.claude/skills/<slug>/`；用户级路径位于用户主目录。
+
+### 确认安装到了哪里
+
+查看安装命令输出的目标路径，再查看 `skillhub list --agent codex` 的记录：坐标、版本、Agent、目录和状态应符合刚才选择的目标。`list` 按当前注册中心过滤；切换注册中心后列表变化不代表本地文件被删除。
+
+状态 `missing` 表示记录对应的目录不存在；`ok` 只表示目录存在，不代表 Agent 已加载或技能已执行成功。进入实际目录检查 `SKILL.md`，再继续下一步。
+
+## 3. 在 Agent 中使用
+
+安装完成后，在目标 Agent 中打开项目，必要时新建会话或重新加载技能。先确认 Agent 能发现该技能，再提出具体任务，例如：
+
+> 请使用 example-skill，按它的说明处理以下材料：……
+
+实际调用名称以技能 `SKILL.md` 中的 `name` 和 Agent 显示结果为准。安装不会自动执行技能，也不会代为配置成员所需的工具或凭据。
+如果 Agent 没发现技能，检查 CLI 输出路径、当前项目、安装范围和目标 Agent，参见 [FAQ](./faq.md)。
+
+整套安装使用 `skillhub suite install`，之后从套装的入口技能开始；详见 [技能套装使用指南](./guide/skill-suites.md)。
+
+## 4. 更新和管理
+
+```bash
+skillhub upgrade @team/example-skill --check
+skillhub upgrade @team/example-skill
+```
+
+检查计划后再更新。保留需要的本地修改；不要把 `--force` 当作默认参数。卸载、同步团队工作区和完整命令说明见 [CLI 指南](./guide/cli.md)。
+
+## 常见问题与处理
+
+| 现象 | 先检查什么 | 下一步 |
+| --- | --- | --- |
+| 搜索不到目标技能 | 当前注册中心、拼写、登录身份和资源可见性 | 在网页确认坐标和版本是否已发布，见[搜索与安装](./guide/skill-discovery.md) |
+| 安装时报同名目录冲突 | 输出的目标目录是否来自另一来源或包含自己的文件 | 先保留所需内容，不直接使用 `--force` 覆盖未知目录，见[CLI 参考](./guide/cli.md) |
+| 安装成功但 Agent 看不到 | Agent 类型、项目根目录、user/project 范围 | 对照安装输出路径，按 Agent 的发现方式重载或重开会话 |
+| Agent 已加载但执行失败 | 技能说明所需的工具、输入和凭据 | 按 `SKILL.md` 配置运行环境；注册中心不会代为执行这些步骤 |
+
+## 下一步
+
+需要配套技能时，阅读[技能套装](./guide/skill-suites.md)；需要更多命令时，查阅 [CLI 指南](./guide/cli.md)。发布技能、管理团队、自托管和源码开发，请从[文档导航](./guide/index.md)选择对应任务。

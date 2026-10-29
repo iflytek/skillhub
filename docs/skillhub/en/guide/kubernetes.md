@@ -1,4 +1,4 @@
-# Kubernetes Deployment Guide
+# Kubernetes Deployment: Kustomize Configuration and Verification
 
 This document explains how to deploy SkillHub on a Kubernetes cluster.
 
@@ -35,6 +35,8 @@ deploy/k8s/
 
 ## Quick Start
 
+All relative paths below use `deploy/k8s` in the repository as the working directory. Configure the Secret, then inspect `kubectl kustomize overlays/with-infra/` locally; rendered output may contain secrets. Applying manifests creates resources and backend startup runs database migrations.
+
 ### 1. Create Namespace
 
 ```bash
@@ -44,10 +46,10 @@ kubectl create namespace skillhub
 ### 2. Configure Secret
 
 ```bash
-cd deploy/k8s/base
+cd deploy/k8s
 
 # Copy example file
-cp secret.yaml.example secret.yaml
+cp base/secret.yaml.example base/secret.yaml
 
 # Edit secret.yaml with your configuration
 ```
@@ -65,6 +67,14 @@ cp secret.yaml.example secret.yaml
 | skill-scanner-llm-api-key | LLM API key | No |
 | skill-scanner-llm-base-url | Local/custom LLM service base URL | No |
 | skill-scanner-llm-model | LLM model name used by the scanner | No |
+
+Apply the completed Secret separately. The current Kustomization does not include `base/secret.yaml`; copying the file does not create it in the cluster:
+
+```bash
+kubectl apply -n skillhub -f base/secret.yaml
+```
+
+Also add the public URL and anonymous-download signing secret to your backend overlay; see “Complete environment wiring before deployment” below.
 
 ### 3. Choose Deployment Method
 
@@ -270,7 +280,7 @@ kubectl create secret docker-registry ghcr-secret \
 kubectl logs postgres-0 -n skillhub
 
 # Check Secret configuration
-kubectl get secret skillhub-secret -n skillhub -o yaml
+kubectl describe deployment skillhub-server -n skillhub
 ```
 
 ### View Logs
@@ -288,6 +298,8 @@ kubectl logs -l app.kubernetes.io/name=skillhub-scanner -n skillhub -f
 
 ## Cleanup
 
+Run only after retiring the instance and backing up its database and skill storage. Namespace deletion removes its resources and PVCs; underlying data retention depends on the storage reclaim policy.
+
 ```bash
 # Delete all resources
 kubectl delete -k overlays/with-infra/  # or overlays/external/
@@ -295,3 +307,33 @@ kubectl delete -k overlays/with-infra/  # or overlays/external/
 # Delete namespace
 kubectl delete namespace skillhub
 ```
+
+## Complete environment wiring before deployment
+
+The base manifests do not automatically pass every application setting. Add the required environment entries to the `server` container in your `skillhub-server` Deployment overlay:
+
+```yaml
+- name: SKILLHUB_PUBLIC_BASE_URL
+  value: https://skills.example.com
+- name: SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET
+  valueFrom:
+    secretKeyRef:
+      name: skillhub-secret
+      key: download-anon-cookie-secret
+```
+
+Add `download-anon-cookie-secret` under `stringData` in your private `base/secret.yaml`, using a random value of at least 32 characters. Replace the public URL. Startup rejects the default anonymous-download secret placeholder. Keep the public URL, Ingress host, TLS and secure-cookie settings aligned; Ingress does not issue certificates automatically.
+
+For S3 storage, also map the Secret keys `skillhub-storage-s3-access-key` and `skillhub-storage-s3-secret-key` through `secretKeyRef` to `SKILLHUB_STORAGE_S3_ACCESS_KEY` and `SKILLHUB_STORAGE_S3_SECRET_KEY`. Merely adding keys to a Secret does not inject them into the process. Explicitly wire settings absent from the base manifest, including Suite review and Bundle confirmation controls; Compose defaults do not apply here.
+
+## Upgrade and verify
+
+1. Pin application image `newTag` values in `base/kustomization.yaml`. Preserve the previous version and overlay, and back up the database, storage and private Secrets.
+2. Render the selected overlay locally. Check images, environment references, Ingress, PVCs and namespace; do not publish rendered Secrets.
+3. Apply configuration, wait for `kubectl rollout status deployment/skillhub-server -n skillhub`, then inspect Pod events and logs. ConfigMap/Secret changes do not automatically refresh running process environments; roll affected Deployments during an appropriate maintenance window.
+4. From the actual entrypoint, verify login, search, a test publication and its scan/review, and an exact-version download. Ready probes alone do not establish business acceptance.
+5. For a failed upgrade, inspect migrations and dependencies before rollback. Check schema compatibility and retain PVCs; deleting a namespace is not a retry procedure.
+
+For `CreateContainerConfigError`, check that referenced Secrets and required keys exist. For `CrashLoopBackOff`, inspect startup logs. For `Pending`, check PVCs and scheduling capacity. Do not expose Secret data during troubleshooting.
+
+A separate [Helm Chart](https://github.com/iflytek/skillhub/tree/main/charts/skillhub) is available. Follow its README for values, Secrets and dependencies rather than mixing Helm instructions with this guide's Kustomize paths.

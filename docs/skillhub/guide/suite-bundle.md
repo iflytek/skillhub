@@ -1,6 +1,28 @@
-# Suite Bundle 批量导入
+# 通过 Bundle 导入技能套装
 
 Suite Bundle 用一次 ZIP 或文件夹上传，为 Suite 创建首个版本，或基于一个已发布版本创建新版本。系统先展示成员差异，只有用户明确确认后才进入成员 Skill 的正常发布和审核流程。
+
+安装和调用请先阅读[技能套装使用指南](./skill-suites)。本页面向批量导入内容的作者。`SUITE.yaml`（`kind: SkillSuiteBundle`）与套装设计中的 `suite.yaml`（`kind: SkillSuite`）不是同一种文件。
+
+## 适合谁、准备什么
+
+本页面向套装作者。只想安装使用的人应阅读[技能套装](/guide/skill-suites)，不需要制作 Bundle。导入前准备目标空间的写权限、完整成员清单、一个入口成员，以及每个 package 成员自己的有效 `SKILL.md`。reference 成员必须已经发布且你有权访问。
+
+Bundle 用来创建成员版本并生成套装草稿，不会直接把技能安装进本地 Agent，也不会跳过成员审核。创建前确认套装坐标未被占用；更新前记录基准套装版本，不要把增量清单当成完整新版本。
+
+## 导入中断与恢复
+
+| 操作状态 | 含义与处理 |
+| --- | --- |
+| `RUNNING` | 成员发布处理中，查看成员行定位进度 |
+| `WAITING_FOR_MEMBERS` | 等待成员完成发布流程；按成员链接查看审核状态 |
+| `BLOCKED_RETRYABLE` | 查看具体受阻成员；扫描失败与成员发布失败使用不同重试提示，权限或空间状态问题需先恢复条件 |
+| `REPREVIEW_REQUIRED` | 计划或基准发生变化，重新上传并预览，不能直接确认旧计划 |
+| `SUITE_DRAFT_CREATED` | 成员阶段结束，打开生成的套装草稿继续审核与发布；这不是套装已发布 |
+| `CANCELLED` | 本次套装创建已停止；已创建的成员版本及审核不会被自动撤销，仍可从成员链接跟踪 |
+
+刷新页面后查看同一持久化操作，不要为了“继续”另建一份套装。完成后如无法打开草稿，保留操作 ID 并请管理员检查结果关联；不要把完成状态理解为所有结果均可访问。
+
 
 ## 归档结构
 
@@ -10,8 +32,6 @@ Suite Bundle 用一次 ZIP 或文件夹上传，为 Suite 创建首个版本，�
 SUITE.yaml
 skills/
   intake/
-    SKILL.md
-  summarizer/
     SKILL.md
 ```
 
@@ -28,7 +48,7 @@ spec:
   summary: 串联病历接收与摘要生成
   overview: |
     接收结构化病历，完成字段校验后生成摘要。
-    入口技能负责接收和分派，摘要技能负责输出最终结果。
+    入口技能使用共享词典完成字段校验。
   visibility: PUBLIC
   entry: "@global/intake"
   members:

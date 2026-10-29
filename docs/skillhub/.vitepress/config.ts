@@ -23,7 +23,7 @@ export default defineConfig({
         nav: [
           { text: '首页', link: '/' },
           { text: '快速开始', link: '/quickstart' },
-          { text: '功能指南', link: '/guide/skill-publish' },
+          { text: '文档导航', link: '/guide/' },
           { text: '开源周报', link: 'https://iflytek.github.io/skillhub/weekly/' },
           { text: 'FAQ', link: '/faq' },
         ],
@@ -33,27 +33,52 @@ export default defineConfig({
             items: [
               { text: '项目简介', link: '/introduction' },
               { text: '快速开始', link: '/quickstart' },
-            ],
-          },
-          {
-            text: '核心功能',
-            items: [
-              { text: 'Skill 发布与版本管理', link: '/guide/skill-publish' },
-              { text: '技能头像与图片审核接入', link: '/guide/skill-avatars' },
-              { text: 'Suite Bundle 批量导入', link: '/guide/suite-bundle' },
-              { text: 'Skill 搜索与发现', link: '/guide/skill-discovery' },
-              { text: '命名空间与团队管理', link: '/guide/namespace' },
-              { text: '审核与治理', link: '/guide/review' },
-              { text: '安全扫描', link: '/guide/scanner' },
-              { text: '用户交互与社交', link: '/guide/social' },
-              { text: 'Runtime 集成契约', link: '/guide/runtime-integration' },
-            ],
-          },
-          {
-            text: '更多',
-            items: [
-              { text: 'Kubernetes 部署', link: '/guide/kubernetes' },
+              { text: '账号与访问令牌', link: '/guide/account-access' },
+              { text: '文档导航', link: '/guide/' },
               { text: '常见问题', link: '/faq' },
+            ],
+          },
+          {
+            text: '使用技能',
+            items: [
+              { text: '搜索与安装技能', link: '/guide/skill-discovery' },
+              { text: '管理技能套装', link: '/guide/skill-suites' },
+              { text: 'CLI 使用参考', link: '/guide/cli' },
+              { text: '收藏、评分与通知', link: '/guide/social' },
+            ],
+          },
+          {
+            text: '创作与发布',
+            collapsed: false,
+            items: [
+              { text: '发布与更新技能', link: '/guide/skill-publish' },
+              { text: 'Bundle 导入', link: '/guide/suite-bundle' },
+            ],
+          },
+          {
+            text: '团队与治理',
+            collapsed: false,
+            items: [
+              { text: '管理命名空间', link: '/guide/namespace' },
+              { text: '审核技能与套装', link: '/guide/review' },
+              { text: '安全扫描与报告', link: '/guide/scanner' },
+            ],
+          },
+          {
+            text: '部署与运维',
+            collapsed: false,
+            items: [
+              { text: 'Docker 部署', link: '/guide/deployment' },
+              { text: 'Kubernetes 部署', link: '/guide/kubernetes' },
+              { text: '技能头像与审核', link: '/guide/skill-avatars' },
+            ],
+          },
+          {
+            text: '开发与集成',
+            collapsed: false,
+            items: [
+              { text: 'Runtime 集成参考', link: '/guide/runtime-integration' },
+              { text: '源码开发手册', link: 'https://github.com/iflytek/skillhub/blob/main/docs/dev-workflow.md' },
             ],
           },
         ],
@@ -72,36 +97,62 @@ export default defineConfig({
         nav: [
           { text: 'Home', link: '/en/' },
           { text: 'Quick Start', link: '/en/quickstart' },
-          { text: 'Guide', link: '/en/guide/skill-publish' },
+          { text: 'Guides', link: '/en/guide/' },
           { text: 'Weekly Reports', link: 'https://iflytek.github.io/skillhub/weekly/' },
           { text: 'FAQ', link: '/en/faq' },
         ],
         sidebar: [
           {
-            text: 'Getting Started',
+            text: 'Start',
             items: [
               { text: 'Introduction', link: '/en/introduction' },
-              { text: 'Quick Start', link: '/en/quickstart' },
-            ],
-          },
-          {
-            text: 'Core Features',
-            items: [
-              { text: 'Skill Publishing & Versioning', link: '/en/guide/skill-publish' },
-              { text: 'Suite Bundle Import', link: '/en/guide/suite-bundle' },
-              { text: 'Skill Search & Discovery', link: '/en/guide/skill-discovery' },
-              { text: 'Namespace & Team Management', link: '/en/guide/namespace' },
-              { text: 'Review & Governance', link: '/en/guide/review' },
-              { text: 'Security Scanning', link: '/en/guide/scanner' },
-              { text: 'Social & Interaction', link: '/en/guide/social' },
-              { text: 'Runtime Integration Contract', link: '/en/guide/runtime-integration' },
-            ],
-          },
-          {
-            text: 'More',
-            items: [
-              { text: 'Kubernetes Deployment', link: '/en/guide/kubernetes' },
+              { text: 'Quick start', link: '/en/quickstart' },
+              { text: 'Accounts and access tokens', link: '/en/guide/account-access' },
+              { text: 'Documentation map', link: '/en/guide/' },
               { text: 'FAQ', link: '/en/faq' },
+            ],
+          },
+          {
+            text: 'Use skills',
+            items: [
+              { text: 'Find and install skills', link: '/en/guide/skill-discovery' },
+              { text: 'Manage skill suites', link: '/en/guide/skill-suites' },
+              { text: 'CLI reference', link: '/en/guide/cli' },
+              { text: 'Stars, ratings and notifications', link: '/en/guide/social' },
+            ],
+          },
+          {
+            text: 'Author skills',
+            collapsed: false,
+            items: [
+              { text: 'Publish and update skills', link: '/en/guide/skill-publish' },
+              { text: 'Import a bundle', link: '/en/guide/suite-bundle' },
+            ],
+          },
+          {
+            text: 'Team governance',
+            collapsed: false,
+            items: [
+              { text: 'Manage namespaces', link: '/en/guide/namespace' },
+              { text: 'Review submissions', link: '/en/guide/review' },
+              { text: 'Configure scanning', link: '/en/guide/scanner' },
+            ],
+          },
+          {
+            text: 'Deploy and operate',
+            collapsed: false,
+            items: [
+              { text: 'Deploy with Docker', link: '/en/guide/deployment' },
+              { text: 'Deploy on Kubernetes', link: '/en/guide/kubernetes' },
+              { text: 'Skill avatars and moderation', link: '/en/guide/skill-avatars' },
+            ],
+          },
+          {
+            text: 'Develop and integrate',
+            collapsed: false,
+            items: [
+              { text: 'Integrate a runtime', link: '/en/guide/runtime-integration' },
+            { text: 'Development handbook', link: 'https://github.com/iflytek/skillhub/blob/main/docs/dev-workflow.md' },
             ],
           },
         ],
