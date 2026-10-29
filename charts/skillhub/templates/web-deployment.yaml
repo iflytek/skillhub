@@ -58,6 +58,16 @@ spec:
                 configMapKeyRef:
                   name: {{ include "skillhub.fullname" . }}-config
                   key: web-api-base-url
+            - name: SKILLHUB_WEB_ANALYTICS_CONFIG
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: web-analytics-config
+            - name: SKILLHUB_WEB_ANALYTICS_UPSTREAM
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: web-analytics-upstream
             {{- with .Values.web.extraEnv }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

@@ -1,0 +1,32 @@
+# Optional persistent collector. Add to compose.release.yml explicitly.
+# The platform admin stays loopback-only; there is no additional Nginx.
+services:
+  analytics-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:?provide a separate database password}
+    volumes:
+      - analytics_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U umami -d umami]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  umami:
+    image: ghcr.io/umami-software/umami:3.4.1
+    restart: unless-stopped
+    environment:
+      # Use a URL-safe password (letters/digits recommended), or percent-encode
+      # its password component in UMAMI_DATABASE_URL separately.
+      DATABASE_URL: ${UMAMI_DATABASE_URL:-postgresql://umami:${UMAMI_DB_PASSWORD:?provide a separate database password}@analytics-postgres:5432/umami}
+      APP_SECRET: ${UMAMI_APP_SECRET:?provide a separate random app secret}
+    ports:
+      - "127.0.0.1:${UMAMI_ADMIN_PORT:-8300}:3000"
+    depends_on:
+      analytics-postgres:
+        condition: service_healthy
+volumes:
+  analytics_postgres_data:
