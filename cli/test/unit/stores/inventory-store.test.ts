@@ -1,5 +1,6 @@
+import { renameAtomicFile } from '../../../src/platform/atomic-rename'
 import { describe, expect, test } from 'bun:test'
-import { mkdir, rm, utimes, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rm, utimes, writeFile } from 'node:fs/promises'
 import { mkdtemp } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, dirname } from 'node:path'
@@ -164,4 +165,32 @@ describe('InventoryStore', () => {
       { ...replacement, version: '1.1.0', fingerprint: 'fp-v2', installedBy: ['direct'] }
     ])
   })
+})
+
+ test('exhausted Windows rename retries preserve inventory, clean temporary files, and do not replay the mutation', async () => {
+  const home = await makeTempHome()
+  const original = new InventoryStore(home)
+  let attempts = 0
+  const failure = Object.assign(new Error('Persistent sharing failure'), { code: 'EPERM' })
+  class FailingRenameStore extends InventoryStore {
+    protected override async replaceInventoryFile(temporaryPath: string): Promise<void> {
+      await renameAtomicFile(temporaryPath, this.path, async () => { attempts++; throw failure }, 'win32')
+    }
+  }
+  try {
+    await original.writeAtomic({ items: [] })
+    const bytes = await readFile(original.path)
+    const failing = new FailingRenameStore(home)
+    let mutations = 0
+    await expect(failing.mutateAtomic(inventory => {
+      mutations++
+      inventory.items.push({ registry: 'https://registry.example', namespace: 'team', slug: 'writer', targets: [] })
+    })).rejects.toBe(failure)
+    expect(attempts).toBe(6)
+    expect(mutations).toBe(1)
+    expect(await readFile(original.path)).toEqual(bytes)
+    expect((await readdir(dirname(original.path))).filter(name => name.endsWith('.tmp'))).toEqual([])
+    await original.mutateAtomic(inventory => { inventory.items.push({ registry: 'https://registry.example', namespace: 'team', slug: 'other', targets: [] }) })
+    expect((await original.read()).items.map(item => item.slug)).toEqual(['other'])
+  } finally { await rm(home, { recursive: true, force: true }) }
 })

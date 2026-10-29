@@ -1,7 +1,8 @@
+import { renameAtomicFile } from '../platform/atomic-rename'
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { isDeepStrictEqual } from 'node:util'
-import { lstat, open, readFile, rename, rm } from 'node:fs/promises'
+import { lstat, open, readFile, rm } from 'node:fs/promises'
 import { dirname, isAbsolute, relative, resolve, join } from 'node:path'
 import { lock } from 'proper-lockfile'
 import { acquireAcquisitionGate } from '../services/skill-target-lock'
@@ -285,7 +286,7 @@ export class InventoryStore {
       const file = await open(tmpPath, 'wx', 0o600)
       try { await file.writeFile(payload); await file.sync() } finally { await file.close() }
       parseInventory(JSON.parse(await readFile(tmpPath, 'utf-8')))
-      await rename(tmpPath, this.path)
+      await this.replaceInventoryFile(tmpPath)
       if (process.platform !== 'win32') {
         const directory = await open(dirname(this.path), 'r')
         try { await directory.sync() } finally { await directory.close() }
@@ -293,6 +294,10 @@ export class InventoryStore {
     } finally {
       await rm(tmpPath, { force: true }).catch(() => {})
     }
+  }
+
+  protected async replaceInventoryFile(temporaryPath: string): Promise<void> {
+    await renameAtomicFile(temporaryPath, this.path)
   }
 
   private async acquireLock(): Promise<() => Promise<void>> {

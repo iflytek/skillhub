@@ -113,7 +113,10 @@ test('independent prepared upgrades commit without losing siblings', async () =>
   try {
     for (let i = 0; i < 3; i++) await f.install(i, '1.0.0')
     const first = await f.prepare(0); const second = await f.prepare(1)
-    expect((await Promise.all([f.runtime.executeUpgrade(first), f.runtime.executeUpgrade(second)])).map(result => result.outcome)).toEqual(['committed', 'committed'])
+    const results = await Promise.allSettled([f.runtime.executeUpgrade(first), f.runtime.executeUpgrade(second)])
+    const failures = results.filter(result => result.status === 'rejected')
+    if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Independent upgrades failed')
+    expect(results.map(result => result.status === 'fulfilled' ? result.value.outcome : undefined)).toEqual(['committed', 'committed'])
     const targets = (await f.store.read()).items[0]!.targets
     expect(f.roots.map(root => targets.find(target => target.rootDir === root.root)?.version)).toEqual(['3.0.0', '3.0.0', '1.0.0'])
   } finally { await f.close() }
