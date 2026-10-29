@@ -214,9 +214,12 @@ export async function prepareDownloadCache(path) {
   const target = resolve(path);
   for (const base of bases) {
     const basePath = resolve(base);
-    const suffix = relative(basePath, target);
-    if (!suffix || suffix === '..' || suffix.startsWith('..' + sep) || isAbsolute(suffix)) continue;
-    let current = await realpath(basePath);
+    const canonicalBase = await realpath(basePath);
+    // Only the trusted anchor may be canonicalized: never resolve unverified descendants.
+    const suffix = [basePath, canonicalBase].map(anchor => relative(anchor, target))
+      .find(value => value && value !== '..' && !value.startsWith('..' + sep) && !isAbsolute(value));
+    if (!suffix) continue;
+    let current = canonicalBase;
     const parts = suffix.split(sep);
     for (const [index, part] of parts.entries()) {
       current = join(current, part);

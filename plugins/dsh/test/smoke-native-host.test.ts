@@ -252,3 +252,34 @@ test.skipIf(process.platform === 'win32')('download cache rejects writable inter
   await expect(access(join(parent, 'cache'))).rejects.toThrow();
   expect((await stat(parent)).mode & 0o777).toBe(0o777);
 });
+
+
+test('trusted temporary base aliases accept lexical and canonical children but never anchors or descendant links', async () => {
+  const directory = await root();
+  const actual = join(directory, 'actual-temp');
+  const alias = join(directory, 'temp-alias');
+  await mkdir(actual);
+  await symlink(actual, alias, process.platform === 'win32' ? 'junction' : 'dir');
+  const previous = { CI: process.env.CI, RUNNER_TEMP: process.env.RUNNER_TEMP, TMPDIR: process.env.TMPDIR, TEMP: process.env.TEMP, TMP: process.env.TMP };
+  try {
+    process.env.TMPDIR = alias; process.env.TEMP = alias; process.env.TMP = alias;
+    delete process.env.RUNNER_TEMP;
+    expect((await prepareDownloadCache(join(actual, 'canonical'))).path).toBe(join(actual, 'canonical'));
+    expect((await prepareDownloadCache(join(alias, 'lexical'))).path).toBe(join(actual, 'lexical'));
+    await expect(prepareDownloadCache(alias)).rejects.toThrow();
+    await expect(prepareDownloadCache(actual)).rejects.toThrow();
+    const descendant = join(actual, 'linked');
+    await symlink(directory, descendant, process.platform === 'win32' ? 'junction' : 'dir');
+    await expect(prepareDownloadCache(join(alias, 'linked', 'escape'))).rejects.toThrow();
+    await expect(prepareDownloadCache(join(actual, 'linked', 'escape'))).rejects.toThrow();
+    const unrelated = join(directory, 'other-temp'); await mkdir(unrelated);
+    process.env.TMPDIR = unrelated; process.env.TEMP = unrelated; process.env.TMP = unrelated;
+    process.env.CI = 'true'; process.env.RUNNER_TEMP = alias;
+    expect((await prepareDownloadCache(join(actual, 'runner'))).path).toBe(join(actual, 'runner'));
+    await expect(prepareDownloadCache(actual)).rejects.toThrow();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key]; else process.env[key] = value;
+    }
+  }
+});
