@@ -28,3 +28,16 @@ test('observer diagnostics whitelist states and exact dependency booleans', () =
   expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { observer: { stage: 'private', validation: 'private-path' }, dependencies: { skillhub: 'secret' } } }), 'runtime-baseline'))
     .toEqual({ stage: 'host-result', code: 'HOST_RESULT_TIMEOUT', observer: 'not-observed', dependencies: {} });
 });
+
+test('availability diagnostics retain only fixed checkpoint labels, never raw failure data', () => {
+  const checkpoint = { scenario: 'user-winner', checkpoint: 'assertion', assertion: 'discovery' };
+  const base = { passed: false, probe: 'skill-availability', stage: 'host-assertion', failureCode: 'HOST_ASSERTION_FAILED',
+    error: '/private/AVAILABILITY_PRIVATE_SENTINEL', diagnostics: { availability: { ...checkpoint, error: 'secret', path: '/private' } } };
+  const safe = safeProbeFailure(JSON.stringify(base), 'skill-availability');
+  expect(safe.availability).toEqual(checkpoint);
+  expect(JSON.stringify(safe)).not.toMatch(/private|secret|SENTINEL/);
+  for (const key of ['scenario', 'checkpoint', 'assertion']) {
+    expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { availability: { ...checkpoint, [key]: '/private/secret' } } }), 'skill-availability').availability).toBeUndefined();
+  }
+  expect(safeProbeFailure(JSON.stringify({ ...base, probe: 'plugin-lifecycle' }), 'plugin-lifecycle').availability).toBeUndefined();
+});

@@ -119,6 +119,15 @@ export async function selectTarball(input) {
   return target;
 }
 
+export function safeAvailabilityCheckpoint(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const scenarios = ['setup', 'user-install', 'user-winner', 'project-install', 'project-winner', 'user-shadowed', 'remote', 'by-name', 'content-modified', 'skill-missing', 'directory-missing', 'policy', 'absent', 'incomplete-provider', 'failed-provider'];
+  const checkpoints = ['setup', 'install', 'install-poll', 'reference', 'before-digest', 'execute', 'assertion', 'after-digest', 'mutation'];
+  const assertions = ['none', 'isError', 'kind', 'schemaVersion', 'association', 'scope', 'integrity', 'discovery', 'name', 'reason', 'invocation', 'installation', 'namespace', 'slug', 'version', 'fingerprint', 'render', 'privacy', 'unchanged', 'accepted', 'completed', 'reference'];
+  if (!scenarios.includes(value.scenario) || !checkpoints.includes(value.checkpoint) || !assertions.includes(value.assertion)) return undefined;
+  return { scenario: value.scenario, checkpoint: value.checkpoint, assertion: value.assertion };
+}
+
 export function safeProbeFailure(log, probe) {
   const stages = ['setup', 'validate-root', 'prepare-fixture', 'fixture-ports', 'registry-ready', 'host-result', 'host-assertion'];
   const codes = ['PROBE_FAILED', 'REGISTRY_EXITED', 'REGISTRY_TIMEOUT', 'CHILD_EXITED', 'HOST_ASSERTION_FAILED', 'HOST_RESULT_TIMEOUT'];
@@ -136,6 +145,8 @@ export function safeProbeFailure(log, probe) {
         if (['root-realpath', 'temporary-realpath', 'temporary-containment', 'home-identity'].includes(validation)) {
           safe.validation = validation;
         }
+        const availability = safeAvailabilityCheckpoint(result.diagnostics.availability);
+        if (probe === 'skill-availability' && availability) safe.availability = availability;
         safe.dependencies = {};
         for (const name of ['loader', 'pluginPackages', 'clientModules', 'skillhub']) {
           const present = result.diagnostics.dependencies?.[name];
