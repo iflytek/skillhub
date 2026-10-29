@@ -84,6 +84,7 @@ type RuntimeConfig = {
   authSessionBootstrapEnabled?: string
   authSessionBootstrapProvider?: string
   authSessionBootstrapAuto?: string
+  analytics?: unknown
 }
 
 declare global {
