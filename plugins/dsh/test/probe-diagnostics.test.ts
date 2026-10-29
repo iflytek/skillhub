@@ -41,3 +41,23 @@ test('availability diagnostics retain only fixed checkpoint labels, never raw fa
   }
   expect(safeProbeFailure(JSON.stringify({ ...base, probe: 'plugin-lifecycle' }), 'plugin-lifecycle').availability).toBeUndefined();
 });
+
+test('both toggle probes expose only bounded fixture locations and fixed labels', () => {
+  for (const probe of ['skill-toggle', 'skill-toggle-watch-off']) {
+    const base = { passed: false, probe, stage: 'host-assertion', failureCode: 'HOST_ASSERTION_FAILED',
+      diagnostics: { toggle: { scenario: 'disabled-upgrade', assertion: 'equal', error: 'private-secret' },
+        location: { fixture: 'skill-toggle-fixture.mjs', line: 152, stack: '/private/secret' } } };
+    const safe = safeProbeFailure(JSON.stringify(base), probe);
+    expect(safe.toggle).toEqual({ scenario: 'disabled-upgrade', assertion: 'equal' });
+    expect(safe.location).toEqual({ fixture: 'skill-toggle-fixture.mjs', line: 152 });
+    expect(JSON.stringify(safe)).not.toMatch(/private|secret|stack/);
+    for (const line of [0, -1, 10001, 1.5, '152', null]) {
+      expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { location: { fixture: 'skill-toggle-fixture.mjs', line } } }), probe).location).toBeUndefined();
+    }
+    expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { location: { fixture: '/private/skill-toggle-fixture.mjs', line: 3 } } }), probe).location).toBeUndefined();
+    for (const key of ['scenario', 'assertion']) {
+      expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { toggle: { ...base.diagnostics.toggle, [key]: 'private-secret' } } }), probe).toggle).toBeUndefined();
+    }
+    expect(safeProbeFailure(JSON.stringify({ ...base, probe: 'runtime-baseline' }), 'runtime-baseline').location).toBeUndefined();
+  }
+});

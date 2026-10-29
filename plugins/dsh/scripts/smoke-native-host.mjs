@@ -128,6 +128,19 @@ export function safeAvailabilityCheckpoint(value) {
   return { scenario: value.scenario, checkpoint: value.checkpoint, assertion: value.assertion };
 }
 
+export function safeToggleCheckpoint(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const scenarios = ['setup', 'install', 'initial-discovery', 'watch-off-disable', 'watch-off-diagnosis', 'watch-off-uninstall', 'cancel', 'disable', 'disabled-files', 'disabled-use', 'enable', 'disable-again', 'disabled-upgrade', 'disabled-uninstall', 'same-name-install', 'same-name-disable', 'same-name-fallback', 'same-name-diagnosis', 'cleanup'];
+  const assertions = ['none', 'invoke', 'operation', 'discovery', 'equal', 'notEqual', 'deepEqual', 'rejects', 'truthy'];
+  if (!scenarios.includes(value.scenario) || !assertions.includes(value.assertion)) return undefined;
+  return { scenario: value.scenario, assertion: value.assertion };
+}
+
+export function safeFixtureLocation(value) {
+  if (value?.fixture !== 'skill-toggle-fixture.mjs' || !Number.isInteger(value.line) || value.line < 1 || value.line > 10000) return undefined;
+  return { fixture: value.fixture, line: value.line };
+}
+
 export function safeProbeFailure(log, probe) {
   const stages = ['setup', 'validate-root', 'prepare-fixture', 'fixture-ports', 'registry-ready', 'host-result', 'host-assertion'];
   const codes = ['PROBE_FAILED', 'REGISTRY_EXITED', 'REGISTRY_TIMEOUT', 'CHILD_EXITED', 'HOST_ASSERTION_FAILED', 'HOST_RESULT_TIMEOUT'];
@@ -147,6 +160,12 @@ export function safeProbeFailure(log, probe) {
         }
         const availability = safeAvailabilityCheckpoint(result.diagnostics.availability);
         if (probe === 'skill-availability' && availability) safe.availability = availability;
+        if (['skill-toggle', 'skill-toggle-watch-off'].includes(probe)) {
+          const toggle = safeToggleCheckpoint(result.diagnostics.toggle);
+          const location = safeFixtureLocation(result.diagnostics.location);
+          if (toggle) safe.toggle = toggle;
+          if (location) safe.location = location;
+        }
         safe.dependencies = {};
         for (const name of ['loader', 'pluginPackages', 'clientModules', 'skillhub']) {
           const present = result.diagnostics.dependencies?.[name];

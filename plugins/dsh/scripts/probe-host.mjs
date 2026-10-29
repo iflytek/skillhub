@@ -1,4 +1,4 @@
-import { safeAvailabilityCheckpoint } from './smoke-native-host.mjs';
+import { safeAvailabilityCheckpoint, safeToggleCheckpoint, safeFixtureLocation } from './smoke-native-host.mjs';
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, realpath, writeFile, access } from 'node:fs/promises';
@@ -30,6 +30,8 @@ let selectedProbe;
 let observerStatusFile;
 let dependencyStatusFile;
 let availabilityCheckpoint;
+let toggleCheckpoint;
+let fixtureLocation;
 let failureCode = 'PROBE_FAILED';
 function fail(code, message) { failureCode = code; throw new Error(message); }
 async function main() {
@@ -181,6 +183,10 @@ try {
     if (report) {
       if (report.passed !== true) {
         if (values.probe === 'skill-availability') availabilityCheckpoint = safeAvailabilityCheckpoint(report.checkpoint);
+        if (['skill-toggle', 'skill-toggle-watch-off'].includes(values.probe)) {
+          toggleCheckpoint = safeToggleCheckpoint(report.checkpoint);
+          fixtureLocation = safeFixtureLocation(report.location);
+        }
         stage = 'host-assertion';
         fail('HOST_ASSERTION_FAILED', 'Host probe failed; inspect its result file.');
       }
@@ -208,6 +214,8 @@ try {
 main().catch(async () => {
   const diagnostics = {};
   if (availabilityCheckpoint) diagnostics.availability = availabilityCheckpoint;
+  if (toggleCheckpoint) diagnostics.toggle = toggleCheckpoint;
+  if (fixtureLocation) diagnostics.location = fixtureLocation;
   for (const [key, file] of [['observer', observerStatusFile], ['dependencies', dependencyStatusFile]]) {
     if (!file) continue;
     try { diagnostics[key] = JSON.parse(await readFile(file, 'utf8')); } catch { /* Missing marker is itself diagnostic. */ }
