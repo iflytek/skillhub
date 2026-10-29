@@ -75,7 +75,8 @@ docker compose --env-file .env.release -f compose.release.yml -f compose.analyti
 
 管理端口只绑定宿主机回环地址。远程机器需使用自己的 SSH 转发或受控管理入口。
 本机打开 `http://localhost:8300`。Umami 初始登录是 `admin` / `umami`，立即修改密码。
-创建网站，复制 UUID。此步骤不能省略，启动容器不会自动创建网站。
+修改密码会使旧会话失效。用新密码重新登录，再创建网站，复制 UUID。
+此步骤不能省略，启动容器不会自动创建网站。
 将第 2 节 JSON 的 websiteId 换成该 UUID，再填写：
 
 ```dotenv
