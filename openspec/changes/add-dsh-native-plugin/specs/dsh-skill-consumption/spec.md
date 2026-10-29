@@ -436,3 +436,25 @@ Daily catalog, installed-skill groups, conversation inventory cards and default 
 #### Scenario: Explicit installation management
 - **WHEN** the user selects a particular installation in secondary management or uses an exact operation receipt
 - **THEN** its exact reference remains authoritative for that request and is never silently replaced by the skill-level selector's winner
+
+
+### Requirement: User-triggered installed update overview
+The installed view SHALL check current managed installations only on explicit user action, aggregate results by skill, and retain exact installation identity for individual updates. It SHALL NOT execute updates during the scan.
+
+#### Scenario: Mixed installation results
+- **WHEN** installations of one skill return different update states
+- **THEN** the view counts the skill once as upgradable if any location can upgrade, and the detail exposes each location independently
+- **AND** blocked or unavailable results are not represented as current or executable upgrades
+
+#### Scenario: Context or inventory changes during a scan
+- **WHEN** the source, session, workspace, or installation reference changes
+- **THEN** stale results cannot populate the current overview or authorize an update
+
+#### Scenario: Retry and individual confirmation
+- **WHEN** a user retries failed checks or opens an upgradable skill
+- **THEN** checks remain read-only and the existing precise per-installation update confirmation is required before mutation
+
+#### Scenario: Large inventory update checking
+- **WHEN** a user checks many installations, including several locations of the same skill
+- **THEN** a bounded Host-owned scan reads and indexes the trusted inventory once, validates only the requested target and inventory revision per result, and shares remote version resolution for the same source and skill within that scan
+- **AND** inventory or context changes invalidate the scan, scan resources expire or are released on cancellation, and mutation preparation retains its independent full validation

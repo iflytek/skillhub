@@ -20,6 +20,7 @@ function native(): NativeRuntime {
     assessUpdate: () => { throw new Error('Unexpected assessment'); },
     inspectUpgrade: async () => { throw new Error('Unexpected inspection'); },
     inspectRemoval: async () => { throw new Error('Unexpected removal inspection'); },
+    openInstalledSnapshot: async () => ({ projection: { items: [], complete: true, issues: [] }, read: async () => { throw new Error('Unexpected scan read'); } }),
     listInstalled: async () => ({ items: [], complete: true, issues: [] }),
     executeInstall: async () => { throw new Error('Unexpected execution'); },
     recover: async () => { throw new Error('Unexpected recovery'); },

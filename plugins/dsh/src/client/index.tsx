@@ -1,3 +1,4 @@
+import { installedContext } from './installed-context.js';
 import { ManagementToolView, type ManagementViewServices } from './management-tool-view.js';
 import { SkillDraftRetentions } from './use-skill-drafts.js';
 import { newSkillConversation } from './use-skill-navigation.js';
@@ -255,7 +256,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       }, ({ renderSlot }) => renderSlot('skillhub.catalog', {})));
       ctx.slots.inject('skillhub.catalog', () => ctx.slots.register({ name: 'skillhub.catalog',
         inject: sessionId => ({ installation: sessionId ? installationFor(sessionId, true) : undefined,
-          installed: sessionId ? { sessionId, management: managementFor(sessionId), skillUse: useSkills.catalogServices(sessionId), upgradeRequests, removalRequests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
+          installed: sessionId ? { sessionId, context: installedContext(() => ({ scope: ctx.sessions.scope(SessionId(sessionId)), cwd: ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.cwd, active: !!ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.retainedBy.mainView }), listener => ctx.sessions.list.subscribe(listener)), get management() { return managementFor(sessionId); }, skillUse: useSkills.catalogServices(sessionId), upgradeRequests, removalRequests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
             operation: installationFor(sessionId).operation,
             recoverOperation: async input => {
               const scope = ctx.sessions.scope(SessionId(sessionId));
@@ -284,6 +285,18 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
             const scope = ctx.sessions.scope(SessionId(sessionId));
             if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');
             return withSessionRemote(scope, remote => remote.skillhub.getInstalledDetail(revision, itemKey, signal));
+          }, beginInstalledUpdateScan: async (revision, signal) => {
+            const scope = ctx.sessions.scope(SessionId(sessionId));
+            if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');
+            return withSessionRemote(scope, remote => remote.skillhub.beginInstalledUpdateScan(revision, signal));
+          }, checkInstalledUpdateScan: async (revision, scanId, itemKey, signal) => {
+            const scope = ctx.sessions.scope(SessionId(sessionId));
+            if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');
+            return withSessionRemote(scope, remote => remote.skillhub.checkInstalledUpdateScan(revision, scanId, itemKey, signal));
+          }, endInstalledUpdateScan: async (revision, scanId) => {
+            const scope = ctx.sessions.scope(SessionId(sessionId));
+            if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');
+            return withSessionRemote(scope, remote => remote.skillhub.endInstalledUpdateScan(revision, scanId));
           }, checkUpdate: async (revision, itemKey, signal) => {
             const scope = ctx.sessions.scope(SessionId(sessionId));
             if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');

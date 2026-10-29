@@ -514,3 +514,9 @@ node scripts/smoke-native-host.mjs --artifact artifacts --report host-smoke-summ
 需要把本机原始日志保存在仓库外时，将 `TMPDIR` 设置为仓库外报告目录；脚本的所有 Host/profile/HOME/探针日志都位于该目录下的独立根。不要指向现有 DSH 安装。
 
 新 RC 的 Gateway 要求 in-process 调用显式携带 Peer；观察器使用该 Connection 的 `browserPeer`，旧 RC 使用原有 `operator`。不伪造身份，不使用浏览器输入创建主机身份。发布插件通过生成的 Remote 绑定调用，不直接构造 Gateway invocation。
+
+## 已安装更新总览
+
+`installed-update-overview-probe.mjs` 导出 `probeInstalledUpdateOverview(page, screenshot)`，由已进入活动会话的真实 DSH Playwright 页面调用。夹具需要至少一个真实可更新安装、至少四个安装位置和一个多位置技能；按当前实际结果选择更新确认目标，不固定某技能的旧版本。先执行真实只读检查并取消逐位置更新确认，扫描断言一次 `beginInstalledUpdateScan`、逐位置 `checkInstalledUpdateScan` 与一次 `endInstalledUpdateScan`，再仅拦截 `checkInstalledUpdateScan` 响应验证混合结果、三并发、失败重试、关键词叠加、详情返回与迟到结果丢弃。不会确认安装写入或调用模型。`screenshot(name)` 由运行器保存图片；深浅色和 360px 布局均有断言。
+
+`installed-update-context-component.tsx` 是独立 React + QueryClient 组件夹具，使用 Bun 的浏览器构建后挂到含 `#root` 的测试 HTML，供 `installed-update-context-probe.mjs` 的 `probeInstalledUpdateContext(page)` 调用。它验证库存 itemKey 替换、来源/会话切换、同会话工作区 A→B→A 与迟到响应。仅内存服务，不更改真实 DSH 工作区或来源配置；与真实 Host 验收分别记录。上述浏览器探针不由 `bun test` 自动运行。

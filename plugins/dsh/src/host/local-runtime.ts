@@ -129,6 +129,10 @@ export class LocalRuntime {
     return this.call(runtime => runtime.readSkillExamples(directory));
   }
 
+  openInstalledSnapshot(registry: string, targets: readonly InstalledProjectionTarget[]) {
+    return this.call(runtime => runtime.openInstalledSnapshot(registry, targets));
+  }
+
   listInstalled(registry: string, targets: readonly InstalledProjectionTarget[]): Promise<InstalledProjection> {
     const roots = targets.map(target => ({ ...target }));
     return this.call(runtime => runtime.listInstalled(registry, roots));

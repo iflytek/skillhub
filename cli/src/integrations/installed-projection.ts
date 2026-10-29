@@ -17,17 +17,22 @@ const itemSchema = z.object({ registry: text, namespace: text, slug: text, targe
 /** Read only the selected Registry's DSH records in Host-approved roots; never repair or hash all files. */
 export async function readInstalledProjection(inventory: Pick<InventoryStore, 'read'>, registry: string,
   targets: readonly InstalledProjectionTarget[]): Promise<InstalledProjection> {
+  let records: unknown[]
+  try {
+    const raw: unknown = await inventory.read()
+    records = z.object({ items: z.array(z.unknown()) }).parse(raw).items
+  } catch { return { items: [], complete: false, issues: ['inventory-unreadable'] } }
+  return readInstalledProjectionRecords(records, registry, targets)
+}
+
+/** Internal projection primitive: callers must obtain records from a trusted inventory snapshot. */
+export async function readInstalledProjectionRecords(records: readonly unknown[], registry: string,
+  targets: readonly InstalledProjectionTarget[]): Promise<InstalledProjection> {
   const result: InstalledProjection = { items: [], complete: true, issues: [] }
   const issue = (code: InstalledProjection['issues'][number]) => {
     result.complete = false
     if (!result.issues.includes(code)) result.issues.push(code)
   }
-  let records: unknown[]
-  try {
-    const raw: unknown = await inventory.read()
-    const parsed = z.object({ items: z.array(z.unknown()) }).parse(raw)
-    records = parsed.items
-  } catch { issue('inventory-unreadable'); return result }
   const roots = targets.map(target => {
     if (!isAbsolute(target.root)) throw new Error('Installed projection requires absolute Host roots')
     return { ...target, root: resolve(target.root) }
@@ -85,4 +90,45 @@ export async function readInstalledProjection(inventory: Pick<InventoryStore, 'r
     }
   }
   return result
+}
+
+/** A round-owned snapshot. Inventory identity is checked around every target projection. */
+export async function openInstalledProjectionSnapshot(inventory: Pick<InventoryStore, 'read' | 'path'>,
+  registry: string, targets: readonly InstalledProjectionTarget[]) {
+  const identity = async () => {
+    const stat = await lstat(inventory.path, { bigint: true }).catch(error => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+      throw error
+    })
+    if (!stat) return 'absent'
+    if (!stat.isFile()) throw new Error('Inventory is not a regular file')
+    return [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs].join(':')
+  }
+  const revision = await identity()
+  const records = (await inventory.read()).items
+  const assertCurrent = async () => {
+    if (await identity() !== revision) throw new Error('Inventory changed during update scan')
+  }
+  await assertCurrent()
+  const projection = await readInstalledProjectionRecords(records, registry, targets)
+  await assertCurrent()
+  const key = (item: Pick<InstalledProjectionItem, 'namespace' | 'slug' | 'scope'>) => JSON.stringify([item.namespace, item.slug, item.scope])
+  const index = new Map<string, unknown[]>()
+  for (const record of records) {
+    for (const target of targets) {
+      const entries = record.targets.filter(entry => isAbsolute(entry.rootDir) && resolve(entry.rootDir) === resolve(target.root) && entry.agent === 'dsh')
+      if (!entries.length) continue
+      const id = key({ ...record, scope: target.scope })
+      const bucket = index.get(id) ?? []
+      bucket.push({ ...record, targets: entries }); index.set(id, bucket)
+    }
+  }
+  return { projection, async read(item: InstalledProjectionItem) {
+    await assertCurrent()
+    const result = await readInstalledProjectionRecords(index.get(key(item)) ?? [], registry, targets.filter(target => target.scope === item.scope))
+    await assertCurrent()
+    const current = result.items.find(value => value.targetPath === item.targetPath)
+    if (!current || JSON.stringify(current) !== JSON.stringify(item)) throw new Error('Installed target changed during update scan')
+    return current
+  } }
 }

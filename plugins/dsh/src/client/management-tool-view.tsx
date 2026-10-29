@@ -201,8 +201,8 @@ function ManagementGroup({ items, revision, services, verified }: { items: Item[
 }
 
 /** Read-only position inventory rendered directly in a skill detail, never a management modal. */
-export function InstallationManagement({ identity, revision, services, useSkill, onInstall, onUsed }: {
-  identity: Pick<Item, 'namespace' | 'slug'>; revision: string; services: ManagementViewServices; onInstall?(): void; onUsed?(): void; useSkill?: import('./use-skill.js').SkillUseServices;
+export function InstallationManagement({ identity, revision, services, useSkill, onInstall, onUsed, updateChecks }: {
+  updateChecks?: Record<string, InstalledUpdateCheck>; identity: Pick<Item, 'namespace' | 'slug'>; revision: string; services: ManagementViewServices; onInstall?(): void; onUsed?(): void; useSkill?: import('./use-skill.js').SkillUseServices;
 }) {
   const [receipt, setReceipt] = useState<ConversationManagementResult>();
   const [container, setContainer] = useState<HTMLElement | null>(null);
@@ -217,7 +217,7 @@ export function InstallationManagement({ identity, revision, services, useSkill,
     <ManagementNoticeBoundary container={container} key={`${revision}:${identity.namespace}/${identity.slug}:${services.installation.sessionId}`}><h3>安装管理</h3>
     {query.isPending ? <p role="status">正在读取安装位置…</p> : query.isError ? <p role="alert">安装记录暂不可用。<Button size="sm" variant="ghost" onClick={() => void query.refetch()}>重新读取</Button></p> : <>
       {(!query.data.complete || query.data.unavailable.length > 0) && <p role="alert">部分位置无法读取，以下记录可能不完整。</p>}
-      <ManagementLocations items={query.data.items.filter(item => item.namespace === identity.namespace && item.slug === identity.slug)} revision={revision} services={scoped} onUsed={onUsed} onManagement={setReceipt} />
+      <ManagementLocations items={query.data.items.filter(item => item.namespace === identity.namespace && item.slug === identity.slug)} revision={revision} services={scoped} updateChecks={updateChecks} onUsed={onUsed} onManagement={setReceipt} />
     </>}
     {onInstall && <Button size="sm" variant="outline" onClick={onInstall}>安装其他位置</Button>}
     {receipt && container && <Dialog open onOpenChange={open => { if (!open) setReceipt(undefined); }}><DialogContent container={container}>
@@ -228,14 +228,14 @@ export function InstallationManagement({ identity, revision, services, useSkill,
     </DialogContent></Dialog>}
   </ManagementNoticeBoundary></section>;
 }
-export function ManagementLocations({ items, revision, services, onUsed, onManagement }: {
-  items: Item[]; revision: string; services: ManagementViewServices; onUsed?(): void; onManagement?(result: ConversationManagementResult): void;
+export function ManagementLocations({ items, revision, services, onUsed, onManagement, updateChecks }: {
+  items: Item[]; updateChecks?: Record<string, InstalledUpdateCheck>; revision: string; services: ManagementViewServices; onUsed?(): void; onManagement?(result: ConversationManagementResult): void;
 }) {
   return <>{!items.length && <p role="status">该技能暂无安装记录。</p>}{items.map(item => {
     const label = managementTargetLabel(items, item).replace('当前用户', '所有项目').replace('当前项目', '仅此项目');
     return <section key={item.locationKey ?? item.itemKey} className="astron-sh-management-location-row" aria-label={`${label} v${item.version}`}>
       <header><h4>{label}</h4><span>v{item.version}</span><span>{item.state === 'present' ? item.installationState === 'disabled' ? '已停用' : '已启用' : '安装待核验'}</span></header>
-      <ManagementRow key={item.itemKey} item={item} revision={revision} services={services} grouped targetLabel={label} expanded onUsed={onUsed} onManagement={onManagement} />
+      <ManagementRow key={item.itemKey} item={item} revision={revision} services={services} initialCheck={updateChecks?.[item.itemKey]} grouped targetLabel={label} expanded onUsed={onUsed} onManagement={onManagement} />
     </section>;
   })}</>;
 }

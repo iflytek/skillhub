@@ -1,0 +1,158 @@
+import assert from 'node:assert/strict';
+/** Real Host/browser UI acceptance. Only per-item scan responses are controlled; no install writes. */
+export async function probeInstalledUpdateOverview(page, screenshot) {
+  const rpc = [];
+  const theme = async colorScheme => {
+    await page.emulateMedia({ colorScheme });
+    await page.waitForFunction(dark => {
+      const button = document.querySelector('.skillhub-installed-filters button[aria-pressed="true"]');
+      if (!button) return false;
+      const style = getComputedStyle(button);
+      const rgb = style.backgroundColor.match(/[\d.]+/g)?.map(Number);
+      return rgb && (dark ? rgb[0] < 100 : rgb[0] > 150);
+    }, colorScheme === 'dark');
+    await page.evaluate(async () => { await Promise.all(document.getAnimations().filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity).map(animation => animation.finished.catch(() => {}))); });
+  };
+  page.on('request', request => {
+    const path = new URL(request.url()).pathname;
+    if (path.startsWith('/api/')) rpc.push(path);
+  });
+  await page.getByRole('button', { name: '技能中心', exact: true }).click();
+  const inventoryResponse = page.waitForResponse(response => new URL(response.url()).pathname === '/api/skillhub/listInstalled');
+  await page.getByRole('tab', { name: '已安装', exact: true }).click();
+  const inventory = (await (await inventoryResponse).json()).result.value;
+  const items = inventory.items;
+  assert(items.length > 3);
+  const list = page.getByRole('region', { name: '已安装技能', exact: true });
+  const scan = list.getByRole('button', { name: '检查更新', exact: true });
+  await scan.waitFor();
+  assert(!rpc.some(path => /\/(checkUpdate|beginInstalledUpdateScan|checkInstalledUpdateScan)$/.test(path)), 'Entering must not scan');
+  assert.equal(await list.locator('select').count(), 0);
+  assert(!await list.getByText('尚未检查', { exact: false }).count());
+  await screenshot('initial-light');
+  await theme('dark'); await screenshot('initial-dark');
+  await theme('light');
+  const keyboardFilter = list.getByRole('group', { name: '更新筛选' }).getByRole('button', { name: '可更新', exact: true });
+  await keyboardFilter.focus(); await page.keyboard.press('Enter');
+  assert.equal(await keyboardFilter.getAttribute('aria-pressed'), 'true');
+  await page.keyboard.press('Tab'); await page.keyboard.press('Space');
+  assert.equal(await list.getByRole('button', { name: '检查失败', exact: true }).getAttribute('aria-pressed'), 'true');
+  await list.getByRole('button', { name: '全部', exact: true }).click();
+  const realStart = rpc.length;
+  await scan.click();
+  await page.getByText(`已检查 ${items.length}/${items.length}`, { exact: false }).waitFor();
+  await screenshot('real-results');
+  const realResults = await list.innerText();
+  const realScanRpc = rpc.slice(realStart);
+  assert.equal(realScanRpc.filter(path => path.endsWith('/beginInstalledUpdateScan')).length, 1);
+  assert.equal(realScanRpc.filter(path => path.endsWith('/checkInstalledUpdateScan')).length, items.length);
+  assert(!realScanRpc.some(path => path.endsWith('/checkUpdate')));
+  assert.equal(rpc.slice(realStart).filter(path => path.endsWith('/endInstalledUpdateScan')).length, 1);
+  const actualUpdate = list.locator('.astron-sh-installed-card').filter({ has: page.getByRole('button', { name: '查看更新', exact: true }) }).first();
+  await actualUpdate.getByRole('button', { name: '查看更新', exact: true }).click();
+  const realDetail = page.getByRole('region', { name: '已安装技能详情', exact: true });
+  await realDetail.getByRole('button', { name: '更新', exact: true }).first().click();
+  await page.getByRole('button', { name: '确认更新', exact: true }).waitFor();
+  await screenshot('real-update-confirmation');
+  await page.getByRole('button', { name: '取消', exact: true }).click();
+  await page.getByRole('button', { name: '确认更新', exact: true }).waitFor({ state: 'hidden' });
+  await realDetail.getByRole('button', { name: '← 返回已安装', exact: true }).click();
+  // Stable fixtures are real installed records; overwrite read-only responses to cover mixed outcomes.
+  const multi = items.find(item => items.filter(other => other.slug === item.slug).length > 1);
+  assert(multi, 'Needs a multi-location installation');
+  const other = items.filter(item => item.slug !== multi.slug);
+  const failedKey = other[0].itemKey, blockedKey = other[1].itemKey;
+  let active = 0, peak = 0, calls = [], retry = false, hold = false;
+  const releases = [];
+  await page.route('**/api/skillhub/checkInstalledUpdateScan', async route => {
+    const requestBody = route.request().postDataJSON();
+    const serialized = JSON.stringify(requestBody);
+    const item = items.find(candidate => serialized.includes(candidate.itemKey));
+    assert(item, 'checkInstalledUpdateScan must use an exact inventory itemKey');
+    calls.push(item.itemKey); active++; peak = Math.max(peak, active);
+    const response = await route.fetch();
+    const body = await response.json();
+    if (hold) await new Promise(resolve => releases.push(resolve));
+    else await new Promise(resolve => setTimeout(resolve, 180));
+    body.result = { ok: true, value: { state: item.itemKey === failedKey && !retry ? 'unavailable' : item.itemKey === blockedKey ? 'blocked' : item.slug === multi.slug ? 'upgradable' : 'current', currentVersion: item.version, candidateVersion: item.slug === multi.slug ? '1.3.0' : null, reason: item.itemKey === blockedKey ? 'local-changes' : '', checkedAt: new Date().toISOString() } };
+    active--;
+    await route.fulfill({ response, json: body }).catch(() => {});
+  });
+  await scan.click();
+  await list.getByRole('button', { name: '取消检查' }).waitFor();
+  assert(await scan.isDisabled());
+  await page.waitForFunction(total => {
+    const text = document.querySelector('.skillhub-installed-summary')?.textContent ?? '';
+    const match = text.match(/检查中 (\d+)\/(\d+)/);
+    return match && Number(match[1]) > 0 && Number(match[1]) < total;
+  }, items.length);
+  await screenshot('progress');
+  await page.getByText(`已检查 ${items.length}/${items.length} · 1 个技能可更新 · 1 处检查失败`, { exact: true }).waitFor();
+  assert.equal(peak, 3); assert.equal(calls.length, items.length);
+  assert(await list.getByText('多位置安装有更新').count() === 1);
+  assert(await list.getByText('更新需处理，请查看安装状态。').count() >= 1);
+  await screenshot('mixed-light');
+  const filter = list.getByLabel('更新筛选');
+  await filter.getByRole('button', { name: '可更新', exact: true }).click();
+  assert.equal(await list.locator('.astron-sh-installed-card').count(), 1);
+  const keyword = list.getByRole('searchbox', { name: '过滤已安装技能' });
+  await keyword.fill('does-not-exist');
+  await list.getByText('没有匹配的技能。', { exact: true }).waitFor();
+  await keyword.fill(multi.slug);
+  await list.getByRole('button', { name: '查看更新', exact: true }).click();
+  const detail = page.getByRole('region', { name: '已安装技能详情', exact: true });
+  await detail.getByRole('button', { name: '更新', exact: true }).first().waitFor();
+  assert.equal(await detail.getByRole('button', { name: '更新', exact: true }).count(), items.filter(item => item.slug === multi.slug).length);
+  await screenshot('detail-update-targets');
+  await detail.getByRole('button', { name: '← 返回已安装', exact: true }).click();
+  assert.equal(await filter.getByRole('button', { name: '可更新', exact: true }).getAttribute('aria-pressed'), 'true'); assert.equal(await keyword.inputValue(), multi.slug);
+  await keyword.fill(''); await filter.getByRole('button', { name: '检查失败', exact: true }).click();
+  assert.equal(await list.locator('.astron-sh-installed-card').count(), 1);
+  retry = true; calls = [];
+  await list.getByRole('button', { name: '重试失败项', exact: true }).click();
+  await page.getByText('已检查 1/1 · 1 个技能可更新', { exact: true }).waitFor();
+  assert.deepEqual(calls, [failedKey]);
+  await filter.getByRole('button', { name: '全部', exact: true }).click();
+  await theme('dark'); await screenshot('mixed-dark');
+  await page.setViewportSize({ width: 360, height: 1000 }); await screenshot('mixed-360-dark');
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+  await theme('light'); await screenshot('mixed-360-light');
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  hold = true; calls = [];
+  await scan.click();
+  await page.waitForFunction(() => document.body.innerText.includes('检查中 0/'));
+  await page.waitForTimeout(250);
+  await list.getByRole('button', { name: '取消检查', exact: true }).click();
+  releases.splice(0).forEach(resolve => resolve());
+  await page.waitForTimeout(300);
+  assert(calls.length <= 3);
+  assert((await list.innerText()).includes('已停止 0/'));
+  // Switch between existing real sessions while a read-only scan is held.
+  calls = [];
+  await scan.click(); await page.waitForTimeout(250);
+  const originalSessionKey = await page.locator('[data-row-key^="session:"]').first().getAttribute('data-row-key');
+  const workspace = page.locator('[data-row-key^="workspace:"]').filter({ has: page.getByText('layout-review-project', { exact: true }) });
+  if (await workspace.getAttribute('aria-expanded') === 'false') { await workspace.hover(); await workspace.locator('span[class*="_chevron"]').click(); }
+  await page.waitForFunction(() => document.querySelectorAll('[data-row-key^="session:"]').length > 1, undefined, { timeout: 5000 }).catch(() => {});
+  const keys = await page.locator('[data-row-key^="session:"]').evaluateAll(nodes => nodes.map(node => node.getAttribute('data-row-key')));
+  const nextKey = keys.find(key => key !== originalSessionKey);
+  let realSessionSwitch = 'unavailable: no second retained session in fixture workspace';
+  if (nextKey) {
+  await page.locator(`[data-row-key="${nextKey}"]`).click();
+  if (!await page.getByRole('button', { name: '检查更新', exact: true }).isVisible()) await page.getByRole('button', { name: '技能中心', exact: true }).click();
+  await page.getByRole('tab', { name: '已安装', exact: true }).click();
+  releases.splice(0).forEach(resolve => resolve());
+  await page.waitForFunction(() => !document.querySelector('.skillhub-installed-summary')?.textContent.includes('已检查'));
+  assert(calls.length <= 3);
+  await screenshot('real-session-switch');
+  await page.locator(`[data-row-key="${originalSessionKey}"]`).click();
+  realSessionSwitch = 'passed';
+  } else {
+    await list.getByRole('button', { name: '取消检查', exact: true }).click();
+    releases.splice(0).forEach(resolve => resolve());
+  }
+  const writes = rpc.filter(path => /\/(start|commit|execute|send)/i.test(path));
+  assert.deepEqual(writes, []);
+  await page.unroute('**/api/skillhub/checkInstalledUpdateScan');
+  return { passed: true, inventoryPositions: items.length, realScanRpc, realResults, controlledMixed: true, peakConcurrency: peak, grouped: true, filters: true, retryOnlyFailures: true, detailRoundTrip: true, realUpgradeConfirmationCancelled: true, realSessionSwitch, cancellationDropsLateResults: true, installationWrites: writes.length };
+}
