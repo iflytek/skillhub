@@ -297,6 +297,7 @@ jobs:
           EOF
 
           gh release create "$TAG" \
+            --latest=false \
             --title "CLI ${VERSION}" \
             --notes-file release-notes.md \
             "skillhub-cli-${VERSION}.tar.gz" \

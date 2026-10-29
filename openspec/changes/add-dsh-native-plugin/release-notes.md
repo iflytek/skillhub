@@ -1,6 +1,16 @@
 # SkillHub DSH 原生插件发布说明
 
 
+## 0.6.0 候选：启停、检查更新与紧凑卡片
+
+- **受管理技能启停**：[#1025](https://github.com/iflytek/skillhub/pull/1025) 按确认的位置将 `SKILL.md` 转换为 `SKILL.md.disabled`，启用恢复入口，保留目录和资源。更新停用安装后仍保持停用；文件修改、共享归属、目标被占用及不可信记录仍阻止写操作。停用不撤回已加载会话内容，也不停止任务。
+- **统一检查、逐项更新**：[#1030](https://github.com/iflytek/skillhub/pull/1030) 主动只读检查当前来源库存，渐进显示结果和失败重试。一次可信快照、有界并发、同来源技能共用远端 resolve；取消及上下文变化不接纳迟到结果。真正更新仍进入详情按位置确认，不提供批量自动覆盖。
+- **日常围绕使用技能**：[#1032](https://github.com/iflytek/skillhub/pull/1032) 已安装页采用桌面两列、窄屏一列的紧凑横向卡片，显示真实本地名称、一行摘要和实际安装版本；至多两个语义标签。整卡进入详情，保留使用技能主按钮，管理安装/检查更新收进更多菜单。单卡检查不清除其他卡结果，使用和菜单不误触详情。
+- **库存与配套 CLI**：首次成功写入库存 v3，读取 v1/v2 不迁移，旧库存保留字节核对备份。共享库存的 CLI 配套候选为 `0.3.0`，计划先发布 CLI 再发布 DSH；插件内置核心、不会调用 CLI，只有插件的用户无需另装 CLI。CLI `0.2.0` 不支持 v3；旧包拒绝 v3 不是可用回滚，不能只恢复库存而忽略入口、文件、元数据和操作日志。
+- **交付边界**：保留现有双 RC、Node/Cordis 与来源边界；详情官网链接仅使用 API 的安全 `webUrl`，缺失即隐藏。该增量不包含 SaaS 部署、场景助手或技能清单导入导出。
+
+上述是已合并源码的候选范围，不声明 `0.6.0`/CLI `0.3.0` 已发布，也不把历史功能验收等同本轮最终候选、跨平台恢复或公开包验收。发布顺序和限制见 [发布指南](release-guide.md)，结果由 [验证记录](verification.md) 单独维护。
+
 ## 0.5.0 技能可用性诊断
 
 - 技能卡片“更多 → 检查可用性”与对话工具 `astron_skillhub_check_availability` 提供只读诊断，区分文件完整性、同名覆盖、宿主未知及用户/模型调用策略（[#1023](https://github.com/iflytek/skillhub/pull/1023)）。
@@ -10,7 +20,7 @@
 
 ## 版本与交付状态
 
-当前准备版本为 `0.5.0`；上一公开版本为 `0.4.0`。发布状态以对应 npm 版本和发布工作流为准。
+当前准备版本为 DSH `0.6.0` 和配套 CLI `0.3.0`，尚不据此声明已公开发布。历史版本说明保留；实际公开状态以对应 npm 版本和专用发布工作流为准。
 
 `@astron-team/skillhub-dsh@0.3.1` 已发布，独立标签为 `dsh-v0.3.1`。[发布准备 PR #995](https://github.com/iflytek/skillhub/pull/995) 已合并，[专用发布工作流](https://github.com/iflytek/skillhub/actions/runs/39556075587) 成功；[公开 npm 包](https://www.npmjs.com/package/@astron-team/skillhub-dsh/v/0.3.1) 与工作流产物逐字节一致，发布时 `latest` 指向 `0.3.1`。两版 Linux 的严格安装、原生探针及浏览器操作复验通过，测试工件与公开包字节一致，结果见 [验证摘要](verification.md)。历史已发布版本保持不变。
 
@@ -100,7 +110,7 @@ Node 保持 `>=24.2.0 <25`。精确兼容与验证边界见 [兼容设计](compa
 
 ## 安装、更新与维护
 
-可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.3.1 --ignore-scripts` 安装到已有 Web Profile。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
+`0.6.0` 公开可用后，可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.0 --ignore-scripts` 安装到已有 Web Profile；发布前使用本地候选 tarball。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
 
 更新或回退前保留原包和校验值、停止新操作并处理待恢复事务，然后停止 Host、安装兼容包并重新启动。浏览器旧资源可强制刷新；这不能代替 Host 依赖重载。禁用或移除包不会卸载技能，不应删除技能目录、inventory 或操作日志。
 

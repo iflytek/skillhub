@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
 import { cp, mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { InventoryStore } from '../../../src/stores/inventory-store'
@@ -135,7 +136,7 @@ test.each([false, true])('restart recovers a renamed entry without overwriting a
   } finally { await rm(f.home, { recursive: true, force: true }) }
 })
 
-test.skipIf(process.platform === 'win32')('killed toggle writers recover intent, renamed and committed boundaries', async () => {
+test('killed toggle writers recover intent, renamed and committed boundaries', async () => {
   const fixtures = await Promise.all(['intent', 'linked', 'moved', 'restore-linked', 'committed'].map(async boundary => {
     const f = await fixture()
     const accepted = await f.runtime.acceptToggle({ hostInstanceId: f.runtime.hostInstanceId, ownerId: 'owner', mode: 'new', requestKey: randomUUID(), parameters: { boundary } }, async () => ({
@@ -145,12 +146,47 @@ test.skipIf(process.platform === 'win32')('killed toggle writers recover intent,
     return { ...f, boundary, operationId: accepted!.operationId }
   }))
   try {
-    await Promise.all(fixtures.map(async f => {
-      const child = Bun.spawn([process.execPath, new URL('../../fixtures/toggle-crash-child.ts', import.meta.url).pathname, f.home, f.operationId, f.boundary],
+    const crashes = await Promise.allSettled(fixtures.map(async f => {
+      const readyFile = join(f.home, 'crash-ready')
+      const child = Bun.spawn([process.execPath, fileURLToPath(new URL('../../fixtures/toggle-crash-child.ts', import.meta.url)), f.home, f.operationId, f.boundary, readyFile],
         { stdout: 'pipe', stderr: 'pipe' })
-      expect(await child.exited).not.toBe(0)
-      expect(await new Response(child.stderr).text()).toBe('')
+      const waitForExit = async (exited: Promise<number>) => {
+        let timer: ReturnType<typeof setTimeout> | undefined
+        try {
+          return await Promise.race([exited, new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Owned crash process did not exit within 10 seconds')), 10000)
+          })])
+        } finally { clearTimeout(timer) }
+      }
+      const terminate = async () => {
+        if (child.exitCode !== null) return
+        if (process.platform === 'win32') {
+          const killer = Bun.spawn(['taskkill.exe', '/PID', String(child.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'pipe' })
+          try { expect(await waitForExit(killer.exited)).toBe(0) } finally { if (killer.exitCode === null) killer.kill() }
+        } else child.kill('SIGKILL')
+      }
+      try {
+        const deadline = Date.now() + 20000
+        let ready = false
+        while (Date.now() < deadline && child.exitCode === null) {
+          try { ready = (await readFile(readyFile, 'utf8')) === f.boundary } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+          }
+          if (ready) break
+          await Bun.sleep(25)
+        }
+        expect(ready).toBe(true)
+        await terminate()
+        expect(await waitForExit(child.exited)).not.toBe(0)
+        expect(await new Response(child.stderr).text()).toBe('')
+      } finally {
+        // Cleanup uses only this child handle even if taskkill failed; it is not a passing crash assertion.
+        if (child.exitCode === null) child.kill()
+        await waitForExit(child.exited)
+      }
     }))
+    const failures = crashes.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+    if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Crash fixtures failed after all owned children settled')
     // Reverse-link recovery holds the inventory lease; its stale timeout is 30 seconds.
     await Bun.sleep(31_500)
     for (const f of fixtures) {
@@ -162,7 +198,7 @@ test.skipIf(process.platform === 'win32')('killed toggle writers recover intent,
       expect(await readFile(join(f.path, state === 'disabled' ? 'SKILL.md.disabled' : 'SKILL.md'), 'utf8')).toBe('# Original\n')
     }
   } finally { await Promise.all(fixtures.map(f => rm(f.home, { recursive: true, force: true }))) }
-}, 60_000)
+}, 90_000)
 
 test.each(['forward', 'rollback'] as const)('exclusive entry creation preserves a competitor appearing after preflight: %s', async direction => {
   const f = await fixture()

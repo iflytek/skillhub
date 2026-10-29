@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Node-only CI entry; keep its helpers importable without starting a Host or downloading dependencies.
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
-import { hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
+import { scenarioProbes, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
 
 const roots: string[] = [];
 async function root() {
@@ -172,4 +172,12 @@ test('native smoke accepts only explicit DSH releases and rejects incompatible r
     expect(() => selectDshVersion(version)).toThrow('Unsupported DSH release');
   }
   expect(() => selectDshVersion('0.2.1-rc.2', 'retained')).toThrow('requires the current Cordis family');
+});
+
+
+test('installation scenarios select a fresh smoke invocation without availability leftovers', () => {
+  expect(scenarioProbes()).toEqual(['runtime-baseline', 'plugin-lifecycle', 'skill-availability']);
+  expect(scenarioProbes('skill-toggle')).toEqual(['runtime-baseline', 'skill-toggle']);
+  expect(scenarioProbes('skill-toggle-watch-off')).toEqual(['runtime-baseline', 'skill-toggle-watch-off']);
+  expect(() => scenarioProbes('unknown')).toThrow('Unsupported Host scenario');
 });

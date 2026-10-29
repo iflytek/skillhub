@@ -621,7 +621,7 @@ subject to the server's package validation.
 
 ### Installation inventory compatibility
 
-The local installation inventory uses schema version 3 in the unreleased enable/disable increment. Each installation directory owns its
+The `0.3.0` release candidate uses installation inventory schema version 3. Each installation directory owns its
 version, fingerprint, timestamp and ownership, so a user installation and a project installation
 of the same skill can remain on different versions. `list --json` reports the actual version for
 each target. `upgrade --check --json` and upgrade results contain one row per selected installation
@@ -637,9 +637,11 @@ writes v3 (`schemaVersion`, `records`, `suites`). Each target records `installat
 (`enabled` or `disabled`); legacy targets project to enabled without inventing missing integrity.
 
 Stop incompatible CLI writers and let DSH finish pending recovery before migration. Published
-CLI `0.2.0` and `0.1.12` must not share writes with v3. Protocol rejection is not a complete
-cross-process guard: historical commands have different read paths. Release the compatible CLI
-before exposing this plugin increment. Restoring old inventory alone is not a safe downgrade;
+CLI `0.2.0` and `0.1.12` do not support v3 and must not share writes with it. An old package
+rejecting v3 is not a usable rollback. Protocol rejection is not a complete
+cross-process guard: historical commands have different read paths. The planned release order is CLI `0.3.0` followed by DSH `0.6.0`; verify that the exact
+versions are publicly available before installing them. Users sharing inventory must upgrade
+all CLI writers first. DSH bundles its core: plugin-only users do not need a separate CLI. Restoring old inventory alone is not a safe downgrade;
 verify entry names, package bytes, metadata and operation logs together.
 
 This CLI does not add enable/disable commands. Use DSH for explicit toggles and disabled updates;

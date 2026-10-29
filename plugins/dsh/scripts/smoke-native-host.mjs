@@ -13,6 +13,12 @@ export function selectDshVersion(version, family = 'fresh') {
   if (version === '0.2.1-rc.2' && family === 'retained') throw new Error('DSH 0.2.1 requires the current Cordis family.');
   return version;
 }
+export function scenarioProbes(scenario = 'smoke') {
+  if (scenario === 'smoke') return ['runtime-baseline', 'plugin-lifecycle', 'skill-availability'];
+  if (scenario === 'skill-toggle' || scenario === 'skill-toggle-watch-off') return ['runtime-baseline', scenario];
+  throw new Error('Unsupported Host scenario');
+}
+
 const PNPM_VERSION = '10.33.0';
 
 export const retainedCordisFamily = {
@@ -169,14 +175,15 @@ async function findNpm() {
 }
 
 async function main() {
-  const { values } = parseArgs({ options: { 'dsh-version': { type: 'string', default: '0.2.0-rc.2' }, artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' }, 'cordis-family': { type: 'string', default: 'fresh' } } });
+  const { values } = parseArgs({ options: { 'dsh-version': { type: 'string', default: '0.2.0-rc.2' }, artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' }, 'cordis-family': { type: 'string', default: 'fresh' }, scenario: { type: 'string', default: 'smoke' } } });
   if (values.help) {
-    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--cordis-family fresh|retained] [--dsh-version 0.2.0-rc.2|0.2.1-rc.2]');
+    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--scenario smoke|skill-toggle|skill-toggle-watch-off] [--cordis-family fresh|retained] [--dsh-version 0.2.0-rc.2|0.2.1-rc.2]');
     return;
   }
   if (!values.artifact || !values.report) throw new Error('Specify --artifact and --report; see --help.');
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major !== 24 || minor < 2) throw new Error('Use the fixed Node >=24.2.0 <25 baseline.');
+  const probes = scenarioProbes(values.scenario);
   const dshVersion = selectDshVersion(values['dsh-version'], values['cordis-family']);
   const installManifest = hostInstallManifest(values['cordis-family']);
   const artifact = await selectTarball(values.artifact);
@@ -193,7 +200,7 @@ async function main() {
   process.once('SIGINT', stop);
   process.once('SIGTERM', stop);
   const summary = { passed: false, platform: process.platform, node: process.versions.node,
-    dsh: dshVersion, pnpm: PNPM_VERSION, cordisFamily: values['cordis-family'],
+    scenario: values.scenario, dsh: dshVersion, pnpm: PNPM_VERSION, cordisFamily: values['cordis-family'],
     artifactSha256: createHash('sha256').update(await readFile(artifact)).digest('hex'),
     modelCalled: false, probes: [], stage: 'install-host' };
   const run = (name, args, timeoutMs = 300000) => runBounded(args, { cwd: join(root, 'workspace'), env,
@@ -217,7 +224,7 @@ async function main() {
     const manifest = JSON.parse(await readFile(join(root, 'home/profiles/skillhub-m0/node_modules/@astron-team/skillhub-dsh/package.json'), 'utf8'));
     if (manifest.name !== '@astron-team/skillhub-dsh') throw new Error('Unexpected installed candidate identity.');
     const probeScript = fileURLToPath(new URL('./probe-host.mjs', import.meta.url));
-    for (const probe of ['runtime-baseline', 'plugin-lifecycle', 'skill-availability']) {
+    for (const probe of probes) {
       summary.stage = probe;
       await run(probe, [probeScript, '--root', root, '--probe', probe], 150000);
       const lines = (await readFile(join(root, 'logs', probe + '.log'), 'utf8')).trim().split('\n');
@@ -238,7 +245,7 @@ async function main() {
   } catch (error) {
     summary.failure = ['SPAWN_FAILED', 'DEADLINE_OR_CANCELLED', 'PROCESS_FAILED', 'CLEANUP_DEADLINE'].includes(error.code)
       ? error.code : 'INVALID_RESULT';
-    if (['runtime-baseline', 'plugin-lifecycle', 'skill-availability'].includes(summary.stage)) {
+    if (probes.includes(summary.stage)) {
       const log = await readFile(join(root, 'logs', summary.stage + '.log'), 'utf8').catch(() => '');
       summary.probeFailure = safeProbeFailure(log, summary.stage);
     }
