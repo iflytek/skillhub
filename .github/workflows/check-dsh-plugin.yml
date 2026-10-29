@@ -81,9 +81,26 @@ jobs:
         run: |
           mkdir -p artifacts
           npm pack --ignore-scripts --pack-destination artifacts
+      - name: Validate public download cache before restore
+        working-directory: plugins/dsh
+        run: node --input-type=module -e "import { prepareDownloadCache } from './scripts/smoke-native-host.mjs'; await prepareDownloadCache(process.argv[1]);" "${{ runner.temp }}/skillhub-public-npm"
+      - name: Restore public npm download content
+        id: public-downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/skillhub-public-npm/_cacache
+          key: dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-0.2.0-rc.2
+          restore-keys: |
+            dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-
       - name: Verify native DSH Host in an isolated Web Profile
         working-directory: plugins/dsh
-        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-smoke-summary.json
+        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-smoke-summary.json --download-cache "${{ runner.temp }}/skillhub-public-npm"
+      - name: Save public npm download content
+        if: matrix.node == '24.2.0' && steps.public-downloads.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/skillhub-public-npm/_cacache
+          key: dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-0.2.0-rc.2
       - name: Verify retained Cordis family in an isolated Web Profile
         if: matrix.os == 'ubuntu-latest' && matrix.node == '24.2.0'
         working-directory: plugins/dsh
@@ -173,12 +190,29 @@ jobs:
         with:
           name: skillhub-dsh-development-package-${{ matrix.os }}-node-24.2.0
           path: plugins/dsh/artifacts
+      - name: Validate public download cache before restore
+        working-directory: plugins/dsh
+        run: node --input-type=module -e "import { prepareDownloadCache } from './scripts/smoke-native-host.mjs'; await prepareDownloadCache(process.argv[1]);" "${{ runner.temp }}/skillhub-public-npm"
+      - name: Restore public npm download content
+        id: public-downloads
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/skillhub-public-npm/_cacache
+          key: dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-${{ matrix.dsh }}
+          restore-keys: |
+            dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-
       - name: Verify installed skill activation in a fresh isolated Profile
         working-directory: plugins/dsh
-        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-toggle-summary.json --scenario skill-toggle --dsh-version '${{ matrix.dsh }}'
+        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-toggle-summary.json --download-cache "${{ runner.temp }}/skillhub-public-npm" --scenario skill-toggle --dsh-version '${{ matrix.dsh }}'
       - name: Verify watch-off activation in a fresh isolated Profile
         working-directory: plugins/dsh
-        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-toggle-watch-off-summary.json --scenario skill-toggle-watch-off --dsh-version '${{ matrix.dsh }}'
+        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-toggle-watch-off-summary.json --download-cache "${{ runner.temp }}/skillhub-public-npm" --scenario skill-toggle-watch-off --dsh-version '${{ matrix.dsh }}'
+      - name: Save public npm download content
+        if: steps.public-downloads.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/skillhub-public-npm/_cacache
+          key: dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-${{ matrix.dsh }}
       - name: Upload sanitized activation summaries
         if: always()
         uses: actions/upload-artifact@v4

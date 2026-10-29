@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { closeSync, openSync } from 'node:fs';
-import { access, mkdir, mkdtemp, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
+import { access, chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
@@ -206,6 +206,38 @@ export function safeProbeFailure(log, probe) {
   return undefined;
 }
 
+// Only npm's public download content is shared; every Host/config/profile stays fresh.
+export async function prepareDownloadCache(path) {
+  if (!isAbsolute(path)) throw new Error('Download cache must be an absolute temporary directory.');
+  const bases = [tmpdir()];
+  if (process.env.CI && process.env.RUNNER_TEMP && isAbsolute(process.env.RUNNER_TEMP)) bases.push(process.env.RUNNER_TEMP);
+  const target = resolve(path);
+  for (const base of bases) {
+    const basePath = resolve(base);
+    const suffix = relative(basePath, target);
+    if (!suffix || suffix === '..' || suffix.startsWith('..' + sep) || isAbsolute(suffix)) continue;
+    let current = await realpath(basePath);
+    const parts = suffix.split(sep);
+    for (const [index, part] of parts.entries()) {
+      current = join(current, part);
+      await mkdir(current, { mode: 0o700 }).catch(error => { if (error.code !== 'EEXIST') throw error; });
+      const info = await lstat(current);
+      if (!info.isDirectory() || info.isSymbolicLink() || (process.getuid && info.uid !== process.getuid())
+        || (process.platform !== 'win32' && index < parts.length - 1 && (info.mode & 0o022) !== 0)) {
+        throw new Error('Download cache must contain only current-user directories without links.');
+      }
+    }
+    await chmod(current, 0o700);
+    const content = join(current, '_cacache');
+    const info = await lstat(content).catch(error => { if (error.code !== 'ENOENT') throw error; });
+    if (info && (!info.isDirectory() || info.isSymbolicLink() || (process.getuid && info.uid !== process.getuid()))) {
+      throw new Error('Invalid download content directory.');
+    }
+    return { path: current, populated: Boolean(info && (await readdir(content)).length) };
+  }
+  throw new Error('Download cache must be below the current temporary directory.');
+}
+
 export function isolatedEnvironment(root, inherited = process.env) {
   // In particular, do not inherit model credentials, DSH overrides or Node preload hooks.
   const allowed = /^(PATH|SystemRoot|WINDIR|COMSPEC|PATHEXT|TEMP|TMP|TMPDIR|LANG|LC_ALL|HTTPS?_PROXY|ALL_PROXY|NO_PROXY|CI)$/i;
@@ -218,6 +250,7 @@ export function isolatedEnvironment(root, inherited = process.env) {
     APPDATA: join(root, 'appdata'), LOCALAPPDATA: join(root, 'localappdata'),
     DSH_HOME: join(root, 'home'), DSH_AGENTS_HOME: join(root, 'agents'), DSH_TELEMETRY_DISABLED: '1',
     npm_config_cache: join(root, 'npm-cache'), npm_config_userconfig: join(root, 'empty.npmrc'),
+    npm_config_logs_dir: join(root, 'logs/npm'),
     npm_config_globalconfig: join(root, 'empty-global.npmrc'), CI: 'true' };
 }
 
@@ -233,9 +266,9 @@ async function findNpm() {
 }
 
 async function main() {
-  const { values } = parseArgs({ options: { 'dsh-version': { type: 'string', default: '0.2.0-rc.2' }, artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' }, 'cordis-family': { type: 'string', default: 'fresh' }, scenario: { type: 'string', default: 'smoke' } } });
+  const { values } = parseArgs({ options: { 'download-cache': { type: 'string' }, 'dsh-version': { type: 'string', default: '0.2.0-rc.2' }, artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' }, 'cordis-family': { type: 'string', default: 'fresh' }, scenario: { type: 'string', default: 'smoke' } } });
   if (values.help) {
-    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--scenario smoke|skill-toggle|skill-toggle-watch-off] [--cordis-family fresh|retained] [--dsh-version 0.2.0-rc.2|0.2.1-rc.2]');
+    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--download-cache <temporary-directory>] [--scenario smoke|skill-toggle|skill-toggle-watch-off] [--cordis-family fresh|retained] [--dsh-version 0.2.0-rc.2|0.2.1-rc.2]');
     return;
   }
   if (!values.artifact || !values.report) throw new Error('Specify --artifact and --report; see --help.');
@@ -250,6 +283,8 @@ async function main() {
   await mkdir(dirname(reportFile), { recursive: true });
   const root = await mkdtemp(join(tmpdir(), 'skillhub-native-smoke-'));
   const env = isolatedEnvironment(root);
+  const downloads = values['download-cache'] ? await prepareDownloadCache(values['download-cache']) : undefined;
+  if (downloads) env.npm_config_cache = downloads.path;
   for (const directory of ['home', 'native-install-home', 'agents', 'workspace', 'logs']) await mkdir(join(root, directory), { mode: 0o700 });
   for (const name of ['empty.npmrc', 'empty-global.npmrc']) await writeFile(join(root, name), '', { mode: 0o600 });
   await writeFile(join(root, 'package.json'), JSON.stringify(installManifest));
@@ -260,12 +295,20 @@ async function main() {
   const summary = { passed: false, platform: process.platform, node: process.versions.node,
     scenario: values.scenario, dsh: dshVersion, pnpm: PNPM_VERSION, cordisFamily: values['cordis-family'],
     artifactSha256: createHash('sha256').update(await readFile(artifact)).digest('hex'),
-    modelCalled: false, probes: [], stage: 'install-host' };
+    modelCalled: false, probes: [], preparation: { cacheMode: downloads ? 'shared-public-downloads' : 'isolated', cachePopulated: downloads?.populated ?? false }, stage: 'install-host' };
   const run = (name, args, timeoutMs = 300000) => runBounded(args, { cwd: join(root, 'workspace'), env,
     log: join(root, 'logs', name + '.log'), timeoutMs, signal: abort.signal });
   try {
-    await run('install-host', [npm, 'install', '--prefix', root, '--ignore-scripts', '--no-audit', '--no-fund',
-      '--registry=https://registry.npmjs.org', `@deepseek-ai/dsh@${dshVersion}`, `pnpm@${PNPM_VERSION}`], 600000);
+    const installStarted = Date.now();
+    try {
+      await run('install-host', [npm, 'install', '--prefix', root, '--ignore-scripts', '--no-audit', '--no-fund',
+        '--registry=https://registry.npmjs.org', `@deepseek-ai/dsh@${dshVersion}`, `pnpm@${PNPM_VERSION}`], 600000);
+    } finally {
+      env.npm_config_cache = join(root, 'npm-cache');
+      summary.preparation.elapsedMs = Date.now() - installStarted;
+      const installLog = await readFile(join(root, 'logs/install-host.log'), 'utf8').catch(() => '');
+      summary.preparation.observedCodes = knownHostFailureCodes(installLog);
+    }
     const dsh = join(root, 'node_modules/@deepseek-ai/dsh/lib/bin.js');
     await access(dsh);
     summary.stage = 'initialize-web';

@@ -1,10 +1,10 @@
 import { afterEach, expect, test } from 'bun:test';
-import { realpath, access, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { realpath, access, chmod, mkdir, stat, symlink, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Node-only CI entry; keep its helpers importable without starting a Host or downloading dependencies.
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
-import { scenarioProbes, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
+import { prepareDownloadCache, scenarioProbes, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
 
 const roots: string[] = [];
 async function root() {
@@ -180,4 +180,75 @@ test('installation scenarios select a fresh smoke invocation without availabilit
   expect(scenarioProbes('skill-toggle')).toEqual(['runtime-baseline', 'skill-toggle']);
   expect(scenarioProbes('skill-toggle-watch-off')).toEqual(['runtime-baseline', 'skill-toggle-watch-off']);
   expect(() => scenarioProbes('unknown')).toThrow('Unsupported Host scenario');
+});
+
+
+test('explicit public download cache shares content but never Host state or credentials', async () => {
+  const directory = await root();
+  const shared = join(directory, 'downloads');
+  expect((await prepareDownloadCache(shared)).populated).toBe(false);
+  await mkdir(join(shared, '_cacache'));
+  await writeFile(join(shared, '_cacache', 'content'), 'public-tarball');
+  expect((await prepareDownloadCache(shared)).populated).toBe(true);
+  const first = isolatedEnvironment(join(directory, 'first'), { npm_config_cache: '/personal', NPM_TOKEN: 'private', npm_config__auth: 'private' });
+  const second = isolatedEnvironment(join(directory, 'second'), first);
+  for (const key of ['HOME', 'USERPROFILE', 'DSH_HOME', 'DSH_AGENTS_HOME', 'npm_config_userconfig', 'npm_config_logs_dir', 'npm_config_cache']) {
+    expect(first[key]).not.toBe(second[key]);
+    expect(first[key]).not.toContain(shared);
+  }
+  expect(first.NPM_TOKEN).toBeUndefined();
+  expect(first.npm_config__auth).toBeUndefined();
+  expect(await readFile(join(shared, '_cacache', 'content'), 'utf8')).toBe('public-tarball');
+});
+
+test('download cache rejects relative, temp-root, outside and linked directories', async () => {
+  const directory = await root();
+  await expect(prepareDownloadCache('relative')).rejects.toThrow();
+  await expect(prepareDownloadCache(tmpdir())).rejects.toThrow();
+  await expect(prepareDownloadCache(process.cwd())).rejects.toThrow();
+  const actual = join(directory, 'actual');
+  await mkdir(actual);
+  const linked = join(directory, 'linked');
+  await symlink(actual, linked, process.platform === 'win32' ? 'junction' : 'dir');
+  await expect(prepareDownloadCache(join(linked, 'nested'))).rejects.toThrow();
+  await expect(access(join(actual, 'nested'))).rejects.toThrow();
+  const content = join(directory, 'content-cache');
+  await mkdir(content);
+  await symlink(actual, join(content, '_cacache'), process.platform === 'win32' ? 'junction' : 'dir');
+  await expect(prepareDownloadCache(content)).rejects.toThrow();
+});
+
+
+test('explicit CI runner temp is trusted without inheriting it into Host state', async () => {
+  const directory = await root();
+  const previous = { CI: process.env.CI, RUNNER_TEMP: process.env.RUNNER_TEMP, TMPDIR: process.env.TMPDIR, TEMP: process.env.TEMP, TMP: process.env.TMP };
+  const alternate = join(directory, 'ordinary-temp');
+  await mkdir(alternate);
+  try {
+    process.env.CI = 'true';
+    process.env.RUNNER_TEMP = directory;
+    process.env.TMPDIR = alternate;
+    process.env.TEMP = alternate;
+    process.env.TMP = alternate;
+    expect(tmpdir()).toBe(alternate);
+    const target = join(directory, 'runner-downloads');
+    expect((await prepareDownloadCache(target)).path).toBe(target);
+    expect(isolatedEnvironment(join(directory, 'host')).RUNNER_TEMP).toBeUndefined();
+  } finally {
+    for (const [key, value] of Object.entries(previous)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
+
+
+test.skipIf(process.platform === 'win32')('download cache rejects writable intermediate directories without changing their mode', async () => {
+  const directory = await root();
+  const parent = join(directory, 'shared-parent');
+  await mkdir(parent);
+  await chmod(parent, 0o777);
+  await expect(prepareDownloadCache(join(parent, 'cache'))).rejects.toThrow();
+  await expect(access(join(parent, 'cache'))).rejects.toThrow();
+  expect((await stat(parent)).mode & 0o777).toBe(0o777);
 });

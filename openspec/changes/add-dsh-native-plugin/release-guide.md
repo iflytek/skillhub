@@ -93,6 +93,8 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 新增独立安装启停验收矩阵：Linux/macOS/Windows × DSH `0.2.0-rc.2`/`0.2.1-rc.2`，固定 Node `24.2.0`，复用对应平台检查过的候选 tarball。`--scenario skill-toggle` 与 `--scenario skill-toggle-watch-off` 分别创建全新隔离 Host/Profile，不能复用可用性探针遗留的安装状态。核心恢复测试在五个持久化边界终止本次测试子进程；Windows 使用原生进程终止，POSIX 使用 SIGKILL。核心进程恢复、Host 启停发现及真实浏览器交互分别记录，不将核心测试称为完整 Host 强杀重启验收。矩阵配置不等于本次已通过，结果见最终发布验证记录。
 
+Host 准备允许通过显式 `--download-cache` 共享受校验临时目录中的公共 npm `_cacache` 下载内容。CI 恢复缓存前及实际使用时都检查目录归属、链接与权限；按平台、架构、依赖准备代码和 DSH 版本区分缓存，可复用同族旧版本的公共内容。不得缓存 `node_modules`、Profile、技能、库存、历史、凭证或日志；只有 `install-host` 使用该缓存，候选安装与 Host 运行恢复独立私有缓存。每次验收仍创建全新状态，冷缓存未命中执行真实安装，安装 600 秒与各业务检查时限不变；耗时、缓存内容是否存在及固定错误码只作诊断，准备失败不得记为业务通过。
+
 ### 2.2 插件包检查
 
 - Host、Client、patch、Remote 元数据、声明及许可证包含在包中，exports 指向有效文件。
