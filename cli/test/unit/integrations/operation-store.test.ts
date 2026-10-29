@@ -163,16 +163,16 @@ test.each(['EPERM', 'EBUSY'])('journal replacement retries %s under the store lo
   const root = await mkdtemp(join(tmpdir(), 'skillhub-journal-retry-'))
   let armed = false; let attempts = 0; let validations = 0
   const reachedRename = Promise.withResolvers<void>()
-  let firstAttempt: { source: string; target: string; payload: Buffer } | undefined
-  let previous: Buffer | undefined
+  let firstAttempt: { source: string; target: string; payload: string } | undefined
+  let previous: string | undefined
   let competing: Promise<PromiseSettledResult<unknown>[]> | undefined
   try {
     const store = await OperationStore.open(root, (from, to) => renameAtomicFile(from, to, async (source, target) => {
       if (armed) {
-        const observation = { source, target, payload: await readFile(source) }
+        const observation = { source: String(source), target: String(target), payload: (await readFile(source)).toString('hex') }
         if (!firstAttempt) firstAttempt = observation
         else expect(observation).toEqual(firstAttempt)
-        expect(await readFile(target)).toEqual(previous!)
+        expect((await readFile(target)).toString('hex')).toEqual(previous!)
         if (++attempts < 3) { reachedRename.resolve(); throw Object.assign(new Error('Sharing failure'), { code }) }
       }
       await rename(source, target)
@@ -180,7 +180,7 @@ test.each(['EPERM', 'EBUSY'])('journal replacement retries %s under the store lo
     const key = request(store)
     const initial = (await store.accept(key, async () => { validations++; return accepted }))!
     const other = await OperationStore.open(root)
-    previous = await readFile(join(root, initial.operationId + '.json'))
+    previous = (await readFile(join(root, initial.operationId + '.json'))).toString('hex')
     armed = true
     const updating = store.update(initial.operationId, key.ownerId, 0, { ...initial.operation.status, phase: 'staging' })
     await reachedRename.promise
