@@ -4,6 +4,7 @@ import { useCopyToClipboard } from '@/shared/lib/clipboard'
 import { buildSkillhubCoordinate, getBaseUrl, isPortableSkillVersion } from './install-command'
 
 interface InstallForAgentButtonProps {
+  analyticsId?: string
   namespace: string
   slug: string
   version: string
@@ -25,7 +26,7 @@ export function buildAgentInstallPrompt(
   return formatPrompt(guideUrl, skill, version)
 }
 
-export function InstallForAgentButton({ namespace, slug, version, disabled = false }: InstallForAgentButtonProps) {
+export function InstallForAgentButton({ namespace, slug, version, disabled = false, analyticsId }: InstallForAgentButtonProps) {
   const { t } = useTranslation()
   const [copied, copy] = useCopyToClipboard()
 
@@ -53,6 +54,7 @@ export function InstallForAgentButton({ namespace, slug, version, disabled = fal
 
   return (
     <button
+      data-analytics-id={analyticsId}
       type="button"
       data-testid="install-for-agent-button"
       onClick={handleCopy}

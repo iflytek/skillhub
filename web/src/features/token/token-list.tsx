@@ -178,7 +178,7 @@ export function TokenList() {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-semibold">{t('token.title')}</h2>
           <CreateTokenDialog existingNames={[]}>
-            <Button>{t('token.createNew')}</Button>
+            <Button data-analytics-id="account.token.open">{t('token.createNew')}</Button>
           </CreateTokenDialog>
         </div>
         <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-5 py-6 text-sm text-destructive">
@@ -193,7 +193,7 @@ export function TokenList() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">{t('token.title')}</h2>
         <CreateTokenDialog existingNames={tokens.map((token) => token.name)}>
-          <Button>{t('token.createNew')}</Button>
+          <Button data-analytics-id="account.token.open">{t('token.createNew')}</Button>
         </CreateTokenDialog>
       </div>
       <p className="text-sm text-muted-foreground">{t('token.copyHint')}</p>
@@ -230,7 +230,7 @@ export function TokenList() {
                   <TableCell>{formatDate(token.expiresAt, t('token.neverExpires'))}</TableCell>
                   <TableCell className="text-center">
                     <div className="flex justify-center gap-2">
-                      <Button
+                      <Button data-analytics-id="account.token.expiration.edit"
                         variant="outline"
                         size="sm"
                         onClick={() => handleEditExpiration(token)}
@@ -239,7 +239,7 @@ export function TokenList() {
                         <Pencil className="mr-1 h-4 w-4" />
                         {t('token.editExpiration')}
                       </Button>
-                      <Button
+                      <Button data-analytics-id="account.token.revoke"
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDelete(token.id, token.name)}
@@ -257,10 +257,10 @@ export function TokenList() {
       )}
 
       {tokenPage && tokenPage.total > PAGE_SIZE ? (
-        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+        <Pagination analyticsId="account.token.paginate" page={page} totalPages={totalPages} onPageChange={setPage} />
       ) : null}
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="account.token.revoke.confirm" cancelAnalyticsId="account.token.revoke.cancel"
         open={deleteDialog.open}
         onOpenChange={(open) => setDeleteDialog({ ...deleteDialog, open })}
         title={t('token.deleteTitle')}
@@ -271,7 +271,7 @@ export function TokenList() {
       />
 
       <Dialog open={expirationDialog.open} onOpenChange={(open) => setExpirationDialog((current) => ({ ...current, open }))}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId="account.token.expiration.cancel">
           <DialogHeader className="min-w-0">
             <DialogTitle>{t('token.editExpirationTitle')}</DialogTitle>
             <DialogDescription className="break-all">
@@ -288,15 +288,15 @@ export function TokenList() {
                   mode: value as TokenExpirationMode,
                 }))}
               >
-                <SelectTrigger id="token-expiration-mode">
+                <SelectTrigger data-analytics-id="account.token.edit.expiry.interact" id="token-expiration-mode">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="never">{t('createToken.expirationNever')}</SelectItem>
-                  <SelectItem value="7d">{t('createToken.expiration7d')}</SelectItem>
-                  <SelectItem value="30d">{t('createToken.expiration30d')}</SelectItem>
-                  <SelectItem value="90d">{t('createToken.expiration90d')}</SelectItem>
-                  <SelectItem value="custom">{t('createToken.expirationCustom')}</SelectItem>
+                  <SelectItem data-analytics-id="account.token.edit.expiry.never" value="never">{t('createToken.expirationNever')}</SelectItem>
+                  <SelectItem data-analytics-id="account.token.edit.expiry.week" value="7d">{t('createToken.expiration7d')}</SelectItem>
+                  <SelectItem data-analytics-id="account.token.edit.expiry.month" value="30d">{t('createToken.expiration30d')}</SelectItem>
+                  <SelectItem data-analytics-id="account.token.edit.expiry.quarter" value="90d">{t('createToken.expiration90d')}</SelectItem>
+                  <SelectItem data-analytics-id="account.token.edit.expiry.custom" value="custom">{t('createToken.expirationCustom')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -317,10 +317,10 @@ export function TokenList() {
             ) : null}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setExpirationDialog({ open: false, mode: 'never', customExpiresAt: '' })}>
+            <Button data-analytics-id="account.token.expiration.cancel" variant="outline" onClick={() => setExpirationDialog({ open: false, mode: 'never', customExpiresAt: '' })}>
               {t('dialog.cancel')}
             </Button>
-            <Button onClick={confirmExpirationUpdate} disabled={updateExpirationMutation.isPending}>
+            <Button data-analytics-id="account.token.expiration.save" onClick={confirmExpirationUpdate} disabled={updateExpirationMutation.isPending}>
               {updateExpirationMutation.isPending ? t('token.updatingExpiration') : t('token.saveExpiration')}
             </Button>
           </DialogFooter>

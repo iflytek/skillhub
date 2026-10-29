@@ -1,0 +1,40 @@
+# LOCAL DEMO ONLY. Umami starts with admin / umami: change it immediately.
+# The DB password and app secret below are public demo values, NOT production secrets.
+# SkillHub is an existing upstream, not built or configured by this demo.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: demo-only-change-me
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U umami -d umami]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+  umami:
+    image: ghcr.io/umami-software/umami:3.4.1
+    environment:
+      DATABASE_URL: postgresql://umami:demo-only-change-me@postgres:5432/umami
+      APP_SECRET: demo-only-change-this-before-use
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Direct admin access is LOCAL setup only; never proxy the admin through edge.
+    ports: ["127.0.0.1:8300:3000"]
+  edge:
+    image: nginx:1.30.6-alpine
+    # Docker Desktop/OrbStack provide this name; native Linux needs this mapping.
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    environment:
+      SKILLHUB_WEB_UPSTREAM: ${SKILLHUB_WEB_UPSTREAM:-host.docker.internal:80}
+      UMAMI_UPSTREAM: umami:3000
+      NGINX_ENVSUBST_FILTER: ^(SKILLHUB_WEB_UPSTREAM|UMAMI_UPSTREAM)$$
+    volumes:
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template:ro
+      - ./observe/v1/observer.mjs:/srv/_skillhub-observe/v1/observer.mjs:ro
+      - ./observe/v1/skillhub-intents.mjs:/srv/_skillhub-observe/v1/skillhub-intents.mjs:ro
+      - ./observe/v1/umami-adapter.mjs:/srv/_skillhub-observe/v1/umami-adapter.mjs:ro
+    ports: ["127.0.0.1:8081:8081"]
+    depends_on: [umami]

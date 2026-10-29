@@ -5,6 +5,7 @@ import { getFileIcon } from './file-type-utils'
 import { cn } from '@/shared/lib/utils'
 
 interface FileTreeNodeProps {
+  analyticsId?: string
   node: FileTreeNode
   onFileClick: (node: FileTreeNode) => void
   defaultExpanded?: boolean
@@ -42,6 +43,7 @@ export const FileTreeNodeComponent = memo(function FileTreeNodeComponent({
   onFileClick,
   defaultExpanded = false,
   compact = false,
+  analyticsId,
 }: FileTreeNodeProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded)
 
@@ -55,6 +57,7 @@ export const FileTreeNodeComponent = memo(function FileTreeNodeComponent({
   if (node.type === 'file') {
     return (
       <div
+        data-analytics-id={analyticsId}
         className={cn('flex items-center justify-between px-3 py-2 hover:bg-accent/10 cursor-pointer transition-colors group', compact && 'py-1.5')}
         style={{ paddingLeft: `${node.depth * 16 + 12}px` }}
         onClick={() => onFileClick(node)}
@@ -76,6 +79,7 @@ export const FileTreeNodeComponent = memo(function FileTreeNodeComponent({
   return (
     <div>
       <div
+        data-analytics-id={analyticsId ? 'skill.directory.toggle' : undefined}
         className={cn('flex items-center gap-2 px-3 py-2 hover:bg-muted/50 cursor-pointer transition-colors', compact && 'py-1.5')}
         style={{ paddingLeft: `${node.depth * 16 + 12}px` }}
         onClick={() => setIsExpanded(!isExpanded)}
@@ -96,6 +100,7 @@ export const FileTreeNodeComponent = memo(function FileTreeNodeComponent({
         <div>
           {node.children.map((child) => (
             <FileTreeNodeComponent
+              analyticsId={analyticsId}
               key={child.id}
               node={child}
               onFileClick={onFileClick}

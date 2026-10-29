@@ -54,7 +54,7 @@ function ReviewListSection({ namespaceId, slug }: { namespaceId?: number; slug: 
     return (
       <div className="flex flex-col gap-3 border-t border-border/60 px-5 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
         <p>{t('nsReviews.pageSummary', { total: totalElements, page: currentPage + 1 })}</p>
-        <Pagination page={currentPage} totalPages={totalPages} onPageChange={(nextPage) => changePage(status, nextPage)} />
+        <Pagination analyticsId="review.namespace.paginate" page={currentPage} totalPages={totalPages} onPageChange={(nextPage) => changePage(status, nextPage)} />
       </div>
     )
   }
@@ -94,7 +94,7 @@ function ReviewListSection({ namespaceId, slug }: { namespaceId?: number; slug: 
               <p className="mt-3 text-sm text-muted-foreground">{review.reviewComment}</p>
             ) : null}
             <div className="mt-4 flex justify-end">
-              <Link
+              <Link data-analytics-id="review.detail.open"
                 to={buildNamespaceReviewDetailPath(slug, review.id)}
                 className="inline-flex items-center rounded-md border border-border/60 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
               >
@@ -114,11 +114,11 @@ function ReviewListSection({ namespaceId, slug }: { namespaceId?: number; slug: 
         <div className="w-full max-w-48">
           <label htmlFor="namespace-review-status" className="mb-2 block text-sm font-medium text-muted-foreground">{t('nsReviews.statusLabel')}</label>
           <Select value={activeStatus} onValueChange={(value) => setActiveStatus(value as ReviewStatus)}>
-            <SelectTrigger id="namespace-review-status"><SelectValue /></SelectTrigger>
+            <SelectTrigger data-analytics-id="review.namespace.status.interact" id="namespace-review-status"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="PENDING">{t('nsReviews.tabPending')}</SelectItem>
-              <SelectItem value="APPROVED">{t('nsReviews.tabApproved')}</SelectItem>
-              <SelectItem value="REJECTED">{t('nsReviews.tabRejected')}</SelectItem>
+              <SelectItem data-analytics-id="review.namespace.status" value="PENDING">{t('nsReviews.tabPending')}</SelectItem>
+              <SelectItem data-analytics-id="review.namespace.status" value="APPROVED">{t('nsReviews.tabApproved')}</SelectItem>
+              <SelectItem data-analytics-id="review.namespace.status" value="REJECTED">{t('nsReviews.tabRejected')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -127,12 +127,12 @@ function ReviewListSection({ namespaceId, slug }: { namespaceId?: number; slug: 
             {t('nsReviews.sortLabel')}
           </label>
           <Select value={sortDirection} onValueChange={handleSortChange}>
-            <SelectTrigger id="namespace-review-sort">
+            <SelectTrigger data-analytics-id="review.namespace.sort.interact" id="namespace-review-sort">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="DESC">{t('nsReviews.sortNewest')}</SelectItem>
-              <SelectItem value="ASC">{t('nsReviews.sortOldest')}</SelectItem>
+              <SelectItem data-analytics-id="review.namespace.sort" value="DESC">{t('nsReviews.sortNewest')}</SelectItem>
+              <SelectItem data-analytics-id="review.namespace.sort" value="ASC">{t('nsReviews.sortOldest')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -172,8 +172,8 @@ export function NamespaceReviewsPage() {
         search: { queue: value === 'sync' ? 'sync' : undefined }, replace: true,
       })}>
         <TabsList>
-          <TabsTrigger value="user">{t('reviews.typeSkill')}</TabsTrigger>
-          <TabsTrigger value="sync">{t('reviews.typeSync')}</TabsTrigger>
+          <TabsTrigger data-analytics-id="review.namespace.user.tab" value="user">{t('reviews.typeSkill')}</TabsTrigger>
+          <TabsTrigger data-analytics-id="review.namespace.sync.tab" value="sync">{t('reviews.typeSync')}</TabsTrigger>
         </TabsList>
         <TabsContent value="user" className="mt-5">
           <ReviewListSection namespaceId={namespace?.id} slug={slug} />

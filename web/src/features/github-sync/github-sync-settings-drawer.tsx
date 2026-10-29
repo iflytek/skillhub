@@ -11,7 +11,7 @@ export function GithubSyncSettingsDrawer({ onClose, visible }: { onClose: () => 
   const schedule = useGithubSyncSchedulePolicy(visible)
 
   return <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-    <DialogContent className="github-sync-surface !left-auto !right-0 !top-0 !h-dvh !max-h-dvh !grid-rows-[auto_minmax(0,1fr)] !gap-0 !overflow-hidden w-[min(100vw,44rem)] !translate-x-0 !translate-y-0 !rounded-none p-0">
+    <DialogContent closeAnalyticsId="github.settings.close" className="github-sync-surface !left-auto !right-0 !top-0 !h-dvh !max-h-dvh !grid-rows-[auto_minmax(0,1fr)] !gap-0 !overflow-hidden w-[min(100vw,44rem)] !translate-x-0 !translate-y-0 !rounded-none p-0">
       <DialogHeader className="border-b px-5 py-4 text-left">
         <DialogTitle>{t('githubSync.systemSettings')}</DialogTitle>
         <DialogDescription>{t('githubSync.settingsHelp')}</DialogDescription>

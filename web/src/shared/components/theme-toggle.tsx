@@ -15,7 +15,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   const accessibleName = t('theme.darkMode')
 
   return (
-    <button
+    <button data-analytics-id="navigation.theme.toggle"
       type="button"
       role="switch"
       aria-label={accessibleName}

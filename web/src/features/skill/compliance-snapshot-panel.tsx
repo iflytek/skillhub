@@ -48,7 +48,7 @@ export function ComplianceSnapshotPanel({ snapshot, className, defaultExpanded =
           <div className="font-mono text-xs text-muted-foreground" title={snapshot?.digest}>
             {shortDigest(snapshot?.digest)}
           </div>
-          <button
+          <button data-analytics-id="skill.compliance.toggle"
             type="button"
             className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/80 px-2.5 py-1 text-xs font-medium text-foreground transition-colors hover:bg-background"
             aria-expanded={isExpanded}

@@ -57,7 +57,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
 
   return (
     <div ref={rootRef} className="relative">
-      <Button
+      <Button data-analytics-id="navigation.language.open"
         type="button"
         variant="ghost"
         size="sm"
@@ -77,7 +77,7 @@ export function LanguageSwitcher({ className }: LanguageSwitcherProps) {
             className="flex min-w-[8rem] flex-col overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
           >
             {languages.map((lang) => (
-              <button
+              <button data-analytics-id="navigation.language.select"
                 key={lang.code}
                 type="button"
                 role="menuitem"

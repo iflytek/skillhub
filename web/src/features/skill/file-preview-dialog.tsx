@@ -11,6 +11,9 @@ import { getFileTypeLabel, canPreviewFile, getLanguageForHighlight } from './fil
 import type { FileTreeNode } from './file-tree-builder'
 
 interface FilePreviewDialogProps {
+  downloadAnalyticsId?: string
+  copyAnalyticsId?: string
+  closeAnalyticsId?: string
   open: boolean
   onOpenChange: (open: boolean) => void
   node: FileTreeNode | null
@@ -37,6 +40,9 @@ export function FilePreviewDialog({
   onDownload,
   onLinkClick,
   maxPreviewBytes,
+  downloadAnalyticsId,
+  copyAnalyticsId,
+  closeAnalyticsId,
 }: FilePreviewDialogProps) {
   const { t } = useTranslation()
   // Tracks the copy animation state: idle → spinning → done
@@ -81,7 +87,7 @@ export function FilePreviewDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Hide the default close button; override base width to fill most of the viewport */}
-      <DialogContent className="w-[min(calc(100vw-2rem),72rem)] max-h-[90vh] p-0 gap-0 flex flex-col [&>button]:hidden">
+      <DialogContent closeAnalyticsId={closeAnalyticsId} className="w-[min(calc(100vw-2rem),72rem)] max-h-[90vh] p-0 gap-0 flex flex-col [&>button]:hidden">
         {/* Header: file name, type badge, and action buttons (including close) */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-border/40 bg-muted/30 flex-shrink-0">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -93,6 +99,7 @@ export function FilePreviewDialog({
           <div className="flex items-center gap-1 flex-shrink-0">
             {content && (
               <Button
+                data-analytics-id={copyAnalyticsId}
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 active:scale-95"
@@ -106,6 +113,7 @@ export function FilePreviewDialog({
               </Button>
             )}
             <Button
+              data-analytics-id={downloadAnalyticsId}
               variant="ghost"
               size="icon"
               className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-accent transition-all duration-200 hover:scale-110 active:scale-95"
@@ -115,6 +123,7 @@ export function FilePreviewDialog({
               <Download className="h-4 w-4 transition-transform duration-200 hover:translate-y-0.5" />
             </Button>
             <Button
+              data-analytics-id={closeAnalyticsId}
               variant="ghost"
               size="icon"
               className="h-8 w-8 rounded-lg opacity-60 hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all duration-200 hover:rotate-90 active:scale-95"
@@ -146,7 +155,7 @@ export function FilePreviewDialog({
                     ? t('filePreview.binaryFile')
                     : t('filePreview.unsupported')}
               </p>
-              <Button onClick={onDownload}>{t('filePreview.downloadHint', { name: node.name })}</Button>
+              <Button data-analytics-id={downloadAnalyticsId} onClick={onDownload}>{t('filePreview.downloadHint', { name: node.name })}</Button>
             </div>
           ) : content && isMarkdown ? (
             <MarkdownRenderer content={content} onLinkClick={onLinkClick} />

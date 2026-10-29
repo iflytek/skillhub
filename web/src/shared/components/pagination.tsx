@@ -3,6 +3,7 @@ import { cn } from '@/shared/lib/utils'
 import { Button } from '@/shared/ui/button'
 
 interface PaginationProps {
+  analyticsId?: string
   page: number
   totalPages: number
   onPageChange: (page: number) => void
@@ -42,13 +43,14 @@ export function buildPageItems(current: number, totalPages: number): PageItem[] 
   return items
 }
 
-export function Pagination({ page, totalPages, onPageChange, compact = false }: PaginationProps) {
+export function Pagination({ page, totalPages, onPageChange, compact = false, analyticsId }: PaginationProps) {
   const { t } = useTranslation()
   const pageItems = buildPageItems(page, totalPages)
 
   return (
     <nav aria-label={t('pagination.label')} className={cn('flex flex-wrap items-center justify-center', compact ? 'gap-1 py-2' : 'gap-2 py-4 sm:gap-3')}>
       <Button
+        data-analytics-id={analyticsId}
         variant="outline"
         size="sm"
         onClick={() => onPageChange(page - 1)}
@@ -70,6 +72,7 @@ export function Pagination({ page, totalPages, onPageChange, compact = false }: 
             </span>
           ) : (
             <Button
+              data-analytics-id={analyticsId}
               key={item}
               type="button"
               variant={item === page ? 'default' : 'ghost'}
@@ -86,6 +89,7 @@ export function Pagination({ page, totalPages, onPageChange, compact = false }: 
       </div>
 
       <Button
+        data-analytics-id={analyticsId}
         variant="outline"
         size="sm"
         onClick={() => onPageChange(page + 1)}

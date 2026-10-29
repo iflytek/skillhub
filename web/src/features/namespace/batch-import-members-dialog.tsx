@@ -165,7 +165,7 @@ export function BatchImportMembersDialog({ slug, children }: BatchImportMembersD
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-2xl">
+      <DialogContent closeAnalyticsId={step === 'results' ? 'namespace.import.close' : 'namespace.import.cancel'} className="max-w-2xl">
         <DialogHeader className="text-center sm:text-center">
           <DialogTitle className="text-center">{t('members.batchDialogTitle')}</DialogTitle>
           <DialogDescription className="text-center">
@@ -175,10 +175,10 @@ export function BatchImportMembersDialog({ slug, children }: BatchImportMembersD
 
         {step === 'upload' && (
           <div className="space-y-4 py-2">
-            <Button type="button" variant="outline" size="sm" onClick={downloadCsvTemplate}>
+            <Button data-analytics-id="namespace.template.download" type="button" variant="outline" size="sm" onClick={downloadCsvTemplate}>
               {t('members.batchDownloadTemplate')}
             </Button>
-            <div
+            <div data-analytics-id="namespace.import.choose"
               role="button"
               tabIndex={0}
               aria-label={t('members.batchDropHint')}
@@ -194,7 +194,7 @@ export function BatchImportMembersDialog({ slug, children }: BatchImportMembersD
               <p className="text-sm text-muted-foreground">{t('members.batchDropHint')}</p>
               <p className="text-xs text-muted-foreground mt-1">{t('members.batchFormatHint')}</p>
             </div>
-            <input
+            <input data-analytics-id="namespace.import.select"
               ref={fileInputRef}
               type="file"
               accept=".csv"
@@ -277,16 +277,16 @@ export function BatchImportMembersDialog({ slug, children }: BatchImportMembersD
 
         <DialogFooter className="sm:justify-center sm:space-x-3">
           {step === 'upload' && (
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+            <Button data-analytics-id="namespace.import.cancel" type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               {t('dialog.cancel')}
             </Button>
           )}
           {step === 'preview' && (
             <>
-              <Button type="button" variant="outline" onClick={() => { setParsedRows([]); setStep('upload') }}>
+              <Button data-analytics-id="namespace.import.reset" type="button" variant="outline" onClick={() => { setParsedRows([]); setStep('upload') }}>
                 {t('members.batchBack')}
               </Button>
-              <Button
+              <Button data-analytics-id="namespace.import.confirm"
                 type="button"
                 onClick={handleSubmit}
                 disabled={validRows.length === 0 || batchMutation.isPending}
@@ -298,7 +298,7 @@ export function BatchImportMembersDialog({ slug, children }: BatchImportMembersD
             </>
           )}
           {step === 'results' && (
-            <Button type="button" onClick={() => handleOpenChange(false)}>
+            <Button data-analytics-id="namespace.import.close" type="button" onClick={() => handleOpenChange(false)}>
               {t('members.batchDone')}
             </Button>
           )}

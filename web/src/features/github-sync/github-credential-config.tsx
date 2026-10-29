@@ -66,12 +66,12 @@ export function GithubCredentialConfig() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div><h2 className="font-semibold">{t('githubSync.credentials')}</h2><p className="text-sm text-muted-foreground">{t('githubSync.credentialHelp')}</p></div>
-        <Button size="sm" className="sync-action" onClick={openCreate}>{t('githubSync.addCredential')}</Button>
+        <Button data-analytics-id="github.credential.create" size="sm" className="sync-action" onClick={openCreate}>{t('githubSync.addCredential')}</Button>
       </div>
       <Dialog open={open} onOpenChange={(nextOpen) => { setOpen(nextOpen); if (!nextOpen) reset() }}>
-        <DialogContent className="github-sync-surface rounded-md">
+        <DialogContent closeAnalyticsId={editingId ? 'github.credential.replace.cancel' : 'github.credential.create.cancel'} className="github-sync-surface rounded-md">
           <DialogHeader><DialogTitle>{editingId ? t('githubSync.replaceCredential') : t('githubSync.addCredential')}</DialogTitle><DialogDescription>{t('githubSync.credentialHelp')}</DialogDescription></DialogHeader>
-          <form onSubmit={save} className="space-y-3">
+          <form data-analytics-id={editingId ? 'github.credential.replace.submit' : 'github.credential.create.submit'} onSubmit={save} className="space-y-3">
             <label className="block text-sm">{t('githubSync.credentialLabel')}
               <Input autoComplete="off" maxLength={100} value={label} onChange={(event) => setLabel(event.target.value)} required />
             </label>
@@ -79,7 +79,7 @@ export function GithubCredentialConfig() {
               <Input type="password" autoComplete="new-password" minLength={20} maxLength={512}
                 value={token} onChange={(event) => setToken(event.target.value)} required />
             </label>
-            <div className="flex justify-end gap-2"><Button type="button" size="sm" variant="outline" className="sync-action" onClick={() => setOpen(false)}>{t('githubSync.cancel')}</Button><Button type="submit" size="sm" className="sync-action" disabled={mutations.create.isPending || mutations.replace.isPending}>{editingId ? t('githubSync.replaceCredential') : t('githubSync.addCredential')}</Button></div>
+            <div className="flex justify-end gap-2"><Button data-analytics-id={editingId ? 'github.credential.replace.cancel' : 'github.credential.create.cancel'} type="button" size="sm" variant="outline" className="sync-action" onClick={() => setOpen(false)}>{t('githubSync.cancel')}</Button><Button type="submit" size="sm" className="sync-action" disabled={mutations.create.isPending || mutations.replace.isPending}>{editingId ? t('githubSync.replaceCredential') : t('githubSync.addCredential')}</Button></div>
           </form>
         </DialogContent>
       </Dialog>
@@ -111,10 +111,10 @@ export function GithubCredentialConfig() {
                 )) : '—'}</TableCell>
                 <TableCell>{formatLocalDateTime(credential.lastUsedAt, i18n.language)}</TableCell>
                 <TableCell className="space-x-2 whitespace-nowrap">
-                  <Button size="sm" variant="outline" className="sync-action" disabled={!credential.id} onClick={() => credential.id && openReplace(credential.id, credential.label ?? '')}>
+                  <Button data-analytics-id="github.credential.replace" size="sm" variant="outline" className="sync-action" disabled={!credential.id} onClick={() => credential.id && openReplace(credential.id, credential.label ?? '')}>
                     {t('githubSync.replaceCredential')}
                   </Button>
-                  <Button size="sm" variant="outline" className="sync-action" disabled={!credential.id || mutations.setEnabled.isPending || credential.status === 'INVALID' || credential.status !== 'ACTIVE' && credential.keyAvailable === false}
+                  <Button data-analytics-id={credential.status === 'ACTIVE' ? 'github.credential.disable' : 'github.credential.enable'} size="sm" variant="outline" className="sync-action" disabled={!credential.id || mutations.setEnabled.isPending || credential.status === 'INVALID' || credential.status !== 'ACTIVE' && credential.keyAvailable === false}
                     onClick={() => credential.id && setEnabled(credential.id, credential.status !== 'ACTIVE')}>
                     {credential.status === 'ACTIVE' ? t('githubSync.disable') : t('githubSync.enable')}
                   </Button>

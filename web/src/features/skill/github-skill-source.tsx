@@ -16,9 +16,9 @@ export function GithubSkillSourceCard({ source, version }: { source: GithubSkill
         <p className="mt-2 break-all font-mono">{version}</p>
       </details>
       <dl className="space-y-2 text-sm">
-        <div><dt className="text-muted-foreground">{t('review.githubRepository')}</dt><dd className="break-all"><a href={repositoryUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">{source.ownerLogin}/{source.repositoryName}</a></dd></div>
+        <div><dt className="text-muted-foreground">{t('review.githubRepository')}</dt><dd className="break-all"><a data-analytics-id="github.repository.external" href={repositoryUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">{source.ownerLogin}/{source.repositoryName}</a></dd></div>
         <div><dt className="text-muted-foreground">{t('review.githubSkillPath')}</dt><dd className="font-mono break-all">{source.skillPath}</dd></div>
-        <div><dt className="text-muted-foreground">{t('review.githubCommit')}</dt><dd className="break-all"><a href={commitUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-primary underline">{source.commitSha}</a></dd></div>
+        <div><dt className="text-muted-foreground">{t('review.githubCommit')}</dt><dd className="break-all"><a data-analytics-id="github.commit.external" href={commitUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-primary underline">{source.commitSha}</a></dd></div>
         <div><dt className="text-muted-foreground">{t('review.githubLicenseStatus')}</dt><dd>{t(`review.githubLicense${source.licenseStatus}`, { defaultValue: source.licenseStatus })}</dd></div>
       </dl>
       <div>
@@ -34,7 +34,7 @@ export function GithubSkillSourceCard({ source, version }: { source: GithubSkill
               return (
                 <li key={`${document.scope}/${document.path}`} className="break-all">
                   <span className="text-muted-foreground">{t(`skillDetail.githubLicenseScope${document.scope}`)}: </span>
-                  <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-primary underline">{repositoryPath}</a>
+                  <a data-analytics-id="github.file.external" href={fileUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-primary underline">{repositoryPath}</a>
                 </li>
               )
             })}

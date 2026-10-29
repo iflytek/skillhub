@@ -113,25 +113,25 @@ export function SuiteDetailPage() {
             </div>
             <div className="flex flex-wrap gap-2">
               {command ? (
-                <Button size="sm" className="gap-2" onClick={copyCommand}>
+                <Button data-analytics-id="suite.command.copy" size="sm" className="gap-2" onClick={copyCommand}>
                   <Download className="h-4 w-4" aria-hidden="true" />
                   {t('suite.installSuite')}
                 </Button>
               ) : null}
               {command ? (
-                <Button size="sm" variant="soft" className="gap-2" onClick={copyCommand}>
+                <Button data-analytics-id="suite.command.copy" size="sm" variant="soft" className="gap-2" onClick={copyCommand}>
                   <Copy className="h-4 w-4" aria-hidden="true" />
                   {t('suite.copyInstallCommand')}
                 </Button>
               ) : null}
               {suite.allowedActions.includes('EDIT') ? (
-                <Button size="sm" variant="outline" onClick={() => navigate({
+                <Button data-analytics-id="suite.draft.edit" size="sm" variant="outline" onClick={() => navigate({
                   to: `/dashboard/suites/${suite.namespace}/${encodeURIComponent(suite.slug)}/edit`,
                   search: { version: suite.version },
                 })}>{t('suite.editDraft')}</Button>
               ) : null}
               {suite.allowedActions.includes('SUBMIT') || suite.allowedActions.includes('PUBLISH_PRIVATE') ? (
-                <Button size="sm" disabled={submitMutation.isPending} onClick={submit}>
+                <Button data-analytics-id={suite.visibility === 'PRIVATE' ? 'suite.publish.direct.request' : 'suite.review.submit.request'} size="sm" disabled={submitMutation.isPending} onClick={submit}>
                   {suite.visibility === 'PRIVATE' ? t('suite.publishDirectly') : t('suite.submitReview')}
                 </Button>
               ) : null}
@@ -152,9 +152,9 @@ export function SuiteDetailPage() {
 
       <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="overview" className="py-2 text-xs">{t('suite.overviewTab')}</TabsTrigger>
-          <TabsTrigger value="members" className="py-2 text-xs">{t('suite.membersTabShort', { count: suite.members.length })}</TabsTrigger>
-          <TabsTrigger value="versions" className="py-2 text-xs">{t('suite.versionsTab', { count: versions.length })}</TabsTrigger>
+          <TabsTrigger data-analytics-id="suite.overview.tab" value="overview" className="py-2 text-xs">{t('suite.overviewTab')}</TabsTrigger>
+          <TabsTrigger data-analytics-id="suite.members.tab" value="members" className="py-2 text-xs">{t('suite.membersTabShort', { count: suite.members.length })}</TabsTrigger>
+          <TabsTrigger data-analytics-id="suite.versions.tab" value="versions" className="py-2 text-xs">{t('suite.versionsTab', { count: versions.length })}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-4">
@@ -182,7 +182,7 @@ export function SuiteDetailPage() {
                     </p>
                   </div>
                   {entryMember.browsable && !entryMember.blockingReason && entryMember.skillId && entryMember.skillVersionId ? (
-                    <Button size="sm" variant="soft" className="mt-3" onClick={() => navigate({
+                    <Button data-analytics-id="skill.version.open" size="sm" variant="soft" className="mt-3" onClick={() => navigate({
                       to: '/space/$namespace/$slug',
                       params: { namespace: entryMember.namespace, slug: entryMember.slug },
                       search: { returnTo, version: entryMember.version },

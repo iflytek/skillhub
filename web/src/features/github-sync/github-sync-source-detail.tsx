@@ -39,6 +39,6 @@ export function GithubSyncSourceDetail({ sourceId, status, visible }: { sourceId
         <TableCell>{formatLocalDateTime(skill.acquisitionRetryAt, i18n.language)}</TableCell>
       </TableRow>)}</TableBody>
     </Table></div> : null}
-    {skills.data && totalPages > 1 ? <Pagination page={page} totalPages={totalPages} onPageChange={setPage} /> : null}
+    {skills.data && totalPages > 1 ? <Pagination analyticsId="github.source.paginate" page={page} totalPages={totalPages} onPageChange={setPage} /> : null}
   </section>
 }
