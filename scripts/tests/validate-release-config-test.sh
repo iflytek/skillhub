@@ -113,6 +113,21 @@ assert environment["SKILLHUB_PUBLIC_BASE_URL"] == "https://skillhub.example.com/
 PY
 done
 
+for device_override in '' '   ' '/portal/device' 'https://login.example.com/custom/device?source=cli#confirm'; do
+  device_env="$tmp/device-valid.env"
+  write_env "$device_env" "release-download-secret-32-bytes-minimum"
+  printf 'DEVICE_AUTH_VERIFICATION_URI=%s\n' "$device_override" >>"$device_env"
+  "$SCRIPT" "$device_env" >/dev/null
+done
+
+for device_override in 'javascript:alert(1)' '//login.example.com/device' 'https:///device' \
+  'https://user:secret@example.com/device' 'https://skills.example.com/invalid path'; do
+  device_env="$tmp/device-invalid.env"
+  write_env "$device_env" "release-download-secret-32-bytes-minimum"
+  printf 'DEVICE_AUTH_VERIFICATION_URI=%s\n' "$device_override" >>"$device_env"
+  expect_fail "$device_env" "DEVICE_AUTH_VERIFICATION_URI"
+done
+
 valid_feishu_env="$tmp/valid-feishu.env"
 write_env "$valid_feishu_env" "release-download-secret-32-bytes-minimum"
 cat >>"$valid_feishu_env" <<'EOF'

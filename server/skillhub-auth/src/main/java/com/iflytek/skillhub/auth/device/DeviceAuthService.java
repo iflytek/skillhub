@@ -76,7 +76,7 @@ public class DeviceAuthService {
             throw new IllegalArgumentException(error);
         }
         boolean absolute = ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
-                && StringUtils.hasText(uri.getHost()) && uri.getRawUserInfo() == null;
+                && StringUtils.hasText(uri.getHost()) && uri.getRawUserInfo() == null && uri.getPort() <= 65535;
         boolean relative = allowRelative && !uri.isAbsolute() && uri.getRawAuthority() == null
                 && value.startsWith("/") && !value.startsWith("//");
         if (!absolute && !relative) {

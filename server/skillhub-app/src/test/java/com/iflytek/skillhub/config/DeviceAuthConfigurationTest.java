@@ -54,7 +54,8 @@ class DeviceAuthConfigurationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"javascript:alert(1)", "//other.example.com/device", "https:///device",
-            "https://user:secret@example.com/device", "https://skills.example.com/invalid path"})
+            "https://user:secret@example.com/device", "https://skills.example.com/invalid path",
+            "https://skills.example.com:65536/device"})
     void invalidOverrideFailsContextWithoutEchoingItsValue(String override) throws IOException {
         run(Map.of("DEVICE_AUTH_VERIFICATION_URI", override), context -> {
             assertThat(context).hasFailed();
