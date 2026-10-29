@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, test } from 'bun:test'
 import {
   acquireSkillTargetLock,
+  acquireTargetLock,
   assertPrivateLockDir,
   ensurePrivateLockDir,
   skillTargetLockPath,
@@ -235,4 +236,72 @@ describe('skill target lifecycle lock', () => {
     }
     expect(await exists(lockPathBeforeRemoval)).toBe(false)
   })
+})
+
+
+test.each(['EPERM', 'EBUSY'])('Windows target lock retries only a transient mkdir %s on the selected lock', async code => {
+  const path = join(tmpdir(), 'skillhub-injected-lock'); let calls = 0
+  const release = async () => {}
+  expect(await acquireTargetLock(path, async (target, options) => {
+    expect(target).toBe(path)
+    expect(options).toEqual({ lockfilePath: path, realpath: false, stale: 10000, update: 3000, retries: 0 })
+    if (++calls < 3) throw Object.assign(new Error('Sharing failure'), { code, syscall: 'mkdir', path })
+    return release
+  }, 'win32')).toBe(release)
+  expect(calls).toBe(3)
+})
+
+test('Windows target lock exhaustion preserves the original mkdir error', async () => {
+  const path = join(tmpdir(), 'skillhub-injected-lock')
+  const error = Object.assign(new Error('Sharing failure'), { code: 'EPERM', syscall: 'mkdir', path }); let calls = 0
+  await expect(acquireTargetLock(path, async () => { calls++; throw error }, 'win32')).rejects.toBe(error)
+  expect(calls).toBe(6)
+})
+
+test.each([
+  ['linux', 'EPERM', 'mkdir', true], ['darwin', 'EBUSY', 'mkdir', true],
+  ['win32', 'ELOCKED', 'mkdir', true], ['win32', 'EACCES', 'mkdir', true],
+  ['win32', 'EPERM', 'rmdir', true], ['win32', 'EPERM', 'mkdir', false],
+] as const)('target lock rejects %s %s %s without broadening retry ownership', async (platform, code, syscall, selectedPath) => {
+  const path = join(tmpdir(), 'skillhub-injected-lock')
+  const error = Object.assign(new Error('No retry'), { code, syscall, path: selectedPath ? path : path + '-other' }); let calls = 0
+  await expect(acquireTargetLock(path, async () => { calls++; throw error }, platform)).rejects.toBe(error)
+  expect(calls).toBe(1)
+})
+
+test('Windows target lock retries never steal a live proper-lockfile owner', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-lock-live-owner-'))
+  const path = join(root, 'target.lock'); const release = await acquireTargetLock(path)
+  try {
+    const original = await lstat(path)
+    await expect(acquireTargetLock(path, undefined, 'win32')).rejects.toMatchObject({ code: 'ELOCKED' })
+    expect((await lstat(path)).mtimeMs).toBe(original.mtimeMs)
+  } finally { await release(); await rm(root, { recursive: true, force: true }) }
+})
+
+
+test('target acquisition gate excludes another contender throughout Windows retry backoff', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-lock-retry-gate-'))
+  let secondEntered = false; let attempts = 0
+  let second: Promise<PromiseSettledResult<() => Promise<void>>[]> | undefined
+  let release: (() => Promise<void>) | undefined
+  try {
+    release = await acquireSkillTargetLock(root, 'writer', path => acquireTargetLock(path, async () => {
+      if (++attempts === 1) {
+        second = Promise.allSettled([acquireSkillTargetLock(root, 'writer', async otherPath => {
+          secondEntered = true; return acquireTargetLock(otherPath)
+        })])
+        throw Object.assign(new Error('Sharing failure'), { code: 'EPERM', syscall: 'mkdir', path })
+      }
+      expect(secondEntered).toBe(false)
+      return acquireTargetLock(path)
+    }, 'win32'))
+    const result = await second!
+    expect(attempts).toBe(2)
+    expect(secondEntered).toBe(true)
+    expect(result[0]!.status).toBe('rejected')
+  } finally {
+    if (second) for (const result of await second) if (result.status === 'fulfilled') await result.value()
+    await release?.(); await rm(root, { recursive: true, force: true })
+  }
 })

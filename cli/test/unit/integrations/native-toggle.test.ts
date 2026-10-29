@@ -248,7 +248,10 @@ test('independent toggle transactions preserve both targets in shared inventory'
       }))
       return { operationId: accepted!.operationId, ownerId: 'owner', baseline, authorize: async () => {} }
     }))
-    expect((await Promise.all(requests.map(request => f.runtime.executeToggle(request)))).map(result => result.outcome)).toEqual(['committed', 'committed'])
+    const results = await Promise.allSettled(requests.map(request => f.runtime.executeToggle(request)))
+    const failures = results.filter(result => result.status === 'rejected')
+    if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Independent toggle transactions failed')
+    expect(results.map(result => result.status === 'fulfilled' ? result.value.outcome : undefined)).toEqual(['committed', 'committed'])
     expect((await f.inventory.read()).items[0]!.targets.map(target => target.installationState)).toEqual(['disabled', 'disabled'])
   } finally { await rm(f.home, { recursive: true, force: true }) }
 })

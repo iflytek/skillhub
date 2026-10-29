@@ -21,7 +21,8 @@ export async function orderSkillTargetLocks<T extends { rootDir: string }>(targe
 }
 
 /** Serializes every local lifecycle mutation for one Skill target directory. */
-export async function acquireSkillTargetLock(rootDir: string, slug: string): Promise<() => Promise<void>> {
+export async function acquireSkillTargetLock(rootDir: string, slug: string,
+  acquire: typeof acquireTargetLock = acquireTargetLock): Promise<() => Promise<void>> {
   const lockPath = await skillTargetLockPath(rootDir, slug)
   // proper-lockfile's stale deletion is not serialized. Gate only the acquisition attempt so two
   // recoverers cannot remove and replace the same target lock concurrently.
@@ -36,7 +37,7 @@ export async function acquireSkillTargetLock(rootDir: string, slug: string): Pro
 
   let releaseTarget: () => Promise<void>
   try {
-    releaseTarget = await acquireTargetLock(lockPath)
+    releaseTarget = await acquire(lockPath)
   } catch (operationError) {
     try {
       await releaseAcquisitionGate()
@@ -61,14 +62,27 @@ export async function acquireSkillTargetLock(rootDir: string, slug: string): Pro
   return releaseTarget
 }
 
-function acquireTargetLock(lockPath: string): Promise<() => Promise<void>> {
-  return lock(lockPath, {
-    lockfilePath: lockPath,
-    realpath: false,
-    stale: 10_000,
-    update: 3_000,
-    retries: 0
-  })
+/** The acquisition gate remains held while retrying a Windows mkdir sharing failure. */
+export async function acquireTargetLock(lockPath: string, acquire: typeof lock = lock,
+  platform: NodeJS.Platform = process.platform): Promise<() => Promise<void>> {
+  const delays = [20, 40, 80, 160, 320]
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await acquire(lockPath, {
+        lockfilePath: lockPath,
+        realpath: false,
+        stale: 10_000,
+        update: 3_000,
+        retries: 0
+      })
+    } catch (error) {
+      const failure = error as NodeJS.ErrnoException
+      const delay = delays[attempt]
+      if (platform !== 'win32' || !['EPERM', 'EBUSY'].includes(failure.code ?? '')
+        || failure.syscall !== 'mkdir' || failure.path !== lockPath || delay === undefined) throw error
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
 }
 
 /** Serialize stale-lock recovery attempts without replacing a live contender. */

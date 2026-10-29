@@ -1,9 +1,10 @@
+import { renameAtomicFile } from '../platform/atomic-rename'
 import { inventoryWithoutState, type Inventory } from '../stores/inventory-store'
 import { isDeepStrictEqual } from 'node:util'
 import { toggleJournal, validateToggleJournal, type ToggleJournal } from './toggle-journal'
 import { createHash, randomUUID } from 'node:crypto'
 import { constants } from 'node:fs'
-import { chmod, link, lstat, mkdir, open, readdir, readFile, realpath, rename, rm, unlink } from 'node:fs/promises'
+import { chmod, link, lstat, mkdir, open, readdir, readFile, realpath, rm, unlink } from 'node:fs/promises'
 import { basename, dirname, isAbsolute, join } from 'node:path'
 import { canonicalizeExistingPath, pathsOverlap } from '../platform/paths'
 import { z } from 'zod'
@@ -53,21 +54,22 @@ export function operationRequestDigest(parameters: Record<string, string | numbe
 
 /** Host-only durable operation ownership. This store never executes or replays a file mutation. */
 export class OperationStore {
-  private constructor(readonly root: string, readonly hostInstanceId: string) {}
+  private constructor(readonly root: string, readonly hostInstanceId: string,
+    private readonly replaceFile: typeof renameAtomicFile = renameAtomicFile) {}
 
-  static async open(root: string): Promise<OperationStore> {
+  static async open(root: string, replaceFile: typeof renameAtomicFile = renameAtomicFile): Promise<OperationStore> {
     if (!isAbsolute(root)) throw new Error('Operation state requires a trusted absolute directory')
     await mkdir(root, { recursive: true, mode: 0o700 })
     const info = await lstat(root)
     if (!info.isDirectory() || info.isSymbolicLink() || (process.getuid && info.uid !== process.getuid())) throw new Error('Unsafe operation state directory')
     if (process.platform !== 'win32') await chmod(root, 0o700)
-    const pending = new OperationStore(root, '')
+    const pending = new OperationStore(root, '', replaceFile)
     return pending.locked(async () => {
       const path = join(root, 'host.json')
       const saved = await readJson(path)
       const hostInstanceId = saved === undefined ? randomUUID() : z.object({ hostInstanceId: id }).strict().parse(saved).hostInstanceId
-      if (saved === undefined) await atomicWrite(path, { hostInstanceId })
-      const store = new OperationStore(root, hostInstanceId)
+      if (saved === undefined) await atomicWrite(path, { hostInstanceId }, replaceFile)
+      const store = new OperationStore(root, hostInstanceId, replaceFile)
       await store.isolateExtendedRecords()
       return store
     })
@@ -483,7 +485,7 @@ export class OperationStore {
     if (extended) {
       await this.prepareExtendedDirectory()
       await this.isolateRecord(value.operationId)
-      await writeOperationRecord(this.extendedPath(value.operationId), { ...value, schemaVersion: 3 })
+      await writeOperationRecord(this.extendedPath(value.operationId), { ...value, schemaVersion: 3 }, this.replaceFile)
       return
     }
     // v2 snapshots contain ownership only, exactly as consumed by published clients.
@@ -500,7 +502,7 @@ export class OperationStore {
         compatible.removal.inventoryCommit.after = inventoryWithoutState(compatible.removal.inventoryCommit.after)
       }
     }
-    await writeOperationRecord(this.path(value.operationId), compatible)
+    await writeOperationRecord(this.path(value.operationId), compatible, this.replaceFile)
   }
 
   private async locked<T>(run: () => Promise<T>): Promise<T> {
@@ -570,14 +572,14 @@ async function readJson(path: string): Promise<unknown | undefined> {
   } finally { await file.close() }
 }
 
-async function atomicWrite(path: string, value: unknown): Promise<void> {
+async function atomicWrite(path: string, value: unknown, replaceFile: typeof renameAtomicFile): Promise<void> {
   const temporary = `${path}.${randomUUID()}.tmp`
   try {
     const payload = JSON.stringify(value)
     if (Buffer.byteLength(payload) > 1024 * 1024) throw new OperationStoreError('CORRUPT_RECORD')
     const file = await open(temporary, 'wx', 0o600)
     try { await file.writeFile(payload); await file.sync() } finally { await file.close() }
-    await rename(temporary, path)
+    await replaceFile(temporary, path)
     if (process.platform !== 'win32') {
       const directory = await open(dirname(path), 'r')
       try { await directory.sync() } finally { await directory.close() }
@@ -598,10 +600,10 @@ async function syncJournalDirectory(path: string): Promise<void> {
 }
 
 /** Recovery may advance v1 status, but never rewrite the original serialized evidence. */
-async function writeOperationRecord(path: string, value: OperationRecord): Promise<void> {
-  if (value.schemaVersion === 3) return atomicWrite(path, value)
+async function writeOperationRecord(path: string, value: OperationRecord, replaceFile: typeof renameAtomicFile): Promise<void> {
+  if (value.schemaVersion === 3) return atomicWrite(path, value, replaceFile)
   const previous = await readJson(path) as OperationRecord | undefined
-  if (!previous && value.schemaVersion === 2) return atomicWrite(path, value)
+  if (!previous && value.schemaVersion === 2) return atomicWrite(path, value, replaceFile)
   if (!previous || previous.schemaVersion !== value.schemaVersion) throw new Error('Legacy operation evidence missing')
   const preserved = structuredClone(value)
   if (preserved.transaction && previous.transaction) {
@@ -620,7 +622,7 @@ async function writeOperationRecord(path: string, value: OperationRecord): Promi
       preserved.removal.inventoryCommit.after = previous.removal.inventoryCommit.after
     }
   }
-  await atomicWrite(path, preserved)
+  await atomicWrite(path, preserved, replaceFile)
 }
 
 /** A pending install may not exist yet; resolve the nearest existing ancestor. */

@@ -1,6 +1,7 @@
+import { renameAtomicFile } from '../../../src/platform/atomic-rename'
 import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
-import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { OperationStore, operationRequestDigest } from '../../../src/integrations/operation-store'
@@ -156,3 +157,61 @@ test.each(['identical', 'changed'] as const)('interrupted journal isolation hand
     expect(await readdir(root)).not.toContain(`${ordinary.operationId}.json`)
   }
 }))
+
+
+test.each(['EPERM', 'EBUSY'])('journal replacement retries %s under the store lock without replaying validation or revision', async code => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-journal-retry-'))
+  let armed = false; let attempts = 0; let validations = 0
+  const reachedRename = Promise.withResolvers<void>()
+  let firstAttempt: { source: string; target: string; payload: Buffer } | undefined
+  let previous: Buffer | undefined
+  let competing: Promise<PromiseSettledResult<unknown>[]> | undefined
+  try {
+    const store = await OperationStore.open(root, (from, to) => renameAtomicFile(from, to, async (source, target) => {
+      if (armed) {
+        const observation = { source, target, payload: await readFile(source) }
+        if (!firstAttempt) firstAttempt = observation
+        else expect(observation).toEqual(firstAttempt)
+        expect(await readFile(target)).toEqual(previous!)
+        if (++attempts < 3) { reachedRename.resolve(); throw Object.assign(new Error('Sharing failure'), { code }) }
+      }
+      await rename(source, target)
+    }, 'win32'))
+    const key = request(store)
+    const initial = (await store.accept(key, async () => { validations++; return accepted }))!
+    const other = await OperationStore.open(root)
+    previous = await readFile(join(root, initial.operationId + '.json'))
+    armed = true
+    const updating = store.update(initial.operationId, key.ownerId, 0, { ...initial.operation.status, phase: 'staging' })
+    await reachedRename.promise
+    competing = Promise.allSettled([other.update(initial.operationId, key.ownerId, 0, { ...initial.operation.status, phase: 'staging' })])
+    const staged = await updating
+    expect(staged.revision).toBe(1)
+    expect((await competing)[0]!.status).toBe('rejected')
+    expect(attempts).toBe(3)
+    expect(validations).toBe(1)
+    expect((await store.get(initial.operationId, key.ownerId))!.revision).toBe(1)
+    expect((await store.accept({ ...key, mode: 'retry' }, async () => { throw new Error('must not replay') }))!.operationId).toBe(initial.operationId)
+  } finally { await competing; await rm(root, { recursive: true, force: true }) }
+})
+
+test('exhausted journal replacement preserves original bytes and releases the store lock', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-journal-exhaust-'))
+  let armed = false; let attempts = 0
+  const failure = Object.assign(new Error('Sharing failure'), { code: 'EPERM' })
+  try {
+    const store = await OperationStore.open(root, (from, to) => renameAtomicFile(from, to, async (source, target) => {
+      if (armed) { attempts++; throw failure }
+      await rename(source, target)
+    }, 'win32'))
+    const key = request(store); const initial = (await store.accept(key, async () => accepted))!
+    const path = join(root, initial.operationId + '.json'); const before = await readFile(path)
+    armed = true
+    await expect(store.update(initial.operationId, key.ownerId, 0, { ...initial.operation.status, phase: 'staging' })).rejects.toBe(failure)
+    expect(attempts).toBe(6)
+    expect(await readFile(path)).toEqual(before)
+    expect((await readdir(root)).filter(name => name.endsWith('.tmp'))).toEqual([])
+    armed = false
+    expect((await store.update(initial.operationId, key.ownerId, 0, { ...initial.operation.status, phase: 'staging' })).revision).toBe(1)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
