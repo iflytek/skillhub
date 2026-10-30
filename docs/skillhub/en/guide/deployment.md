@@ -38,6 +38,23 @@ Resolve validation errors before starting. Backend startup runs Flyway database 
 
 Suite review writes are enabled by default in the single-server release Compose topology; Suite Bundle confirmation is disabled by default. See [Bundle import](suite-bundle.md) for enabling it. For rolling upgrades where old and new backends coexist, follow the [Suite deployment order](https://github.com/iflytek/skillhub/blob/main/docs/25-skill-suites.md).
 
+## CLI device authorization URL
+
+`skillhub login --no-open --registry https://skills.example.com` first resolves `--token`, then `SKILLHUB_TOKEN`, then saved credentials for that registry. Device authorization starts only when no token is resolved; an invalid token does not automatically fall back. `--no-open` only disables automatic browser launch. Verify the resulting identity with `skillhub whoami --registry https://skills.example.com`.
+
+- When `DEVICE_AUTH_VERIFICATION_URI` is unset, empty, or whitespace, the server appends `/device` to `SKILLHUB_PUBLIC_BASE_URL`, preserving sub-paths and trimming trailing slashes. For example, `https://skills.example.com/portal/` becomes `https://skills.example.com/portal/device`.
+- Without a public base URL, the compatibility fallback is `/device`, resolved by the CLI against the registry origin. Set the actual public Web URL for production, sub-path, or separate Web/API deployments.
+- An explicit valid HTTP(S) URL or root-relative path overrides the default. Invalid values prevent startup without echoing the configured value. `/cli/auth` is the legacy loopback callback, not the device-code entry page.
+
+After changing this setting in `.env.release`, recreate the backend in the existing deployment directory, preserving its Compose project name and overrides:
+
+```bash
+make validate-release-config
+docker compose --env-file .env.release -f compose.release.yml up -d --no-deps --force-recreate server
+```
+
+This updates an already running stack; use the full `up -d` for an initial deployment. A plain `restart` does not reload container environment variables. If other shared settings changed, recreate their affected services too. Retry device authorization and check the returned public URL without sharing codes or tokens. See the [operations reference](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for the full configuration contract.
+
 ## Upgrade, stop, and troubleshoot
 
 Before upgrading, record the current image version and configuration, and back up both the database and skill object storage. Set `SKILLHUB_VERSION` to the target release and repeat validation, `pull`, `up -d`, and workflow verification. Rolling back an image does not roll back the database; check migration compatibility first.
