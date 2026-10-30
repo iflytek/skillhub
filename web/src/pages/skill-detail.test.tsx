@@ -19,6 +19,7 @@ const useSkillVersionsMock = vi.fn()
 const useSkillFilesMock = vi.fn()
 const useSkillReadmeMock = vi.fn()
 const useSkillFileMock = vi.fn()
+const useSkillVersionDetailMock = vi.fn()
 const usePromotionSourceStateMock = vi.fn()
 const submitPromotionMock = vi.fn()
 const submitRevocationMock = vi.fn()
@@ -208,7 +209,7 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useSkillVersions: (...args: unknown[]) => useSkillVersionsMock(...args),
-  useSkillVersionDetail: () => ({ data: undefined }),
+  useSkillVersionDetail: (...args: unknown[]) => useSkillVersionDetailMock(...args),
   useSkillFiles: (...args: unknown[]) => useSkillFilesMock(...args),
   useSkillReadme: (...args: unknown[]) => useSkillReadmeMock(...args),
   useSkillFile: (...args: unknown[]) => useSkillFileMock(...args),
@@ -301,6 +302,8 @@ describe('SkillDetailPage', () => {
     useSkillFilesMock.mockReset()
     useSkillReadmeMock.mockReset()
     useSkillFileMock.mockReset()
+    useSkillVersionDetailMock.mockReset()
+    useSkillVersionDetailMock.mockReturnValue({ data: undefined })
     toastMocks.success.mockReset()
     toastMocks.error.mockReset()
     hasRoleMock.mockImplementation((role: string) => role === 'USER')
@@ -1011,6 +1014,19 @@ describe('SkillDetailPage', () => {
 
     expect(html).toContain('break-all')
     expect(html).toContain('leading-snug')
+  })
+
+  it('renders the selected snapshot overview and opens the packaged SKILL.md separately', () => {
+    useSkillVersionDetailMock.mockReturnValue({ data: { parsedMetadataJson: JSON.stringify({
+      name: 'demo-skill', description: 'Original description', shortDescriptionOverride: 'Selected summary',
+      overviewOverride: '# Selected overview',
+    }) } })
+    useSkillFilesMock.mockReturnValue({ data: [createSkillFile('README.md'), createSkillFile('SKILL.md')] })
+    render(<SkillDetailPage />)
+    expect(screen.getByText('markdown:# Selected overview')).toBeTruthy()
+    expect(screen.queryByText('markdown:# Demo')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'skillDetail.viewSkillMd' }))
+    expect(screen.getByRole('dialog').textContent).toContain('preview:SKILL.md')
   })
 
   it('opens a file preview when overview markdown relative link matches a package file', () => {

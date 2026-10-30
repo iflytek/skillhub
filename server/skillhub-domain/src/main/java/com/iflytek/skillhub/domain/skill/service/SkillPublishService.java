@@ -705,7 +705,9 @@ public class SkillPublishService {
                     .orElse(null);
             if (published != null && published.getParsedMetadataJson() != null) {
                 try {
-                    SkillMetadata previous = objectMapper.readValue(published.getParsedMetadataJson(), SkillMetadata.class);
+                    SkillMetadata previous = objectMapper.readerFor(SkillMetadata.class)
+                            .without(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                            .readValue(published.getParsedMetadataJson());
                     if (previous.shortDescriptionOverride() != null || previous.overviewOverride() != null) {
                         metadata = metadata.withPresentation(previous.shortDescriptionOverride(),
                                 previous.overviewOverride(), published.getVersion());
