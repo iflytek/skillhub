@@ -1,5 +1,5 @@
 /** Read legacy version snapshots without rewriting the package or trusting arbitrary JSON. */
-export function getVersionPresentation(snapshot?: string): { displayName?: string; summary?: string } {
+export function getVersionPresentation(snapshot?: string): { displayName?: string; summary?: string; overview?: string } {
   if (!snapshot) return {}
   try {
     const value: unknown = JSON.parse(snapshot)
@@ -8,7 +8,12 @@ export function getVersionPresentation(snapshot?: string): { displayName?: strin
     const metadata = isObject(frontmatter.metadata) ? frontmatter.metadata : {}
     const displayName = validName(value.displayNameOverride) ?? validName(metadata['display-name'])
       ?? (typeof value.name === 'string' ? value.name : undefined)
-    return { displayName, summary: typeof value.description === 'string' ? value.description : undefined }
+    const overview = typeof value.overviewOverride === 'string' && value.overviewOverride.trim().length > 0
+      ? value.overviewOverride.trim()
+      : typeof metadata.overview === 'string' && metadata.overview.trim().length > 0 ? metadata.overview.trim() : undefined
+    const summary = typeof value.shortDescriptionOverride === 'string' && value.shortDescriptionOverride.trim().length > 0
+      ? value.shortDescriptionOverride.trim() : typeof value.description === 'string' ? value.description : undefined
+    return overview ? { displayName, summary, overview } : { displayName, summary }
   } catch {
     return {}
   }

@@ -42,13 +42,14 @@ public class SkillPublishAppService {
             SkillVisibility visibility, Set<String> roles, boolean confirmWarnings, AvatarAction action,
             String uploadId, String expectedSlug, AuditRequestContext context) {
         return publish(namespace, entries, actor, visibility, roles, confirmWarnings, action,
-                uploadId, expectedSlug, null, context);
+                uploadId, expectedSlug, null, null, null, false, context);
     }
 
     @Transactional
     public SkillPublishService.PublishResult publish(String namespace, List<PackageEntry> entries, String actor,
             SkillVisibility visibility, Set<String> roles, boolean confirmWarnings, AvatarAction action,
-            String uploadId, String expectedSlug, String displayName, AuditRequestContext context) {
+            String uploadId, String expectedSlug, String displayName, String shortDescription,
+            String overview, boolean resetPresentation, AuditRequestContext context) {
         if (action == AvatarAction.REPLACE && (uploadId == null || uploadId.isBlank())
                 || action != AvatarAction.REPLACE && uploadId != null && !uploadId.isBlank()) {
             throw new DomainBadRequestException("error.skill.avatar.invalidUpload");
@@ -64,9 +65,12 @@ public class SkillPublishAppService {
                 uploads.validateReference(namespace, targetSlug, actor, uploadId);
             }
         }
-        SkillPublishService.PublishResult result = displayName == null || displayName.isBlank()
+        SkillPublishService.PublishResult result = (displayName == null || displayName.isBlank())
+                && (shortDescription == null || shortDescription.isBlank())
+                && (overview == null || overview.isBlank()) && !resetPresentation
                 ? publications.publishFromEntries(namespace, entries, actor, visibility, roles, confirmWarnings)
-                : publications.publishFromEntries(namespace, entries, actor, visibility, roles, confirmWarnings, displayName);
+                : publications.publishFromEntries(namespace, entries, actor, visibility, roles, confirmWarnings, displayName,
+                        shortDescription, overview, resetPresentation);
         var review = reviews.findBySkillVersionIdAndStatus(
                 result.version().getId(), ReviewTaskStatus.PENDING).orElse(null);
         if (action == AvatarAction.REPLACE) {

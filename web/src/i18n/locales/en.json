@@ -2235,6 +2235,8 @@
     "displayName": "Display name",
     "displayNamePlaceholder": "For example: Meeting notes assistant",
     "displayNameHelp": "Up to 200 characters. Defaults to the package title. Changes follow this version’s review and do not alter the identifier or package files. Leave blank to use the package title.",
+    "shortDescription": "Short description",
+    "overview": "Detailed overview (Markdown)",
     "readingPackage": "Reading package metadata…",
     "examplesReady": "Recognized {{count}} task examples across all languages.",
     "examplesNone": "No task examples provided. Publishing and use remain available.",

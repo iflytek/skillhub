@@ -129,6 +129,7 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
         resolveLatestVersion(skill)
                 .map(this::extractParsedMetadata)
                 .ifPresent(metadata -> {
+                    addPart(searchParts, String.valueOf(metadata.get("description")));
                     appendFrontmatter(asMap(metadata.get("frontmatter")), keywords, searchParts);
                     appendComplianceSnapshot(
                             asMap(metadata.get(ComplianceMetadataService.SNAPSHOT_FIELD_NAME)),

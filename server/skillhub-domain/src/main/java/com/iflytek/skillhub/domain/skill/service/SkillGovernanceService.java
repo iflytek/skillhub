@@ -388,7 +388,7 @@ public class SkillGovernanceService {
         try {
             SkillMetadata metadata = objectMapper.readValue(metadataJson, SkillMetadata.class);
             skill.setDisplayName(metadata.displayName());
-            skill.setSummary(metadata.description());
+            skill.setSummary(metadata.shortDescription());
         } catch (Exception e) {
             throw new IllegalStateException("Failed to deserialize skill metadata", e);
         }

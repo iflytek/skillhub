@@ -214,6 +214,7 @@ export function SkillDetailPage() {
   const { data: files } = useSkillFiles(qns, qslug, selectedVersion, skillReady)
   const documentationPath = resolveDocumentationFilePath(files)
   const { data: readme, error: readmeError } = useSkillReadme(qns, qslug, selectedVersion, documentationPath, skillReady)
+  const renderedDocumentation = historicalMetadata.overview ?? readme
   const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useSkillFile(
     qns,
     qslug,
@@ -988,7 +989,7 @@ export function SkillDetailPage() {
           </TabsList>
 
           <TabsContent value="readme" className="mt-6">
-            {readme ? (
+            {renderedDocumentation ? (
               <Card className="p-8 space-y-4">
                 {documentationPath ? (
                   <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
@@ -1004,7 +1005,7 @@ export function SkillDetailPage() {
                     style={!isOverviewExpanded && isOverviewCollapsible ? { maxHeight: `${overviewMaxHeight}px` } : undefined}
                   >
                     <div ref={overviewContentRef}>
-                      <MarkdownRenderer content={readme} onLinkClick={handleOverviewLinkClick} />
+                      <MarkdownRenderer content={renderedDocumentation} onLinkClick={handleOverviewLinkClick} />
                     </div>
                     {!isOverviewExpanded && isOverviewCollapsible ? (
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-card via-card/95 to-transparent" />

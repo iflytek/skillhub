@@ -336,8 +336,17 @@ public class SkillPublishService {
             String namespaceSlug, List<PackageEntry> entries, String publisherId,
             SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
             String displayName) {
+        return publishFromEntries(namespaceSlug, entries, publisherId, visibility, platformRoles, confirmWarnings,
+                displayName, null, null, false);
+    }
+
+    @Transactional
+    public PublishResult publishFromEntries(
+            String namespaceSlug, List<PackageEntry> entries, String publisherId,
+            SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
+            String displayName, String shortDescription, String overview, boolean resetPresentation) {
         return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles,
-                confirmWarnings, false, false, null, null, displayName);
+                confirmWarnings, false, false, null, null, displayName, shortDescription, overview, resetPresentation);
     }
 
     /** Publishes a validated GitHub package into the dedicated sync review queue. */
@@ -499,6 +508,17 @@ public class SkillPublishService {
             SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
             boolean forceAutoPublish, boolean bypassMembershipCheck,
             BundlePublicationTarget bundleTarget, GithubSyncPublicationTarget syncTarget, String displayName) {
+        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles,
+                confirmWarnings, forceAutoPublish, bypassMembershipCheck, bundleTarget, syncTarget, displayName,
+                null, null, false);
+    }
+
+    private PublishResult publishFromEntriesInternal(
+            String namespaceSlug, List<PackageEntry> entries, String publisherId,
+            SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
+            boolean forceAutoPublish, boolean bypassMembershipCheck,
+            BundlePublicationTarget bundleTarget, GithubSyncPublicationTarget syncTarget, String displayName,
+            String shortDescription, String overview, boolean resetPresentation) {
 
         // 1. Find namespace by slug
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
@@ -538,6 +558,8 @@ public class SkillPublishService {
 
         String skillMdContent = new String(skillMd.content());
         SkillMetadata metadata = skillMetadataParser.parse(skillMdContent).withDisplayNameOverride(displayName);
+        metadata = metadata.withPresentation(resetPresentation ? null : shortDescription,
+                resetPresentation ? null : overview, null);
         String upstreamVersion = syncTarget == null ? null : metadata.version();
         if (syncTarget != null) {
             // A reverted upstream package is a new review target after an intervening update.
@@ -886,7 +908,7 @@ public class SkillPublishService {
         // A pending update must not replace the currently published title or summary.
         if (autoPublish || visibility == SkillVisibility.PRIVATE || skill.getLatestVersionId() == null) {
             skill.setDisplayName(metadata.displayName());
-            skill.setSummary(metadata.description());
+            skill.setSummary(metadata.shortDescription());
         }
         if (syncTarget != null) {
             skill.assignGithubSyncOwnership(publisherId);
@@ -1150,6 +1172,9 @@ public class SkillPublishService {
         parsedMetadata.put("body", metadata.body());
         parsedMetadata.put("frontmatter", metadata.frontmatter());
         parsedMetadata.put("displayNameOverride", metadata.displayNameOverride());
+        parsedMetadata.put("shortDescriptionOverride", metadata.shortDescriptionOverride());
+        parsedMetadata.put("overviewOverride", metadata.overviewOverride());
+        parsedMetadata.put("presentationInheritedFrom", metadata.presentationInheritedFrom());
         if (syncTarget != null) {
             parsedMetadata.put("upstreamVersion", upstreamVersion);
             parsedMetadata.put("githubContentSha256", syncTarget.contentSha256());

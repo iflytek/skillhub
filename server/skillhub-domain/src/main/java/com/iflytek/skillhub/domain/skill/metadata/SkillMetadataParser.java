@@ -60,7 +60,15 @@ public class SkillMetadataParser {
         }
 
         validateDisplayName(frontmatter);
-        return new SkillMetadata(name, description, version, body, frontmatter);
+        String shortDescription = extractNestedOptionalField(frontmatter, "metadata", "short-description");
+        String overview = extractNestedOptionalField(frontmatter, "metadata", "overview");
+        if (shortDescription != null && shortDescription.length() > 200) {
+            throw new DomainBadRequestException("error.skill.metadata.shortDescription.tooLong", 200);
+        }
+        if (overview != null && overview.length() > 20000) {
+            throw new DomainBadRequestException("error.skill.metadata.overview.tooLong", 20000);
+        }
+        return new SkillMetadata(name, description, version, body, frontmatter, null, shortDescription, overview, null);
     }
 
     private void validateDisplayName(Map<String, Object> frontmatter) {
