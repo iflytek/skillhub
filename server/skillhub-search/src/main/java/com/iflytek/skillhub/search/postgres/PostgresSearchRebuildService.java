@@ -123,6 +123,7 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
     private SearchIndexPayload buildSearchPayload(Skill skill) {
         List<String> searchParts = new ArrayList<>();
         addPart(searchParts, skill.getSlug());
+        addPart(searchParts, skill.getDisplayName());
         addPart(searchParts, skill.getSummary());
 
         Set<String> keywords = new TreeSet<>();
@@ -130,7 +131,11 @@ public class PostgresSearchRebuildService implements SearchRebuildService {
                 .map(this::extractParsedMetadata)
                 .ifPresent(metadata -> {
                     addPart(searchParts, String.valueOf(metadata.get("description")));
-                    appendFrontmatter(asMap(metadata.get("frontmatter")), keywords, searchParts);
+                    Map<String, Object> frontmatter = new LinkedHashMap<>(asMap(metadata.get("frontmatter")));
+                    Map<String, Object> packageMetadata = new LinkedHashMap<>(asMap(frontmatter.get("metadata")));
+                    packageMetadata.remove("overview");
+                    frontmatter.put("metadata", packageMetadata);
+                    appendFrontmatter(frontmatter, keywords, searchParts);
                     appendComplianceSnapshot(
                             asMap(metadata.get(ComplianceMetadataService.SNAPSHOT_FIELD_NAME)),
                             keywords,

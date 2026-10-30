@@ -55,6 +55,7 @@ export function PublishPage() {
   const [displayName, setDisplayName] = useState('')
   const [shortDescription, setShortDescription] = useState('')
   const [overview, setOverview] = useState('')
+  const [resetPresentation, setResetPresentation] = useState(false)
   const displayNameEdited = useRef(false)
   const shortDescriptionEdited = useRef(false)
   const overviewEdited = useRef(false)
@@ -111,6 +112,11 @@ export function PublishPage() {
 
   const handleFileSelect = (file: File | null) => {
     setSelectedFile(file)
+    shortDescriptionEdited.current = false
+    overviewEdited.current = false
+    setShortDescription('')
+    setOverview('')
+    setResetPresentation(false)
     setFileRevision(value => value + 1)
     setPrecheckWarnings([])
     setWarningDialogOpen(false)
@@ -159,9 +165,9 @@ export function PublishPage() {
         avatarUploadId: avatarEdit.uploadId,
         expectedSlug: updateSlug || undefined,
         displayName,
-        shortDescription,
-        overview,
-        resetPresentation: false,
+        shortDescription: resetPresentation ? undefined : shortDescriptionEdited.current ? shortDescription : undefined,
+        overview: resetPresentation ? undefined : overviewEdited.current ? overview : undefined,
+        resetPresentation,
       })
       setPrecheckWarnings([])
       setWarningDialogOpen(false)
@@ -364,6 +370,13 @@ export function PublishPage() {
 
         <div className="space-y-2">
           <Label htmlFor="skill-short-description">{t('publish.shortDescription')}</Label>
+          {isUpdate && updateTarget?.publishedVersion?.version && !resetPresentation && (
+            <p className="text-sm text-muted-foreground">{t('publish.presentationInheritance', { version: updateTarget.publishedVersion.version })}</p>
+          )}
+          {isUpdate && <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={resetPresentation} onChange={event => setResetPresentation(event.target.checked)} />
+            {t('publish.resetPresentation')}
+          </label>}
           <Input id="skill-short-description" maxLength={200} value={shortDescription} disabled={ownerReadOnly || isBusy || !selectedFile}
             onChange={event => { shortDescriptionEdited.current = true; setShortDescription(event.target.value) }} />
         </div>

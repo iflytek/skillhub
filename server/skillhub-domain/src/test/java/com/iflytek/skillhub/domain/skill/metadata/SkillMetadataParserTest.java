@@ -16,6 +16,15 @@ class SkillMetadataParserTest {
         SkillMetadata source = parser.parse("---\nname: my-skill\ndescription: Original\nmetadata:\n  short-description: Package short\n  overview: Package overview\n---\nBody");
         assertEquals("Package short", source.shortDescription());
         assertEquals("Package overview", source.overview());
+        assertNull(source.shortDescriptionOverride());
+        assertNull(source.overviewOverride());
+        assertEquals("Original", source.withPresentation(null, null, null).description());
+        SkillMetadata reset = source.withPresentation("Web short", "Web overview", null)
+                .withPresentation(null, null, null);
+        assertNull(reset.shortDescriptionOverride());
+        assertNull(reset.overviewOverride());
+        assertEquals("Package short", reset.shortDescription());
+        assertEquals("Package overview", reset.overview());
         SkillMetadata custom = source.withPresentation("  Web short  ", "  # Web overview  ", null);
         assertEquals("Web short", custom.shortDescription());
         assertEquals("# Web overview", custom.overview());

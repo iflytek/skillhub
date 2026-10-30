@@ -12,7 +12,10 @@ export function getVersionPresentation(snapshot?: string): { displayName?: strin
       ? value.overviewOverride.trim()
       : typeof metadata.overview === 'string' && metadata.overview.trim().length > 0 ? metadata.overview.trim() : undefined
     const summary = typeof value.shortDescriptionOverride === 'string' && value.shortDescriptionOverride.trim().length > 0
-      ? value.shortDescriptionOverride.trim() : typeof value.description === 'string' ? value.description : undefined
+      ? value.shortDescriptionOverride.trim()
+      : typeof metadata['short-description'] === 'string' && metadata['short-description'].trim().length > 0
+        ? metadata['short-description'].trim()
+        : typeof value.description === 'string' ? value.description : undefined
     return overview ? { displayName, summary, overview } : { displayName, summary }
   } catch {
     return {}

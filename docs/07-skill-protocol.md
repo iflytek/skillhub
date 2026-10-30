@@ -45,7 +45,7 @@ description: When to use    # 必需，1-2 句话
 - 网页上传后通过鉴权只读 `POST /api/web/skills/package-preview`（也提供 `/api/v1/skills/package-preview`）读取 `name/displayName/description/version`；此步骤不保存包、不创建技能或启动扫描，正式提交仍执行完整校验。
 - 上述类型和长度限制在新上传解析时检查。读取历史版本快照时，非字符串或超长的旧 `display-name` 回退到该版本的 `name`，原始 frontmatter 保留，避免阻塞审核、提升或版本撤回。
 - `metadata.short-description` 可选，作为卡片、列表和搜索摘要，去除首尾空白后最多 200 个字符；缺失时回退到原始 `description`。`metadata.overview` 可选，为详情页 Markdown 概览，最多 20,000 个字符；缺失时详情页按 README.md → SKILL.md 回退。
-- 网页发布 multipart 可选字段 `shortDescription`、`overview` 和 `resetPresentation`；网页显式值优先于包内元数据，`resetPresentation=true` 清除自定义覆盖。值随版本快照保存，原始包文件不变。
+- 网页发布 multipart 可选字段 `shortDescription`、`overview` 和 `resetPresentation`；网页显式值优先于包内元数据，`resetPresentation=true` 清除自定义覆盖并禁止本次继承。两边均未提供展示值时，仅继承提交时当前已发布版本的自定义覆盖，并在快照记录 `presentationInheritedFrom`；不继承旧版包内默认值。值随版本快照保存，原始包文件不变。待审核版本不更新公开摘要，审核通过后才生效。
 - 有效 short description 映射为 `skill.summary`；原始 `description` 仍加入搜索文本。frontmatter 完整解析结果存入 `skill_version.parsed_metadata_json`。
 
 平台扩展字段（可选，`x-astron-` 前缀）：

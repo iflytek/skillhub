@@ -119,6 +119,65 @@ class SkillPublishServiceTest {
     }
 
     @Test
+    void inheritsOnlyPublishedCustomPresentationAndFreezesSnapshot() throws Exception {
+        String content = "---\nname: test-skill\ndescription: New default\nversion: 2.0.0\n---\nBody";
+        PackageEntry entry = new PackageEntry("SKILL.md", content.getBytes(StandardCharsets.UTF_8),
+                content.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(entry);
+        Namespace namespace = new Namespace("test-ns", "Test NS", "owner");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "test-skill", "owner", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setSummary("Published custom");
+        skill.setLatestVersionId(11L);
+        SkillVersion previous = new SkillVersion(1L, "1.0.0", "owner");
+        setId(previous, 11L);
+        previous.setStatus(SkillVersionStatus.PUBLISHED);
+        previous.setParsedMetadataJson(objectMapper.writeValueAsString(
+                new SkillMetadata("test-skill", "Old default", "1.0.0", "Body", Map.of(), null,
+                        "Published custom", "# Custom overview", null)));
+        when(namespaceRepository.findBySlug("test-ns")).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "owner"))
+                .thenReturn(Optional.of(mock(NamespaceMember.class)));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(content)).thenReturn(new SkillMetadata("test-skill", "New default", "2.0.0", "Body", Map.of()));
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "test-skill")).thenReturn(List.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(1L, "test-skill", "owner")).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(previous));
+        when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(call -> {
+            SkillVersion version = call.getArgument(0);
+            if (version.getId() == null) setId(version, 12L);
+            return version;
+        });
+        SkillVersion pending = service.publishFromEntries("test-ns", entries, "owner", SkillVisibility.PUBLIC,
+                Set.of(), true, null, null, null, false).version();
+        assertEquals("Published custom", skill.getSummary());
+        assertEquals(SkillVersionStatus.PENDING_REVIEW, pending.getStatus());
+        JsonNode snapshot = objectMapper.readTree(pending.getParsedMetadataJson());
+        assertEquals("1.0.0", snapshot.path("presentationInheritedFrom").asText());
+        assertEquals("Published custom", snapshot.path("shortDescriptionOverride").asText());
+        assertEquals("# Custom overview", snapshot.path("overviewOverride").asText());
+        assertEquals("New default", snapshot.path("description").asText());
+
+        SkillVersion reset = service.publishFromEntries("test-ns", entries, "owner", SkillVisibility.PUBLIC,
+                Set.of(), true, null, null, null, true).version();
+        JsonNode resetSnapshot = objectMapper.readTree(reset.getParsedMetadataJson());
+        assertTrue(resetSnapshot.path("shortDescriptionOverride").isNull());
+        assertTrue(resetSnapshot.path("overviewOverride").isNull());
+        assertTrue(resetSnapshot.path("presentationInheritedFrom").isNull());
+        assertEquals("Published custom", skill.getSummary());
+
+        previous.setParsedMetadataJson(objectMapper.writeValueAsString(
+                new SkillMetadata("test-skill", "Old default", "1.0.0", "Body", Map.of())));
+        SkillVersion defaults = service.publishFromEntries("test-ns", entries, "owner", SkillVisibility.PUBLIC,
+                Set.of(), true, null, null, null, false).version();
+        JsonNode defaultSnapshot = objectMapper.readTree(defaults.getParsedMetadataJson());
+        assertTrue(defaultSnapshot.path("shortDescriptionOverride").isNull());
+        assertTrue(defaultSnapshot.path("presentationInheritedFrom").isNull());
+    }
+
+    @Test
     void testPublishFromEntries_Success() throws Exception {
         // Arrange
         String namespaceSlug = "test-ns";

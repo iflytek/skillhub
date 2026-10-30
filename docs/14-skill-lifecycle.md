@@ -91,7 +91,7 @@ Status: contract reference with documented implementation exception
 - `PENDING_REVIEW -> PUBLISHED`
 - review task 标记为 `APPROVED`
 - `Skill.latestVersionId` 指向该版本
-- skill 展示元数据从发布版本刷新
+- skill 展示元数据从发布版本刷新，摘要采用该版本有效 `short-description`（自定义覆盖优先，其次包内值，再退回 `description`）；`overview` 仅在选中版本详情展示。提交时的自定义继承冻结在版本快照，审核期间不随其他版本发布而变化。
 
 ### 4.3 审核拒绝
 

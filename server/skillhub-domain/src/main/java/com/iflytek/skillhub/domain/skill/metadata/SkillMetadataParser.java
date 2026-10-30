@@ -68,7 +68,7 @@ public class SkillMetadataParser {
         if (overview != null && overview.length() > 20000) {
             throw new DomainBadRequestException("error.skill.metadata.overview.tooLong", 20000);
         }
-        return new SkillMetadata(name, description, version, body, frontmatter, null, shortDescription, overview, null);
+        return new SkillMetadata(name, description, version, body, frontmatter);
     }
 
     private void validateDisplayName(Map<String, Object> frontmatter) {

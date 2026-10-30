@@ -37,6 +37,20 @@ skillhub publish ./my-skill --namespace myspace
 skillhub sync pull --namespace myspace
 ```
 
+## Presentation metadata for published packages
+
+Add optional `metadata.short-description` (up to 200 characters) and `metadata.overview` (Markdown, up to 20,000 characters) to `SKILL.md` frontmatter. The former is the card/search summary; the latter is the detail-page overview. Neither changes the original required `description`, slug, or archive contents. If absent, summary uses `description` and the detail view uses README.md then SKILL.md. CLI publication reads these package keys directly; it does not need web-only multipart fields. Custom web values belong to version snapshots, not the package.
+
+```yaml
+---
+name: my-skill
+description: When to use this skill
+metadata:
+  short-description: Brief card text
+  overview: "# Detailed overview"
+---
+```
+
 ## 🌐 Registry Configuration
 
 The active registry is resolved in the following priority order:

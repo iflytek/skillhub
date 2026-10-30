@@ -65,10 +65,11 @@ public class SkillPublishAppService {
                 uploads.validateReference(namespace, targetSlug, actor, uploadId);
             }
         }
-        SkillPublishService.PublishResult result = (displayName == null || displayName.isBlank())
-                && (shortDescription == null || shortDescription.isBlank())
+        SkillPublishService.PublishResult result = (shortDescription == null || shortDescription.isBlank())
                 && (overview == null || overview.isBlank()) && !resetPresentation
-                ? publications.publishFromEntries(namespace, entries, actor, visibility, roles, confirmWarnings)
+                ? (displayName == null || displayName.isBlank()
+                    ? publications.publishFromEntries(namespace, entries, actor, visibility, roles, confirmWarnings)
+                    : publications.publishFromEntries(namespace, entries, actor, visibility, roles, confirmWarnings, displayName))
                 : publications.publishFromEntries(namespace, entries, actor, visibility, roles, confirmWarnings, displayName,
                         shortDescription, overview, resetPresentation);
         var review = reviews.findBySkillVersionIdAndStatus(

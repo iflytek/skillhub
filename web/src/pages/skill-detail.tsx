@@ -205,7 +205,7 @@ export function SkillDetailPage() {
   const selectedMetadata = selectedVersion === ownerPreviewVersion?.version ? ownerPreviewVersion
     : selectedVersion === publishedVersion?.version ? publishedVersion
       : selectedVersion === headlineVersion?.version ? headlineVersion : null
-  const { data: selectedVersionDetail } = useSkillVersionDetail(qns, qslug, selectedVersion, skillReady && !selectedMetadata)
+  const { data: selectedVersionDetail } = useSkillVersionDetail(qns, qslug, selectedVersion, skillReady)
   const historicalMetadata = getVersionPresentation(selectedVersionDetail?.parsedMetadataJson)
   const selectedDisplayName = selectedMetadata?.displayName ?? historicalMetadata.displayName ?? skill?.displayName
   const selectedSummary = selectedMetadata?.summary ?? historicalMetadata.summary ?? skill?.summary
@@ -989,9 +989,15 @@ export function SkillDetailPage() {
           </TabsList>
 
           <TabsContent value="readme" className="mt-6">
+            {files?.find(file => file.filePath === 'SKILL.md') && (
+              <Button type="button" variant="outline" className="mb-4" onClick={() => {
+                const skillFile = files.find(file => file.filePath === 'SKILL.md')
+                if (skillFile) handleFileClick(createPackageFilePreviewNode(skillFile))
+              }}>{t('skillDetail.viewSkillMd')}</Button>
+            )}
             {renderedDocumentation ? (
               <Card className="p-8 space-y-4">
-                {documentationPath ? (
+                {!historicalMetadata.overview && documentationPath ? (
                   <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                     {t('skillDetail.documentationSource', { path: documentationPath })}
                   </div>

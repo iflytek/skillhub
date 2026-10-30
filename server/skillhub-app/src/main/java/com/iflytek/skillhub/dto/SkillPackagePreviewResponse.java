@@ -8,6 +8,11 @@ public record SkillPackagePreviewResponse(String name, String displayName, Strin
                                           String overview, String version,
                                           @JsonInclude(JsonInclude.Include.NON_NULL) Status examplesStatus,
                                           @JsonInclude(JsonInclude.Include.NON_NULL) Integer examplesCount) {
+    public SkillPackagePreviewResponse(String name, String displayName, String description, String version,
+                                       Status examplesStatus, Integer examplesCount) {
+        this(name, displayName, description, description, null, version, examplesStatus, examplesCount);
+    }
+
     public SkillPackagePreviewResponse(String name, String displayName, String description, String version) {
         this(name, displayName, description, description, null, version, null, null);
     }

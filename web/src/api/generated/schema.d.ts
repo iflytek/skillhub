@@ -8187,6 +8187,8 @@ export interface components {
             name?: string;
             displayName?: string;
             description?: string;
+            shortDescription?: string;
+            overview?: string;
             version?: string;
             /** @enum {string} */
             examplesStatus?: "ready" | "none" | "invalid";
@@ -15503,6 +15505,9 @@ export interface operations {
                 avatarUploadId?: string;
                 expectedSlug?: string;
                 displayName?: string;
+                shortDescription?: string;
+                overview?: string;
+                resetPresentation?: boolean;
             };
             header?: never;
             path: {
@@ -15539,6 +15544,9 @@ export interface operations {
                 avatarUploadId?: string;
                 expectedSlug?: string;
                 displayName?: string;
+                shortDescription?: string;
+                overview?: string;
+                resetPresentation?: boolean;
             };
             header?: never;
             path: {
