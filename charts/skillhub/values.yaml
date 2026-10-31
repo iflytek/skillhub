@@ -312,6 +312,15 @@ server:
   # Server instance supports typed review subjects; fresh non-rolling installs may enable it directly.
   suiteReviewWritesEnabled: false
 
+  # Independent of tracing; optional OTLP Logs receiver. Other budgets use server.extraEnv.
+  businessLogs:
+    enabled: false
+    endpoint: ""
+    # Existing Secret containing URL-encoded OTLP header pairs. No inline credentials.
+    headersSecretRef:
+      name: ""
+      key: headers
+
   image:
     registry: ""
     tag: ""

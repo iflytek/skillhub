@@ -170,6 +170,22 @@ skillhub:
       confirmation-enabled: ${SKILLHUB_SUITE_BUNDLE_CONFIRMATION_ENABLED:false}
   observability:
     tracing-mode: ${SKILLHUB_TRACING_MODE:none}
+    business-logs:
+      enabled: ${SKILLHUB_BUSINESS_LOGS_ENABLED:false}
+      # Logs-specific URL is used as-is; include /v1/logs (not /v1/traces).
+      endpoint: ${SKILLHUB_BUSINESS_LOGS_ENDPOINT:}
+      headers: ${SKILLHUB_BUSINESS_LOGS_HEADERS:}
+      timeout: ${SKILLHUB_BUSINESS_LOGS_TIMEOUT:3s}
+      compression: ${SKILLHUB_BUSINESS_LOGS_COMPRESSION:gzip}
+      max-queue-size: ${SKILLHUB_BUSINESS_LOGS_MAX_QUEUE_SIZE:2048}
+      max-export-batch-size: ${SKILLHUB_BUSINESS_LOGS_MAX_EXPORT_BATCH_SIZE:256}
+      schedule-delay: ${SKILLHUB_BUSINESS_LOGS_SCHEDULE_DELAY:1s}
+      shutdown-timeout: ${SKILLHUB_BUSINESS_LOGS_SHUTDOWN_TIMEOUT:5s}
+      retry-max-attempts: ${SKILLHUB_BUSINESS_LOGS_RETRY_MAX_ATTEMPTS:3}
+      retry-initial-backoff: ${SKILLHUB_BUSINESS_LOGS_RETRY_INITIAL_BACKOFF:200ms}
+      retry-max-backoff: ${SKILLHUB_BUSINESS_LOGS_RETRY_MAX_BACKOFF:1s}
+      event-allowlist: ${SKILLHUB_BUSINESS_LOGS_EVENT_ALLOWLIST:skill.publication.effective,skill.download.prepared,skill.review.approved,skill.review.rejected,skill.promotion.approved,skill.promotion.rejected,skill.status.changed,skill.visibility.changed,skill.version.yanked}
+      namespace-allowlist: ${SKILLHUB_BUSINESS_LOGS_NAMESPACE_ALLOWLIST:}
     log-format: ${SKILLHUB_LOG_FORMAT:text}
     log-async-queue-size: ${SKILLHUB_LOG_ASYNC_QUEUE_SIZE:1024}
     service-version: ${SKILLHUB_SERVICE_VERSION:unknown}

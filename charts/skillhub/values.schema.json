@@ -452,6 +452,26 @@
             "enabled": { "type": "boolean" },
             "replicaCount": { "type": "integer", "minimum": 1 },
             "suiteReviewWritesEnabled": { "type": "boolean" },
+            "businessLogs": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["enabled", "endpoint", "headersSecretRef"],
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "endpoint": { "type": "string", "pattern": "^$|^https?://[^@?#]+/[^?#]+$" },
+                "headersSecretRef": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "key"],
+                  "properties": {
+                    "name": { "$ref": "#/definitions/optionalDnsLabel" },
+                    "key": { "type": "string", "minLength": 1 }
+                  }
+                }
+              },
+              "if": { "properties": { "enabled": { "const": true } } },
+              "then": { "properties": { "endpoint": { "minLength": 1 } } }
+            },
             "image": { "$ref": "#/definitions/image" },
             "dependencyWait": {
               "type": "object",

@@ -804,7 +804,13 @@ class SkillPublishServiceTest {
         verify(reviewTaskRepository, never()).save(any(ReviewTask.class));
         verify(skillRepository).save(argThat(savedSkill ->
                 savedSkill.getLatestVersionId() != null && savedSkill.getLatestVersionId().equals(10L)));
-        verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));
+        var published = ArgumentCaptor.forClass(SkillPublishedEvent.class);
+        verify(eventPublisher).publishEvent(published.capture());
+        assertEquals(1L, published.getValue().snapshot().namespaceId());
+        assertEquals(publisherId, published.getValue().snapshot().actorId());
+        assertEquals("user", published.getValue().snapshot().actorType());
+        assertEquals("auto_publish", published.getValue().snapshot().source());
+        assertNotNull(published.getValue().snapshot().occurredAt());
     }
 
     @Test

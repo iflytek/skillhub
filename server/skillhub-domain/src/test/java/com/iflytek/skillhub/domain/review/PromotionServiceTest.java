@@ -593,6 +593,14 @@ class PromotionServiceTest {
             assertEquals(NEW_SKILL_ID, event.skillId());
             assertEquals(NEW_VERSION_ID, event.versionId());
             assertEquals(REVIEWER_ID, event.publisherId());
+            assertEquals(TARGET_NAMESPACE_ID, event.snapshot().namespaceId());
+            assertEquals(REVIEWER_ID, event.snapshot().actorId());
+            assertEquals("promotion", event.snapshot().source());
+            ArgumentCaptor<com.iflytek.skillhub.domain.event.PromotionApprovedEvent> approved =
+                    ArgumentCaptor.forClass(com.iflytek.skillhub.domain.event.PromotionApprovedEvent.class);
+            verify(eventPublisher).publishEvent(approved.capture());
+            assertEquals(5L, approved.getValue().snapshot().namespaceId());
+            assertEquals(REVIEWER_ID, approved.getValue().snapshot().actorId());
 
             // Verify targetSkillId updated on promotion request
             verify(promotionRequestRepository).save(approvedRequest);
@@ -921,6 +929,7 @@ class PromotionServiceTest {
         void shouldRejectPromotionSuccessfully() {
             PromotionRequest pr = createPendingPromotion();
             when(promotionRequestRepository.findById(PROMOTION_ID)).thenReturn(Optional.of(pr));
+            when(skillRepository.findById(SOURCE_SKILL_ID)).thenReturn(Optional.of(createSourceSkill()));
             when(permissionChecker.canReviewPromotion(pr, REVIEWER_ID, Set.of("SKILL_ADMIN"))).thenReturn(true);
             when(promotionRequestRepository.updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, pr.getVersion()))
@@ -935,7 +944,11 @@ class PromotionServiceTest {
             assertEquals(Instant.now(CLOCK), result.getReviewedAt());
             verify(promotionRequestRepository).updateStatusWithVersion(
                     PROMOTION_ID, ReviewTaskStatus.REJECTED, REVIEWER_ID, "Not ready", null, pr.getVersion());
-            verify(eventPublisher, never()).publishEvent(any());
+            var rejected = ArgumentCaptor.forClass(com.iflytek.skillhub.domain.event.PromotionRejectedEvent.class);
+            verify(eventPublisher).publishEvent(rejected.capture());
+            assertEquals(SOURCE_SKILL_ID, rejected.getValue().skillId());
+            assertEquals(5L, rejected.getValue().snapshot().namespaceId());
+            assertEquals(REVIEWER_ID, rejected.getValue().snapshot().actorId());
         }
 
         @Test

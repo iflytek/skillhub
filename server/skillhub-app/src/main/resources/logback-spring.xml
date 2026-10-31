@@ -45,6 +45,12 @@
         <appender-ref ref="json-console"/>
     </appender>
 
+    <!-- Business Logs only: raw SDK diagnostics may echo receiver bodies / transport exceptions
+         containing credentials. Drop them on the business exporter's own threads; Trace and other
+         exporters keep their existing diagnostics. sdk.logs is used only by the business pipeline. -->
+    <turboFilter class="com.iflytek.skillhub.observability.business.BusinessLogsDiagnosticsFilter"/>
+    <logger name="io.opentelemetry.sdk.logs" level="OFF"/>
+
     <root level="INFO">
         <appender-ref ref="${activeAppender}"/>
     </root>

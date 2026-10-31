@@ -637,6 +637,7 @@ override 或部署平台环境变量把上述 `SPRING_SECURITY_*` 变量注入 `
 | 请求关联 | 响应头和日志中的 `X-Request-Id` / `request.id` |
 | 日志 | 文本或 ECS 风格 JSON，均输出到容器 stdout / stderr |
 | Trace | `none`、Micrometer + OTel SDK、或外部 Java Agent 三选一 |
+| 业务事实 | 默认关闭的独立 OTLP Logs 出口；[事件目录、配置、Secret、Collector 实收查询与可靠性边界](./business-event-logs.md) |
 | 指标 | Spring Boot Actuator；Prometheus 是可选后端，不是 Trace 前置条件 |
 
 ### 10.1 通用配置
@@ -663,7 +664,7 @@ JSON 日志使用以下稳定字段：
 
 ### 10.2 三种 Tracing 模式
 
-三种模式只能选择一种，切换后需要重启：
+三种 Trace 模式只能选择一种，切换后需要重启。该限制不禁止独立配置业务 Logs；下表及本节的 endpoint 限制仅指 TRACE endpoint：
 
 | 模式 | 适用场景 | 必需配置 |
 |------|----------|----------|

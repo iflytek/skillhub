@@ -1,0 +1,14 @@
+name: skillhub-1009-business-logs
+services:
+  collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    container_name: skillhub-1009-collector
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    user: "0:0"
+    mem_limit: 128m
+    cpus: 0.5
+    ports:
+      - "127.0.0.1:4318:4318"
+    volumes:
+      - ./collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+

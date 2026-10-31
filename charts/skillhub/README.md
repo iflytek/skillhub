@@ -9,6 +9,8 @@
 - **数据层**：使用 Bitnami PostgreSQL/Redis，支持主从复制、哨兵模式
 - **安全**：TLS 证书管理、Secret 密码保护；Bitnami 数据组件默认提供 NetworkPolicy
 - **可观测性**：内置 Prometheus metrics exporter
+- **业务事件 Logs（默认关闭）**：`server.businessLogs.enabled`、`endpoint` 与 `headersSecretRef`（引用现有 Secret）；
+  其他预算/过滤配置使用 `server.extraEnv`，不增加默认 Collector。见[完整运行手册](../../docs/business-event-logs.md)。
 
 ## 快速开始
 
