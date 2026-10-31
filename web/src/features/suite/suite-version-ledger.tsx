@@ -227,7 +227,7 @@ function ExpandedVersion({
                           @{member.namespace}/{member.slug}
                         </Link>
                       ) : <span className="truncate font-mono">@{member.namespace}/{member.slug}</span>}
-                      <span className="font-mono">v{member.version}</span>
+                      <span className="block min-w-0 truncate font-mono" title={`v${member.version}`}>{`v${member.version}`}</span>
                       <span>{member.entry ? t('suite.entrySkill') : t('suite.management.memberRole')}</span>
                       <span className={cn(
                         kind === 'ADDED' && 'text-emerald-700 dark:text-emerald-300',
