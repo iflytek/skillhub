@@ -12,6 +12,31 @@ class SkillMetadataParserTest {
     private final SkillMetadataParser parser = new SkillMetadataParser();
 
     @Test
+    void presentationOverridesAndPackageDefaultsRemainDistinct() {
+        SkillMetadata source = parser.parse("---\nname: my-skill\ndescription: Original\nmetadata:\n  short-description: Package short\n  overview: Package overview\n---\nBody");
+        assertEquals("Package short", source.shortDescription());
+        assertEquals("Package overview", source.overview());
+        assertNull(source.shortDescriptionOverride());
+        assertNull(source.overviewOverride());
+        assertEquals("Original", source.withPresentation(null, null, null).description());
+        SkillMetadata reset = source.withPresentation("Web short", "Web overview", null)
+                .withPresentation(null, null, null);
+        assertNull(reset.shortDescriptionOverride());
+        assertNull(reset.overviewOverride());
+        assertEquals("Package short", reset.shortDescription());
+        assertEquals("Package overview", reset.overview());
+        SkillMetadata custom = source.withPresentation("  Web short  ", "  # Web overview  ", null);
+        assertEquals("Web short", custom.shortDescription());
+        assertEquals("# Web overview", custom.overview());
+        assertEquals(source.frontmatter(), custom.frontmatter());
+        assertThrows(DomainBadRequestException.class,
+                () -> source.withPresentation("x".repeat(201), null, null));
+        assertThrows(DomainBadRequestException.class,
+                () -> source.withPresentation(null, "x".repeat(20001), null));
+    }
+
+
+    @Test
     void platformOverrideIsVersionedWithoutChangingFrontmatter() throws Exception {
         SkillMetadata source = parser.parse("---\nname: my-skill\ndescription: Test\nmetadata:\n  display-name: 包内标题\n---\nBody");
         SkillMetadata result = source.withDisplayNameOverride("  网页标题  ");

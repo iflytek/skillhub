@@ -22,6 +22,7 @@ import {
   normalizeSelectValue,
 } from '@/shared/ui/select'
 import { Input } from '@/shared/ui/input'
+import { Textarea } from '@/shared/ui/textarea'
 import { Label } from '@/shared/ui/label'
 import { Card } from '@/shared/ui/card'
 import { SkillAvatarEditor, KEEP_AVATAR, type AvatarEdit } from '@/features/skill/skill-avatar-editor'
@@ -52,7 +53,12 @@ export function PublishPage() {
   const previewId = useId()
   const [fileRevision, setFileRevision] = useState(0)
   const [displayName, setDisplayName] = useState('')
+  const [shortDescription, setShortDescription] = useState('')
+  const [overview, setOverview] = useState('')
+  const [resetPresentation, setResetPresentation] = useState(false)
   const displayNameEdited = useRef(false)
+  const shortDescriptionEdited = useRef(false)
+  const overviewEdited = useRef(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [namespaceSlug, setNamespaceSlug] = useState<string>(prefill.namespace)
   const [visibility, setVisibility] = useState<string>(prefill.visibility)
@@ -74,6 +80,12 @@ export function PublishPage() {
   useEffect(() => {
     if (packagePreview.data && !displayNameEdited.current) {
       setDisplayName(packagePreview.data.displayName ?? packagePreview.data.name ?? '')
+    }
+    if (packagePreview.data && !shortDescriptionEdited.current) {
+      setShortDescription(packagePreview.data.shortDescription ?? packagePreview.data.description ?? '')
+    }
+    if (packagePreview.data && !overviewEdited.current) {
+      setOverview(packagePreview.data.overview ?? '')
     }
   }, [packagePreview.data])
   const avatarTarget = useQuery({ queryKey: ['skill-avatar', namespaceSlug, updateSlug], queryFn: () => skillAvatarApi.status(namespaceSlug, updateSlug), enabled: !!namespaceSlug && !!updateSlug })
@@ -100,6 +112,11 @@ export function PublishPage() {
 
   const handleFileSelect = (file: File | null) => {
     setSelectedFile(file)
+    shortDescriptionEdited.current = false
+    overviewEdited.current = false
+    setShortDescription('')
+    setOverview('')
+    setResetPresentation(false)
     setFileRevision(value => value + 1)
     setPrecheckWarnings([])
     setWarningDialogOpen(false)
@@ -148,6 +165,9 @@ export function PublishPage() {
         avatarUploadId: avatarEdit.uploadId,
         expectedSlug: updateSlug || undefined,
         displayName,
+        shortDescription: resetPresentation ? undefined : shortDescriptionEdited.current ? shortDescription : undefined,
+        overview: resetPresentation ? undefined : overviewEdited.current ? overview : undefined,
+        resetPresentation,
       })
       setPrecheckWarnings([])
       setWarningDialogOpen(false)
@@ -346,6 +366,24 @@ export function PublishPage() {
           {selectedFile && packagePreview.data?.examplesStatus === 'ready' && <p role="status" className="text-xs text-muted-foreground">{t('publish.examplesReady', { count: packagePreview.data.examplesCount })}</p>}
           {selectedFile && packagePreview.data?.examplesStatus === 'none' && <p className="text-xs text-muted-foreground">{t('publish.examplesNone')}</p>}
           {selectedFile && packagePreview.data?.examplesStatus === 'invalid' && <p role="status" className="text-xs text-muted-foreground">{t('publish.examplesInvalid')}</p>}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="skill-short-description">{t('publish.shortDescription')}</Label>
+          {isUpdate && updateTarget?.publishedVersion?.version && !resetPresentation && (
+            <p className="text-sm text-muted-foreground">{t('publish.presentationInheritance', { version: updateTarget.publishedVersion.version })}</p>
+          )}
+          {isUpdate && <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={resetPresentation} onChange={event => setResetPresentation(event.target.checked)} />
+            {t('publish.resetPresentation')}
+          </label>}
+          <Input id="skill-short-description" maxLength={200} value={shortDescription} disabled={ownerReadOnly || isBusy || !selectedFile}
+            onChange={event => { shortDescriptionEdited.current = true; setShortDescription(event.target.value) }} />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="skill-overview">{t('publish.overview')}</Label>
+          <Textarea id="skill-overview" maxLength={20000} rows={8} value={overview} disabled={ownerReadOnly || isBusy || !selectedFile}
+            onChange={event => { overviewEdited.current = true; setOverview(event.target.value) }} />
         </div>
 
         <SkillAvatarEditor key={`${namespaceSlug}/${updateSlug}`} name={search.updateName ?? updateSlug} currentUrl={avatarTarget.data?.avatarUrl} canRemove={!!updateSlug} disabled={ownerReadOnly || isBusy || avatarUnavailable} onChange={setAvatarEdit} />

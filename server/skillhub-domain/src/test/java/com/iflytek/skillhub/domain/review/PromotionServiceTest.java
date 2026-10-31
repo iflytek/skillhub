@@ -672,7 +672,9 @@ class PromotionServiceTest {
             Skill sourceSkill = createSourceSkill();
             SkillVersion sourceVersion = createPublishedVersion();
             sourceSkill.setLatestVersionId(999L);
-            sourceVersion.setParsedMetadataJson(selectedVersionMetadata(hasDisplayName));
+            sourceVersion.setParsedMetadataJson(selectedVersionMetadata(hasDisplayName)
+                    .replace("\"description\":\"Old version summary\"",
+                            "\"description\":\"Old version summary\",\"shortDescriptionOverride\":\"Selected custom summary\",\"overviewOverride\":\"# Selected overview\""));
 
             when(promotionRequestRepository.findById(PROMOTION_ID))
                     .thenReturn(Optional.of(pr), Optional.of(approvedRequest));
@@ -699,7 +701,10 @@ class PromotionServiceTest {
             verify(skillRepository, times(2)).save(skillCaptor.capture());
             Skill newSkill = skillCaptor.getAllValues().get(0);
             assertEquals(hasDisplayName ? "旧版标题" : "包内标题", newSkill.getDisplayName());
-            assertEquals("Old version summary", newSkill.getSummary());
+            assertEquals("Selected custom summary", newSkill.getSummary());
+            ArgumentCaptor<SkillVersion> versionCaptor = ArgumentCaptor.forClass(SkillVersion.class);
+            verify(skillVersionRepository).save(versionCaptor.capture());
+            assertEquals(sourceVersion.getParsedMetadataJson(), versionCaptor.getValue().getParsedMetadataJson());
             assertEquals(NEW_VERSION_ID, newSkill.getLatestVersionId());
         }
 

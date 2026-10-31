@@ -5,13 +5,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const preview = vi.hoisted(() => vi.fn())
 const publish = vi.hoisted(() => vi.fn())
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn(), useSearch: () => ({ namespace: 'team-ai' }) }))
+const searchParams = vi.hoisted(() => ({ value: { namespace: 'team-ai', updateSkill: undefined as string | undefined } }))
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn(), useSearch: () => searchParams.value }))
 vi.mock('react-i18next', async () => ({ ...await vi.importActual<typeof import('react-i18next')>('react-i18next'), useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('@/shared/hooks/use-skill-queries', () => ({ useSkillDetail: () => ({ data: undefined }), previewSkillPackage: preview, usePublishSkill: () => ({ mutateAsync: publish, isPending: false }) }))
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({ useMyNamespaces: () => ({ data: [{ id: 1, slug: 'team-ai', displayName: 'Team' }], isLoading: false }) }))
 vi.mock('@/features/publish/upload-zone', () => ({ UploadZone: ({ onFileSelect }: { onFileSelect: (file: File) => void }) => <input aria-label="package" type="file" onChange={e => { if (e.target.files?.[0]) onFileSelect(e.target.files[0]) }} /> }))
 vi.mock('@/features/skill/skill-avatar-editor', () => ({ KEEP_AVATAR: { action: 'KEEP', ready: true }, SkillAvatarEditor: () => null }))
 vi.mock('@/features/skill/skill-avatar-manager', () => ({ SkillAvatarManager: () => null }))
+vi.mock('@/api/client', async (importOriginal) => ({ ...await importOriginal<typeof import('@/api/client')>(), skillAvatarApi: { status: vi.fn().mockResolvedValue({ action: 'KEEP' }) } }))
 vi.mock('@/shared/lib/navigate-after-overlays', () => ({ navigateAfterOverlays: (action: () => void) => action() }))
 vi.mock('@/shared/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 import { PublishPage } from './publish'
@@ -27,7 +29,44 @@ function select(name: string) {
 const metadata = (name: string) => ({ name: 'stable-slug', displayName: name, version: '1.0.0', description: 'summary' })
 
 afterEach(cleanup)
-beforeEach(() => { preview.mockReset(); publish.mockReset(); publish.mockResolvedValue({ namespace: 'team-ai', slug: 'stable-slug', version: '1.0.0', status: 'PENDING_REVIEW' }) })
+beforeEach(() => { searchParams.value.updateSkill = undefined; preview.mockReset(); publish.mockReset(); publish.mockResolvedValue({ namespace: 'team-ai', slug: 'stable-slug', version: '1.0.0', status: 'PENDING_REVIEW' }) })
+
+describe('web presentation publishing', () => {
+  it('prefills package presentation without sending unedited defaults', async () => {
+    preview.mockResolvedValue({ ...metadata('Package title'), shortDescription: 'Package short', overview: '# Package overview' })
+    mount(); select('presentation.zip')
+    await waitFor(() => expect((screen.getByLabelText('publish.shortDescription') as HTMLInputElement).value).toBe('Package short'))
+    expect((screen.getByLabelText('publish.overview') as HTMLTextAreaElement).value).toBe('# Package overview')
+    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({
+      shortDescription: undefined, overview: undefined, resetPresentation: false,
+    })))
+  })
+
+  it('sends edited presentation and reset intent independently of form defaults', async () => {
+    preview.mockResolvedValue({ ...metadata('Package title'), shortDescription: 'Package short', overview: '# Package overview' })
+    mount(); select('presentation.zip')
+    await waitFor(() => expect((screen.getByLabelText('publish.shortDescription') as HTMLInputElement).value).toBe('Package short'))
+    fireEvent.change(screen.getByLabelText('publish.shortDescription'), { target: { value: 'Web short' } })
+    fireEvent.change(screen.getByLabelText('publish.overview'), { target: { value: '# Web overview' } })
+    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({
+      shortDescription: 'Web short', overview: '# Web overview', resetPresentation: false,
+    })))
+  })
+  it('sends reset without re-sending edited fields', async () => {
+    searchParams.value.updateSkill = 'stable-slug'
+    preview.mockResolvedValue({ ...metadata('Package title'), shortDescription: 'Package short', overview: '# Package overview' })
+    mount(); select('presentation.zip')
+    await waitFor(() => expect((screen.getByLabelText('publish.shortDescription') as HTMLInputElement).value).toBe('Package short'))
+    fireEvent.change(screen.getByLabelText('publish.shortDescription'), { target: { value: 'Discard me' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: 'publish.resetPresentation' }))
+    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    await waitFor(() => expect(publish).toHaveBeenCalledWith(expect.objectContaining({
+      shortDescription: undefined, overview: undefined, resetPresentation: true,
+    })))
+  })
+})
 
 describe('web display name publishing', () => {
   it('prefills from the package and sends the explicit edited name with the original file', async () => {

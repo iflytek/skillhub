@@ -83,6 +83,9 @@ public class SkillPublishController extends BaseApiController {
             @RequestParam(value = "avatarUploadId", required = false) String avatarUploadId,
             @RequestParam(value = "expectedSlug", required = false) String expectedSlug,
             @RequestParam(value = "displayName", required = false) String displayName,
+            @RequestParam(value = "shortDescription", required = false) String shortDescription,
+            @RequestParam(value = "overview", required = false) String overview,
+            @RequestParam(value = "resetPresentation", defaultValue = "false") boolean resetPresentation,
             @AuthenticationPrincipal PlatformPrincipal principal, HttpServletRequest request) throws IOException {
 
         SkillVisibility skillVisibility = SkillVisibility.valueOf(visibility.toUpperCase());
@@ -110,7 +113,8 @@ public class SkillPublishController extends BaseApiController {
                 principal.userId(),
                 skillVisibility,
                 principal.platformRoles(),
-                confirmWarnings, avatarAction, avatarUploadId, expectedSlug, displayName, AuditRequestContext.from(request)
+                confirmWarnings, avatarAction, avatarUploadId, expectedSlug, displayName,
+                shortDescription, overview, resetPresentation, AuditRequestContext.from(request)
         );
 
         PublishResponse response = new PublishResponse(

@@ -31,7 +31,8 @@ public class SkillPackagePreviewService {
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.publish.skillMd.notFound"));
         SkillMetadata metadata = parser.parse(new String(skillMd.content(), StandardCharsets.UTF_8));
         SkillExamplesSummary examples = SkillExamplesSummary.recognize(entries);
-        return new SkillPackagePreviewResponse(metadata.name(), metadata.displayName(), metadata.description(), metadata.version(),
+        return new SkillPackagePreviewResponse(metadata.name(), metadata.displayName(), metadata.description(),
+                metadata.shortDescription(), metadata.overview(), metadata.version(),
                 examples.status(), examples.count());
     }
 }

@@ -119,6 +119,80 @@ class SkillPublishServiceTest {
     }
 
     @Test
+    void inheritsOnlyPublishedCustomPresentationAndFreezesSnapshot() throws Exception {
+        String content = "---\nname: test-skill\ndescription: New default\nversion: 2.0.0\n---\nBody";
+        PackageEntry entry = new PackageEntry("SKILL.md", content.getBytes(StandardCharsets.UTF_8),
+                content.length(), "text/markdown");
+        List<PackageEntry> entries = List.of(entry);
+        Namespace namespace = new Namespace("test-ns", "Test NS", "owner");
+        setId(namespace, 1L);
+        Skill skill = new Skill(1L, "test-skill", "owner", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        skill.setSummary("Published custom");
+        skill.setLatestVersionId(11L);
+        SkillVersion previous = new SkillVersion(1L, "1.0.0", "owner");
+        setId(previous, 11L);
+        previous.setStatus(SkillVersionStatus.PUBLISHED);
+        previous.setParsedMetadataJson(objectMapper.writeValueAsString(Map.of(
+                "name", "test-skill", "description", "Old default", "version", "1.0.0",
+                "body", "Body", "frontmatter", Map.of(),
+                "shortDescriptionOverride", "Published custom", "overviewOverride", "# Custom overview",
+                "complianceSnapshot", Map.of("status", "PASS"))));
+        when(namespaceRepository.findBySlug("test-ns")).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "owner"))
+                .thenReturn(Optional.of(mock(NamespaceMember.class)));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(content)).thenReturn(new SkillMetadata("test-skill", "New default", "2.0.0", "Body", Map.of()));
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "test-skill")).thenReturn(List.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(1L, "test-skill", "owner")).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findBySkillIdAndStatus(1L, SkillVersionStatus.PUBLISHED)).thenReturn(List.of(previous));
+        when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(call -> {
+            SkillVersion version = call.getArgument(0);
+            if (version.getId() == null) setId(version, 12L);
+            return version;
+        });
+        SkillVersion pending = service.publishFromEntries("test-ns", entries, "owner", SkillVisibility.PUBLIC,
+                Set.of(), true, null, null, null, false).version();
+        assertEquals("Published custom", skill.getSummary());
+        assertEquals(SkillVersionStatus.PENDING_REVIEW, pending.getStatus());
+        JsonNode snapshot = objectMapper.readTree(pending.getParsedMetadataJson());
+        assertEquals("1.0.0", snapshot.path("presentationInheritedFrom").asText());
+        assertEquals("Published custom", snapshot.path("shortDescriptionOverride").asText());
+        assertEquals("# Custom overview", snapshot.path("overviewOverride").asText());
+        assertEquals("New default", snapshot.path("description").asText());
+
+        SkillVersion reset = service.publishFromEntries("test-ns", entries, "owner", SkillVisibility.PUBLIC,
+                Set.of(), true, null, null, null, true).version();
+        JsonNode resetSnapshot = objectMapper.readTree(reset.getParsedMetadataJson());
+        assertTrue(resetSnapshot.path("shortDescriptionOverride").isNull());
+        assertTrue(resetSnapshot.path("overviewOverride").isNull());
+        assertTrue(resetSnapshot.path("presentationInheritedFrom").isNull());
+        SkillMetadata restored = objectMapper.readerFor(SkillMetadata.class)
+                .without(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .readValue(reset.getParsedMetadataJson());
+        assertEquals("New default", restored.shortDescription());
+        assertEquals("Body", restored.overview());
+        assertEquals("Published custom", skill.getSummary());
+
+        previous.setParsedMetadataJson(objectMapper.writeValueAsString(
+                new SkillMetadata("test-skill", "Old default", "1.0.0", "Body", Map.of())));
+        SkillVersion defaults = service.publishFromEntries("test-ns", entries, "owner", SkillVisibility.PUBLIC,
+                Set.of(), true, null, null, null, false).version();
+        JsonNode defaultSnapshot = objectMapper.readTree(defaults.getParsedMetadataJson());
+        assertTrue(defaultSnapshot.path("shortDescriptionOverride").isNull());
+        assertTrue(defaultSnapshot.path("presentationInheritedFrom").isNull());
+
+        SkillVersion publishedReset = service.publishFromEntries("test-ns", entries, "owner", SkillVisibility.PUBLIC,
+                Set.of("SUPER_ADMIN"), true, null, null, null, true).version();
+        assertEquals(SkillVersionStatus.PUBLISHED, publishedReset.getStatus());
+        assertEquals("New default", skill.getSummary());
+        assertEquals("Body", objectMapper.readerFor(SkillMetadata.class)
+                .without(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                .<SkillMetadata>readValue(publishedReset.getParsedMetadataJson()).overview());
+    }
+
+    @Test
     void testPublishFromEntries_Success() throws Exception {
         // Arrange
         String namespaceSlug = "test-ns";
@@ -1025,13 +1099,14 @@ class SkillPublishServiceTest {
         setId(skill, 11L);
         skill.setDisplayName("Demo Skill");
         skill.setSummary("Original summary");
+        skill.setLatestVersionId(21L);
         Namespace namespace = new Namespace("global", "Global", "owner");
         setId(namespace, 1L);
 
         SkillVersion sourceVersion = new SkillVersion(skill.getId(), "1.2.3", publisherId);
         setId(sourceVersion, 21L);
         sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
-        sourceVersion.setParsedMetadataJson("{\"displayNameOverride\":\"原网页标题\"}");
+        sourceVersion.setParsedMetadataJson("{\"displayNameOverride\":\"原网页标题\",\"shortDescriptionOverride\":\"Custom summary\",\"overviewOverride\":\"# Custom overview\"}");
         sourceVersion.setPublishedAt(Instant.parse("2026-03-15T10:00:00Z"));
 
         String sourceSkillMd = """
@@ -1062,6 +1137,8 @@ class SkillPublishServiceTest {
         when(skillFileRepository.findByVersionId(sourceVersion.getId())).thenReturn(List.of(skillMdFile, readmeFile));
         when(objectStorageService.getObject(skillMdFile.getStorageKey())).thenReturn(new java.io.ByteArrayInputStream(sourceSkillMd.getBytes(StandardCharsets.UTF_8)));
         when(objectStorageService.getObject(readmeFile.getStorageKey())).thenReturn(new java.io.ByteArrayInputStream(readmeBytes));
+        when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(1L, "demo-skill", publisherId))
+                .thenReturn(Optional.of(skill));
         when(skillPackageValidator.validate(anyList())).thenReturn(ValidationResult.pass());
         when(skillMetadataParser.parse(anyString())).thenReturn(rereleaseMetadata);
         when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
@@ -1085,6 +1162,9 @@ class SkillPublishServiceTest {
 
         assertEquals("1.2.4", result.version().getVersion());
         assertEquals("原网页标题", objectMapper.readTree(result.version().getParsedMetadataJson()).path("displayNameOverride").asText());
+        assertEquals("Custom summary", objectMapper.readTree(result.version().getParsedMetadataJson()).path("shortDescriptionOverride").asText());
+        assertEquals("# Custom overview", objectMapper.readTree(result.version().getParsedMetadataJson()).path("overviewOverride").asText());
+        assertEquals("Original summary", skill.getSummary(), "Pending rerelease must not change the public summary");
         // Rerelease for PUBLIC skill should go to PENDING_REVIEW (respecting visibility rules)
         assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
         // Review task should be created for PUBLIC skill

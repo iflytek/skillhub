@@ -205,7 +205,7 @@ export function SkillDetailPage() {
   const selectedMetadata = selectedVersion === ownerPreviewVersion?.version ? ownerPreviewVersion
     : selectedVersion === publishedVersion?.version ? publishedVersion
       : selectedVersion === headlineVersion?.version ? headlineVersion : null
-  const { data: selectedVersionDetail } = useSkillVersionDetail(qns, qslug, selectedVersion, skillReady && !selectedMetadata)
+  const { data: selectedVersionDetail } = useSkillVersionDetail(qns, qslug, selectedVersion, skillReady)
   const historicalMetadata = getVersionPresentation(selectedVersionDetail?.parsedMetadataJson)
   const selectedDisplayName = selectedMetadata?.displayName ?? historicalMetadata.displayName ?? skill?.displayName
   const selectedSummary = selectedMetadata?.summary ?? historicalMetadata.summary ?? skill?.summary
@@ -214,6 +214,7 @@ export function SkillDetailPage() {
   const { data: files } = useSkillFiles(qns, qslug, selectedVersion, skillReady)
   const documentationPath = resolveDocumentationFilePath(files)
   const { data: readme, error: readmeError } = useSkillReadme(qns, qslug, selectedVersion, documentationPath, skillReady)
+  const renderedDocumentation = historicalMetadata.overview ?? readme
   const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useSkillFile(
     qns,
     qslug,
@@ -988,9 +989,15 @@ export function SkillDetailPage() {
           </TabsList>
 
           <TabsContent value="readme" className="mt-6">
-            {readme ? (
+            {files?.find(file => file.filePath === 'SKILL.md') && (
+              <Button type="button" variant="outline" className="mb-4" onClick={() => {
+                const skillFile = files.find(file => file.filePath === 'SKILL.md')
+                if (skillFile) handleFileClick(createPackageFilePreviewNode(skillFile))
+              }}>{t('skillDetail.viewSkillMd')}</Button>
+            )}
+            {renderedDocumentation ? (
               <Card className="p-8 space-y-4">
-                {documentationPath ? (
+                {!historicalMetadata.overview && documentationPath ? (
                   <div className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
                     {t('skillDetail.documentationSource', { path: documentationPath })}
                   </div>
@@ -1004,7 +1011,7 @@ export function SkillDetailPage() {
                     style={!isOverviewExpanded && isOverviewCollapsible ? { maxHeight: `${overviewMaxHeight}px` } : undefined}
                   >
                     <div ref={overviewContentRef}>
-                      <MarkdownRenderer content={readme} onLinkClick={handleOverviewLinkClick} />
+                      <MarkdownRenderer content={renderedDocumentation} onLinkClick={handleOverviewLinkClick} />
                     </div>
                     {!isOverviewExpanded && isOverviewCollapsible ? (
                       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-card via-card/95 to-transparent" />

@@ -320,7 +320,7 @@ public class PromotionService {
         try {
             SkillMetadata metadata = objectMapper.readValue(metadataJson, SkillMetadata.class);
             target.setDisplayName(metadata.displayName());
-            target.setSummary(metadata.description());
+            target.setSummary(metadata.shortDescription());
         } catch (Exception e) {
             throw new IllegalStateException("Failed to deserialize skill metadata", e);
         }
