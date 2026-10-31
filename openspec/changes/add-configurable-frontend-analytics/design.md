@@ -53,6 +53,14 @@ Nginx 通过独立 include 片段选择已注册适配器的精确端点：Umami
 
 部署配置变更经重建/重启 Web 使新页面生效；旧标签页不自动接收新环境参数。动态停止通过当前页面接口生效；紧急全局停止可关闭独立采集路由。文档不得宣称仅修改 env 即刻撤销已在发送的请求。模块使用正常发布构建产物与缓存策略，不把可变配置放入 immutable JS。
 
+### 5. Serialization and loading implementation
+
+PR-2 不新增 jq 或 Node 运行时依赖。镜像已有 BusyBox awk 负责有界 JSON 语法和部署控制字段校验，base64 将 JSON 作为数据追加到现有 no-store runtime-config.js；浏览器用 JSON.parse 解码，不经 eval，也不把任意 JSON 插入 JS 字面量。配置最大 64 KiB、最多 32 层，重复键拒绝。非法 rules 仍按既有 resolveRules 跳过，不升级为整个配置失败。
+
+bootstrap 仅静态包含小型 gate 和注册参数校验；controller/helper 与 adapter 保持独立懒加载 chunk。在首个 React DOM commit 后的独立任务中启动 gate，不把正常挂载与 SDK 绑定。enabled=true 且 consent=denied 时不加载模块，但代理保留精确端点，供当前页显式 start() 授权后使用。静态 adapter factory 在动态导入返回后检查取消信号，迟到的导入不能重新创建 SDK。
+
+旧示例目录仅保留指南指针。helper/adapter 与全部断言迁入产品测试树；历史 edge/Compose 只保留为测试 fixture，不是部署路径，不维护第二份采集实现。
+
 ## Risks and verification
 
 重点验证默认零 SDK/采集请求、错误配置降级、页面启动不等统计 SDK、DNS失败不阻断Web、stop/init竞争、适配器字段清洗、根/子路径、100M原业务上传、登录/下载及配置回滚。固定 SDK 升级须验证真实发送顺序；不能将静态配置或模拟API测试描述为真实业务E2E。正式测试矩阵在实现和独立Review收敛后生成。

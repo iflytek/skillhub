@@ -39,7 +39,7 @@
 {{- fail (printf "web.basePath must be '/' or a normalized sub-path that starts and ends with '/' and has no '.'/'..' or empty segments (matches the runtime and release-config checks): %s" $webBasePath) -}}
 {{- end -}}
 {{- $firstSegment := index (splitList "/" $webBasePath) 1 -}}
-{{- if has $firstSegment (list "api" "oauth2" "login" "assets" "registry" "nginx-health" ".well-known" "runtime-config.js") -}}
+{{- if has $firstSegment (list "api" "oauth2" "login" "assets" "registry" "nginx-health" ".well-known" "runtime-config.js" "_skillhub-analytics") -}}
 {{- fail (printf "web.basePath must not start with a segment reserved by the SkillHub server (%s); it would shadow the server's own Nginx location: %s" $firstSegment $webBasePath) -}}
 {{- end -}}
 {{- $suffix := trimSuffix "/" $webBasePath -}}

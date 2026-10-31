@@ -446,6 +446,11 @@ web:
   basePath: ""
   apiBaseUrl: ""
 
+  # 默认关闭。config 是与 Compose 相同的 JSON 字符串；不放平台密钥。
+  analytics:
+    config: ""
+    upstream: ""
+
   service:
     enabled: true
     type: ClusterIP

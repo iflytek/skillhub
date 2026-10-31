@@ -60,4 +60,6 @@ data:
   # Sub-path deployment (empty keeps a fixed-base image's baked base; set e.g. /portal/)
   web-base-path: {{ .Values.web.basePath | default "" | quote }}
   web-api-base-url: {{ .Values.web.apiBaseUrl | default "" | quote }}
+  web-analytics-config: {{ dig "analytics" "config" "" .Values.web | quote }}
+  web-analytics-upstream: {{ dig "analytics" "upstream" "" .Values.web | quote }}
   builtin-skills-enabled: {{ .Values.builtinSkills.enabled | quote }}

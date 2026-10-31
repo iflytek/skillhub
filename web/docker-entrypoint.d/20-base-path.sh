@@ -63,7 +63,7 @@ if [ "$SKILLHUB_WEB_BASE_PATH" != / ]; then
   first_segment=${SKILLHUB_WEB_BASE_PATH#/}
   first_segment=${first_segment%%/*}
   case "$first_segment" in
-    api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
+    api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js|_skillhub-analytics)
       echo "SKILLHUB_WEB_BASE_PATH must not start with a segment reserved by the SkillHub server ($first_segment); it would shadow the server's own Nginx location: $SKILLHUB_WEB_BASE_PATH" >&2
       exit 1
       ;;

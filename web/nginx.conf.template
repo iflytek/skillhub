@@ -42,6 +42,9 @@ server {
     # keeps $skillhub_forwarded_prefix defined even when the file is not present.
     set $skillhub_forwarded_prefix "";
     include /etc/nginx/skillhub-base-path*.conf;
+    include /etc/nginx/skillhub-analytics*.conf;
+    # Reserve this prefix even in config-only checks without an entrypoint.
+    location /_skillhub-analytics/ { return 404; }
 
     location / {
         add_header Cache-Control "no-cache, must-revalidate" always;

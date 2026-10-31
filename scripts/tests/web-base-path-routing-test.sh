@@ -67,7 +67,7 @@ grep -F '/assets/index.js' "$root_web_root/index.html" >/dev/null
 # would desync the generated location from the baked asset URLs).
 for bad in '/foo/../bar/' '/foo/./bar/' '/foo//bar/' '/no-trailing' 'foo/' \
            '/api/' '/oauth2/' '/login/' '/assets/' '/registry/' '/nginx-health/' \
-           '/.well-known/' '/runtime-config.js/' '/api/nested/'; do
+           '/.well-known/' '/runtime-config.js/' '/api/nested/' '/_skillhub-analytics/' '/_skillhub-analytics/nested/'; do
   reject_root="$tmp/reject-html"
   reject_config="$tmp/reject.conf"
   mkdir -p "$reject_root"

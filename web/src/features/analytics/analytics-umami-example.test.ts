@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createUmamiAdapter, sanitizeUmamiPayload } from '../docs/examples/analytics/observe/v1/umami-adapter.mjs'
-import { resolveRules } from '../docs/examples/analytics/observe/v1/skillhub-intents.mjs'
+import { createUmamiAdapter, sanitizeUmamiPayload } from './adapters/umami/umami-adapter.mjs'
+import { resolveRules } from './skillhub-intents.mjs'
 import { readFileSync } from 'node:fs'
 
 const manifest = JSON.parse(readFileSync('../docs/frontend-analytics-manifest.json', 'utf8')) as {
@@ -16,8 +16,8 @@ const website = '4398de8e-40df-4483-9eea-ed213643525f'
 const intent = { id: 'skill.example.open', event: 'click' }
 
 describe('optional edge deployment defaults', () => {
-  const nginx = readFileSync('../docs/examples/analytics/nginx.conf', 'utf8')
-  const compose = readFileSync('../docs/examples/analytics/compose.yaml', 'utf8')
+  const nginx = readFileSync('src/features/analytics/fixtures/pr1-nginx.conf', 'utf8')
+  const compose = readFileSync('src/features/analytics/fixtures/pr1-compose.yaml', 'utf8')
 
   it('inherits the standard 100 MiB limit on all proxied application routes', () => {
     // Tokenize quoted strings as units so braces/semicolons in responses do not
