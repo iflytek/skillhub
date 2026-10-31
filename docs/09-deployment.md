@@ -4,8 +4,12 @@
 
 ### CLI 设备授权地址
 
-`skillhub login --no-open --registry https://skills.example.com` 使用设备码授权：
-CLI 请求 `/api/v1/auth/device/code`，用户打开返回的 `/device` 页面并登录、确认授权，
+`skillhub login --no-open --registry https://skills.example.com` 先按 `--token`、
+`SKILLHUB_TOKEN`、该 registry 已保存凭据的顺序解析 Token。仅在未解析到 Token 时
+进入设备码授权；已解析的 Token 若验证失败，不会自动回退到设备码流程。`--no-open`
+只禁止自动打开浏览器，不会跳过 Token 解析。
+
+设备码流程中，CLI 请求 `/api/v1/auth/device/code`，用户打开返回的 `/device` 页面并登录、确认授权，
 CLI 再轮询兑换 Token。完成后用 `skillhub whoami --registry https://skills.example.com`
 确认登录身份；不要分享设备码、用户码或 Token。
 
@@ -15,9 +19,22 @@ CLI 再轮询兑换 Token。完成后用 `skillhub whoami --registry https://ski
 - 若公开地址也未设置，保留兼容的 `/device` 相对地址，由 CLI 按 registry 的源解析。
   正式部署、子路径部署或 Web/API 分离部署应设置正确的 Web 公开地址。
 - 显式指定有效的 HTTP(S) 地址或根相对路径时原样使用，支持自定义页面和查询参数。
-  非法地址会阻止服务启动，错误提示只包含配置项名称，不回显配置值。修改后需重启服务。
+  非法地址会阻止服务启动，错误提示只包含配置项名称，不回显配置值。
+  宿主机进程修改配置后需重启；Compose 部署修改 `.env.release` 后需重建受影响容器，
+  `docker compose restart` 不会更新容器环境变量。
 - Compose 的空配置交由后端处理；Helm 的 `deviceAuthVerificationUri` 默认对应
   `<publicBaseUrl>/device`，也可显式覆盖。
+
+对已运行的单机交付栈，仅修改设备授权地址时，在原部署目录保留相同的项目名和 override，执行：
+
+```bash
+make validate-release-config
+docker compose --env-file .env.release -f compose.release.yml up -d --no-deps --force-recreate server
+```
+
+以上命令用于更新已有后端容器；首次部署仍使用完整栈的 `up -d`。若同时修改公开地址等
+其他服务也使用的配置，应一并重建相应服务。重新执行 CLI 登录并核对返回的授权地址，
+不要仅凭配置文件内容判断已生效。
 
 `/cli/auth` 是旧版浏览器 loopback 回调入口，需要客户端附带回调参数；它不是输入设备码的页面。
 不要将设备授权地址设成这个旧入口。此次配置保护不改变旧客户端回调流程。
