@@ -112,7 +112,8 @@ kubectl -n skillhub logs deployment/skillhub-web --tail=100
 ```
 
 deployment 名称使用 Chart 默认 release 名 `skillhub`；自定义名称时替换命令中的名称。
-值进入 ConfigMap 和 Web 环境变量，checksum 改变会触发 Web 滚动更新。
+值写入 Web 专用的 `<release>-web-analytics` ConfigMap，只改统计配置时仅 Web 滚动更新，
+后端 Pod 不会被替换。
 Chart 不自动部署 Umami。先在已有平台创建网站，并确认 Pod 出站网络、DNS 和证书可用。
 集群内 origin 使用完整服务名，例如 `http://umami.stats.svc.cluster.local:3000`，
 Nginx 的运行时 DNS 不自动补 Pod 的搜索后缀。
@@ -177,8 +178,9 @@ await window.skillhubAnalytics.start()
 
 start() 是当前页的显式授权，支持初始 consent=denied。重复 start 不重复安装。
 stop() 幂等；等待中的模块/adapter 不能迟到后重启采集。stop 返回后不新派发请求，
-但已经开始的 fetch 无法撤回。规则变更使用 stop 再初始化；环境变量变化需重建或重启 Web。
-旧标签页不会自动收到新环境参数。修改 env 文件本身不会改变正在运行的容器。
+但已经开始的 fetch 无法撤回。规则变更使用 stop 再初始化。
+修改 `.env.release` 后必须重新创建 Web（`up -d --force-recreate web`）；`docker compose restart`
+只重启原容器，不会重新注入环境变量。旧标签页不会自动收到新配置，需要用户刷新或关闭。
 
 ## 6. 根路径、子路径与验收
 
@@ -228,6 +230,7 @@ curl -i http://localhost/_skillhub-analytics/api/websites
 | SDK 失败后无事件 | 加载失败/超时后不重试；恢复平台后新开页面，或 stop 再 start。 |
 | 模块/资源返回 HTML | 检查部署版本、base path 和入口路由，不能改成任意远程脚本。 |
 | CSP 拦截 | 按原策略授权，不删除 CSP 或放宽通配符。 |
+| send 返回 400 Website not found | websiteId 是合法 UUID，但 Umami 里没有这个网站。事件不会入库；配置校验只检查格式，通过不代表采集成功，需按第 6 节到平台核对入库。 |
 | 有点击但没有统计 | 规则未配置、宿主不支持、超过 Umami 名称 50 字符，或 best-effort 丢失。 |
 | 上传 413 | 检查整条外层代理链，正常 Web 仍是 100M，统计未降低它。 |
 
@@ -262,8 +265,9 @@ Umami 仍可能由传输元数据推导浏览器、系统、设备、地域和�
 超时或 stop 会丢弃。就绪后的请求彼此独立。不要同时加载第二个 Umami tracker。
 stop 的派发保护依赖固定版本在 fetch 前同步序列化的顺序，升级必须重新验证。
 
-自定义 adapter 属于开发流程，不是部署流程：在 `web/src/features/analytics/adapters/`
-增加参数校验与 send/stop factory，注册到静态 registry，再增加部署端校验和精确代理端点。
+自定义 adapter 属于开发流程，不是部署流程。除前端 adapter 外，还要改部署侧：
+在 `web/src/features/analytics/adapters/` 增加参数校验与 send/stop factory 并注册到静态 registry；
+在 Web 启动脚本增加该平台的配置校验和精确代理端点；补充前端与 `web-analytics-test.py` 测试。
 factory 检查取消信号后才创建 SDK。通用 controller 不认识厂商字段，业务组件只提供被动标签。
 复用唯一的 `skillhub-intents.mjs`，不复制 helper，也不开放远程 JS URL。
 新增标签时运行 `node web/scripts/analytics-manifest.mjs --write` 并审核语义和原生交互。

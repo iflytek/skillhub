@@ -109,7 +109,7 @@ Sentinel、实际 MinIO S3 连接，以及由 Kubernetes API 接受的 TLS Ingre
 
 默认关闭。`web.analytics.config` 接受 JSON 字符串，`web.analytics.upstream` 接受仅部署可见的
 HTTP(S) origin。支持 Umami，不需要编辑 JS 或 Nginx；先在平台创建网站并取得 UUID。
-配置变更触发 Web 滚动更新，旧标签页不会自动更新。字段、授权接口、初始化、隐私及验收见
+值放在 Web 专用 ConfigMap，只改统计配置时仅 Web 滚动更新、后端 Pod 不替换；旧标签页不会自动更新。字段、授权接口、初始化、隐私及验收见
 [前端动作统计接入指南](../../docs/frontend-analytics-integration.md)。
 
 ### 高可用模式

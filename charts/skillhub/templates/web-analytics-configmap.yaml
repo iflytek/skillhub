@@ -1,0 +1,13 @@
+{{- /*
+Web-only analytics settings. Kept out of the shared ConfigMap so that changing
+analytics only rolls Web; the server checksum hashes the shared ConfigMap.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "skillhub.fullname" . }}-web-analytics
+  labels:
+    {{- include "skillhub.web.labels" . | nindent 4 }}
+data:
+  config: {{ dig "analytics" "config" "" .Values.web | quote }}
+  upstream: {{ dig "analytics" "upstream" "" .Values.web | quote }}

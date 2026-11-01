@@ -51,7 +51,7 @@ Nginx 通过独立 include 片段选择已注册适配器的精确端点：Umami
 
 现有平台接入：填写 JSON 和内部 upstream，更新 Web。可选自托管组合：在 release Compose 上叠加统计服务与其持久化数据库，使用显式凭证，不新增 Nginx；创建网站/取得 UUID 等一次性平台步骤必须诚实说明。入口和 Helm 均默认关闭。
 
-部署配置变更经重建/重启 Web 使新页面生效；旧标签页不自动接收新环境参数。动态停止通过当前页面接口生效；紧急全局停止可关闭独立采集路由。文档不得宣称仅修改 env 即刻撤销已在发送的请求。模块使用正常发布构建产物与缓存策略，不把可变配置放入 immutable JS。
+部署配置变更需重新创建 Web（Compose restart 不重新注入环境变量；Helm 统计值放在 Web 专用 ConfigMap，只滚动 Web）使新页面生效；旧标签页不自动接收新环境参数。动态停止通过当前页面接口生效；紧急全局停止可关闭独立采集路由。文档不得宣称仅修改 env 即刻撤销已在发送的请求。模块使用正常发布构建产物与缓存策略，不把可变配置放入 immutable JS。
 
 ### 5. Serialization and loading implementation
 

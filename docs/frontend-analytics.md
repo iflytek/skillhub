@@ -113,7 +113,8 @@ The loader runs separately after the first React DOM commit, never blocking moun
 Disabled, absent, invalid or denied configuration does not import the controller.
 Public `window.skillhubAnalytics.start()` explicitly grants current-page consent;
 stop() immediately disables observation. Enabled=false cannot be overridden by
-start. Deployment changes require recreating/restarting Web; old tabs do not update.
+start. Deployment changes require recreating Web (`docker compose restart` does not
+re-read the env file); old tabs do not update.
 
 ## Configuration and proxy
 

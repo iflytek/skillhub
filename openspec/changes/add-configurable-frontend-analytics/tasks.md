@@ -20,7 +20,7 @@
 ## 4. PR-2 (follow-up): deployment
 - [x] 4.1 Safely serialize and validate configuration without breaking existing runtime config.
 - [x] 4.2 Add isolated proxy snippets with request-time DNS, certificate validation and exact endpoints.
-- [ ] 4.3 Wire Docker/Compose/Helm defaults and reserved sub-path validation. (Implemented; Compose/runtime checks passed. Helm CLI rendering remains unverified.)
+- [x] 4.3 Wire Docker/Compose/Helm defaults and reserved sub-path validation. Helm keeps analytics in a Web-only ConfigMap. Template checks executed with helm 3.19.0: `helm lint --strict` and `configuration-contracts.sh`, which renders before/after values and asserts that analytics-only changes roll only Web while backend changes still roll the server. A real-cluster Helm install/upgrade with analytics enabled has not been run.
 - [x] 4.4 Provide optional persistent self-hosted Compose combination without another Nginx.
 
 ## 5. PR-2 (follow-up): documentation
@@ -30,7 +30,7 @@
 
 ## 6. PR-2 (follow-up): quality gates
 - [ ] 6.1 Consolidated independent implementation review, fixes and final base checkpoint.
-- [ ] 6.2 Reviewed requirement/scenario/test matrix and targeted source/deployment checks. (Worker matrix and local checks complete; independent review and Helm execution pending.)
+- [ ] 6.2 Reviewed requirement/scenario/test matrix and targeted source/deployment checks. (Worker matrix, local checks and Helm template checks complete; maintainer verified the real image, backend, Umami, Postgres and browser path. Real-cluster Helm verification and independent review pending.)
 - [ ] 6.3 Exact-SHA release Compose S3/auth smoke and Chromium normal/changed/failure scenarios, including default zero module/SDK/request and root/sub-path upload/login/download/CSP/cache compatibility. (Local browser/real-collector and HTTP proxy checks passed; full backend S3/auth smoke remains pending.)
 - [ ] 6.4 CI/privacy/readiness, one validation report and retained preview for human acceptance.
 - [ ] 6.5 Close Issue #989 only after configuration-only deployment is complete and verified, not when PR-1 merges.

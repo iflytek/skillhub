@@ -475,7 +475,12 @@ assert_rejected subpath-reserved-analytics --set-string web.basePath=/_skillhub-
 assert_rejected subpath-reserved-analytics-nested --set-string web.basePath=/_skillhub-analytics/nested/
 
 render analytics-default "$CHART_DIR" >"$TMP_DIR/analytics-default.yaml"
-grep -Fq 'web-analytics-config: ""' "$TMP_DIR/analytics-default.yaml" || fail "analytics must default off"
+grep -Fq 'name: analytics-default-skillhub-web-analytics' "$TMP_DIR/analytics-default.yaml" \
+  || fail "analytics must render its Web-only ConfigMap"
+grep -Fq '  config: ""' "$TMP_DIR/analytics-default.yaml" || fail "analytics must default off"
+if grep -Eq '^  web-analytics-(config|upstream):' "$TMP_DIR/analytics-default.yaml"; then
+  fail "analytics keys must stay out of the shared ConfigMap hashed by the server"
+fi
 # --set treats {...} as a list, so pass the JSON string through a values file,
 # the same way the operator guide documents it.
 cat >"$TMP_DIR/analytics-values.yaml" <<'VALUES'
@@ -484,11 +489,48 @@ web:
     config: '{"enabled":true,"adapter":"umami","consent":"granted","adapterConfig":{"websiteId":"4398de8e-40df-4483-9eea-ed213643525f"}}'
     upstream: https://stats.example.com
 VALUES
-render analytics-enabled "$CHART_DIR" -f "$TMP_DIR/analytics-values.yaml" >"$TMP_DIR/analytics-enabled.yaml"
+render analytics-default "$CHART_DIR" -f "$TMP_DIR/analytics-values.yaml" >"$TMP_DIR/analytics-enabled.yaml"
 for key in SKILLHUB_WEB_ANALYTICS_CONFIG SKILLHUB_WEB_ANALYTICS_UPSTREAM; do
-  grep -Fq "name: $key" "$TMP_DIR/analytics-enabled.yaml" || fail "missing analytics environment"
+  grep -A4 -F "name: $key" "$TMP_DIR/analytics-enabled.yaml" \
+    | grep -Fq 'name: analytics-default-skillhub-web-analytics' \
+    || fail "$key must come from the Web-only analytics ConfigMap"
 done
-grep -Fq 'web-analytics-upstream: "https://stats.example.com"' "$TMP_DIR/analytics-enabled.yaml" || fail "missing analytics origin"
+grep -Fq '  upstream: "https://stats.example.com"' "$TMP_DIR/analytics-enabled.yaml" || fail "missing analytics origin"
+
+# Pod template annotations: "<deployment-name> <annotation> <value>" per line.
+pod_checksums() {
+  awk '
+    $1 == "kind:" { kind=$2; name="" }
+    kind == "Deployment" && name == "" && $1 == "name:" { name=$2 }
+    kind == "Deployment" && $1 ~ /^checksum\// { print name, $1, $2 }
+  ' "$1" | sort
+}
+checksum_of() {
+  pod_checksums "$1" | awk -v d="$2" -v k="$3" '$1 == d && $2 == k { print $3 }'
+}
+assert_checksum() {
+  local before=$1 after=$2 deployment=$3 annotation=$4 expect=$5
+  local a b
+  a=$(checksum_of "$before" "$deployment" "$annotation")
+  b=$(checksum_of "$after" "$deployment" "$annotation")
+  [[ -n $a && -n $b ]] || fail "$deployment must render $annotation"
+  if [[ $expect == same && $a != "$b" ]]; then
+    fail "$deployment $annotation must not change"
+  elif [[ $expect == changed && $a == "$b" ]]; then
+    fail "$deployment $annotation must change"
+  fi
+}
+web=analytics-default-skillhub-web
+server=analytics-default-skillhub-server
+# Changing only analytics must roll Web and leave every other workload alone.
+assert_checksum "$TMP_DIR/analytics-default.yaml" "$TMP_DIR/analytics-enabled.yaml" "$web" checksum/config: changed
+diff <(pod_checksums "$TMP_DIR/analytics-default.yaml" | grep -v "^$web ") \
+  <(pod_checksums "$TMP_DIR/analytics-enabled.yaml" | grep -v "^$web ") >/dev/null \
+  || fail "analytics-only changes must not replace server or other pods"
+# Backend configuration still rolls the server.
+render analytics-default "$CHART_DIR" -f "$TMP_DIR/analytics-values.yaml" \
+  --set-string bootstrapAdmin.displayName=Changed >"$TMP_DIR/analytics-server-change.yaml"
+assert_checksum "$TMP_DIR/analytics-enabled.yaml" "$TMP_DIR/analytics-server-change.yaml" "$server" checksum/config: changed
 
 # publicBaseUrl is concatenated with paths (/cli/auth, /.well-known/clawhub.json),
 # so a query or fragment corrupts the generated URLs. Reject it independently of
