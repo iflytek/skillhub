@@ -94,14 +94,14 @@ export function SuiteVersionLedger({
               <div className="grid gap-1.5 px-3 py-2 text-xs md:grid-cols-[84px_104px_minmax(112px,1fr)_136px_88px] md:items-center md:gap-2.5">
                 <button data-analytics-id="suite.version.expand"
                   type="button"
-                  className="flex items-center gap-1.5 text-left font-mono font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                  className="flex min-w-0 items-center gap-1.5 text-left font-mono font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
                   aria-expanded={expanded}
                   onClick={() => setExpandedVersion(expanded ? '' : version.version)}
                 >
                   {expanded
-                    ? <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-                    : <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />}
-                  v{version.version}
+                    ? <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    : <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+                  <span className="min-w-0 truncate" title={`v${version.version}`}>{`v${version.version}`}</span>
                 </button>
                 <span className={cn(
                   'w-fit rounded-md border px-1.5 py-0.5 text-[11px] font-medium',
