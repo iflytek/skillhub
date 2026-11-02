@@ -133,6 +133,11 @@ export class LocalRuntime {
     return this.call(runtime => runtime.openInstalledSnapshot(registry, targets));
   }
 
+  listAllInstalled(targets: readonly InstalledProjectionTarget[]): ReturnType<NativeRuntime['listAllInstalled']> {
+    const roots = targets.map(target => ({ ...target }));
+    return this.call(runtime => runtime.listAllInstalled(roots));
+  }
+
   listInstalled(registry: string, targets: readonly InstalledProjectionTarget[]): Promise<InstalledProjection> {
     const roots = targets.map(target => ({ ...target }));
     return this.call(runtime => runtime.listInstalled(registry, roots));

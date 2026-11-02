@@ -1,3 +1,4 @@
+import { editSavedRegistry, validateRegistryConfig } from './registry-config.js';
 import { catalogErrorMessage } from './catalog-error.js';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, Input, SelectField, Skeleton } from './ui.js';
 import { ConfigStyles } from './config-styles.js';
@@ -70,20 +71,14 @@ export function ConfigPage({ form, testConnection }: { form: ConfigForm<SkillHub
   async function save(event: FormEvent) {
     event.preventDefault();
     if (!draft || !state.writable || pending) return;
-    const registryUrl = draft.value.registryUrl.trim();
-    if (registryUrl) {
-      try {
-        const url = new URL(registryUrl);
-        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) throw new Error();
-      } catch {
-        setMessage('请输入 HTTP 或 HTTPS 实例地址，不包含凭证、查询参数或片段。');
-        return;
-      }
-    }
+    let validated: SkillHubConfig;
+    try { validated = validateRegistryConfig(draft.value); }
+    catch (error) { setMessage(error instanceof Error ? error.message : '请检查来源地址。'); return; }
     setPending(true);
     try {
       const accepted = await form.mutate([
-        { op: 'set', path: ['registryUrl'], value: registryUrl },
+        { op: 'set', path: ['registryUrl'], value: validated.registryUrl },
+        { op: 'set', path: ['savedRegistries'], value: validated.savedRegistries },
         ...modules.map(([key]) => ({ op: 'set' as const, path: ['detailTabs', key], value: draft.value.detailTabs[key] })),
       ], draft.revision);
       if (accepted) {
@@ -111,7 +106,16 @@ export function ConfigPage({ form, testConnection }: { form: ConfigForm<SkillHub
           </div>
           {visibleConnection && <p className="astron-sh-config-connection-result" role="status" aria-live="polite" data-passed={visibleConnection.passed}>{visibleConnection.message}</p>}
           <p className="astron-sh-config-help">测试不会保存地址，连接成功仅表示公开目录可读。</p>
-          <p id={`${id}-registry-help`} className="astron-sh-config-help">留空可断开来源。保存新地址后需重新读取技能列表。</p>
+          <p id={`${id}-registry-help`} className="astron-sh-config-help">同一 Profile 共享来源。留空断开连接，已安装技能保留。</p>
+          <div className="astron-sh-saved-registries">
+            <div className="astron-sh-config-card-heading"><strong>保存的来源</strong><Button size="sm" variant="outline" onClick={() => change({ ...value, savedRegistries: [...(value.savedRegistries ?? []), { name: '', url: '' }] })}>添加来源</Button></div>
+            {(value.savedRegistries ?? []).map((entry, index) => <div className="astron-sh-registry-row" key={index}>
+              <label>名称<Input aria-label={`来源 ${index + 1} 名称`} value={entry.name} onChange={event => change(editSavedRegistry(value, index, { ...entry, name: event.target.value }))} /></label>
+              <label>地址<Input aria-label={`来源 ${index + 1} 地址`} type="url" value={entry.url} placeholder="https://your-skillhub.example" onChange={event => change(editSavedRegistry(value, index, { ...entry, url: event.target.value }))} /></label>
+              <Button size="sm" variant="ghost" aria-label={`移除来源 ${index + 1}`} onClick={() => change(editSavedRegistry(value, index))}>移除</Button>
+            </div>)}
+            <p className="astron-sh-config-help">保存后可在技能中心切换。移除当前来源将断开连接，不删除技能。</p>
+          </div>
         </CardContent></Card>
       <Card><CardHeader><CardTitle>详情标签</CardTitle><CardDescription>按来源能力展示版本、审核和评论，建议使用自动检测。</CardDescription></CardHeader>
         <CardContent><div className="astron-sh-config-modules">{modules.map(([key, label, description]) => <div key={key} className="astron-sh-config-module">

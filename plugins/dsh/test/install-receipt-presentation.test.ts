@@ -3,8 +3,8 @@ import { expect, test } from 'bun:test';
 import { receiptInventoryIssue, receiptPresentation } from '../src/client/install-receipt-presentation.js';
 import type { InstalledSkillList } from '../src/host/types.js';
 
-const receipt = { namespace: 'demo', slug: 'helper', version: '1.2.0', targetLabel: '当前项目' };
-const item: InstalledSkillList['items'][number] = { itemKey: 'project-record', namespace: 'demo', slug: 'helper',
+const receipt = { sourceLabel: 'https://registry.example', namespace: 'demo', slug: 'helper', version: '1.2.0', targetLabel: '当前项目' };
+const item: InstalledSkillList['items'][number] = { registry: receipt.sourceLabel, itemKey: 'project-record', namespace: 'demo', slug: 'helper',
   version: '1.2.0', scope: 'project', state: 'present' };
 const inventory: InstalledSkillList = { items: [item], complete: true, issues: [], unavailable: [] };
 
@@ -64,4 +64,9 @@ test('install scope verification allows only the independently healthy scope and
     expect(isInventoryScopeVerified({ ...partial, complete: false }, healthy)).toBe(false);
   }
   expect(isInventoryScopeVerified(undefined, 'user')).toBe(false);
+});
+
+
+test('receipt does not accept a same-name installation from another source', () => {
+  expect(receiptInventoryIssue(receipt, { ...inventory, items: [{ ...item, registry: 'https://other.example' }] }, false)).toContain('已无此技能');
 });

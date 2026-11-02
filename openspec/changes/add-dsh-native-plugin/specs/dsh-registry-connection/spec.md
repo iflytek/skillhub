@@ -94,3 +94,28 @@ The open-source versions endpoint SHALL accept optional `downloadableOnly`, defa
 #### Scenario: Existing consumers omit the new parameter
 - **WHEN** a management consumer omits downloadableOnly
 - **THEN** its authorized lifecycle history remains available and no authentication policy changes
+
+### Requirement: Saved sources with one shared active source
+The plugin SHALL support named saved sources with one active registryUrl shared by a Profile/plugin instance. Configuration writes SHALL preserve revision CAS, omitted defaults and explicit disconnection. Removing a source SHALL NOT remove its installations.
+
+#### Scenario: Shared switch and conflicting edits
+- **WHEN** one page switches from A to B while another holds an old configuration revision
+- **THEN** all pages observe B and stale writes are rejected rather than overwriting the selection
+
+### Requirement: Local management independent of the active market
+The plugin SHALL retain trusted managed installations from other sources, including while disconnected. Local actions SHALL use their original inventory identity and preserve existing filesystem and confirmation protections. Different sources with equal coordinates SHALL NOT merge.
+
+#### Scenario: Old source installation after a switch
+- **WHEN** A has an installation and the active source becomes B or disconnected
+- **THEN** the installation remains locally usable and manageable and its detail does not request B's same-name skill
+
+### Requirement: Update checks restricted to the active source
+The Host SHALL restrict individual and bulk update checks and upgrade preparation to installations from the active source before remote requests. Other-source installations SHALL NOT count as latest, failed or updateable. Switching SHALL discard old results and invalidate unsubmitted plans without abandoning accepted transactions.
+
+#### Scenario: Slow response after switching
+- **WHEN** A's update check completes after switching to B
+- **THEN** its result is discarded, only B participates in current update counts, and switching back to A requires a fresh check before upgrade
+
+#### Scenario: Cross-source upgrade attempt
+- **WHEN** an old-source item is submitted for an update check or upgrade against the active source
+- **THEN** the Host rejects the request before resolve and does not replace its installation with a same-name package

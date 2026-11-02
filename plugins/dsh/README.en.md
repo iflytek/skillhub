@@ -125,11 +125,16 @@ Open DSH **Plugins → @astron-team/skillhub-dsh → SkillHub 设置**.
 3. Choose visibility for versions, security audit and reviews.
 4. Select **保存配置** (Save). After the saved confirmation, open **技能中心** and search for a public test skill.
 
+Add named addresses under **保存的来源** and save, then switch from the Skill Center header. The active source is shared across pages and conversations of the same Profile/plugin instance. Configuration revision checks reject conflicting edits rather than overwriting another page.
+
+Switching preserves existing installations. Installed skills from other trusted sources remain locally usable and manageable, including availability checks, enable/disable and removal; only the current source participates in update checks and upgrades. Same-name skills from different sources remain distinct. Removing the active saved source disconnects without deleting installations; old-source details never borrow current-market content.
+
 **已配置** means a nonempty address is saved, not that connectivity has been tested. An empty address disconnects the source. **重置修改** (Reset changes) restores the current Host snapshot without a network reload or save. Read-only connections cannot edit configuration. On a revision conflict, reset the draft before editing the current values.
 
 | Field | Meaning |
 | --- | --- |
 | `registryUrl` | Registry base URL; defaults to `https://skill.xfyun.cn` when omitted; explicit empty/whitespace disconnects without fallback; custom values are preserved |
+| `savedRegistries` | Optional named sources `[{ name, url }]`; defaults to an empty list. `registryUrl` remains the sole active source |
 | `detailTabs.versions` | Version history visibility |
 | `detailTabs.securityAudit` | Security audit visibility |
 | `detailTabs.reviews` | Read-only review visibility |

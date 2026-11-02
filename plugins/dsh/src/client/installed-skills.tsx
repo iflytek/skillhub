@@ -33,6 +33,7 @@ export interface InstalledServices extends UpgradeServices, RemovalServices {
 type Item = InstalledSkillList['items'][number];
 export function installedCardBadges(items: Item[], results: Record<string, UpdateResult>, verified: boolean) {
   const badges: { label: string; tone: 'neutral' | 'warning' | 'info' }[] = [];
+  if (items[0]?.currentSource === false) badges.push({ label: '其他来源', tone: 'info' });
   const summary = verified ? skillInstallationSummary(items) : '安装待核验';
   if (summary !== '已安装') badges.push({ label: summary, tone: summary === '已停用' ? 'neutral' : 'warning' });
   if (items.some(item => updateFailed(results[item.itemKey]))) badges.push({ label: '检查失败', tone: 'warning' });
@@ -49,7 +50,7 @@ export function installedCardVersions(items: Item[]) {
     title: items.map(item => `${item.scope === 'user' ? '所有项目' : '仅此项目'} · v${item.version}`).join('；') };
 }
 export function installedUpdateKeys(inventory: Item[], results: Record<string, UpdateResult>, retry: boolean, group?: Item[]) {
-  return inventory.filter(item => !group || group.some(target => target.itemKey === item.itemKey))
+  return inventory.filter(item => item.currentSource !== false && (!group || group.some(target => target.itemKey === item.itemKey)))
     .map(item => item.itemKey).filter(key => !retry || updateFailed(results[key]));
 }
 const noContext = { getSnapshot: () => 0, subscribe: () => () => {} };
@@ -91,7 +92,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
       return response.value;
     } });
   const verified = !!query.data && !query.isError && query.data.complete && !query.data.unavailable.length;
-  const records = (identity: Item) => query.data?.items.filter(item => item.namespace === identity.namespace && item.slug === identity.slug) ?? [identity];
+  const records = (identity: Item) => query.data?.items.filter(item => item.registry === identity.registry && item.namespace === identity.namespace && item.slug === identity.slug) ?? [identity];
   const actions = (items: Item[], label?: string) => <SkillPrimaryActions items={items} revision={sourceRevision} verified={verified}
     select={services.management?.selectSkillUse} useSkill={services.skillUse} label={label} summaryVisible={!label} />;
 
@@ -172,9 +173,9 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
     {actions(records(selected), '使用已安装版本')}
     <div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation">{detail.isPending ? <p role="status">正在读取技能说明…</p>
       : detail.isError ? <p role="alert">{detail.error.message}</p>
-        : detail.data.content.state === 'local-only' ? <p role="status">远端说明暂不可用，可在管理安装中查看本地状态。</p>
+        : detail.data.content.state === 'local-only' ? <p role="status">{selected.currentSource === false ? '此技能来自其他来源，可在右侧管理本地安装。' : '远端说明暂不可用，可在管理安装中查看本地状态。'}</p>
           : <DetailContent detail={detail.data.content.detail} modes={modes} remote={remote} retry={() => { void detail.refetch(); }} cacheIdentity={JSON.stringify([services.sessionId, sourceRevision, selected.namespace, selected.slug, detail.data.content.detail.version])} onContextStale={() => { void detail.refetch(); }} />}
-    </article><aside className="astron-sh-detail-aside">{services.management && <InstallationManagement identity={selected} revision={sourceRevision} services={services.management} updateChecks={Object.fromEntries(Object.entries(results).filter((entry): entry is [string, InstalledUpdateCheck] => entry[1].state !== 'failed'))} useSkill={services.skillUse} onInstall={onInstall ? () => onInstall(selected) : undefined} />}</aside></div>
+    </article><aside className="astron-sh-detail-aside">{services.management && <InstallationManagement identity={selected} revision={sourceRevision} services={services.management} updateChecks={Object.fromEntries(Object.entries(results).filter((entry): entry is [string, InstalledUpdateCheck] => entry[1].state !== 'failed'))} useSkill={services.skillUse} onInstall={onInstall && selected.currentSource !== false ? () => onInstall(selected) : undefined} />}</aside></div>
   </section>;
   const term = keyword.trim().toLocaleLowerCase();
   const groups = allGroups.filter(items => filter === 'all' || items.some(item => filter === 'updates' ? results[item.itemKey]?.state === 'upgradable' : updateFailed(results[item.itemKey]))).filter(items => !term || items.some(item => `@${item.namespace}/${item.slug} ${item.displayName ?? ''} ${item.version}`.toLocaleLowerCase().includes(term)));
@@ -184,7 +185,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
       <input type="search" aria-label="过滤已安装技能" placeholder="搜索已安装技能" value={keyword} onChange={event => setKeyword(event.target.value)} />
     </label><Button ref={refreshButton} onClick={() => { void query.refetch(); }} disabled={query.isFetching}>刷新已安装</Button>
       {keyword && <Button variant="ghost" onClick={() => setKeyword('')}>清空过滤</Button>}
-      <Button onClick={() => startCheck()} disabled={progress.running || query.isFetching || query.isError || !query.data?.items.length}>检查更新</Button>
+      <Button onClick={() => startCheck()} disabled={progress.running || query.isFetching || query.isError || !query.data?.items.some(item => item.currentSource !== false)}>检查更新</Button>
       {progress.running && <Button variant="ghost" onClick={() => { scan.current?.abort(); scan.current = null; setProgress(previous => ({ ...previous, running: false })); }}>取消检查</Button>}
       {failures > 0 && <Button onClick={() => startCheck(true)} disabled={progress.running || query.isFetching}>重试失败项</Button>}
     </div>
@@ -192,14 +193,14 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
       <div className="skillhub-installed-filters" role="group" aria-label="更新筛选">
         {([['all', '全部'], ['updates', '可更新'], ['failed', '检查失败']] as const).map(([value, label]) => <Button key={value} size="sm" variant={filter === value ? 'outline' : 'ghost'} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</Button>)}
       </div>
-      <p role="status">{progress.total > 0 ? `${progress.running ? '检查中' : progress.done < progress.total ? '已停止' : '已检查'} ${progress.done}/${progress.total}${upgradable ? ` · ${upgradable} 个技能可更新` : ''}${failures ? ` · ${failures} 处检查失败` : ''}` : `${groups.length} 个技能`}</p>
+      <p role="status">{progress.total > 0 ? `${progress.running ? '检查中' : progress.done < progress.total ? '已停止' : '已检查'} ${progress.done}/${progress.total}${upgradable ? ` · ${upgradable} 个技能可更新` : ''}${failures ? ` · ${failures} 处检查失败` : ''}` : query.data && !query.data.items.some(item => item.currentSource !== false) ? '当前来源暂无可检查的技能' : `${groups.length} 个技能`}</p>
     </div>
     {query.isPending ? <CardSkeletons message="正在读取已安装技能…" /> : query.isError ? <p role="alert">{query.error.message}</p> : <>
       {(!query.data.complete || query.data.unavailable.length > 0) && <p role="alert">部分安装记录无法读取，列表可能不完整。</p>}
-      {!groups.length ? <p className="skillhub-installed-empty">{term || filter !== 'all' ? '没有匹配的技能。' : verified ? '当前来源暂无已安装技能。' : '暂未读取到安装记录。'}</p>
+      {!groups.length ? <p className="skillhub-installed-empty">{term || filter !== 'all' ? '没有匹配的技能。' : verified ? '暂无受管的已安装技能。' : '暂未读取到安装记录。'}</p>
         : <div className="astron-sh-card-grid" aria-label="已安装技能列表">{groups.map(items => {
           const identity = items[0]!;
-          const key = JSON.stringify([identity.namespace, identity.slug]);
+          const key = JSON.stringify([identity.registry, identity.namespace, identity.slug]);
           const presentation = items.find(item => item.summary) ?? identity;
           const displayName = presentation.displayName || identity.slug;
           const versions = installedCardVersions(items);
@@ -230,7 +231,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
                       listScroll.current = scrollContainer.current?.scrollTop ?? 0;
                       menuNavigating.current = true; triggerKey.current = key; trigger.current = null; setSelected(identity);
                     }}>管理安装</DropdownMenu.Item>
-                    <DropdownMenu.Item disabled={progress.running || query.isFetching || query.isError} onSelect={() => startCheck(false, items)}>检查更新</DropdownMenu.Item>
+                    {items.some(item => item.currentSource !== false) && <DropdownMenu.Item disabled={progress.running || query.isFetching || query.isError} onSelect={() => startCheck(false, items)}>检查更新</DropdownMenu.Item>}
                   </DropdownMenu.Content></DropdownMenu.Portal>
                 </DropdownMenu.Root>
               </div>

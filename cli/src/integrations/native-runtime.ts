@@ -5,7 +5,7 @@ import { isDeepStrictEqual } from 'node:util'
 import { inspectToggle, executeNativeToggle, recoverToggle } from './native-toggle'
 import { readSkillExamples } from '../services/skill-examples'
 import { observeInstallationDiscovery } from './install-discovery'
-import { readInstalledProjection, openInstalledProjectionSnapshot } from './installed-projection'
+import { readInstalledProjection, readAllInstalledProjection, openInstalledProjectionSnapshot } from './installed-projection'
 import { assessSkillUpdate } from './update-assessment'
 import { inspectUpgradeBaseline } from './upgrade-baseline'
 import { inspectRemovalBaseline } from './removal-baseline'
@@ -116,6 +116,7 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
     assessUpdate: assessSkillUpdate,
     inspectUpgrade: (selected, targets) => inspectUpgradeBaseline(inventory, { ...selected }, targets.map(target => ({ ...target }))),
     openInstalledSnapshot: (registry, targets) => openInstalledProjectionSnapshot(inventory, registry, targets),
+    listAllInstalled: targets => readAllInstalledProjection(inventory, targets.map(target => ({ ...target }))),
     listInstalled: (registry, targets) => readInstalledProjection(inventory, registry, targets.map(target => ({ ...target }))),
     executeInstall: async request => {
       await ensureCompatible()

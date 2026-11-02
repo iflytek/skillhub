@@ -21,6 +21,7 @@ function native(): NativeRuntime {
     inspectUpgrade: async () => { throw new Error('Unexpected inspection'); },
     inspectRemoval: async () => { throw new Error('Unexpected removal inspection'); },
     openInstalledSnapshot: async () => ({ projection: { items: [], complete: true, issues: [] }, read: async () => { throw new Error('Unexpected scan read'); } }),
+    listAllInstalled: async () => ({ items: [], complete: true, issues: [] }),
     listInstalled: async () => ({ items: [], complete: true, issues: [] }),
     executeInstall: async () => { throw new Error('Unexpected execution'); },
     recover: async () => { throw new Error('Unexpected recovery'); },

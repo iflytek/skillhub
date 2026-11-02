@@ -66,7 +66,7 @@ export function InstallControl({ detail, sourceRevision, services, initiatedFrom
   const local = useQuery({ queryKey: ['skillhub-installed', services.sessionId, sourceRevision], retry: false,
     enabled: true,
     queryFn: async ({ signal }) => read(await services.installed(sourceRevision, signal)) });
-  const current = local.data?.items.find(item => item.namespace === detail.namespace && item.slug === detail.slug && item.scope === scope);
+  const current = local.data?.items.find(item => item.currentSource !== false && item.namespace === detail.namespace && item.slug === detail.slug && item.scope === scope);
   const inventoryVerified = !local.isError && !local.isFetching && isInventoryScopeVerified(local.data, scope);
   const upgradeSource = useQuery({ queryKey: ['skillhub-upgrade-source', services.sessionId, sourceRevision], retry: false,
     enabled: !!services.upgrades && !!services.registryIdentity && current?.state === 'present' && current.version !== detail.version,
@@ -75,7 +75,7 @@ export function InstallControl({ detail, sourceRevision, services, initiatedFrom
     enabled: !!services.upgrades && !!services.checkVersionUpdate && inventoryVerified && current?.state === 'present' && current.version !== detail.version,
     queryFn: async ({ signal }) => read(await services.checkVersionUpdate!(sourceRevision, current!.itemKey, detail.version, signal)) });
   const absent = inventoryVerified && !current;
-  const records = local.data?.items.filter(item => item.namespace === detail.namespace && item.slug === detail.slug) ?? [];
+  const records = local.data?.items.filter(item => item.currentSource !== false && item.namespace === detail.namespace && item.slug === detail.slug) ?? [];
   const result = operation.data ?? attempt?.operation;
   const completed = result?.phase === 'completed';
   const progressVisible = !!attempt && !completed;
@@ -162,7 +162,7 @@ class StaleTargetError extends Error {}
 
 /** Prefer the scope already installed, rather than presenting a misleading second install. */
 export function preferredInstallationScope(inventory: InstalledSkillList, detail: Pick<SkillDetail, 'namespace' | 'slug'>, available: readonly ('user' | 'project')[]): 'user' | 'project' | undefined {
-  const records = inventory.items.filter(item => item.namespace === detail.namespace && item.slug === detail.slug);
+  const records = inventory.items.filter(item => item.currentSource !== false && item.namespace === detail.namespace && item.slug === detail.slug);
   return (['project', 'user'] as const).find(scope => records.some(item => item.scope === scope))
     ?? (available.includes('user') ? 'user' : undefined);
 }
