@@ -1,10 +1,13 @@
 # 前端动作统计接入指南
 
+<!-- #region analytics-body -->
 ## 1. 先了解边界
+
+当前是手动、本地演示接入，生产一键配置尚未交付；新方案合并并验证后再更新本指南。
 
 SkillHub 页面只提供被动的 `data-analytics-id` 标签，默认不采集、不加载统计 SDK、不发送事件。可选 helper 把允许的原生交互转换成 `{ id, event }`，再交给部署方选择的 adapter。点击下载只表示下载意图，不表示下载、安装成功；提交发布也不表示发布成功。部署方负责授权、隐私合规、保留期限和平台安全。
 
-本文对应 PR-1（#1010）的手工接入示例，不是产品内置开关。仅通过 Docker／Compose 或 Helm 配置开启、默认关闭和按需加载的能力计划在 PR-2 交付，见 [OpenSpec 变更](../openspec/changes/add-configurable-frontend-analytics/proposal.md)。Issue #989 要等 PR-2 完成并验证后才关闭。精确接口、事件边界和隐私约束以[英文契约](frontend-analytics.md)为准。
+本文对应 PR-1（#1010）的手工接入示例，不是产品内置开关。仅通过 Docker／Compose 或 Helm 配置开启、默认关闭和按需加载的能力计划在 PR-2 交付，见 [OpenSpec 变更](https://github.com/iflytek/skillhub/blob/main/openspec/changes/add-configurable-frontend-analytics/proposal.md)。Issue #989 要等 PR-2 完成并验证后才关闭。精确接口、事件边界和隐私约束以[英文契约][analytics-reference]为准。
 
 ## 2. 选择接入路径
 
@@ -12,8 +15,8 @@ SkillHub 页面只提供被动的 `data-analytics-id` 标签，默认不采集�
 
 先确认平台接收地址、公开站点标识、授权策略和 CSP。不要把平台管理密钥放到浏览器。平台不受支持时，需要部署方编写自己的 adapter；当前版本不能只填平台名字就接入任意平台。
 
-1. 复用 [helper](examples/analytics/observe/v1/skillhub-intents.mjs)，不要修改业务页面或引入厂商 SDK。
-2. 参照 [Umami adapter](examples/analytics/observe/v1/umami-adapter.mjs)实现 `send(intent) -> Promise<void>` 和 `stop()`。send 必须消化同步异常和异步拒绝，不向页面抛错；stop 后不能再派发请求，已经开始的 fetch 无法撤回。
+1. 复用 [helper](https://github.com/iflytek/skillhub/blob/main/docs/examples/analytics/observe/v1/skillhub-intents.mjs)，不要修改业务页面或引入厂商 SDK。
+2. 参照 [Umami adapter](https://github.com/iflytek/skillhub/blob/main/docs/examples/analytics/observe/v1/umami-adapter.mjs)实现 `send(intent) -> Promise<void>` 和 `stop()`。send 必须消化同步异常和异步拒绝，不向页面抛错；stop 后不能再派发请求，已经开始的 fetch 无法撤回。
 3. 由 adapter 验证平台参数、清洗最终发送字段、管理 SDK 加载和超时。不要只清洗 helper 回调后就信任 SDK 自动附加的 URL、标题或身份字段。
 4. 在部署方入口中连接 helper 与 adapter，只有策略允许时才初始化：
 
@@ -33,18 +36,20 @@ function stop() { stopObserver(); adapter.stop() }
 
 前提：已有能正常使用的 SkillHub Web；已安装 Docker 和 Compose；能使用示例指定的 Umami 3.4.1、Postgres 16、Nginx 1.30.6 镜像；本机 8300 和 8081 端口空闲。所有 shell 命令从仓库根目录运行。示例会创建独立演示网络和临时数据库，不用于生产持久化。请在隔离环境运行。
 
+启动前先执行 `docker compose ls --all`，确认专用项目名 `skillhub-analytics-demo` 未被其他项目占用。若已占用，选择一个未使用的新名字，并在本文所有命令中一致替换。所有演示命令显式使用 `-p`，防止继承终端已有的 `COMPOSE_PROJECT_NAME` 而误操作其他部署；换一个克隆目录本身不能隔离 Compose 项目。
+
 先检查配置，再启动：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml config
-docker compose -f docs/examples/analytics/compose.yaml up -d
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml config
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d
 ```
 
 默认上游是 `host.docker.internal:80`，对应 release Compose 的 `WEB_PORT` 默认 80。这里是容器访问宿主机的 Web 入口，不是后端端口，也不是 edge 自己的 8081。若 Web 实际发布在其他端口（比如 18080），先在当前终端导出，再启动。后面所有 compose 命令都要在这个终端里执行，否则重建 edge 时会回到默认的 80：
 
 ```sh
 export SKILLHUB_WEB_UPSTREAM=host.docker.internal:18080
-docker compose -f docs/examples/analytics/compose.yaml up -d
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d
 ```
 
 原生 Linux Docker 需要 `host.docker.internal` 映射，示例 edge 已包含 `extra_hosts: ["host.docker.internal:host-gateway"]`。Docker Desktop／OrbStack 已提供这个名字。宿主机 Web 必须监听容器可达的地址；如果防火墙或仅回环监听阻止访问，先调整可达性，或填写容器可以访问的其他 `host:port`。不要填写 `http://` 或 URL 路径。
@@ -61,9 +66,9 @@ docker compose -f docs/examples/analytics/compose.yaml up -d
 然后重建 edge，使单文件挂载更新可靠生效：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml up -d --force-recreate edge
-docker compose -f docs/examples/analytics/compose.yaml exec edge nginx -t
-docker compose -f docs/examples/analytics/compose.yaml exec edge nginx -T
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d --force-recreate edge
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml exec edge nginx -t
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml exec edge nginx -T
 ```
 
 打开 `http://localhost:8081`，不要从原 Web 入口验收注入。
@@ -122,7 +127,7 @@ node web/scripts/analytics-manifest.mjs --write
 node web/scripts/analytics-manifest.mjs
 ```
 
-审核生成的 [manifest](frontend-analytics-manifest.json) 差异和原生交互测试。部署方再加一条规则即可。ID 必须匹配 `^[a-z]+(?:\.[a-z]+){2,}$`：至少三段小写字母，不含数字、下划线或资源信息。已有 ID 含义冻结，不能把用户、技能名、版本、路径拼进去。manifest 是版本清单，不是运行时封闭枚举。
+审核生成的 [manifest](https://github.com/iflytek/skillhub/blob/main/docs/frontend-analytics-manifest.json) 差异和原生交互测试。部署方再加一条规则即可。ID 必须匹配 `^[a-z]+(?:\.[a-z]+){2,}$`：至少三段小写字母，不含数字、下划线或资源信息。已有 ID 含义冻结，不能把用户、技能名、版本、路径拼进去。manifest 是版本清单，不是运行时封闭枚举。
 
 ## 4. 部署、子路径和 CSP
 
@@ -132,7 +137,7 @@ edge 仅在 UI HTML 注入一个延迟执行的 module，不改变 API、登录�
 
 根路径演示的 CSP 需要允许同源外部 module 和同源连接。保留原有 CSP；nonce-only 或 strict-dynamic 策略不能只靠同源满足。需要部署方协调每响应 nonce 或已批准的 hash／SRI；做不到就不要启用。不要加 unsafe-inline、unsafe-eval 或通配符。还要保留原安全头，注意 Nginx add_header 的 location 继承规则。
 
-`/skillhub/` 等子路径不是只改一个 URL。先按正常部署方式配置 `SKILLHUB_WEB_BASE_PATH=/skillhub/` 和匹配的同源 API base，再同时调整 UI location、无尾斜线重定向、旁路正则、模块目录／注入 src、两个 Umami 精确端点和 adapter prefix。edge 到 Web 的 proxy_pass 不带尾斜线，保留原 URI，不能再次重写。逐项配置见[英文契约的子路径映射](frontend-analytics.md#supported-sub-path-mapping)。OAuth、公网 HTTPS 和资源地址仍遵守原部署要求。
+`/skillhub/` 等子路径不是只改一个 URL。先按正常部署方式配置 `SKILLHUB_WEB_BASE_PATH=/skillhub/` 和匹配的同源 API base，再同时调整 UI location、无尾斜线重定向、旁路正则、模块目录／注入 src、两个 Umami 精确端点和 adapter prefix。edge 到 Web 的 proxy_pass 不带尾斜线，保留原 URI，不能再次重写。逐项配置见[英文契约的子路径映射][analytics-subpaths]。OAuth、公网 HTTPS 和资源地址仍遵守原部署要求。
 
 ## 5. 验收：照这个顺序检查
 
@@ -160,13 +165,31 @@ window.skillhubAnalytics.stop()
 
 stop 不能撤回已开始的 fetch。重新获准后才可调用 start()；同一个 root 重复初始化保留第一次规则和回调，修改规则需要先 stop 再初始化。
 
-7. 将入口恢复 `enabled: false`，重新创建 edge。保持「Disable cache」勾选（或换一个新的无痕窗口），刷新页面后再搜索：不得加载 script.js、产生采集回调或 send。完全不注入时也应零采集。最后在隔离演示中停止 Umami，再打开新页面搜索和打开技能卡片，应仍正常，无统计依赖导致的页面错误：
+7. **关闭态独立验收**：将入口恢复 `enabled: false`，重新创建 edge：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml stop umami
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d --no-deps --force-recreate edge
 ```
 
-验收后如需继续演示，使用上面的 up 命令恢复。不要为了测试停止共享平台或生产服务。
+保持「Disable cache」勾选（或换一个新的无痕窗口），刷新页面后搜索：不得加载 script.js、产生采集回调或 send，搜索与技能卡片仍正常。完全不注入时也应零采集。这一步不验证启用态的故障隔离。
+
+8. **启用态依赖故障验收**：仅在上述隔离演示中，将入口重新设为 `enabled: true`，保留第 2 节创建的有效网站 UUID，并确认当前授权允许采集；按第 7 步重新创建 edge，禁用缓存并刷新。先重复第 3～5 步，确认一次测试动作确实入库，作为故障前对照。不要为了测试停止共享平台或生产服务。
+
+保持入口启用和授权有效，仅停止演示 Umami：
+
+```sh
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml stop umami
+```
+
+在已加载 SDK 的页面再次搜索，应观察到采集请求失败，同时搜索结果和技能卡片仍正常。再新开一个禁用缓存的页面：SDK 请求应失败，但业务仍可用，不能出现统计异常导致的未捕获页面错误。记录失败请求和业务结果；不要把关闭态的零请求当成故障隔离通过，也不要把失败请求当作成功入库。
+
+9. **恢复或清理**：继续演示时执行：
+
+```sh
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml start umami
+```
+
+等待 `http://localhost:8300` 恢复可用后，禁用缓存并刷新 edge 页面，再执行一次新动作，确认请求成功且新事件入库。原页面的 SDK 初始化失败不会保证自动恢复，故障期间丢失的事件也不保证补发。结束演示则按第 7 节关闭采集、恢复入口文件，并仅清理该演示项目；不要删除现有 SkillHub 或共享平台的数据。
 
 ## 6. 故障排查
 
@@ -189,7 +212,7 @@ docker compose -f docs/examples/analytics/compose.yaml stop umami
 结束本地演示（会删除演示数据库，先确认无需要保留的数据）：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml down -v
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml down -v
 ```
 
 限制必须一起评估：
@@ -197,4 +220,9 @@ docker compose -f docs/examples/analytics/compose.yaml down -v
 - 尽力发送，无重试、无持久队列，可能少计。SDK 加载期最多在内存暂存 20 条，默认最多等三秒；超额、失败、超时或 stop 都丢弃。已就绪发送彼此独立，不因一个请求挂起而阻塞后续动作。
 - 示例固定 Umami 3.4.1。stop 的派发保护依赖此版本在 fetch 前同步序列化的顺序，升级必须重跑适配器测试和真实浏览器验收；不要同时加载第二个 Umami tracker。
 - JSON 字段少不等于匿名传输。IP、User-Agent、Origin 仍到平台；SDK 还带网站、实际 hostname 和后续会话 cache 头。edge 去掉采集代理的 Cookie、Authorization、Referer，并使用 no-referrer。Umami 仍可能据传输元数据推导浏览器、系统、设备、地域和会话。
-- SDK 在清洗前仍会在页面内读取标题、URL、referrer 和自身 localStorage 开关；通用 helper 不读取这些内容。平台日志、数据保留和权限需另审计，详见[隐私契约](frontend-analytics.md#privacy-and-integration-modes)。
+- SDK 在清洗前仍会在页面内读取标题、URL、referrer 和自身 localStorage 开关；通用 helper 不读取这些内容。平台日志、数据保留和权限需另审计，详见[隐私契约][analytics-privacy]。
+<!-- #endregion analytics-body -->
+
+[analytics-reference]: frontend-analytics.md
+[analytics-subpaths]: frontend-analytics.md#supported-sub-path-mapping
+[analytics-privacy]: frontend-analytics.md#privacy-and-integration-modes

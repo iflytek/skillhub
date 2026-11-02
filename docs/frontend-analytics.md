@@ -1,9 +1,12 @@
 # Passive frontend analytics attributes
 
-For step-by-step setup, see the [Chinese integration guide](frontend-analytics-integration.md).
+<!-- #region analytics-body -->
+For step-by-step setup, see the [Chinese integration guide][analytics-guide].
 This document is the English contract reference. Configuration-only deployment is
-planned in [PR-2](../openspec/changes/add-configurable-frontend-analytics/proposal.md);
-the current examples remain deployment-owned and opt-in.
+planned in [PR-2](https://github.com/iflytek/skillhub/blob/main/openspec/changes/add-configurable-frontend-analytics/proposal.md);
+the current examples remain deployment-owned and opt-in. They describe a manual,
+local demo integration; production one-click configuration has not been delivered.
+The guide will be updated after the new flow is merged and validated.
 
 SkillHub exposes semantic HTML attributes for separately maintained, optional
 collectors. It does not collect or send analytics by default. There is no SDK,
@@ -57,7 +60,7 @@ The source inventory covers these domains:
 - Notifications/preferences, account/profile/security/token flows, login,
   registration/reset/device/CLI authorization, administration and global navigation.
 
-[The generated manifest](frontend-analytics-manifest.json) is the authoritative
+[The generated manifest](https://github.com/iflytek/skillhub/blob/main/docs/frontend-analytics-manifest.json) is the authoritative
 source index: registered routes and their implementations, literal JSX sites,
 conditional values, static navigation definitions and forwarding sites. Counts
 are recomputed from the TypeScript AST; they are not quotas. Unique IDs are
@@ -166,7 +169,7 @@ incident. Vendor credentials and ingestion endpoints belong outside core.
 
 ## Configure rules and add tags
 
-[The vendor-neutral helper](examples/analytics/observe/v1/skillhub-intents.mjs)
+[The vendor-neutral helper](https://github.com/iflytek/skillhub/blob/main/docs/examples/analytics/observe/v1/skillhub-intents.mjs)
 exports `observeSkillhubIntents({ root, rules, onIntent })`, frozen `DEFAULT_RULES`
 (the original 12 categories), and pure `resolveRules(rules)`:
 
@@ -220,13 +223,15 @@ example is not present in the `web/` Docker build context.
 
 ## Connect a platform: local Umami v3.4.1 demo
 
-[The Compose example](examples/analytics/compose.yaml) runs Umami v3.4.1 (MIT),
+[The Compose example](https://github.com/iflytek/skillhub/blob/main/docs/examples/analytics/compose.yaml) runs Umami v3.4.1 (MIT),
 Postgres 16 and an optional edge; SkillHub remains your existing web upstream.
 From the repository root:
 
+Before starting, run `docker compose ls --all` and confirm the dedicated project name `skillhub-analytics-demo` is not used by another project. If occupied, choose an unused name and replace it consistently in every command. Explicit `-p` prevents inheriting an existing terminal `COMPOSE_PROJECT_NAME` and targeting another deployment; cloning into a different directory does not itself isolate the Compose project.
+
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml config
-docker compose -f docs/examples/analytics/compose.yaml up -d
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml config
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d
 ```
 
 The default Web upstream is `host.docker.internal:80`, matching the release
@@ -242,13 +247,13 @@ an isolated local Docker environment with available network pools. Open
 `http://localhost:8300` for local setup only. Umami's default `admin` / `umami`
 credentials, the public DB password and app secret are DEMO ONLY: change them.
 Create a synthetic website in Umami, copy its UUID into
-[`observer.mjs`](examples/analytics/observe/v1/observer.mjs), then explicitly change
+[`observer.mjs`](https://github.com/iflytek/skillhub/blob/main/docs/examples/analytics/observe/v1/observer.mjs), then explicitly change
 `enabled` and the consent hook for your local policy. Open SkillHub through
 `http://localhost:8081` and exercise an enabled action; inspect the request to
 `/_skillhub-umami/api/send` and Umami's event view. Tear down the local demo with
-`docker compose -f docs/examples/analytics/compose.yaml down -v` (demo data is removed).
+`docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml down -v` (demo data is removed).
 
-[`umami-adapter.mjs`](examples/analytics/observe/v1/umami-adapter.mjs) is the only
+[`umami-adapter.mjs`](https://github.com/iflytek/skillhub/blob/main/docs/examples/analytics/observe/v1/umami-adapter.mjs) is the only
 vendor-specific code. It loads `/script.js` with `data-auto-track="false"`, so
 v3.4.1 installs no pageview, history hook, click listener or performance observer.
 `data-host-url` is the same-origin `/_skillhub-umami` prefix, and
@@ -315,7 +320,7 @@ HTML is the deployment rollback; default SkillHub never loads any of this.
 
 Prefer a separately maintained same-origin HTTPS module, optionally inserted by
 Nginx `sub_filter`, not an app entrypoint modification. Start with
-[the opt-in edge template](examples/analytics/nginx.conf). It is not loaded by the
+[the opt-in edge template](https://github.com/iflytek/skillhub/blob/main/docs/examples/analytics/nginx.conf). It is not loaded by the
 product. Compose substitutes only the two upstream host:port variables. Publish
 its HTTP listener on loopback behind your HTTPS terminator. Serve the supplied
 `observer.mjs`, helper and adapter outside the app bundle; only enable the entry
@@ -390,3 +395,6 @@ configuration, reload through the normal deployment procedure, and purge cached
 HTML. Existing cached versioned JS can remain temporarily but must not be referenced
 or initialized. Verify new HTML has no script, no callback/reporting occurs and
 SkillHub remains usable. This document does not authorize production changes.
+<!-- #endregion analytics-body -->
+
+[analytics-guide]: frontend-analytics-integration.md
