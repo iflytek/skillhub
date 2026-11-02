@@ -446,12 +446,8 @@ run_analytics_compose() {
 
 prepare_analytics_files() {
   mkdir -p "$ANALYTICS_HOME"
-  if [ "$USE_ALIYUN" = "true" ]; then
-    analytics_source="$SKILLHUB_RAW_BASE/compose.analytics-umami.yml"
-  else
-    analytics_source="$SKILLHUB_RAW_BASE/compose.analytics-umami.yml"
-  fi
-  download_file "$analytics_source" "$ANALYTICS_COMPOSE_FILE"
+  # GitHub raw and the OSS mirror both publish files at the repository root.
+  download_file "$SKILLHUB_RAW_BASE/compose.analytics-umami.yml" "$ANALYTICS_COMPOSE_FILE"
   if [ ! -f "$ANALYTICS_ENV_FILE" ]; then
     old_umask="$(umask)"
     umask 077
