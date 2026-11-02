@@ -24,7 +24,7 @@ it('defaults closed, preserves rules replacement and delegates adapter validatio
   expect(parseAnalyticsConfig({}).config).toMatchObject({ enabled: false, consent: 'denied' })
   expect(parseAnalyticsConfig({ ...valid, rules: {} }).config?.rules).toEqual({})
   expect(parseAnalyticsConfig(valid).config).not.toHaveProperty('websiteId')
-  expect(Object.keys(adapters)).toEqual(['umami'])
+  expect(Object.keys(adapters).sort()).toEqual(['datafinder', 'umami'])
   expect(parseAnalyticsConfig({ ...valid, adapter: '__proto__' }).config).toBeNull()
 })
 it('cancels a late module before controller initialization; start explicitly grants consent', async () => {

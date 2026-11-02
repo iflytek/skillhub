@@ -527,6 +527,15 @@ assert_checksum "$TMP_DIR/analytics-default.yaml" "$TMP_DIR/analytics-enabled.ya
 diff <(pod_checksums "$TMP_DIR/analytics-default.yaml" | grep -v "^$web ") \
   <(pod_checksums "$TMP_DIR/analytics-enabled.yaml" | grep -v "^$web ") >/dev/null \
   || fail "analytics-only changes must not replace server or other pods"
+# A second adapter uses the same opaque JSON/ConfigMap contract, via a values file.
+render analytics-default "$CHART_DIR" -f "$CHART_DIR/tests/datafinder-values.yaml" >"$TMP_DIR/analytics-datafinder.yaml"
+grep -Fq 'appId\":123456' "$TMP_DIR/analytics-datafinder.yaml" || fail "DataFinder public config missing"
+grep -Fq '  upstream: "https://collector.example.com"' "$TMP_DIR/analytics-datafinder.yaml" || fail "DataFinder origin missing"
+assert_checksum "$TMP_DIR/analytics-default.yaml" "$TMP_DIR/analytics-datafinder.yaml" "$web" checksum/config: changed
+diff <(pod_checksums "$TMP_DIR/analytics-default.yaml" | grep -v "^$web ") \
+  <(pod_checksums "$TMP_DIR/analytics-datafinder.yaml" | grep -v "^$web ") >/dev/null \
+  || fail "DataFinder must not roll non-Web pods"
+
 # Backend configuration still rolls the server.
 render analytics-default "$CHART_DIR" -f "$TMP_DIR/analytics-values.yaml" \
   --set-string bootstrapAdmin.displayName=Changed >"$TMP_DIR/analytics-server-change.yaml"

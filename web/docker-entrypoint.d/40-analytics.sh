@@ -20,7 +20,7 @@ if [ -n "$raw" ]; then
 fi
 case "$status" in
   'invalid '*) printf '[analytics] %s: invalid configuration; disabled\n' "${status#invalid }" >&2 ;;
-  enabled|denied)
+  'enabled umami'|'denied umami'|'enabled datafinder'|'denied datafinder')
     upstream="${SKILLHUB_WEB_ANALYTICS_UPSTREAM:-}"
     # Strict origin grammar; never interpolate unvalidated input into Nginx.
     safe_chars=true
@@ -64,10 +64,16 @@ case "$status" in
       # data; quotes, newlines, U+2028 and closing tags cannot become executable.
       printf 'try { window.__SKILLHUB_RUNTIME_CONFIG__.analytics = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob("%s"), function(c) { return c.charCodeAt(0); }))); } catch (_) { console.error("[analytics] config: invalid JSON; disabled"); }\n' "$encoded" > "$root/analytics-runtime.js"
       printf 'set $skillhub_analytics_upstream "%s";\n' "$upstream" > "$proxy"
-      for endpoint in script.js api/send; do
-        method=GET
-        [ "$endpoint" != api/send ] || method=POST
-        printf 'location = /_skillhub-analytics/%s {\n    limit_except %s { deny all; }\n    proxy_pass $skillhub_analytics_upstream/%s;\n    proxy_set_header Host "%s";\n    proxy_set_header Cookie "";\n    proxy_set_header Authorization "";\n    proxy_set_header Referer "";\n    proxy_hide_header Set-Cookie;\n    proxy_ssl_verify on;\n    proxy_ssl_server_name on;\n    proxy_ssl_name %s;\n    proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;\n    proxy_connect_timeout 3s;\n    proxy_read_timeout 3s;\n    proxy_cache off;\n}\n' "$endpoint" "$method" "$endpoint" "$authority" "$host" >> "$proxy"
+      case "${status#* }" in
+        umami) endpoints='script.js api/send' ;;
+        datafinder) endpoints=list ;;
+      esac
+      for endpoint in $endpoints; do
+        method=POST
+        [ "$endpoint" != script.js ] || method=GET
+        send_timeout=''
+        [ "$endpoint" != list ] || send_timeout='    proxy_send_timeout 3s;'
+        printf 'location = /_skillhub-analytics/%s {\n    limit_except %s { deny all; }\n    proxy_pass $skillhub_analytics_upstream/%s;\n    proxy_set_header Host "%s";\n    proxy_set_header Cookie "";\n    proxy_set_header Authorization "";\n    proxy_set_header Referer "";\n    proxy_hide_header Set-Cookie;\n    proxy_ssl_verify on;\n    proxy_ssl_server_name on;\n    proxy_ssl_name %s;\n    proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;\n    proxy_connect_timeout 3s;\n    proxy_read_timeout 3s;\n    proxy_cache off;\n%s\n}\n' "$endpoint" "$method" "$endpoint" "$authority" "$host" "$send_timeout" >> "$proxy"
       done
     else
       printf '%s\n' '[analytics] upstream: invalid origin; disabled' >&2

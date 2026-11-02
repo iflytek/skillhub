@@ -58,7 +58,7 @@ function value(depth,    id,c,key,item,token) {
  } else if(c=="\"") { kind[id]="string"; data[id]=string(); return id }
  else {
   token=substr(s,p)
-  if(match(token,/^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/)) { kind[id]="number"; p+=RLENGTH; return id }
+  if(match(token,/^-?(0|[1-9][0-9]*)(\.[0-9]+)?([eE][+-]?[0-9]+)?/)) { kind[id]="number"; data[id]=substr(token,1,RLENGTH)+0; p+=RLENGTH; return id }
   if(substr(token,1,4)=="true") { kind[id]="boolean"; data[id]="true"; p+=4; return id }
   if(substr(token,1,5)=="false") { kind[id]="boolean"; data[id]="false"; p+=5; return id }
   if(substr(token,1,4)=="null") { kind[id]="null"; p+=4; return id }
@@ -78,14 +78,24 @@ END {
  adapter=child[root SUBSEP "adapter"]; settings=child[root SUBSEP "adapterConfig"]
  if(enabled && kind[enabled]!="boolean") bad("enabled")
  if(consent && (kind[consent]!="string" || (data[consent]!="denied" && data[consent]!="granted"))) bad("consent")
- if(adapter && (kind[adapter]!="string" || data[adapter]!="umami")) bad("adapter")
+ if(adapter && (kind[adapter]!="string" || (data[adapter]!="umami" && data[adapter]!="datafinder"))) bad("adapter")
  if(settings && kind[settings]!="object") bad("adapterConfig")
  if(data[enabled]=="true") {
-  if(data[adapter]!="umami") bad("adapter")
-  website=child[settings SUBSEP "websiteId"]; uuid=data[website]
-  if(kind[settings]!="object" || count[settings]!=1 || kind[website]!="string" || length(uuid)!=36 || uuid !~ /^[0-9a-fA-F-]+$/ || substr(uuid,9,1)!="-" || substr(uuid,14,1)!="-" || substr(uuid,19,1)!="-" || substr(uuid,24,1)!="-") bad("adapterConfig")
-  gsub(/-/,"",uuid); if(length(uuid)!=32) bad("adapterConfig")
+  if(kind[settings]!="object") bad("adapterConfig")
+  if(data[adapter]=="umami") {
+   website=child[settings SUBSEP "websiteId"]; uuid=data[website]
+   if(count[settings]!=1 || kind[website]!="string" || length(uuid)!=36 || uuid !~ /^[0-9a-fA-F-]+$/ || substr(uuid,9,1)!="-" || substr(uuid,14,1)!="-" || substr(uuid,19,1)!="-" || substr(uuid,24,1)!="-") bad("adapterConfig")
+   gsub(/-/,"",uuid); if(length(uuid)!=32) bad("adapterConfig")
+  } else if(data[adapter]=="datafinder") {
+   for(k in child) if(index(k,settings SUBSEP)==1) {
+    name=substr(k,length(settings SUBSEP)+1)
+    if(name!="appId" && name!="product") bad("adapterConfig")
+   }
+   app=child[settings SUBSEP "appId"]; product=child[settings SUBSEP "product"]
+   if(kind[app]!="number" || data[app]<1 || data[app]>2147483647 || int(data[app])!=data[app]) bad("adapterConfig.appId")
+   if(product && (kind[product]!="string" || length(data[product])>32 || data[product]!~/^[a-z][a-z0-9_]*$/)) bad("adapterConfig.product")
+  } else bad("adapter")
   # Denied pages can later call start(), so retain valid public configuration.
-  print (data[consent]=="granted" ? "enabled" : "denied")
+  print (data[consent]=="granted" ? "enabled" : "denied") " " data[adapter]
  } else print "disabled"
 }

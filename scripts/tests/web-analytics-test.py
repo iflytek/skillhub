@@ -67,4 +67,45 @@ class AnalyticsStartup(unittest.TestCase):
    runtime,proxy,diagnostics=self.render(raw)
    self.assertNotIn('proxy_pass',proxy)
    self.assertIn('analytics',diagnostics)
+class DatafinderStartup(unittest.TestCase):
+ render=AnalyticsStartup.render
+ def datafinder(self, settings=None):
+  return json.dumps(dict(enabled=True, adapter='datafinder', consent='granted', adapterConfig={'appId':123456} if settings is None else settings))
+ def test_datafinder_proxy(self):
+  runtime,proxy,diagnostics=self.render(self.datafinder())
+  self.assertEqual(diagnostics,'')
+  self.assertEqual(proxy.count('location = '),1)
+  self.assertIn('location = /_skillhub-analytics/list {',proxy)
+  self.assertIn('limit_except POST { deny all; }',proxy)
+  self.assertIn('proxy_pass $skillhub_analytics_upstream/list;',proxy)
+  self.assertNotIn('script.js',proxy)
+  self.assertNotIn('api/send',proxy)
+  self.assertNotIn('proxy_set_header User-Agent',proxy)
+  for directive in ['proxy_set_header Cookie ""','proxy_set_header Authorization ""','proxy_set_header Referer ""','proxy_hide_header Set-Cookie','proxy_ssl_verify on','proxy_connect_timeout 3s','proxy_read_timeout 3s','proxy_send_timeout 3s','proxy_cache off']:
+   self.assertIn(directive,proxy)
+  self.assertNotIn('stats.example.com',runtime)
+ def test_datafinder_valid_settings(self):
+  for settings in [{'appId':1},{'appId':2147483647},{'appId':1,'product':'a_2'},{'appId':1e2}]:
+   runtime,proxy,diagnostics=self.render(self.datafinder(settings))
+   self.assertIn('atob(',runtime)
+   self.assertIn('proxy_pass',proxy)
+   self.assertEqual(diagnostics,'')
+ def test_datafinder_field_diagnostics(self):
+  for settings,field in [({},'adapterConfig.appId'),({'appId':0},'adapterConfig.appId'),({'appId':-1},'adapterConfig.appId'),({'appId':1.1},'adapterConfig.appId'),({'appId':2147483648},'adapterConfig.appId'),({'appId':'PRIVATE'},'adapterConfig.appId'),({'appId':1,'product':'PRIVATE'},'adapterConfig.product'),({'appId':1,'product':'a'*33},'adapterConfig.product'),({'appId':1,'product':''},'adapterConfig.product'),({'appId':1,'product':None},'adapterConfig.product'),({'appId':1,'X-MCS-AppKey':'PRIVATE'},'adapterConfig')]:
+   runtime,proxy,diagnostics=self.render(self.datafinder(settings))
+   self.assertNotIn('proxy_pass',proxy)
+   self.assertIn('[analytics] '+field+':',diagnostics)
+   self.assertNotIn('PRIVATE',runtime+proxy+diagnostics)
+ def test_datafinder_hostile_upstream(self):
+  for upstream in ['https://stats.example.com;PRIVATE','https://user:PRIVATE@stats.example.com','https://stats.example.com/list','https://stats.example.com\nPRIVATE']:
+   runtime,proxy,diagnostics=self.render(self.datafinder(),upstream)
+   self.assertNotIn('proxy_pass',proxy)
+   self.assertIn('upstream',diagnostics)
+   self.assertNotIn('PRIVATE',runtime+proxy+diagnostics)
+ def test_datafinder_denied_and_escaped_keys(self):
+  raw=self.datafinder({'appId':1,'product':'skillhub'}).replace('granted','denied').replace('appId','\\u0061ppId')
+  runtime,proxy,diagnostics=self.render(raw)
+  self.assertIn('atob(',runtime)
+  self.assertIn('/list',proxy)
+  self.assertEqual(diagnostics,'')
 if __name__=='__main__': unittest.main()

@@ -1,8 +1,8 @@
 import { DEFAULT_RULES, observeSkillhubIntents, resolveRules } from './skillhub-intents.mjs'
 import { adapters } from './registry'
-import type { AdapterFactory, AnalyticsAPI, AnalyticsConfig } from './types'
+import type { AdapterFactory, AnalyticsAPI, AnalyticsConfig, AnalyticsContext } from './types'
 
-export function createAnalyticsController(config: AnalyticsConfig, options: { root?: Document | Element; factory?: AdapterFactory; prefix?: string } = {}): AnalyticsAPI {
+export function createAnalyticsController(config: AnalyticsConfig, options: { root?: Document | Element; factory?: AdapterFactory; prefix?: string; context?: AnalyticsContext } = {}): AnalyticsAPI {
   let generation = 0
   let pending: Promise<void> | undefined
   let dispose: (() => void) | undefined
@@ -26,7 +26,7 @@ export function createAnalyticsController(config: AnalyticsConfig, options: { ro
     const factory = options.factory ?? adapters[config.adapter!]?.create
     pending = (async () => {
       try {
-        const adapter = await factory(config.adapterConfig ?? {}, options.prefix ?? `${import.meta.env.BASE_URL}_skillhub-analytics`, signal)
+        const adapter = await factory(config.adapterConfig ?? {}, options.prefix ?? `${import.meta.env.BASE_URL}_skillhub-analytics`, signal, options.context)
         if (own !== generation) { adapter.stop(); return }
         const stopObserver = observeSkillhubIntents({ root, rules: active, onIntent: intent => adapter.send(intent) })
         dispose = () => { stopObserver(); try { adapter.stop() } catch { /* isolated */ } }

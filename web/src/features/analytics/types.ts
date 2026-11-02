@@ -11,6 +11,7 @@ export interface AnalyticsAdapter {
   send(intent: SkillhubIntent): Promise<void>
   stop(): void
 }
-export type AdapterFactory = (config: Record<string, unknown>, prefix: string, signal?: AbortSignal) => Promise<AnalyticsAdapter>
+export interface AnalyticsContext { currentPageType?: () => string }
+export type AdapterFactory = (config: Record<string, unknown>, prefix: string, signal?: AbortSignal, context?: AnalyticsContext) => Promise<AnalyticsAdapter>
 export interface AnalyticsAPI { start(): Promise<void>; stop(): void }
 export interface Diagnostic { field: string; reason: string }

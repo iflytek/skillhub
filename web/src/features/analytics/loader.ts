@@ -1,9 +1,9 @@
 import { parseAnalyticsConfig, reportDiagnostics } from './config'
-import type { AnalyticsAPI } from './types'
+import type { AnalyticsAPI, AnalyticsContext } from './types'
 import type { createAnalyticsController } from './controller'
 
 type Module = { createAnalyticsController: typeof createAnalyticsController }
-export function installAnalyticsLoader(read: () => unknown, load: () => Promise<Module> = () => import('./controller')): AnalyticsAPI {
+export function installAnalyticsLoader(read: () => unknown, load: () => Promise<Module> = () => import('./controller'), context?: AnalyticsContext): AnalyticsAPI {
   let generation = 0
   let controller: AnalyticsAPI | undefined
   let pending: Promise<void> | undefined
@@ -28,7 +28,7 @@ export function installAnalyticsLoader(read: () => unknown, load: () => Promise<
       try {
         const module = await load()
         if (own !== generation) return
-        controller = module.createAnalyticsController({ ...config, consent: 'granted' })
+        controller = module.createAnalyticsController({ ...config, consent: 'granted' }, { context })
         await controller.start()
       } catch { console.error('[analytics] module: initialization failed') }
     })()

@@ -20,7 +20,12 @@ export function parseAnalyticsConfig(raw: unknown): { config: AnalyticsConfig | 
     if (adapterConfig !== undefined && !object(adapterConfig)) fail('adapterConfig', 'expected object')
     if (enabled === true) {
       if (typeof adapter !== 'string' || !Object.prototype.hasOwnProperty.call(adapters, adapter)) fail('adapter', 'required registered adapter')
-      else if (!object(adapterConfig) || !adapters[adapter].validate(adapterConfig)) fail('adapterConfig', 'invalid public settings')
+      else if (!object(adapterConfig)) fail('adapterConfig', 'invalid public settings')
+      else {
+        const entry = adapters[adapter]
+        if (entry.diagnostics) diagnostics.push(...entry.diagnostics(adapterConfig))
+        else if (!entry.validate(adapterConfig)) fail('adapterConfig', 'invalid public settings')
+      }
     }
     return { config: diagnostics.length ? null : { enabled, consent, adapter, adapterConfig, ...(Object.prototype.hasOwnProperty.call(value, 'rules') ? { rules } : {}) } as AnalyticsConfig, diagnostics }
   } catch { fail('config', 'invalid JSON or unreadable object'); return { config: null, diagnostics } }
