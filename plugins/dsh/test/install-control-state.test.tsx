@@ -82,3 +82,13 @@ test.each(['enabled', 'disabled'] as const)('available upgrade is secondary besi
   expect(html.match(/astron-sh-button-default/g)?.length).toBe(1);
   expect(html).toContain(installationState === 'disabled' ? '>启用</button>' : '>使用已安装版本</button>');
 });
+
+test('other-source same-name installs neither claim the viewed market skill nor choose its scope', () => {
+  const other = { ...record, registry: 'https://other.example', currentSource: false };
+  const html = render([other]);
+  expect(html).toContain('>安装到所有项目</button>');
+  expect(html).not.toContain('已安装 v1.2.0');
+  expect(html).not.toContain('>卸载</button>');
+  expect(html).not.toContain('>使用此技能</button>');
+  expect(preferredInstallationScope(inventory([{ ...other, scope: 'project' }]), detail, ['project', 'user'])).toBe('user');
+});

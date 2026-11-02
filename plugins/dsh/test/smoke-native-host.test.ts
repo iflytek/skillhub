@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Node-only CI entry; keep its helpers importable without starting a Host or downloading dependencies.
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
-import { prepareDownloadCache, scenarioProbes, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
+import { summarizeNpmPreparation, prepareDownloadCache, scenarioProbes, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
 
 const roots: string[] = [];
 async function root() {
@@ -282,4 +282,30 @@ test('trusted temporary base aliases accept lexical and canonical children but n
       if (value === undefined) delete process.env[key]; else process.env[key] = value;
     }
   }
+});
+
+
+test('npm preparation diagnostics retain only bounded known timing and cache observations', () => {
+  const result = summarizeNpmPreparation([
+    'npm timing idealTree:init Completed in 12ms',
+    'npm timing idealTree:buildDeps Completed in 345ms',
+    'npm timing reify:unpack Completed in 500ms',
+    'npm timing secret/token Completed in 8ms',
+    'npm http fetch GET 200 https://private.invalid/token 23ms (cache miss)',
+    'npm http fetch GET 200 https://private.invalid/token 4ms (cache hit)',
+    'npm http fetch GET 200 https://private.invalid/token 5ms (cache revalidated)',
+    'npm timing reify Completed in 99999999999999999ms',
+    'npm http cache diagnostic-fixture@http://private.invalid/package.tgz 0ms (cache hit)',
+  ].join('\n'));
+  expect(result).toEqual({ completedTimingsMs: { 'idealTree:init': 12, 'idealTree:buildDeps': 345, 'reify:unpack': 500 },
+    lastCompletedPhase: 'reify:unpack', cacheObservations: { hit: 2, miss: 1, revalidated: 1 }, truncated: false });
+  expect(JSON.stringify(result)).not.toMatch(/secret|token|private/);
+  expect(summarizeNpmPreparation('x'.repeat(1024 * 1024 + 1)).truncated).toBe(true);
+});
+
+
+test('truncated npm diagnostic tails discard the partial first line', () => {
+  const result = summarizeNpmPreparation('npm timing reify Completed in 1ms\nnpm timing idealTree Completed in 2ms', true);
+  expect(result.completedTimingsMs).toEqual({ idealTree: 2 });
+  expect(result.lastCompletedPhase).toBe('idealTree');
 });

@@ -161,7 +161,7 @@ function ManagementOperation({ result, services }: { result: Extract<ManagementV
 export function groupManagementItems(items: Item[]): Item[][] {
   const groups = new Map<string, Item[]>();
   for (const item of items) {
-    const key = JSON.stringify([item.namespace, item.slug]);
+    const key = JSON.stringify([item.registry, item.namespace, item.slug]);
     const group = groups.get(key);
     if (group) group.push(item); else groups.set(key, [item]);
   }
@@ -174,10 +174,10 @@ export function managementTargetLabel(items: Item[], item: Item): string {
 function InstalledList({ list, revision, services, refreshed = false }: { list: InstalledSkillList; revision: string; services: ManagementViewServices; refreshed?: boolean }) {
   const [limit, setLimit] = useState(6);
   const groups = groupManagementItems(list.items);
-  return <><header className="astron-sh-conversation-heading"><h3>{groups.length} 个技能 · {list.items.length} 处安装</h3><span>当前来源{refreshed ? ' · 已重新查询' : ''}</span></header>
+  return <><header className="astron-sh-conversation-heading"><h3>{groups.length} 个技能 · {list.items.length} 处安装</h3><span>受管安装{refreshed ? ' · 已重新查询' : ''}</span></header>
     {(!list.complete || list.unavailable.length > 0) && <p role="alert">部分位置无法读取，列表可能不完整。{list.unavailable.map(scopeLabel).join('、')}{list.unavailable.length > 0 ? '状态未知。' : ''}</p>}
-    {!list.items.length && <p>{list.complete && !list.unavailable.length ? '当前来源暂无安装记录。' : '暂未读取到安装记录。'}</p>}
-    <div className="astron-sh-management-list" data-single={groups.length === 1}>{groups.slice(0, limit).map(items => <ManagementGroup key={JSON.stringify([items[0]!.namespace, items[0]!.slug])} items={items} revision={revision} services={services} verified={list.complete && !list.unavailable.length} />)}</div>
+    {!list.items.length && <p>{list.complete && !list.unavailable.length ? '暂无受管安装记录。' : '暂未读取到安装记录。'}</p>}
+    <div className="astron-sh-management-list" data-single={groups.length === 1}>{groups.slice(0, limit).map(items => <ManagementGroup key={JSON.stringify([items[0]!.registry, items[0]!.namespace, items[0]!.slug])} items={items} revision={revision} services={services} verified={list.complete && !list.unavailable.length} />)}</div>
     {groups.length > limit && <Button size="sm" variant="ghost" onClick={() => setLimit(value => value + 6)}>查看更多</Button>}
     {(!list.complete || list.unavailable.length > 0) && <RefreshInstalled />}
   </>;
@@ -194,7 +194,7 @@ export async function refreshManagementLocation(services: ManagementViewServices
 function ManagementGroup({ items, revision, services, verified }: { items: Item[]; revision: string; services: ManagementViewServices; verified: boolean }) {
   const identity = items[0]!;
   return <article className="astron-sh-management-group" aria-label={`${identity.namespace}/${identity.slug}`}>
-    <div className="astron-sh-management-name"><strong>{identity.slug}</strong><span>@{identity.namespace}</span></div>
+    <div className="astron-sh-management-name"><strong>{identity.slug}</strong><span>@{identity.namespace}</span>{identity.currentSource === false && <span title={identity.registry}>其他来源</span>}</div>
     <span>{skillInstallationSummary(items)}</span>
     <SkillPrimaryActions items={items} revision={revision} verified={verified} summaryVisible select={services.selectSkillUse} useSkill={services.installation.skillUse} onManage={services.installation.manageInstalled ? () => services.installation.manageInstalled!(revision, identity) : undefined} />
   </article>;
@@ -202,12 +202,12 @@ function ManagementGroup({ items, revision, services, verified }: { items: Item[
 
 /** Read-only position inventory rendered directly in a skill detail, never a management modal. */
 export function InstallationManagement({ identity, revision, services, useSkill, onInstall, onUsed, updateChecks }: {
-  updateChecks?: Record<string, InstalledUpdateCheck>; identity: Pick<Item, 'namespace' | 'slug'>; revision: string; services: ManagementViewServices; onInstall?(): void; onUsed?(): void; useSkill?: import('./use-skill.js').SkillUseServices;
+  updateChecks?: Record<string, InstalledUpdateCheck>; identity: Pick<Item, 'registry' | 'namespace' | 'slug'>; revision: string; services: ManagementViewServices; onInstall?(): void; onUsed?(): void; useSkill?: import('./use-skill.js').SkillUseServices;
 }) {
   const [receipt, setReceipt] = useState<ConversationManagementResult>();
   const [container, setContainer] = useState<HTMLElement | null>(null);
   const scoped = useMemo(() => useSkill ? { ...services, installation: { ...services.installation, skillUse: useSkill } } : services, [services, useSkill]);
-  const query = useQuery({ queryKey: ['skillhub-installed', services.installation.sessionId, revision, 'management-locations', identity.namespace, identity.slug],
+  const query = useQuery({ queryKey: ['skillhub-installed', services.installation.sessionId, revision, 'management-locations', identity.registry, identity.namespace, identity.slug],
     gcTime: 0, retry: false, refetchOnWindowFocus: false, refetchOnReconnect: false, queryFn: async ({ signal }) => {
       services.assertCurrent();
       const list = read(await services.installation.installed(revision, signal));
@@ -217,7 +217,7 @@ export function InstallationManagement({ identity, revision, services, useSkill,
     <ManagementNoticeBoundary container={container} key={`${revision}:${identity.namespace}/${identity.slug}:${services.installation.sessionId}`}><h3>安装管理</h3>
     {query.isPending ? <p role="status">正在读取安装位置…</p> : query.isError ? <p role="alert">安装记录暂不可用。<Button size="sm" variant="ghost" onClick={() => void query.refetch()}>重新读取</Button></p> : <>
       {(!query.data.complete || query.data.unavailable.length > 0) && <p role="alert">部分位置无法读取，以下记录可能不完整。</p>}
-      <ManagementLocations items={query.data.items.filter(item => item.namespace === identity.namespace && item.slug === identity.slug)} revision={revision} services={scoped} updateChecks={updateChecks} onUsed={onUsed} onManagement={setReceipt} />
+      <ManagementLocations items={query.data.items.filter(item => (identity.registry ? item.registry === identity.registry : item.currentSource !== false) && item.namespace === identity.namespace && item.slug === identity.slug)} revision={revision} services={scoped} updateChecks={updateChecks} onUsed={onUsed} onManagement={setReceipt} />
     </>}
     {onInstall && <Button size="sm" variant="outline" onClick={onInstall}>安装其他位置</Button>}
     {receipt && container && <Dialog open onOpenChange={open => { if (!open) setReceipt(undefined); }}><DialogContent container={container}>
@@ -247,7 +247,7 @@ function ManagementRefreshBoundary({ services, previousRevision, children }: { s
     enabled: false, retry: false, queryFn: async ({ signal }) => { services.assertCurrent(); const value = await services.refreshInstalled(signal); services.assertCurrent(); return value; } });
   const state = { pending: query.isFetching, failed: query.isError, refresh: () => { void query.refetch(); } };
   return <RefreshContext.Provider value={state}>{query.data ? <section aria-label="刷新后的安装记录">
-    {previousRevision && previousRevision !== query.data.sourceRevision && <p role="status">技能来源已变化，以下是当前来源的安装记录。</p>}
+    {previousRevision && previousRevision !== query.data.sourceRevision && <p role="status">技能来源已变化，安装记录已重新读取。</p>}
     {query.isError ? <RefreshInstalled /> : <fieldset disabled={query.isFetching} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <InstalledList key={query.dataUpdatedAt} list={query.data.list} revision={query.data.sourceRevision} services={services} refreshed />
     </fieldset>}
@@ -338,7 +338,7 @@ function ManagementRow({ item, revision, services, initialCheck, checkOnly = fal
               <DropdownMenu.Content className="skillhub-controls astron-sh-position-menu" align="end" sideOffset={4} collisionPadding={8}>
                 {item.state === 'present' && item.installationState !== 'disabled' && <DropdownMenu.Item disabled={useAction.disabled} onSelect={useAction.run}>使用此位置</DropdownMenu.Item>}
                 {services.availability && <DropdownMenu.Item disabled={availability.isFetching} onSelect={() => { void availability.refetch(); }}>检查可用性</DropdownMenu.Item>}
-                {item.state === 'present' && <DropdownMenu.Item onSelect={() => { void run('check'); }}>检查更新</DropdownMenu.Item>}
+                {item.currentSource !== false && item.state === 'present' && <DropdownMenu.Item onSelect={() => { void run('check'); }}>检查更新</DropdownMenu.Item>}
                 {item.state === 'present' && item.installationState !== 'disabled' && <DropdownMenu.Item onSelect={() => { void run('disable'); }}>停用</DropdownMenu.Item>}
                 {item.state === 'present' && <DropdownMenu.Item onSelect={() => { void run('uninstall'); }}>卸载</DropdownMenu.Item>}
               </DropdownMenu.Content>
@@ -352,7 +352,7 @@ function ManagementRow({ item, revision, services, initialCheck, checkOnly = fal
       {(!expanded || !notify || (availability.isError && stale(availability.error))) && (availability.isFetching ? <p role="status">正在检查可用性…</p> : availability.isError ? <><p role="alert">{stale(availability.error) ? '安装记录已变化，请重新查询。' : '可用性暂时无法核验。'}</p>{stale(availability.error) && <RefreshInstalled />}</> : availability.data && <AvailabilityResult value={availability.data} />)}
       {!expanded && moreOpen && <div className="astron-sh-management-more-content" aria-label="技能操作">
         {services.availability && <Button size="sm" variant="ghost" disabled={pending || availability.isFetching} onClick={() => { setMoreOpen(false); if (!availability.isFetching) void availability.refetch(); }}>检查可用性</Button>}
-        {!check && item.state === 'present' && <Button size="sm" variant="ghost" disabled={pending} onClick={() => { setMoreOpen(false); void run('check'); }}>检查更新</Button>}
+        {item.currentSource !== false && !check && item.state === 'present' && <Button size="sm" variant="ghost" disabled={pending} onClick={() => { setMoreOpen(false); void run('check'); }}>检查更新</Button>}
         {item.state === 'present' && item.installationState !== 'disabled' && <Button size="sm" variant="ghost" disabled={pending} onClick={() => { setMoreOpen(false); void run('disable'); }}>停用</Button>}
         {item.state === 'present' && <Button size="sm" variant="ghost" disabled={pending} onClick={() => { setMoreOpen(false); void run('uninstall'); }}>卸载</Button>}
       </div>}

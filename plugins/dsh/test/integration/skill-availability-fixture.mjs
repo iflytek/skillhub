@@ -97,6 +97,7 @@ async function run(ctx, root, signal, checkpoint) {
     checkpoint.operation = { deadlineReached: false };
     mark('install');
     const result = await execute('astron_skillhub_install', { namespace, slug: 'document-helper', scope });
+    checkpoint.install = { status: result.value?.status, code: result.value?.code };
     mark('assertion', 'isError');
     assert.equal(result.isError, false);
     mark('assertion', 'accepted');

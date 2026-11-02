@@ -95,6 +95,23 @@ Public API 的可见性规则：
 - 若 `latest_version_id = null`，即使 `visibility=PUBLIC`，skill 也不会对外公开，只有 owner 可访问
 - `hidden=true` 时，普通访客不可访问；仅 owner 或该 namespace 的 `ADMIN` / `OWNER` 可访问
 
+### 技能详情的公共页面地址
+
+`GET /api/v1/skills/{namespace}/{slug}` 的 `data.webUrl` 是可空的 URI 字符串，
+指向该技能的 SkillHub 网页详情，而非作者自定义外站地址，也不是 CLI `resolve` 响应字段。
+它只取自部署配置 `skillhub.public.base-url`（环境变量 `SKILLHUB_PUBLIC_BASE_URL`），
+不根据请求的 Host 或转发头推测地址，不改变技能原有访问权限。
+
+- 有效配置须为带主机的 HTTP(S) 地址，不能包含用户凭据、查询参数或片段。
+- 配置缺省、空白或不符合上述校验时返回 `null`；客户端应隐藏该跳转入口，不拼造链接。
+- 保留公开地址中的子路径，去掉结尾斜杠，再追加 `/space/{namespace}/{slug}`。
+  两个路径段分别按 UTF-8 URL 编码，空格为 `%20`，段内斜杠为 `%2F`。
+- 例如公开地址 `https://skills.example.com/portal/` 和技能 `team/demo`，
+  返回 `https://skills.example.com/portal/space/team/demo`。
+
+实现与边界测试：[SkillWebUrls](../server/skillhub-app/src/main/java/com/iflytek/skillhub/service/SkillWebUrls.java)、
+[SkillWebUrlsTest](../server/skillhub-app/src/test/java/com/iflytek/skillhub/service/SkillWebUrlsTest.java)。
+
 `GET /api/v1/skills/{namespace}/{slug}/versions/{version}` 的 `data` 字段除版本基础信息外，还必须包含：
 
 - `parsedMetadataJson`：`SKILL.md` frontmatter 的完整 JSON 序列化结果

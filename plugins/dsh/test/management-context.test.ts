@@ -16,7 +16,7 @@ function snapshot(text: string) { return JSON.parse(text.slice(text.lastIndexOf(
 
 test('snapshot exposes bounded installation facts, not routing references, paths or integrity claims', () => {
   const text = installationContext(list);
-  expect(snapshot(text)).toEqual({ source: 'currently configured SkillHub registry', complete: true, truncated: false, unavailable: [], totalRecords: 1,
+  expect(snapshot(text)).toEqual({ source: 'trusted SkillHub installations across registries', complete: true, truncated: false, unavailable: [], totalRecords: 1,
     items: [{ namespace: 'team', name: 'writer', version: '1.0.0', scope: 'project', state: 'present', installationState: 'enabled' }] });
   expect(text).not.toContain(item.itemKey); expect(text).not.toContain('/private');
   expect(text).toContain('Presence does not prove content integrity');
@@ -97,7 +97,7 @@ test('compiled service injects and disposes its official context listener with s
   let prompt = ctx.plugin(SystemPrompt); await prompt;
   await new Promise(resolve => setTimeout(resolve, 0));
   try {
-    expect((await ctx.systemPrompt.assemble(context)).contexts[0]?.text).toContain('no registry is currently connected');
+    expect((await ctx.systemPrompt.assemble(context)).contexts[0]?.text).toContain('current installation records could not be read');
     await prompt.dispose();
     prompt = ctx.plugin(SystemPrompt); await prompt;
     await new Promise(resolve => setTimeout(resolve, 0));

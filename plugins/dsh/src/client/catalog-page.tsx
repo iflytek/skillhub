@@ -1,3 +1,5 @@
+import { RegistrySelector, type RegistryConfiguration } from './registry-selector.js';
+import { sameRegistry } from './registry-config.js';
 import { SkillWebsiteLink } from './skill-website-link.js';
 import { UpgradeControl } from './upgrade-control.js';
 import { RemovalControl } from './removal-control.js';
@@ -42,13 +44,13 @@ function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { code: 
   if (result.ok) return result.value;
   throw new Error(catalogErrorMessage(result.error));
 }
-export function CatalogPage({ remote, navigation, client, onReturn, installation, installed, availability }: {
-  remote: Remote; navigation: CatalogNavigation; client: QueryClient; onReturn: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability;
+export function CatalogPage({ remote, navigation, client, onReturn, installation, installed, availability, registryConfiguration }: {
+  remote: Remote; navigation: CatalogNavigation; client: QueryClient; onReturn: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability; registryConfiguration?: RegistryConfiguration;
 }) {
-  return <QueryClientProvider client={client}><Catalog remote={remote} navigation={navigation} onReturn={onReturn} installation={installation} installed={installed} availability={availability} /></QueryClientProvider>;
+  return <QueryClientProvider client={client}><Catalog remote={remote} navigation={navigation} onReturn={onReturn} installation={installation} installed={installed} availability={availability} registryConfiguration={registryConfiguration} /></QueryClientProvider>;
 }
-function Catalog({ remote, navigation, onReturn, installation, installed, availability }: {
-  remote: Remote; navigation: CatalogNavigation; onReturn: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability;
+function Catalog({ remote, navigation, onReturn, installation, installed, availability, registryConfiguration }: {
+  remote: Remote; navigation: CatalogNavigation; onReturn: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability; registryConfiguration?: RegistryConfiguration;
 }) {
   const queryClient = useQueryClient();
   const entries = useSyncExternalStore(availability.subscribe, availability.getSnapshot);
@@ -70,6 +72,15 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   const context = useQuery({ queryKey: ['skillhub-context'], queryFn: async () => unwrap(await remote.getContext()), retry: false });
   const compatibility = useQuery({ queryKey: ['skillhub-compatibility'], queryFn: async () => unwrap(await remote.getCompatibility()), retry: false });
   const revision = context.data?.sourceRevision;
+  const previousRevision = useRef(revision);
+  useLayoutEffect(() => {
+    if (previousRevision.current && revision && previousRevision.current !== revision) {
+      setInstallCandidate(null); setUpgradeCandidate(null); setRemovalCandidate(null);
+      navigation.selected = null; setSelected(null);
+      navigation.installedOrigin = undefined; setInstalledOrigin(undefined);
+    }
+    previousRevision.current = revision;
+  }, [revision, navigation]);
   // Share the installed tab's cache and settled-operation invalidation, without blocking market reads.
   const inventory = useQuery({ queryKey: ['skillhub-installed', installed?.sessionId, revision],
     enabled: !!installed && !!revision && !!context.data?.configured && tab === 'browse', retry: false,
@@ -117,8 +128,8 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
     setSelected(item);
   }
   function manageSkill(item: NonNullable<typeof inventory.data>['items'][number], intent: 'remove' | 'upgrade') {
-    if (intent === 'remove') { if (revision && context.data) setRemovalCandidate({ item, revision, source: context.data.registryUrl }); return; }
-    if (revision && context.data) setUpgradeCandidate({ item, revision, source: context.data.registryUrl });
+    if (intent === 'remove') { if (revision && context.data) setRemovalCandidate({ item, revision, source: item.registry ?? context.data.registryUrl }); return; }
+    if (revision && context.data) setUpgradeCandidate({ item, revision, source: item.registry ?? context.data.registryUrl });
   }
   function error(message: string, retry: () => void) {
     return <div role="alert" className="astron-sh-error"><p>{message}</p><Button onClick={retry}>重试</Button></div>;
@@ -160,7 +171,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
       }} />}
 
     <header className="astron-sh-catalog-header"><div className="astron-sh-location"><Icon name="grid" /><strong>SkillHub</strong><span>/</span><span>{selected ? '技能详情' : '技能广场'}</span></div>
-      <div className="astron-sh-toolbar-actions"><Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
+      <div className="astron-sh-toolbar-actions">{registryConfiguration && <RegistrySelector configuration={registryConfiguration} />}<Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
       {(installation || installed) && <Button variant="ghost" className="astron-sh-icon-button" aria-label="返回会话" title="关闭 SkillHub，返回会话" onClick={() => { if (!selected && tab === 'browse') navigation.scrollTop = scroller.current?.scrollTop ?? 0; onReturn(); }}><Icon name="close" /></Button>}</div>
     </header>
     {sourceOpen && <p className="astron-sh-source-info" role="status">当前来源：{context.data?.registryUrl || '尚未配置来源'}</p>}
@@ -168,8 +179,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
       <p>{compatibility.isError ? '无法读取 DSH 依赖版本核验结果。' : `当前 DSH 依赖组合未通过核验，安装、升级、卸载和恢复写入已禁用。请使用 ${compatibility.data?.candidateDshVersion} 对应的完整发行依赖。`}</p>
       <Button onClick={() => { void compatibility.refetch(); }}>重新核验版本</Button></div>}
     {context.isPending ? <CatalogSkeleton tab={tab} draft={draft} /> : context.isError ? error(context.error.message, () => { void context.refetch(); })
-      : !context.data.configured ? <div className="astron-sh-empty"><h2>连接 SkillHub</h2><p>{entries.configuration ? '在 DSH 的插件页面打开 SkillHub 配置，填写来源地址并保存。' : '尚未配置技能来源，且当前配置入口不可用。请先恢复 DSH 的插件配置功能，再连接 SkillHub。'}</p><Button onClick={() => { void context.refetch(); }}>刷新连接</Button></div>
-        : selected ? <>
+      : selected && context.data.configured ? <>
           <Button variant="ghost" onClick={back}>← 返回技能广场</Button>
           <div className="astron-sh-detail-heading"><SkillAvatar name={sourceMatches ? detail.data?.title || selected.displayName : selected.displayName} slug={selected.slug} namespace={selected.namespace} />
             <div><h2 ref={heading} tabIndex={-1}>{sourceMatches ? detail.data?.title || selected.displayName || selected.slug : selected.displayName || selected.slug}</h2>
@@ -181,7 +191,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
             : detail.isPending ? <DetailSkeleton />
               : detail.isError ? error(detail.error.message, () => { void detail.refetch(); })
                  : <><SkillMetrics item={detail.data} />
-                  {installation && installed && <MarketCardActions label="使用已安装版本" records={inventory.data?.items.filter(item => item.namespace === selected.namespace && item.slug === selected.slug) ?? []}
+                  {installation && installed && <MarketCardActions label="使用已安装版本" records={inventory.data?.items.filter(item => sameRegistry(item.registry, context.data.registryUrl) && item.namespace === selected.namespace && item.slug === selected.slug) ?? []}
                     sourceRevision={revision!} services={installed} verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
                     onInstall={() => setInstallCandidate({ item: selected, revision: revision! })} />}
                   <div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation" aria-label="技能说明">
@@ -190,8 +200,8 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
                     onContextStale={() => { void detail.refetch(); }}
                     onSelectVersion={version => { const next = { ...selected, latestVersion: version }; navigation.selected = next; setSelected(next); }} />
                 </article><aside className="astron-sh-detail-aside">
-                  {installed?.management ? <InstallationManagement identity={selected} revision={revision!} services={installed.management} useSkill={installed.skillUse}
-                    onInstall={inventory.data?.items.some(item => item.namespace === selected.namespace && item.slug === selected.slug) ? () => setInstallCandidate({ item: selected, revision: revision! }) : undefined} />
+                  {installed?.management ? <InstallationManagement identity={{ ...selected, registry: context.data.registryUrl }} revision={revision!} services={installed.management} useSkill={installed.skillUse}
+                    onInstall={inventory.data?.items.some(item => sameRegistry(item.registry, context.data.registryUrl) && item.namespace === selected.namespace && item.slug === selected.slug) ? () => setInstallCandidate({ item: selected, revision: revision! }) : undefined} />
                     : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话。</p><Button onClick={onReturn}>前往会话</Button></div>}
                 </aside></div></>}
         </> : <>
@@ -201,6 +211,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
             : installed ? <InstalledSkills key={`${installed.sessionId}:${revision}`} services={installed} onInstall={item => setInstallCandidate({ item: { namespace: item.namespace, slug: item.slug, latestVersion: item.version, summary: '' }, revision: revision! })} onRemove={item => manageSkill(item, 'remove')} onUpgrade={item => manageSkill(item, 'upgrade')} navigation={installedNavigation!} source={context.data.registryUrl} sourceRevision={revision!} remote={remote} modes={context.data.detailTabs} scrollContainer={scroller} />
               : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话，再查看该用户和项目的安装记录。</p><Button onClick={onReturn}>前往会话</Button></div>
             }</TabsContent><TabsContent value="browse">
+              {!context.data.configured ? <div className="astron-sh-empty"><h2>连接 SkillHub</h2><p>{entries.configuration ? '在 DSH 的插件页面配置来源，或从顶部选择已保存的来源。' : '来源配置暂不可用，已安装技能仍可管理。'}</p><Button onClick={() => { void context.refetch(); }}>刷新连接</Button></div> : <>
               <form className="astron-sh-search-form" onSubmit={event => { event.preventDefault(); search(draft.trim()); }}>
                 <div className="astron-sh-search-field"><Icon name="search" /><Input aria-label="搜索技能" placeholder="搜索技能名称或用途" value={draft} onChange={event => { navigation.draft = event.target.value; setDraft(event.target.value); }} /></div>
                 <Button type="submit">搜索</Button><Button onClick={() => { navigation.draft = ''; setDraft(''); search(''); }}>清空</Button>
@@ -221,9 +232,9 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
                 {items.length === 0 ? <p className="astron-sh-empty">{listing.hasNextPage ? '此批没有可展示的已发布技能，可继续加载。' : '没有找到匹配的技能，请尝试其他关键词。'}</p>
                   : <div className="astron-sh-card-grid">{items.map(item => <SkillCard key={`${item.namespace}/${item.slug}`} item={item} version={item.latestVersion}
                     status={inventory.data && !inventory.isError
-                      && inventory.data.items.some(record => record.namespace === item.namespace && record.slug === item.slug)
-                      ? <span>{skillInstallationSummary(inventory.data.items.filter(record => record.namespace === item.namespace && record.slug === item.slug))}</span> : undefined}
-                    actions={<MarketCardActions records={inventory.data?.items.filter(record => record.namespace === item.namespace && record.slug === item.slug) ?? []}
+                      && inventory.data.items.some(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug)
+                      ? <span>{skillInstallationSummary(inventory.data.items.filter(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug))}</span> : undefined}
+                    actions={<MarketCardActions records={inventory.data?.items.filter(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug) ?? []}
                       services={installed} sourceRevision={revision!}
                       verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
                       onInstall={() => revision && setInstallCandidate({ item, revision })} onManage={() => openSkill(item)} />}
@@ -233,7 +244,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
                 {listing.isFetchNextPageError && <p role="alert">下一批暂时无法读取，已加载的技能保留。请重试。</p>}
                 {listing.hasNextPage && <div className="astron-sh-load-more"><span>已显示 {items.length} 项</span><Button disabled={listing.isFetching} onClick={() => { void listing.fetchNextPage(); }}>{listing.isFetchingNextPage ? '正在加载…' : listing.isFetchNextPageError ? '重新加载下一批' : '加载更多'}</Button></div>}
               </>}
-            </TabsContent></Tabs>
+            </>}</TabsContent></Tabs>
         </>}
   </section>;
 }

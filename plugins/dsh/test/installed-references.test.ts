@@ -26,8 +26,8 @@ async function fixture(run: (fixture: {
     let complete = true; let revision = 'source'; let listReads = 0;
     const service = Object.assign(Object.create(SkillHubService.prototype), {
       lifetime: new AbortController(), installedReferenceKey: randomBytes(32),
-      localRuntime: { listInstalled: async (_registry: string, roots: { scope: string; root: string }[]) => { listReads++; return {
-        items: records.filter(item => roots.some(target => target.scope === item.scope && join(target.root, item.slug) === item.targetPath)),
+      localRuntime: { listAllInstalled: async (roots: { scope: string; root: string }[]) => { listReads++; return {
+        items: records.filter(item => roots.some(target => target.scope === item.scope && join(target.root, item.slug) === item.targetPath)).map(item => ({ ...item, registry: 'https://registry.example' })),
         complete, issues: complete ? [] : ['inventory-unreadable'],
       }; } },
       ctx: { invocation: { request: { args: { agentId: 'session-a' } } }, get: () => ({ get: () => agent }) },

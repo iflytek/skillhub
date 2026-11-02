@@ -182,7 +182,13 @@ export function NativeControlStyles() {
 .skillhub-controls .astron-sh-location>svg{width:16px;height:16px;min-width:16px;flex:0 0 16px;display:block}
 .skillhub-controls .astron-sh-location>strong,.skillhub-controls .astron-sh-location>span{white-space:nowrap;flex-shrink:0}
 .skillhub-controls .astron-sh-location>span:last-child{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis}
-.skillhub-controls .astron-sh-toolbar-actions{flex:0 0 auto;white-space:nowrap}.skillhub-controls .astron-sh-icon-button{flex:0 0 32px}.skillhub-controls .astron-sh-icon-button>svg{width:16px;height:16px;flex:0 0 16px}
+.skillhub-controls .astron-sh-toolbar-actions{flex:0 1 auto;white-space:nowrap;min-width:0;align-items:center}
+.skillhub-controls .astron-sh-registry-selector{position:relative;min-width:0;width:180px;max-width:30vw}
+.skillhub-controls .astron-sh-registry-selector>.astron-sh-select-root{display:block;min-width:0}
+.skillhub-controls .astron-sh-registry-selector .astron-sh-select-trigger{width:100%;min-width:0;min-height:32px;height:32px;font-size:12px}
+.skillhub-controls .astron-sh-registry-selector .astron-sh-select-trigger>span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.skillhub-controls .astron-sh-registry-selector>[role=alert]{position:absolute;right:0;top:100%;z-index:2;white-space:normal;width:240px;padding:8px;background:var(--astron-sh-bg);border:1px solid var(--astron-sh-border);border-radius:8px;font-size:12px}
+.skillhub-controls .astron-sh-icon-button{flex:0 0 32px}.skillhub-controls .astron-sh-icon-button>svg{width:16px;height:16px;flex:0 0 16px}
 .skillhub-controls .astron-sh-directory-tabs{display:inline-flex;align-items:center;width:fit-content;max-width:100%;height:38px;padding:3px;gap:4px;border:1px solid var(--astron-sh-border);border-radius:9px;background:var(--astron-sh-soft);margin-bottom:20px;overflow-x:auto}
 .skillhub-controls .astron-sh-directory-tabs>.astron-sh-tabs-trigger{height:30px;min-height:30px;padding:4px 16px;line-height:20px;font-size:13px;white-space:nowrap;border:0;border-radius:6px;box-shadow:none;transition:none}
 .skillhub-controls .astron-sh-directory-tabs>.astron-sh-tabs-trigger[data-state=active]{background:var(--astron-sh-bg);color:var(--astron-sh-accent);box-shadow:0 1px 3px #00000012}

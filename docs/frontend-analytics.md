@@ -1,6 +1,7 @@
 # Passive frontend analytics contract
 
-For deployment, use the [Chinese configuration guide](frontend-analytics-integration.md).
+<!-- #region analytics-body -->
+For deployment, use the [Chinese configuration guide][analytics-guide].
 Docker/Compose and Helm ship optional analytics with Web. No configuration means no
 controller/adapter chunk, SDK or collection request. The small configuration gate is
 part of bootstrap; the controller and SDK are not. Business components remain passive.
@@ -11,7 +12,7 @@ part of bootstrap; the controller and SDK are not. Business components remain pa
 It describes intent, not its result. IDs match `^[a-z]+(?:\.[a-z]+){2,}$`.
 Lowercase dotted names are independent of language, visible text and layout.
 Published meanings are frozen. A meaning change requires a new ID. Renames/removals
-need release notes and a reviewed [manifest](frontend-analytics-manifest.json) diff.
+need release notes and a reviewed [manifest](https://github.com/iflytek/skillhub/blob/main/docs/frontend-analytics-manifest.json) diff.
 The manifest is an AST source inventory, not a runtime closed enum or a count of
 users, pageviews, successful operations or exhaustive business coverage.
 
@@ -203,3 +204,6 @@ Supported-platform deployment, initialization, verification, upgrade, shutdown a
 custom adapter development are documented in the guide. Custom adapters require
 reviewed code, registry validation, cancellation, final payload cleaning and exact
 proxy routes; business components must remain vendor-neutral and passive.
+<!-- #endregion analytics-body -->
+
+[analytics-guide]: frontend-analytics-integration.md

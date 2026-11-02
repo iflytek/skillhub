@@ -39,6 +39,10 @@ export function ConfigStyles() {
 .skillhub-controls .astron-sh-config-skeleton-title{width:100px;height:18px;margin-bottom:12px}
 .skillhub-controls .astron-sh-config-skeleton-content{display:grid;gap:16px}
 .skillhub-controls .astron-sh-config-skeleton-content>.astron-sh-skeleton{height:36px}
-@media(max-width:480px){.skillhub-controls.astron-sh-config .astron-sh-card-header{padding:16px 16px 12px}.skillhub-controls.astron-sh-config .astron-sh-card-content{padding:0 16px 16px}.skillhub-controls .astron-sh-config-module{gap:12px}.skillhub-controls .astron-sh-config-module>.astron-sh-select-root{width:116px}.skillhub-controls .astron-sh-config-actions>span{width:100%;margin:2px 0 0}}
+.skillhub-controls .astron-sh-saved-registries{margin-top:24px;padding-top:18px;border-top:1px solid var(--astron-sh-border)}
+.skillhub-controls .astron-sh-registry-row{display:grid;grid-template-columns:minmax(100px,1fr) minmax(140px,2fr) auto;align-items:end;gap:8px;margin-top:12px}
+.skillhub-controls .astron-sh-registry-row label{min-width:0;font-size:12px;color:var(--astron-sh-muted)}
+.skillhub-controls .astron-sh-registry-row input{margin-top:4px}
+@media(max-width:480px){.skillhub-controls .astron-sh-registry-row{grid-template-columns:minmax(0,1fr) auto}.skillhub-controls .astron-sh-registry-row label:nth-child(2){grid-column:1;grid-row:2}.skillhub-controls .astron-sh-registry-row button{grid-column:2;grid-row:2}.skillhub-controls.astron-sh-config .astron-sh-card-header{padding:16px 16px 12px}.skillhub-controls.astron-sh-config .astron-sh-card-content{padding:0 16px 16px}.skillhub-controls .astron-sh-config-module{gap:12px}.skillhub-controls .astron-sh-config-module>.astron-sh-select-root{width:116px}.skillhub-controls .astron-sh-config-actions>span{width:100%;margin:2px 0 0}}
 `}</style>;
 }

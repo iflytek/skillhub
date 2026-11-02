@@ -27,9 +27,9 @@ test('metadata belongs to this call and invalid records cannot offer management 
   expect(parseManagementResult({ ...pending, confirmationRef: null }, 'call-1')).toBeUndefined();
   expect(parseManagementResult({ ...pending, status: 'accepted' }, 'call-1')).toBeUndefined();
 });
-test('list is current-source scoped, limited, and keeps distinct actual installation scopes', () => {
+test('list shows managed installations, is limited, and keeps distinct actual installation scopes', () => {
   const html = render({ ...installed, items: Array.from({ length: 8 }, (_, i) => ({ ...item, slug: `notes-${i}`, itemKey: `key-${i}`, scope: i === 0 ? 'project' : 'user' })) });
-  expect(html).toContain('当前来源'); expect(html).not.toContain('当前项目'); expect(html).not.toContain('当前用户');
+  expect(html).toContain('受管安装'); expect(html).not.toContain('当前项目'); expect(html).not.toContain('当前用户');
   expect(html).toContain('notes-5'); expect(html).not.toContain('notes-6'); expect(html).toContain('查看更多');
   expect(html).toContain('管理安装'); expect(html).toContain('使用技能');
   expect(html).not.toContain('aria-label="技能操作"');
@@ -318,7 +318,7 @@ test('detail installation management is inline and survives an empty refreshed i
   const unexpected = async () => { throw new Error('Rendering cannot execute requests'); };
   const services: ManagementViewServices = { selectSkillUse: unexpected, client, refreshInstalled: unexpected, check: unexpected, begin: unexpected, confirm: unexpected, assertCurrent() {},
     installation: { sessionId: 'session', requests, targets: unexpected, installed: unexpected, start: unexpected, operation: unexpected, compatibility: unexpected } };
-  const key = ['skillhub-installed', 'session', 'revision', 'management-locations', item.namespace, item.slug];
+  const key = ['skillhub-installed', 'session', 'revision', 'management-locations', undefined, item.namespace, item.slug];
   const renderPanel = () => renderToStaticMarkup(<QueryClientProvider client={client}><InstallationManagement identity={item} revision="revision" services={services} /></QueryClientProvider>);
   try {
     client.setQueryData(key, { ...installed, items: [{ ...item, installationState: 'disabled' }, { ...item, itemKey: 'project-key', scope: 'project', version: '2', installationState: 'enabled' }] });

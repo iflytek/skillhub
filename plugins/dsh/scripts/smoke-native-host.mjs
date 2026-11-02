@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { closeSync, openSync } from 'node:fs';
-import { access, chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
+import { access, chmod, open, lstat, mkdir, mkdtemp, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -125,7 +125,16 @@ export function safeAvailabilityCheckpoint(value) {
   const checkpoints = ['setup', 'install', 'install-poll', 'reference', 'before-digest', 'execute', 'assertion', 'after-digest', 'mutation'];
   const assertions = ['none', 'isError', 'kind', 'schemaVersion', 'association', 'scope', 'integrity', 'discovery', 'name', 'reason', 'invocation', 'installation', 'namespace', 'slug', 'version', 'fingerprint', 'render', 'privacy', 'unchanged', 'accepted', 'completed', 'reference'];
   if (!scenarios.includes(value.scenario) || !checkpoints.includes(value.checkpoint) || !assertions.includes(value.assertion)) return undefined;
-  return { scenario: value.scenario, checkpoint: value.checkpoint, assertion: value.assertion };
+  const result = { scenario: value.scenario, checkpoint: value.checkpoint, assertion: value.assertion };
+  const statuses = ['accepted', 'not-confirmed', 'awaiting-confirmation', 'cancelled'];
+  // Mirror the public installationFailureCodes contract; never forward error messages or IDs.
+  const codes = ['CONTEXT_STALE', 'REQUEST_CONFLICT', 'SOURCE_NOT_CONFIGURED', 'SOURCE_DENIED',
+    'SKILL_UNAVAILABLE', 'RATE_LIMITED', 'SOURCE_UNAVAILABLE', 'TARGET_UNAVAILABLE', 'UNCONFIRMED'];
+  if (statuses.includes(value.install?.status)) {
+    result.install = { status: value.install.status };
+    if (codes.includes(value.install.code)) result.install.code = value.install.code;
+  }
+  return result;
 }
 
 export function safeToggleCheckpoint(value) {
@@ -204,6 +213,50 @@ export function safeProbeFailure(log, probe) {
     }
   }
   return undefined;
+}
+
+// npm emits completed timers incrementally with --timing, even when killed before
+// its final timing.json. Never expose arbitrary timer names, URLs or log lines.
+const npmPreparationLogLimit = 1024 * 1024;
+export function summarizeNpmPreparation(log, truncated = false) {
+  const phases = new Set(['idealTree', 'idealTree:init', 'idealTree:userRequests', 'idealTree:buildDeps',
+    'idealTree:fixDepFlags', 'reify', 'reify:loadTrees', 'reify:diffTrees', 'reify:retireShallow',
+    'reify:createSparse', 'reify:loadBundles', 'reify:unpack', 'reify:unretire', 'reify:build',
+    'reify:trash', 'reify:save', 'command:install']);
+  const result = { completedTimingsMs: {}, lastCompletedPhase: null,
+    cacheObservations: { hit: 0, miss: 0, revalidated: 0 }, truncated: truncated || log.length > npmPreparationLogLimit };
+  let bounded = log.slice(-npmPreparationLogLimit);
+  if (result.truncated) {
+    const newline = bounded.indexOf('\n');
+    bounded = newline < 0 ? '' : bounded.slice(newline + 1);
+  }
+  for (const line of bounded.split('\n')) {
+    const timer = /^npm timing ([A-Za-z:]+) Completed in ([0-9]+)ms\r?$/.exec(line);
+    if (timer && phases.has(timer[1])) {
+      const elapsed = Number(timer[2]);
+      if (Number.isSafeInteger(elapsed) && elapsed <= 3600000) {
+        result.completedTimingsMs[timer[1]] = elapsed;
+        result.lastCompletedPhase = timer[1];
+      }
+    }
+    const request = /^npm http fetch GET [0-9]{3} \S+ [0-9]+ms \(cache (hit|miss|revalidated)\)\r?$/.exec(line);
+    if (request) result.cacheObservations[request[1]]++;
+    // npm also logs package-cache lookups separately from HTTP fetch responses.
+    if (/^npm http cache \S+ [0-9]+ms \(cache hit\)\r?$/.test(line)) result.cacheObservations.hit++;
+  }
+  return result;
+}
+
+async function readPreparationLog(path) {
+  let file;
+  try {
+    file = await open(path, 'r');
+    const { size } = await file.stat();
+    const buffer = Buffer.alloc(Math.min(size, npmPreparationLogLimit));
+    const { bytesRead } = await file.read(buffer, 0, buffer.length, Math.max(0, size - buffer.length));
+    return { text: buffer.subarray(0, bytesRead).toString('utf8'), truncated: size > buffer.length };
+  } catch { return { text: '', truncated: false }; }
+  finally { await file?.close(); }
 }
 
 // Only npm's public download content is shared; every Host/config/profile stays fresh.
@@ -304,13 +357,15 @@ async function main() {
   try {
     const installStarted = Date.now();
     try {
-      await run('install-host', [npm, 'install', '--prefix', root, '--ignore-scripts', '--no-audit', '--no-fund',
+      // Prefer reuse within the original exact/range/peer constraints to reduce duplicate files.
+      await run('install-host', [npm, 'install', '--prefer-dedupe', '--timing', '--loglevel=http', '--prefix', root, '--ignore-scripts', '--no-audit', '--no-fund',
         '--registry=https://registry.npmjs.org', `@deepseek-ai/dsh@${dshVersion}`, `pnpm@${PNPM_VERSION}`], 600000);
     } finally {
       env.npm_config_cache = join(root, 'npm-cache');
       summary.preparation.elapsedMs = Date.now() - installStarted;
-      const installLog = await readFile(join(root, 'logs/install-host.log'), 'utf8').catch(() => '');
-      summary.preparation.observedCodes = knownHostFailureCodes(installLog);
+      const installLog = await readPreparationLog(join(root, 'logs/install-host.log'));
+      summary.preparation.observedCodes = knownHostFailureCodes(installLog.text);
+      summary.preparation.npm = summarizeNpmPreparation(installLog.text, installLog.truncated);
     }
     const dsh = join(root, 'node_modules/@deepseek-ai/dsh/lib/bin.js');
     await access(dsh);

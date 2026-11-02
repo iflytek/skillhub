@@ -29,6 +29,9 @@ export interface InstalledProjectionItem {
   installationState?: InstallationState
   state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'
 }
+export interface AllInstalledProjection extends InstalledProjection {
+  items: (InstalledProjectionItem & { registry: string })[]
+}
 export interface InstalledProjection {
   items: InstalledProjectionItem[]
   complete: boolean
@@ -82,6 +85,7 @@ export interface NativeRuntime {
   inspectUpgrade(selected: UpgradeSelection, targets: readonly InstalledProjectionTarget[]): Promise<UpgradeBaseline>
   assessUpdate(installed: UpdateIdentity, candidate: UpdateIdentity): UpdateAssessment
   openInstalledSnapshot(registry: string, targets: readonly InstalledProjectionTarget[]): Promise<{ projection: InstalledProjection; read(item: InstalledProjectionItem): Promise<InstalledProjectionItem> }>
+  listAllInstalled(targets: readonly InstalledProjectionTarget[]): Promise<AllInstalledProjection>
   listInstalled(registry: string, targets: readonly InstalledProjectionTarget[]): Promise<InstalledProjection>
   readonly hostInstanceId: string
   listPending(): Promise<NativePendingOperation[]>

@@ -77,7 +77,7 @@ export function SuiteMemberTable({ suite, returnTo, management = false, onEdit }
                   {identity}
                 </Link>
               ) : identity}
-              <span className="font-mono text-xs">v{member.version}</span>
+              <span className="block min-w-0 truncate font-mono text-xs" title={`v${member.version}`}>{`v${member.version}`}</span>
               <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">
                 {member.summary || t(member.entry ? 'suite.entryMemberPurpose' : 'suite.memberPurposeFallback')}
               </p>

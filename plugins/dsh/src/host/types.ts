@@ -30,6 +30,7 @@ export interface HostInstallRequest {
 
 export interface SkillHubConfig {
   registryUrl: string;
+  savedRegistries?: { name: string; url: string }[];
   detailTabs: { versions: TabMode; securityAudit: TabMode; reviews: TabMode };
 }
 
@@ -102,7 +103,7 @@ export type SkillUseSelection = { status: 'ready'; itemKey: string }
     | 'multiple-usable-installations' | 'selection-timeout' };
 
 export interface InstalledSkillList {
-  items: { itemKey: string; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
+  items: { itemKey: string; registry?: string; currentSource?: boolean; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
     /** Optional local frontmatter for display only; never used for selection or authorization. */
     displayName?: string; summary?: string;
     state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'; installationState?: 'enabled' | 'disabled' }[];

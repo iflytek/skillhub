@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { installationFailureCodes } from '../src/host/installation-failure.js';
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
 import { safeProbeFailure } from '../scripts/smoke-native-host.mjs';
 
@@ -79,4 +80,21 @@ test('operation observations and Host codes whitelist every field without reveal
     expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { operation: { phase: '/secret', files: '/secret', discovery: '/secret', recovery: '/secret', deadlineReached: 'secret' }, observedHostCodes: 'EPERM' } }), probe).operation).toBeUndefined();
     expect(safeProbeFailure(JSON.stringify({ ...base, probe: 'runtime-baseline' }), 'runtime-baseline').operation).toBeUndefined();
   }
+});
+
+test('availability admission diagnostics expose only known install status and failure code', () => {
+  const checkpoint = { scenario: 'user-install', checkpoint: 'assertion', assertion: 'accepted',
+    install: { status: 'not-confirmed', code: 'TARGET_UNAVAILABLE', message: '/secret/token' } };
+  const record = { passed: false, probe: 'skill-availability', stage: 'host-assertion',
+    failureCode: 'HOST_ASSERTION_FAILED', diagnostics: { availability: checkpoint } };
+  const safe = safeProbeFailure(JSON.stringify(record), 'skill-availability');
+  expect(safe.availability.install).toEqual({ status: 'not-confirmed', code: 'TARGET_UNAVAILABLE' });
+  expect(JSON.stringify(safe)).not.toContain('secret');
+  for (const code of installationFailureCodes) {
+    checkpoint.install.code = code;
+    expect(safeProbeFailure(JSON.stringify(record), 'skill-availability').availability.install.code).toBe(code);
+  }
+  checkpoint.install.status = '/private/status';
+  checkpoint.install.code = '/private/code';
+  expect(safeProbeFailure(JSON.stringify(record), 'skill-availability').availability.install).toBeUndefined();
 });

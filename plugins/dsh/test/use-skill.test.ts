@@ -426,3 +426,12 @@ test('skill selector ready passes its exact key into handoff and still rechecks 
   f.controller.casePanel()!.finish(); await expect(use).rejects.toThrow('取消');
   expect(f.state()).toBe(f.original); expect(f.counts().inserted).toBe(0); f.controller.dispose();
 });
+
+
+test('exact handoff never substitutes another registry at equal coordinates version and scope', () => {
+  const identity = { registry: 'https://a.example/', namespace: 'demo', slug: 'writer', version: '1.0.0', scope: 'user' as const };
+  const other = { ...identity, registry: 'https://b.example', itemKey: 'b', state: 'present' as const };
+  const inventory: InstalledSkillList = { items: [other], complete: true, issues: [], unavailable: [] };
+  expect(exactInstalledSkill(inventory, identity)).toBeUndefined();
+  expect(exactInstalledSkill({ ...inventory, items: [{ ...other, registry: 'https://a.example', itemKey: 'a' }] }, identity)?.itemKey).toBe('a');
+});

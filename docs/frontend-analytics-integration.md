@@ -1,13 +1,15 @@
 # 前端动作统计接入指南
 
+<!-- #region analytics-body -->
 ## 1. 默认关闭，按需开启
 
 不配置时，不加载采集模块或 SDK，也不发送统计请求。正常业务不等待统计平台。
 现在 Docker、Compose、Helm 用户只需填写配置。不需要改 JS、复制文件或手写 Nginx。
 现在支持 Umami 3.4.1 和 DataFinder（火山引擎增长分析）。其他平台需要开发并发布新的注册 adapter，不是任意远程脚本插件。
+本指南需要你已有统计平台，或按第 3 节用源码目录里的 Compose 组合自建。`runtime.sh` 一键部署统计平台、独立 Compose 项目和 Helm 独立部署统计平台尚未交付，见 #1037 的后续 PR。
 
 点击下载只是下载意图，不是下载或安装成功。提交发布也不是发布成功。
-部署方负责授权策略、平台安全、数据保留和合规。接口和事件边界见[英文契约](frontend-analytics.md)。
+部署方负责授权策略、平台安全、数据保留和合规。接口和事件边界见[英文契约][analytics-reference]。
 
 ## 2. 复用已有 Umami
 
@@ -301,7 +303,7 @@ curl -i http://localhost/_skillhub-analytics/api/websites
 | 有点击但没有统计 | 规则未配置、宿主不支持、超过 Umami 名称 50 字符，或 best-effort 丢失。 |
 | 上传 413 | 检查整条外层代理链，正常 Web 仍是 100M，统计未降低它。 |
 
-升级先比较[manifest](frontend-analytics-manifest.json)，已有 ID 含义冻结，新 ID 不自动加入默认规则。
+升级先比较[manifest](https://github.com/iflytek/skillhub/blob/main/docs/frontend-analytics-manifest.json)，已有 ID 含义冻结，新 ID 不自动加入默认规则。
 消失的配置 ID 不再触发。SDK 固定 Umami 3.4.1；升级需重测真实 payload、stop、并发和
 根/子路径业务。回滚 Web 镜像要同时使用该版本支持的配置；先关闭统计最稳妥。
 
@@ -340,3 +342,6 @@ factory 检查取消信号后才创建 SDK。通用 controller 不认识厂商�
 复用唯一的 `skillhub-intents.mjs`，不复制 helper，也不开放远程 JS URL。
 新增标签时运行 `node web/scripts/analytics-manifest.mjs --write` 并审核语义和原生交互。
 测试命令为 `pnpm -C web test src/features/analytics` 和 `python3 scripts/tests/web-analytics-test.py`。
+<!-- #endregion analytics-body -->
+
+[analytics-reference]: frontend-analytics.md
