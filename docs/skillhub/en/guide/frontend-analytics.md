@@ -1,6 +1,10 @@
 # Frontend analytics: first local setup
 
-This walkthrough adds a local demo entry in front of an existing SkillHub Web and verifies events stored in Umami. Collection is off by default. This is a **manual integration example**; configuration-only activation through Docker/Compose or Helm has not been merged.
+This walkthrough adds a local demo entry in front of an existing SkillHub Web and verifies events stored in Umami. Collection is off by default.
+
+::: warning Current support scope
+This page covers the delivered manual, local demo integration, not a production one-click deployment. **Production one-click configuration has not been delivered.** The new Docker/Compose and Helm configuration flow is still in progress; this page will be updated after it is merged and validated.
+:::
 
 ## 1. Prepare Web and the example files
 

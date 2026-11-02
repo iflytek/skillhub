@@ -3,6 +3,8 @@
 <!-- #region analytics-body -->
 ## 1. 先了解边界
 
+当前是手动、本地演示接入，生产一键配置尚未交付；新方案合并并验证后再更新本指南。
+
 SkillHub 页面只提供被动的 `data-analytics-id` 标签，默认不采集、不加载统计 SDK、不发送事件。可选 helper 把允许的原生交互转换成 `{ id, event }`，再交给部署方选择的 adapter。点击下载只表示下载意图，不表示下载、安装成功；提交发布也不表示发布成功。部署方负责授权、隐私合规、保留期限和平台安全。
 
 本文对应 PR-1（#1010）的手工接入示例，不是产品内置开关。仅通过 Docker／Compose 或 Helm 配置开启、默认关闭和按需加载的能力计划在 PR-2 交付，见 [OpenSpec 变更](https://github.com/iflytek/skillhub/blob/main/openspec/changes/add-configurable-frontend-analytics/proposal.md)。Issue #989 要等 PR-2 完成并验证后才关闭。精确接口、事件边界和隐私约束以[英文契约][analytics-reference]为准。

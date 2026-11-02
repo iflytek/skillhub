@@ -4,7 +4,9 @@
 For step-by-step setup, see the [Chinese integration guide][analytics-guide].
 This document is the English contract reference. Configuration-only deployment is
 planned in [PR-2](https://github.com/iflytek/skillhub/blob/main/openspec/changes/add-configurable-frontend-analytics/proposal.md);
-the current examples remain deployment-owned and opt-in.
+the current examples remain deployment-owned and opt-in. They describe a manual,
+local demo integration; production one-click configuration has not been delivered.
+The guide will be updated after the new flow is merged and validated.
 
 SkillHub exposes semantic HTML attributes for separately maintained, optional
 collectors. It does not collect or send analytics by default. There is no SDK,
