@@ -42,3 +42,11 @@
 - [x] 7.4 Verify unit/build/script gates, Compose rendering and local mock-collector browser integration at root and sub-path; document setup and privacy.
 - [x] 7.5 Run full Helm lint/configuration-contracts with the declared PostgreSQL/Redis subcharts available (helm 3.19.0 container; template checks only, no real cluster).
 - [ ] 7.6 Independent parent review, real-platform acceptance and publication.
+
+## 8. Maintainer one-click follow-up
+- [x] 8.1 Split Umami and SkillHub Compose projects, add shared external network to Web/Umami only, and implement two-step `runtime.sh` lifecycle with persisted 0600 secrets. `clean` retains independent analytics credentials; no volume deletion.
+- [x] 8.2 Add independent Kubernetes Umami/Postgres unit with Secret, PVC, services and port-forward management path; chart remains optional and unchanged.
+- [x] 8.3 Document script-new, script-existing and Helm paths, UUID acquisition, upgrades, shutdown and retention; replace stale PR-1 edge fixtures with current deployment assertions.
+- [x] 8.4 Verify isolated Compose from an empty runtime directory, repeat secrets/data, Web recreation/network, analytics stop/restart, existing-platform enable, disable and business routes. Evidence: `skillhub-1037-oneclick/evidence/compose-smoke.log`.
+- [x] 8.5 Verify real kind: separate stats unit and SkillHub Helm release, Umami DB event increase via Web proxy, analytics-only Helm upgrade rolls Web while server Pod UID remains unchanged. Evidence: `skillhub-1037-oneclick/evidence/kind-smoke.log`.
+- [ ] 8.6 Independent maintainer review and PR acceptance remain external; do not close Issue #989 here.
