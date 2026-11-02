@@ -119,3 +119,8 @@ The Host SHALL restrict individual and bulk update checks and upgrade preparatio
 #### Scenario: Cross-source upgrade attempt
 - **WHEN** an old-source item is submitted for an update check or upgrade against the active source
 - **THEN** the Host rejects the request before resolve and does not replace its installation with a same-name package
+
+#### Scenario: Model checks updates after a source switch
+- **WHEN** a user asks the conversation agent to check installed skills for updates
+- **THEN** the tool contract directs the agent to obtain fresh opaque routing references from the installed list, check only current-source items, and distinguish update eligibility from an available newer version
+- **AND** a stale context is not presented as missing human approval; the agent is directed to refresh once and report an unresolved failure rather than repeatedly retry or invent a confirmation step

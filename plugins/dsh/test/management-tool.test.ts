@@ -104,3 +104,45 @@ test('availability tool enforces exclusive selectors and strips unexpected diagn
   const rendered = JSON.stringify(tool.output.render({ name: 'writer' }, JSON.parse(JSON.stringify(value))));
   expect(rendered).toContain('not-associated'); expect(rendered).not.toContain('secret');
 });
+
+
+test('management schemas expose exact reference provenance and stale errors guide one bounded retry', async () => {
+  const tools = registry(); const requests: unknown[] = [];
+  registerManagementTools(tools, async (_action, input) => {
+    requests.push(input);
+    return { kind: 'skillhub-management', status: 'not-confirmed', action: 'check', reason: 'CONTEXT_STALE' };
+  });
+  for (const action of ['availability', 'check', 'upgrade', 'uninstall', 'enable', 'disable'] as const) {
+    const tool = tools.get(MANAGEMENT_TOOLS[action])!;
+    const schema = JSON.stringify(tool.parameters);
+    expect(schema).toContain('top-level sourceRevision');
+    expect(schema).toContain('NOT a registry URL');
+    expect(schema).toContain('items[].itemKey');
+    expect(schema).toContain('NOT namespace/slug');
+  }
+  const tool = tools.get(MANAGEMENT_TOOLS.check)!;
+  const args = { sourceRevision: 'https://registry.example', itemKey: 'team/writer' };
+  const result = JSON.parse(JSON.stringify(await tool.execute(args, context)));
+  expect(requests).toEqual([args]); // No guessed references or automatic authorization repair.
+  expect(result).toMatchObject({ status: 'not-confirmed', reason: 'CONTEXT_STALE' });
+  const rendered = JSON.stringify(tool.output.render(args, result));
+  expect(rendered).toContain('NOT awaiting human approval');
+  expect(rendered).toContain('retry the requested action at most once');
+  expect(rendered).toContain('do not loop or invent a confirmation step or URL');
+  expect(rendered).toContain('NOT that an update exists');
+  expect(rendered).toContain('READ ONLY and need no human approval');
+  expect(tool.output.presentationMeta!(args, result)).toEqual(result);
+});
+
+
+test('stale operation receipts cannot be repaired with installation references or resubmitted', async () => {
+  const tools = registry();
+  registerManagementTools(tools, async () => ({ kind: 'skillhub-management', status: 'not-confirmed', action: 'operation', reason: 'CONTEXT_STALE' }));
+  const tool = tools.get(MANAGEMENT_TOOLS.operation)!;
+  const args = { operationId: '11111111-1111-4111-8111-111111111111', hostInstanceId: '22222222-2222-4222-8222-222222222222' };
+  const result = JSON.parse(JSON.stringify(await tool.execute(args, context)));
+  const rendered = JSON.stringify(tool.output.render(args, result));
+  expect(rendered).toContain('listing installations cannot recover');
+  expect(rendered).toContain('Do not resubmit the mutation');
+  expect(rendered).not.toContain('retry the requested action');
+});
