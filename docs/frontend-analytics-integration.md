@@ -34,18 +34,20 @@ function stop() { stopObserver(); adapter.stop() }
 
 前提：已有能正常使用的 SkillHub Web；已安装 Docker 和 Compose；能使用示例指定的 Umami 3.4.1、Postgres 16、Nginx 1.30.6 镜像；本机 8300 和 8081 端口空闲。所有 shell 命令从仓库根目录运行。示例会创建独立演示网络和临时数据库，不用于生产持久化。请在隔离环境运行。
 
+启动前先执行 `docker compose ls --all`，确认专用项目名 `skillhub-analytics-demo` 未被其他项目占用。若已占用，选择一个未使用的新名字，并在本文所有命令中一致替换。所有演示命令显式使用 `-p`，防止继承终端已有的 `COMPOSE_PROJECT_NAME` 而误操作其他部署；换一个克隆目录本身不能隔离 Compose 项目。
+
 先检查配置，再启动：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml config
-docker compose -f docs/examples/analytics/compose.yaml up -d
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml config
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d
 ```
 
 默认上游是 `host.docker.internal:80`，对应 release Compose 的 `WEB_PORT` 默认 80。这里是容器访问宿主机的 Web 入口，不是后端端口，也不是 edge 自己的 8081。若 Web 实际发布在其他端口（比如 18080），先在当前终端导出，再启动。后面所有 compose 命令都要在这个终端里执行，否则重建 edge 时会回到默认的 80：
 
 ```sh
 export SKILLHUB_WEB_UPSTREAM=host.docker.internal:18080
-docker compose -f docs/examples/analytics/compose.yaml up -d
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d
 ```
 
 原生 Linux Docker 需要 `host.docker.internal` 映射，示例 edge 已包含 `extra_hosts: ["host.docker.internal:host-gateway"]`。Docker Desktop／OrbStack 已提供这个名字。宿主机 Web 必须监听容器可达的地址；如果防火墙或仅回环监听阻止访问，先调整可达性，或填写容器可以访问的其他 `host:port`。不要填写 `http://` 或 URL 路径。
@@ -62,9 +64,9 @@ docker compose -f docs/examples/analytics/compose.yaml up -d
 然后重建 edge，使单文件挂载更新可靠生效：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml up -d --force-recreate edge
-docker compose -f docs/examples/analytics/compose.yaml exec edge nginx -t
-docker compose -f docs/examples/analytics/compose.yaml exec edge nginx -T
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d --force-recreate edge
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml exec edge nginx -t
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml exec edge nginx -T
 ```
 
 打开 `http://localhost:8081`，不要从原 Web 入口验收注入。
@@ -164,7 +166,7 @@ stop 不能撤回已开始的 fetch。重新获准后才可调用 start()；同�
 7. **关闭态独立验收**：将入口恢复 `enabled: false`，重新创建 edge：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml up -d --no-deps --force-recreate edge
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d --no-deps --force-recreate edge
 ```
 
 保持「Disable cache」勾选（或换一个新的无痕窗口），刷新页面后搜索：不得加载 script.js、产生采集回调或 send，搜索与技能卡片仍正常。完全不注入时也应零采集。这一步不验证启用态的故障隔离。
@@ -174,7 +176,7 @@ docker compose -f docs/examples/analytics/compose.yaml up -d --no-deps --force-r
 保持入口启用和授权有效，仅停止演示 Umami：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml stop umami
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml stop umami
 ```
 
 在已加载 SDK 的页面再次搜索，应观察到采集请求失败，同时搜索结果和技能卡片仍正常。再新开一个禁用缓存的页面：SDK 请求应失败，但业务仍可用，不能出现统计异常导致的未捕获页面错误。记录失败请求和业务结果；不要把关闭态的零请求当成故障隔离通过，也不要把失败请求当作成功入库。
@@ -182,7 +184,7 @@ docker compose -f docs/examples/analytics/compose.yaml stop umami
 9. **恢复或清理**：继续演示时执行：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml start umami
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml start umami
 ```
 
 等待 `http://localhost:8300` 恢复可用后，禁用缓存并刷新 edge 页面，再执行一次新动作，确认请求成功且新事件入库。原页面的 SDK 初始化失败不会保证自动恢复，故障期间丢失的事件也不保证补发。结束演示则按第 7 节关闭采集、恢复入口文件，并仅清理该演示项目；不要删除现有 SkillHub 或共享平台的数据。
@@ -208,7 +210,7 @@ docker compose -f docs/examples/analytics/compose.yaml start umami
 结束本地演示（会删除演示数据库，先确认无需要保留的数据）：
 
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml down -v
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml down -v
 ```
 
 限制必须一起评估：

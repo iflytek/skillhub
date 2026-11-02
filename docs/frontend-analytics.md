@@ -225,9 +225,11 @@ example is not present in the `web/` Docker build context.
 Postgres 16 and an optional edge; SkillHub remains your existing web upstream.
 From the repository root:
 
+Before starting, run `docker compose ls --all` and confirm the dedicated project name `skillhub-analytics-demo` is not used by another project. If occupied, choose an unused name and replace it consistently in every command. Explicit `-p` prevents inheriting an existing terminal `COMPOSE_PROJECT_NAME` and targeting another deployment; cloning into a different directory does not itself isolate the Compose project.
+
 ```sh
-docker compose -f docs/examples/analytics/compose.yaml config
-docker compose -f docs/examples/analytics/compose.yaml up -d
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml config
+docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d
 ```
 
 The default Web upstream is `host.docker.internal:80`, matching the release
@@ -247,7 +249,7 @@ Create a synthetic website in Umami, copy its UUID into
 `enabled` and the consent hook for your local policy. Open SkillHub through
 `http://localhost:8081` and exercise an enabled action; inspect the request to
 `/_skillhub-umami/api/send` and Umami's event view. Tear down the local demo with
-`docker compose -f docs/examples/analytics/compose.yaml down -v` (demo data is removed).
+`docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml down -v` (demo data is removed).
 
 [`umami-adapter.mjs`](https://github.com/iflytek/skillhub/blob/main/docs/examples/analytics/observe/v1/umami-adapter.mjs) is the only
 vendor-specific code. It loads `/script.js` with `data-auto-track="false"`, so
