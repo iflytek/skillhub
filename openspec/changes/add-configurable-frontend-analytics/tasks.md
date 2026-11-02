@@ -40,5 +40,5 @@
 - [x] 7.2 Pass optional vendor-neutral page context from the router; send templates and anonymous browser UUID only, with storage fallback.
 - [x] 7.3 Generate one POST-only list proxy, preserving browser User-Agent and existing proxy isolation; cover validation, payload, deadlines and stop races.
 - [x] 7.4 Verify unit/build/script gates, Compose rendering and local mock-collector browser integration at root and sub-path; document setup and privacy.
-- [ ] 7.5 Run full Helm lint/configuration-contracts with the declared PostgreSQL/Redis subcharts available. Offline checkout lacks them; reduced real Web-template lint/render is not the full chart gate.
+- [x] 7.5 Run full Helm lint/configuration-contracts with the declared PostgreSQL/Redis subcharts available (helm 3.19.0 container; template checks only, no real cluster).
 - [ ] 7.6 Independent parent review, real-platform acceptance and publication.
