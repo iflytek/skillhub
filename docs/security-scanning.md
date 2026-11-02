@@ -81,6 +81,15 @@ Scanner-side optional environment variables:
 - `SKILLHUB_SCANNER_HARD_TIMEOUT_SECONDS` (default `930`)
 - `SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES` (default `110100480`, or 105 MiB)
 
+For `SKILLHUB_SCANNER_MAX_UPLOAD_SIZE_BYTES`, prefer an integer byte value such as
+`110100480` (105 MiB). The scanner also accepts scientific notation when the value
+is an exact finite integer, for example `1.1010048e+08`; this accommodates Helm
+serialization. Fractional values, non-finite values and invalid text are rejected
+at scanner startup rather than silently rounded. Zero and negative integer values
+are clamped to `1` byte, not interpreted as unlimited. Scientific-notation values
+must also fit the platform's supported integer range. This scanner-side limit does
+not override separate proxy or server upload limits.
+
 If the LLM variables are absent, the scanner should still run with non-LLM analyzers.
 The default timeout ordering is server read timeout (900 seconds), scanner hard timeout
 (930 seconds), then pending-message reclaim (960 seconds). A hard timeout exits the scanner process

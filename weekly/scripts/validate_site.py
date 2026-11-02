@@ -50,6 +50,8 @@ class PageParser(HTMLParser):
         self.empty_table_count = 0
         self.ids: set[str] = set()
         self.duplicate_ids: set[str] = set()
+        self.skip_targets: set[str] = set()
+        self.main_ids: set[str] = set()
         self.external_assets: list[str] = []
         self.non_content_depth = 0
 
@@ -70,6 +72,12 @@ class PageParser(HTMLParser):
             if element_id in self.ids:
                 self.duplicate_ids.add(element_id)
             self.ids.add(element_id)
+        if tag == "main" and element_id:
+            self.main_ids.add(element_id)
+        if tag == "a" and "skip-link" in (values.get("class") or "").split():
+            href = values.get("href") or ""
+            if href.startswith("#"):
+                self.skip_targets.add(href[1:])
         if tag == "h1":
             self.h1_count += 1
         if values.get("role") == "tab":
@@ -237,6 +245,9 @@ def validate(root: Path) -> list[str]:
         )
         if empty_panels:
             errors.append(f"{index_path}: panels without modules: {empty_panels}")
+        for target in sorted(parser.skip_targets):
+            if target not in parser.main_ids:
+                errors.append(f"{index_path}: skip link target #{target} must identify main")
         if parser.duplicate_ids:
             errors.append(f"{index_path}: duplicate ids: {sorted(parser.duplicate_ids)}")
         if parser.external_assets:

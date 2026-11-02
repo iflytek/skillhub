@@ -160,13 +160,31 @@ window.skillhubAnalytics.stop()
 
 stop 不能撤回已开始的 fetch。重新获准后才可调用 start()；同一个 root 重复初始化保留第一次规则和回调，修改规则需要先 stop 再初始化。
 
-7. 将入口恢复 `enabled: false`，重新创建 edge。保持「Disable cache」勾选（或换一个新的无痕窗口），刷新页面后再搜索：不得加载 script.js、产生采集回调或 send。完全不注入时也应零采集。最后在隔离演示中停止 Umami，再打开新页面搜索和打开技能卡片，应仍正常，无统计依赖导致的页面错误：
+7. **关闭态独立验收**：将入口恢复 `enabled: false`，重新创建 edge：
+
+```sh
+docker compose -f docs/examples/analytics/compose.yaml up -d --no-deps --force-recreate edge
+```
+
+保持「Disable cache」勾选（或换一个新的无痕窗口），刷新页面后搜索：不得加载 script.js、产生采集回调或 send，搜索与技能卡片仍正常。完全不注入时也应零采集。这一步不验证启用态的故障隔离。
+
+8. **启用态依赖故障验收**：仅在上述隔离演示中，将入口重新设为 `enabled: true`，保留第 2 节创建的有效网站 UUID，并确认当前授权允许采集；按第 7 步重新创建 edge，禁用缓存并刷新。先重复第 3～5 步，确认一次测试动作确实入库，作为故障前对照。不要为了测试停止共享平台或生产服务。
+
+保持入口启用和授权有效，仅停止演示 Umami：
 
 ```sh
 docker compose -f docs/examples/analytics/compose.yaml stop umami
 ```
 
-验收后如需继续演示，使用上面的 up 命令恢复。不要为了测试停止共享平台或生产服务。
+在已加载 SDK 的页面再次搜索，应观察到采集请求失败，同时搜索结果和技能卡片仍正常。再新开一个禁用缓存的页面：SDK 请求应失败，但业务仍可用，不能出现统计异常导致的未捕获页面错误。记录失败请求和业务结果；不要把关闭态的零请求当成故障隔离通过，也不要把失败请求当作成功入库。
+
+9. **恢复或清理**：继续演示时执行：
+
+```sh
+docker compose -f docs/examples/analytics/compose.yaml start umami
+```
+
+等待 `http://localhost:8300` 恢复可用后，禁用缓存并刷新 edge 页面，再执行一次新动作，确认请求成功且新事件入库。原页面的 SDK 初始化失败不会保证自动恢复，故障期间丢失的事件也不保证补发。结束演示则按第 7 节关闭采集、恢复入口文件，并仅清理该演示项目；不要删除现有 SkillHub 或共享平台的数据。
 
 ## 6. 故障排查
 

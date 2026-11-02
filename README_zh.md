@@ -249,10 +249,24 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 | 参数 | 说明 | 示例 |
 |------|------|------|
 | `--public-url <url>` | 公网访问地址（推荐配置） | `--public-url https://skill.example.com` |
-| `--version <tag>` | 指定镜像版本 | `--version v0.2.0` |
+| `--version <tag>` | 指定镜像版本 | `--version v0.2.25` |
+| `--ref <git-ref>` | 指定部署文件的 Git ref（GitHub raw 模式） | `--ref v0.2.25` |
 | `--aliyun` | 使用阿里云镜像（国内推荐） | `--aliyun` |
 | `--home <dir>` | 指定运行时目录 | `--home /opt/skillhub` |
 | `--no-scanner` | 禁用安全扫描服务 | `--no-scanner` |
+
+`--version` 选择镜像标签，不固定部署文件；部署文件默认取自 `main`。
+如需同时固定安装脚本、Compose 清单、环境模板及应用镜像标签，可使用已发布的 ref 和标签：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/v0.2.25/scripts/runtime.sh | sh -s -- up --ref v0.2.25 --version v0.2.25 --home /opt/skillhub --public-url https://skillhub.your-company.com
+```
+
+此例需要能访问 GitHub raw。`--aliyun` 会改用 OSS 根目录下载部署文件，
+此时 `--ref` 不会选择版本子目录；自定义 `SKILLHUB_RAW_BASE` 也优先于按 Git ref 生成的地址，
+不能把这两种情况称为已通过 `--ref` 固定部署文件。
+脚本保留已有 `.env.release`，请另行记录其中配置及显式镜像覆盖值。
+固定应用镜像标签不等于冻结全部依赖镜像，也不能代替数据库备份。
 
 > **重要**：生产环境请务必配置 `--public-url`，确保 CLI 安装命令和 Agent 设置指引显示正确的地址。
 

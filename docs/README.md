@@ -18,6 +18,7 @@ Use the documentation site for user workflows, repository guides for engineering
 
 - [Docker deployment and upgrades](skillhub/en/guide/deployment.md) / [中文](skillhub/guide/deployment.md)
 - [Kubernetes](skillhub/en/guide/kubernetes.md) / [中文](skillhub/guide/kubernetes.md)
+- [Optional frontend analytics](skillhub/en/guide/frontend-analytics.md) / [前端动作统计](skillhub/guide/frontend-analytics.md)
 - [Deployment reference](09-deployment.md), [object storage](object-storage.md), [SMTP and password reset](19-smtp-password-reset-email-setup.md)
 - [Security scanning](security-scanning.md), [observability](observability-developer-guide.md), [private SSO integration](12-private-sso-integration-playbook.md)
 
