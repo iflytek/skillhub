@@ -4,7 +4,7 @@
 
 不配置时，不加载采集模块或 SDK，也不发送统计请求。正常业务不等待统计平台。
 现在 Docker、Compose、Helm 用户只需填写配置。不需要改 JS、复制文件或手写 Nginx。
-第一版支持 Umami 3.4.1。其他平台需要开发并发布新的注册 adapter，不是任意远程脚本插件。
+现在支持 Umami 3.4.1 和 DataFinder（火山引擎增长分析）。其他平台需要开发并发布新的注册 adapter，不是任意远程脚本插件。
 
 点击下载只是下载意图，不是下载或安装成功。提交发布也不是发布成功。
 部署方负责授权策略、平台安全、数据保留和合规。接口和事件边界见[英文契约](frontend-analytics.md)。
@@ -45,6 +45,72 @@ Web 启动时自动生成同源代理，只开放 `/_skillhub-analytics/script.j
 直接运行 Docker 时，把同样两项用 `--env-file` 传给正常的 Web 容器即可。文件使用原始
 `KEY=value` 格式，JSON 外不要加 dotenv 单引号。保留原有 API、公开地址和端口配置。
 不要把 API 上游改成统计平台地址。
+
+## 2.1 接入 DataFinder（火山引擎增长分析）
+
+适合已有公有云或私有部署的平台。先在平台创建应用。
+打开该应用的 Web SDK 接入页，找到数字 `app_id` 和采集域名（channel domain）。
+每个私有部署可能不同。填写采集域名，不是管理后台地址，也不带 `/list`。
+确认 Web 容器到该域名的网络、DNS 和 HTTPS 证书正常。
+
+用下面两项替换第 2 节的 Umami 配置。`123456` 是虚构应用 ID，请换成自己的值。
+
+```dotenv
+SKILLHUB_WEB_ANALYTICS_CONFIG='{"enabled":true,"adapter":"datafinder","consent":"granted","adapterConfig":{"appId":123456,"product":"skillhub"}}'
+SKILLHUB_WEB_ANALYTICS_UPSTREAM=https://collector.example.com
+```
+
+沿用第 2 节的校验和重建 Web 命令。不安装官方 JS SDK，也不加载远程脚本。
+浏览器只通过同源 `/_skillhub-analytics/list` 发 POST，子路径自动加前缀。
+其他采集路径（包括 Umami 的 script.js、api/send）保持 404。
+浏览器配置不包含采集域名。代理保留浏览器 User-Agent。
+
+Helm 使用 values 文件，不用 `--set` 传 JSON。保留原有生产 values，再追加：
+
+```yaml
+web:
+  analytics:
+    config: '{"enabled":true,"adapter":"datafinder","consent":"granted","adapterConfig":{"appId":123456,"product":"skillhub"}}'
+    upstream: https://collector.example.com
+```
+
+然后按第 4 节升级 Web。Chart 不创建 DataFinder 服务。
+`appId` 必须是 1 到 2147483647 的整数。`product` 可省略，默认 `skillhub`。
+product 只接受小写字母开头，后接小写字母、数字或下划线，最长 32 字符。
+除此之外的 adapterConfig 字段全部拒绝。不要填写 App Key（`X-MCS-AppKey`）。
+它用于服务端 HTTP 接入，不属于浏览器采集。
+
+如何核对：
+
+1. 新开页面。在 Network 确认应用先挂载，再加载采集 chunk。不会自动发 pageview。
+2. 搜索或点击配置允许的动作。检查 POST `/list` 的 JSON 数组。每次一个 batch、一个 event。
+   `events[0].event` 是原始动作 ID，例如 `skill.download.request`，点号不替换。
+   `params` 是 JSON 字符串，例如 `{"event":"click"}`，不是对象。
+3. `header.app_id` 是应用 ID。`header.custom.product` 和 `header.custom.module` 在平台显示为公共属性。
+   product 区分同一应用下的产品。module 是动作发生页的路由模板，例如 `/space/$namespace/$slug`。
+   不含真实 namespace、slug、查询或 hash；未匹配页面为 `other`。params 中的 event 是事件属性。
+4. 回复应有 `e:0` 和 `sc:1`。只有 HTTP 200 不代表接收成功。
+   再到该应用的实时事件或事件分析页，按动作名、product 和 module 核对。
+5. 调用 stop 后继续操作，业务应正常且没有新的 `/list`。默认关闭或 denied 的新页面不加载采集 chunk，
+   不生成浏览器统计 ID；denied 只有显式 start 才运行。授权方式和停用步骤与第 5、7 节相同。
+
+排查时不要分享完整配置或事件中的浏览器 ID：
+
+| 现象 | 检查 |
+| --- | --- |
+| `/list` 400 `UserAgent is not allowed` | 平台拒绝非浏览器 UA。用真实浏览器验收；检查额外代理是否清空或替换 User-Agent，不要在前端伪造。 |
+| HTTP 200 但 `sc:0` | 没有事件被接收。空数组也是 sc:0；检查数组、appId、events 和 params 字符串，再核对平台应用。 |
+| `/list` 502 或超时 | 检查采集域名、DNS、网络和证书。不要关闭 TLS 校验。业务不等待采集，没有自动重试。 |
+| 配置被关闭 | 检查 appId、product 和多余字段。日志只提示字段，不回显原值。 |
+| 平台看不到事件 | 确认应用、时间范围、动作规则和授权；检查 e/sc，不只看 HTTP 状态。 |
+
+隐私边界：DataFinder adapter 用 crypto.randomUUID 生成匿名浏览器 ID。
+保存在 localStorage 的 `skillhub.analytics.datafinder.browser-id`，作为 user_unique_id 和 web_id。
+这支持同一浏览器的 UV 统计，不等于无身份数据；由部署方决定是否可接受。
+清除该键会使后续可持久化的采集生成新 ID。存储不可用时，当前页只用内存 ID。
+不绑定 SkillHub 登录账号，不读取账号 ID。页面只发送模板，不发送实际 URL 或参数值。
+仍有 IP、User-Agent 等传输元数据。沿用第 8 节的日志、权限、保留和授权审核要求。
+每次发送最长三秒，无 SDK、批量等待、事件持久化或重试。已发出的请求不能由 stop 撤回。
 
 ## 3. 可选自托管组合
 
@@ -126,10 +192,10 @@ Nginx 的运行时 DNS 不自动补 Pod 的搜索后缀。
 | 字段 | 含义 |
 | --- | --- |
 | enabled | 布尔值，默认 false。总开关，start() 不能绕过它。 |
-| adapter | 静态注册名，目前只有 umami。 |
+| adapter | 静态注册名：umami 或 datafinder。 |
 | consent | denied 或 granted，默认 denied。 |
 | rules | 可选规则对象。省略用默认 12 条；显式提供会替换；空对象不采集。 |
-| adapterConfig | 适配器公开参数对象。Umami 只接受 websiteId UUID。 |
+| adapterConfig | 适配器公开参数。Umami 只接受 websiteId UUID；DataFinder 接受 appId 和可选 product，见第 2.1 节。 |
 
 未知配置字段或不合法的平台参数关闭统计。rules 沿用纯 `resolveRules` 的 active/skipped
 语义：非法容器没有 active，非法条目跳过，其他合法规则继续工作。日志不输出非法 ID
@@ -253,7 +319,8 @@ docker compose --env-file .env.release -f compose.release.yml -f compose.analyti
 
 ## 8. 隐私和自定义开发边界
 
-JSON 只保留静态 ID 和原生 event。helper 不读内容、输入值、URL、Cookie、存储或身份。
+helper 只保留静态 ID 和原生 event，不读内容、输入值、URL、Cookie、存储或身份。
+DataFinder 的匿名浏览器 ID 和页面模板边界见第 2.1 节。以下 SDK 说明仅适用于 Umami。
 SDK 在清洗前仍会读取页面标题、URL、referrer 和自己的 localStorage 开关。
 少字段不等于匿名：IP、User-Agent、Origin 仍到平台；Umami 还有 website、实际 hostname、
 会话 cache 请求头。Nginx 在统计上游前移除 Cookie、Authorization、Referer，并隐藏 Set-Cookie。

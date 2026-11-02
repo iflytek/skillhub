@@ -121,7 +121,9 @@ re-read the env file); old tabs do not update.
 `SKILLHUB_WEB_ANALYTICS_CONFIG` is JSON with enabled (boolean/default false),
 adapter (static registry name), consent (denied/granted/default denied), rules
 (optional finite rule map), adapterConfig (adapter-owned public object). Umami
-accepts only websiteId UUID. Invalid configuration disables only analytics with
+accepts only websiteId UUID. DataFinder accepts only appId (integer 1..2147483647)
+and optional product (`^[a-z][a-z0-9_]{0,31}$`, default skillhub). No App Key or other
+adapter fields are accepted. Invalid configuration disables only analytics with
 field-only diagnostics, never raw values. Rule resolution keeps its skip behavior.
 The startup parser limits JSON to 64 KiB/32 levels and rejects duplicate keys.
 
@@ -133,8 +135,9 @@ No jq, Node runtime, extra package, CSP relaxation or HTML injection is required
 
 The reserved same-origin prefix is `/_skillhub-analytics/`. BASE_PATH is applied in
 the browser; existing Nginx rewrite strips it once. Enabled configurations generate
-exact script.js and api/send routes, with method restrictions; all other paths are
-404, never Umami admin. Consent-denied enabled configurations retain those routes
+exact script.js and api/send routes for Umami, or one POST-only list route for
+DataFinder, with method restrictions; all other paths are
+404, never a platform administration endpoint. Consent-denied enabled configurations retain those routes
 for explicit dynamic start, but do not load/request them automatically.
 Variable proxy_pass uses the existing resolver at request time. HTTPS verifies
 certificates using the system trust bundle and correct SNI. Collector proxying
@@ -143,8 +146,8 @@ uploads, TLS, business caching and permissions are not changed.
 
 ## Privacy and integration modes
 
-Allowlist only static id/event, not text/HTML, input/option values, clipboard,
-URLs/query/fragment, cookies, storage, identities, codes/tokens, private paths,
+Allowlist static id/event and adapter-owned fields described below, not text/HTML, input/option values, clipboard,
+URLs/query/fragment, cookies, account identities, codes/tokens, private paths,
 filenames, review reasons or crop data. Test IDs can contain resource identifiers;
 do not scrape them. The manifest is not a payload.
 
@@ -172,6 +175,28 @@ browser/OS/device/geo/session from transport metadata. With pinned 3.4.1 absent 
 stores empty path/query and fallback hostname localhost; title/referrer/screen/
 language/distinct identity remain absent. Removing JSON fields does not disable
 transport-derived processing. Operators must review consent, logs, access and law.
+
+DataFinder sends the minimal `/list` JSON array directly through same-origin fetch
+with keepalive, credentials omitted and no referrer. No official SDK is shipped,
+proxied or loaded. One intent is one batch, without batching delay or event storage;
+fetch and response parsing share a three-second deadline, no retries. Acceptance
+requires HTTP success, e=0 and sc=1, not HTTP 200 alone. Failures are best-effort drops.
+Events retain their dotted ID; params is the JSON string `{ "event": "click" }`
+(or submit/keydown). header.custom contains only product and module. The optional
+generic context getter is passed from bootstrap through loader/controller/factory;
+it is read at send time. Bootstrap uses the already-loaded app router's matched
+route metadata (routesById[routeId].fullPath), never concrete match paths, params,
+query or hash. Unmatched routes use other. Analytics does not eagerly import the router.
+
+DataFinder's user_unique_id and web_id share an anonymous crypto.randomUUID stored
+under localStorage key `skillhub.analytics.datafinder.browser-id`. Invalid stored
+values are replaced. Unavailable storage falls back to one in-memory ID for the
+page, including stop/start. This enables per-browser UV and is not linked to the
+SkillHub account. Deployers must decide whether this persistent identifier is
+acceptable. Disabled/denied collection does not run this code or access the key.
+Only the identifier persists, never events. Clearing the key rotates a stored ID.
+IP/User-Agent/Origin remain transport metadata; the proxy preserves browser UA.
+No App Key is accepted in browser settings or sent by this adapter.
 
 Supported-platform deployment, initialization, verification, upgrade, shutdown and
 custom adapter development are documented in the guide. Custom adapters require

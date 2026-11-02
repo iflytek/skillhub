@@ -61,6 +61,22 @@ bootstrap 仅静态包含小型 gate 和注册参数校验；controller/helper �
 
 旧示例目录仅保留指南指针。helper/adapter 与全部断言迁入产品测试树；历史 edge/Compose 只保留为测试 fixture，不是部署路径，不维护第二份采集实现。
 
+### PR-3: second registered adapter
+
+| adapter | adapterConfig | collection endpoint | implementation |
+| --- | --- | --- | --- |
+| umami | websiteId UUID | script.js / api/send | pinned manual SDK, unchanged |
+| datafinder | appId: integer 1..2147483647; optional product: lowercase name, default skillhub | POST list only | direct keepalive fetch; no official SDK |
+
+DataFinder 是配置化接入，不加载官方 SDK。事件名保留动作 ID，params 是仅含原生 event 的 JSON 字符串。
+header.custom 只含 product 和 module。module 由 bootstrap 提供通用 currentPageType getter，经 loader/controller/factory 透传，
+发送时读取匹配路由的 fullPath 模板，不用具体 URL、params、query 或 hash；未匹配为 other。采集 chunk 不提前导入 router。
+匿名 UUID 用于 user_unique_id/web_id，localStorage 键为 skillhub.analytics.datafinder.browser-id；存储不可用则当页内存回退。
+不绑定登录账号。部署方需审核浏览器 UV 标识的隐私影响，denied 时不运行。App Key 和其他额外字段拒绝。
+每次一条事件、无批量等待、事件持久化或重试；发送与响应解析共用三秒上限。接收成功需 e=0、sc=1，不只 HTTP 200。
+代理仅开放 POST /_skillhub-analytics/list，沿用 TLS 验证和敏感头清除，保留浏览器 User-Agent。
+通用配置/控制器不认识上述厂商字段，其他 adapter 可忽略通用页面上下文。
+
 ## Risks and verification
 
 重点验证默认零 SDK/采集请求、错误配置降级、页面启动不等统计 SDK、DNS失败不阻断Web、stop/init竞争、适配器字段清洗、根/子路径、100M原业务上传、登录/下载及配置回滚。固定 SDK 升级须验证真实发送顺序；不能将静态配置或模拟API测试描述为真实业务E2E。正式测试矩阵在实现和独立Review收敛后生成。
