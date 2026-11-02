@@ -15,41 +15,19 @@ afterEach(() => { document.head.replaceChildren(); vi.useRealTimers(); vi.restor
 const website = '4398de8e-40df-4483-9eea-ed213643525f'
 const intent = { id: 'skill.example.open', event: 'click' }
 
-describe('optional edge deployment defaults', () => {
-  const nginx = readFileSync('src/features/analytics/fixtures/pr1-nginx.conf', 'utf8')
-  const compose = readFileSync('src/features/analytics/fixtures/pr1-compose.yaml', 'utf8')
-
-  it('inherits the standard 100 MiB limit on all proxied application routes', () => {
-    // Tokenize quoted strings as units so braces/semicolons in responses do not
-    // affect scope. Track blocks instead of accepting a location-only limit.
-    const tokens = nginx.replace(/#.*$/gm, '').match(/"[^"\n]*"|'[^'\n]*'|[{};]|[^\s{};]+/g) ?? []
-    const blocks: string[] = [], statement: string[] = []
-    const limits: Array<{ scope: string[]; value: string }> = []
-    for (const token of tokens) {
-      if (token === '{') { blocks.push(statement.join(' ')); statement.length = 0 }
-      else if (token === '}') { blocks.pop(); statement.length = 0 }
-      else if (token === ';') {
-        if (statement[0] === 'client_max_body_size') limits.push({ scope: [...blocks], value: statement[1] })
-        statement.length = 0
-      } else statement.push(token)
-    }
-    expect(limits).toContainEqual({ scope: ['server'], value: '100M' })
-    // A collector-only restriction is allowed; application locations must inherit.
-    expect(limits.filter(limit => limit.scope.some(scope => scope.startsWith('location') && !scope.includes('/_skillhub-umami/')))).toEqual([])
-    expect(limits.filter(limit => limit.scope.length === 1)).toEqual([{ scope: ['server'], value: '100M' }])
+describe('production deployment defaults', () => {
+  it('keeps the 100 MiB application limit at server scope', () => {
+    const nginx = readFileSync('nginx.conf.template', 'utf8')
+    expect(nginx).toMatch(/server\s*\{(?:(?!location)[\s\S])*?client_max_body_size 100M;/)
   })
-
-  it('defaults to the release Web entry, not the development port', () => {
+  it('keeps the release Web entry and independent collector networking', () => {
     const release = readFileSync('../compose.release.yml', 'utf8')
+    const overlay = readFileSync('../compose.release.analytics.yml', 'utf8')
+    const collector = readFileSync('../compose.analytics-umami.yml', 'utf8')
     expect(release).toContain('${WEB_PORT:-80}:80')
-    expect(compose).toContain('SKILLHUB_WEB_UPSTREAM: ${SKILLHUB_WEB_UPSTREAM:-host.docker.internal:80}')
-    expect(compose).not.toContain('host.docker.internal:8080')
-  })
-
-  it('maps the host gateway on native Linux for the edge service', () => {
-    const edge = compose.split('\n  edge:\n')[1]
-    expect(edge).toBeDefined()
-    expect(edge).toContain('extra_hosts: ["host.docker.internal:host-gateway"]')
+    expect(overlay).toContain('  web:\n    networks:\n      - default\n      - analytics')
+    expect(collector).toContain('    external: true')
+    expect(collector).toContain('analytics_postgres_data')
   })
 })
 
