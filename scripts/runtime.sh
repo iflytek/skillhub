@@ -24,6 +24,10 @@ REDIS_IMAGE_VALUE="${REDIS_IMAGE:-}"
 DISABLE_SCANNER=false
 USE_ALIYUN=false
 EXPLICIT_REF=false
+WEBSITE_ID=""
+ANALYTICS_UPSTREAM=""
+ANALYTICS_ADAPTER="umami"
+ANALYTICS_APP_ID=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -91,9 +95,38 @@ while [ "$#" -gt 0 ]; do
       SKILLHUB_PUBLIC_BASE_URL_VALUE="$2"
       shift 2
       ;;
+    --website-id)
+      [ "$#" -ge 2 ] || { echo "Missing value for --website-id" >&2; exit 1; }
+      WEBSITE_ID="$2"
+      shift 2
+      ;;
+    --upstream)
+      [ "$#" -ge 2 ] || { echo "Missing value for --upstream" >&2; exit 1; }
+      ANALYTICS_UPSTREAM="$2"
+      shift 2
+      ;;
+    --adapter)
+      [ "$#" -ge 2 ] || { echo "Missing value for --adapter" >&2; exit 1; }
+      ANALYTICS_ADAPTER="$2"
+      shift 2
+      ;;
+    --app-id)
+      [ "$#" -ge 2 ] || { echo "Missing value for --app-id" >&2; exit 1; }
+      ANALYTICS_APP_ID="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<EOF
-Usage: sh runtime.sh [up|down|clean|ps|logs|pull] [options]
+Usage: sh runtime.sh [up|down|clean|ps|logs|pull|analytics-up|analytics-enable|analytics-disable|analytics-down|analytics-ps|analytics-logs|analytics-pull] [options]
+
+Analytics:
+  analytics-up          Install independent Umami and PostgreSQL; then create a website
+  analytics-enable      Enable Web collection with --website-id UUID [--upstream origin]
+  analytics-disable     Stop Web collection without stopping either platform
+  analytics-down        Stop Umami and its database without deleting volumes
+  analytics-ps/logs/pull  Operate only the independent analytics project
+  --adapter <name>      umami (default) or datafinder (with --app-id)
+  --app-id <integer>    Existing DataFinder application ID
 
 Options:
   --version <tag>       Use a specific image tag, for example v0.1.0
@@ -128,6 +161,10 @@ else
   echo "Using GitHub raw for runtime files: $SKILLHUB_RAW_BASE"
 fi
 COMPOSE_FILE="$SKILLHUB_HOME/compose.release.yml"
+OVERLAY_FILE="$SKILLHUB_HOME/compose.release.analytics.yml"
+ANALYTICS_HOME="$SKILLHUB_HOME/analytics"
+ANALYTICS_COMPOSE_FILE="$ANALYTICS_HOME/compose.analytics-umami.yml"
+ANALYTICS_ENV_FILE="$ANALYTICS_HOME/.env"
 ENV_EXAMPLE_FILE="$SKILLHUB_HOME/.env.release.example"
 ENV_FILE="$SKILLHUB_HOME/.env.release"
 
@@ -306,6 +343,10 @@ SQL
 prepare_runtime_files() {
   mkdir -p "$SKILLHUB_HOME"
   download_file "$SKILLHUB_RAW_BASE/compose.release.yml" "$COMPOSE_FILE"
+  # GitHub and OSS both publish this root-level overlay; fetch only when used.
+  if [ "$COMMAND" = "analytics-enable" ] || [ -f "$OVERLAY_FILE" ]; then
+    download_file "$SKILLHUB_RAW_BASE/compose.release.analytics.yml" "$OVERLAY_FILE"
+  fi
   download_file "$SKILLHUB_RAW_BASE/.env.release.example" "$ENV_EXAMPLE_FILE"
 
   if [ ! -f "$ENV_FILE" ]; then
@@ -372,8 +413,81 @@ prepare_runtime_files() {
 
 run_compose() {
   compose_cmd="$(find_compose)"
+  if [ "$(get_env_value SKILLHUB_ANALYTICS_NETWORK_ENABLED false)" = "true" ]; then
+    ensure_analytics_network
+    # Preserve the normal default network and attach only Web to analytics.
+    set -- -f "$OVERLAY_FILE" "$@"
+  fi
   # shellcheck disable=SC2086
   $compose_cmd --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+}
+
+analytics_project() {
+  get_env_value SKILLHUB_ANALYTICS_PROJECT skillhub-analytics
+}
+
+analytics_network() {
+  get_env_value SKILLHUB_ANALYTICS_NETWORK skillhub-analytics
+}
+
+ensure_analytics_network() {
+  network_name="$(analytics_network)"
+  if ! docker network inspect "$network_name" >/dev/null 2>&1; then
+    docker network create "$network_name" >/dev/null
+  fi
+}
+
+run_analytics_compose() {
+  compose_cmd="$(find_compose)"
+  # Explicit -p also protects against an inherited COMPOSE_PROJECT_NAME.
+  # shellcheck disable=SC2086
+  $compose_cmd -p "$(analytics_project)" --env-file "$ANALYTICS_ENV_FILE" -f "$ANALYTICS_COMPOSE_FILE" "$@"
+}
+
+prepare_analytics_files() {
+  mkdir -p "$ANALYTICS_HOME"
+  if [ "$USE_ALIYUN" = "true" ]; then
+    analytics_source="$SKILLHUB_RAW_BASE/compose.analytics-umami.yml"
+  else
+    analytics_source="$SKILLHUB_RAW_BASE/compose.analytics-umami.yml"
+  fi
+  download_file "$analytics_source" "$ANALYTICS_COMPOSE_FILE"
+  if [ ! -f "$ANALYTICS_ENV_FILE" ]; then
+    old_umask="$(umask)"
+    umask 077
+    {
+      printf 'UMAMI_DB_PASSWORD=%s\n' "$(generate_secret)"
+      printf 'UMAMI_APP_SECRET=%s\n' "$(generate_secret)"
+      printf 'UMAMI_ADMIN_PORT=8300\n'
+      printf 'SKILLHUB_ANALYTICS_NETWORK=%s\n' "$(analytics_network)"
+    } >"$ANALYTICS_ENV_FILE"
+    umask "$old_umask"
+  fi
+  chmod 600 "$ANALYTICS_ENV_FILE"
+}
+
+validate_analytics_input() {
+  case "$ANALYTICS_UPSTREAM" in
+    http://*|https://*) ;;
+    *) echo "--upstream must be an HTTP(S) origin" >&2; exit 1 ;;
+  esac
+  case "${ANALYTICS_UPSTREAM#*://}" in
+    ""|*[!A-Za-z0-9._:-]*|*..*) echo "--upstream must not contain paths, credentials or whitespace" >&2; exit 1 ;;
+  esac
+  case "$ANALYTICS_ADAPTER" in
+    umami)
+      if ! printf '%s' "$WEBSITE_ID" | grep -Eiq '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'; then
+        echo "--website-id must be a UUID" >&2; exit 1
+      fi
+      ;;
+    datafinder)
+      case "$ANALYTICS_APP_ID" in
+        ""|0|*[!0-9]*) echo "--app-id must be a positive integer" >&2; exit 1 ;;
+      esac
+      [ "$ANALYTICS_APP_ID" -le 2147483647 ] || { echo "--app-id is out of range" >&2; exit 1; }
+      ;;
+    *) echo "Unsupported analytics adapter" >&2; exit 1 ;;
+  esac
 }
 
 shell_quote() {
@@ -497,6 +611,55 @@ EOF
     ;;
   pull)
     run_compose pull
+    ;;
+  analytics-up)
+    ensure_analytics_network
+    prepare_analytics_files
+    run_analytics_compose up -d
+    admin_port="$(grep '^UMAMI_ADMIN_PORT=' "$ANALYTICS_ENV_FILE" | cut -d= -f2-)"
+    printf 'Umami management: http://127.0.0.1:%s\nChange the default admin/umami password, create a website, copy its UUID, then run analytics-enable --website-id <UUID>.\nAnalytics files: %s\n' "$admin_port" "$ANALYTICS_HOME"
+    ;;
+  analytics-enable)
+    if [ -z "$ANALYTICS_UPSTREAM" ]; then
+      ANALYTICS_UPSTREAM=http://umami:3000
+      local_analytics=true
+    else
+      local_analytics=false
+    fi
+    validate_analytics_input
+    if [ "$ANALYTICS_ADAPTER" = "umami" ]; then
+      analytics_config="{\"enabled\":true,\"adapter\":\"umami\",\"consent\":\"granted\",\"adapterConfig\":{\"websiteId\":\"$WEBSITE_ID\"}}"
+    else
+      analytics_config="{\"enabled\":true,\"adapter\":\"datafinder\",\"consent\":\"granted\",\"adapterConfig\":{\"appId\":$ANALYTICS_APP_ID}}"
+    fi
+    if [ "$local_analytics" = "true" ]; then
+      [ -f "$ANALYTICS_ENV_FILE" ] || { echo "Run analytics-up first or provide --upstream for an existing platform" >&2; exit 1; }
+      ensure_analytics_network
+      set_env_value SKILLHUB_ANALYTICS_NETWORK_ENABLED true
+    else
+      set_env_value SKILLHUB_ANALYTICS_NETWORK_ENABLED false
+    fi
+    set_env_value SKILLHUB_WEB_ANALYTICS_CONFIG "'$analytics_config'"
+    set_env_value SKILLHUB_WEB_ANALYTICS_UPSTREAM "$ANALYTICS_UPSTREAM"
+    run_compose up -d --no-deps --force-recreate web
+    echo "Web analytics enabled; refresh open browser tabs and verify events in the platform."
+    ;;
+  analytics-disable)
+    set_env_value SKILLHUB_WEB_ANALYTICS_CONFIG ""
+    set_env_value SKILLHUB_WEB_ANALYTICS_UPSTREAM ""
+    set_env_value SKILLHUB_ANALYTICS_NETWORK_ENABLED false
+    run_compose up -d --no-deps --force-recreate web
+    echo "Web analytics disabled; platform and data remain unchanged."
+    ;;
+  analytics-down|analytics-ps|analytics-logs|analytics-pull)
+    [ -f "$ANALYTICS_ENV_FILE" ] || { echo "No local analytics deployment; run analytics-up first" >&2; exit 1; }
+    prepare_analytics_files
+    case "$COMMAND" in
+      analytics-down) run_analytics_compose stop ;;
+      analytics-ps) run_analytics_compose ps ;;
+      analytics-logs) run_analytics_compose logs -f ;;
+      analytics-pull) run_analytics_compose pull ;;
+    esac
     ;;
   *)
     echo "Unsupported command: $COMMAND" >&2
