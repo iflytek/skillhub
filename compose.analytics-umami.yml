@@ -1,5 +1,5 @@
-# Optional persistent collector. Add to compose.release.yml explicitly.
-# The platform admin stays loopback-only; there is no additional Nginx.
+# Independent Compose project. Only Umami joins the shared external network.
+name: ${SKILLHUB_ANALYTICS_PROJECT:-skillhub-analytics}
 services:
   analytics-postgres:
     image: postgres:16-alpine
@@ -28,5 +28,12 @@ services:
     depends_on:
       analytics-postgres:
         condition: service_healthy
+    networks:
+      - default
+      - analytics
 volumes:
   analytics_postgres_data:
+networks:
+  analytics:
+    external: true
+    name: ${SKILLHUB_ANALYTICS_NETWORK:-skillhub-analytics}
