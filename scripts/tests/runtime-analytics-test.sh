@@ -15,7 +15,10 @@ run() { sh "$ROOT/scripts/runtime.sh" "$@" >"$TMP/output"; }
 fail() { echo "FAIL: $*" >&2; exit 1; }
 run analytics-up
 [ -f "$TMP/home/analytics/compose.analytics-umami.yml" ] || fail 'missing platform file'
-[ "$(stat -f %Lp "$TMP/home/analytics/.env")" = 600 ] || fail 'secret permissions'
+file_mode() {
+  if stat -c %a "$1" >/dev/null 2>&1; then stat -c %a "$1"; else stat -f %Lp "$1"; fi
+}
+[ "$(file_mode "$TMP/home/analytics/.env")" = 600 ] || fail 'secret permissions'
 secret_before=$(shasum -a 256 "$TMP/home/analytics/.env" | cut -d' ' -f1)
 run analytics-up
 [ "$(shasum -a 256 "$TMP/home/analytics/.env" | cut -d' ' -f1)" = "$secret_before" ] || fail 'secrets overwritten'
