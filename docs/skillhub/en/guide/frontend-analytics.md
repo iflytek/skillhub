@@ -3,7 +3,7 @@
 This walkthrough adds a local demo entry in front of an existing SkillHub Web and verifies events stored in Umami. Collection is off by default.
 
 ::: warning Current support scope
-Docker/Compose and Helm can now enable analytics through configuration only, for Umami and DataFinder (Volcengine growth analytics); see the [detailed guide](./frontend-analytics-guide.md) (Chinese). **One-click script deployment of an analytics platform has not been delivered**; bring your own platform. The rest of this page is the older manual local demo pinned to `v0.2.25`, kept for background.
+The one-click script can install independent Umami from an empty directory or connect an existing platform; Helm can deploy analytics as a separate unit. Follow the [detailed guide](./frontend-analytics-guide.md) (Chinese). The remainder is the older manual local demo pinned to `v0.2.25`, kept for background.
 :::
 
 ## 1. Prepare Web and the example files

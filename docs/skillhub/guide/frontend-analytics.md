@@ -3,7 +3,7 @@
 本文带你在已有 SkillHub 前增加一个本地演示入口，连接 Umami 并确认事件入库。SkillHub 默认不采集。
 
 ::: warning 当前支持范围
-Docker／Compose 和 Helm 已可只填配置开启统计，支持 Umami 和 DataFinder（火山引擎增长分析），步骤见[详细指南](./frontend-analytics-guide.md)。**一键脚本部署统计平台尚未交付**，需自行准备统计平台。本页下文是固定 `v0.2.25` 的旧版手动本地演示，仅供了解原理。
+一键脚本可从空目录安装独立 Umami，也可接入已有平台；Helm 可独立部署统计服务。操作见[详细指南](./frontend-analytics-guide.md)。本页下文是固定 `v0.2.25` 的旧版手动本地演示，仅供了解原理。
 :::
 
 ## 1. 准备已有 Web 和示例文件

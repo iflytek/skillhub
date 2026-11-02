@@ -6,7 +6,7 @@
 不配置时，不加载采集模块或 SDK，也不发送统计请求。正常业务不等待统计平台。
 现在 Docker、Compose、Helm 用户只需填写配置。不需要改 JS、复制文件或手写 Nginx。
 现在支持 Umami 3.4.1 和 DataFinder（火山引擎增长分析）。其他平台需要开发并发布新的注册 adapter，不是任意远程脚本插件。
-本指南需要你已有统计平台，或按第 3 节用源码目录里的 Compose 组合自建。`runtime.sh` 一键部署统计平台、独立 Compose 项目和 Helm 独立部署统计平台尚未交付，见 #1037 的后续 PR。
+一键脚本可新建独立 Umami，或接入已有平台；Helm 下 Umami 是独立部署单元。下方给出三条路径。
 
 点击下载只是下载意图，不是下载或安装成功。提交发布也不是发布成功。
 部署方负责授权策略、平台安全、数据保留和合规。接口和事件边界见[英文契约][analytics-reference]。
@@ -115,54 +115,89 @@ product 只接受小写字母开头，后接小写字母、数字或下划线，
 仍有 IP、User-Agent 等传输元数据。沿用第 8 节的日志、权限、保留和授权审核要求。
 每次发送最长三秒，无 SDK、批量等待、事件持久化或重试。已发出的请求不能由 stop 撤回。
 
-## 3. 可选自托管组合
+## 3. 一键脚本：新建独立 Umami
 
-需要 Docker Compose、可用的镜像网络及持久磁盘。这个组合增加 Umami 和它自己的
-Postgres，不增加 Nginx，也不修改 SkillHub 数据库。正式使用前配置备份和访问控制。
-
-在 `.env.release` 追加独立随机凭证。先在本地生成，再把输出填入文件，不要提交文件。
-
-```sh
-openssl rand -hex 24
-openssl rand -hex 32
-```
-
-```dotenv
-UMAMI_DB_PASSWORD=<第一条命令生成的值>
-UMAMI_APP_SECRET=<第二条命令生成的值>
-UMAMI_ADMIN_PORT=8300
-```
-
-数据库口令使用字母和数字最简单。包含特殊字符时，另填 `UMAMI_DATABASE_URL`，对 URL
-密码部分做百分号编码；Postgres 的 `UMAMI_DB_PASSWORD` 仍保留原值。
-先只启动平台，此时统计配置可以留空：
+无需克隆仓库。从发布分支下载脚本执行；`--ref` 固定脚本和配套文件的同一版本。
+`runtime.sh` 从 GitHub raw 获取 `compose.release.yml`、`.env.release.example`，在启用时获取
+`compose.release.analytics.yml`，在部署统计平台时获取 `compose.analytics-umami.yml`。
+这些文件保存在 `--home` 指定目录。使用 `--aliyun` 时镜像 OSS 根目录须同时发布两个新增 Compose 文件；
+旧镜像仅可运行不含统计的 `up`。生产环境先锁定版本、备份数据，核对管理端访问控制。
 
 ```sh
-docker compose --env-file .env.release -f compose.release.yml -f compose.analytics-umami.yml config --quiet
-docker compose --env-file .env.release -f compose.release.yml -f compose.analytics-umami.yml up -d analytics-postgres umami
+curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh -o runtime.sh
+sh runtime.sh up --home "$HOME/skillhub-runtime"
+sh runtime.sh analytics-up --home "$HOME/skillhub-runtime"
 ```
 
-管理端口只绑定宿主机回环地址。远程机器需使用自己的 SSH 转发或受控管理入口。
-本机打开 `http://localhost:8300`。Umami 初始登录是 `admin` / `umami`，立即修改密码。
-修改密码会使旧会话失效。用新密码重新登录，再创建网站，复制 UUID。
-此步骤不能省略，启动容器不会自动创建网站。
-将第 2 节 JSON 的 websiteId 换成该 UUID，再填写：
+第二步首次创建 `analytics/.env`（权限 600、随机 DB 密码和 APP_SECRET）、外部共享网络，
+启动独立 Compose 项目 `skillhub-analytics`：Postgres 使用独立数据卷，Umami 管理端默认只绑定
+`127.0.0.1:8300`。重复执行不重置密钥或数据。远程机器通过 SSH 端口转发管理。
+如需改端口，编辑 `analytics/.env` 中的 `UMAMI_ADMIN_PORT`，再运行 `analytics-up` 使端口生效。
+若同机部署多个实例，先在 `.env.release` 中为每个实例指定唯一的
+`SKILLHUB_ANALYTICS_PROJECT`、`SKILLHUB_ANALYTICS_NETWORK`；已有平台不需要此网络。
 
-```dotenv
-SKILLHUB_WEB_ANALYTICS_UPSTREAM=http://umami:3000
-```
-
-这里是 Compose 内部服务名。然后重建正常 Web：
+打开 `http://127.0.0.1:8300`，用初始账号 `admin` / `umami` 登录，**立即修改密码**。
+重新登录，在网站管理中新建网站并复制网站 **UUID**。这一步由管理员完成，脚本不会代建网站。
+密码或 API token 不得填入 Web 配置。拿到 UUID 后运行：
 
 ```sh
-docker compose --env-file .env.release -f compose.release.yml -f compose.analytics-umami.yml up -d --no-deps --force-recreate web
+sh runtime.sh analytics-enable --home "$HOME/skillhub-runtime" --website-id <网站UUID>
 ```
 
-同一 Compose 网络提供 DNS。Web 在独立容器或主机时需填写真正可达的内部 origin。
-不使用旧示例的 edge 或宿主机 Web 代理。统计平台初始化、改密、备份仍是运维步骤，
-不能把首次部署称为无需准备的一条命令。
+脚本把公开 JSON 和内部 origin `http://umami:3000` 写入 `.env.release`，只重建 Web。
+Web 和 Umami 通过外部网络互通；SkillHub server/数据库只留在 SkillHub 默认网络。
+以后 `runtime.sh up` 自动带 Web 网络 overlay，容器重建仍可连通。
+两个项目各自执行 `up`/`analytics-up`、`down`/`analytics-down`、`pull`/`analytics-pull`。
+`analytics-down` 仅 stop，数据卷和密钥保留；重新运行 `analytics-up` 即恢复。
+`down` 不停 Umami，`clean` 只删除 SkillHub 运行目录，不删 Compose 数据卷；清理前备份 `analytics/.env`。
+不要用 `down -v`，除非已备份且明确要删除数据。
 
-## 4. Helm
+## 3.1 一键脚本：接入已有统计平台
+
+已有 Umami 时，不运行 `analytics-up`。登录已有平台创建网站，取得 UUID，并确认 Web 容器
+可达平台 HTTP(S) origin、DNS 和 CA 信任。然后：
+
+```sh
+sh runtime.sh analytics-enable --home "$HOME/skillhub-runtime" \
+  --website-id <网站UUID> --upstream https://stats.example.com
+```
+
+使用已有 DataFinder 时，把平台应用的数字 app_id 和采集域名（非管理域名）填入：
+
+```sh
+sh runtime.sh analytics-enable --home "$HOME/skillhub-runtime" \
+  --adapter datafinder --app-id 123456 --upstream https://collector.example.com
+```
+
+两种已有平台均不创建本地统计服务或共享网络。关闭采集运行
+`sh runtime.sh analytics-disable --home "$HOME/skillhub-runtime"`，仅重建 Web，平台仍运行。
+现有手工 Compose 部署也可按第 2 节直接填写 `.env.release` 并重建 Web。
+
+## 4. Helm：独立统计部署单元
+
+SkillHub Chart 不依赖 Umami。自建平台可先部署独立的 `deploy/k8s/analytics-umami/umami.yaml`。
+示例以 `stats` namespace、默认 StorageClass 的 PVC 为基础。先创建独立 namespace 和 Secret：
+
+```sh
+kubectl create namespace stats
+# 在权限受限的目录中生成 db-password、app-secret、database-url 三个文件；
+# database-url 内容为 postgresql://umami:<db-password>@umami-postgres.stats.svc.cluster.local:5432/umami
+kubectl -n stats create secret generic umami-credentials \
+  --from-file=db-password=./db-password \
+  --from-file=app-secret=./app-secret \
+  --from-file=database-url=./database-url
+kubectl apply -f deploy/k8s/analytics-umami/umami.yaml
+kubectl -n stats rollout status deployment/umami-postgres
+kubectl -n stats rollout status deployment/umami
+kubectl -n stats port-forward svc/umami 8300:3000
+```
+
+使用 32 字节以上的独立随机密钥；数据库 URL 的口令若含特殊字符需 URL 编码。
+Secret 文件不入库，不把密钥直接放在命令行或 Helm values。管理入口仅 port-forward，
+使用 `http://127.0.0.1:8300` 改默认口令、创建网站、取得 UUID。
+PVC 独立于 SkillHub Release；更新 Umami 镜像或密钥须单独滚动统计 Deployment，
+Postgres 大版本升级先备份数据库并按其升级流程迁移。删除 Deployment 不删除 PVC；
+删除 namespace/PVC 会删除数据，须先做可恢复备份。
 
 保留已有生产 values 和 Secret。在 values 中增加以下内容：
 
@@ -170,7 +205,7 @@ docker compose --env-file .env.release -f compose.release.yml -f compose.analyti
 web:
   analytics:
     config: '{"enabled":true,"adapter":"umami","consent":"granted","adapterConfig":{"websiteId":"4398de8e-40df-4483-9eea-ed213643525f"}}'
-    upstream: https://stats.example.com
+    upstream: http://umami.stats.svc.cluster.local:3000
 ```
 
 ```sh
@@ -314,10 +349,11 @@ curl -i http://localhost/_skillhub-analytics/api/websites
 自托管只停止统计服务，不要对整个业务栈执行 down：
 
 ```sh
-docker compose --env-file .env.release -f compose.release.yml -f compose.analytics-umami.yml stop umami analytics-postgres
+sh runtime.sh analytics-down --home "$HOME/skillhub-runtime"
 ```
 
-数据库卷保留。删除统计数据需另行备份、确认后只处理 `analytics_postgres_data` 对应的卷，
+Helm 自建平台可单独缩容 `kubectl -n stats scale deployment/umami --replicas=0`，
+恢复后扩容；SkillHub Release 保持运行。数据库卷保留。删除统计数据需另行备份、确认后只处理 `analytics_postgres_data` 对应的卷，
 不要使用整个项目的 `down -v`。
 
 ## 8. 隐私和自定义开发边界
