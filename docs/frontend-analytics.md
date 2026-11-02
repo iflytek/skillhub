@@ -188,7 +188,8 @@ it is read at send time. Bootstrap uses the already-loaded app router's matched
 route metadata (routesById[routeId].fullPath), never concrete match paths, params,
 query or hash. Unmatched routes use other. Analytics does not eagerly import the router.
 
-DataFinder's user_unique_id and web_id share an anonymous crypto.randomUUID stored
+DataFinder's user_unique_id and web_id share an anonymous random UUID v4 (crypto.randomUUID,
+or crypto.getRandomValues where randomUUID is unavailable, e.g. plain-HTTP origins) stored
 under localStorage key `skillhub.analytics.datafinder.browser-id`. Invalid stored
 values are replaced. Unavailable storage falls back to one in-memory ID for the
 page, including stop/start. This enables per-browser UV and is not linked to the

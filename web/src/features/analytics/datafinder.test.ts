@@ -77,6 +77,19 @@ it.each(['getItem', 'setItem'] as const)('uses one in-memory page UUID when stor
   const b = createDatafinderAdapter({ appId: 1 }, '/_skillhub-analytics'); await b.send(intent); b.stop()
   expect(JSON.parse(fetch.mock.calls[0][1]!.body as string)[0].user).toEqual(JSON.parse(fetch.mock.calls[1][1]!.body as string)[0].user)
 })
+it.each([true, false])('falls back to a getRandomValues v4 UUID without randomUUID (plain HTTP); storage %s', async storageWorks => {
+  const fetch = vi.fn<typeof globalThis.fetch>().mockImplementation(async () => new Response(JSON.stringify({ e: 0, message: 'success', sc: 1, tc: 1 })))
+  vi.stubGlobal('fetch', fetch)
+  const real = globalThis.crypto
+  vi.stubGlobal('crypto', { getRandomValues: <T extends ArrayBufferView<ArrayBuffer>>(array: T) => real.getRandomValues(array) })
+  if (!storageWorks) vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw Error('PRIVATE') })
+  const a = createDatafinderAdapter({ appId: 1 }, '/_skillhub-analytics'); await a.send(intent); a.stop()
+  expect(fetch).toHaveBeenCalledTimes(1)
+  const { user } = JSON.parse(fetch.mock.calls[0][1]!.body as string)[0]
+  expect(user.user_unique_id).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  expect(user.web_id).toBe(user.user_unique_id)
+  if (storageWorks) expect(localStorage.getItem(BROWSER_ID_KEY)).toBe(user.user_unique_id)
+})
 it('replaces non-UUID stored values instead of forwarding arbitrary storage data', async () => {
   localStorage.setItem(BROWSER_ID_KEY, 'PRIVATE')
   const fetch = transport(), a = createDatafinderAdapter({ appId: 1 }, '/_skillhub-analytics')

@@ -104,7 +104,8 @@ product 只接受小写字母开头，后接小写字母、数字或下划线，
 | 配置被关闭 | 检查 appId、product 和多余字段。日志只提示字段，不回显原值。 |
 | 平台看不到事件 | 确认应用、时间范围、动作规则和授权；检查 e/sc，不只看 HTTP 状态。 |
 
-隐私边界：DataFinder adapter 用 crypto.randomUUID 生成匿名浏览器 ID。
+隐私边界：DataFinder adapter 生成随机的匿名浏览器 ID（UUID v4）。
+优先用 crypto.randomUUID；纯 HTTP 内网部署没有它，改用 crypto.getRandomValues 生成同样格式的 ID。
 保存在 localStorage 的 `skillhub.analytics.datafinder.browser-id`，作为 user_unique_id 和 web_id。
 这支持同一浏览器的 UV 统计，不等于无身份数据；由部署方决定是否可接受。
 清除该键会使后续可持久化的采集生成新 ID。存储不可用时，当前页只用内存 ID。
