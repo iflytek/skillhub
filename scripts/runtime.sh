@@ -482,7 +482,7 @@ validate_analytics_input() {
       ;;
     datafinder)
       case "$ANALYTICS_APP_ID" in
-        ""|0|*[!0-9]*) echo "--app-id must be a positive integer" >&2; exit 1 ;;
+        ""|0*|*[!0-9]*) echo "--app-id must be a positive decimal integer" >&2; exit 1 ;;
       esac
       [ "$ANALYTICS_APP_ID" -le 2147483647 ] || { echo "--app-id is out of range" >&2; exit 1; }
       ;;
@@ -601,7 +601,13 @@ EOF
     ;;
   clean)
     run_compose down
-    rm -rf "$SKILLHUB_HOME"
+    if [ -d "$ANALYTICS_HOME" ]; then
+      # Keep independent platform credentials and files; never strand its database.
+      rm -f "$COMPOSE_FILE" "$OVERLAY_FILE" "$ENV_EXAMPLE_FILE" "$ENV_FILE"
+      echo "SkillHub files removed; independent analytics files retained in $ANALYTICS_HOME"
+    else
+      rm -rf "$SKILLHUB_HOME"
+    fi
     ;;
   ps)
     run_compose ps
@@ -620,6 +626,10 @@ EOF
     printf 'Umami management: http://127.0.0.1:%s\nChange the default admin/umami password, create a website, copy its UUID, then run analytics-enable --website-id <UUID>.\nAnalytics files: %s\n' "$admin_port" "$ANALYTICS_HOME"
     ;;
   analytics-enable)
+    if [ -z "$ANALYTICS_UPSTREAM" ] && [ "$ANALYTICS_ADAPTER" != "umami" ]; then
+      echo "--upstream is required for an existing platform" >&2
+      exit 1
+    fi
     if [ -z "$ANALYTICS_UPSTREAM" ]; then
       ANALYTICS_UPSTREAM=http://umami:3000
       local_analytics=true

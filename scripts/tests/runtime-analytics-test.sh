@@ -34,4 +34,7 @@ grep -q '^SKILLHUB_ANALYTICS_NETWORK_ENABLED=false$' "$TMP/home/.env.release" ||
 run analytics-down
 grep -q -- 'compose.analytics-umami.yml stop' "$DOCKER_LOG" || fail 'analytics down removed volumes'
 ! grep -q -- 'compose.analytics-umami.yml down' "$DOCKER_LOG" || fail 'analytics down removed project'
+DOCKER_LOG="$TMP/docker.log" SKILLHUB_HOME="$TMP/home" SKILLHUB_RAW_BASE="file://$ROOT" PATH="$TMP/bin:$PATH" sh "$ROOT/scripts/runtime.sh" clean >"$TMP/output"
+[ -f "$TMP/home/analytics/.env" ] || fail 'clean deleted independent analytics credentials'
+[ ! -f "$TMP/home/.env.release" ] || fail 'clean left SkillHub credentials'
 echo 'runtime-analytics-test passed'
