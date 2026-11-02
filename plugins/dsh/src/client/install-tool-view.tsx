@@ -90,7 +90,7 @@ function InstallationResult({ result, services, receipt, openInstalled }: {
     'receipt', result.hostInstanceId, result.operationId, result.sourceLabel, receipt.sessionGeneration], retry: false,
     enabled: canInspectCurrent && !!context.data && !context.isFetching && !context.isError,
     queryFn: ({ signal }) => readReceiptInventory(receipt, result, context.data!, signal) });
-  const entries = current.data?.items.filter(item => item.namespace === result.namespace && item.slug === result.slug) ?? [];
+  const entries = current.data?.items.filter(item => item.registry?.replace(/\/+$/, '') === result.sourceLabel.replace(/\/+$/, '') && item.namespace === result.namespace && item.slug === result.slug) ?? [];
   const inventoryIssue = canInspectCurrent ? receiptInventoryIssue(result, context.isError ? undefined : current.data, context.isError || current.isError) : null;
   const inventoryPending = canInspectCurrent && (!context.isError && (context.isPending || context.isFetching || current.isPending || current.isFetching));
   const presentation = receiptPresentation(operation, query.isError || !!mismatch, inventoryPending, inventoryIssue);
@@ -101,7 +101,7 @@ function InstallationResult({ result, services, receipt, openInstalled }: {
     <div className="astron-sh-install-actions">{canInspectCurrent && operation?.phase === 'completed' && !context.isError && context.data && entries.some(item => item.state === 'present' && item.installationState !== 'disabled' && item.version === result.version && (item.scope === 'user' ? '当前用户' : '当前项目') === operation.targetLabel) && <UseSkillButton services={services.skillUse} revision={context.data.sourceRevision} resolve={async signal => {
       const inventory = await readReceiptInventory(receipt, result, context.data!, signal);
       const scope = operation.targetLabel === '当前用户' ? 'user' : operation.targetLabel === '当前项目' ? 'project' : undefined;
-      return scope ? exactInstalledSkill(inventory, { ...result, scope })?.itemKey ?? '' : '';
+      return scope ? exactInstalledSkill(inventory, { ...result, registry: result.sourceLabel, scope })?.itemKey ?? '' : '';
     }} />}<Button variant="outline" disabled={query.isFetching || inventoryPending} onClick={() => {
       // Settled operation reads invalidate the enabled current-inventory query in the shared hook.
       void query.refetch();

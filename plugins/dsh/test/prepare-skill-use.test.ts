@@ -76,7 +76,7 @@ async function fixture(run: (f: {
     } } };
     const runtime = { getStatus: () => ({ state: 'ready', pendingOperations }),
       readSkillExamples,
-      listInstalled: async () => { if (replaceDuringInventory) currentSkills = { ...skills }; return { items, complete: true, issues: [] }; },
+      listAllInstalled: async () => { if (replaceDuringInventory) currentSkills = { ...skills }; return { items: items.map(item => ({ ...item, registry: 'https://registry.example' })), complete: true, issues: [] }; },
       inspectRemoval: async (): Promise<RemovalBaseline> => {
         if (invalidMetadata) return { status: 'blocked', reason: 'metadata-invalid' };
         if (shared) return { status: 'blocked', reason: 'shared-target' };

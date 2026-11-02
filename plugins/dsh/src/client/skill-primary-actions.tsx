@@ -34,7 +34,11 @@ export function SkillPrimaryActions({ items, revision, verified, select, useSkil
   const potentiallyUsable = verified && items.some(item => item.state === 'present' && item.installationState !== 'disabled');
   return <div className="astron-sh-primary-actions">
     {potentiallyUsable && identity && select ? <UseSkillButton key={JSON.stringify([revision, identity.namespace, identity.slug])} services={useSkill} revision={revision} label={label} onUsed={onUsed} onHandoff={onUsed}
-      resolve={signal => selectSkillItem(select, revision, identity.namespace, identity.slug, signal)} /> : (!summaryVisible || !verified || !select) && <span className="astron-sh-use-reason">{verified ? skillInstallationSummary(items) === '已停用' ? '技能已停用' : '当前安装待核验' : '安装状态待核验'}</span>}
+      resolve={async signal => {
+        const key = await selectSkillItem(select, revision, identity.namespace, identity.slug, signal);
+        if (!items.some(item => item.itemKey === key)) throw new Error('当前会话使用的是另一来源的同名技能，请查看安装管理。');
+        return key;
+      }} /> : (!summaryVisible || !verified || !select) && <span className="astron-sh-use-reason">{verified ? skillInstallationSummary(items) === '已停用' ? '技能已停用' : '当前安装待核验' : '安装状态待核验'}</span>}
     {onManage && <Button size="sm" variant={potentiallyUsable && select ? 'outline' : 'default'} onClick={onManage}>管理安装</Button>}
   </div>;
 }

@@ -273,9 +273,9 @@ export function SkillUseFocus({ controller, sessionId }: { controller: SkillUseC
   return null;
 }
 
-export function exactInstalledSkill(inventory: InstalledSkillList, identity: Pick<Item, 'namespace' | 'slug' | 'version' | 'scope'>): Item | undefined {
+export function exactInstalledSkill(inventory: InstalledSkillList, identity: Pick<Item, 'registry' | 'namespace' | 'slug' | 'version' | 'scope'>): Item | undefined {
   if (!inventory.complete || inventory.unavailable.includes(identity.scope)) return;
-  const matches = inventory.items.filter(item => item.namespace === identity.namespace && item.slug === identity.slug && item.version === identity.version && item.scope === identity.scope);
+  const matches = inventory.items.filter(item => item.registry?.replace(/\/+$/, '') === identity.registry?.replace(/\/+$/, '') && item.namespace === identity.namespace && item.slug === identity.slug && item.version === identity.version && item.scope === identity.scope);
   return matches.length === 1 && matches[0]?.state === 'present' && matches[0].installationState !== 'disabled' ? matches[0] : undefined;
 }
 

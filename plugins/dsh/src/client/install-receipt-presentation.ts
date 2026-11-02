@@ -3,13 +3,13 @@ import type { InstalledSkillList, NativeOperation } from '../host/types.js';
 import type { InstallResult } from './install-result.js';
 
 /** A historical receipt only matches inventory in its original scope and exact version. */
-export function receiptInventoryIssue(result: Pick<InstallResult, 'namespace' | 'slug' | 'version' | 'targetLabel'>,
+export function receiptInventoryIssue(result: Pick<InstallResult, 'sourceLabel' | 'namespace' | 'slug' | 'version' | 'targetLabel'>,
   inventory: InstalledSkillList | undefined, failed: boolean): string | null {
   if (failed) return '当前安装状态无法核验，请重新核验状态。';
   if (!inventory) return null;
   const scope = result.targetLabel === '当前用户' ? 'user' : result.targetLabel === '当前项目' ? 'project' : undefined;
   if (!scope || !isInventoryScopeVerified(inventory, scope)) return '当前库存读取不完整或原安装范围无法确认。';
-  const current = inventory.items.find(item => item.namespace === result.namespace && item.slug === result.slug && item.scope === scope);
+  const current = inventory.items.find(item => item.registry?.replace(/\/+$/, '') === result.sourceLabel.replace(/\/+$/, '') && item.namespace === result.namespace && item.slug === result.slug && item.scope === scope);
   if (!current) return '原安装范围内已无此技能的安装记录。';
   if (current.state !== 'present') return '原安装范围的本地文件状态异常，请核验当前记录。';
   if (current.version !== result.version) return `原安装范围当前为 v${current.version}，已不是此次安装的版本。`;

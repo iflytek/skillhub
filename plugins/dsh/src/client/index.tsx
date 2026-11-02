@@ -1,3 +1,4 @@
+import { RegistryConfiguration } from './registry-selector.js';
 import { installedContext } from './installed-context.js';
 import { ManagementToolView, type ManagementViewServices } from './management-tool-view.js';
 import { SkillDraftRetentions } from './use-skill-drafts.js';
@@ -57,6 +58,19 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
   });
   const panel = ctx.inject(['remote.skillhub', 'slots', 'sessions', 'uiSession'], (ctx) => {
     const client = new QueryClient();
+    const registryConfiguration = new RegistryConfiguration();
+    ctx.inject(['configForms'], ctx => {
+      const form = ctx.configForms.get<SkillHubConfig>('astron-skillhub');
+      ctx.effect(() => registryConfiguration.bind(form));
+      let previous = form.getSnapshot().value?.registryUrl;
+      ctx.effect(() => form.subscribe(() => {
+        const current = form.getSnapshot().value?.registryUrl;
+        if (current === previous) return;
+        previous = current;
+        void client.cancelQueries({ predicate: query => String(query.queryKey[0]).startsWith('skillhub-') }).then(() =>
+          client.invalidateQueries({ predicate: query => String(query.queryKey[0]).startsWith('skillhub-') }));
+      }));
+    });
     ctx.slots.inject('tool.call.toolview', () => availability.enable('conversation'));
     const navigation = createCatalogNavigation();
     const requests = new InstallationRequests(() => window.sessionStorage);
@@ -69,7 +83,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       capture: (sessionId, actions) => captureSkillUse(ctx, sessionId, actions),
       revision: async () => {
         const response = await ctx.remote.skillhub.getContext();
-        if (!response.ok || !response.value.configured) throw new Error('来源不可用，请检查插件设置。');
+        if (!response.ok) throw new Error('来源不可用，请检查插件设置。');
         return response.value.sourceRevision;
       },
       prepare: async (sessionId, revision, itemKey, signal) => {
@@ -152,7 +166,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       const services: ManagementViewServices = { selectSkillUse: (revision, namespace, slug, signal) => call(remote => remote.skillhub.selectSkillUse(revision, namespace, slug, signal)), client, installation: installationFor(sessionId), assertCurrent: receipt.assertCurrent,
         refreshInstalled: signal => call(async remote => {
           const source = await ctx.remote.skillhub.getContext();
-          if (!source.ok || !source.value.configured) throw new Error('当前技能来源不可用。');
+          if (!source.ok) throw new Error('无法读取技能上下文。');
           receipt.assertCurrent();
           const installed = await remote.skillhub.listInstalled(source.value.sourceRevision, signal);
           if (!installed.ok) throw new Error('无法读取当前安装记录。');
@@ -303,7 +317,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
             return withSessionRemote(scope, remote => remote.skillhub.checkUpdate(revision, itemKey, signal));
           } } satisfies InstalledServices : undefined }),
       }, ({ installation, installed, inputActions, sessionId }) => <SkillUseBinding controller={useSkills} sessionId={sessionId} actions={inputActions}><CatalogPage remote={ctx.remote.skillhub} navigation={navigation} client={client}
-        installation={installation} installed={installed} availability={availability} onReturn={() => ctx.layout.selectPanel(null)} /></SkillUseBinding>));
+        installation={installation} installed={installed} availability={availability} registryConfiguration={registryConfiguration} onReturn={() => ctx.layout.selectPanel(null)} /></SkillUseBinding>));
       ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({ name: 'sidebar.panellist', id: panelId, label: '技能中心', order: 10 }, () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.6" /><rect x="3" y="14" width="7" height="7" rx="1.6" /><rect x="14" y="14" width="7" height="7" rx="1.6" /><path d="M17.5 2.5v8M13.5 6.5h8" /></svg>));
     });
   });
