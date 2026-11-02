@@ -46,14 +46,20 @@ Suite review writes are enabled by default in the single-server release Compose 
 - Without a public base URL, the compatibility fallback is `/device`, resolved by the CLI against the registry origin. Set the actual public Web URL for production, sub-path, or separate Web/API deployments.
 - An explicit valid HTTP(S) URL or root-relative path overrides the default. Invalid values prevent startup without echoing the configured value. `/cli/auth` is the legacy loopback callback, not the device-code entry page.
 
-After changing this setting in `.env.release`, recreate the backend in the existing deployment directory, preserving its Compose project name and overrides:
+Edit `.env.release` in the existing deployment directory before recreating the backend:
+
+- Source checkout: run `make validate-release-config` from the repository root containing `Makefile` and `scripts/validate-release-config.sh`, and resolve errors before recreation.
+- One-click script installation: use the `Runtime dir` printed by the script (the instance's `--home` directory). The script downloads the Compose file and environment template, not the Make validation tooling; do not run `make` in that directory.
+
+The following command applies to a standard stack without a custom project name or override files:
 
 ```bash
-make validate-release-config
 docker compose --env-file .env.release -f compose.release.yml up -d --no-deps --force-recreate server
 ```
 
-This updates an already running stack; use the full `up -d` for an initial deployment. A plain `restart` does not reload container environment variables. If other shared settings changed, recreate their affected services too. Retry device authorization and check the returned public URL without sharing codes or tokens. See the [operations reference](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for the full configuration contract.
+If the original deployment uses `-p`, `COMPOSE_PROJECT_NAME`, or additional `-f` files, retain its project name, environment file and every `-f` argument in the original order. Do not copy the base command unchanged: it could target another instance or omit override settings. This only recreates the existing backend; it does not download deployment files again.
+
+Use the full `up -d` for an initial deployment. A plain `restart` does not reload container environment variables. If other shared settings changed, recreate their affected services too. To verify the device URL, retry the login command without `--token`, `SKILLHUB_TOKEN`, or saved credentials for that registry, and check the returned public URL. Successful login with an existing token does not verify the device URL. Do not share codes or tokens. See the [operations reference](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for the full configuration contract.
 
 ## Upgrade, stop, and troubleshoot
 

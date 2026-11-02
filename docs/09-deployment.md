@@ -25,16 +25,27 @@ CLI 再轮询兑换 Token。完成后用 `skillhub whoami --registry https://ski
 - Compose 的空配置交由后端处理；Helm 的 `deviceAuthVerificationUri` 默认对应
   `<publicBaseUrl>/device`，也可显式覆盖。
 
-对已运行的单机交付栈，仅修改设备授权地址时，在原部署目录保留相同的项目名和 override，执行：
+对已运行的单机交付栈，仅修改设备授权地址时，先编辑原部署目录中的 `.env.release`：
+
+- 源码部署：在包含 `Makefile` 和 `scripts/validate-release-config.sh` 的仓库根目录，
+  先执行 `make validate-release-config`，修正错误后再重建。
+- 一键脚本部署：进入脚本输出的 `Runtime dir`（即该实例的 `--home` 目录）。脚本仅下载
+  Compose 清单和环境模板，不提供上述 Make 校验入口，不要在该目录执行 `make`。
+
+以下重建命令适用于未自定义项目名、未使用 override 的标准栈：
 
 ```bash
-make validate-release-config
 docker compose --env-file .env.release -f compose.release.yml up -d --no-deps --force-recreate server
 ```
 
-以上命令用于更新已有后端容器；首次部署仍使用完整栈的 `up -d`。若同时修改公开地址等
-其他服务也使用的配置，应一并重建相应服务。重新执行 CLI 登录并核对返回的授权地址，
-不要仅凭配置文件内容判断已生效。
+若原部署使用了 `-p`、`COMPOSE_PROJECT_NAME` 或额外的 `-f` 文件，重建时必须保留原项目名、
+环境文件及按原顺序排列的全部 `-f` 参数，不能直接照抄以上基础命令；否则可能操作另一实例
+或丢失 override 中的配置。此操作只重建已有后端容器，不重新下载部署文件。
+
+首次部署仍使用完整栈的 `up -d`。若同时修改公开地址等其他服务也使用的配置，
+应一并重建相应服务。验证设备授权地址时，使用未传 `--token`、未设置 `SKILLHUB_TOKEN`，
+且该 registry 没有保存凭据的 CLI 环境，再执行上述登录命令并核对返回地址；
+已有 Token 的登录成功不能证明设备授权地址已更新。不要仅凭配置文件内容判断已生效。
 
 `/cli/auth` 是旧版浏览器 loopback 回调入口，需要客户端附带回调参数；它不是输入设备码的页面。
 不要将设备授权地址设成这个旧入口。此次配置保护不改变旧客户端回调流程。
