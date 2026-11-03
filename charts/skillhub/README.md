@@ -105,6 +105,29 @@ PVC UID 与绑定 PV 在升级前后保持不变。四个场景分别覆盖默�
 Sentinel、实际 MinIO S3 连接，以及由 Kubernetes API 接受的 TLS Ingress 路由。
 默认清理自己创建的 namespace；设置 `KEEP_HELM_SMOKE=true` 可保留现场用于排查。
 
+### 可选前端动作统计
+
+默认关闭。`web.analytics.config` 接受 JSON 字符串，`web.analytics.upstream` 接受仅部署可见的
+HTTP(S) origin。支持 Umami 和 DataFinder，不需要编辑 JS 或 Nginx；Umami 先创建网站取得 UUID，
+DataFinder 先取得应用 app_id 和采集域名。
+值放在 Web 专用 ConfigMap，只改统计配置时仅 Web 滚动更新、后端 Pod 不替换；旧标签页不会自动更新。字段、授权接口、初始化、隐私及验收见
+[前端动作统计接入指南](../../docs/frontend-analytics-integration.md)。
+
+统计专项验收脚本会发送测试事件、查询 `stats` 中的独立数据库，并对指定的已安装 Release
+执行真实 `helm upgrade --reuse-values`，将统计规则改为空对象；它不是只读检查，也不会自动恢复规则。
+仅用于隔离验收安装，要求单个 Ready Web/Server Pod、独立 `stats` 平台和提前配置好的 Web port-forward。
+从仓库根目录运行（先替换网站 UUID、values 和安装名称）：
+
+```sh
+ANALYTICS_SMOKE_WEB_URL=http://127.0.0.1:18082 \
+  bash charts/skillhub/tests/analytics-smoke.sh "<网站UUID>" values-acceptance.yaml sh1037 skillhub
+```
+
+第二个参数必须是该安装使用的配置；脚本复用已有 Release 值，不会隐式加载
+`tests/test-values.yaml`。显式文件仍可覆盖原值，勿混用其他环境的 values 或重新生成 Secret。
+脚本成功只证明代理入库及本次统计配置升级时 Web 滚动、Server 未替换；浏览器授权、
+业务回归和真实生产配置仍须按接入指南验证。验收后用原安装配置再次升级以恢复规则。
+
 ### 高可用模式
 
 ```bash
@@ -159,6 +182,11 @@ helm -n skillhub upgrade -i skillhub ./charts/skillhub \
   -f values-production.yaml \
   --set existingSecret=my-custom-secret
 ```
+
+### 自动生成凭据的升级边界
+
+应用 Secret 与 Server／GitHub Sync 的校验值在一次渲染中共用同一结果，真正修改凭据仍会触发相应滚动。
+旧版 Chart 曾分别生成随机值；若已安装实例采用自动生成应用凭据，首次升级到此修复版本可能纠正校验值并额外滚动一次后端，Secret 内容保持不变。预留滚动窗口，不要为避免滚动重新生成或替换凭据。
 
 ### GitOps 稳定 Secret
 

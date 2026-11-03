@@ -13,6 +13,7 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'nginx-health',
   '.well-known',
   'runtime-config.js',
+  '_skillhub-analytics',
 ])
 
 /**

@@ -28,7 +28,9 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY runtime-config.js.template /usr/share/nginx/html/runtime-config.js.template
 COPY docker-entrypoint.d/20-base-path.sh /docker-entrypoint.d/20-base-path.sh
 COPY docker-entrypoint.d/30-runtime-config.sh /docker-entrypoint.d/30-runtime-config.sh
-RUN chmod +x /docker-entrypoint.d/20-base-path.sh /docker-entrypoint.d/30-runtime-config.sh
+COPY analytics-config.awk /etc/skillhub/analytics-config.awk
+COPY docker-entrypoint.d/40-analytics.sh /docker-entrypoint.d/40-analytics.sh
+RUN chmod +x /docker-entrypoint.d/20-base-path.sh /docker-entrypoint.d/30-runtime-config.sh /docker-entrypoint.d/40-analytics.sh
 EXPOSE 80
 HEALTHCHECK --interval=10s --timeout=3s \
   CMD wget -qO- http://127.0.0.1/nginx-health || exit 1

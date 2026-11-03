@@ -1,4 +1,4 @@
-// Deployment-owned adapter for Umami v3.4.1 (MIT). No SDK in the product.
+// Optional adapter for Umami v3.4.1 (MIT). SDK loads only on explicit creation.
 // Same grammar as web/scripts/analytics-manifest.mjs; manifest parity is tested.
 const idShape = /^[a-z]+(?:\.[a-z]+){2,}$/
 const websiteShape = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
