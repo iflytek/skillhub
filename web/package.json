@@ -18,7 +18,9 @@
       "postcss@<8.5.23": "^8.5.23",
       "postcss-selector-parser@<7.1.6": "^7.1.6",
       "nanoid@<3.3.18": "^3.3.18",
-      "seroval@<=1.5.2": "^1.5.3",
+      "seroval@<1.6.11": "1.6.11",
+      "minimatch@<11.0.1": "11.0.1",
+      "file-entry-cache@6.0.1>flat-cache": "4.0.1",
       "picomatch@<2.3.2": "^2.3.2",
       "picomatch@>=4.0.0 <4.0.4": "^4.0.4",
       "flatted@<3.4.2": "^3.4.2",
@@ -27,6 +29,10 @@
       "dompurify@<3.4.16": "^3.4.16",
       "katex@<0.18.2": "0.18.10",
       "source-map-js@<1.2.2": "^1.2.2"
+    },
+    "patchedDependencies": {
+      "@redocly/openapi-core@1.34.10": "patches/@redocly__openapi-core@1.34.10.patch",
+      "@eslint/eslintrc@2.1.4": "patches/@eslint__eslintrc@2.1.4.patch"
     }
   },
   "scripts": {

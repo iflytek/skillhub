@@ -101,7 +101,7 @@
     "react-markdown": "10.1.0",
     "rehype-sanitize": "6.0.0",
     "yaml": "2.9.1",
-    "zod": "4.4.3"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-agent": "0.2.1-rc.2",
@@ -161,6 +161,7 @@
     "access": "public"
   },
   "overrides": {
+    "zod": "4.6.6",
     "@deepseek-ai/cordis": "4.0.5",
     "@deepseek-ai/cordis-plugin-loader": "1.0.6",
     "@deepseek-ai/cordis-plugin-include": "1.0.10",
