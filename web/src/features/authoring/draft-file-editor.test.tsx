@@ -7,7 +7,7 @@ import { DraftFileEditor } from './draft-file-editor'
 import i18n from '@/i18n/config'
 
 vi.mock('@tanstack/react-router', () => ({ useBlocker: () => ({ status: 'idle' }) }))
-vi.mock('@/api/client', () => ({ authoringApi: { getDraft: vi.fn(), readFile: vi.fn(), saveFile: vi.fn(), deleteFile: vi.fn() } }))
+vi.mock('@/api/client', () => ({ authoringApi: { getDraft: vi.fn(), listFiles: vi.fn(), readFile: vi.fn(), saveFile: vi.fn(), deleteFile: vi.fn() } }))
 vi.mock('@/shared/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 const clients: QueryClient[] = []
 function mount() {
@@ -57,6 +57,17 @@ describe('draft files', () => {
     await screen.findByLabelText('File content')
     fireEvent.change(screen.getByLabelText('Path'), { target: { value: 'skill.md' } })
     fireEvent.click(screen.getByRole('button', { name: 'Create file' }))
+    expect(authoringApi.saveFile).not.toHaveBeenCalled()
+  })
+
+  it('refuses to overwrite a file absent from the cached list', async () => {
+    vi.mocked(authoringApi.listFiles).mockResolvedValue([{ path: 'new.md' }])
+    mount()
+    await screen.findByLabelText('File content')
+    fireEvent.change(screen.getByLabelText('Path'), { target: { value: 'new.md' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create file' }))
+    await waitFor(() => expect(authoringApi.listFiles).toHaveBeenCalledWith(42))
+    await waitFor(() => expect(screen.getByRole<HTMLButtonElement>('button', { name: 'Create file' }).disabled).toBe(false))
     expect(authoringApi.saveFile).not.toHaveBeenCalled()
   })
 

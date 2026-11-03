@@ -31,11 +31,11 @@ function DraftWorkbench({ id }: { id: number }) {
   })
   const files = useQuery({
     queryKey: ['authoring', 'draft', id, 'files'], queryFn: () => authoringApi.listFiles(id),
-    enabled: validId && draft.isSuccess, meta: { skipGlobalErrorHandler: true }, retry: false,
+    enabled: validId && draft.data != null, meta: { skipGlobalErrorHandler: true }, retry: false,
   })
   const runs = useQuery({
     queryKey: ['authoring', 'draft', id, 'runs'], queryFn: () => authoringApi.listRuns(id),
-    enabled: validId && draft.isSuccess, meta: { skipGlobalErrorHandler: true }, retry: false,
+    enabled: validId && draft.data != null, meta: { skipGlobalErrorHandler: true }, retry: false,
     refetchInterval: query => query.state.data?.some(run => run.active) ? 1500 : false,
   })
   const activeRun = runs.data?.some(run => run.active) ?? false
@@ -60,7 +60,7 @@ function DraftWorkbench({ id }: { id: number }) {
 
   if (!validId) return <p role="alert">{t('authoring.detail.loadFailed')}</p>
   if (draft.isPending) return <p role="status">{t('authoring.ui.loading')}</p>
-  if (draft.isError) return <QueryError error={draft.error} retry={() => void draft.refetch()} />
+  if (!draft.data) return <QueryError error={draft.error} retry={() => void draft.refetch()} />
   const current = draft.data
   if (current.revision == null) return <p role="alert">{t('authoring.detail.loadFailed')}</p>
   return (
@@ -79,10 +79,11 @@ function DraftWorkbench({ id }: { id: number }) {
       </div>
       <p className="text-sm text-muted-foreground">{t('authoring.detail.structureOnly')}</p>
       {dirty && <p role="status" className="text-sm text-muted-foreground">{t('authoring.detail.saveFirst')}</p>}
+      {draft.isError && <QueryError error={draft.error} retry={() => void draft.refetch()} />}
       <Card><CardContent className="pt-6">
         {files.isPending && <p role="status">{t('authoring.ui.loading')}</p>}
         {files.isError && <QueryError error={files.error} retry={() => void files.refetch()} />}
-        {files.isSuccess && <DraftFileEditor draftId={id} files={files.data} revision={current.revision} onSaved={refreshDraft} onDirtyChange={setDirty} />}
+        {files.data && <DraftFileEditor draftId={id} files={files.data} revision={current.revision} onSaved={refreshDraft} onDirtyChange={setDirty} />}
       </CardContent></Card>
       <section className="space-y-3" aria-label={t('authoring.detail.tabRuns')}>
         <h2 className="text-lg font-semibold">{t('authoring.detail.tabRuns')}</h2>

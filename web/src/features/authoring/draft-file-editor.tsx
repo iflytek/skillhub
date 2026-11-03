@@ -46,6 +46,7 @@ export function DraftFileEditor({ draftId, files, revision, onSaved, onDirtyChan
     enabled: path != null, meta: { skipGlobalErrorHandler: true }, retry: false,
     staleTime: Infinity,
   })
+  const loadedFile = read.data
   const blocker = useBlocker({ shouldBlockFn: () => dirty || busy, enableBeforeUnload: dirty || busy, withResolver: true })
   useEffect(() => { onDirtyChange(dirty || busy) }, [dirty, busy, onDirtyChange])
 
@@ -78,7 +79,20 @@ export function DraftFileEditor({ draftId, files, revision, onSaved, onDirtyChan
       toast.error(t('authoring.files.exists'))
       return
     }
-    if (await mutateFile(() => authoringApi.saveFile(draftId, { path: next, content: '', expectedRevision: revision }), 'authoring.files.created', next)) setNewPath('')
+    const created = await mutateFile(async () => {
+      // Read the revision before listing files. Any concurrent creation after
+      // that revision either appears in the list or makes the write conflict.
+      const snapshot = await authoringApi.getDraft(draftId)
+      if (snapshot.revision == null) throw new Error(t('authoring.ui.loadFailed'))
+      const latestFiles = await authoringApi.listFiles(draftId)
+      if (latestFiles.some(file => file.path === next)) {
+        throw new Error(t('authoring.files.exists'))
+      }
+      return authoringApi.saveFile(draftId, {
+        path: next, content: '', expectedRevision: snapshot.revision,
+      })
+    }, 'authoring.files.created', next)
+    if (created) setNewPath('')
   }
   const upload = async () => {
     if (!uploadFile || !newPath.trim() || busy || dirty) return
@@ -112,7 +126,7 @@ export function DraftFileEditor({ draftId, files, revision, onSaved, onDirtyChan
         {!path && <p>{t('authoring.files.empty')}</p>}
         {path && read.isPending && <p role="status">{t('authoring.ui.loading')}</p>}
         {path && read.isError && <QueryError error={read.error} retry={() => void read.refetch()} />}
-        {path && read.isSuccess && (read.data.encoding === 'text' ? <TextFileEditor key={`${draftId}:${path}:${read.data.sha256}:${editorGeneration}`} content={read.data.content ?? ''} disabled={busy} onDirtyChange={setDirty} onSave={content => mutateFile(() => authoringApi.saveFile(draftId, { path, content, expectedRevision: read.data.revision }), 'authoring.files.saved')} /> : <div className="space-y-2 rounded-md border p-4" data-testid="binary-file-panel">
+        {path && loadedFile && (loadedFile.encoding === 'text' ? <TextFileEditor key={`${draftId}:${path}:${loadedFile.sha256}:${editorGeneration}`} content={loadedFile.content ?? ''} disabled={busy} onDirtyChange={setDirty} onSave={content => mutateFile(() => authoringApi.saveFile(draftId, { path, content, expectedRevision: loadedFile.revision }), 'authoring.files.saved')} /> : <div className="space-y-2 rounded-md border p-4" data-testid="binary-file-panel">
           <p className="break-all font-mono text-sm">{path}</p>
           <p className="text-sm">{t('authoring.files.size')}: {formatBytes(selected?.size ?? 0)}</p>
           <p className="break-all font-mono text-xs">sha256: {selected?.sha256}</p>
