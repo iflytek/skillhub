@@ -237,7 +237,9 @@ kubectl -n skillhub logs deployment/skillhub-web --tail=100
 保留现有 Secret 引用和固定凭证，不能为开启统计重新生成业务密钥。
 deployment 名称使用 Chart 默认 release 名 `skillhub`；自定义名称时替换命令中的名称。
 值写入 Web 专用的 `<release>-web-analytics` ConfigMap，只改统计配置时仅 Web 滚动更新，
-后端 Pod 不会被替换。
+后端 Pod 不会被替换。旧版 Chart 若自动生成应用凭据，Secret 与后端校验值可能不一致；
+首次升级到本修复版本会纠正校验值，可能额外滚动一次后端，但不重置凭据。请预留滚动窗口，
+之后单独调整统计配置仅滚动 Web。
 Chart 不自动部署 Umami。先在已有平台创建网站，并确认 Pod 出站网络、DNS 和证书可用。
 集群内 origin 使用完整服务名，例如 `http://umami.stats.svc.cluster.local:3000`，
 Nginx 的运行时 DNS 不自动补 Pod 的搜索后缀。

@@ -183,6 +183,11 @@ helm -n skillhub upgrade -i skillhub ./charts/skillhub \
   --set existingSecret=my-custom-secret
 ```
 
+### 自动生成凭据的升级边界
+
+应用 Secret 与 Server／GitHub Sync 的校验值在一次渲染中共用同一结果，真正修改凭据仍会触发相应滚动。
+旧版 Chart 曾分别生成随机值；若已安装实例采用自动生成应用凭据，首次升级到此修复版本可能纠正校验值并额外滚动一次后端，Secret 内容保持不变。预留滚动窗口，不要为避免滚动重新生成或替换凭据。
+
 ### GitOps 稳定 Secret
 
 Argo CD 等 GitOps 工具使用离线 `helm template`，无法通过 Helm `lookup` 读取集群
