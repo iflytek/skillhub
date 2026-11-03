@@ -60,7 +60,11 @@ export async function syncTree(path: string): Promise<void> {
   for (const entry of await readdir(path, {withFileTypes:true})) {
     const child = join(path, entry.name)
     if (entry.isDirectory()) await syncTree(child)
-    else { const file = await open(child, 'r'); try { await file.sync() } finally { await file.close() } }
+    else {
+      // Windows FlushFileBuffers needs write access; r+ preserves the copied bytes without truncation.
+      const file = await open(child, process.platform === 'win32' ? 'r+' : 'r')
+      try { await file.sync() } finally { await file.close() }
+    }
   }
   await syncDirectory(path)
 }

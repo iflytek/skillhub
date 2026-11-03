@@ -263,3 +263,18 @@ test('automatic change inspection blocks oversized local files before hashing th
     expect(await readFile(join(f.path, 'resource.txt'), 'utf8')).toBe('resource0')
   } finally { await f.close() }
 })
+
+test('durable tree flush keeps existing nested binary and text file bytes intact', async () => {
+  const f = await fixture()
+  try {
+    const { mkdir } = await import('node:fs/promises')
+    const { syncTree } = await import('../../../src/integrations/native-changes')
+    const directory = join(f.home, 'flush-copy')
+    await mkdir(join(directory, 'nested'), { recursive: true })
+    await writeFile(join(directory, 'text.txt'), 'flush does not replace or truncate this file\n')
+    await writeFile(join(directory, 'nested', 'binary.dat'), Buffer.from([0, 255, 1, 2, 3]))
+    await syncTree(directory)
+    expect(await readFile(join(directory, 'text.txt'), 'utf8')).toBe('flush does not replace or truncate this file\n')
+    expect(await readFile(join(directory, 'nested', 'binary.dat'))).toEqual(Buffer.from([0, 255, 1, 2, 3]))
+  } finally { await f.close() }
+})
