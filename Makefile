@@ -1,5 +1,6 @@
 .PHONY: build build-backend build-backend-app build-builtin-skills build-cli build-frontend build-web check clean cli-install db-reset dev dev-all dev-all-down dev-all-reset dev-down dev-github-sync dev-logs dev-server dev-server-restart dev-status dev-web docs-build docs-dev docs-preview generate-api help lint-cli lint-web namespace-smoke suite-smoke suite-bundle-smoke parallel-down parallel-init parallel-sync parallel-up pr publish-cli publish-cli-major publish-cli-minor staging staging-down staging-logs test test-backend test-backend-app test-builtin-skills test-cli test-e2e-frontend test-e2e-smoke-frontend test-frontend test-redis-cluster test-web typecheck-cli typecheck-web validate-release-config web-deps web-install web-install-ci
 
+.DEFAULT_GOAL := help
 DEV_DIR := .dev
 DEV_SERVER_PID := $(DEV_DIR)/server.pid
 DEV_WEB_PID := $(DEV_DIR)/web.pid
@@ -14,7 +15,7 @@ STAGING_WEB_URL := http://localhost
 STAGING_SERVER_IMAGE := skillhub-server:staging
 DEV_PROCESS := bash scripts/dev-process.sh
 DEV_SERVER_PREPARE := true
-DEV_SERVER_CMD := ./scripts/run-dev-app.sh
+DEV_SERVER_CMD := bash ../scripts/business-logs-demo.sh run-host ./scripts/run-dev-app.sh
 DEV_SERVER_SCANNER_ENV := SKILLHUB_SECURITY_SCANNER_ENABLED=true SKILLHUB_SECURITY_SCANNER_URL=$(DEV_SCANNER_URL) SKILLHUB_SECURITY_SCANNER_MODE=upload
 BACKEND_TEST_JAVA_OPTIONS ?= -XX:+EnableDynamicAgentLoading
 PARALLEL_BASE_REF ?= origin/main
@@ -24,6 +25,22 @@ STAGING_COMPOSE_PROJECT_NAME ?= skillhub-staging
 DEV_COMPOSE := docker compose -p $(DEV_COMPOSE_PROJECT_NAME)
 STAGING_BASE_COMPOSE := docker compose -p $(STAGING_COMPOSE_PROJECT_NAME)
 STAGING_COMPOSE := $(STAGING_BASE_COMPOSE) -f docker-compose.yml -f docker-compose.staging.yml
+
+.PHONY: business-logs-demo-up business-logs-demo-status business-logs-demo-records business-logs-demo-verify business-logs-demo-down
+business-logs-demo-up: ## 启动本地业务日志 Collector（BUSINESS_LOGS_BACKEND=host 或 container）
+	sh scripts/business-logs-demo.sh up
+
+business-logs-demo-status: ## 查看本地业务日志 Collector
+	sh scripts/business-logs-demo.sh status
+
+business-logs-demo-records: ## 输出 Collector 实收 JSON 行
+	sh scripts/business-logs-demo.sh records
+
+business-logs-demo-verify: ## 验证实收事件（默认 skill.download.prepared）
+	sh scripts/business-logs-demo.sh verify
+
+business-logs-demo-down: ## 停止本地 Collector，保留记录与网络
+	sh scripts/business-logs-demo.sh down
 
 help: ## 显示帮助
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
