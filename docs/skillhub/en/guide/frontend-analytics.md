@@ -44,7 +44,3 @@ Disabled or unauthorized new pages must load no collection module or SDK and sen
 HTTP 200 alone is not evidence of storage. Verify records in the platform; DataFinder additionally requires `e:0` and `sc:1`. Actions describe intent rather than successful download, installation or publication.
 
 `consent=granted` records the deployment's authorization; it does not mean every user clicked a consent dialog. Integrate an existing consent component when per-user approval is required.
-
-## Historical manual demo
-
-The [manual setup for v0.2.25 (fixed historical documentation)](https://github.com/iflytek/skillhub/blob/250336d3e9a7446feed37e7c0790932bd9d1eef9/docs/skillhub/en/guide/frontend-analytics.md) describes the older edge and JS integration. Use the configuration-only paths above for current deployment.

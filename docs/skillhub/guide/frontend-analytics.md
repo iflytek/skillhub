@@ -45,7 +45,3 @@ SkillHub 支持通过配置接入 Umami 或 DataFinder。默认关闭；开启�
 - HTTP 200 不等于记录已经入库；还要到统计平台核对。DataFinder 同时要求响应 `e:0`、`sc:1`。
 
 动作表示用户意图，例如“点击下载”，不代表下载或安装成功。`consent=granted` 是部署方授权，不代替逐用户同意弹窗；需要逐用户同意时，按指南接入现有授权组件。
-
-## 历史手工演示
-
-[适用于 v0.2.25 的手工演示说明（固定历史文档）](https://github.com/iflytek/skillhub/blob/250336d3e9a7446feed37e7c0790932bd9d1eef9/docs/skillhub/guide/frontend-analytics.md)保留了旧 edge 和 JS 接入过程。当前配置化部署请使用上面的三条路径。
