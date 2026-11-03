@@ -4,7 +4,7 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname "$0")/.." && pwd)
 STATE_DIR=${BUSINESS_LOGS_DEMO_STATE_DIR:-$ROOT/.dev/business-logs}
 COMMAND=${1:-status}
-shift || true
+[ "$#" -eq 0 ] || shift
 
 if [ "$COMMAND" = run-host ]; then
   if [ -f "$STATE_DIR/host-port" ]; then

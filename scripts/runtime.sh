@@ -146,7 +146,8 @@ Business Logs (default off):
   business-logs-enable   Apply .env.release to server; --logs-endpoint overrides receiver
   business-logs-disable  Disable collection and recreate server; keep receiver and data
   business-logs-down     Stop only the optional Collector; keep files and network
-  business-logs-ps/logs  Inspect only the optional Collector
+  business-logs-ps       Show collection state and optional Collector status
+  business-logs-logs     Follow optional Collector logs
   --logs-endpoint <url>  Full OTLP/HTTP Logs URL (no credentials/query/fragment)
   --logs-network <name>  Attach server to this external private network
 
@@ -513,7 +514,7 @@ validate_business_logs_endpoint() {
     *) echo "Business Logs requires a full HTTP(S) Logs URL" >&2; exit 1 ;;
   esac
   case "$1" in
-    *'@'*|*'?'*|*'#'*|*[[:space:]]*|*'\\'*)
+    *'@'*|*'?'*|*'#'*|*[[:space:]]*|*'\'*)
       echo "Business Logs URL must not contain credentials, query, fragment or whitespace" >&2; exit 1 ;;
   esac
 }
@@ -777,11 +778,18 @@ EOF
     run_compose up -d --no-deps --force-recreate server
     echo "Business Logs disabled; receiver data and network retained."
     ;;
-  business-logs-down|business-logs-ps|business-logs-logs)
+  business-logs-ps)
+    printf 'Business Logs enabled: %s\n' "$(get_env_value SKILLHUB_BUSINESS_LOGS_ENABLED false)"
+    if [ -f "$BUSINESS_LOGS_ENV_FILE" ]; then
+      run_business_logs_compose ps
+    else
+      echo "No optional Collector; the receiver is managed externally."
+    fi
+    ;;
+  business-logs-down|business-logs-logs)
     [ -f "$BUSINESS_LOGS_ENV_FILE" ] || { echo "No optional Collector; run business-logs-up first" >&2; exit 1; }
     case "$COMMAND" in
       business-logs-down) run_business_logs_compose stop ;;
-      business-logs-ps) run_business_logs_compose ps ;;
       business-logs-logs) run_business_logs_compose logs -f ;;
     esac
     ;;
