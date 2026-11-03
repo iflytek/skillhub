@@ -74,7 +74,7 @@ export function TransferOwnershipDialog({ namespace, members, children }: Transf
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <DialogContent closeAnalyticsId="namespace.ownership.cancel">
         <DialogHeader className="text-center sm:text-center">
           <DialogTitle className="text-center">{t('members.transferDialogTitle')}</DialogTitle>
           <DialogDescription className="text-center">
@@ -91,12 +91,12 @@ export function TransferOwnershipDialog({ namespace, members, children }: Transf
             <Label htmlFor="transfer-new-owner">{t('members.transferNewOwnerLabel')}</Label>
             {candidates.length > 0 ? (
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger id="transfer-new-owner">
+                <SelectTrigger data-analytics-id="namespace.ownership.interact" id="transfer-new-owner">
                   <SelectValue placeholder={t('members.transferSelectPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {candidates.map((candidate) => (
-                    <SelectItem key={candidate.userId} value={candidate.userId}>
+                    <SelectItem data-analytics-id="namespace.ownership.select" key={candidate.userId} value={candidate.userId}>
                       {candidate.displayName || candidate.userId} ({candidate.role})
                     </SelectItem>
                   ))}
@@ -129,10 +129,10 @@ export function TransferOwnershipDialog({ namespace, members, children }: Transf
         ) : null}
 
         <DialogFooter className="sm:justify-center sm:space-x-3">
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button data-analytics-id="namespace.ownership.cancel" type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             {t('dialog.cancel')}
           </Button>
-          <Button
+          <Button data-analytics-id="namespace.ownership.confirm"
             type="button"
             variant="destructive"
             onClick={handleTransfer}

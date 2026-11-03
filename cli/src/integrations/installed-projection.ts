@@ -3,10 +3,10 @@ import { createHash } from 'node:crypto'
 import { lstat, realpath } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
 import { z } from 'zod'
-import type { InventoryStore } from '../stores/inventory-store'
+import { readInstallationState, type InventoryStore } from '../stores/inventory-store'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
 
-import type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget } from './native-contract'
+import type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget, AllInstalledProjection } from './native-contract'
 export type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget } from './native-contract'
 
 const text = z.string().min(1)
@@ -17,17 +17,49 @@ const itemSchema = z.object({ registry: text, namespace: text, slug: text, targe
 /** Read only the selected Registry's DSH records in Host-approved roots; never repair or hash all files. */
 export async function readInstalledProjection(inventory: Pick<InventoryStore, 'read'>, registry: string,
   targets: readonly InstalledProjectionTarget[]): Promise<InstalledProjection> {
+  let records: unknown[]
+  try {
+    const raw: unknown = await inventory.read()
+    records = z.object({ items: z.array(z.unknown()) }).parse(raw).items
+  } catch { return { items: [], complete: false, issues: ['inventory-unreadable'] } }
+  return readInstalledProjectionRecords(records, registry, targets)
+}
+
+/** Read trusted DSH installations across sources, without changing the default source-filtered API. */
+export async function readAllInstalledProjection(inventory: Pick<InventoryStore, 'read'>,
+  targets: readonly InstalledProjectionTarget[]): Promise<AllInstalledProjection> {
+  let records: unknown[]
+  try {
+    records = z.object({ items: z.array(z.unknown()) }).parse(await inventory.read()).items
+  } catch { return { items: [], complete: false, issues: ['inventory-unreadable'] } }
+  const result: AllInstalledProjection = { items: [], complete: true, issues: [] }
+  const registries = new Map<string, unknown[]>()
+  for (const record of records) {
+    const parsed = itemSchema.safeParse(record)
+    if (parsed.success) {
+      const registry = parsed.data.registry.replace(/\/+$/, '')
+      const bucket = registries.get(registry) ?? []
+      bucket.push(record); registries.set(registry, bucket)
+    }
+    else { result.complete = false; result.issues = ['invalid-record'] }
+  }
+  for (const [registry, sourceRecords] of registries) {
+    const projection = await readInstalledProjectionRecords(sourceRecords, registry, targets)
+    result.items.push(...projection.items.map(item => ({ ...item, registry })))
+    result.complete &&= projection.complete
+    result.issues = [...new Set([...result.issues, ...projection.issues])]
+  }
+  return result
+}
+
+/** Internal projection primitive: callers must obtain records from a trusted inventory snapshot. */
+export async function readInstalledProjectionRecords(records: readonly unknown[], registry: string,
+  targets: readonly InstalledProjectionTarget[]): Promise<InstalledProjection> {
   const result: InstalledProjection = { items: [], complete: true, issues: [] }
   const issue = (code: InstalledProjection['issues'][number]) => {
     result.complete = false
     if (!result.issues.includes(code)) result.issues.push(code)
   }
-  let records: unknown[]
-  try {
-    const raw: unknown = await inventory.read()
-    const parsed = z.object({ items: z.array(z.unknown()) }).parse(raw)
-    records = parsed.items
-  } catch { issue('inventory-unreadable'); return result }
   const roots = targets.map(target => {
     if (!isAbsolute(target.root)) throw new Error('Installed projection requires absolute Host roots')
     return { ...target, root: resolve(target.root) }
@@ -44,7 +76,7 @@ export async function readInstalledProjection(inventory: Pick<InventoryStore, 'r
       for (const target of roots.filter(target => target.root === resolve(entry.rootDir))) {
         const path = join(target.root, item.slug)
         const projected: InstalledProjectionItem = { scope: target.scope, namespace: item.namespace,
-          slug: item.slug, installationState: entry.installationState ?? 'enabled', version: entry.version, ...(entry.fingerprint ? { fingerprint: entry.fingerprint } : {}), targetPath: path, state: 'present',
+          slug: item.slug, version: entry.version, ...(entry.fingerprint ? { fingerprint: entry.fingerprint } : {}), targetPath: path, state: 'present',
           recordRevision: createHash('sha256').update(JSON.stringify([item.registry.replace(/\/+$/, ''), item.namespace, item.slug,
             entry.installationState ?? 'enabled', entry.agent, entry.rootDir, entry.installDir, entry.version, entry.fingerprint ?? null, entry.installedAt,
             [...new Set(entry.installedBy ?? ['direct'])].sort()])).digest('hex') }
@@ -67,11 +99,14 @@ export async function readInstalledProjection(inventory: Pick<InventoryStore, 'r
           if (!directory.isDirectory() || await realpath(path) !== path) {
             projected.state = 'mismatch'; issue('invalid-record'); continue
           }
-          for (const [file, kind] of [[join(path, '.skillhub'), 'directory'], [join(path, '.skillhub/metadata.json'), 'file'], [join(path, entry.installationState === 'disabled' ? 'SKILL.md.disabled' : 'SKILL.md'), 'file']] as const) {
+          const installationState = await readInstallationState(path)
+          if (!installationState) { projected.state = 'unreadable'; issue('target-unreadable'); continue }
+          projected.installationState = installationState
+          for (const [file, kind] of [[join(path, '.skillhub'), 'directory'], [join(path, '.skillhub/metadata.json'), 'file'], [join(path, installationState === 'disabled' ? 'SKILL.md.disabled' : 'SKILL.md'), 'file']] as const) {
             const stat = await lstat(file)
             if (kind === 'directory' ? !stat.isDirectory() : !stat.isFile()) throw new Error('Unexpected local file type')
           }
-          if (entry.installationState === 'disabled') await assertEntryAbsent(join(path, 'SKILL.md'))
+          await assertEntryAbsent(join(path, installationState === 'disabled' ? 'SKILL.md' : 'SKILL.md.disabled'))
           const metadata = await readInstalledSkillMetadata(path)
           if (metadata.status !== 'valid') { projected.state = 'metadata-invalid'; issue('target-unreadable'); continue }
           const local = metadata.metadata
@@ -85,4 +120,45 @@ export async function readInstalledProjection(inventory: Pick<InventoryStore, 'r
     }
   }
   return result
+}
+
+/** A round-owned snapshot. Inventory identity is checked around every target projection. */
+export async function openInstalledProjectionSnapshot(inventory: Pick<InventoryStore, 'read' | 'path'>,
+  registry: string, targets: readonly InstalledProjectionTarget[]) {
+  const identity = async () => {
+    const stat = await lstat(inventory.path, { bigint: true }).catch(error => {
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined
+      throw error
+    })
+    if (!stat) return 'absent'
+    if (!stat.isFile()) throw new Error('Inventory is not a regular file')
+    return [stat.dev, stat.ino, stat.size, stat.mtimeNs, stat.ctimeNs].join(':')
+  }
+  const revision = await identity()
+  const records = (await inventory.read()).items
+  const assertCurrent = async () => {
+    if (await identity() !== revision) throw new Error('Inventory changed during update scan')
+  }
+  await assertCurrent()
+  const projection = await readInstalledProjectionRecords(records, registry, targets)
+  await assertCurrent()
+  const key = (item: Pick<InstalledProjectionItem, 'namespace' | 'slug' | 'scope'>) => JSON.stringify([item.namespace, item.slug, item.scope])
+  const index = new Map<string, unknown[]>()
+  for (const record of records) {
+    for (const target of targets) {
+      const entries = record.targets.filter(entry => isAbsolute(entry.rootDir) && resolve(entry.rootDir) === resolve(target.root) && entry.agent === 'dsh')
+      if (!entries.length) continue
+      const id = key({ ...record, scope: target.scope })
+      const bucket = index.get(id) ?? []
+      bucket.push({ ...record, targets: entries }); index.set(id, bucket)
+    }
+  }
+  return { projection, async read(item: InstalledProjectionItem) {
+    await assertCurrent()
+    const result = await readInstalledProjectionRecords(index.get(key(item)) ?? [], registry, targets.filter(target => target.scope === item.scope))
+    await assertCurrent()
+    const current = result.items.find(value => value.targetPath === item.targetPath)
+    if (!current || JSON.stringify(current) !== JSON.stringify(item)) throw new Error('Installed target changed during update scan')
+    return current
+  } }
 }

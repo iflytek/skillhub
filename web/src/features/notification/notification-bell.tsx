@@ -38,7 +38,7 @@ export function NotificationBell() {
 
   return (
     <div ref={containerRef} className="relative">
-      <button
+      <button data-analytics-id="notification.menu.toggle"
         type="button"
         aria-label={t('notification.title')}
         onClick={() => setOpen((v) => !v)}

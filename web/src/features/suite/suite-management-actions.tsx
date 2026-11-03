@@ -120,23 +120,23 @@ export function SuiteManagementActions({ suite, compact = false }: { suite: Skil
       <p className={compact ? 'mt-1 text-xs text-muted-foreground' : 'mt-1 text-sm text-muted-foreground'}>{t('suite.managementDescription')}</p>
       <div className={compact ? 'mt-2.5 flex flex-wrap gap-1.5' : 'mt-4 flex flex-wrap gap-2'}>
         {allowed.has('REOPEN') ? (
-          <Button variant="outline" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} disabled={reopenMutation.isPending} onClick={reopen}>
+          <Button data-analytics-id="suite.draft.reopen" variant="outline" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} disabled={reopenMutation.isPending} onClick={reopen}>
             {t('suite.reopenDraft')}
           </Button>
         ) : null}
         {allowed.has('CREATE_VERSION') && !compact ? (
-          <Button variant="outline" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} onClick={() => navigateToEditor(true)}>{t('suite.createVersion')}</Button>
+          <Button data-analytics-id="suite.version.create" variant="outline" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} onClick={() => navigateToEditor(true)}>{t('suite.createVersion')}</Button>
         ) : null}
         {allowed.has('YANK') ? (
-          <Button variant="destructive" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} onClick={() => setYankOpen(true)}>{t('suite.yankVersion')}</Button>
+          <Button data-analytics-id="suite.version.yank" variant="destructive" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} onClick={() => setYankOpen(true)}>{t('suite.yankVersion')}</Button>
         ) : null}
         {allowed.has('HIDE') || allowed.has('RESTORE') ? (
-          <Button variant="outline" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} onClick={() => setConfirmAction(suite.hidden ? 'restore' : 'hide')}>
+          <Button data-analytics-id={suite.hidden ? 'suite.restore.request' : 'suite.hide.request'} variant="outline" size={compact ? 'sm' : 'default'} className={compact ? 'h-6 px-2 text-[11px]' : undefined} onClick={() => setConfirmAction(suite.hidden ? 'restore' : 'hide')}>
             {t(suite.hidden ? 'suite.restore' : 'suite.hide')}
           </Button>
         ) : null}
         {allowed.has('ARCHIVE') || allowed.has('UNARCHIVE') ? (
-          <Button
+          <Button data-analytics-id={suite.suiteStatus === 'ARCHIVED' ? 'suite.unarchive.request' : 'suite.archive.request'}
             variant="outline"
             size={compact ? 'sm' : 'default'}
             className={compact ? 'h-6 px-2 text-[11px]' : undefined}
@@ -146,7 +146,7 @@ export function SuiteManagementActions({ suite, compact = false }: { suite: Skil
           </Button>
         ) : null}
         {allowed.has('DELETE') ? (
-          <Button
+          <Button data-analytics-id="suite.delete.request"
             variant="destructive"
             size={compact ? 'sm' : 'default'}
             className={compact ? 'h-6 px-2 text-[11px]' : undefined}
@@ -158,6 +158,8 @@ export function SuiteManagementActions({ suite, compact = false }: { suite: Skil
       </div>
 
       <ConfirmDialog
+        confirmAnalyticsId={confirmAction === 'hide' ? 'suite.hide.confirm' : confirmAction === 'restore' ? 'suite.restore.confirm' : confirmAction === 'archive' ? 'suite.archive.confirm' : confirmAction === 'unarchive' ? 'suite.unarchive.confirm' : confirmAction === 'delete' ? 'suite.delete.confirm' : undefined}
+        cancelAnalyticsId={confirmAction === 'hide' ? 'suite.hide.cancel' : confirmAction === 'restore' ? 'suite.restore.cancel' : confirmAction === 'archive' ? 'suite.archive.cancel' : confirmAction === 'unarchive' ? 'suite.unarchive.cancel' : confirmAction === 'delete' ? 'suite.delete.cancel' : undefined}
         open={confirmAction !== null}
         onOpenChange={(open) => { if (!open) setConfirmAction(null) }}
         title={confirmTitle}
@@ -168,7 +170,7 @@ export function SuiteManagementActions({ suite, compact = false }: { suite: Skil
       />
 
       <Dialog open={yankOpen} onOpenChange={setYankOpen}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId="suite.version.yank.cancel">
           <DialogHeader>
             <DialogTitle>{t('suite.yankConfirmTitle')}</DialogTitle>
             <DialogDescription>{t('suite.yankConfirmDescription', { version: suite.version })}</DialogDescription>
@@ -179,8 +181,8 @@ export function SuiteManagementActions({ suite, compact = false }: { suite: Skil
             placeholder={t('suite.yankReasonPlaceholder')}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setYankOpen(false)}>{t('suite.cancel')}</Button>
-            <Button
+            <Button data-analytics-id="suite.version.yank.cancel" variant="outline" onClick={() => setYankOpen(false)}>{t('suite.cancel')}</Button>
+            <Button data-analytics-id="suite.version.yank.confirm"
               variant="destructive"
               disabled={!yankReason.trim() || yankMutation.isPending}
               onClick={yank}

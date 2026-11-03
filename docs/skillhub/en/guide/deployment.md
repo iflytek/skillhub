@@ -48,6 +48,29 @@ for publication, download preparation, review, promotion, archive, visibility an
 scope, every setting, a real receive/query example and loss/duplicate/shutdown limits. Download preparation
 is not completion or installation; this lossy stream is not audit, billing or reliable notification.
 
+## CLI device authorization URL
+
+`skillhub login --no-open --registry https://skills.example.com` first resolves `--token`, then `SKILLHUB_TOKEN`, then saved credentials for that registry. Device authorization starts only when no token is resolved; an invalid token does not automatically fall back. `--no-open` only disables automatic browser launch. Verify the resulting identity with `skillhub whoami --registry https://skills.example.com`.
+
+- When `DEVICE_AUTH_VERIFICATION_URI` is unset, empty, or whitespace, the server appends `/device` to `SKILLHUB_PUBLIC_BASE_URL`, preserving sub-paths and trimming trailing slashes. For example, `https://skills.example.com/portal/` becomes `https://skills.example.com/portal/device`.
+- Without a public base URL, the compatibility fallback is `/device`, resolved by the CLI against the registry origin. Set the actual public Web URL for production, sub-path, or separate Web/API deployments.
+- An explicit valid HTTP(S) URL or root-relative path overrides the default. Invalid values prevent startup without echoing the configured value. `/cli/auth` is the legacy loopback callback, not the device-code entry page.
+
+Edit `.env.release` in the existing deployment directory before recreating the backend:
+
+- Source checkout: run `make validate-release-config` from the repository root containing `Makefile` and `scripts/validate-release-config.sh`, and resolve errors before recreation.
+- One-click script installation: use the `Runtime dir` printed by the script (the instance's `--home` directory). The script downloads the Compose file and environment template, not the Make validation tooling; do not run `make` in that directory.
+
+The following command applies to a standard stack without a custom project name or override files:
+
+```bash
+docker compose --env-file .env.release -f compose.release.yml up -d --no-deps --force-recreate server
+```
+
+If the original deployment uses `-p`, `COMPOSE_PROJECT_NAME`, or additional `-f` files, retain its project name, environment file and every `-f` argument in the original order. Do not copy the base command unchanged: it could target another instance or omit override settings. This only recreates the existing backend; it does not download deployment files again.
+
+Use the full `up -d` for an initial deployment. A plain `restart` does not reload container environment variables. If other shared settings changed, recreate their affected services too. To verify the device URL, retry the login command without `--token`, `SKILLHUB_TOKEN`, or saved credentials for that registry, and check the returned public URL. Successful login with an existing token does not verify the device URL. Do not share codes or tokens. See the [operations reference](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for the full configuration contract.
+
 ## Upgrade, stop, and troubleshoot
 
 Before upgrading, record the current image version and configuration, and back up both the database and skill object storage. Set `SKILLHUB_VERSION` to the target release and repeat validation, `pull`, `up -d`, and workflow verification. Rolling back an image does not roll back the database; check migration compatibility first.

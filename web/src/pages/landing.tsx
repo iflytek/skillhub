@@ -89,7 +89,7 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
         <div className="flex min-h-[360px] flex-col p-5">
           <div className="mb-4 flex items-center gap-2 rounded-lg border border-border/70 bg-secondary/70 px-3 py-2 transition-colors focus-within:border-ring focus-within:bg-background">
             <SearchIcon className="h-4 w-4 flex-shrink-0 text-muted-foreground" strokeWidth={1.5} />
-            <input
+            <input data-analytics-id="discovery.query.enter"
               type="text"
               placeholder={t('landing.hero.searchPlaceholder')}
               className="min-w-0 flex-1 border-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
@@ -103,7 +103,7 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
 
           <div className="space-y-2">
             {HERO_SKILLS.map((skill) => (
-              <button
+              <button data-analytics-id="discovery.suggestion.search"
                 key={skill.name}
                 type="button"
                 className="group flex w-full items-center gap-3 rounded-lg border border-border/70 bg-background p-3 text-left transition-[transform,border-color,background-color,box-shadow] duration-150 hover:-translate-y-px hover:border-border hover:bg-secondary/60 hover:shadow-sm active:translate-y-0 active:scale-[0.995] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none"
@@ -129,7 +129,7 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
 
           <div className="mt-auto flex items-center justify-between border-t border-border/70 pt-3">
             <span className="text-xs text-muted-foreground">{t('landing.experience.demoSkills.caption')}</span>
-            <Link
+            <Link data-analytics-id="navigation.skills.open"
               to="/search"
               search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
               className="inline-flex items-center gap-1 text-xs font-medium text-foreground hover:text-primary"
@@ -355,10 +355,10 @@ export function LandingPage() {
             </p>
 
             <div className="mb-8 flex flex-wrap gap-3">
-              <Link to="/dashboard/publish" className="btn-pill btn-pill-primary">
+              <Link data-analytics-id="skill.publish.open" to="/dashboard/publish" className="btn-pill btn-pill-primary">
                 {t('landing.hero.publishSkill')}
               </Link>
-              <Link
+              <Link data-analytics-id="navigation.skills.open"
                 to="/search"
                 search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }}
                 className="group btn-pill btn-pill-outline inline-flex items-center gap-2"
@@ -421,7 +421,7 @@ export function LandingPage() {
               <h2 className="mb-2 text-3xl font-medium tracking-tight text-foreground">{popularTitle}</h2>
               <p className="text-sm text-muted-foreground">{popularDescription}</p>
             </div>
-            <Button
+            <Button data-analytics-id="discovery.popular.open"
               variant="ghost"
               onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 0, starredOnly: false } })}
             >
@@ -434,7 +434,7 @@ export function LandingPage() {
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {popularSkills?.items.map((skill, idx) => (
                 <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
-                  <SkillCard skill={skill} onClick={() => handleSkillClick(skill.namespace, skill.slug)} />
+                  <SkillCard analyticsId="skill.card.open" skill={skill} onClick={() => handleSkillClick(skill.namespace, skill.slug)} />
                 </div>
               ))}
             </div>
@@ -450,7 +450,7 @@ export function LandingPage() {
               <h2 className="mb-2 text-3xl font-medium tracking-tight text-foreground">{latestTitle}</h2>
               <p className="text-sm text-muted-foreground">{latestDescription}</p>
             </div>
-            <Button
+            <Button data-analytics-id="discovery.latest.open"
               variant="ghost"
               onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0, starredOnly: false } })}
             >
@@ -463,7 +463,7 @@ export function LandingPage() {
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {latestSkills?.items.map((skill, idx) => (
                 <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
-                  <SkillCard skill={skill} onClick={() => handleSkillClick(skill.namespace, skill.slug)} />
+                  <SkillCard analyticsId="skill.card.open" skill={skill} onClick={() => handleSkillClick(skill.namespace, skill.slug)} />
                 </div>
               ))}
             </div>
@@ -480,10 +480,10 @@ export function LandingPage() {
           <h2 className="mb-3 text-2xl font-medium tracking-tight text-foreground md:text-3xl">{t('landing.experience.cta.title')}</h2>
           <p className="mb-8 text-muted-foreground">{t('landing.experience.cta.description')}</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <a href="https://github.com/iflytek/skillhub" target="_blank" rel="noreferrer" className="btn-pill btn-pill-primary">
+            <a data-analytics-id="navigation.repository.open" href="https://github.com/iflytek/skillhub" target="_blank" rel="noreferrer" className="btn-pill btn-pill-primary">
               {t('landing.experience.cta.deploy')}
             </a>
-            <a href="https://iflytek.github.io/skillhub/" target="_blank" rel="noreferrer" className="group btn-pill btn-pill-outline inline-flex items-center gap-2">
+            <a data-analytics-id="navigation.documentation.open" href="https://iflytek.github.io/skillhub/" target="_blank" rel="noreferrer" className="group btn-pill btn-pill-outline inline-flex items-center gap-2">
               {t('landing.experience.cta.docs')} <CheckCircle2 className="h-4 w-4" />
             </a>
           </div>

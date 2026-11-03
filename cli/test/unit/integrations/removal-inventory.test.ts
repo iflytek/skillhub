@@ -11,7 +11,7 @@ test('removal commits exactly one target, journals before writing and preserves 
   try {
     const store = new InventoryStore(home)
     const root = join(home, 'skills')
-    const target = { installationState: 'enabled' as const, version: '1.0.0', fingerprint: 'fingerprint', agent: 'dsh', rootDir: root, installDir: join(root, 'writer'), installedAt: '2026-10-14' }
+    const target = { version: '1.0.0', fingerprint: 'fingerprint', agent: 'dsh', rootDir: root, installDir: join(root, 'writer'), installedAt: '2026-10-14' }
     const retained = { ...target, agent: 'other', rootDir: join(home, 'other'), installDir: join(home, 'other/writer') }
     const item = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', targets: [target, retained] }
     const other = { ...item, slug: 'reader', targets: [{ ...target, installDir: join(root, 'reader') }] }

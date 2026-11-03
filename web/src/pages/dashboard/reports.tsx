@@ -128,7 +128,7 @@ export function ReportsPage() {
             <Card key={report.id} className="p-5 space-y-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-2 min-w-0">
-                  <button
+                  <button data-analytics-id="skill.detail.open"
                     type="button"
                     className={`text-left font-semibold font-heading text-foreground transition-colors hover:text-primary ${REPORT_TEXT_WRAP_CLASS_NAME}`}
                     onClick={() => handleOpenSkill(report.namespace, report.skillSlug)}
@@ -148,7 +148,7 @@ export function ReportsPage() {
 
               {status === 'PENDING' ? (
                 <div className="flex items-center justify-end gap-2">
-                  <Button
+                  <Button data-analytics-id="report.dismiss.request"
                     variant="outline"
                     size="sm"
                     disabled={resolveMutation.isPending || dismissMutation.isPending}
@@ -156,7 +156,7 @@ export function ReportsPage() {
                   >
                     {t('reports.dismiss')}
                   </Button>
-                  <Button
+                  <Button data-analytics-id="report.resolve.request"
                     variant="outline"
                     size="sm"
                     disabled={resolveMutation.isPending || dismissMutation.isPending}
@@ -164,7 +164,7 @@ export function ReportsPage() {
                   >
                     {t('reports.resolve')}
                   </Button>
-                  <Button
+                  <Button data-analytics-id="report.hide.request"
                     variant="outline"
                     size="sm"
                     disabled={resolveMutation.isPending || dismissMutation.isPending}
@@ -172,7 +172,7 @@ export function ReportsPage() {
                   >
                     {t('reports.resolveAndHide')}
                   </Button>
-                  <Button
+                  <Button data-analytics-id="report.archive.request"
                     size="sm"
                     disabled={resolveMutation.isPending || dismissMutation.isPending}
                     onClick={() => setPendingAction({ id: report.id, action: 'resolve', disposition: 'RESOLVE_AND_ARCHIVE', skillLabel })}
@@ -189,7 +189,7 @@ export function ReportsPage() {
           )
         })}
         {reports.total > reports.size ? (
-          <Pagination
+          <Pagination analyticsId="report.list.paginate"
             page={pages[status]}
             totalPages={Math.max(Math.ceil(reports.total / reports.size), 1)}
             onPageChange={(nextPage) => setPages((current) => ({ ...current, [status]: nextPage }))}
@@ -205,9 +205,9 @@ export function ReportsPage() {
 
       <Tabs defaultValue="PENDING">
         <TabsList>
-          <TabsTrigger value="PENDING">{t('reports.tabPending')}</TabsTrigger>
-          <TabsTrigger value="RESOLVED">{t('reports.tabResolved')}</TabsTrigger>
-          <TabsTrigger value="DISMISSED">{t('reports.tabDismissed')}</TabsTrigger>
+          <TabsTrigger data-analytics-id="report.pending.tab" value="PENDING">{t('reports.tabPending')}</TabsTrigger>
+          <TabsTrigger data-analytics-id="report.resolved.tab" value="RESOLVED">{t('reports.tabResolved')}</TabsTrigger>
+          <TabsTrigger data-analytics-id="report.dismissed.tab" value="DISMISSED">{t('reports.tabDismissed')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="PENDING" className="mt-6">
@@ -222,6 +222,8 @@ export function ReportsPage() {
       </Tabs>
 
       <ConfirmDialog
+        confirmAnalyticsId={pendingAction?.action === 'dismiss' ? 'report.dismiss.confirm' : pendingAction?.disposition === 'RESOLVE_AND_HIDE' ? 'report.hide.confirm' : pendingAction?.disposition === 'RESOLVE_AND_ARCHIVE' ? 'report.archive.confirm' : pendingAction ? 'report.resolve.confirm' : undefined}
+        cancelAnalyticsId={pendingAction?.action === 'dismiss' ? 'report.dismiss.cancel' : pendingAction?.disposition === 'RESOLVE_AND_HIDE' ? 'report.hide.cancel' : pendingAction?.disposition === 'RESOLVE_AND_ARCHIVE' ? 'report.archive.cancel' : pendingAction ? 'report.resolve.cancel' : undefined}
         open={pendingAction !== null}
         onOpenChange={(open) => {
           if (!open) {

@@ -1,6 +1,7 @@
+import { renameAtomicFile } from '../../../src/platform/atomic-rename'
 import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
-import { mkdir, mkdtemp, readdir, readFile, rm, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readdir, readFile, rename, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { OperationStore, operationRequestDigest } from '../../../src/integrations/operation-store'
@@ -114,3 +115,103 @@ test('pending journals block parent and child targets including aliases with mis
   await store.assertTargetsAvailable([sibling], current)
   expect((await store.get(pending.operationId, pending.ownerId))!.operation.status.phase).toBe('unknown')
 }))
+
+test('ordinary journals remain v2 while activation journals are isolated and replayable', () => fixture(async (store, root) => {
+  const ordinary = (await store.accept(request(store), async () => accepted))!
+  const key = request(store)
+  const activation = (await store.accept(key, async () => ({ ...accepted, kind: 'disable' })))!
+  expect(JSON.parse(await readFile(join(root, `${ordinary.operationId}.json`), 'utf8')).schemaVersion).toBe(2)
+  expect(JSON.parse(await readFile(join(root, 'activation', `${activation.operationId}.json`), 'utf8')).schemaVersion).toBe(3)
+  expect((await readdir(root)).filter(name => name.endsWith('.json')).sort()).toEqual([`${ordinary.operationId}.json`, 'host.json'].sort())
+  const reopened = await OperationStore.open(root)
+  expect((await reopened.accept({ ...key, mode: 'retry' }, async () => { throw new Error('No replay mutation') }))?.operationId).toBe(activation.operationId)
+  expect((await reopened.listForRecovery()).map(record => record.operationId)).toContain(activation.operationId)
+  expect((await reopened.accept(request(reopened), async () => accepted))?.schemaVersion).toBe(2)
+}))
+
+test('existing root v3 journal is moved byte-for-byte outside legacy scan', () => fixture(async (store, root) => {
+  const ordinary = (await store.accept(request(store), async () => accepted))!
+  const bytes = JSON.stringify({ ...ordinary, schemaVersion: 3 }, null, 3)
+  await writeFile(join(root, `${ordinary.operationId}.json`), bytes)
+  const reopened = await OperationStore.open(root)
+  expect(await readFile(join(root, 'activation', `${ordinary.operationId}.json`), 'utf8')).toBe(bytes)
+  expect(await readdir(root)).not.toContain(`${ordinary.operationId}.json`)
+  expect((await reopened.get(ordinary.operationId, ordinary.ownerId))?.schemaVersion).toBe(3)
+}))
+
+test.each(['identical', 'changed'] as const)('interrupted journal isolation handles %s duplicate without hiding evidence', mode => fixture(async (store, root) => {
+  const ordinary = (await store.accept(request(store), async () => accepted))!
+  const path = join(root, `${ordinary.operationId}.json`)
+  await mkdir(join(root, 'activation'))
+  await writeFile(join(root, 'activation', `${ordinary.operationId}.json`), await readFile(path))
+  if (mode === 'changed') {
+    await writeFile(path, JSON.stringify({ ...ordinary, revision: 1 }))
+    await expect(OperationStore.open(root)).rejects.toMatchObject({ code: 'CORRUPT_RECORD' })
+    expect(JSON.parse(await readFile(path, 'utf8')).revision).toBe(1)
+    expect(JSON.parse(await readFile(join(root, 'activation', `${ordinary.operationId}.json`), 'utf8')).revision).toBe(0)
+  } else {
+    const reopened = await OperationStore.open(root)
+    expect(await readdir(root)).not.toContain(`${ordinary.operationId}.json`)
+    await reopened.update(ordinary.operationId, ordinary.ownerId, 0, { ...ordinary.operation.status, phase: 'staging' })
+    expect((await reopened.get(ordinary.operationId, ordinary.ownerId))?.revision).toBe(1)
+    expect(await readdir(root)).not.toContain(`${ordinary.operationId}.json`)
+  }
+}))
+
+
+test.each(['EPERM', 'EBUSY'])('journal replacement retries %s under the store lock without replaying validation or revision', async code => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-journal-retry-'))
+  let armed = false; let attempts = 0; let validations = 0
+  const reachedRename = Promise.withResolvers<void>()
+  let firstAttempt: { source: string; target: string; payload: string } | undefined
+  let previous: string | undefined
+  let competing: Promise<PromiseSettledResult<unknown>[]> | undefined
+  try {
+    const store = await OperationStore.open(root, (from, to) => renameAtomicFile(from, to, async (source, target) => {
+      if (armed) {
+        const observation = { source: String(source), target: String(target), payload: (await readFile(source)).toString('hex') }
+        if (!firstAttempt) firstAttempt = observation
+        else expect(observation).toEqual(firstAttempt)
+        expect((await readFile(target)).toString('hex')).toEqual(previous!)
+        if (++attempts < 3) { reachedRename.resolve(); throw Object.assign(new Error('Sharing failure'), { code }) }
+      }
+      await rename(source, target)
+    }, 'win32'))
+    const key = request(store)
+    const initial = (await store.accept(key, async () => { validations++; return accepted }))!
+    const other = await OperationStore.open(root)
+    previous = (await readFile(join(root, initial.operationId + '.json'))).toString('hex')
+    armed = true
+    const updating = store.update(initial.operationId, key.ownerId, 0, { ...initial.operation.status, phase: 'staging' })
+    await reachedRename.promise
+    competing = Promise.allSettled([other.update(initial.operationId, key.ownerId, 0, { ...initial.operation.status, phase: 'staging' })])
+    const staged = await updating
+    expect(staged.revision).toBe(1)
+    expect((await competing)[0]!.status).toBe('rejected')
+    expect(attempts).toBe(3)
+    expect(validations).toBe(1)
+    expect((await store.get(initial.operationId, key.ownerId))!.revision).toBe(1)
+    expect((await store.accept({ ...key, mode: 'retry' }, async () => { throw new Error('must not replay') }))!.operationId).toBe(initial.operationId)
+  } finally { await competing; await rm(root, { recursive: true, force: true }) }
+})
+
+test('exhausted journal replacement preserves original bytes and releases the store lock', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-journal-exhaust-'))
+  let armed = false; let attempts = 0
+  const failure = Object.assign(new Error('Sharing failure'), { code: 'EPERM' })
+  try {
+    const store = await OperationStore.open(root, (from, to) => renameAtomicFile(from, to, async (source, target) => {
+      if (armed) { attempts++; throw failure }
+      await rename(source, target)
+    }, 'win32'))
+    const key = request(store); const initial = (await store.accept(key, async () => accepted))!
+    const path = join(root, initial.operationId + '.json'); const before = await readFile(path)
+    armed = true
+    await expect(store.update(initial.operationId, key.ownerId, 0, { ...initial.operation.status, phase: 'staging' })).rejects.toBe(failure)
+    expect(attempts).toBe(6)
+    expect(await readFile(path)).toEqual(before)
+    expect((await readdir(root)).filter(name => name.endsWith('.tmp'))).toEqual([])
+    armed = false
+    expect((await store.update(initial.operationId, key.ownerId, 0, { ...initial.operation.status, phase: 'staging' })).revision).toBe(1)
+  } finally { await rm(root, { recursive: true, force: true }) }
+})

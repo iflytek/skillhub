@@ -77,14 +77,14 @@ export function NamespaceGithubSourcesPage() {
       <DashboardPageHeader title={t('githubSync.teamTitle', { slug })} subtitle={t('githubSync.teamSubtitle')} />
       <Card className="p-5 space-y-3">
         <h2 className="text-lg font-semibold">{t('githubSync.addRepository')}</h2>
-        <form onSubmit={create} className="flex flex-wrap items-end gap-3">
+        <form data-analytics-id="github.namespace.create" onSubmit={create} className="flex flex-wrap items-end gap-3">
           <label className="min-w-52 flex-1 text-sm">{t('githubSync.repository')}
             <Input placeholder="owner/repository" value={repository} onChange={(event) => setRepository(event.target.value)} required />
           </label>
           <label className="text-sm">{t('githubSync.visibility')}
             <select className="block h-9 rounded-md border bg-background px-2" value={visibility} onChange={(event) => setVisibility(event.target.value)}>
-              <option value="NAMESPACE_ONLY">{t('githubSync.namespaceOnly')}</option>
-              <option value="PUBLIC">{t('githubSync.public')}</option>
+              <option data-analytics-id="github.namespace.create.visibility.namespace" value="NAMESPACE_ONLY">{t('githubSync.namespaceOnly')}</option>
+              <option data-analytics-id="github.namespace.create.visibility.public" value="PUBLIC">{t('githubSync.public')}</option>
             </select>
           </label>
           <Button type="submit" disabled={mutations.create.isPending}>{t('githubSync.add')}</Button>
@@ -110,10 +110,10 @@ export function NamespaceGithubSourcesPage() {
                 <TableCell>{entry.enabled ? t('githubSync.active') : t('githubSync.paused')}</TableCell>
                 <TableCell>
                   <select aria-label={t('githubSync.visibility')} className="h-9 rounded-md border bg-background px-2" value={entry.sourceVisibility ?? 'NAMESPACE_ONLY'} disabled={!entry.id || mutations.setVisibility.isPending} onChange={(event) => entry.id && changeVisibility(entry.id, event.target.value)}>
-                    <option value="NAMESPACE_ONLY">{t('githubSync.namespaceOnly')}</option><option value="PUBLIC">{t('githubSync.public')}</option>
+                    <option data-analytics-id="github.namespace.visibility.namespace" value="NAMESPACE_ONLY">{t('githubSync.namespaceOnly')}</option><option data-analytics-id="github.namespace.visibility.public" value="PUBLIC">{t('githubSync.public')}</option>
                   </select>
                 </TableCell>
-                <TableCell><Button size="sm" variant="outline" disabled={!entry.id || mutations.setEnabled.isPending} onClick={() => entry.id && changeEnabled(entry.id, !entry.enabled)}>{entry.enabled ? t('githubSync.disable') : t('githubSync.enable')}</Button></TableCell>
+                <TableCell><Button data-analytics-id={entry.enabled ? 'github.namespace.disable' : 'github.namespace.enable'} size="sm" variant="outline" disabled={!entry.id || mutations.setEnabled.isPending} onClick={() => entry.id && changeEnabled(entry.id, !entry.enabled)}>{entry.enabled ? t('githubSync.disable') : t('githubSync.enable')}</Button></TableCell>
               </TableRow>
             ))}</TableBody>
           </Table>
@@ -140,13 +140,13 @@ export function NamespaceGithubSourcesPage() {
                   <span>{t('githubSync.failed')}: <strong>{source.failedPackages ?? 0}</strong></span>
                 </div></TableCell>
                 <TableCell>{formatLocalDateTime(source.nextCheckAt, i18n.language)}</TableCell>
-                <TableCell className="space-y-2"><Button size="sm" variant="outline" onClick={() => { setSelectedSource(source.id ?? null); setSkillPage(0) }}>{t('githubSync.viewSkills')}</Button>{source.id != null ? <GithubSourceRescanButton sourceId={source.id} status={source.status} namespaceSlug={slug} /> : null}</TableCell>
+                <TableCell className="space-y-2"><Button data-analytics-id="github.source.skills" size="sm" variant="outline" onClick={() => { setSelectedSource(source.id ?? null); setSkillPage(0) }}>{t('githubSync.viewSkills')}</Button>{source.id != null ? <GithubSourceRescanButton sourceId={source.id} status={source.status} namespaceSlug={slug} /> : null}</TableCell>
               </TableRow>
             ))}</TableBody>
           </Table>
         ) : null}
         {resolved.data && Math.ceil((resolved.data.total ?? 0) / (resolved.data.size || PAGE_SIZE)) > 1 ? (
-          <Pagination page={page} totalPages={Math.ceil((resolved.data.total ?? 0) / (resolved.data.size || PAGE_SIZE))} onPageChange={setPage} />
+          <Pagination analyticsId="github.namespace.paginate" page={page} totalPages={Math.ceil((resolved.data.total ?? 0) / (resolved.data.size || PAGE_SIZE))} onPageChange={setPage} />
         ) : null}
       </Card>
       <section className="space-y-3" aria-label={t('githubSync.runs')}>
@@ -156,7 +156,7 @@ export function NamespaceGithubSourcesPage() {
       </section>
       {selectedSource !== null ? (
         <Card className="p-5 space-y-3">
-          <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{t('githubSync.skillPaths')} · #{selectedSource}</h2><Button size="sm" variant="ghost" onClick={() => setSelectedSource(null)}>{t('githubSync.close')}</Button></div>
+          <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">{t('githubSync.skillPaths')} · #{selectedSource}</h2><Button data-analytics-id="github.namespace.skills.close" size="sm" variant="ghost" onClick={() => setSelectedSource(null)}>{t('githubSync.close')}</Button></div>
           <GithubSourceIgnoreEditor sourceId={selectedSource} namespaceSlug={slug} />
           {skills.isLoading ? <p className="text-sm text-muted-foreground">{t('githubSync.loading')}</p> : null}
           {skills.error ? <p role="alert" className="text-sm text-destructive">{t('githubSync.loadFailed')}: {skills.error.message}</p> : null}
@@ -167,7 +167,7 @@ export function NamespaceGithubSourcesPage() {
             </Table>
           ) : null}
           {skills.data && Math.ceil((skills.data.total ?? 0) / (skills.data.size || PAGE_SIZE)) > 1 ? (
-            <Pagination page={skillPage} totalPages={Math.ceil((skills.data.total ?? 0) / (skills.data.size || PAGE_SIZE))} onPageChange={setSkillPage} />
+            <Pagination analyticsId="github.source.paginate" page={skillPage} totalPages={Math.ceil((skills.data.total ?? 0) / (skills.data.size || PAGE_SIZE))} onPageChange={setSkillPage} />
           ) : null}
         </Card>
       ) : null}

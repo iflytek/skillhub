@@ -160,7 +160,7 @@ export function AdminUsersPage() {
           <div className="space-y-2">
             <Label htmlFor="admin-user-search">{t('adminUsers.searchLabel')}</Label>
             <div className="flex gap-2">
-              <Input
+              <Input data-analytics-id="admin.user.search"
                 id="admin-user-search"
                 placeholder={t('adminUsers.searchPlaceholder')}
                 value={searchInput}
@@ -168,10 +168,10 @@ export function AdminUsersPage() {
                 onKeyDown={handleSearchKeyDown}
                 className="flex-1"
               />
-              <Button type="button" onClick={applySearch}>
+              <Button data-analytics-id="admin.user.search" type="button" onClick={applySearch}>
                 {t('adminUsers.searchAction')}
               </Button>
-              <Button type="button" variant="outline" onClick={clearSearch} disabled={!searchInput && !search}>
+              <Button data-analytics-id="admin.user.clear" type="button" variant="outline" onClick={clearSearch} disabled={!searchInput && !search}>
                 {t('adminUsers.clearSearch')}
               </Button>
             </div>
@@ -183,14 +183,14 @@ export function AdminUsersPage() {
               value={normalizeSelectValue(statusFilter) ?? allStatusFilterValue}
               onValueChange={(value) => setStatusFilter(value === allStatusFilterValue ? '' : value)}
             >
-              <SelectTrigger id="admin-user-status">
+              <SelectTrigger data-analytics-id="admin.user.status.interact" id="admin-user-status">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={allStatusFilterValue}>{t('adminUsers.filterAll')}</SelectItem>
-                <SelectItem value="ACTIVE">{t('adminUsers.filterActive')}</SelectItem>
-                <SelectItem value="PENDING">{t('adminUsers.filterPending')}</SelectItem>
-                <SelectItem value="DISABLED">{t('adminUsers.filterDisabled')}</SelectItem>
+                <SelectItem data-analytics-id="admin.user.status.filter" value={allStatusFilterValue}>{t('adminUsers.filterAll')}</SelectItem>
+                <SelectItem data-analytics-id="admin.user.status.filter" value="ACTIVE">{t('adminUsers.filterActive')}</SelectItem>
+                <SelectItem data-analytics-id="admin.user.status.filter" value="PENDING">{t('adminUsers.filterPending')}</SelectItem>
+                <SelectItem data-analytics-id="admin.user.status.filter" value="DISABLED">{t('adminUsers.filterDisabled')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -229,7 +229,7 @@ export function AdminUsersPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs text-muted-foreground min-w-0 max-w-[14rem] truncate" title={user.userId}>{user.userId}</span>
-                        <CopyButton text={user.userId} ariaLabel={t('adminUsers.copyUserId', { username: user.username })} />
+                        <CopyButton analyticsId="admin.user.identifier.copy" text={user.userId} ariaLabel={t('adminUsers.copyUserId', { username: user.username })} />
                       </div>
                     </TableCell>
                     <TableCell>{user.email || '-'}</TableCell>
@@ -250,7 +250,7 @@ export function AdminUsersPage() {
                     <TableCell>{formatDate(user.createdAt)}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button
+                        <Button data-analytics-id="admin.user.role.edit"
                           variant="outline"
                           size="sm"
                           onClick={() => handleChangeRole(user)}
@@ -258,7 +258,7 @@ export function AdminUsersPage() {
                           {t('adminUsers.changeRole')}
                         </Button>
                         {user.status === 'PENDING' && (
-                          <Button
+                          <Button data-analytics-id="admin.user.approve"
                             variant="outline"
                             size="sm"
                             onClick={() => approveUserMutation.mutate(user.userId)}
@@ -267,7 +267,7 @@ export function AdminUsersPage() {
                           </Button>
                         )}
                         {user.status === 'ACTIVE' ? (
-                          <Button
+                          <Button data-analytics-id="admin.user.disable"
                             variant="outline"
                             size="sm"
                             onClick={() => handleToggleStatus(user, 'ban')}
@@ -275,7 +275,7 @@ export function AdminUsersPage() {
                             {t('adminUsers.disable')}
                           </Button>
                         ) : (
-                          <Button
+                          <Button data-analytics-id="admin.user.enable"
                             variant="outline"
                             size="sm"
                             onClick={() => handleToggleStatus(user, 'unban')}
@@ -283,7 +283,7 @@ export function AdminUsersPage() {
                             {t('adminUsers.enable')}
                           </Button>
                         )}
-                        <Button
+                        <Button data-analytics-id="admin.user.password.reset"
                           variant="outline"
                           size="sm"
                           onClick={() => handleTriggerPasswordReset(user)}
@@ -303,7 +303,7 @@ export function AdminUsersPage() {
               {t('adminUsers.totalRecords', { total: data.total, page: page + 1 })}
             </p>
             <div className="flex gap-2">
-              <Button
+              <Button data-analytics-id="admin.user.previous"
                 variant="outline"
                 size="sm"
                 disabled={page === 0}
@@ -311,7 +311,7 @@ export function AdminUsersPage() {
               >
                 {t('adminUsers.prevPage')}
               </Button>
-              <Button
+              <Button data-analytics-id="admin.user.next"
                 variant="outline"
                 size="sm"
                 disabled={(page + 1) * 20 >= data.total}
@@ -325,7 +325,7 @@ export function AdminUsersPage() {
       )}
 
    <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId="admin.user.role.cancel">
           <DialogHeader>
             <DialogTitle>{t('adminUsers.changeRoleTitle')}</DialogTitle>
             <DialogDescription>
@@ -336,12 +336,12 @@ export function AdminUsersPage() {
             <div className="space-y-2">
               <Label htmlFor="role">{t('adminUsers.roleLabel')}</Label>
               <Select value={newRole} onValueChange={setNewRole}>
-                <SelectTrigger id="role">
+                <SelectTrigger data-analytics-id="admin.user.role.interact" id="role">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {roleOptions.map((roleOption) => (
-                    <SelectItem key={roleOption.value} value={roleOption.value}>
+                    <SelectItem data-analytics-id="admin.user.role.select" key={roleOption.value} value={roleOption.value}>
                       {roleOption.label}
                     </SelectItem>
                   ))}
@@ -350,10 +350,10 @@ export function AdminUsersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>
+            <Button data-analytics-id="admin.user.role.cancel" variant="outline" onClick={() => setRoleDialogOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button
+            <Button data-analytics-id="admin.user.role.confirm"
               onClick={confirmRoleChange}
               disabled={
                 updateRoleMutation.isPending
@@ -369,7 +369,7 @@ export function AdminUsersPage() {
       </Dialog>
 
       <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId={actionType === 'ban' ? 'admin.user.disable.cancel' : actionType === 'unban' ? 'admin.user.enable.cancel' : 'admin.user.password.reset.cancel'}>
           <DialogHeader>
             <DialogTitle>{t('adminUsers.confirmAction')}</DialogTitle>
             <DialogDescription>
@@ -381,10 +381,10 @@ export function AdminUsersPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDialogOpen(false)}>
+            <Button data-analytics-id={actionType === 'ban' ? 'admin.user.disable.cancel' : actionType === 'unban' ? 'admin.user.enable.cancel' : 'admin.user.password.reset.cancel'} variant="outline" onClick={() => setConfirmDialogOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button
+            <Button data-analytics-id={actionType === 'ban' ? 'admin.user.disable.confirm' : actionType === 'unban' ? 'admin.user.enable.confirm' : 'admin.user.password.reset.confirm'}
               onClick={confirmUserAction}
               disabled={disableUserMutation.isPending || enableUserMutation.isPending || triggerPasswordResetMutation.isPending}
             >

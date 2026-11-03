@@ -103,7 +103,7 @@ export function DeviceAuthPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form data-analytics-id="auth.device.authorize" onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
             <Label>{t('device.codeLabel')}</Label>
             <div className="flex items-center gap-3">

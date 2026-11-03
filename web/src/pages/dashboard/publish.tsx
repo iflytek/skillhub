@@ -262,13 +262,13 @@ export function PublishPage() {
                 setAvatarEdit(KEEP_AVATAR)
               }}
             >
-              <SelectTrigger id="namespace">
+              <SelectTrigger data-analytics-id="skill.publish.namespace.interact" id="namespace">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value={EMPTY_NAMESPACE_VALUE}>{t('publish.selectNamespace')}</SelectItem>
+                <SelectItem data-analytics-id="skill.publish.namespace.clear" value={EMPTY_NAMESPACE_VALUE}>{t('publish.selectNamespace')}</SelectItem>
                 {namespaces?.map((ns) => (
-                  <SelectItem key={ns.id} value={ns.slug}>
+                  <SelectItem data-analytics-id="skill.publish.namespace.select" key={ns.id} value={ns.slug}>
                     {ns.displayName} (@{ns.slug})
                   </SelectItem>
                 ))}
@@ -280,13 +280,13 @@ export function PublishPage() {
         <div className="space-y-3">
           <Label htmlFor="visibility" className="text-sm font-semibold font-heading">{t('publish.visibility')}</Label>
           <Select value={visibility} onValueChange={setVisibility} disabled={ownerReadOnly || isBusy || avatarOnly}>
-            <SelectTrigger id="visibility">
+            <SelectTrigger data-analytics-id="skill.publish.visibility.interact" id="visibility">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="PUBLIC">{t('publish.visibilityOptions.public')}</SelectItem>
-              <SelectItem value="NAMESPACE_ONLY">{namespaceOnlyLabel}</SelectItem>
-              <SelectItem value="PRIVATE">{t('publish.visibilityOptions.private')}</SelectItem>
+              <SelectItem data-analytics-id="skill.publish.visibility.public" value="PUBLIC">{t('publish.visibilityOptions.public')}</SelectItem>
+              <SelectItem data-analytics-id="skill.publish.visibility.namespace" value="NAMESPACE_ONLY">{namespaceOnlyLabel}</SelectItem>
+              <SelectItem data-analytics-id="skill.publish.visibility.private" value="PRIVATE">{t('publish.visibilityOptions.private')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -294,7 +294,7 @@ export function PublishPage() {
         <div className="space-y-3">
           <Label className="text-sm font-semibold font-heading">{t('publish.file')}</Label>
           {isUpdate && <p className="text-sm text-muted-foreground">{t('publish.optionalPackage')}</p>}
-          <UploadZone
+          <UploadZone analyticsId="skill.package.select" folderAnalyticsId="skill.package.folder.select" pickerAnalyticsId="skill.package.folder.open"
             onFileSelect={handleFileSelect}
             onFolderSelect={handleFolderSelect}
             disabled={ownerReadOnly || isBusy || isPackaging}
@@ -309,7 +309,7 @@ export function PublishPage() {
                   {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
                 </span>
               </div>
-              <Button
+              <Button data-analytics-id="skill.package.remove"
                 type="button"
                 variant="outline"
                 size="sm"
@@ -340,7 +340,7 @@ export function PublishPage() {
           {selectedFile && packagePreview.isPending && <p role="status" className="text-sm text-muted-foreground">{t('publish.readingPackage')}</p>}
           {selectedFile && packagePreview.isError && <div role="alert" className="text-sm text-destructive">
             <p>{t('publish.packagePreviewFailed')}</p>
-            <Button type="button" size="sm" variant="outline" onClick={() => packagePreview.refetch()}>{t('publish.retryPackagePreview')}</Button>
+            <Button data-analytics-id="skill.package.preview.retry" type="button" size="sm" variant="outline" onClick={() => packagePreview.refetch()}>{t('publish.retryPackagePreview')}</Button>
           </div>}
           {selectedFile && packagePreview.data && <p className="break-all text-xs text-muted-foreground">{t('publish.packageName')}: <code>{packagePreview.data.name}</code></p>}
           {selectedFile && packagePreview.data?.examplesStatus === 'ready' && <p role="status" className="text-xs text-muted-foreground">{t('publish.examplesReady', { count: packagePreview.data.examplesCount })}</p>}
@@ -352,7 +352,7 @@ export function PublishPage() {
         {updateSlug && <SkillAvatarManager namespace={namespaceSlug} slug={updateSlug} disabled={ownerReadOnly || isBusy} />}
         {avatarTarget.isError && <p role="alert" className="text-sm text-destructive">{t('skillAvatar.failed')}</p>}
 
-        <Button
+        <Button data-analytics-id={avatarOnly ? "skill.avatar.save" : "skill.publish.request"}
           className="w-full text-primary-foreground disabled:text-primary-foreground"
           size="lg"
           onClick={handlePublish}
@@ -362,7 +362,7 @@ export function PublishPage() {
         </Button>
       </Card>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId={avatarOnly ? undefined : "skill.publish.confirm"} cancelAnalyticsId={avatarOnly ? undefined : "skill.publish.cancel"}
         open={warningDialogOpen}
         onOpenChange={setWarningDialogOpen}
         title={t('publish.warningConfirmTitle')}

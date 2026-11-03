@@ -48,7 +48,7 @@ function AgentAccessPanel() {
             ['registry', t('landing.experience.quickStart.agent.registryTab')],
             ['discovery', t('landing.experience.quickStart.agent.discoveryTab')],
           ] as const).map(([id, label]) => (
-            <button
+            <button data-analytics-id="guide.view.select"
               key={id}
               type="button"
               role="tab"
@@ -75,7 +75,7 @@ function AgentAccessPanel() {
             <p className="min-w-0 flex-1 text-sm leading-7 text-foreground">
               {t('landing.experience.quickStart.agent.instructionPrefix')} <span className="break-all text-blue-600 underline decoration-blue-300 underline-offset-4">{registryUrl}/registry/skill.md</span> {t('landing.experience.quickStart.agent.instructionSuffix')}
             </p>
-            <button
+            <button data-analytics-id="guide.prompt.copy"
               type="button"
               onClick={() => {
                 void copy(instruction).catch(() => {
@@ -171,7 +171,7 @@ function CliAccessPanel() {
             <span className="select-none font-bold text-emerald-600 dark:text-emerald-400">$</span>
             <div className="flex-1">
               <span className="text-neutral-800 dark:text-neutral-200">npx -y @astron-team/skillhub@0.1.12 --version</span>
-              <button
+              <button data-analytics-id="guide.command.copy"
                 type="button"
                 onClick={() => handleCopy('npx -y @astron-team/skillhub@0.1.12 --version', 0)}
                 className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground align-middle transition-[color,background-color,transform] hover:bg-neutral-100 hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-neutral-800"
@@ -190,7 +190,7 @@ function CliAccessPanel() {
             <span className="select-none font-bold text-emerald-600 dark:text-emerald-400">$</span>
             <div className="flex-1">
               <span className="text-neutral-800 dark:text-neutral-200">npx -y @astron-team/skillhub@0.1.12 search weather \</span>
-              <button
+              <button data-analytics-id="guide.command.copy"
                 type="button"
                 onClick={() => handleCopy(`npx -y @astron-team/skillhub@0.1.12 search weather --registry ${registryUrl} --limit 5`, 1)}
                 className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground align-middle transition-[color,background-color,transform] hover:bg-neutral-100 hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-neutral-800"
@@ -229,7 +229,7 @@ function CliAccessPanel() {
             <span className="select-none font-bold text-emerald-600 dark:text-emerald-400">$</span>
             <div className="flex-1">
               <span className="text-neutral-800 dark:text-neutral-200">npx -y @astron-team/skillhub@0.1.12 install @global/weather \</span>
-              <button
+              <button data-analytics-id="guide.command.copy"
                 type="button"
                 onClick={() => handleCopy(`npx -y @astron-team/skillhub@0.1.12 install @global/weather --dir ./skills --registry ${registryUrl}`, 2)}
                 className="ml-2 inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] text-muted-foreground align-middle transition-[color,background-color,transform] hover:bg-neutral-100 hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-neutral-800"
@@ -270,7 +270,7 @@ function CliAccessPanel() {
           <span className="text-border">·</span>
           <span className="break-all font-mono">registry: {registryUrl}</span>
         </div>
-        <a href="https://github.com/iflytek/skillhub/tree/main/cli" target="_blank" rel="noreferrer" className="group flex items-center gap-1 font-medium text-blue-600 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400 dark:hover:text-blue-300">
+        <a data-analytics-id="navigation.cli.open" href="https://github.com/iflytek/skillhub/tree/main/cli" target="_blank" rel="noreferrer" className="group flex items-center gap-1 font-medium text-blue-600 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400 dark:hover:text-blue-300">
           {t('landing.experience.quickStart.cli.docs')}
           <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
         </a>
@@ -318,7 +318,7 @@ function WebAccessPanel() {
               <h3 className="mt-2 text-xl font-semibold tracking-tight text-foreground">weather <span className="font-mono text-xs font-normal text-muted-foreground">@global</span></h3>
               <p className="mt-1 text-xs text-muted-foreground">{t('landing.experience.quickStart.web.summary')}</p>
             </div>
-            <a href={buildApiUrl(`${WEB_API_PREFIX}/skills/global/weather/download`)} className="inline-flex w-fit items-center gap-2 rounded-lg bg-foreground px-4 py-2.5 text-xs font-semibold text-background shadow-sm transition-[transform,opacity,box-shadow] duration-150 hover:-translate-y-px hover:opacity-90 hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none">
+            <a data-analytics-id="guide.package.download" href={buildApiUrl(`${WEB_API_PREFIX}/skills/global/weather/download`)} className="inline-flex w-fit items-center gap-2 rounded-lg bg-foreground px-4 py-2.5 text-xs font-semibold text-background shadow-sm transition-[transform,opacity,box-shadow] duration-150 hover:-translate-y-px hover:opacity-90 hover:shadow-md active:translate-y-0 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 motion-reduce:transform-none">
               <Download className="h-3.5 w-3.5" />{t('landing.experience.quickStart.web.download')}
             </a>
           </div>
@@ -368,7 +368,7 @@ export function LandingQuickStartSection() {
             {ACCESS_MODES.map((mode) => {
               const active = activeMode === mode.id
               return (
-                <button
+                <button data-analytics-id="guide.mode.select"
                   key={mode.id}
                   type="button"
                   aria-pressed={active}

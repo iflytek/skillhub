@@ -6,7 +6,7 @@ import SkillHubService from '@astron-team/skillhub-dsh';
 import { installationContext, registerManagementContext } from '../src/host/management-context.js';
 import type { InstalledSkillList } from '../src/host/types.js';
 
-const item = { itemKey: 'hidden-item-key', namespace: 'team', slug: 'writer', version: '1.0.0', scope: 'project' as const, state: 'present' as const };
+const item = { itemKey: 'hidden-item-key', namespace: 'team', slug: 'writer', version: '1.0.0', scope: 'project' as const, state: 'present' as const, installationState: 'enabled' as const };
 const list: InstalledSkillList = { items: [item], complete: true, unavailable: [], issues: [] };
 function scope(): AssembleContext {
   const agent = { session: { id: 'test-session', header: { cwd: '/private/project' } } } as unknown as Agent;
@@ -16,7 +16,7 @@ function snapshot(text: string) { return JSON.parse(text.slice(text.lastIndexOf(
 
 test('snapshot exposes bounded installation facts, not routing references, paths or integrity claims', () => {
   const text = installationContext(list);
-  expect(snapshot(text)).toEqual({ source: 'currently configured SkillHub registry', complete: true, truncated: false, unavailable: [], totalRecords: 1,
+  expect(snapshot(text)).toEqual({ source: 'trusted SkillHub installations across registries', complete: true, truncated: false, unavailable: [], totalRecords: 1,
     items: [{ namespace: 'team', name: 'writer', version: '1.0.0', scope: 'project', state: 'present', installationState: 'enabled' }] });
   expect(text).not.toContain(item.itemKey); expect(text).not.toContain('/private');
   expect(text).toContain('Presence does not prove content integrity');
@@ -97,7 +97,7 @@ test('compiled service injects and disposes its official context listener with s
   let prompt = ctx.plugin(SystemPrompt); await prompt;
   await new Promise(resolve => setTimeout(resolve, 0));
   try {
-    expect((await ctx.systemPrompt.assemble(context)).contexts[0]?.text).toContain('no registry is currently connected');
+    expect((await ctx.systemPrompt.assemble(context)).contexts[0]?.text).toContain('current installation records could not be read');
     await prompt.dispose();
     prompt = ctx.plugin(SystemPrompt); await prompt;
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -105,4 +105,27 @@ test('compiled service injects and disposes its official context listener with s
     await service.dispose();
     expect((await ctx.systemPrompt.assemble(context)).contexts).toEqual([]);
   } finally { await service.dispose(); await prompt.dispose(); }
+});
+
+
+test('unknown entry state remains unknown in model context', () => {
+  const value = snapshot(installationContext({ ...list, complete: false,
+    items: [{ ...item, state: 'unreadable', installationState: undefined }], issues: ['target-unreadable'] }));
+  expect(value.items[0].state).toBe('unreadable');
+  expect(value.items[0]).not.toHaveProperty('installationState');
+  expect(value.complete).toBe(false);
+});
+
+
+test('source eligibility is not an update result or a management routing token', () => {
+  const text = installationContext({ ...list, items: [
+    { ...item, registry: 'https://a.example', currentSource: true },
+    { ...item, registry: 'https://b.example', currentSource: false, scope: 'user' },
+  ] });
+  expect(snapshot(text).items.map((entry: { updateSource: string }) => entry.updateSource)).toEqual(['current', 'other']);
+  expect(text).toContain('NOT that an update exists');
+  expect(text).toContain('after switching to their source');
+  expect(text).toContain('source URLs are never sourceRevision');
+  expect(text).toContain('require no human confirmation');
+  expect(text).not.toContain(item.itemKey);
 });

@@ -10,6 +10,6 @@ export function summarizeInstallation(
     complete: !!inventory?.complete && inventory.unavailable.length === 0,
     unavailable: inventory ? [...inventory.unavailable] : ['user', 'project'],
     records: inventory?.items.filter(item => item.namespace === identity.namespace && item.slug === identity.slug)
-      .map(({ scope, version, state, installationState }) => ({ scope, version, state, installationState: installationState ?? 'enabled' })) ?? [],
+      .map(({ scope, version, state, installationState }) => ({ scope, version, state, installationState })) ?? [],
   };
 }

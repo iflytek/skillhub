@@ -30,7 +30,7 @@ export function GithubCatalogSkillRow({ skill, onOpen }: { skill: SkillSummary; 
         <span className="inline-flex items-center gap-1"><Download className="h-3.5 w-3.5" aria-hidden="true" />{formatCompactCount(skill.downloadCount)}</span>
       </div>
     </div>
-    <Button variant="outline" size="sm" className="w-fit border-[var(--sync-line)] text-[var(--sync-blue)] hover:bg-[var(--sync-panel)]" onClick={onOpen}>
+    <Button data-analytics-id="skill.detail.open" variant="outline" size="sm" className="w-fit border-[var(--sync-line)] text-[var(--sync-blue)] hover:bg-[var(--sync-panel)]" onClick={onOpen}>
       {t('githubCatalog.viewSkill')} <ArrowUpRight className="ml-1 h-4 w-4" aria-hidden="true" />
     </Button>
   </article>
@@ -59,8 +59,8 @@ export function GithubSkillsPage() {
             <p className="text-sm leading-7 text-muted-foreground sm:text-base">{t('githubCatalog.description')}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={() => document.getElementById('github-skills-results')?.scrollIntoView({ behavior: 'smooth' })}>{t('githubCatalog.explore')}</Button>
-            <Button variant="outline" onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0, starredOnly: false } })}>{t('githubCatalog.allSkills')}</Button>
+            <Button data-analytics-id="github.catalog.explore" onClick={() => document.getElementById('github-skills-results')?.scrollIntoView({ behavior: 'smooth' })}>{t('githubCatalog.explore')}</Button>
+            <Button data-analytics-id="navigation.skills.open" variant="outline" onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0, starredOnly: false } })}>{t('githubCatalog.allSkills')}</Button>
           </div>
         </div>
         <div className="flex flex-col justify-between gap-8 border-t border-[var(--sync-line)] bg-[var(--sync-panel)] p-6 sm:p-9 lg:border-l lg:border-t-0 lg:p-8">
@@ -79,16 +79,16 @@ export function GithubSkillsPage() {
         <div><h2 className="text-xl font-semibold text-[var(--sync-ink)]">{t('githubCatalog.resultsTitle')}</h2><p className="mt-1 text-sm text-muted-foreground">{t('githubCatalog.resultsDescription')}</p></div>
         {skills.data ? <p className="text-sm tabular-nums text-muted-foreground">{t('githubCatalog.resultCount', { count: skills.data.total })}</p> : null}
       </div>
-      <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
+      <form data-analytics-id="github.catalog.search" onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
         <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[var(--sync-blue)]" aria-hidden="true" /><Input className="pl-9" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t('githubCatalog.searchPlaceholder')} aria-label={t('githubCatalog.searchPlaceholder')} /></div>
         <Button type="submit">{t('githubCatalog.search')}</Button>
-        <select aria-label={t('githubCatalog.sortLabel')} value={sort} onChange={(event) => navigate({ to: '/github', search: { q, sort: event.target.value, page: 0 } })} className="h-9 rounded-md border border-[var(--sync-line)] bg-background px-3 text-sm"><option value="newest">{t('githubCatalog.newest')}</option><option value="downloads">{t('githubCatalog.mostDownloaded')}</option></select>
+        <select data-analytics-id="github.catalog.sort" aria-label={t('githubCatalog.sortLabel')} value={sort} onChange={(event) => navigate({ to: '/github', search: { q, sort: event.target.value, page: 0 } })} className="h-9 rounded-md border border-[var(--sync-line)] bg-background px-3 text-sm"><option value="newest">{t('githubCatalog.newest')}</option><option value="downloads">{t('githubCatalog.mostDownloaded')}</option></select>
       </form>
       {skills.isLoading ? <p className="py-10 text-center text-sm text-muted-foreground">{t('githubCatalog.loading')}</p> : null}
       {skills.error ? <p role="alert" className="py-8 text-sm text-destructive">{t('githubCatalog.loadFailed')}: {skills.error.message}</p> : null}
       {!skills.isLoading && !skills.error && !skills.data?.items.length ? <div className="border-l-[3px] border-[var(--sync-amber)] bg-[var(--sync-panel)] p-6 text-sm text-muted-foreground">{t('githubCatalog.empty')}</div> : null}
       {skills.data?.items.length ? <div>{skills.data.items.map((skill) => <GithubCatalogSkillRow key={skill.id} skill={skill} onOpen={() => navigate({ to: `/space/${skill.namespace}/${encodeURIComponent(skill.slug)}`, search: { returnTo: '/github' } })} />)}</div> : null}
-      {skills.data && skills.data.total > PAGE_SIZE ? <Pagination page={page} totalPages={Math.ceil(skills.data.total / PAGE_SIZE)} onPageChange={(next) => navigate({ to: '/github', search: { q, sort, page: next } })} /> : null}
+      {skills.data && skills.data.total > PAGE_SIZE ? <Pagination analyticsId="github.catalog.paginate" page={page} totalPages={Math.ceil(skills.data.total / PAGE_SIZE)} onPageChange={(next) => navigate({ to: '/github', search: { q, sort, page: next } })} /> : null}
     </section>
   </div>
 }

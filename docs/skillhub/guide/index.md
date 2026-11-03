@@ -37,6 +37,7 @@
 
 - [Docker 部署](./deployment.md)：安装、配置、升级和备份。
 - [Kubernetes 部署](./kubernetes.md)：集群和 Helm 部署。
+- [前端动作统计](./frontend-analytics.md)：可选手动接入、授权与故障验收。
 - [技能头像与审核](./skill-avatars.md)：管理员配置图片审核服务。
 
 ## 开发与集成

@@ -76,14 +76,14 @@ export function GithubSyncReviewDiff({ source, reviewId }: { source: GithubSyncR
       {selected ? (
         <>
           <div className="flex flex-wrap items-center gap-2 border-b bg-muted/20 px-3 py-2 text-xs">
-            <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" aria-label={t('review.githubPreviousFile')}
+            <Button data-analytics-id="review.file.previous" type="button" variant="outline" size="sm" className="h-7 w-7 p-0" aria-label={t('review.githubPreviousFile')}
               disabled={selectedIndex <= 0} onClick={() => selectFile(files[selectedIndex - 1].path)}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-            <select aria-label={t('review.githubSelectFile')} value={selected.path}
+            <select data-analytics-id="review.file.select" aria-label={t('review.githubSelectFile')} value={selected.path}
               onChange={(event) => selectFile(event.target.value)}
               className="h-7 min-w-0 flex-1 rounded border border-border bg-background px-2 font-mono text-xs sm:max-w-xl">
               {files.map((file) => <option key={file.path} value={file.path}>{t(`review.githubChange${file.changeType}`)} · {file.path}</option>)}
             </select>
-            <Button type="button" variant="outline" size="sm" className="h-7 w-7 p-0" aria-label={t('review.githubNextFile')}
+            <Button data-analytics-id="review.file.next" type="button" variant="outline" size="sm" className="h-7 w-7 p-0" aria-label={t('review.githubNextFile')}
               disabled={selectedIndex >= files.length - 1} onClick={() => selectFile(files[selectedIndex + 1].path)}><ChevronRight className="h-3.5 w-3.5" /></Button>
             <span className="text-muted-foreground">{selectedIndex + 1}/{files.length}</span>
             <span className="rounded bg-primary/10 px-1.5 py-0.5 text-primary">{t(`review.githubChange${selected.changeType}`)}</span>
@@ -92,8 +92,8 @@ export function GithubSyncReviewDiff({ source, reviewId }: { source: GithubSyncR
             <span className="min-w-0 break-all font-mono">{selected.path}</span>
             {canComputeDiff && selected.changeType === 'MODIFIED' && (
               <div className="flex shrink-0 gap-1" role="group" aria-label={t('review.githubViewMode')}>
-                <Button size="sm" className="h-7 px-2" variant={viewMode === 'changes' ? 'secondary' : 'ghost'} onClick={() => setViewMode('changes')}>{t('review.githubViewChanges')}</Button>
-                <Button size="sm" className="h-7 px-2" variant={viewMode === 'full' ? 'secondary' : 'ghost'} onClick={() => setViewMode('full')}>{t('review.githubViewFull')}</Button>
+                <Button data-analytics-id="review.diff.changes" size="sm" className="h-7 px-2" variant={viewMode === 'changes' ? 'secondary' : 'ghost'} onClick={() => setViewMode('changes')}>{t('review.githubViewChanges')}</Button>
+                <Button data-analytics-id="review.diff.full" size="sm" className="h-7 px-2" variant={viewMode === 'full' ? 'secondary' : 'ghost'} onClick={() => setViewMode('full')}>{t('review.githubViewFull')}</Button>
               </div>
             )}
           </div>
@@ -105,7 +105,7 @@ export function GithubSyncReviewDiff({ source, reviewId }: { source: GithubSyncR
                   : t(selectedSize > MAX_INLINE_PREVIEW_BYTES ? 'filePreview.tooLarge'
                     : previewCheck?.reason === 'binary' ? 'filePreview.binaryFile' : 'filePreview.unsupported')}</p>
                 {!removedBaseUnavailable && (
-                  <a className="inline-block text-primary underline" href={buildApiUrl(downloadPath)} download>{t('filePreview.downloadFile')}</a>
+                  <a data-analytics-id="review.file.download" className="inline-block text-primary underline" href={buildApiUrl(downloadPath)} download>{t('filePreview.downloadFile')}</a>
                 )}
               </div>
             ) : isLoadingText ? (
@@ -143,7 +143,7 @@ export function GithubSyncReviewEvidence({ source }: { source: GithubSyncReviewS
       <dl className="grid gap-x-4 gap-y-3 text-xs sm:grid-cols-2">
         <div><dt className="text-muted-foreground">{t('review.githubRepository')}</dt><dd className="mt-1 break-all font-medium">{repository}</dd></div>
         <div><dt className="text-muted-foreground">{t('review.githubSkillPath')}</dt><dd className="mt-1 break-all font-mono">{source.skillPath}</dd></div>
-        <div><dt className="text-muted-foreground">{t('review.githubCommit')}</dt><dd className="mt-1"><a className="break-all font-mono text-primary underline" href={commitUrl} target="_blank" rel="noopener noreferrer">{source.commitSha}</a></dd></div>
+        <div><dt className="text-muted-foreground">{t('review.githubCommit')}</dt><dd className="mt-1"><a data-analytics-id="review.commit.external" className="break-all font-mono text-primary underline" href={commitUrl} target="_blank" rel="noopener noreferrer">{source.commitSha}</a></dd></div>
         <div><dt className="text-muted-foreground">{t('review.githubRunId')}</dt><dd className="mt-1 break-all font-mono">{source.runId}</dd></div>
         <div><dt className="text-muted-foreground">{t('review.githubLicenseStatus')}</dt><dd className="mt-1 font-medium">{t(`review.githubLicense${source.evidence.status}`, { defaultValue: source.evidence.status })}</dd></div>
       </dl>

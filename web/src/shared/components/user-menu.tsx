@@ -109,7 +109,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <button
+      <button data-analytics-id="navigation.account.toggle"
         type="button"
         aria-expanded={open}
         aria-haspopup="menu"
@@ -142,53 +142,53 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             role="menu"
             className="overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
           >
-            <Link to="/dashboard/skills" className={menuItemClassName} onClick={closeMenu}>
+            <Link data-analytics-id="navigation.owned.skills" to="/dashboard/skills" className={menuItemClassName} onClick={closeMenu}>
               {t('user.menu.mySkills')}
             </Link>
-            <Link to="/dashboard/suites" className={menuItemClassName} onClick={closeMenu}>
+            <Link data-analytics-id="navigation.owned.suites" to="/dashboard/suites" className={menuItemClassName} onClick={closeMenu}>
               {t('user.menu.mySuites')}
             </Link>
-            <Link to="/dashboard" className={menuItemClassName} onClick={closeMenu}>
+            <Link data-analytics-id="navigation.dashboard.open" to="/dashboard" className={menuItemClassName} onClick={closeMenu}>
               {t('user.menu.dashboard')}
             </Link>
             {user.canChangePassword === true ? (
-              <Link to="/settings/security" className={menuItemClassName} onClick={closeMenu}>
+              <Link data-analytics-id="account.security.open" to="/settings/security" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.security')}
               </Link>
             ) : null}
             {canReview ? (
-              <Link to="/dashboard/reviews" className={menuItemClassName} onClick={closeMenu}>
+              <Link data-analytics-id="review.queue.open" to="/dashboard/reviews" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.reviews')}
               </Link>
             ) : null}
             {canReview || isUserAdmin || isAuditor || isSuperAdmin ? <div className="-mx-1 my-1 h-px bg-muted" /> : null}
             {isUserAdmin ? (
-              <Link to="/admin/users" className={menuItemClassName} onClick={closeMenu}>
+              <Link data-analytics-id="admin.users.open" to="/admin/users" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.users')}
               </Link>
             ) : null}
             {isSuperAdmin ? (
-              <Link to="/admin/labels" className={menuItemClassName} onClick={closeMenu}>
+              <Link data-analytics-id="admin.labels.open" to="/admin/labels" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.labels')}
               </Link>
             ) : null}
             {isSuperAdmin ? (
-              <Link to="/admin/system-config" className={menuItemClassName} onClick={closeMenu}>
+              <Link data-analytics-id="admin.settings.open" to="/admin/system-config" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.systemConfig')}
               </Link>
             ) : null}
             {isSuperAdmin ? (
-              <Link to="/admin/namespaces" className={menuItemClassName} onClick={closeMenu}>
+              <Link data-analytics-id="admin.namespaces.open" to="/admin/namespaces" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.namespacesAdmin')}
               </Link>
             ) : null}
             {isAuditor ? (
-              <Link to="/admin/audit-log" className={menuItemClassName} onClick={closeMenu}>
+              <Link data-analytics-id="admin.audit.open" to="/admin/audit-log" className={menuItemClassName} onClick={closeMenu}>
                 {t('user.menu.auditLog')}
               </Link>
             ) : null}
             <div className="-mx-1 my-1 h-px bg-muted" />
-            <button
+            <button data-analytics-id="auth.logout.request"
               type="button"
               onClick={handleLogout}
               className={cn(menuItemClassName, 'text-destructive')}

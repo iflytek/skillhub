@@ -1,3 +1,6 @@
+import { dirname, join } from 'node:path'
+import { durableJson, privateDirectory } from './native-changes'
+import { assertChanges, verifyBackup } from './native-changes'
 import { isDeepStrictEqual } from 'node:util'
 import { SkillHubClient } from '../clients/skillhub-client'
 import { installSkill } from '../services/install-service'
@@ -14,7 +17,7 @@ import { assertOwnedRegularTree } from './recovery-files'
 /** Execute only the complete confirmed snapshot; the shared core owns target locks and inventory CAS. */
 export async function executeNativeUpgrade(operations: OperationStore, inventory: InventoryStore,
   input: NativeUpgradeExecution): Promise<NativeRecoveryResult> {
-  const request = { ...input, baseline: structuredClone(input.baseline) }
+  const request = { ...input, baseline: structuredClone(input.baseline), ...(input.localChangesAuthorization ? { localChangesAuthorization: structuredClone(input.localChangesAuthorization) } : {}) }
   const { baseline } = request
   const record = await operations.get(request.operationId, request.ownerId)
   if (!record || record.operation.kind !== 'upgrade' || record.operation.status.phase !== 'accepted') throw new Error('Upgrade is not owned and accepted')
@@ -30,11 +33,23 @@ export async function executeNativeUpgrade(operations: OperationStore, inventory
   const verifyBaseline = async () => {
     for (const target of baseline.targets) await request.authorize([target.root, target.path], 'staging')
     await operations.assertTargetsAvailable(paths, request)
-    const current = await inspectUpgradeBaseline(inventory, { ...baseline.inventoryItem, version: baseline.inventoryItem.targets[0]!.version }, baseline.targets)
+    if (request.localChangesAuthorization) {
+      const consent = request.localChangesAuthorization
+      if (!isDeepStrictEqual(consent.snapshot.baseline, baseline) || baseline.targets.length !== 1) throw new Error('Local changes authorization changed')
+      await assertChanges(inventory, consent.snapshot)
+      await verifyBackup(operations.root, consent.snapshot, consent.backupReceipt)
+    }
+    const current = await inspectUpgradeBaseline(inventory, { ...baseline.inventoryItem, version: baseline.inventoryItem.targets[0]!.version }, baseline.targets, !!request.localChangesAuthorization)
     if (!isDeepStrictEqual(current, baseline)) throw new Error('Upgrade baseline changed')
   }
   try {
     await verifyBaseline()
+    if (request.localChangesAuthorization) {
+      const directory = join(dirname(operations.root), 'dirty-upgrade-proofs')
+      await privateDirectory(directory)
+      await durableJson(join(directory, `${record.operationId}.json`), { ownerId: record.ownerId,
+        authorization: request.localChangesAuthorization })
+    }
     const client = new SkillHubClient(request.registry)
     const resolved = await client.resolve(request.namespace, request.slug, request.version)
     if (resolved.namespace !== request.namespace || resolved.slug !== request.slug || resolved.version !== request.version

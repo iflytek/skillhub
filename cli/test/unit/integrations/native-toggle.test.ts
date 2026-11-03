@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
-import { cp, mkdtemp, mkdir, readFile, realpath, rm, writeFile } from 'node:fs/promises'
+import { cp, mkdtemp, mkdir, readFile, realpath, rename, rm, writeFile } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { InventoryStore } from '../../../src/stores/inventory-store'
@@ -41,6 +42,9 @@ test('offline toggles rename only entry, preserve bytes, reject stale plans, and
       }))
       const result = await f.runtime.executeToggle({ operationId: operation!.operationId, ownerId: 'owner', baseline, authorize: async () => {} })
       expect(result.outcome).toBe('committed')
+      const disk = JSON.parse(await readFile(f.inventory.path, 'utf8'))
+      expect(disk.schemaVersion).toBe(2)
+      expect(disk.records[0].targets[0]).not.toHaveProperty('installationState')
       expect((await f.runtime.getOperation(operation!.operationId, 'owner'))?.files).toBe(desired)
       expect(await readFile(join(f.path, desired === 'disabled' ? 'SKILL.md.disabled' : 'SKILL.md'), 'utf8')).toBe('# Original\n')
       expect(await readFile(join(f.path, '.skillhub/metadata.json'))).toEqual(metadata)
@@ -81,16 +85,12 @@ test.each(['cas-before', 'cas-after', 'intent', 'committed-log'] as const)('togg
       namespace: f.selected.namespace, slug: f.selected.slug, version: f.selected.version, kind: 'disable', targetLabel: 'User', targetPaths: [f.path],
       context: { sourceIdentity: f.selected.registry, sourceLabel: 'Registry', sourceRevision: 'r1', hostLabel: 'Host', initiatedFrom: 'plaza' }
     }))
-    const mutate = f.inventory.mutateAtomic.bind(f.inventory)
-    if (mode.startsWith('cas')) f.inventory.mutateAtomic = async (...args) => {
-      if (mode === 'cas-after') await mutate(...args)
-      throw new Error('Injected CAS failure')
-    }
     const append = operations.recordToggle.bind(operations)
     let once = true
     operations.recordToggle = async (...args) => {
-      if (once && (mode === 'intent' && args[3].stage === 'intent' || mode === 'committed-log' && args[3].stage === 'committed')) {
+      if (once && (mode === 'intent' && args[3].stage === 'intent' || mode !== 'intent' && args[3].stage === 'committed')) {
         once = false
+        if (mode === 'cas-after' || mode === 'committed-log') await append(...args)
         throw new Error('Injected journal failure')
       }
       return append(...args)
@@ -123,7 +123,7 @@ test.each([false, true])('restart recovers a renamed entry without overwriting a
     }
     await expect(executeNativeToggle(operations, f.inventory, { operationId: accepted!.operationId, ownerId: 'owner', baseline,
       authorize: async (_paths, phase) => { if (phase === 'rollback') throw new Error('Recovery unavailable') } })).rejects.toThrow('Crash window')
-    expect((await f.inventory.read()).items[0]!.targets[0]!.installationState).toBe('enabled')
+    expect((await f.inventory.read()).items[0]!.targets[0]!.installationState).toBe('disabled')
     expect(await readFile(join(f.path, 'SKILL.md.disabled'), 'utf8')).toBe('# Original\n')
     if (conflict) await writeFile(join(f.path, 'SKILL.md'), 'New occupant')
     const restarted = await openNativeRuntime({ inventoryHome: f.home, stateDirectory: f.stateDirectory })
@@ -135,7 +135,7 @@ test.each([false, true])('restart recovers a renamed entry without overwriting a
   } finally { await rm(f.home, { recursive: true, force: true }) }
 })
 
-test.skipIf(process.platform === 'win32')('killed toggle writers recover intent, renamed and committed boundaries', async () => {
+test('killed toggle writers recover intent, renamed and committed boundaries', async () => {
   const fixtures = await Promise.all(['intent', 'linked', 'moved', 'restore-linked', 'committed'].map(async boundary => {
     const f = await fixture()
     const accepted = await f.runtime.acceptToggle({ hostInstanceId: f.runtime.hostInstanceId, ownerId: 'owner', mode: 'new', requestKey: randomUUID(), parameters: { boundary } }, async () => ({
@@ -145,12 +145,47 @@ test.skipIf(process.platform === 'win32')('killed toggle writers recover intent,
     return { ...f, boundary, operationId: accepted!.operationId }
   }))
   try {
-    await Promise.all(fixtures.map(async f => {
-      const child = Bun.spawn([process.execPath, new URL('../../fixtures/toggle-crash-child.ts', import.meta.url).pathname, f.home, f.operationId, f.boundary],
+    const crashes = await Promise.allSettled(fixtures.map(async f => {
+      const readyFile = join(f.home, 'crash-ready')
+      const child = Bun.spawn([process.execPath, fileURLToPath(new URL('../../fixtures/toggle-crash-child.ts', import.meta.url)), f.home, f.operationId, f.boundary, readyFile],
         { stdout: 'pipe', stderr: 'pipe' })
-      expect(await child.exited).not.toBe(0)
-      expect(await new Response(child.stderr).text()).toBe('')
+      const waitForExit = async (exited: Promise<number>) => {
+        let timer: ReturnType<typeof setTimeout> | undefined
+        try {
+          return await Promise.race([exited, new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Owned crash process did not exit within 10 seconds')), 10000)
+          })])
+        } finally { clearTimeout(timer) }
+      }
+      const terminate = async () => {
+        if (child.exitCode !== null) return
+        if (process.platform === 'win32') {
+          const killer = Bun.spawn(['taskkill.exe', '/PID', String(child.pid), '/T', '/F'], { stdout: 'ignore', stderr: 'pipe' })
+          try { expect(await waitForExit(killer.exited)).toBe(0) } finally { if (killer.exitCode === null) killer.kill() }
+        } else child.kill('SIGKILL')
+      }
+      try {
+        const deadline = Date.now() + 20000
+        let ready = false
+        while (Date.now() < deadline && child.exitCode === null) {
+          try { ready = (await readFile(readyFile, 'utf8')) === f.boundary } catch (error) {
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+          }
+          if (ready) break
+          await Bun.sleep(25)
+        }
+        expect(ready).toBe(true)
+        await terminate()
+        expect(await waitForExit(child.exited)).not.toBe(0)
+        expect(await new Response(child.stderr).text()).toBe('')
+      } finally {
+        // Cleanup uses only this child handle even if taskkill failed; it is not a passing crash assertion.
+        if (child.exitCode === null) child.kill()
+        await waitForExit(child.exited)
+      }
     }))
+    const failures = crashes.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+    if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Crash fixtures failed after all owned children settled')
     // Reverse-link recovery holds the inventory lease; its stale timeout is 30 seconds.
     await Bun.sleep(31_500)
     for (const f of fixtures) {
@@ -162,7 +197,7 @@ test.skipIf(process.platform === 'win32')('killed toggle writers recover intent,
       expect(await readFile(join(f.path, state === 'disabled' ? 'SKILL.md.disabled' : 'SKILL.md'), 'utf8')).toBe('# Original\n')
     }
   } finally { await Promise.all(fixtures.map(f => rm(f.home, { recursive: true, force: true }))) }
-}, 60_000)
+}, 90_000)
 
 test.each(['forward', 'rollback'] as const)('exclusive entry creation preserves a competitor appearing after preflight: %s', async direction => {
   const f = await fixture()
@@ -181,11 +216,14 @@ test.each(['forward', 'rollback'] as const)('exclusive entry creation preserves 
       if (direction === 'rollback' && args[3].stage === 'restoring') await writeFile(args[3].from, 'Competing entry', { flag: 'wx' })
       return saved
     }
-    if (direction === 'rollback') f.inventory.mutateAtomic = async () => { throw new Error('CAS denied') }
+    if (direction === 'rollback') {
+      const write = operations.recordToggle.bind(operations)
+      operations.recordToggle = async (...args) => { if (args[3].stage === 'committed') throw new Error('Commit denied'); return write(...args) }
+    }
     await expect(executeNativeToggle(operations, f.inventory, { operationId: accepted!.operationId, ownerId: 'owner', baseline, authorize: async () => {} })).rejects.toThrow()
     expect(await readFile(join(f.path, direction === 'forward' ? 'SKILL.md.disabled' : 'SKILL.md'), 'utf8')).toBe('Competing entry')
     expect(await readFile(join(f.path, direction === 'forward' ? 'SKILL.md' : 'SKILL.md.disabled'), 'utf8')).toBe('# Original\n')
-    expect((await f.inventory.read()).items[0]!.targets[0]!.installationState).toBe('enabled')
+    expect((await f.inventory.read()).items[0]!.targets[0]!.installationState).toBeUndefined()
     expect((await f.runtime.getOperation(accepted!.operationId, 'owner'))?.phase).toBe('recovery-required')
   } finally { await rm(f.home, { recursive: true, force: true }) }
 })
@@ -210,7 +248,71 @@ test('independent toggle transactions preserve both targets in shared inventory'
       }))
       return { operationId: accepted!.operationId, ownerId: 'owner', baseline, authorize: async () => {} }
     }))
-    expect((await Promise.all(requests.map(request => f.runtime.executeToggle(request)))).map(result => result.outcome)).toEqual(['committed', 'committed'])
+    const results = await Promise.allSettled(requests.map(request => f.runtime.executeToggle(request)))
+    const failures = results.filter(result => result.status === 'rejected')
+    if (failures.length) throw new AggregateError(failures.map(result => result.reason), 'Independent toggle transactions failed')
+    expect(results.map(result => result.status === 'fulfilled' ? result.value.outcome : undefined)).toEqual(['committed', 'committed'])
     expect((await f.inventory.read()).items[0]!.targets.map(target => target.installationState)).toEqual(['disabled', 'disabled'])
+  } finally { await rm(f.home, { recursive: true, force: true }) }
+})
+
+test.each(['enabled', 'disabled'] as const)('existing v3 recovery respects persisted %s commit evidence', async storedState => {
+  const f = await fixture()
+  try {
+    const baseline = await f.runtime.inspectToggle(f.selected, f.target, 'disabled')
+    if (baseline.status !== 'ready') throw new Error('Missing baseline')
+    const accepted = await f.runtime.acceptToggle({ hostInstanceId: f.runtime.hostInstanceId, ownerId: 'owner', mode: 'new', requestKey: randomUUID(), parameters: { storedState } }, async () => ({
+      namespace: 'demo', slug: 'writer', version: '1.0.0', kind: 'disable', targetLabel: 'User', targetPaths: [f.path],
+      context: { sourceIdentity: f.selected.registry, sourceLabel: 'Registry', sourceRevision: 'r1', hostLabel: 'Host', initiatedFrom: 'plaza' }
+    }))
+    const operations = await OperationStore.open(f.stateDirectory)
+    const append = operations.recordToggle.bind(operations)
+    operations.recordToggle = async (...args) => {
+      const saved = await append(...args)
+      if (args[3].stage === 'moved') throw new Error('Lost legacy response')
+      return saved
+    }
+    await expect(executeNativeToggle(operations, f.inventory, { operationId: accepted!.operationId, ownerId: 'owner', baseline,
+      authorize: async (_paths, phase) => { if (phase === 'rollback') throw new Error('Recovery unavailable') } })).rejects.toThrow()
+    const inventory = await f.inventory.read()
+    inventory.items[0]!.targets[0]!.installationState = storedState
+    await writeFile(f.inventory.path, JSON.stringify({ schemaVersion: 3, records: inventory.items }))
+    const restarted = await openNativeRuntime({ inventoryHome: f.home, stateDirectory: f.stateDirectory })
+    expect((await restarted.recover(accepted!.operationId, 'owner', [f.path], async () => {})).outcome).toBe(storedState === 'disabled' ? 'committed' : 'restored')
+    expect((await f.inventory.read()).items[0]!.targets[0]!.installationState).toBe(storedState)
+    await f.inventory.ensureWritable()
+    expect(await f.inventory.diskVersion()).toBe(2)
+  } finally { await rm(f.home, { recursive: true, force: true }) }
+})
+
+test('recovery never overwrites a legitimate replacement after an interrupted enable', async () => {
+  const f = await fixture()
+  try {
+    await rename(join(f.path, 'SKILL.md'), join(f.path, 'SKILL.md.disabled'))
+    const baseline = await f.runtime.inspectToggle(f.selected, f.target, 'enabled')
+    if (baseline.status !== 'ready') throw new Error('Missing disabled baseline')
+    const accepted = await f.runtime.acceptToggle({ hostInstanceId: f.runtime.hostInstanceId, ownerId: 'owner', mode: 'new', requestKey: randomUUID(), parameters: { enable: true } }, async () => ({
+      namespace: 'demo', slug: 'writer', version: '1.0.0', kind: 'enable', targetLabel: 'User', targetPaths: [f.path],
+      context: { sourceIdentity: f.selected.registry, sourceLabel: 'Registry', sourceRevision: 'r1', hostLabel: 'Host', initiatedFrom: 'plaza' }
+    }))
+    const operations = await OperationStore.open(f.stateDirectory)
+    const append = operations.recordToggle.bind(operations)
+    operations.recordToggle = async (...args) => {
+      const saved = await append(...args)
+      if (args[3].stage === 'moved') throw new Error('Interrupted enable')
+      return saved
+    }
+    await expect(executeNativeToggle(operations, f.inventory, { operationId: accepted!.operationId, ownerId: 'owner', baseline,
+      authorize: async (_paths, phase) => { if (phase === 'rollback') throw new Error('Recovery unavailable') } })).rejects.toThrow()
+    await writeFile(join(f.path, 'SKILL.md'), '# Legitimate replacement\n')
+    const snapshot = await snapshotSkillDirectory(f.path)
+    const target = { ...baseline.inventoryItem.targets[0]!, version: '2.0.0', installedAt: '2026-10-29', fingerprint: snapshot.fingerprint, installationState: 'enabled' as const }
+    await writeFile(join(f.path, '.skillhub/metadata.json'), JSON.stringify({ ...f.selected, version: target.version, ...snapshot, agent: 'dsh', installedAt: target.installedAt }))
+    await f.inventory.writeAtomic({ items: [{ ...baseline.inventoryItem, targets: [target] }] })
+    const paths = [f.inventory.path, join(f.path, 'SKILL.md'), join(f.path, '.skillhub/metadata.json'), join(f.path, 'resource.txt')]
+    const before = await Promise.all(paths.map(path => readFile(path)))
+    const restarted = await openNativeRuntime({ inventoryHome: f.home, stateDirectory: f.stateDirectory })
+    expect((await restarted.recover(accepted!.operationId, 'owner', [f.path], async () => {})).outcome).toBe('unknown')
+    expect(await Promise.all(paths.map(path => readFile(path)))).toEqual(before)
   } finally { await rm(f.home, { recursive: true, force: true }) }
 })

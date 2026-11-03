@@ -36,7 +36,7 @@ export function StarButton({ skillId, starCount, onRequireLogin }: StarButtonPro
   }
 
   return (
-    <Button
+    <Button data-analytics-id={starStatus.starred ? 'skill.star.remove' : 'skill.star.add'}
       variant={starStatus.starred ? 'default' : 'outline'}
       size="sm"
       className="justify-between"

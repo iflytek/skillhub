@@ -310,7 +310,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
 
       {!editing ? (
         <div className="flex w-fit rounded-lg border bg-muted/30 p-1" role="tablist" aria-label={t('suite.authoringMode')}>
-          <button
+          <button data-analytics-id="suite.authoring.manual"
             type="button"
             role="tab"
             aria-selected={authoringMode === 'manual'}
@@ -319,7 +319,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
           >
             {t('suite.manualAuthoring')}
           </button>
-          <button
+          <button data-analytics-id="suite.authoring.import"
             type="button"
             role="tab"
             aria-selected={authoringMode === 'import'}
@@ -352,8 +352,8 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
             setNamespace(value)
             if (value) setNamespaceRequired(false)
           }} disabled={loadingSource}>
-            <SelectTrigger id="suite-namespace"><SelectValue placeholder={t('suite.selectNamespace')} /></SelectTrigger>
-            <SelectContent>{namespaces?.map((item) => <SelectItem key={item.id} value={item.slug}>@{item.slug}</SelectItem>)}</SelectContent>
+            <SelectTrigger data-analytics-id="suite.namespace.interact" id="suite-namespace"><SelectValue placeholder={t('suite.selectNamespace')} /></SelectTrigger>
+            <SelectContent>{namespaces?.map((item) => <SelectItem data-analytics-id="suite.namespace.select" key={item.id} value={item.slug}>@{item.slug}</SelectItem>)}</SelectContent>
           </Select>
           {namespaceRequired ? <p role="alert" className="text-xs text-destructive">{t('suite.namespaceRequired')}</p> : null}
         </div>
@@ -414,11 +414,11 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
               setVisibility(value)
             }
           }}>
-            <SelectTrigger id="suite-visibility"><SelectValue /></SelectTrigger>
+            <SelectTrigger data-analytics-id="suite.visibility.interact" id="suite-visibility"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="PUBLIC">{t('suite.visibilityPublic')}</SelectItem>
-              <SelectItem value="NAMESPACE_ONLY">{t('suite.visibilityNamespace')}</SelectItem>
-              <SelectItem value="PRIVATE">{t('suite.visibilityPrivate')}</SelectItem>
+              <SelectItem data-analytics-id="suite.visibility.public" value="PUBLIC">{t('suite.visibilityPublic')}</SelectItem>
+              <SelectItem data-analytics-id="suite.visibility.namespace" value="NAMESPACE_ONLY">{t('suite.visibilityNamespace')}</SelectItem>
+              <SelectItem data-analytics-id="suite.visibility.private" value="PRIVATE">{t('suite.visibilityPrivate')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -516,7 +516,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
               ['coordinate', 'suite.scopeCoordinate'],
               ['market', 'suite.scopeMarket'],
             ] as const).map(([scope, label]) => (
-              <button
+              <button data-analytics-id={scope === 'namespace' ? 'suite.candidate.namespace.select' : scope === 'coordinate' ? 'suite.candidate.coordinate.select' : 'suite.candidate.market.select'}
                 key={scope}
                 type="button"
                 role="tab"
@@ -539,7 +539,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
           <div className="mt-3 grid gap-2 md:grid-cols-[minmax(0,1fr)_160px_auto]">
             <div className="relative">
               <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
+              <Input data-analytics-id="suite.candidate.search"
                 className="h-9 pl-9"
                 value={candidateInput}
                 onChange={(event) => setCandidateInput(event.target.value)}
@@ -555,14 +555,14 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
                 setCandidateSearchStarted(false)
               }
             }}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger data-analytics-id="suite.candidate.visibility.interact"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="PUBLIC">{t('suite.visibilityPublic')}</SelectItem>
-                <SelectItem value="NAMESPACE_ONLY">{t('suite.visibilityNamespace')}</SelectItem>
-                <SelectItem value="PRIVATE">{t('suite.visibilityPrivate')}</SelectItem>
+                <SelectItem data-analytics-id="suite.candidate.visibility.public" value="PUBLIC">{t('suite.visibilityPublic')}</SelectItem>
+                <SelectItem data-analytics-id="suite.candidate.visibility.namespace" value="NAMESPACE_ONLY">{t('suite.visibilityNamespace')}</SelectItem>
+                <SelectItem data-analytics-id="suite.candidate.visibility.private" value="PRIVATE">{t('suite.visibilityPrivate')}</SelectItem>
               </SelectContent>
             </Select>
-            <Button size="sm" className="h-9 px-5" disabled={marketSearchRequiresKeyword} onClick={runCandidateSearch}>
+            <Button data-analytics-id="suite.candidate.search" size="sm" className="h-9 px-5" disabled={marketSearchRequiresKeyword} onClick={runCandidateSearch}>
               {t('suite.search')}
             </Button>
           </div>
@@ -593,7 +593,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
                 const alreadySelected = selectedIds.has(candidate.skillVersionId)
                 const sameSkillDifferentVersion = selectedSkillIds.has(candidate.skillId) && !alreadySelected
                 return (
-                  <button
+                  <button data-analytics-id={sameSkillDifferentVersion ? 'suite.member.version.replace' : 'suite.member.add'}
                     key={candidate.skillVersionId}
                     type="button"
                     className="grid min-w-[760px] w-full grid-cols-[minmax(220px,1.2fr)_minmax(180px,1fr)_120px_120px] items-center gap-3 border-b px-4 py-3 text-left transition-colors hover:bg-muted/60 disabled:cursor-not-allowed disabled:opacity-55"
@@ -631,7 +631,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
               <h2 className="text-sm font-semibold">{t('suite.selectedMembers', { count: selected.length })}</h2>
               <p className="mt-1 text-xs text-muted-foreground">{t('suite.selectedMembersDescription')}</p>
             </div>
-            <Button size="sm" variant="ghost" onClick={() => setMembersSettingsOpen(false)}>{t('suite.collapseMembers')}</Button>
+            <Button data-analytics-id="suite.members.collapse" size="sm" variant="ghost" onClick={() => setMembersSettingsOpen(false)}>{t('suite.collapseMembers')}</Button>
           </div>
           {membersRequired ? <p role="alert" className="mt-2 text-xs text-destructive">{t('suite.membersRequired')}</p> : null}
           <div className="mt-3 space-y-1.5" role="radiogroup" aria-label={t('suite.entrySkill')}>
@@ -640,17 +640,17 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
               return (
                 <div key={member.skillVersionId} className={cn('rounded-lg border p-2.5', isEntry && 'border-amber-300 bg-amber-50/60 dark:bg-amber-950/20')}>
                   <div className="flex flex-wrap items-center gap-2">
-                    <button type="button" className="min-w-[220px] flex-1 text-left" onClick={() => setEntrySkillVersionId(member.skillVersionId)}>
+                    <button data-analytics-id="suite.entry.select" type="button" className="min-w-[220px] flex-1 text-left" onClick={() => setEntrySkillVersionId(member.skillVersionId)}>
                       <span className="block truncate text-sm font-medium" title={member.displayName}>{member.displayName}</span>
                       <span className="truncate text-xs text-muted-foreground" title={`@${member.namespace}/${member.slug}@${member.version}`}>@{member.namespace}/{member.slug}@{member.version}</span>
                     </button>
                     {isEntry ? <span className="rounded-full bg-amber-200/80 px-2 py-0.5 text-xs text-amber-900">{t('suite.entrySkill')}</span> : null}
-                    <Button className="h-7 w-7 p-0" aria-label={t('suite.moveMemberUp', { name: member.displayName })} variant="outline" size="sm" disabled={index === 0} onClick={() => moveMember(index, -1)}><ArrowUp className="h-3.5 w-3.5" aria-hidden="true" /></Button>
-                    <Button className="h-7 w-7 p-0" aria-label={t('suite.moveMemberDown', { name: member.displayName })} variant="outline" size="sm" disabled={index === selected.length - 1} onClick={() => moveMember(index, 1)}><ArrowDown className="h-3.5 w-3.5" aria-hidden="true" /></Button>
-                    <Button className="h-7 w-7 p-0" aria-label={t('suite.removeMember', { name: member.displayName })} variant="ghost" size="sm" onClick={() => removeMember(member.skillVersionId)}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /></Button>
+                    <Button data-analytics-id="suite.member.up" className="h-7 w-7 p-0" aria-label={t('suite.moveMemberUp', { name: member.displayName })} variant="outline" size="sm" disabled={index === 0} onClick={() => moveMember(index, -1)}><ArrowUp className="h-3.5 w-3.5" aria-hidden="true" /></Button>
+                    <Button data-analytics-id="suite.member.down" className="h-7 w-7 p-0" aria-label={t('suite.moveMemberDown', { name: member.displayName })} variant="outline" size="sm" disabled={index === selected.length - 1} onClick={() => moveMember(index, 1)}><ArrowDown className="h-3.5 w-3.5" aria-hidden="true" /></Button>
+                    <Button data-analytics-id="suite.member.remove" className="h-7 w-7 p-0" aria-label={t('suite.removeMember', { name: member.displayName })} variant="ghost" size="sm" onClick={() => removeMember(member.skillVersionId)}><Trash2 className="h-3.5 w-3.5" aria-hidden="true" /></Button>
                   </div>
                   <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                    <input type="radio" name="suite-entry-skill" aria-label={t('suite.setEntryFor', { name: member.displayName })} checked={isEntry} onChange={() => setEntrySkillVersionId(member.skillVersionId)} />
+                    <input data-analytics-id="suite.entry.select" type="radio" name="suite-entry-skill" aria-label={t('suite.setEntryFor', { name: member.displayName })} checked={isEntry} onChange={() => setEntrySkillVersionId(member.skillVersionId)} />
                     {t('suite.setEntry')}
                   </label>
                 </div>
@@ -674,18 +674,18 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
               ) : selected.map((member) => (
                 <span key={member.skillVersionId} className={cn('inline-flex shrink-0 items-center gap-2 rounded-md border px-2 py-1 text-xs', entrySkillVersionId === member.skillVersionId && 'border-amber-300 bg-amber-50 text-amber-950')}>
                   <span className="max-w-56 truncate">@{member.namespace}/{member.slug}@{member.version}</span>
-                  <button type="button" aria-label={t('suite.removeMember', { name: member.displayName })} onClick={() => removeMember(member.skillVersionId)}>
+                  <button data-analytics-id="suite.member.remove" type="button" aria-label={t('suite.removeMember', { name: member.displayName })} onClick={() => removeMember(member.skillVersionId)}>
                     <X className="h-3 w-3" aria-hidden="true" />
                   </button>
                 </span>
               ))}
             </div>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setMembersSettingsOpen((open) => !open)}>
+          <Button data-analytics-id="suite.members.toggle" size="sm" variant="outline" onClick={() => setMembersSettingsOpen((open) => !open)}>
             {membersSettingsOpen ? t('suite.collapseMembers') : t('suite.expandMembers')}
           </Button>
-          <Button size="sm" variant="outline" onClick={goBack}>{t('suite.cancel')}</Button>
-          <Button
+          <Button data-analytics-id="suite.draft.cancel" size="sm" variant="outline" onClick={goBack}>{t('suite.cancel')}</Button>
+          <Button data-analytics-id={editing ? 'suite.draft.edit.save' : creatingVersion ? 'suite.version.draft.save' : 'suite.draft.create.save'}
             size="sm"
             disabled={createMutation.isPending || createVersionMutation.isPending || updateMutation.isPending}
             onClick={save}
@@ -693,7 +693,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
         </div>
       </div>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="suite.member.version.confirm" cancelAnalyticsId="suite.member.version.cancel"
         open={pendingVersionUpdate !== null}
         onOpenChange={(open) => { if (!open) setPendingVersionUpdate(null) }}
         title={t('suite.confirmVersionUpdateTitle')}

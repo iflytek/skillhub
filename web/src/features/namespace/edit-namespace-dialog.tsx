@@ -67,7 +67,7 @@ export function EditNamespaceDialog({ namespace, children }: EditNamespaceDialog
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <DialogContent closeAnalyticsId="namespace.settings.cancel">
         <DialogHeader className="text-center sm:text-center">
           <DialogTitle className="text-center">{t('namespaceEdit.dialogTitle')}</DialogTitle>
           <DialogDescription className="text-center">@{namespace.slug}</DialogDescription>
@@ -104,10 +104,10 @@ export function EditNamespaceDialog({ namespace, children }: EditNamespaceDialog
         ) : null}
 
         <DialogFooter className="sm:justify-center sm:space-x-3">
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button data-analytics-id="namespace.settings.cancel" type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             {t('dialog.cancel')}
           </Button>
-          <Button type="button" onClick={handleSave} disabled={updateMutation.isPending}>
+          <Button data-analytics-id="namespace.settings.save" type="button" onClick={handleSave} disabled={updateMutation.isPending}>
             {updateMutation.isPending ? t('namespaceEdit.saving') : t('namespaceEdit.saveAction')}
           </Button>
         </DialogFooter>

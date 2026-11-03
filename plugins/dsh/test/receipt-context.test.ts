@@ -20,7 +20,7 @@ function fixture() {
     recovery: 'not-needed', discovery: 'confirmed', warningCount: 0 };
   let current = true;
   let inventory: InstalledSkillList = { complete: true, unavailable: [], issues: [], items: [
-    { namespace: receipt.namespace, slug: receipt.slug, version: receipt.version, scope: 'project', state: 'present', itemKey: 'fresh-item-key' },
+    { registry: receipt.sourceLabel, namespace: receipt.namespace, slug: receipt.slug, version: receipt.version, scope: 'project', state: 'present', itemKey: 'fresh-item-key' },
   ] };
   const revisions: string[] = [];
   const scope = {}; let cwd = '/project-a';

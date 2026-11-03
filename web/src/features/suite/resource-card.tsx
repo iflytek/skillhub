@@ -5,11 +5,12 @@ import { NamespaceBadge } from '@/shared/components/namespace-badge'
 import { Card } from '@/shared/ui/card'
 import { formatCompactCount } from '@/shared/lib/number-format'
 
-export function ResourceCard({ resource, onClick }: { resource: ResourceSummary; onClick: () => void }) {
+export function ResourceCard({ resource, onClick, analyticsId }: { resource: ResourceSummary; onClick: () => void; analyticsId?: string }) {
   const { t } = useTranslation()
   const isSuite = resource.resourceType === 'SUITE'
   return (
     <Card
+      data-analytics-id={analyticsId}
       className="group h-full min-w-0 cursor-pointer p-5 transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
       role="link"
       tabIndex={0}

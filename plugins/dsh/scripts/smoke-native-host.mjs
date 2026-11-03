@@ -1,9 +1,9 @@
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { closeSync, openSync } from 'node:fs';
-import { access, mkdir, mkdtemp, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
+import { access, chmod, open, lstat, mkdir, mkdtemp, readFile, readdir, realpath, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { delimiter, dirname, join, resolve } from 'node:path';
+import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
@@ -13,6 +13,12 @@ export function selectDshVersion(version, family = 'fresh') {
   if (version === '0.2.1-rc.2' && family === 'retained') throw new Error('DSH 0.2.1 requires the current Cordis family.');
   return version;
 }
+export function scenarioProbes(scenario = 'smoke') {
+  if (scenario === 'smoke') return ['runtime-baseline', 'plugin-lifecycle', 'skill-availability'];
+  if (scenario === 'skill-toggle' || scenario === 'skill-toggle-watch-off') return ['runtime-baseline', scenario];
+  throw new Error('Unsupported Host scenario');
+}
+
 const PNPM_VERSION = '10.33.0';
 
 export const retainedCordisFamily = {
@@ -113,6 +119,59 @@ export async function selectTarball(input) {
   return target;
 }
 
+export function safeAvailabilityCheckpoint(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const scenarios = ['setup', 'user-install', 'user-winner', 'project-install', 'project-winner', 'user-shadowed', 'remote', 'by-name', 'content-modified', 'skill-missing', 'directory-missing', 'policy', 'absent', 'incomplete-provider', 'failed-provider'];
+  const checkpoints = ['setup', 'install', 'install-poll', 'reference', 'before-digest', 'execute', 'assertion', 'after-digest', 'mutation'];
+  const assertions = ['none', 'isError', 'kind', 'schemaVersion', 'association', 'scope', 'integrity', 'discovery', 'name', 'reason', 'invocation', 'installation', 'namespace', 'slug', 'version', 'fingerprint', 'render', 'privacy', 'unchanged', 'accepted', 'completed', 'reference'];
+  if (!scenarios.includes(value.scenario) || !checkpoints.includes(value.checkpoint) || !assertions.includes(value.assertion)) return undefined;
+  const result = { scenario: value.scenario, checkpoint: value.checkpoint, assertion: value.assertion };
+  const statuses = ['accepted', 'not-confirmed', 'awaiting-confirmation', 'cancelled'];
+  // Mirror the public installationFailureCodes contract; never forward error messages or IDs.
+  const codes = ['CONTEXT_STALE', 'REQUEST_CONFLICT', 'SOURCE_NOT_CONFIGURED', 'SOURCE_DENIED',
+    'SKILL_UNAVAILABLE', 'RATE_LIMITED', 'SOURCE_UNAVAILABLE', 'TARGET_UNAVAILABLE', 'UNCONFIRMED'];
+  if (statuses.includes(value.install?.status)) {
+    result.install = { status: value.install.status };
+    if (codes.includes(value.install.code)) result.install.code = value.install.code;
+  }
+  return result;
+}
+
+export function safeToggleCheckpoint(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const scenarios = ['setup', 'install', 'initial-discovery', 'watch-off-disable', 'watch-off-diagnosis', 'watch-off-uninstall', 'cancel', 'disable', 'disabled-files', 'disabled-use', 'enable', 'disable-again', 'disabled-upgrade', 'disabled-uninstall', 'same-name-install', 'same-name-disable', 'same-name-fallback', 'same-name-diagnosis', 'cleanup'];
+  const assertions = ['none', 'invoke', 'operation', 'discovery', 'equal', 'notEqual', 'deepEqual', 'rejects', 'truthy'];
+  if (!scenarios.includes(value.scenario) || !assertions.includes(value.assertion)) return undefined;
+  return { scenario: value.scenario, assertion: value.assertion };
+}
+
+export function safeFixtureLocation(value) {
+  if (value?.fixture !== 'skill-toggle-fixture.mjs' || !Number.isInteger(value.line) || value.line < 1 || value.line > 10000) return undefined;
+  return { fixture: value.fixture, line: value.line };
+}
+
+export function safeOperationObservation(value) {
+  if (!value || typeof value !== 'object') return undefined;
+  const fields = {
+    phase: ['accepted', 'staging', 'revalidating', 'committing', 'recovering', 'completed', 'failed', 'recovery-required', 'unknown'],
+    files: ['pending', 'installed', 'already-installed', 'upgraded', 'removed', 'stale-record-removed', 'enabled', 'disabled', 'failed', 'unknown'],
+    discovery: ['unconfirmed', 'confirmed', 'failed'], recovery: ['not-needed', 'restored', 'incomplete', 'unknown'],
+  };
+  const safe = {};
+  for (const [name, allowed] of Object.entries(fields)) if (allowed.includes(value[name])) safe[name] = value[name];
+  if (typeof value.deadlineReached === 'boolean') safe.deadlineReached = value.deadlineReached;
+  return Object.keys(safe).length ? safe : undefined;
+}
+
+const diagnosticCodes = ['EACCES', 'EPERM', 'ENOENT', 'EEXIST', 'ENOSPC', 'EBUSY', 'EXDEV', 'ENOTEMPTY', 'EIO', 'ELOCKED', 'ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND', 'EAI_AGAIN', 'AUTHORIZATION', 'NETWORK', 'FILESYSTEM', 'INVALID_INPUT', 'VALIDATION', 'UNCLASSIFIED'];
+export function safeHostFailureCodes(value) {
+  return Array.isArray(value) ? diagnosticCodes.filter(code => value.includes(code)) : [];
+}
+export function knownHostFailureCodes(log) {
+  // Observed codes are diagnostic hints, not attribution of the assertion's cause.
+  return diagnosticCodes.filter(code => new RegExp('\\b' + code + '\\b').test(log));
+}
+
 export function safeProbeFailure(log, probe) {
   const stages = ['setup', 'validate-root', 'prepare-fixture', 'fixture-ports', 'registry-ready', 'host-result', 'host-assertion'];
   const codes = ['PROBE_FAILED', 'REGISTRY_EXITED', 'REGISTRY_TIMEOUT', 'CHILD_EXITED', 'HOST_ASSERTION_FAILED', 'HOST_RESULT_TIMEOUT'];
@@ -130,6 +189,20 @@ export function safeProbeFailure(log, probe) {
         if (['root-realpath', 'temporary-realpath', 'temporary-containment', 'home-identity'].includes(validation)) {
           safe.validation = validation;
         }
+        const availability = safeAvailabilityCheckpoint(result.diagnostics.availability);
+        if (probe === 'skill-availability' && availability) safe.availability = availability;
+        if (['skill-toggle', 'skill-toggle-watch-off'].includes(probe)) {
+          const toggle = safeToggleCheckpoint(result.diagnostics.toggle);
+          const location = safeFixtureLocation(result.diagnostics.location);
+          if (toggle) safe.toggle = toggle;
+          if (location) safe.location = location;
+        }
+        if (['skill-availability', 'skill-toggle', 'skill-toggle-watch-off'].includes(probe)) {
+          const operation = safeOperationObservation(result.diagnostics.operation);
+          if (operation) safe.operation = operation;
+          const codes = safeHostFailureCodes(result.diagnostics.observedHostCodes);
+          if (codes.length) safe.observedHostCodes = codes;
+        }
         safe.dependencies = {};
         for (const name of ['loader', 'pluginPackages', 'clientModules', 'skillhub']) {
           const present = result.diagnostics.dependencies?.[name];
@@ -140,6 +213,85 @@ export function safeProbeFailure(log, probe) {
     }
   }
   return undefined;
+}
+
+// npm emits completed timers incrementally with --timing, even when killed before
+// its final timing.json. Never expose arbitrary timer names, URLs or log lines.
+const npmPreparationLogLimit = 1024 * 1024;
+export function summarizeNpmPreparation(log, truncated = false) {
+  const phases = new Set(['idealTree', 'idealTree:init', 'idealTree:userRequests', 'idealTree:buildDeps',
+    'idealTree:fixDepFlags', 'reify', 'reify:loadTrees', 'reify:diffTrees', 'reify:retireShallow',
+    'reify:createSparse', 'reify:loadBundles', 'reify:unpack', 'reify:unretire', 'reify:build',
+    'reify:trash', 'reify:save', 'command:install']);
+  const result = { completedTimingsMs: {}, lastCompletedPhase: null,
+    cacheObservations: { hit: 0, miss: 0, revalidated: 0 }, truncated: truncated || log.length > npmPreparationLogLimit };
+  let bounded = log.slice(-npmPreparationLogLimit);
+  if (result.truncated) {
+    const newline = bounded.indexOf('\n');
+    bounded = newline < 0 ? '' : bounded.slice(newline + 1);
+  }
+  for (const line of bounded.split('\n')) {
+    const timer = /^npm timing ([A-Za-z:]+) Completed in ([0-9]+)ms\r?$/.exec(line);
+    if (timer && phases.has(timer[1])) {
+      const elapsed = Number(timer[2]);
+      if (Number.isSafeInteger(elapsed) && elapsed <= 3600000) {
+        result.completedTimingsMs[timer[1]] = elapsed;
+        result.lastCompletedPhase = timer[1];
+      }
+    }
+    const request = /^npm http fetch GET [0-9]{3} \S+ [0-9]+ms \(cache (hit|miss|revalidated)\)\r?$/.exec(line);
+    if (request) result.cacheObservations[request[1]]++;
+    // npm also logs package-cache lookups separately from HTTP fetch responses.
+    if (/^npm http cache \S+ [0-9]+ms \(cache hit\)\r?$/.test(line)) result.cacheObservations.hit++;
+  }
+  return result;
+}
+
+async function readPreparationLog(path) {
+  let file;
+  try {
+    file = await open(path, 'r');
+    const { size } = await file.stat();
+    const buffer = Buffer.alloc(Math.min(size, npmPreparationLogLimit));
+    const { bytesRead } = await file.read(buffer, 0, buffer.length, Math.max(0, size - buffer.length));
+    return { text: buffer.subarray(0, bytesRead).toString('utf8'), truncated: size > buffer.length };
+  } catch { return { text: '', truncated: false }; }
+  finally { await file?.close(); }
+}
+
+// Only npm's public download content is shared; every Host/config/profile stays fresh.
+export async function prepareDownloadCache(path) {
+  if (!isAbsolute(path)) throw new Error('Download cache must be an absolute temporary directory.');
+  const bases = [tmpdir()];
+  if (process.env.CI && process.env.RUNNER_TEMP && isAbsolute(process.env.RUNNER_TEMP)) bases.push(process.env.RUNNER_TEMP);
+  const target = resolve(path);
+  for (const base of bases) {
+    const basePath = resolve(base);
+    const canonicalBase = await realpath(basePath);
+    // Only the trusted anchor may be canonicalized: never resolve unverified descendants.
+    const suffix = [basePath, canonicalBase].map(anchor => relative(anchor, target))
+      .find(value => value && value !== '..' && !value.startsWith('..' + sep) && !isAbsolute(value));
+    if (!suffix) continue;
+    let current = canonicalBase;
+    const parts = suffix.split(sep);
+    for (const [index, part] of parts.entries()) {
+      current = join(current, part);
+      await mkdir(current, { mode: 0o700 }).catch(error => { if (error.code !== 'EEXIST') throw error; });
+      const info = await lstat(current);
+      if (!info.isDirectory() || info.isSymbolicLink() || (process.getuid && info.uid !== process.getuid())
+        || (process.platform !== 'win32' && index < parts.length - 1 && (info.mode & 0o022) !== 0)) {
+        throw new Error('Download cache must contain only current-user directories without links.');
+      }
+    }
+    await chmod(current, 0o700);
+    const content = join(current, '_cacache');
+    const info = await lstat(content).catch(error => { if (error.code !== 'ENOENT') throw error; });
+    if (info && (!info.isDirectory() || info.isSymbolicLink() || (process.getuid && info.uid !== process.getuid()))) {
+      throw new Error('Invalid download content directory.');
+    }
+    return { path: current, populated: Boolean(info && (await readdir(content)).length) };
+  }
+  throw new Error('Download cache must be below the current temporary directory.');
 }
 
 export function isolatedEnvironment(root, inherited = process.env) {
@@ -154,6 +306,7 @@ export function isolatedEnvironment(root, inherited = process.env) {
     APPDATA: join(root, 'appdata'), LOCALAPPDATA: join(root, 'localappdata'),
     DSH_HOME: join(root, 'home'), DSH_AGENTS_HOME: join(root, 'agents'), DSH_TELEMETRY_DISABLED: '1',
     npm_config_cache: join(root, 'npm-cache'), npm_config_userconfig: join(root, 'empty.npmrc'),
+    npm_config_logs_dir: join(root, 'logs/npm'),
     npm_config_globalconfig: join(root, 'empty-global.npmrc'), CI: 'true' };
 }
 
@@ -169,14 +322,15 @@ async function findNpm() {
 }
 
 async function main() {
-  const { values } = parseArgs({ options: { 'dsh-version': { type: 'string', default: '0.2.0-rc.2' }, artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' }, 'cordis-family': { type: 'string', default: 'fresh' } } });
+  const { values } = parseArgs({ options: { 'download-cache': { type: 'string' }, 'dsh-version': { type: 'string', default: '0.2.0-rc.2' }, artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' }, 'cordis-family': { type: 'string', default: 'fresh' }, scenario: { type: 'string', default: 'smoke' } } });
   if (values.help) {
-    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--cordis-family fresh|retained] [--dsh-version 0.2.0-rc.2|0.2.1-rc.2]');
+    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--download-cache <temporary-directory>] [--scenario smoke|skill-toggle|skill-toggle-watch-off] [--cordis-family fresh|retained] [--dsh-version 0.2.0-rc.2|0.2.1-rc.2]');
     return;
   }
   if (!values.artifact || !values.report) throw new Error('Specify --artifact and --report; see --help.');
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major !== 24 || minor < 2) throw new Error('Use the fixed Node >=24.2.0 <25 baseline.');
+  const probes = scenarioProbes(values.scenario);
   const dshVersion = selectDshVersion(values['dsh-version'], values['cordis-family']);
   const installManifest = hostInstallManifest(values['cordis-family']);
   const artifact = await selectTarball(values.artifact);
@@ -185,6 +339,8 @@ async function main() {
   await mkdir(dirname(reportFile), { recursive: true });
   const root = await mkdtemp(join(tmpdir(), 'skillhub-native-smoke-'));
   const env = isolatedEnvironment(root);
+  const downloads = values['download-cache'] ? await prepareDownloadCache(values['download-cache']) : undefined;
+  if (downloads) env.npm_config_cache = downloads.path;
   for (const directory of ['home', 'native-install-home', 'agents', 'workspace', 'logs']) await mkdir(join(root, directory), { mode: 0o700 });
   for (const name of ['empty.npmrc', 'empty-global.npmrc']) await writeFile(join(root, name), '', { mode: 0o600 });
   await writeFile(join(root, 'package.json'), JSON.stringify(installManifest));
@@ -193,14 +349,24 @@ async function main() {
   process.once('SIGINT', stop);
   process.once('SIGTERM', stop);
   const summary = { passed: false, platform: process.platform, node: process.versions.node,
-    dsh: dshVersion, pnpm: PNPM_VERSION, cordisFamily: values['cordis-family'],
+    scenario: values.scenario, dsh: dshVersion, pnpm: PNPM_VERSION, cordisFamily: values['cordis-family'],
     artifactSha256: createHash('sha256').update(await readFile(artifact)).digest('hex'),
-    modelCalled: false, probes: [], stage: 'install-host' };
+    modelCalled: false, probes: [], preparation: { cacheMode: downloads ? 'shared-public-downloads' : 'isolated', cachePopulated: downloads?.populated ?? false }, stage: 'install-host' };
   const run = (name, args, timeoutMs = 300000) => runBounded(args, { cwd: join(root, 'workspace'), env,
     log: join(root, 'logs', name + '.log'), timeoutMs, signal: abort.signal });
   try {
-    await run('install-host', [npm, 'install', '--prefix', root, '--ignore-scripts', '--no-audit', '--no-fund',
-      '--registry=https://registry.npmjs.org', `@deepseek-ai/dsh@${dshVersion}`, `pnpm@${PNPM_VERSION}`], 600000);
+    const installStarted = Date.now();
+    try {
+      // Prefer reuse within the original exact/range/peer constraints to reduce duplicate files.
+      await run('install-host', [npm, 'install', '--prefer-dedupe', '--timing', '--loglevel=http', '--prefix', root, '--ignore-scripts', '--no-audit', '--no-fund',
+        '--registry=https://registry.npmjs.org', `@deepseek-ai/dsh@${dshVersion}`, `pnpm@${PNPM_VERSION}`], 600000);
+    } finally {
+      env.npm_config_cache = join(root, 'npm-cache');
+      summary.preparation.elapsedMs = Date.now() - installStarted;
+      const installLog = await readPreparationLog(join(root, 'logs/install-host.log'));
+      summary.preparation.observedCodes = knownHostFailureCodes(installLog.text);
+      summary.preparation.npm = summarizeNpmPreparation(installLog.text, installLog.truncated);
+    }
     const dsh = join(root, 'node_modules/@deepseek-ai/dsh/lib/bin.js');
     await access(dsh);
     summary.stage = 'initialize-web';
@@ -217,7 +383,7 @@ async function main() {
     const manifest = JSON.parse(await readFile(join(root, 'home/profiles/skillhub-m0/node_modules/@astron-team/skillhub-dsh/package.json'), 'utf8'));
     if (manifest.name !== '@astron-team/skillhub-dsh') throw new Error('Unexpected installed candidate identity.');
     const probeScript = fileURLToPath(new URL('./probe-host.mjs', import.meta.url));
-    for (const probe of ['runtime-baseline', 'plugin-lifecycle', 'skill-availability']) {
+    for (const probe of probes) {
       summary.stage = probe;
       await run(probe, [probeScript, '--root', root, '--probe', probe], 150000);
       const lines = (await readFile(join(root, 'logs', probe + '.log'), 'utf8')).trim().split('\n');
@@ -238,7 +404,7 @@ async function main() {
   } catch (error) {
     summary.failure = ['SPAWN_FAILED', 'DEADLINE_OR_CANCELLED', 'PROCESS_FAILED', 'CLEANUP_DEADLINE'].includes(error.code)
       ? error.code : 'INVALID_RESULT';
-    if (['runtime-baseline', 'plugin-lifecycle', 'skill-availability'].includes(summary.stage)) {
+    if (probes.includes(summary.stage)) {
       const log = await readFile(join(root, 'logs', summary.stage + '.log'), 'utf8').catch(() => '');
       summary.probeFailure = safeProbeFailure(log, summary.stage);
     }

@@ -18,7 +18,7 @@ export function SkillAvatarTakedown({ namespace, slug }: { namespace: string; sl
   return <div className="space-y-2 rounded-lg border border-destructive/30 p-4">
     <p className="text-sm font-medium">{t('skillAvatar.takedownHelp')}</p>
     <Input value={reason} onChange={(event) => setReason(event.target.value)} placeholder={t('skillAvatar.reason')} aria-label={t('skillAvatar.reason')} />
-    <Button variant="outline" disabled={!reason.trim() || mutation.isPending} onClick={() => mutation.mutate()}>{t('skillAvatar.takedown')}</Button>
+    <Button data-analytics-id="skill.avatar.takedown" variant="outline" disabled={!reason.trim() || mutation.isPending} onClick={() => mutation.mutate()}>{t('skillAvatar.takedown')}</Button>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
   </div>
 }

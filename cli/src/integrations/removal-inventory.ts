@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from 'node:util'
 import { captureInstallInventory } from '../services/inventory-cas'
 import { sameInstalledSkillSource } from '../services/installed-skill-metadata'
-import { targetInstalledBy } from '../stores/inventory-store'
+import { inventoryWithoutState, targetInstalledBy } from '../stores/inventory-store'
 import type { Inventory, InventoryStore } from '../stores/inventory-store'
 import type { RemovalBaseline } from './native-contract'
 
@@ -21,7 +21,7 @@ export async function commitRemovalInventory(store: InventoryStore,
   const expectedState = await captureInstallInventory({ items: [expected] }, expected, paths)
   await store.mutateAtomic(inventory => {
     const matches = inventory.items.filter(item => sameInstalledSkillSource(item, expected))
-    if (!isDeepStrictEqual(matches.map(item => ({ ...item, targets: item.targets.filter(target => target.installDir === path) })), [expected])) throw new Error('Removal inventory changed')
+    if (!isDeepStrictEqual(inventoryWithoutState({ items: matches.map(item => ({ ...item, targets: item.targets.filter(target => target.installDir === path) })) }), inventoryWithoutState({ items: [expected] }))) throw new Error('Removal inventory changed')
     const item = matches[0]!
     item.targets = item.targets.filter(entry => entry.installDir !== path)
     if (!item.targets.length) inventory.items = inventory.items.filter(entry => entry !== item)

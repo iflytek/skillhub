@@ -52,7 +52,7 @@ export function InvitationHistory({ slug }: { slug: string }) {
     <section className="min-w-0 space-y-3 border-t pt-4" aria-label={t('invitation.historyTitle')}>
       <div className="flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{t('invitation.historyTitle')}</h3>
-        <Button variant="ghost" size="sm" className="gap-1.5 px-2.5" disabled={history.isFetching} onClick={() => void history.refetch()}>
+        <Button data-analytics-id="namespace.invitation.refresh" variant="ghost" size="sm" className="gap-1.5 px-2.5" disabled={history.isFetching} onClick={() => void history.refetch()}>
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />{t('invitation.historyRefresh')}
         </Button>
       </div>
@@ -86,7 +86,7 @@ export function InvitationHistory({ slug }: { slug: string }) {
               </dl>
             </li>)}</ul>
           </div>
-          {history.data.totalPages > 1 ? <Pagination compact page={page} totalPages={history.data.totalPages} onPageChange={setPage} /> : null}
+          {history.data.totalPages > 1 ? <Pagination analyticsId="namespace.invitation.paginate" compact page={page} totalPages={history.data.totalPages} onPageChange={setPage} /> : null}
         </>
       ) : <p className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">{t('invitation.historyEmpty')}</p>}
     </section>

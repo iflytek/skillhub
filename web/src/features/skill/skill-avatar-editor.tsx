@@ -121,28 +121,28 @@ export function SkillAvatarEditor({ name, currentUrl, canRemove = false, disable
 
   return <section className="space-y-2" aria-label={t('skillAvatar.title')}>
     <h2 className="text-sm font-medium">{t('skillAvatar.optionalTitle')}</h2>
-    <div {...getRootProps()} className="flex items-center gap-3">
+    <div {...getRootProps()} data-analytics-id={disabled || state === 'UPLOADING' ? undefined : 'skill.avatar.file.drop'} data-analytics-event="drop" className="flex items-center gap-3">
       {state === 'READY' && previewUrl ? <img src={buildApiUrl(previewUrl)} alt={t('skillAvatar.cropPreview')} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
         : <SkillAvatar name={name} url={state === 'REMOVE' ? null : currentUrl} size="h-16 w-16 shrink-0 text-xl" />}
-      <input {...getInputProps({ 'aria-label': t('skillAvatar.choose'), className: 'sr-only', style: undefined, disabled: disabled || state === 'UPLOADING' })} />
+      <input {...getInputProps({ 'aria-label': t('skillAvatar.choose'), className: 'sr-only', style: undefined, disabled: disabled || state === 'UPLOADING' })} data-analytics-id="skill.avatar.file.select" />
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap gap-1">
-          <Button ref={chooseButton} type="button" size="sm" variant="outline" disabled={disabled || state === 'UPLOADING'} onClick={open}>{t(currentUrl || state === 'READY' ? 'skillAvatar.change' : 'skillAvatar.choose')}</Button>
-          {(canRemove || state === 'READY') && state !== 'REMOVE' && <Button type="button" size="sm" variant="ghost" disabled={disabled || dialogOpen} onClick={() => reset(canRemove)}>{t('skillAvatar.remove')}</Button>}
-          {state !== 'KEEP' && !dialogOpen && <Button type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => reset()}>{t('skillAvatar.discardChange')}</Button>}
+          <Button data-analytics-id={currentUrl || state === 'READY' ? 'skill.avatar.change' : 'skill.avatar.choose'} ref={chooseButton} type="button" size="sm" variant="outline" disabled={disabled || state === 'UPLOADING'} onClick={open}>{t(currentUrl || state === 'READY' ? 'skillAvatar.change' : 'skillAvatar.choose')}</Button>
+          {(canRemove || state === 'READY') && state !== 'REMOVE' && <Button data-analytics-id="skill.avatar.remove" type="button" size="sm" variant="ghost" disabled={disabled || dialogOpen} onClick={() => reset(canRemove)}>{t('skillAvatar.remove')}</Button>}
+          {state !== 'KEEP' && !dialogOpen && <Button data-analytics-id="skill.avatar.reset" type="button" size="sm" variant="ghost" disabled={disabled} onClick={() => reset()}>{t('skillAvatar.discardChange')}</Button>}
         </div>
         {state !== 'KEEP' && !dialogOpen && <p role="status" className="text-xs text-muted-foreground">{t(state === 'READY' ? 'skillAvatar.stagedReady' : state === 'REMOVE' ? 'skillAvatar.removedDraft' : `skillAvatar.uploadStates.${state}`)}</p>}
       </div>
     </div>
     {!dialogOpen && error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     <Dialog open={dialogOpen} onOpenChange={value => { if (!value) cancelSelection() }}>
-      <DialogContent className="w-[min(calc(100vw-2rem),26rem)] gap-4 p-4 sm:p-6"
+      <DialogContent closeAnalyticsId="skill.avatar.cancel" className="w-[min(calc(100vw-2rem),26rem)] gap-4 p-4 sm:p-6"
         onCloseAutoFocus={event => { event.preventDefault(); chooseButton.current?.focus() }}>
         <DialogHeader>
           <DialogTitle>{t('skillAvatar.cropTitle')}</DialogTitle>
           <DialogDescription>{t('skillAvatar.cropHelp')}</DialogDescription>
         </DialogHeader>
-        {sourceUrl && <div className="flex h-80 max-h-[min(320px,45vh)] min-w-0 items-center justify-center overflow-hidden rounded-lg bg-muted/40">
+        {sourceUrl && <div data-analytics-id={disabled || state === 'UPLOADING' ? undefined : 'skill.avatar.crop.adjust'} data-analytics-event="pointerup+keydown" className="flex h-80 max-h-[min(320px,45vh)] min-w-0 items-center justify-center overflow-hidden rounded-lg bg-muted/40">
           <ReactCrop crop={crop} aspect={1} keepSelection minWidth={16} minHeight={16}
             className="max-h-[min(320px,45vh)] max-w-full"
             disabled={disabled || state === 'UPLOADING'}
@@ -165,8 +165,8 @@ export function SkillAvatarEditor({ name, currentUrl, canRemove = false, disable
         {state === 'UPLOADING' && <p role="status" className="text-sm text-muted-foreground">{t('skillAvatar.uploadStates.UPLOADING')}</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <DialogFooter className="flex-row justify-end">
-          <Button type="button" variant="outline" onClick={cancelSelection}>{t('dialog.cancel')}</Button>
-          <Button type="button" disabled={disabled || state === 'UPLOADING' || !crop?.width || !crop.height} onClick={() => void upload()}>{t(state === 'ERROR' ? 'skillAvatar.uploadRetry' : 'skillAvatar.cropConfirm')}</Button>
+          <Button data-analytics-id="skill.avatar.cancel" type="button" variant="outline" onClick={cancelSelection}>{t('dialog.cancel')}</Button>
+          <Button data-analytics-id={state === 'ERROR' ? 'skill.avatar.retry' : 'skill.avatar.upload'} type="button" disabled={disabled || state === 'UPLOADING' || !crop?.width || !crop.height} onClick={() => void upload()}>{t(state === 'ERROR' ? 'skillAvatar.uploadRetry' : 'skillAvatar.cropConfirm')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

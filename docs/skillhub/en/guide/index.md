@@ -37,6 +37,7 @@ Read these guides when you need to run your own registry. Choose a deployment me
 
 - [Deploy with Docker](./deployment.md): installation, configuration, upgrades, and backups.
 - [Deploy on Kubernetes](./kubernetes.md): cluster and Helm deployment.
+- [Frontend analytics](./frontend-analytics.md): optional manual integration, consent, and failure acceptance.
 - [Skill avatars and moderation](./skill-avatars.md): administrator configuration for image moderation providers.
 
 ## Develop and integrate

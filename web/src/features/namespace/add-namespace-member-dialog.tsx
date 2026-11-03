@@ -107,7 +107,7 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <DialogContent closeAnalyticsId="namespace.member.cancel">
         <DialogHeader className="text-center sm:text-center">
           <DialogTitle className="text-center">{t('members.addDialogTitle')}</DialogTitle>
           <DialogDescription className="text-center">
@@ -119,7 +119,7 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
           <div className="space-y-2">
             <Label htmlFor="member-search">{t('members.searchLabel')}</Label>
             <div className="flex gap-2">
-              <Input
+              <Input data-analytics-id="namespace.member.search"
                 id="member-search"
                 value={searchInput}
                 placeholder={t('members.searchPlaceholder')}
@@ -136,7 +136,7 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
                   }
                 }}
               />
-              <Button type="button" variant="outline" onClick={handleSearch}>
+              <Button data-analytics-id="namespace.member.search" type="button" variant="outline" onClick={handleSearch}>
                 {t('members.searchAction')}
               </Button>
             </div>
@@ -168,7 +168,7 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
                         <div className="text-sm text-muted-foreground">{candidate.email || candidate.userId}</div>
                         <div className="font-mono text-xs text-muted-foreground">{candidate.userId}</div>
                       </div>
-                      <Button
+                      <Button data-analytics-id="namespace.member.select"
                         type="button"
                         variant="outline"
                         size="sm"
@@ -193,7 +193,7 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
 
           <div className="space-y-2">
             <Label htmlFor="member-user-id">{t('members.manualUserIdLabel')}</Label>
-            <Input
+            <Input data-analytics-id="namespace.member.add"
               id="member-user-id"
               value={userId}
               placeholder={t('members.manualUserIdPlaceholder')}
@@ -222,12 +222,12 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
           <div className="space-y-2">
             <Label htmlFor="member-role">{t('members.roleLabel')}</Label>
             <Select value={role} onValueChange={(value) => setRole(value as NamespaceRole)}>
-              <SelectTrigger id="member-role">
+              <SelectTrigger data-analytics-id="namespace.member.role.interact" id="member-role">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {ROLE_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={option}>
+                  <SelectItem data-analytics-id={option === 'ADMIN' ? 'namespace.member.role.admin' : 'namespace.member.role.member'} key={option} value={option}>
                     {t(option === 'ADMIN' ? 'members.roleAdmin' : 'members.roleMember')}
                   </SelectItem>
                 ))}
@@ -241,10 +241,10 @@ export function AddNamespaceMemberDialog({ slug, children }: AddNamespaceMemberD
         ) : null}
 
         <DialogFooter className="sm:justify-center sm:space-x-3">
-          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button data-analytics-id="namespace.member.cancel" type="button" variant="outline" onClick={() => handleOpenChange(false)}>
             {t('dialog.cancel')}
           </Button>
-          <Button type="button" onClick={handleAddMember} disabled={addMemberMutation.isPending}>
+          <Button data-analytics-id="namespace.member.add" type="button" onClick={handleAddMember} disabled={addMemberMutation.isPending}>
             {addMemberMutation.isPending ? t('members.addingMember') : t('members.addMember')}
           </Button>
         </DialogFooter>

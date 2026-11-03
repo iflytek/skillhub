@@ -334,15 +334,15 @@ export function AdminNamespacesPage() {
           <div className="space-y-2">
             <Label htmlFor="admin-namespace-search">{t('adminNamespaces.searchLabel')}</Label>
             <div className="flex gap-2">
-              <Input
+              <Input data-analytics-id="admin.namespace.search"
                 id="admin-namespace-search"
                 placeholder={t('adminNamespaces.searchPlaceholder')}
                 value={keywordInput}
                 onChange={(event) => setKeywordInput(event.target.value)}
                 onKeyDown={handleSearchKeyDown}
               />
-              <Button type="button" onClick={applySearch}>{t('adminNamespaces.searchAction')}</Button>
-              <Button type="button" variant="outline" onClick={clearSearch} disabled={!keywordInput && !keyword}>
+              <Button data-analytics-id="admin.namespace.search" type="button" onClick={applySearch}>{t('adminNamespaces.searchAction')}</Button>
+              <Button data-analytics-id="admin.namespace.clear" type="button" variant="outline" onClick={clearSearch} disabled={!keywordInput && !keyword}>
                 {t('adminNamespaces.clearSearch')}
               </Button>
             </div>
@@ -353,12 +353,12 @@ export function AdminNamespacesPage() {
               value={normalizeSelectValue(statusFilter) ?? ALL_FILTER_VALUE}
               onValueChange={(value) => setStatusFilter(value === ALL_FILTER_VALUE ? '' : value)}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger data-analytics-id="admin.namespace.status.interact"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>{t('adminNamespaces.filterAll')}</SelectItem>
-                <SelectItem value="ACTIVE">{t('namespaceStatus.active')}</SelectItem>
-                <SelectItem value="FROZEN">{t('namespaceStatus.frozen')}</SelectItem>
-                <SelectItem value="ARCHIVED">{t('namespaceStatus.archived')}</SelectItem>
+                <SelectItem data-analytics-id="admin.namespace.status.filter" value={ALL_FILTER_VALUE}>{t('adminNamespaces.filterAll')}</SelectItem>
+                <SelectItem data-analytics-id="admin.namespace.status.filter" value="ACTIVE">{t('namespaceStatus.active')}</SelectItem>
+                <SelectItem data-analytics-id="admin.namespace.status.filter" value="FROZEN">{t('namespaceStatus.frozen')}</SelectItem>
+                <SelectItem data-analytics-id="admin.namespace.status.filter" value="ARCHIVED">{t('namespaceStatus.archived')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -368,11 +368,11 @@ export function AdminNamespacesPage() {
               value={normalizeSelectValue(typeFilter) ?? ALL_FILTER_VALUE}
               onValueChange={(value) => setTypeFilter(value === ALL_FILTER_VALUE ? '' : value)}
             >
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger data-analytics-id="admin.namespace.type.interact"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value={ALL_FILTER_VALUE}>{t('adminNamespaces.filterAll')}</SelectItem>
-                <SelectItem value="GLOBAL">{t('adminNamespaces.typeGlobal')}</SelectItem>
-                <SelectItem value="TEAM">{t('adminNamespaces.typeTeam')}</SelectItem>
+                <SelectItem data-analytics-id="admin.namespace.type.filter" value={ALL_FILTER_VALUE}>{t('adminNamespaces.filterAll')}</SelectItem>
+                <SelectItem data-analytics-id="admin.namespace.type.filter" value="GLOBAL">{t('adminNamespaces.typeGlobal')}</SelectItem>
+                <SelectItem data-analytics-id="admin.namespace.type.filter" value="TEAM">{t('adminNamespaces.typeTeam')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -404,7 +404,7 @@ export function AdminNamespacesPage() {
                 </TableHeader>
                 <TableBody>
                   {namespaces.map((namespace) => (
-                    <TableRow
+                    <TableRow data-analytics-id="admin.namespace.open"
                       key={namespace.slug}
                       className={selectedSlug === namespace.slug ? 'bg-secondary/50' : undefined}
                       onClick={() => setSelectedSlug(namespace.slug)}
@@ -428,7 +428,7 @@ export function AdminNamespacesPage() {
                   ))}
                 </TableBody>
               </Table>
-              {totalPages > 1 ? <Pagination page={page} totalPages={totalPages} onPageChange={setPage} /> : null}
+              {totalPages > 1 ? <Pagination analyticsId="admin.namespace.paginate" page={page} totalPages={totalPages} onPageChange={setPage} /> : null}
             </>
           )}
         </Card>
@@ -453,7 +453,7 @@ export function AdminNamespacesPage() {
                     <p className="text-sm text-muted-foreground">{t('adminNamespaces.membersDescription')}</p>
                   </div>
                   <div className="flex gap-2">
-                    <Button
+                    <Button data-analytics-id="admin.namespace.transfer"
                       variant="outline"
                       size="sm"
                       disabled={!selectedNamespace.permissions.canTransferOwnership}
@@ -461,7 +461,7 @@ export function AdminNamespacesPage() {
                     >
                       {t('members.transferOwnership')}
                     </Button>
-                    <Button
+                    <Button data-analytics-id="admin.namespace.member.open"
                       size="sm"
                       disabled={!selectedNamespace.permissions.canManageMembers}
                       onClick={() => openAddMemberDialog(selectedNamespace)}
@@ -481,7 +481,7 @@ export function AdminNamespacesPage() {
                   t={t}
                   i18nLanguage={i18n.language}
                 />
-                {memberTotalPages > 1 ? <Pagination page={memberPage} totalPages={memberTotalPages} onPageChange={setMemberPage} /> : null}
+                {memberTotalPages > 1 ? <Pagination analyticsId="admin.namespace.member.paginate" page={memberPage} totalPages={memberTotalPages} onPageChange={setMemberPage} /> : null}
               </div>
 
               <div className="space-y-3 rounded-xl border border-destructive/20 bg-destructive/5 p-4">
@@ -490,7 +490,7 @@ export function AdminNamespacesPage() {
                   <p className="text-sm text-muted-foreground">{t('adminNamespaces.governanceDescription')}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Button
+                  <Button data-analytics-id="admin.namespace.freeze"
                     variant="outline"
                     size="sm"
                     disabled={!selectedNamespace.permissions.canFreeze}
@@ -498,7 +498,7 @@ export function AdminNamespacesPage() {
                   >
                     {t('myNamespaces.freeze')}
                   </Button>
-                  <Button
+                  <Button data-analytics-id="admin.namespace.unfreeze"
                     variant="outline"
                     size="sm"
                     disabled={!selectedNamespace.permissions.canUnfreeze}
@@ -506,7 +506,7 @@ export function AdminNamespacesPage() {
                   >
                     {t('myNamespaces.unfreeze')}
                   </Button>
-                  <Button
+                  <Button data-analytics-id="admin.namespace.archive"
                     variant="destructive"
                     size="sm"
                     disabled={!selectedNamespace.permissions.canArchive}
@@ -514,7 +514,7 @@ export function AdminNamespacesPage() {
                   >
                     {t('myNamespaces.archive')}
                   </Button>
-                  <Button
+                  <Button data-analytics-id="admin.namespace.restore"
                     variant="outline"
                     size="sm"
                     disabled={!selectedNamespace.permissions.canRestore}
@@ -530,7 +530,7 @@ export function AdminNamespacesPage() {
       </div>
 
       <Dialog open={addMemberDialog.open} onOpenChange={(open) => (open ? setAddMemberDialog((current) => ({ ...current, open })) : closeAddMemberDialog())}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId="admin.namespace.member.cancel">
           <DialogHeader>
             <DialogTitle>{t('members.addDialogTitle')}</DialogTitle>
             <DialogDescription>{t('members.addDialogDescription')}</DialogDescription>
@@ -538,7 +538,7 @@ export function AdminNamespacesPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t('members.searchLabel')}</Label>
-              <Input
+              <Input data-analytics-id="admin.namespace.member.search"
                 value={addMemberDialog.search}
                 placeholder={t('members.searchPlaceholder')}
                 onChange={(event) => setAddMemberDialog((current) => ({ ...current, search: event.target.value }))}
@@ -546,7 +546,7 @@ export function AdminNamespacesPage() {
               {candidatesQuery.data && candidatesQuery.data.length > 0 ? (
                 <div className="max-h-44 space-y-2 overflow-y-auto rounded-lg border border-border/60 p-2">
                   {candidatesQuery.data.map((candidate) => (
-                    <button
+                    <button data-analytics-id="admin.namespace.member.select"
                       key={candidate.userId}
                       type="button"
                       className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-secondary"
@@ -570,23 +570,23 @@ export function AdminNamespacesPage() {
             <div className="space-y-2">
               <Label>{t('members.roleLabel')}</Label>
               <Select value={addMemberDialog.role} onValueChange={(role) => setAddMemberDialog((current) => ({ ...current, role }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger data-analytics-id="admin.namespace.member.role.interact"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="MEMBER">{t('members.roleMember')}</SelectItem>
-                  <SelectItem value="ADMIN">{t('members.roleAdmin')}</SelectItem>
+                  <SelectItem data-analytics-id="admin.namespace.member.role.member" value="MEMBER">{t('members.roleMember')}</SelectItem>
+                  <SelectItem data-analytics-id="admin.namespace.member.role.admin" value="ADMIN">{t('members.roleAdmin')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={closeAddMemberDialog}>{t('dialog.cancel')}</Button>
-            <Button type="button" disabled={addMemberMutation.isPending} onClick={addMember}>{t('members.addMember')}</Button>
+            <Button data-analytics-id="admin.namespace.member.cancel" type="button" variant="outline" onClick={closeAddMemberDialog}>{t('dialog.cancel')}</Button>
+            <Button data-analytics-id="admin.namespace.member.add" type="button" disabled={addMemberMutation.isPending} onClick={addMember}>{t('members.addMember')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={transferDialog.open} onOpenChange={(open) => (open ? setTransferDialog((current) => ({ ...current, open })) : closeTransferDialog())}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId="admin.namespace.transfer.cancel">
           <DialogHeader>
             <DialogTitle>{t('members.transferDialogTitle')}</DialogTitle>
             <DialogDescription>{t('members.transferDialogDescription')}</DialogDescription>
@@ -601,10 +601,10 @@ export function AdminNamespacesPage() {
                 value={transferDialog.selectedUserId}
                 onValueChange={(selectedUserId) => setTransferDialog((current) => ({ ...current, selectedUserId }))}
               >
-                <SelectTrigger><SelectValue placeholder={t('members.transferSelectPlaceholder')} /></SelectTrigger>
+                <SelectTrigger data-analytics-id="admin.namespace.ownership.interact"><SelectValue placeholder={t('members.transferSelectPlaceholder')} /></SelectTrigger>
                 <SelectContent>
                   {transferCandidates.map((candidate) => (
-                    <SelectItem key={candidate.userId} value={candidate.userId}>
+                    <SelectItem data-analytics-id="admin.namespace.ownership.select" key={candidate.userId} value={candidate.userId}>
                       {candidate.displayName || candidate.userId} ({candidate.role})
                     </SelectItem>
                   ))}
@@ -621,8 +621,8 @@ export function AdminNamespacesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={closeTransferDialog}>{t('dialog.cancel')}</Button>
-            <Button
+            <Button data-analytics-id="admin.namespace.transfer.cancel" type="button" variant="outline" onClick={closeTransferDialog}>{t('dialog.cancel')}</Button>
+            <Button data-analytics-id="admin.namespace.transfer.confirm"
               type="button"
               variant="destructive"
               disabled={!transferDialog.selectedUserId || transferDialog.confirmSlug !== transferDialog.slug || transferMutation.isPending}
@@ -634,7 +634,7 @@ export function AdminNamespacesPage() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="admin.namespace.member.remove.confirm" cancelAnalyticsId="admin.namespace.member.remove.cancel"
         open={!!pendingRemoval}
         onOpenChange={(open) => {
           if (!open) setPendingRemoval(null)
@@ -655,7 +655,7 @@ export function AdminNamespacesPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent closeAnalyticsId={pendingLifecycleAction?.action === 'freeze' ? 'admin.namespace.freeze.cancel' : pendingLifecycleAction?.action === 'unfreeze' ? 'admin.namespace.unfreeze.cancel' : pendingLifecycleAction?.action === 'archive' ? 'admin.namespace.archive.cancel' : 'admin.namespace.restore.cancel'}>
           <DialogHeader>
             <DialogTitle>{pendingLifecycleAction ? t(`adminNamespaces.${pendingLifecycleAction.action}ConfirmTitle`) : ''}</DialogTitle>
             <DialogDescription>
@@ -673,8 +673,8 @@ export function AdminNamespacesPage() {
             </div>
           ) : null}
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setPendingLifecycleAction(null)}>{t('dialog.cancel')}</Button>
-            <Button
+            <Button data-analytics-id={pendingLifecycleAction?.action === 'freeze' ? 'admin.namespace.freeze.cancel' : pendingLifecycleAction?.action === 'unfreeze' ? 'admin.namespace.unfreeze.cancel' : pendingLifecycleAction?.action === 'archive' ? 'admin.namespace.archive.cancel' : 'admin.namespace.restore.cancel'} type="button" variant="outline" onClick={() => setPendingLifecycleAction(null)}>{t('dialog.cancel')}</Button>
+            <Button data-analytics-id={pendingLifecycleAction?.action === 'freeze' ? 'admin.namespace.freeze.confirm' : pendingLifecycleAction?.action === 'unfreeze' ? 'admin.namespace.unfreeze.confirm' : pendingLifecycleAction?.action === 'archive' ? 'admin.namespace.archive.confirm' : 'admin.namespace.restore.confirm'}
               type="button"
               variant={pendingLifecycleAction?.action === 'archive' ? 'destructive' : 'default'}
               disabled={lifecycleMutation.isPending}
@@ -796,13 +796,13 @@ function MembersTable({
                 {canManageMembers && !isOwner ? (
                   <div className="flex flex-wrap items-center gap-2">
                     <Select value={roleValue} onValueChange={(role) => onDraftRoleChange(member.userId, role)}>
-                      <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+                      <SelectTrigger data-analytics-id="admin.namespace.member.role.draft.interact" className="w-32"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="MEMBER">{t('members.roleMember')}</SelectItem>
-                        <SelectItem value="ADMIN">{t('members.roleAdmin')}</SelectItem>
+                        <SelectItem data-analytics-id="admin.namespace.member.role.draft.member" value="MEMBER">{t('members.roleMember')}</SelectItem>
+                        <SelectItem data-analytics-id="admin.namespace.member.role.draft.admin" value="ADMIN">{t('members.roleAdmin')}</SelectItem>
                       </SelectContent>
                     </Select>
-                    <Button
+                    <Button data-analytics-id="admin.namespace.member.role"
                       type="button"
                       variant="outline"
                       size="sm"
@@ -822,7 +822,7 @@ function MembersTable({
                 {formatLocalDateTime(member.createdAt, i18nLanguage, { dateStyle: 'medium' })}
               </TableCell>
               <TableCell className="text-right">
-                <Button
+                <Button data-analytics-id="admin.namespace.member.remove"
                   type="button"
                   variant="destructive"
                   size="sm"

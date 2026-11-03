@@ -33,6 +33,27 @@ describe('Publish avatar submission', () => {
   beforeEach(() => { vi.mocked(toast.success).mockClear(); vi.mocked(toast.error).mockClear(); mocks.ownerReadOnly = false; mocks.publish.mockReset(); mocks.navigate.mockReset(); mocks.search.updateSkill = 'foo'; mocks.search.resubmitSkill = ''; mocks.submit.mockReset(); mocks.remove.mockReset(); mocks.refresh.mockReset(); mocks.refresh.mockResolvedValue(undefined) })
   afterEach(cleanup)
 
+  it('separates avatar-only save intent from package publishing, including warning confirmation', async () => {
+    mocks.publish.mockRejectedValueOnce(new ApiError('Pre-publish warnings require confirmation before publishing: synthetic warning', 400))
+      .mockResolvedValueOnce({ namespace: 'team', slug: 'foo', version: '1.1', status: 'PENDING_REVIEW' })
+    render(<PublishPage />)
+    const avatar = screen.getByRole('button', { name: 'publish.saveAvatar' })
+    expect(avatar.getAttribute('data-analytics-id')).toBe('skill.avatar.save')
+    expect(document.querySelector('[data-analytics-id="skill.publish.request"]')).toBeNull()
+    fireEvent.click(screen.getByText('choose package'))
+    const publish = screen.getByRole('button', { name: 'publish.confirm' })
+    expect(publish.getAttribute('data-analytics-id')).toBe('skill.publish.request')
+    expect(document.querySelector('[data-analytics-id="skill.avatar.save"]')).toBeNull()
+    fireEvent.click(publish)
+    await waitFor(() => expect(mocks.publish).toHaveBeenCalledTimes(1))
+    const confirm = await screen.findByRole('button', { name: 'publish.warningConfirmContinue' })
+    expect(confirm.getAttribute('data-analytics-id')).toBe('skill.publish.confirm')
+    expect(screen.getByRole('button', { name: 'publish.warningConfirmCancel' }).getAttribute('data-analytics-id')).toBe('skill.publish.cancel')
+    fireEvent.click(confirm)
+    await waitFor(() => expect(mocks.publish).toHaveBeenCalledTimes(2))
+    expect(mocks.publish.mock.calls.map(([input]) => input.confirmWarnings)).toEqual([false, true])
+  })
+
   it('blocks both package and avatar-only updates when the server says the owner is read-only', () => {
     mocks.ownerReadOnly = true
     render(<PublishPage />)
@@ -43,6 +64,21 @@ describe('Publish avatar submission', () => {
     expect(screen.getByRole('button', { name: 'publish.confirm' }).hasAttribute('disabled')).toBe(true)
     expect(mocks.submit).not.toHaveBeenCalled()
     expect(mocks.publish).not.toHaveBeenCalled()
+  })
+
+  it('marks warning abandonment without confirming or publishing again', async () => {
+    mocks.publish.mockRejectedValueOnce(new ApiError('Pre-publish warnings require confirmation before publishing: synthetic warning', 400))
+    render(<PublishPage />)
+    fireEvent.click(screen.getByText('choose package'))
+    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    const cancel = await screen.findByRole('button', { name: 'publish.warningConfirmCancel' })
+    expect(cancel.getAttribute('data-analytics-id')).toBe('skill.publish.cancel')
+    expect(screen.getByRole('button', { name: 'Close' }).getAttribute('data-analytics-id')).toBe('skill.publish.cancel')
+    fireEvent.click(cancel)
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'publish.warningConfirmContinue' })).toBeNull())
+    expect(mocks.publish).toHaveBeenCalledTimes(1)
+    expect(mocks.navigate).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it('refreshes permissions after an avatar API rejects a stale page, without a success notification', async () => {

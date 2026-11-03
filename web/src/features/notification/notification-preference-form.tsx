@@ -72,7 +72,7 @@ export function NotificationPreferenceForm({ showHeader = true }: { showHeader?:
                 </div>
 
                 {/* Accessible toggle switch */}
-                <button
+                <button data-analytics-id={category === 'PUBLISH' ? 'notification.preference.publish.toggle' : category === 'REVIEW' ? 'notification.preference.review.toggle' : category === 'PROMOTION' ? 'notification.preference.promotion.toggle' : 'notification.preference.report.toggle'}
                   id={toggleId}
                   role="switch"
                   aria-checked={enabled}

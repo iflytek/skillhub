@@ -53,16 +53,16 @@ export function GithubScheduleConfig({ policy }: { policy: GithubSyncSchedulePol
   return <Card className="sync-section space-y-3 p-4 sm:p-5">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 flex-1"><h2 className="font-semibold">{t('githubSync.scheduleTitle')}</h2><p className="text-sm text-muted-foreground">{t('githubSync.scheduleHelp')}</p></div>
-      <Button size="sm" variant="outline" className="sync-action" onClick={openEditor}>{t('githubSync.edit')}</Button>
+      <Button data-analytics-id="github.schedule.edit" size="sm" variant="outline" className="sync-action" onClick={openEditor}>{t('githubSync.edit')}</Button>
     </div>
     <div className="grid gap-3 text-sm sm:grid-cols-3">
       {fields.map((field) => <div key={field}><span className="text-muted-foreground">{t(`githubSync.${field}`)}</span><p className="font-semibold">{policy[field] == null ? '—' : `${policy[field]} ${t('githubSync.hoursUnit')}`}</p></div>)}
     </div>
     {policy.repositoryHours == null ? <p className="text-xs text-muted-foreground">{t('githubSync.scheduleLegacy', { interval: policy.effectiveRepositoryInterval })}</p> : null}
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="github-sync-surface w-[min(calc(100vw-2rem),38rem)] rounded-md">
+      <DialogContent closeAnalyticsId="github.schedule.cancel" className="github-sync-surface w-[min(calc(100vw-2rem),38rem)] rounded-md">
         <DialogHeader><DialogTitle>{t('githubSync.scheduleTitle')}</DialogTitle><DialogDescription>{t('githubSync.scheduleHelp')}</DialogDescription></DialogHeader>
-        <form onSubmit={save} className="space-y-4">
+        <form data-analytics-id="github.schedule.save" onSubmit={save} className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-3">
             {fields.map((field) => <label key={field} className="block text-sm">
               {t(`githubSync.${field}`)}
@@ -71,7 +71,7 @@ export function GithubScheduleConfig({ policy }: { policy: GithubSyncSchedulePol
                 onChange={(event) => setHours((current) => ({ ...current, [field]: event.target.value }))} required />
             </label>)}
           </div>
-          <div className="flex justify-end gap-2"><Button type="button" size="sm" variant="outline" className="sync-action" onClick={() => setOpen(false)}>{t('githubSync.cancel')}</Button><Button type="submit" size="sm" className="sync-action" disabled={mutation.isPending}>{t('githubSync.save')}</Button></div>
+          <div className="flex justify-end gap-2"><Button data-analytics-id="github.schedule.cancel" type="button" size="sm" variant="outline" className="sync-action" onClick={() => setOpen(false)}>{t('githubSync.cancel')}</Button><Button type="submit" size="sm" className="sync-action" disabled={mutation.isPending}>{t('githubSync.save')}</Button></div>
         </form>
       </DialogContent>
     </Dialog>

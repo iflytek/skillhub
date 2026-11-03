@@ -30,6 +30,7 @@ export interface HostInstallRequest {
 
 export interface SkillHubConfig {
   registryUrl: string;
+  savedRegistries?: { name: string; url: string }[];
   detailTabs: { versions: TabMode; securityAudit: TabMode; reviews: TabMode };
 }
 
@@ -102,7 +103,9 @@ export type SkillUseSelection = { status: 'ready'; itemKey: string }
     | 'multiple-usable-installations' | 'selection-timeout' };
 
 export interface InstalledSkillList {
-  items: { itemKey: string; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
+  items: { itemKey: string; registry?: string; currentSource?: boolean; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
+    /** Optional local frontmatter for display only; never used for selection or authorization. */
+    displayName?: string; summary?: string;
     state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'; installationState?: 'enabled' | 'disabled' }[];
   /** Completeness of the inventory projection; unavailable roots are reported independently. */
   complete: boolean;
@@ -216,3 +219,16 @@ export interface TogglePlanView {
   afterState: 'enabled' | 'disabled';
   target: { scope: 'user' | 'project'; path: string } | null;
 }
+
+/** Public views contain only logical release paths and opaque Host references. */
+export interface ChangesView {
+  status: 'ready' | 'blocked'; reason: string; snapshotId: string | null; expiresAt: string | null;
+  kind: 'local' | 'version'; version: string; candidateVersion: string | null;
+  changes: { path: string; kind: 'added' | 'modified' | 'deleted' }[];
+  backupSaved?: boolean;
+  /** Read-only Host path for locating a verified backup; never a mutation input. */
+  backupLocation?: string;
+  changelog?: string;
+}
+export interface ChangeDiffView { path: string; state: 'text' | 'binary' | 'too-large' | 'unavailable'; lines: {kind: 'context' | 'added' | 'deleted'; text: string}[]; truncated: boolean }
+export interface FileResetPlanView { planId: string; expiresAt: string; hostInstanceId: string; paths: {path: string; kind: 'added' | 'modified' | 'deleted'}[] }

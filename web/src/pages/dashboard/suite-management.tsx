@@ -89,7 +89,7 @@ export function SuiteManagementPage() {
   }
 
   const primaryAction = canEdit ? (
-    <Button size="sm" onClick={navigateToEditor}>
+    <Button data-analytics-id={suite.allowedActions.includes('CREATE_VERSION') ? 'suite.version.create' : 'suite.draft.edit'} size="sm" onClick={navigateToEditor}>
       {suite.allowedActions.includes('CREATE_VERSION') ? t('suite.createVersion') : t('suite.editDraft')}
     </Button>
   ) : null
@@ -104,7 +104,7 @@ export function SuiteManagementPage() {
         actions={(
           <div className="flex items-center gap-2">
             {primaryAction}
-            <Button size="sm" variant="soft" className="gap-1.5" onClick={() => navigate({
+            <Button data-analytics-id="suite.market.preview" size="sm" variant="soft" className="gap-1.5" onClick={() => navigate({
               to: `/suite/${namespace}/${encodeURIComponent(slug)}`,
               search: { version: suite.version },
             })}>
@@ -159,10 +159,10 @@ export function SuiteManagementPage() {
         className="space-y-3"
       >
         <TabsList>
-          <TabsTrigger value="overview" className="py-2 text-xs">{t('suite.management.tabs.overview')}</TabsTrigger>
-          <TabsTrigger value="members" className="py-2 text-xs">{t('suite.management.tabs.members', { count: suite.members.length })}</TabsTrigger>
-          <TabsTrigger value="versions" className="py-2 text-xs">{t('suite.management.tabs.versions', { count: versions.length })}</TabsTrigger>
-          <TabsTrigger value="publishing" className="py-2 text-xs">{t('suite.management.tabs.publishing', { count: suiteOperations.length })}</TabsTrigger>
+          <TabsTrigger data-analytics-id="suite.overview.tab" value="overview" className="py-2 text-xs">{t('suite.management.tabs.overview')}</TabsTrigger>
+          <TabsTrigger data-analytics-id="suite.members.tab" value="members" className="py-2 text-xs">{t('suite.management.tabs.members', { count: suite.members.length })}</TabsTrigger>
+          <TabsTrigger data-analytics-id="suite.versions.tab" value="versions" className="py-2 text-xs">{t('suite.management.tabs.versions', { count: versions.length })}</TabsTrigger>
+          <TabsTrigger data-analytics-id="suite.publishing.tab" value="publishing" className="py-2 text-xs">{t('suite.management.tabs.publishing', { count: suiteOperations.length })}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -174,7 +174,7 @@ export function SuiteManagementPage() {
                     <h2 className="text-xs font-semibold">{t('suite.management.publishChecklist')}</h2>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">{t('suite.management.publishChecklistDescription')}</p>
                   </div>
-                  <Button size="sm" className="h-7 px-2.5 text-[11px]" disabled={!readyToPublish || submitMutation.isPending} onClick={() => submit()}>
+                  <Button data-analytics-id={suite.visibility === 'PRIVATE' ? 'suite.publish.direct.request' : 'suite.review.submit.request'} size="sm" className="h-7 px-2.5 text-[11px]" disabled={!readyToPublish || submitMutation.isPending} onClick={() => submit()}>
                       {suite.visibility === 'PRIVATE' ? t('suite.publishDirectly') : t('suite.submitReview')}
                   </Button>
                 </div>
@@ -207,7 +207,7 @@ export function SuiteManagementPage() {
                     <p className="mt-0.5 text-[11px] text-muted-foreground">{t('suite.management.marketContentDescription')}</p>
                   </div>
                   {suite.allowedActions.includes('EDIT') ? (
-                    <Button size="sm" variant="soft" className="h-6 px-2 text-[11px]" onClick={navigateToEditor}>{t('suite.management.editContent')}</Button>
+                    <Button data-analytics-id="suite.content.edit" size="sm" variant="soft" className="h-6 px-2 text-[11px]" onClick={navigateToEditor}>{t('suite.management.editContent')}</Button>
                   ) : null}
                 </div>
                 <div className="space-y-3 px-3 py-3">
@@ -233,7 +233,7 @@ export function SuiteManagementPage() {
                     <p className="mt-0.5 text-[11px] text-muted-foreground">{t('suite.management.membersSnapshotDescription')}</p>
                   </div>
                   {canEdit ? (
-                    <Button size="sm" variant="soft" className="h-6 px-2 text-[11px]" onClick={navigateToEditor}>{t('suite.management.editMembers')}</Button>
+                    <Button data-analytics-id="suite.members.edit" size="sm" variant="soft" className="h-6 px-2 text-[11px]" onClick={navigateToEditor}>{t('suite.management.editMembers')}</Button>
                   ) : null}
                 </div>
                 <div className="grid gap-3 px-3 py-2.5 text-xs sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
@@ -330,7 +330,7 @@ function OperationRows({ operations, locale, suite, compact = false }: {
       {operations.map((operation) => {
         const problemKind = suiteBundleProblemKind(operation.status, operation.failureCode)
         return (
-          <Link
+          <Link data-analytics-id="suite.operation.open"
             key={operation.operationId}
             to="/dashboard/suites/publishing/$operationId"
             params={{ operationId: operation.operationId }}

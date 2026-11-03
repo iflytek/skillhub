@@ -99,26 +99,26 @@ export function GovernancePage() {
           }}
         >
           <TabsList>
-            <TabsTrigger value="ALL">{t('governance.tabAll')}</TabsTrigger>
-            <TabsTrigger value="REVIEW">{t('governance.tabReview')}</TabsTrigger>
-            <TabsTrigger value="PROMOTION">{t('governance.tabPromotion')}</TabsTrigger>
-            <TabsTrigger value="REPORT">{t('governance.tabReport')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="governance.all.tab" value="ALL">{t('governance.tabAll')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="governance.review.tab" value="REVIEW">{t('governance.tabReview')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="governance.promotion.tab" value="PROMOTION">{t('governance.tabPromotion')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="governance.report.tab" value="REPORT">{t('governance.tabReport')}</TabsTrigger>
           </TabsList>
           <TabsContent value="ALL" className="mt-6">
             <GovernanceInbox items={inboxPageData?.items} isLoading={isInboxLoading} />
-            {inboxTotalPages > 1 ? <Pagination page={inboxPage} totalPages={inboxTotalPages} onPageChange={setInboxPage} /> : null}
+            {inboxTotalPages > 1 ? <Pagination analyticsId="governance.inbox.paginate" page={inboxPage} totalPages={inboxTotalPages} onPageChange={setInboxPage} /> : null}
           </TabsContent>
           <TabsContent value="REVIEW" className="mt-6">
             <GovernanceInbox items={inboxPageData?.items} isLoading={isInboxLoading} />
-            {inboxTotalPages > 1 ? <Pagination page={inboxPage} totalPages={inboxTotalPages} onPageChange={setInboxPage} /> : null}
+            {inboxTotalPages > 1 ? <Pagination analyticsId="governance.inbox.paginate" page={inboxPage} totalPages={inboxTotalPages} onPageChange={setInboxPage} /> : null}
           </TabsContent>
           <TabsContent value="PROMOTION" className="mt-6">
             <GovernanceInbox items={inboxPageData?.items} isLoading={isInboxLoading} />
-            {inboxTotalPages > 1 ? <Pagination page={inboxPage} totalPages={inboxTotalPages} onPageChange={setInboxPage} /> : null}
+            {inboxTotalPages > 1 ? <Pagination analyticsId="governance.inbox.paginate" page={inboxPage} totalPages={inboxTotalPages} onPageChange={setInboxPage} /> : null}
           </TabsContent>
           <TabsContent value="REPORT" className="mt-6">
             <GovernanceInbox items={inboxPageData?.items} isLoading={isInboxLoading} />
-            {inboxTotalPages > 1 ? <Pagination page={inboxPage} totalPages={inboxTotalPages} onPageChange={setInboxPage} /> : null}
+            {inboxTotalPages > 1 ? <Pagination analyticsId="governance.inbox.paginate" page={inboxPage} totalPages={inboxTotalPages} onPageChange={setInboxPage} /> : null}
           </TabsContent>
         </Tabs>
       </Card>
@@ -136,7 +136,7 @@ export function GovernancePage() {
             isMarkingRead={markReadMutation.isPending}
           />
           {notificationsTotalPages > 1 ? (
-            <Pagination page={notificationsPage} totalPages={notificationsTotalPages} onPageChange={setNotificationsPage} />
+            <Pagination analyticsId="governance.notification.paginate" page={notificationsPage} totalPages={notificationsTotalPages} onPageChange={setNotificationsPage} />
           ) : null}
         </Card>
 
@@ -146,7 +146,7 @@ export function GovernancePage() {
             <p className="text-sm text-muted-foreground">{t('governance.activitySubtitle')}</p>
           </div>
           <GovernanceActivity items={activityPageData?.items} isLoading={isActivityLoading} />
-          {activityTotalPages > 1 ? <Pagination page={activityPage} totalPages={activityTotalPages} onPageChange={setActivityPage} /> : null}
+          {activityTotalPages > 1 ? <Pagination analyticsId="governance.activity.paginate" page={activityPage} totalPages={activityTotalPages} onPageChange={setActivityPage} /> : null}
         </Card>
       </div>
 
@@ -158,7 +158,7 @@ export function GovernancePage() {
               <p className="text-sm text-muted-foreground">{t('governance.searchMaintenanceDescription')}</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-              <Button
+              <Button data-analytics-id="governance.index.rebuild"
                 type="button"
                 variant="outline"
                 onClick={() => setRebuildDialogOpen(true)}
@@ -170,7 +170,7 @@ export function GovernancePage() {
             </div>
           </Card>
 
-          <ConfirmDialog
+          <ConfirmDialog confirmAnalyticsId="governance.index.rebuild.confirm" cancelAnalyticsId="governance.index.rebuild.cancel"
             open={rebuildDialogOpen}
             onOpenChange={setRebuildDialogOpen}
             title={t('governance.searchRebuildConfirmTitle')}

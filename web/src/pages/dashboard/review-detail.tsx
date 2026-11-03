@@ -208,7 +208,7 @@ function ReviewDetailScreen({
           <h2 className="text-2xl font-bold font-heading mb-2">{t('review.notFound')}</h2>
         </div>
         <div className="flex justify-center">
-          <Button variant="outline" onClick={() => navigate({ to: returnTo })}>
+          <Button data-analytics-id="review.list.open" variant="outline" onClick={() => navigate({ to: returnTo })}>
             {t('review.backToList')}
           </Button>
         </div>
@@ -230,7 +230,7 @@ function ReviewDetailScreen({
             {review.namespace}/{review.subjectSlug || review.skillSlug}
           </p>
         </div>
-        <Button variant="outline" size="sm" className="px-2.5" onClick={() => navigate({ to: returnTo })}>
+        <Button data-analytics-id="review.list.open" variant="outline" size="sm" className="px-2.5" onClick={() => navigate({ to: returnTo })}>
           {t('review.backToList')}
         </Button>
       </div>
@@ -273,7 +273,7 @@ function ReviewDetailScreen({
         </dl>
         {!isSuiteReview && !isMetadataReview && (
           <div className="flex flex-wrap gap-2 border-t pt-3 text-xs">
-            <button type="button" onClick={() => setSelectedTab('source')}
+            <button data-analytics-id="review.security.open" type="button" onClick={() => setSelectedTab('source')}
               className="inline-flex min-h-8 flex-wrap items-center gap-2 rounded border border-border bg-muted/20 px-2.5 py-1 text-left hover:bg-muted/50">
               <span className="font-medium">{t('review.scanSummary')}</span>
               {isLoadingReviewSkillDetail || (skillId && versionId && isLoadingSecurityAudits)
@@ -290,7 +290,7 @@ function ReviewDetailScreen({
                     : activeReviewVersion?.status === 'SCAN_FAILED' ? 'review.scanFailed' : 'review.scanUnavailable')}</span>}
             </button>
             {isGithubSyncReview && (
-              <button type="button" onClick={() => setSelectedTab('source')}
+              <button data-analytics-id="review.security.open" type="button" onClick={() => setSelectedTab('source')}
                 className="inline-flex min-h-8 items-center gap-2 rounded border border-border bg-muted/20 px-2.5 py-1 text-left hover:bg-muted/50">
                 <span className="font-medium">{t('review.githubLicenseStatus')}</span>
                 <span className={githubSource?.evidence.status !== 'RECOGNIZED' ? 'text-amber-700 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400'}>
@@ -314,10 +314,10 @@ function ReviewDetailScreen({
 
       <Tabs value={activeTab} onValueChange={setSelectedTab} className="min-w-0 space-y-4">
         <TabsList className="flex w-full gap-4 overflow-x-auto">
-          <TabsTrigger value="content" className="py-2 text-xs">{t('review.tabContent')}</TabsTrigger>
-          {!isSuiteReview && !isMetadataReview && <TabsTrigger value="changes" className="py-2 text-xs">{t('review.tabChanges')}</TabsTrigger>}
-          {!isSuiteReview && !isMetadataReview && <TabsTrigger value="source" className="py-2 text-xs">{t('review.tabSourceSecurity')}</TabsTrigger>}
-          <TabsTrigger value="history" className="py-2 text-xs">{t('review.tabHistory')}</TabsTrigger>
+          <TabsTrigger data-analytics-id="review.content.tab" value="content" className="py-2 text-xs">{t('review.tabContent')}</TabsTrigger>
+          {!isSuiteReview && !isMetadataReview && <TabsTrigger data-analytics-id="review.changes.tab" value="changes" className="py-2 text-xs">{t('review.tabChanges')}</TabsTrigger>}
+          {!isSuiteReview && !isMetadataReview && <TabsTrigger data-analytics-id="review.source.tab" value="source" className="py-2 text-xs">{t('review.tabSourceSecurity')}</TabsTrigger>}
+          <TabsTrigger data-analytics-id="review.history.tab" value="history" className="py-2 text-xs">{t('review.tabHistory')}</TabsTrigger>
         </TabsList>
         <TabsContent value="content" className="space-y-4">
           {review.requestedVisibility && <section className="rounded-xl border p-4 space-y-2">
@@ -359,7 +359,7 @@ function ReviewDetailScreen({
               ) : (
                 <div className="flex flex-wrap items-center gap-3">
                   <p className="text-sm text-destructive">{t('suite.reviewSnapshotFailed')}</p>
-                  <Button type="button" size="sm" variant="outline" onClick={() => void refetchReviewSuiteDetail()}>
+                  <Button data-analytics-id="review.suite.retry" type="button" size="sm" variant="outline" onClick={() => void refetchReviewSuiteDetail()}>
                     {t('suite.reviewSnapshotRetry')}
                   </Button>
                 </div>
@@ -436,7 +436,7 @@ function ReviewDetailScreen({
               />
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">
-            <Button
+            <Button data-analytics-id="review.approve.request"
               size="sm"
               className="px-2.5"
               onClick={() => {
@@ -450,7 +450,7 @@ function ReviewDetailScreen({
               {t('review.approve')}
             </Button>
             {!showRejectForm ? (
-              <Button
+              <Button data-analytics-id="review.reject.open"
                 size="sm"
                 className="px-2.5"
                 variant="destructive"
@@ -461,7 +461,7 @@ function ReviewDetailScreen({
               </Button>
             ) : (
               <>
-                <Button
+                <Button data-analytics-id="review.reject.request"
                   size="sm"
                   className="px-2.5"
                   variant="destructive"
@@ -476,7 +476,7 @@ function ReviewDetailScreen({
                 >
                   {t('review.confirmReject')}
                 </Button>
-                <Button
+                <Button data-analytics-id="review.reject.cancel"
                   size="sm"
                   className="px-2.5"
                   variant="outline"
@@ -505,7 +505,7 @@ function ReviewDetailScreen({
         </div>}
       </div>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="review.approve.confirm" cancelAnalyticsId="review.approve.cancel"
         open={approveDialog}
         onOpenChange={setApproveDialog}
         title={t('review.approveTitle')}
@@ -514,7 +514,7 @@ function ReviewDetailScreen({
         onConfirm={handleApprove}
       />
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="review.reject.confirm" cancelAnalyticsId="review.reject.cancel"
         open={rejectDialog}
         onOpenChange={setRejectDialog}
         title={t('review.rejectTitle')}

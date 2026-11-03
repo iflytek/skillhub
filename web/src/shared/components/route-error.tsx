@@ -21,7 +21,7 @@ export function RouteError({ error, reset }: RouteErrorProps) {
     <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-6 text-center">
       <h1 className="text-xl font-semibold text-foreground">{t('routeError.title')}</h1>
       <p className="max-w-md text-sm text-muted-foreground">{t('routeError.description')}</p>
-      <Button type="button" onClick={() => reset()}>
+      <Button data-analytics-id="navigation.route.retry" type="button" onClick={() => reset()}>
         {t('routeError.reset')}
       </Button>
     </div>

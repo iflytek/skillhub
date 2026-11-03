@@ -1,3 +1,4 @@
+import { ChangePreview, type ChangeServices } from './change-preview.js';
 import { canCollapseHistory } from './operation-presentation.js';
 import { OperationDetails } from './operation-details.js';
 import { DiscoveryStatus } from './discovery-status.js';
@@ -14,6 +15,7 @@ import { SkillAvatar } from './skill-card.js';
 import { useInstallationOperation } from './use-installation-operation.js';
 
 export interface UpgradeServices extends CompatibilityServices {
+  changes?: ChangeServices;
   sessionId: string;
   upgradeRequests: UpgradeRequests;
   prepareVersionUpgrade?(revision: string, itemKey: string, version: string, signal: AbortSignal): Promise<RemoteResult<UpgradePlanView>>;
@@ -35,7 +37,11 @@ const blockers: Record<string, string> = {
   'recovery-required': '有未完成的操作需要恢复核验，暂不能升级。',
 };
 
-export function UpgradeControl({ services, sourceRevision, source, item, eligible = false, onCompleted, onClosed, history = false, presentation = 'panel', targetVersion }: {
+export function UpgradeControl(props: Parameters<typeof LegacyUpgradeControl>[0]) {
+  if (props.services.changes && props.item.itemKey && props.eligible) return <ChangePreview key={`${props.sourceRevision}:${props.item.itemKey}:${props.targetVersion ?? ''}`} services={{ ...props.services, changes: props.services.changes }} revision={props.sourceRevision} itemKey={props.item.itemKey} installationKey={JSON.stringify([props.source, props.item.namespace, props.item.slug, props.item.scope])} upgrade targetVersion={props.targetVersion} onClose={() => props.onClosed?.()} onCompleted={version => props.onCompleted?.(version)} />;
+  return <LegacyUpgradeControl {...props} />;
+}
+function LegacyUpgradeControl({ services, sourceRevision, source, item, eligible = false, onCompleted, onClosed, history = false, presentation = 'panel', targetVersion }: {
   services: UpgradeServices; sourceRevision: string; source: string; eligible?: boolean; history?: boolean; presentation?: 'panel' | 'dialog'; targetVersion?: string;
   item: { itemKey?: string; namespace: string; slug: string; version?: string; scope: string };
   onCompleted?(version: string): void; onClosed?(): void;

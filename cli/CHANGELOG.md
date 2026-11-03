@@ -2,6 +2,29 @@
 
 All notable CLI behavior changes are documented in this file.
 
+## 0.3.0
+
+### Changed
+
+- Retain strict inventory v2 and derive activation from trusted entry files, without a second
+  persisted activation state. Preserve normal published CLI 0.2.0 interoperability.
+- Preserve disabled installations across namespace synchronization and doctor reconciliation.
+  CLI upgrade refuses disabled targets, including with `--force`; Suite operations cannot adopt
+  disabled positions. This release does not add CLI enable/disable commands.
+- Supply the compatible local installation core for DSH `0.6.0`, including entry-only
+  enable/disable and recovery. The DSH plugin bundles this core and does not invoke CLI commands.
+
+### Upgrade and rollback
+
+- No coordinated CLI upgrade is required for shared inventory. Historical explicit force
+  install/upgrade/sync may overwrite disabled entries; explicit remove may delete them.
+  New readers must reflect the resulting files; default paths must not unintentionally enable.
+- Unpublished v3 inventories require validated, locked conversion with original-byte backup.
+  Compatibility implementation and real old-package acceptance are in progress; publication
+  remains blocked until they pass.
+- Candidate versions are not a publication claim. Final package integrity, clean installation
+  and migration acceptance must be recorded separately for the published packages.
+
 ## 0.2.0
 
 ### Added

@@ -32,6 +32,8 @@ describe('validateBasePath', () => {
     '/.well-known/',
     '/runtime-config.js/',
     '/api/nested/',
+    '/_skillhub-analytics/',
+    '/_skillhub-analytics/nested/',
   ])('rejects reserved first segment %s', (value) => {
     expect(() => validateBasePath(value)).toThrow(/reserved by the SkillHub server/)
   })

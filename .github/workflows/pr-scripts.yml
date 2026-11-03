@@ -9,6 +9,8 @@ on:
       - '.env.release.example'
       - '.env.release.draft'
       - 'compose.release.yml'
+      - 'compose.release.analytics.yml'
+      - 'compose.analytics-umami.yml'
       - 'compose.storage.*.yml'
       - 'deploy/storage/**'
       - 'deploy/runtime-mirror-images.txt'
@@ -55,6 +57,7 @@ jobs:
       - run: python -m unittest discover -s scanner/tests -p 'test_*.py'
       - run: bash scripts/tests/publish-cli-test.sh
       - run: bash scripts/tests/runtime-secret-test.sh
+      - run: bash scripts/tests/runtime-analytics-test.sh
       - run: bash scripts/tests/validate-release-config-test.sh
       - run: bash scripts/tests/storage-compose-test.sh
       - run: bash scripts/tests/storage-compose-render-test.sh

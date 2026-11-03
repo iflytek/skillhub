@@ -178,7 +178,7 @@ function ResourceLabelPanel({
                     <div className="mt-1 text-xs text-muted-foreground">{label.slug}</div>
                   </div>
                   {removable ? (
-                    <Button
+                    <Button data-analytics-id={translationPrefix === 'suite' ? label.type === 'PRIVILEGED' ? 'suite.label.privileged.detach' : 'suite.label.recommended.detach' : label.type === 'PRIVILEGED' ? 'skill.label.privileged.detach' : 'skill.label.recommended.detach'}
                       variant="outline"
                       size="sm"
                       onClick={() => handleDetach(label)}
@@ -209,7 +209,7 @@ function ResourceLabelPanel({
         ) : availableLabels.length > 0 ? (
           <div className="flex flex-wrap gap-2">
             {availableLabels.map((label) => (
-              <Button
+              <Button data-analytics-id={translationPrefix === 'suite' ? label.type === 'PRIVILEGED' ? 'suite.label.privileged.attach' : 'suite.label.recommended.attach' : label.type === 'PRIVILEGED' ? 'skill.label.privileged.attach' : 'skill.label.recommended.attach'}
                 key={label.slug}
                 variant="outline"
                 size="sm"

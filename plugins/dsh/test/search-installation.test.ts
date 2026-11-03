@@ -15,12 +15,12 @@ import type { InstalledSkillList } from '../src/host/types.js';
 const item = { itemKey: 'private-key', namespace: 'team', slug: 'writer', version: '1.0.0', scope: 'user', state: 'present' } as const;
 const checkedAt = '2026-10-19T00:00:00.000Z';
 test('summary matches full coordinates, preserves scopes and abnormal records, and strips private fields', () => {
-  const inventory: InstalledSkillList = { complete: true, issues: [], unavailable: [], items: [item,
+  const inventory: InstalledSkillList = { complete: true, issues: [], unavailable: [], items: [{ ...item, installationState: 'enabled' },
     { ...item, namespace: 'other' }, { ...item, slug: 'other' },
     { ...item, scope: 'project', state: 'missing', version: '0.9.0' }] };
   const value = summarizeInstallation(item, inventory, checkedAt);
   expect(value).toEqual({ checkedAt, complete: true, unavailable: [], records: [
-    { scope: 'user', state: 'present', version: '1.0.0', installationState: 'enabled' }, { scope: 'project', state: 'missing', version: '0.9.0', installationState: 'enabled' }] });
+    { scope: 'user', state: 'present', version: '1.0.0', installationState: 'enabled' }, { scope: 'project', state: 'missing', version: '0.9.0', installationState: undefined }] });
   expect(JSON.stringify(value)).not.toContain('private-key');
   expect(summarizeInstallation(item, { ...inventory, unavailable: ['project'] }, checkedAt).complete).toBe(false);
   expect(summarizeInstallation(item, undefined, checkedAt)).toEqual({ checkedAt, complete: false, unavailable: ['user', 'project'], records: [] });
@@ -70,7 +70,11 @@ async function fixture(run: (value: {
   const fiber = ctx.plugin(SkillHubService, { registryUrl: server.url.href }); await fiber;
   try {
     await run({ service: ctx.skillhub, project, home, session,
-      setRead: read => Reflect.set(ctx.skillhub, 'localRuntime', { listInstalled: read }),
+      setRead: read => Reflect.set(ctx.skillhub, 'localRuntime', { listAllInstalled: async (roots: { scope: string; root: string }[]) => {
+        const registry = ctx.skillhub.getContext().registryUrl;
+        const result = await read(registry, roots) as { items: object[] };
+        return { ...result, items: result.items.map(item => ({ ...item, registry: registry.replace(/\/+$/, '') })) };
+      } }),
       setSearch: read => { search = read; } });
   } finally {
     await fiber.dispose(); await remove(); server.stop(true);

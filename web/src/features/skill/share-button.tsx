@@ -41,7 +41,7 @@ export function ShareButton({ namespace, slug, description }: ShareButtonProps) 
   }
 
   return (
-    <button
+    <button data-analytics-id="skill.share.request"
       type="button"
       data-testid="share-skill-button"
       onClick={handleShare}

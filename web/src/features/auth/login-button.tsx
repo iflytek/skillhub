@@ -68,7 +68,7 @@ export function AuthMethodButtonList({
   return (
     <div className={cn(compact ? 'grid grid-cols-2 gap-2 sm:grid-cols-4' : 'space-y-3')}>
       {providers.map((provider) => (
-        <Button
+        <Button data-analytics-id="auth.oauth.request"
           key={provider.id}
           className={cn(
             compact ? 'h-11 justify-center px-2 text-sm xl:h-10' : 'w-full h-12 text-base',

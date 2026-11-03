@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import SkillHubService from '@astron-team/skillhub-dsh';
 
 test('update check revalidates local identity and only resolves remote metadata', async () => {
-  const installed = { namespace: 'demo', slug: 'writer', version: '1.0.0', fingerprint: 'original', state: 'present' };
+  const installed = { registry: 'https://registry.example', namespace: 'demo', slug: 'writer', version: '1.0.0', fingerprint: 'original', state: 'present' };
   let current = { ...installed };
   let reads = 0;
   let resolves = 0;
@@ -13,6 +13,7 @@ test('update check revalidates local identity and only resolves remote metadata'
   const lifetime = new AbortController();
   const context = {
     lifetime,
+    getContext: () => ({ registryUrl: installed.registry }),
     async readInstalledItem() { reads++; return { item: { ...current }, valid() {} }; },
     async readSource(_revision: string, signal: AbortSignal, resolve: (registry: object, signal: AbortSignal) => unknown) {
       return resolve({ async resolve(namespace: string, slug: string, version: unknown) {

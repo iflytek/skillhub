@@ -621,7 +621,7 @@ subject to the server's package validation.
 
 ### Installation inventory compatibility
 
-The local installation inventory uses schema version 3 in the unreleased enable/disable increment. Each installation directory owns its
+Version `0.3.0` retains installation inventory schema version 2. Each installation directory owns its
 version, fingerprint, timestamp and ownership, so a user installation and a project installation
 of the same skill can remain on different versions. `list --json` reports the actual version for
 each target. `upgrade --check --json` and upgrade results contain one row per selected installation
@@ -631,16 +631,9 @@ Direct install/upgrade/remove and sync pruning refuse Suite-owned or shared posi
 with `--force`. Manage those positions through Suite commands; unrelated direct installations
 remain independently manageable.
 
-Reading a v1/v2 inventory does not change it. The first mutation validates it, preserves its
-original bytes in an immutable digest-addressed backup beside `inventory.json`, and atomically
-writes v3 (`schemaVersion`, `records`, `suites`). Each target records `installationState`
-(`enabled` or `disabled`); legacy targets project to enabled without inventing missing integrity.
+Shared inventory remains strict v2 without a persisted `installationState`; activation is derived from trusted `SKILL.md` / `SKILL.md.disabled` entries. A coordinated CLI upgrade is not required. Published CLI `0.2.0` must retain normal queries and ordinary-target management; default update, sync and Suite paths must not unintentionally enable disabled targets. Historical explicit force install, upgrade and sync retain their overwrite semantics and may restore the standard entry; explicit remove retains deletion semantics. New readers must reflect these actual file changes.
 
-Stop incompatible CLI writers and let DSH finish pending recovery before migration. Published
-CLI `0.2.0` and `0.1.12` must not share writes with v3. Protocol rejection is not a complete
-cross-process guard: historical commands have different read paths. Release the compatible CLI
-before exposing this plugin increment. Restoring old inventory alone is not a safe downgrade;
-verify entry names, package bytes, metadata and operation logs together.
+Reading v1/v2 is non-mutating. Unpublished v3 inventories require validated, locked conversion to v2 with original-byte backup; never restore stale inventory over newer records. Ordinary DSH journals remain compatible; toggle journals must not block unrelated historical operations. Compatibility fixes and real historical-package acceptance are in progress; release remains blocked until they pass.
 
 This CLI does not add enable/disable commands. Use DSH for explicit toggles and disabled updates;
 CLI upgrade refuses disabled targets even with `--force`. Namespace sync retains disabled

@@ -94,3 +94,46 @@ The open-source versions endpoint SHALL accept optional `downloadableOnly`, defa
 #### Scenario: Existing consumers omit the new parameter
 - **WHEN** a management consumer omits downloadableOnly
 - **THEN** its authorized lifecycle history remains available and no authentication policy changes
+
+### Requirement: Saved sources with one shared active source
+The plugin SHALL support named saved sources with one active registryUrl shared by a Profile/plugin instance. Configuration writes SHALL preserve revision CAS, omitted defaults and explicit disconnection. Removing a source SHALL NOT remove its installations.
+
+#### Scenario: Shared switch and conflicting edits
+- **WHEN** one page switches from A to B while another holds an old configuration revision
+- **THEN** all pages observe B and stale writes are rejected rather than overwriting the selection
+
+### Requirement: Local management independent of the active market
+The plugin SHALL retain trusted managed installations from other sources, including while disconnected. Local actions SHALL use their original inventory identity and preserve existing filesystem and confirmation protections. Different sources with equal coordinates SHALL NOT merge.
+
+#### Scenario: Old source installation after a switch
+- **WHEN** A has an installation and the active source becomes B or disconnected
+- **THEN** the installation remains locally usable and manageable and its detail does not request B's same-name skill
+
+### Requirement: Update checks restricted to the active source
+The Host SHALL restrict individual and bulk update checks and upgrade preparation to installations from the active source before remote requests. Other-source installations SHALL NOT count as latest, failed or updateable. Switching SHALL discard old results and invalidate unsubmitted plans without abandoning accepted transactions.
+
+#### Scenario: Slow response after switching
+- **WHEN** A's update check completes after switching to B
+- **THEN** its result is discarded, only B participates in current update counts, and switching back to A requires a fresh check before upgrade
+
+#### Scenario: Cross-source upgrade attempt
+- **WHEN** an old-source item is submitted for an update check or upgrade against the active source
+- **THEN** the Host rejects the request before resolve and does not replace its installation with a same-name package
+
+#### Scenario: Model checks updates after a source switch
+- **WHEN** a user asks the conversation agent to check installed skills for updates
+- **THEN** the tool contract directs the agent to obtain fresh opaque routing references from the installed list, check only current-source items, and distinguish update eligibility from an available newer version
+- **AND** a stale context is not presented as missing human approval; the agent is directed to refresh once and report an unresolved failure rather than repeatedly retry or invent a confirmation step
+
+### Requirement: Settings grouped without losing unsaved changes
+The settings page SHALL group source configuration and detail visibility into keyboard-accessible tabs. Switching tabs SHALL preserve the same unsaved draft and SHALL NOT save or test a connection. Each tab SHALL use one content card. Source selection and management SHALL share a single list with inline editing on demand, without a duplicated current-address editor. A current URL absent from saved sources SHALL remain visible and manageable.
+
+#### Scenario: Save changes from multiple settings tabs
+- **WHEN** a user edits the source and detail visibility in separate tabs and saves
+- **THEN** all pending edits are submitted together with their original configuration revision
+- **AND** an invalid hidden source field brings the source tab and management area into view; conflicting external edits are rejected without silently rebasing the draft
+
+#### Scenario: Return to the saved values
+- **WHEN** edits return to the saved values without an intervening configuration revision change
+- **THEN** no unsaved-change state remains and save is disabled
+- **AND** returning values after an external revision change does not bypass conflict detection

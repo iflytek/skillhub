@@ -89,7 +89,7 @@ export function MyNamespacesPage() {
         subtitle={t('myNamespaces.subtitle')}
         actions={canCreateNamespace ? (
           <CreateNamespaceDialog>
-            <Button>{t('myNamespaces.create')}</Button>
+            <Button data-analytics-id="namespace.create.open">{t('myNamespaces.create')}</Button>
           </CreateNamespaceDialog>
         ) : undefined}
       />
@@ -131,11 +131,11 @@ export function MyNamespacesPage() {
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2 border-t border-border/50 pt-4">
-                  <Button variant="outline" size="sm" onClick={() => handleNamespaceClick(namespace.slug)}>
+                  <Button data-analytics-id="namespace.management.open" variant="outline" size="sm" onClick={() => handleNamespaceClick(namespace.slug)}>
                     {t('namespaceManagement.enter')}
                   </Button>
                   {namespace.type === 'TEAM' && (namespace.currentUserRole === 'OWNER' || namespace.currentUserRole === 'ADMIN') && (
-                    <Button variant="outline" size="sm" onClick={(e) => handleGithubSourcesClick(namespace.slug, e)}>
+                    <Button data-analytics-id="github.namespace.open" variant="outline" size="sm" onClick={(e) => handleGithubSourcesClick(namespace.slug, e)}>
                       {t('githubSync.teamLink')}
                     </Button>
                   )}
@@ -145,7 +145,7 @@ export function MyNamespacesPage() {
           ))}
         </div>
         {totalPages > 1 ? (
-          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+          <Pagination analyticsId="namespace.list.paginate" page={page} totalPages={totalPages} onPageChange={setPage} />
         ) : null}
         </>
       ) : (
@@ -154,7 +154,7 @@ export function MyNamespacesPage() {
           description={t('myNamespaces.emptyDescription')}
           action={canCreateNamespace ? (
             <CreateNamespaceDialog>
-              <Button>{t('myNamespaces.create')}</Button>
+              <Button data-analytics-id="namespace.create.open">{t('myNamespaces.create')}</Button>
             </CreateNamespaceDialog>
           ) : undefined}
         />

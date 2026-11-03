@@ -28,7 +28,7 @@ function CopyButton({ text }: { text: string }) {
   }
 
   return (
-    <button
+    <button data-analytics-id="guide.command.copy"
       type="button"
       onClick={handleCopy}
       className="ml-4 text-xs px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors hover:bg-white/10"

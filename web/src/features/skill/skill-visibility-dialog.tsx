@@ -41,14 +41,14 @@ export function SkillVisibilityDialog({ namespace, slug, visibility, disabled = 
   })
   const expanding = scopes.indexOf(target) < scopes.indexOf(scopes.find(scope => scope === currentVisibility) ?? 'PUBLIC')
   return <>
-    <Button size="sm" variant="outline" disabled={disabled} onClick={(event) => {
+    <Button data-analytics-id="skill.visibility.open" size="sm" variant="outline" disabled={disabled} onClick={(event) => {
       event.stopPropagation()
       setTarget(scopes.find(scope => scope === visibility) ?? 'PUBLIC')
       setError('')
       setOpen(true)
     }}>{t('skillVisibility.title')}</Button>
     <Dialog open={open} onOpenChange={(value) => { if (!mutation.isPending) setOpen(value) }}>
-      <DialogContent onClick={(event) => event.stopPropagation()}>
+      <DialogContent closeAnalyticsId="skill.visibility.cancel" onClick={(event) => event.stopPropagation()}>
         <DialogHeader>
           <DialogTitle>{t('skillVisibility.title')}</DialogTitle>
           <DialogDescription>{t('skillVisibility.description')}</DialogDescription>
@@ -60,14 +60,14 @@ export function SkillVisibilityDialog({ namespace, slug, visibility, disabled = 
           const scope = scopes.find(item => item === value)
           if (scope) setTarget(scope)
         }} disabled={mutation.isPending || Boolean(pendingVisibility)}>
-          <SelectTrigger aria-label={t('skillVisibility.title')}><SelectValue /></SelectTrigger>
-          <SelectContent>{scopes.map(scope => <SelectItem key={scope} value={scope}>{t(`skillVisibility.${scope}`)}</SelectItem>)}</SelectContent>
+          <SelectTrigger data-analytics-id="skill.visibility.interact" aria-label={t('skillVisibility.title')}><SelectValue /></SelectTrigger>
+          <SelectContent>{scopes.map(scope => <SelectItem data-analytics-id={scope === 'PUBLIC' ? 'skill.visibility.public' : scope === 'NAMESPACE_ONLY' ? 'skill.visibility.namespace' : 'skill.visibility.private'} key={scope} value={scope}>{t(`skillVisibility.${scope}`)}</SelectItem>)}</SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">{t(expanding ? 'skillVisibility.expanding' : 'skillVisibility.narrowing')}</p>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
         <DialogFooter>
-          <Button variant="outline" disabled={mutation.isPending} onClick={() => setOpen(false)}>{t('dialog.cancel')}</Button>
-          <Button disabled={mutation.isPending || state.isLoading || state.isError || Boolean(pendingVisibility) || target === currentVisibility} onClick={() => mutation.mutate()}>{t(expanding ? 'skillVisibility.submit' : 'profile.save')}</Button>
+          <Button data-analytics-id="skill.visibility.cancel" variant="outline" disabled={mutation.isPending} onClick={() => setOpen(false)}>{t('dialog.cancel')}</Button>
+          <Button data-analytics-id="skill.visibility.save" disabled={mutation.isPending || state.isLoading || state.isError || Boolean(pendingVisibility) || target === currentVisibility} onClick={() => mutation.mutate()}>{t(expanding ? 'skillVisibility.submit' : 'profile.save')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

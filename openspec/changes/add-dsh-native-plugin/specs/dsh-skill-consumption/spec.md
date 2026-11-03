@@ -134,7 +134,7 @@ The plugin SHALL prepare upgrade and uninstall plans on the Host with exact sour
 - **THEN** the Host rejects it rather than extending or reusing its authority
 
 ### Requirement: Protected explicit upgrade
-The plugin SHALL check for updates only on user request and SHALL upgrade only to a resolved newer exact version with a matching fingerprint. It SHALL preserve invocation restrictions and resources, refuse local drift and shared Suite ownership, and SHALL NOT silently downgrade or replace changed content under the same version.
+The plugin SHALL check for updates only on user request and SHALL upgrade only to a resolved newer exact version with a matching fingerprint. It SHALL preserve invocation restrictions and resources, refuse unconfirmed local drift and shared Suite ownership, and SHALL NOT downgrade or replace changed content under the same version. Explicit handling of local modifications SHALL follow the snapshot-bound backup and final-confirmation requirements in dsh-change-preview; this SHALL NOT introduce a general force option.
 
 #### Scenario: No valid newer release
 - **WHEN** the candidate is older, incomparable, or the same version with different content
@@ -148,9 +148,9 @@ The plugin SHALL check for updates only on user request and SHALL upgrade only t
 - **WHEN** the same source coordinate also has another project, Agent or Suite-owned installation
 - **THEN** that sibling is not included in the upgrade and is preserved; shared ownership or an alias of the selected physical target still blocks the operation
 
-#### Scenario: Local content modified or baseline missing
-- **WHEN** existing content differs from its recorded baseline or has no usable baseline
-- **THEN** upgrade is blocked with a reason and no force option
+#### Scenario: Unconfirmed local content modified or baseline missing
+- **WHEN** existing content differs from its recorded baseline without a verified backup and explicit snapshot-bound authorization, or has no usable original release baseline
+- **THEN** upgrade is blocked with a reason and no general force option; eligible local changes may enter the separate protected handling flow before a new final confirmation
 
 ### Requirement: Exact local uninstall
 The plugin SHALL uninstall only one confirmed trusted target, without remote deletion or changing other targets. It SHALL verify identity, path, baseline and ownership and SHALL isolate files before inventory commit so failure can be reconciled. It SHALL NOT treat arbitrary filesystem errors as absence.
@@ -436,3 +436,44 @@ Daily catalog, installed-skill groups, conversation inventory cards and default 
 #### Scenario: Explicit installation management
 - **WHEN** the user selects a particular installation in secondary management or uses an exact operation receipt
 - **THEN** its exact reference remains authoritative for that request and is never silently replaced by the skill-level selector's winner
+
+
+### Requirement: User-triggered installed update overview
+The installed view SHALL check current managed installations only on explicit user action, aggregate results by skill, and retain exact installation identity for individual updates. It SHALL NOT execute updates during the scan.
+
+#### Scenario: Mixed installation results
+- **WHEN** installations of one skill return different update states
+- **THEN** the view counts the skill once as upgradable if any location can upgrade, and the detail exposes each location independently
+- **AND** blocked or unavailable results are not represented as current or executable upgrades
+
+#### Scenario: Context or inventory changes during a scan
+- **WHEN** the source, session, workspace, or installation reference changes
+- **THEN** stale results cannot populate the current overview or authorize an update
+
+#### Scenario: Retry and individual confirmation
+- **WHEN** a user retries failed checks or opens an upgradable skill
+- **THEN** checks remain read-only and the existing precise per-installation update confirmation is required before mutation
+
+#### Scenario: Large inventory update checking
+- **WHEN** a user checks many installations, including several locations of the same skill
+- **THEN** a bounded Host-owned scan reads and indexes the trusted inventory once, validates only the requested target and inventory revision per result, and shares remote version resolution for the same source and skill within that scan
+- **AND** inventory or context changes invalidate the scan, scan resources expire or are released on cancellation, and mutation preparation retains its independent full validation
+
+### Requirement: Shared state remains compatible with released consumers
+New lifecycle operations SHALL retain the strict v2 shared inventory format readable by released CLI 0.2.0. Activation state SHALL be derived from the verified entry file of the exact managed installation, without an additional writable activation authority. Ordinary operation journals SHALL remain readable by released DSH 0.5.0; activation-specific journals SHALL NOT prevent unrelated ordinary operations in that consumer.
+
+#### Scenario: Old and new consumers alternate ordinary operations
+- **WHEN** a new consumer installs, updates, removes, synchronizes or repairs an ordinary installation
+- **THEN** the old CLI can still list the same inventory and manage unrelated ordinary installations
+- **AND** the operation does not upgrade the shared inventory to an unreadable schema
+
+#### Scenario: Released consumer explicitly replaces a disabled installation
+- **WHEN** the old CLI explicitly force-replaces or removes a disabled installation under its existing overwrite or removal contract
+- **THEN** the new consumer observes the resulting real entry, contents and ownership on its next read
+- **AND** it does not apply stale disabled state to replacement contents or claim that a removed installation remains present
+- **AND** default update, sync and Suite operations are separately tested for unintended re-enablement
+
+#### Scenario: Activation interruption or ambiguous entry files
+- **WHEN** activation is interrupted or both entry names, neither entry, or untrusted entry contents are observed
+- **THEN** exact target identity, durable journal stages and verified files govern recovery under the existing lock domain
+- **AND** ambiguous contents are not reported as a usable installation or overwritten to make the state appear consistent

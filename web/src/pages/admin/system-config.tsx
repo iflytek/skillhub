@@ -128,7 +128,7 @@ export function SystemConfigPage() {
                       <span className="block text-sm text-muted-foreground">{t(`systemConfig.${help}`)}</span>
                     </span>
                     <span className="relative shrink-0">
-                      <input type="checkbox" className="peer sr-only" checked={draft[field]} disabled={updateSettings.isPending}
+                      <input data-analytics-id={field === 'passwordLoginEnabled' ? 'admin.auth.password.toggle' : 'admin.auth.registration.toggle'} type="checkbox" className="peer sr-only" checked={draft[field]} disabled={updateSettings.isPending}
                         onChange={(event) => setDraft({ ...draft, [field]: event.target.checked })}
                         aria-label={t(`systemConfig.${title}`)} />
                       <span aria-hidden="true" className="block h-6 w-11 rounded-full bg-muted-foreground/35 transition-colors peer-checked:bg-primary peer-focus-visible:ring-4 peer-focus-visible:ring-ring/30 peer-disabled:opacity-50" />
@@ -142,11 +142,11 @@ export function SystemConfigPage() {
               ) : null}
               <div className="flex flex-wrap items-center justify-end gap-3 border-t pt-4">
                 {settingsDirty ? <span role="status" className="mr-auto text-sm text-muted-foreground">{t('systemConfig.unsaved')}</span> : null}
-                <Button type="button" variant="outline" disabled={!settingsDirty || updateSettings.isPending}
+                <Button data-analytics-id="admin.auth.discard" type="button" variant="outline" disabled={!settingsDirty || updateSettings.isPending}
                   onClick={() => setDraft({ passwordLoginEnabled: settings.data!.passwordLoginEnabled, selfRegistrationEnabled: settings.data!.selfRegistrationEnabled })}>
                   {t('systemConfig.discard')}
                 </Button>
-                <Button type="button" disabled={!settingsDirty || updateSettings.isPending} onClick={() => {
+                <Button data-analytics-id="admin.auth.save" type="button" disabled={!settingsDirty || updateSettings.isPending} onClick={() => {
                   if (settings.data!.passwordLoginEnabled && !draft.passwordLoginEnabled) setConfirmLoginOff(true)
                   else void saveSettings()
                 }}>{updateSettings.isPending ? t('systemConfig.saving') : t('systemConfig.saveChanges')}</Button>
@@ -155,7 +155,7 @@ export function SystemConfigPage() {
           ) : null}
         </CardContent>
       </Card>
-      <ConfirmDialog open={confirmLoginOff} onOpenChange={setConfirmLoginOff}
+      <ConfirmDialog confirmAnalyticsId="admin.auth.confirm" cancelAnalyticsId="admin.auth.cancel" open={confirmLoginOff} onOpenChange={setConfirmLoginOff}
         closeOnConfirm={false}
         title={t('systemConfig.lockoutTitle')} description={<>{t('systemConfig.lockoutWarning')}{error ? <span role="alert" className="mt-3 block text-destructive">{error}</span> : null}</>}
         confirmText={t('systemConfig.confirmDisableLogin')} variant="destructive"
@@ -171,7 +171,7 @@ export function SystemConfigPage() {
             <li>{t('systemConfig.ruleNoMerge')}</li>
             <li>{t('systemConfig.ruleUnavailable')}</li>
           </ul>
-          <form className="grid items-end gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_1fr_auto]" onSubmit={(event) => {
+          <form data-analytics-id="admin.role.rule.create" className="grid items-end gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1.2fr_1fr_auto]" onSubmit={(event) => {
             event.preventDefault()
             void run(async () => {
               await createRule.mutateAsync({ providerCode: providerCode.trim(), email: email.trim(), roleCode })
@@ -186,7 +186,7 @@ export function SystemConfigPage() {
               <Input id="role-grant-email" placeholder="admin@example.com" type="email" value={email}
                 onChange={(event) => setEmail(event.target.value)} required /></div>
             <div className="space-y-1.5"><Label htmlFor="role-grant-role">{t('systemConfig.role')}</Label>
-              <select id="role-grant-role" className="h-9 w-full rounded-md border border-border/60 bg-background px-3 text-sm" value={roleCode}
+              <select data-analytics-id="admin.role.rule.role.select" id="role-grant-role" className="h-9 w-full rounded-md border border-border/60 bg-background px-3 text-sm" value={roleCode}
               onChange={(event) => setRoleCode(event.target.value)}>
               {(roles.data ?? []).map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}
               </select></div>
@@ -215,7 +215,7 @@ export function SystemConfigPage() {
                   <div className="flex flex-wrap items-end gap-2 border-t pt-3">
                     <div className="min-w-40 flex-1 space-y-1.5 sm:flex-none">
                     <Label htmlFor={`rule-role-${rule.id}`}>{t('systemConfig.role')}</Label>
-                    <select id={`rule-role-${rule.id}`} className="h-9 w-full rounded-md border border-border/60 bg-background px-3 text-sm"
+                    <select data-analytics-id="admin.role.rule.role.edit" id={`rule-role-${rule.id}`} className="h-9 w-full rounded-md border border-border/60 bg-background px-3 text-sm"
                       value={ruleDrafts[rule.id] ?? rule.roleCode} disabled={updateRule.isPending}
                       onChange={(event) => setRuleDrafts({ ...ruleDrafts, [rule.id]: event.target.value })}>
                       {(roles.data ?? []).map((role) => <option key={role.code} value={role.code}>{role.name}</option>)}
@@ -223,11 +223,11 @@ export function SystemConfigPage() {
                     </div>
                     {ruleDrafts[rule.id] && ruleDrafts[rule.id] !== rule.roleCode ? (
                       <>
-                        <Button type="button" size="sm" variant="outline" disabled={updateRule.isPending} onClick={() => setRuleDrafts({ ...ruleDrafts, [rule.id]: rule.roleCode })}>{t('systemConfig.discard')}</Button>
-                        <Button type="button" size="sm" disabled={updateRule.isPending} onClick={() => changeRole(rule)}>{t('systemConfig.saveChanges')}</Button>
+                        <Button data-analytics-id="admin.role.rule.discard" type="button" size="sm" variant="outline" disabled={updateRule.isPending} onClick={() => setRuleDrafts({ ...ruleDrafts, [rule.id]: rule.roleCode })}>{t('systemConfig.discard')}</Button>
+                        <Button data-analytics-id="admin.role.rule.save" type="button" size="sm" disabled={updateRule.isPending} onClick={() => changeRole(rule)}>{t('systemConfig.saveChanges')}</Button>
                       </>
                     ) : null}
-                    <Button type="button" size="sm" variant="ghost" className="sm:ml-auto" disabled={disableRule.isPending}
+                    <Button data-analytics-id="admin.role.rule.disable" type="button" size="sm" variant="ghost" className="sm:ml-auto" disabled={disableRule.isPending}
                       onClick={() => setRuleToDisable(rule)}>{t('systemConfig.disable')}</Button>
                   </div>
                 ) : <p className="text-xs text-muted-foreground">{t('systemConfig.role')}: {roles.data?.find((role) => role.code === rule.roleCode)?.name ?? rule.roleCode}</p>}
@@ -236,7 +236,7 @@ export function SystemConfigPage() {
           </div>
         </CardContent>
       </Card>
-      <ConfirmDialog open={!!ruleToDisable} onOpenChange={(open) => { if (!open) setRuleToDisable(null) }}
+      <ConfirmDialog confirmAnalyticsId="admin.role.rule.disable.confirm" cancelAnalyticsId="admin.role.rule.disable.cancel" open={!!ruleToDisable} onOpenChange={(open) => { if (!open) setRuleToDisable(null) }}
         closeOnConfirm={false}
         title={t('systemConfig.disableTitle')} description={<>{t('systemConfig.disableConfirm')}{error ? <span role="alert" className="mt-3 block text-destructive">{error}</span> : null}</>}
         confirmText={t('systemConfig.disable')} variant="destructive"

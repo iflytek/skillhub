@@ -4,7 +4,7 @@ import { z } from 'zod'
 import { inventoryItemSchema, inventorySnapshotSchema } from './transaction-journal'
 import type { OperationRecord } from './operation-store'
 import { sameInstalledSkillSource } from '../services/installed-skill-metadata'
-import { targetInstalledBy } from '../stores/inventory-store'
+import { inventoryWithoutState, targetInstalledBy } from '../stores/inventory-store'
 
 const path = z.string().min(1).max(2048).refine(value => isAbsolute(value) && resolve(value) === value)
 const intent = z.object({ inventoryItem: inventoryItemSchema,
@@ -61,7 +61,7 @@ export function applyRemovalEvent(record: OperationRecord, event: RemovalEvent):
       const before = event.commit.before
       const expected = structuredClone(before)
       const matches = expected.items.filter(item => sameInstalledSkillSource(item, state.intent.inventoryItem))
-      if (!isDeepStrictEqual(matches.map(item => ({ ...item, targets: item.targets.filter(target => target.installDir === state.intent.target.path) })), [{ ...state.intent.inventoryItem, targets: state.intent.inventoryItem.targets.filter(target => target.installDir === state.intent.target.path) }])) fail()
+      if (!isDeepStrictEqual(inventoryWithoutState({ items: matches.map(item => ({ ...item, targets: item.targets.filter(target => target.installDir === state.intent.target.path) })) }), inventoryWithoutState({ items: [{ ...state.intent.inventoryItem, targets: state.intent.inventoryItem.targets.filter(target => target.installDir === state.intent.target.path) }] }))) fail()
       const item = matches[0]!
       item.targets = item.targets.filter(target => target.installDir !== state.intent.target.path)
       if (!item.targets.length) expected.items = expected.items.filter(entry => entry !== item)

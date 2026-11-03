@@ -1,7 +1,7 @@
 import { link, lstat, open, realpath, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
-import type { InventoryStore } from '../stores/inventory-store'
+import { inventoryWithoutState, type InventoryStore } from '../stores/inventory-store'
 import { captureInstallInventory } from '../services/inventory-cas'
 import { acquireSkillTargetLock } from '../services/skill-target-lock'
 import { assertEntryAbsent, snapshotJournalInstallation } from '../services/installed-skill-snapshot'
@@ -61,18 +61,14 @@ export async function executeNativeToggle(operations: OperationStore, inventory:
     await syncDirectory(target.installDir)
     record = await operations.recordToggle(record.operationId, record.ownerId, record.revision, { ...intent, stage: 'moved' })
     const paths = new Set([target.installDir])
-    const expected = await captureInstallInventory({ items: [item] }, item, paths)
-    await inventory.mutateAtomic(current => {
-      const match = current.items.find(candidate => sameInstalledSkillSource(candidate, item))
-      const entry = match?.targets.find(entry => entry.installDir === target.installDir)
-      if (!entry || !isDeepStrictEqual(entry, target)) throw new Error('Toggle inventory changed')
-      entry.installationState = baseline.afterState
-    }, async before => {
-      if (await captureInstallInventory(before, item, paths) !== expected) throw new Error('Toggle ownership changed')
+    const expected = await captureInstallInventory(inventoryWithoutState({ items: [item] }), item, paths)
+    await inventory.withLockedSnapshot(async current => {
+      if (await captureInstallInventory(inventoryWithoutState(current), item, paths) !== expected) throw new Error('Toggle ownership changed')
       await request.authorize([target.rootDir, target.installDir], 'replace', request.operationId)
       await verifyFiles(record!, baseline.afterState)
+      // The durable journal is the commit point; entry state is only a file projection.
+      record = await operations.recordToggle(record!.operationId, record!.ownerId, record!.revision, { ...intent, stage: 'committed' })
     })
-    record = await operations.recordToggle(record.operationId, record.ownerId, record.revision, { ...intent, stage: 'committed' })
     return complete(operations, record)
   } catch (error) {
     const current = await operations.get(request.operationId, request.ownerId)
@@ -118,19 +114,25 @@ async function reconcileToggle(operations: OperationStore, inventory: InventoryS
   try {
     const intent = record.toggle!
     const before = intent.inventoryItem
-    const after = structuredClone(before)
-    after.targets[0]!.installationState = intent.afterState
     const paths = new Set([intent.target.path])
     return await inventory.withLockedSnapshot(async actual => {
-      const fingerprint = await captureInstallInventory(actual, before, paths)
-      if (fingerprint === await captureInstallInventory({ items: [after] }, after, paths)) {
+      const fingerprint = await captureInstallInventory(inventoryWithoutState(actual), before, paths)
+      if (fingerprint !== await captureInstallInventory(inventoryWithoutState({ items: [before] }), before, paths)) return unknown()
+      let legacyCommitted = false
+      if (await inventory.diskVersion() === 3) {
+        const stored = await inventory.readPersisted()
+        const entry = stored.items.find(item => sameInstalledSkillSource(item, before))?.targets.find(target => target.installDir === intent.target.path)
+        if (!entry || ![intent.beforeState, intent.afterState].includes(entry.installationState!)) return unknown()
+        legacyCommitted = entry.installationState === intent.afterState
+        if (intent.stage === 'committed' && !legacyCommitted) return unknown()
+      }
+      if (intent.stage === 'committed' || legacyCommitted) {
         await verifyFiles(record, intent.afterState)
         if (record.operation.status.phase === 'completed') return { operationId: record.operationId, revision: record.revision, outcome: 'committed', reason: intent.afterState }
         if (['unknown', 'recovery-required'].includes(record.operation.status.phase)) record = await operations.update(record.operationId, record.ownerId, record.revision, { ...record.operation.status, phase: 'recovering' })
         if (record.toggle!.stage !== 'committed') record = await operations.recordToggle(record.operationId, record.ownerId, record.revision, { ...intent, stage: 'committed' })
         return complete(operations, record)
       }
-      if (record.toggle!.stage === 'committed' || fingerprint !== await captureInstallInventory({ items: [before] }, before, paths)) return unknown()
       if (record.operation.status.phase === 'failed' && record.operation.status.recovery === 'restored') {
         await verifyFiles(record, intent.beforeState)
         return { operationId: record.operationId, revision: record.revision, outcome: 'restored', reason: 'toggle-restored' }

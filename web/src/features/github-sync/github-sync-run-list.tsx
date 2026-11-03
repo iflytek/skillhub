@@ -57,12 +57,12 @@ export function GithubSyncRunList({ data, loading, error, page, onPageChange, on
               </div></TableCell>
               <TableCell>{formatLocalDateTime(run.nextRetryAt, i18n.language)}</TableCell>
               <TableCell>{formatLocalDateTime(run.createdAt, i18n.language)}</TableCell>
-              {onSelectRun ? <TableCell>{run.id ? <Button size="sm" className="sync-action" variant="outline" onClick={() => onSelectRun(run.id!)}>{t('githubSync.viewRun')}</Button> : null}</TableCell> : null}
+              {onSelectRun ? <TableCell>{run.id ? <Button data-analytics-id="github.run.open" size="sm" className="sync-action" variant="outline" onClick={() => onSelectRun(run.id!)}>{t('githubSync.viewRun')}</Button> : null}</TableCell> : null}
             </TableRow>
           ))}</TableBody>
         </Table>
       ) : null}
     </Card>
-    {data && totalPages > 1 ? <Pagination page={page} totalPages={totalPages} onPageChange={onPageChange} /> : null}
+    {data && totalPages > 1 ? <Pagination analyticsId="github.run.paginate" page={page} totalPages={totalPages} onPageChange={onPageChange} /> : null}
   </>
 }

@@ -25,9 +25,9 @@ export function AvatarReviewSettingsPanel() {
       {settings.isLoading && <p>{t('skillAvatar.loading')}</p>}
       {settings.isError && <p role="alert">{t('skillAvatar.failed')}</p>}
       {settings.data && <>
-        {(['machineEnabled', 'manualEnabled'] as const).map((field) => <label key={field} className="flex items-center justify-between gap-4 rounded-lg border p-4"><span>{t(`skillAvatar.${field}`)}</span><input type="checkbox" checked={draft[field]} onChange={(event) => { setDraft({ ...draft, [field]: event.target.checked }); setSaved(false) }} /></label>)}
+        {(['machineEnabled', 'manualEnabled'] as const).map((field) => <label key={field} className="flex items-center justify-between gap-4 rounded-lg border p-4"><span>{t(`skillAvatar.${field}`)}</span><input data-analytics-id={field === 'machineEnabled' ? 'admin.avatar.machine.toggle' : 'admin.avatar.manual.toggle'} type="checkbox" checked={draft[field]} onChange={(event) => { setDraft({ ...draft, [field]: event.target.checked }); setSaved(false) }} /></label>)}
         {!draft.machineEnabled && !draft.manualEnabled && <p role="alert" className="text-sm text-destructive">{t('skillAvatar.noReviewRisk')}</p>}
-        <Button disabled={!dirty || update.isPending} onClick={() => update.mutate({ ...draft, version: settings.data!.version })}>{t('skillAvatar.save')}</Button>
+        <Button data-analytics-id="admin.avatar.settings" disabled={!dirty || update.isPending} onClick={() => update.mutate({ ...draft, version: settings.data!.version })}>{t('skillAvatar.save')}</Button>
       </>}
       {saved && <p role="status" className="text-sm">{t('skillAvatar.saved')}</p>}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

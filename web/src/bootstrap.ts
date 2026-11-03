@@ -6,6 +6,13 @@
  */
 import './legacy-polyfills'
 import { initializeTheme } from './shared/lib/theme'
+import { afterAppMount, installAnalyticsLoader } from './features/analytics/loader'
+import { currentPageType } from './app/analytics-page-type'
+import type { AnalyticsAPI } from './features/analytics/types'
+
+declare global {
+  interface Window { skillhubAnalytics?: AnalyticsAPI }
+}
 
 initializeTheme()
 
@@ -43,4 +50,9 @@ void (async () => {
   }
 
   await import('./main')
+  const { router } = await import('./app/router')
+  const root = document.getElementById('root')
+  if (root) afterAppMount(root, () => {
+    window.skillhubAnalytics = installAnalyticsLoader(() => window.__SKILLHUB_RUNTIME_CONFIG__?.analytics, undefined, { currentPageType: () => currentPageType(router) })
+  })
 })()

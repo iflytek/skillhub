@@ -192,7 +192,7 @@ export function ProfileReviewTable() {
       <div className="flex flex-col gap-3 border-t border-border/60 px-6 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
         <p>{t('profileReview.pageSummary', { total: totalElements, page: currentPage + 1 })}</p>
         <div className="flex items-center gap-2">
-          <Button
+          <Button data-analytics-id="review.profile.previous"
             type="button"
             variant="outline"
             size="sm"
@@ -201,7 +201,7 @@ export function ProfileReviewTable() {
           >
             {t('profileReview.prevPage')}
           </Button>
-          <Button
+          <Button data-analytics-id="review.profile.next"
             type="button"
             variant="outline"
             size="sm"
@@ -278,10 +278,10 @@ export function ProfileReviewTable() {
                 <TableCell className="align-top">
                   {isPending ? (
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" className="min-w-[5rem]" onClick={() => handleApproveClick(item)}>
+                      <Button data-analytics-id="review.profile.approve" size="sm" className="min-w-[5rem]" onClick={() => handleApproveClick(item)}>
                         {t('profileReview.approve')}
                       </Button>
-                      <Button
+                      <Button data-analytics-id="review.profile.reject"
                         size="sm"
                         variant="outline"
                         className="min-w-[5rem]"
@@ -339,12 +339,12 @@ export function ProfileReviewTable() {
                   {t('profileReview.sortLabel')}
                 </p>
                 <Select value={sortDirection} onValueChange={handleSortChange}>
-                  <SelectTrigger>
+                  <SelectTrigger data-analytics-id="review.profile.sort.interact">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="DESC">{t('profileReview.sortNewest')}</SelectItem>
-                    <SelectItem value="ASC">{t('profileReview.sortOldest')}</SelectItem>
+                    <SelectItem data-analytics-id="review.profile.sort" value="DESC">{t('profileReview.sortNewest')}</SelectItem>
+                    <SelectItem data-analytics-id="review.profile.sort" value="ASC">{t('profileReview.sortOldest')}</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="mt-2 text-sm text-muted-foreground">
@@ -360,19 +360,19 @@ export function ProfileReviewTable() {
 
             <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as ReviewStatus)}>
               <TabsList className="gap-4 rounded-xl border-b-0 bg-muted/70 p-1 shadow-none">
-                <TabsTrigger
+                <TabsTrigger data-analytics-id="review.profile.pending.tab"
                   value="PENDING"
                   className="mb-0 rounded-lg border-b-0 px-4 py-2.5 text-sm font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
                 >
                   {t('profileReview.tabPending')} ({pendingCount})
                 </TabsTrigger>
-                <TabsTrigger
+                <TabsTrigger data-analytics-id="review.profile.approved.tab"
                   value="APPROVED"
                   className="mb-0 rounded-lg border-b-0 px-4 py-2.5 text-sm font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
                 >
                   {t('profileReview.tabApproved')} ({approvedCount})
                 </TabsTrigger>
-                <TabsTrigger
+                <TabsTrigger data-analytics-id="review.profile.rejected.tab"
                   value="REJECTED"
                   className="mb-0 rounded-lg border-b-0 px-4 py-2.5 text-sm font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
                 >
@@ -413,7 +413,7 @@ export function ProfileReviewTable() {
       </div>
 
       <Dialog open={approveDialogOpen} onOpenChange={setApproveDialogOpen}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId="review.profile.approve.cancel">
           <DialogHeader>
             <DialogTitle>{t('profileReview.confirmApproveTitle')}</DialogTitle>
             <DialogDescription>
@@ -425,10 +425,10 @@ export function ProfileReviewTable() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setApproveDialogOpen(false)}>
+            <Button data-analytics-id="review.profile.approve.cancel" variant="outline" onClick={() => setApproveDialogOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button onClick={confirmApprove} disabled={approveMutation.isPending}>
+            <Button data-analytics-id="review.profile.approve.confirm" onClick={confirmApprove} disabled={approveMutation.isPending}>
               {t('dialog.confirm')}
             </Button>
           </DialogFooter>
@@ -436,7 +436,7 @@ export function ProfileReviewTable() {
       </Dialog>
 
       <Dialog open={rejectDialogOpen} onOpenChange={setRejectDialogOpen}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId="review.profile.reject.cancel">
           <DialogHeader>
             <DialogTitle>{t('profileReview.confirmRejectTitle')}</DialogTitle>
             <DialogDescription>
@@ -452,10 +452,10 @@ export function ProfileReviewTable() {
             rows={4}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectDialogOpen(false)}>
+            <Button data-analytics-id="review.profile.reject.cancel" variant="outline" onClick={() => setRejectDialogOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button
+            <Button data-analytics-id="review.profile.reject.confirm"
               onClick={confirmReject}
               disabled={rejectMutation.isPending || !rejectComment.trim()}
             >

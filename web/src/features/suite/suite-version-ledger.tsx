@@ -92,16 +92,16 @@ export function SuiteVersionLedger({
           return (
             <div key={version.id}>
               <div className="grid gap-1.5 px-3 py-2 text-xs md:grid-cols-[84px_104px_minmax(112px,1fr)_136px_88px] md:items-center md:gap-2.5">
-                <button
+                <button data-analytics-id="suite.version.expand"
                   type="button"
-                  className="flex items-center gap-1.5 text-left font-mono font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
+                  className="flex min-w-0 items-center gap-1.5 text-left font-mono font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70"
                   aria-expanded={expanded}
                   onClick={() => setExpandedVersion(expanded ? '' : version.version)}
                 >
                   {expanded
-                    ? <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
-                    : <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />}
-                  v{version.version}
+                    ? <ChevronDown className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    : <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+                  <span className="min-w-0 truncate" title={`v${version.version}`}>{`v${version.version}`}</span>
                 </button>
                 <span className={cn(
                   'w-fit rounded-md border px-1.5 py-0.5 text-[11px] font-medium',
@@ -115,7 +115,7 @@ export function SuiteVersionLedger({
                 <span className="text-[11px] text-muted-foreground">
                   {formatLocalDateTime(version.publishedAt || version.createdAt, i18n.language)}
                 </span>
-                <Button
+                <Button data-analytics-id="suite.version.select"
                   type="button"
                   size="sm"
                   variant="soft"
@@ -188,13 +188,13 @@ function ExpandedVersion({
             {management ? (
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {detail.allowedActions.includes('EDIT') && onEditVersion ? (
-                  <Button size="sm" variant="soft" className="h-6 px-2 text-[11px]" onClick={() => onEditVersion(detail)}>
+                  <Button data-analytics-id="suite.draft.edit" size="sm" variant="soft" className="h-6 px-2 text-[11px]" onClick={() => onEditVersion(detail)}>
                     {t('suite.editDraft')}
                   </Button>
                 ) : null}
                 {(detail.allowedActions.includes('SUBMIT') || detail.allowedActions.includes('PUBLISH_PRIVATE'))
                   && onSubmitVersion ? (
-                    <Button size="sm" className="h-6 px-2 text-[11px]" onClick={() => onSubmitVersion(detail)}>
+                    <Button data-analytics-id={detail.visibility === 'PRIVATE' ? 'suite.publish.direct.request' : 'suite.review.submit.request'} size="sm" className="h-6 px-2 text-[11px]" onClick={() => onSubmitVersion(detail)}>
                       {detail.visibility === 'PRIVATE' ? t('suite.publishDirectly') : t('suite.submitReview')}
                     </Button>
                 ) : null}
@@ -218,7 +218,7 @@ function ExpandedVersion({
                   return (
                     <div key={`${memberKey(member)}-${kind}`} className="grid gap-1.5 px-2.5 py-1.5 text-[11px] sm:grid-cols-[minmax(180px,1fr)_80px_80px_96px] sm:items-center sm:gap-2.5">
                       {navigable ? (
-                        <Link
+                        <Link data-analytics-id="skill.detail.open"
                           to="/space/$namespace/$slug"
                           params={{ namespace: member.namespace, slug: member.slug }}
                           search={{ returnTo, version: member.version }}
@@ -227,7 +227,7 @@ function ExpandedVersion({
                           @{member.namespace}/{member.slug}
                         </Link>
                       ) : <span className="truncate font-mono">@{member.namespace}/{member.slug}</span>}
-                      <span className="font-mono">v{member.version}</span>
+                      <span className="block min-w-0 truncate font-mono" title={`v${member.version}`}>{`v${member.version}`}</span>
                       <span>{member.entry ? t('suite.entrySkill') : t('suite.management.memberRole')}</span>
                       <span className={cn(
                         kind === 'ADDED' && 'text-emerald-700 dark:text-emerald-300',

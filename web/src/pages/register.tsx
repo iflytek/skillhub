@@ -183,7 +183,7 @@ export function RegisterPage() {
 
         {capabilitiesError ? <p role="alert" className="text-sm text-red-600">{t('systemConfig.capabilitiesUnavailable')}</p> : null}
         {capabilities && !capabilities.registrationAvailable ? <p className="text-sm text-muted-foreground">{t('systemConfig.registrationDisabled')}</p> : null}
-        {capabilities?.registrationAvailable ? <form className="space-y-4" onSubmit={handleSubmit}>
+        {capabilities?.registrationAvailable ? <form data-analytics-id="auth.register.submit" className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label className="text-sm font-medium" htmlFor="register-username">{t('register.username')}</label>
             <Input
@@ -260,7 +260,7 @@ export function RegisterPage() {
           <p className="text-center text-sm text-muted-foreground">
             {t('register.hasAccount')}
             {' '}
-            <Link
+            <Link data-analytics-id="auth.login.open"
               to="/login"
               search={{ returnTo }}
               className="font-medium text-primary hover:underline"

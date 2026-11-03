@@ -57,7 +57,7 @@ function IgnoreForm({ initial, saving, onSave }: {
     void onSave(value.split('\n').map((line) => line.trim()).filter(Boolean))
   }
   return (
-    <form className="space-y-2 border-t pt-4" onSubmit={submit}>
+    <form data-analytics-id="github.ignore.save" className="space-y-2 border-t pt-4" onSubmit={submit}>
       <label htmlFor="github-source-ignore-patterns" className="block text-sm font-medium">{t('githubSync.ignorePaths')}</label>
       <Textarea id="github-source-ignore-patterns" value={value} onChange={(event) => setValue(event.target.value)}
         placeholder="examples/legacy\narchive" rows={4} />

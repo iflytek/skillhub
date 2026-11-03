@@ -206,7 +206,7 @@ export function SearchPage() {
     <div className={APP_SHELL_PAGE_CLASS_NAME}>
       {/* Search Bar */}
       <div className="max-w-3xl mx-auto">
-        <SearchBar
+        <SearchBar analyticsId="search.query.submit"
           value={queryInput}
           isSearching={isUpdatingResults}
           onChange={setQueryInput}
@@ -220,21 +220,21 @@ export function SearchPage() {
           <div className="flex min-w-0 flex-wrap items-center gap-3">
             <span className="text-sm font-medium text-muted-foreground">{t('search.sort.label')}</span>
             <div className="flex max-w-full flex-wrap gap-2">
-              <Button
+              <Button data-analytics-id="search.sort.relevance"
                 variant={sort === 'relevance' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleSortChange('relevance')}
               >
                 {t('search.sort.relevance')}
               </Button>
-              <Button
+              <Button data-analytics-id="search.sort.downloads"
                 variant={sort === 'downloads' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleSortChange('downloads')}
               >
                 {t('search.sort.downloads')}
               </Button>
-              <Button
+              <Button data-analytics-id="search.sort.newest"
                 variant={sort === 'newest' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handleSortChange('newest')}
@@ -260,7 +260,7 @@ export function SearchPage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <span className="shrink-0 text-sm font-medium text-muted-foreground">{t('search.filters.label')}</span>
-          <Button
+          <Button data-analytics-id="search.starred.filter"
             variant={starredOnly ? 'default' : 'outline'}
             size="sm"
             onClick={handleStarredToggle}
@@ -268,7 +268,7 @@ export function SearchPage() {
             {t('search.filterStarred')}
           </Button>
           {!starredOnly && labels?.map((label) => (
-            <Button
+            <Button data-analytics-id="search.label.filter"
               key={label.slug}
               variant={selectedLabel === label.slug ? 'default' : 'outline'}
               size="sm"
@@ -278,7 +278,7 @@ export function SearchPage() {
             </Button>
           ))}
           {namespace ? (
-            <Button
+            <Button data-analytics-id="search.namespace.clear"
               variant="default"
               size="sm"
               onClick={handleNamespaceClear}
@@ -297,7 +297,7 @@ export function SearchPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {displayItems.map((skill, idx) => (
               <div key={skill.id} className={`h-full animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
-                <SkillCard
+                <SkillCard analyticsId="skill.card.open"
                   skill={skill}
                   highlightStarred
                   onClick={() => handleSkillClick(skill.namespace, skill.slug)}
@@ -306,7 +306,7 @@ export function SearchPage() {
             ))}
           </div>
           {totalPages > 1 && (
-            <Pagination
+            <Pagination analyticsId="search.results.paginate"
               page={page}
               totalPages={totalPages}
               onPageChange={handlePageChange}

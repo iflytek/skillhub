@@ -7,6 +7,7 @@ import { FileTreeNodeComponent } from './file-tree-node'
 import type { FileTreeNode } from './file-tree-builder'
 
 interface FileTreeProps {
+  analyticsId?: string
   files: SkillFile[]
   onFileClick?: (node: FileTreeNode) => void
   /** When true, renders without the outer border/header (for embedding in a Card) */
@@ -18,7 +19,7 @@ interface FileTreeProps {
  * Displays a hierarchical file tree with expandable directories.
  * Converts flat file list into tree structure and renders with proper nesting.
  */
-export function FileTree({ files, onFileClick, bare, compact = false }: FileTreeProps) {
+export function FileTree({ files, onFileClick, bare, compact = false, analyticsId }: FileTreeProps) {
   const { t } = useTranslation()
 
   // Cache tree structure to avoid rebuilding on every render
@@ -38,6 +39,7 @@ export function FileTree({ files, onFileClick, bare, compact = false }: FileTree
     <div>
       {tree.map((node) => (
         <FileTreeNodeComponent
+          analyticsId={onFileClick ? analyticsId : undefined}
           key={node.id}
           node={node}
           onFileClick={handleFileClick}

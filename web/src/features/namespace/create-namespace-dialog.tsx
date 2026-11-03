@@ -142,7 +142,7 @@ export function CreateNamespaceDialog({ children }: CreateNamespaceDialogProps) 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
+      <DialogContent closeAnalyticsId="namespace.create.cancel">
         <DialogHeader className="text-center sm:text-center">
           <DialogTitle className="text-center">{t('myNamespaces.createDialogTitle')}</DialogTitle>
           <DialogDescription className="text-center">
@@ -153,7 +153,7 @@ export function CreateNamespaceDialog({ children }: CreateNamespaceDialogProps) 
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="namespace-slug">{t('myNamespaces.createSlugLabel')}</Label>
-            <Input
+            <Input data-analytics-id="namespace.create.request"
               id="namespace-slug"
               placeholder={t('myNamespaces.createSlugPlaceholder')}
               value={slug}
@@ -183,7 +183,7 @@ export function CreateNamespaceDialog({ children }: CreateNamespaceDialogProps) 
 
           <div className="space-y-2">
             <Label htmlFor="namespace-display-name">{t('myNamespaces.createDisplayNameLabel')}</Label>
-            <Input
+            <Input data-analytics-id="namespace.create.request"
               id="namespace-display-name"
               placeholder={t('myNamespaces.createDisplayNamePlaceholder')}
               value={displayName}
@@ -235,10 +235,10 @@ export function CreateNamespaceDialog({ children }: CreateNamespaceDialogProps) 
         ) : null}
 
         <DialogFooter className="sm:justify-center sm:space-x-3">
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button data-analytics-id="namespace.create.cancel" variant="outline" onClick={() => handleOpenChange(false)}>
             {t('dialog.cancel')}
           </Button>
-          <Button onClick={handleSubmit} disabled={createMutation.isPending}>
+          <Button data-analytics-id="namespace.create.request" onClick={handleSubmit} disabled={createMutation.isPending}>
             {createMutation.isPending ? t('myNamespaces.creating') : t('myNamespaces.createSubmit')}
           </Button>
         </DialogFooter>

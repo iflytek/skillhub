@@ -8,7 +8,7 @@ import { OperationStore, operationRequestDigest } from '../../../src/integration
 import { createInstallTransactionObserver } from '../../../src/integrations/transaction-journal'
 import { installSkill } from '../../../src/services/install-service'
 import { SkillHubClient } from '../../../src/clients/skillhub-client'
-import { InventoryStore } from '../../../src/stores/inventory-store'
+import { inventoryWithoutState, InventoryStore } from '../../../src/stores/inventory-store'
 
 class LocalClient extends SkillHubClient {
   async download(): Promise<Response> {
@@ -54,7 +54,7 @@ test('real installation persists move intent before rename and both inventory sn
         beforeInventoryCommit: async commit => {
           await observer.beforeInventoryCommit!(commit)
           const saved = (await store.get(operation.operationId, ownerId))!
-          expect(saved.transaction?.inventoryCommit).toEqual({ ...commit, committed: false })
+          expect(saved.transaction?.inventoryCommit).toEqual({ before: inventoryWithoutState(commit.before), after: inventoryWithoutState(commit.after), committed: false })
           expect((await new InventoryStore(home).read()).items).toEqual([])
         }
       }
@@ -135,7 +135,7 @@ test.each([false, true])('preparation acknowledgment failure leaves target uncha
     expect(await readdir(join(root, 'skills'))).toEqual(existing ? ['writer'] : [])
     const saved = (await store.get(operation.operationId, ownerId))!
     expect(saved.transaction!.moves).toEqual([])
-    expect(saved.transaction!.preparation!.before).toEqual(before)
+    expect(inventoryWithoutState(saved.transaction!.preparation!.before)).toEqual(inventoryWithoutState(before))
     if (existing) expect(await readFile(join(root, 'skills/writer/SKILL.md'), 'utf8')).toBe('# Journal fixture')
   } finally { await rm(root, { recursive: true, force: true }) }
 })

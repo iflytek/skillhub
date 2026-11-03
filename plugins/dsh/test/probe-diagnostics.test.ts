@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { installationFailureCodes } from '../src/host/installation-failure.js';
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
 import { safeProbeFailure } from '../scripts/smoke-native-host.mjs';
 
@@ -27,4 +28,73 @@ test('observer diagnostics whitelist states and exact dependency booleans', () =
       dependencies: { loader: true, pluginPackages: false, clientModules: true, skillhub: false } });
   expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { observer: { stage: 'private', validation: 'private-path' }, dependencies: { skillhub: 'secret' } } }), 'runtime-baseline'))
     .toEqual({ stage: 'host-result', code: 'HOST_RESULT_TIMEOUT', observer: 'not-observed', dependencies: {} });
+});
+
+test('availability diagnostics retain only fixed checkpoint labels, never raw failure data', () => {
+  const checkpoint = { scenario: 'user-winner', checkpoint: 'assertion', assertion: 'discovery' };
+  const base = { passed: false, probe: 'skill-availability', stage: 'host-assertion', failureCode: 'HOST_ASSERTION_FAILED',
+    error: '/private/AVAILABILITY_PRIVATE_SENTINEL', diagnostics: { availability: { ...checkpoint, error: 'secret', path: '/private' } } };
+  const safe = safeProbeFailure(JSON.stringify(base), 'skill-availability');
+  expect(safe.availability).toEqual(checkpoint);
+  expect(JSON.stringify(safe)).not.toMatch(/private|secret|SENTINEL/);
+  for (const key of ['scenario', 'checkpoint', 'assertion']) {
+    expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { availability: { ...checkpoint, [key]: '/private/secret' } } }), 'skill-availability').availability).toBeUndefined();
+  }
+  expect(safeProbeFailure(JSON.stringify({ ...base, probe: 'plugin-lifecycle' }), 'plugin-lifecycle').availability).toBeUndefined();
+});
+
+test('both toggle probes expose only bounded fixture locations and fixed labels', () => {
+  for (const probe of ['skill-toggle', 'skill-toggle-watch-off']) {
+    const base = { passed: false, probe, stage: 'host-assertion', failureCode: 'HOST_ASSERTION_FAILED',
+      diagnostics: { toggle: { scenario: 'disabled-upgrade', assertion: 'equal', error: 'private-secret' },
+        location: { fixture: 'skill-toggle-fixture.mjs', line: 152, stack: '/private/secret' } } };
+    const safe = safeProbeFailure(JSON.stringify(base), probe);
+    expect(safe.toggle).toEqual({ scenario: 'disabled-upgrade', assertion: 'equal' });
+    expect(safe.location).toEqual({ fixture: 'skill-toggle-fixture.mjs', line: 152 });
+    expect(JSON.stringify(safe)).not.toMatch(/private|secret|stack/);
+    for (const line of [0, -1, 10001, 1.5, '152', null]) {
+      expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { location: { fixture: 'skill-toggle-fixture.mjs', line } } }), probe).location).toBeUndefined();
+    }
+    expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { location: { fixture: '/private/skill-toggle-fixture.mjs', line: 3 } } }), probe).location).toBeUndefined();
+    for (const key of ['scenario', 'assertion']) {
+      expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { toggle: { ...base.diagnostics.toggle, [key]: 'private-secret' } } }), probe).toggle).toBeUndefined();
+    }
+    expect(safeProbeFailure(JSON.stringify({ ...base, probe: 'runtime-baseline' }), 'runtime-baseline').location).toBeUndefined();
+  }
+});
+
+test('operation observations and Host codes whitelist every field without revealing operation bodies', async () => {
+  // @ts-expect-error Development-only Node script has no declarations.
+  const { knownHostFailureCodes } = await import('../scripts/smoke-native-host.mjs');
+  expect(knownHostFailureCodes('private /path EPERM code=EBUSY arbitrary-secret NOT_EIO EPERM')).toEqual(['EPERM', 'EBUSY']);
+  for (const probe of ['skill-availability', 'skill-toggle', 'skill-toggle-watch-off']) {
+    const base = { passed: false, probe, stage: 'host-assertion', failureCode: 'HOST_ASSERTION_FAILED', diagnostics: {
+      operation: { phase: 'failed', files: 'failed', recovery: 'restored', discovery: 'unconfirmed', deadlineReached: false,
+        operationId: 'secret', targetLabel: '/private', reason: 'private-secret', code: 'SECRET', error: 'raw-secret' },
+      observedHostCodes: ['EPERM', '/private', 'EBUSY', 'EPERM', 'SECRET'],
+    } };
+    const safe = safeProbeFailure(JSON.stringify(base), probe);
+    expect(safe.operation).toEqual({ phase: 'failed', files: 'failed', recovery: 'restored', discovery: 'unconfirmed', deadlineReached: false });
+    expect(safe.observedHostCodes).toEqual(['EPERM', 'EBUSY']);
+    expect(JSON.stringify(safe)).not.toMatch(/private|secret|SECRET|operationId|targetLabel|reason/);
+    expect(safeProbeFailure(JSON.stringify({ ...base, diagnostics: { operation: { phase: '/secret', files: '/secret', discovery: '/secret', recovery: '/secret', deadlineReached: 'secret' }, observedHostCodes: 'EPERM' } }), probe).operation).toBeUndefined();
+    expect(safeProbeFailure(JSON.stringify({ ...base, probe: 'runtime-baseline' }), 'runtime-baseline').operation).toBeUndefined();
+  }
+});
+
+test('availability admission diagnostics expose only known install status and failure code', () => {
+  const checkpoint = { scenario: 'user-install', checkpoint: 'assertion', assertion: 'accepted',
+    install: { status: 'not-confirmed', code: 'TARGET_UNAVAILABLE', message: '/secret/token' } };
+  const record = { passed: false, probe: 'skill-availability', stage: 'host-assertion',
+    failureCode: 'HOST_ASSERTION_FAILED', diagnostics: { availability: checkpoint } };
+  const safe = safeProbeFailure(JSON.stringify(record), 'skill-availability');
+  expect(safe.availability.install).toEqual({ status: 'not-confirmed', code: 'TARGET_UNAVAILABLE' });
+  expect(JSON.stringify(safe)).not.toContain('secret');
+  for (const code of installationFailureCodes) {
+    checkpoint.install.code = code;
+    expect(safeProbeFailure(JSON.stringify(record), 'skill-availability').availability.install.code).toBe(code);
+  }
+  checkpoint.install.status = '/private/status';
+  checkpoint.install.code = '/private/code';
+  expect(safeProbeFailure(JSON.stringify(record), 'skill-availability').availability.install).toBeUndefined();
 });

@@ -36,7 +36,7 @@ export function RatingInput({ skillId, onRequireLogin }: RatingInputProps) {
         {[1, 2, 3, 4, 5].map((rating) => {
           const isFilled = rating <= (hoveredRating || currentRating)
           return (
-            <button
+            <button data-analytics-id={rating === 1 ? 'skill.rating.one.request' : rating === 2 ? 'skill.rating.two.request' : rating === 3 ? 'skill.rating.three.request' : rating === 4 ? 'skill.rating.four.request' : 'skill.rating.five.request'}
               key={rating}
               type="button"
               className="p-1 hover:scale-110 transition-transform"

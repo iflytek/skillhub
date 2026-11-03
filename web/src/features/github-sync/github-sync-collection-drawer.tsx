@@ -54,7 +54,7 @@ export function GithubSyncCollectionDrawer({ onClose, onRepository, visible }: {
 
   const specified = entries.data?.filter((entry) => entry.entryType === 'CURATED_REPOSITORY')
   return <Dialog open onOpenChange={(open) => { if (!open) onClose() }}>
-    <DialogContent className="github-sync-surface !left-auto !right-0 !top-0 !h-dvh !max-h-dvh !grid-rows-[auto_minmax(0,1fr)] !gap-0 !overflow-hidden w-[min(100vw,44rem)] !translate-x-0 !translate-y-0 !rounded-none p-0">
+    <DialogContent closeAnalyticsId="github.collection.close" className="github-sync-surface !left-auto !right-0 !top-0 !h-dvh !max-h-dvh !grid-rows-[auto_minmax(0,1fr)] !gap-0 !overflow-hidden w-[min(100vw,44rem)] !translate-x-0 !translate-y-0 !rounded-none p-0">
       <DialogHeader className="border-b px-5 py-4 text-left">
         <DialogTitle>{t('githubSync.collectionConfig')}</DialogTitle>
         <DialogDescription>{t('githubSync.collectionScope')}</DialogDescription>
@@ -72,10 +72,10 @@ export function GithubSyncCollectionDrawer({ onClose, onRepository, visible }: {
             </div>
             {summary.data?.recent ? <p className="text-sm text-muted-foreground">{t('githubSync.officialRecentResult', { candidates: summary.data.recent.newCandidateRepositories ?? '—', skills: summary.data.recent.newSkills ?? '—' })}{summary.data.recent.complete === false ? ` · ${t('githubSync.partialHistory')}` : ''}</p> : null}
             {summary.error ? <p role="alert" className="text-sm text-destructive">{t('githubSync.loadFailed')}: {summary.error.message}</p> : null}
-            <Button size="sm" variant="outline" aria-expanded={configExpanded} onClick={() => setConfigExpanded(!configExpanded)}>{t('githubSync.editAutomaticDiscovery')}</Button>
+            <Button data-analytics-id="github.discovery.edit" size="sm" variant="outline" aria-expanded={configExpanded} onClick={() => setConfigExpanded(!configExpanded)}>{t('githubSync.editAutomaticDiscovery')}</Button>
             {configExpanded ? <GithubDeepDiscoveryConfig key={configuration.data.version} configuration={configuration.data} onClose={onClose} embedded /> : null}
           </> : null}
-          <div className="border-t pt-3"><button type="button" className="flex w-full items-center justify-between text-left text-sm font-medium" aria-expanded={progressExpanded} onClick={() => setProgressExpanded(!progressExpanded)}>{t('githubSync.discoveryProgress')}<span aria-hidden="true">{progressExpanded ? '−' : '+'}</span></button>
+          <div className="border-t pt-3"><button data-analytics-id="github.progress.toggle" type="button" className="flex w-full items-center justify-between text-left text-sm font-medium" aria-expanded={progressExpanded} onClick={() => setProgressExpanded(!progressExpanded)}>{t('githubSync.discoveryProgress')}<span aria-hidden="true">{progressExpanded ? '−' : '+'}</span></button>
             {progressExpanded ? <div className="mt-3 space-y-2 text-sm">
               {progress.error ? <p role="alert" className="text-destructive">{t('githubSync.loadFailed')}: {progress.error.message}</p> : null}
               {progress.data?.channels?.length ? <div className="divide-y rounded border">{progress.data.channels.map((channel) => <div key={channel.channel} className="space-y-1 p-2"><div className="flex flex-wrap justify-between gap-2"><span>{t(`deepDiscovery.channel.${channel.channel}`, { defaultValue: channel.channel ?? '—' })}</span><span>{t(`deepDiscovery.state.${channel.state}`, { defaultValue: channel.state ?? '—' })}</span></div><p className="text-xs text-muted-foreground">{t('deepDiscovery.completedShards')}: {channel.completedShards ?? '—'} · {t('deepDiscovery.pendingShards')}: {channel.pendingShards ?? '—'} · {t('deepDiscovery.gapShards')}: {channel.gapShards ?? '—'} · {t('deepDiscovery.lastProgress')}: {formatLocalDateTime(channel.lastProgressAt, i18n.language)}</p></div>)}</div> : <p className="text-muted-foreground">{t('githubSync.empty')}</p>}
@@ -85,7 +85,7 @@ export function GithubSyncCollectionDrawer({ onClose, onRepository, visible }: {
         </section>
         <section className="space-y-4 rounded border p-4">
           <div><h2 className="font-semibold">{t('githubSync.specifiedRepository')}</h2><p className="text-sm text-muted-foreground">{t('githubSync.specifiedRepositoryHelp')}</p></div>
-          <form onSubmit={addRepository} className="flex flex-wrap gap-2">
+          <form data-analytics-id="github.repository.add" onSubmit={addRepository} className="flex flex-wrap gap-2">
             <Input className="min-w-52 flex-1" aria-label={t('githubSync.repository')} placeholder="https://github.com/owner/repository" value={repository} onChange={(event) => setRepository(event.target.value)} required />
             <Button size="sm" type="submit" disabled={mutations.addRepository.isPending}>{t('githubSync.addRepository')}</Button>
           </form>
@@ -95,11 +95,11 @@ export function GithubSyncCollectionDrawer({ onClose, onRepository, visible }: {
             <div className="flex flex-wrap items-center justify-between gap-2"><span className="break-all font-medium">{entry.ownerLogin}/{entry.repositoryName}</span><span className="sync-state" data-tone={entry.enabled ? 'teal' : 'amber'}>{entry.enabled ? t('githubSync.enabled') : t('githubSync.disabled')}</span></div>
             <p className="text-xs text-muted-foreground">{entry.repositoryId ? `#${entry.repositoryId}` : t('githubSync.unresolved')} · {t('githubSync.nextCheck')}: {entry.nextDueAt ? formatLocalDateTime(entry.nextDueAt, i18n.language) : '—'}</p>
             {entry.latestExecution ? <p className="text-xs text-muted-foreground">{t('githubSync.latestExecution')}: {entry.latestExecution.status ? t(`githubSync.codes.${entry.latestExecution.status}`, { defaultValue: entry.latestExecution.status }) : '—'}{entry.latestExecution.errorCode ? ` · ${t(`githubSync.codes.${entry.latestExecution.errorCode}`, { defaultValue: entry.latestExecution.errorCode })}` : ''}{entry.latestExecution.retryAt ? ` · ${t('githubSync.retryAt')}: ${formatLocalDateTime(entry.latestExecution.retryAt, i18n.language)}` : ''}</p> : null}
-            <div className="flex flex-wrap gap-2">{entry.repositoryId ? <Button size="sm" variant="outline" onClick={() => onRepository(entry.repositoryId!)}>{t('githubSync.viewRepository')}</Button> : null}<Button size="sm" variant="outline" disabled={!entry.id || mutations.setEnabled.isPending} onClick={() => entry.id && void setEnabled(entry.id, !entry.enabled)}>{entry.enabled ? t('githubSync.disable') : t('githubSync.enable')}</Button></div>
+            <div className="flex flex-wrap gap-2">{entry.repositoryId ? <Button data-analytics-id="github.repository.open" size="sm" variant="outline" onClick={() => onRepository(entry.repositoryId!)}>{t('githubSync.viewRepository')}</Button> : null}<Button data-analytics-id="github.repository.toggle" size="sm" variant="outline" disabled={!entry.id || mutations.setEnabled.isPending} onClick={() => entry.id && void setEnabled(entry.id, !entry.enabled)}>{entry.enabled ? t('githubSync.disable') : t('githubSync.enable')}</Button></div>
           </div>)}</div> : !entries.isLoading && !entries.error ? <p className="text-sm text-muted-foreground">{t('githubSync.noSpecifiedRepositories')}</p> : null}
         </section>
         <section className="rounded border p-4">
-          <button type="button" className="flex w-full items-center justify-between text-left font-semibold" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{t('githubSync.otherAcquisition')}<span aria-hidden="true">{expanded ? '−' : '+'}</span></button>
+          <button data-analytics-id="github.acquisition.toggle" type="button" className="flex w-full items-center justify-between text-left font-semibold" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>{t('githubSync.otherAcquisition')}<span aria-hidden="true">{expanded ? '−' : '+'}</span></button>
           {expanded ? <div className="mt-4"><GithubDiscoveryConfig layout="other" /></div> : <p className="mt-1 text-sm text-muted-foreground">{t('githubSync.otherAcquisitionHelp')}</p>}
         </section>
         {progress.error ? <p role="alert" className="text-sm text-destructive">{t('githubSync.loadFailed')}: {progress.error.message}</p> : null}

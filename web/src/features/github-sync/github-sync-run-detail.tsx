@@ -22,7 +22,7 @@ export function GithubSyncRunDetail({ runId, onBack, visible = true }: { runId: 
 
   return <div className="space-y-5 animate-fade-up">
     <div className="sync-hero space-y-3">
-      <Button size="sm" variant="ghost" className="sync-action -ml-2" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" />{t('githubSync.runDetail.back')}</Button>
+      <Button data-analytics-id="github.runs.open" size="sm" variant="ghost" className="sync-action -ml-2" onClick={onBack}><ArrowLeft className="mr-2 h-4 w-4" />{t('githubSync.runDetail.back')}</Button>
       <h1 className="text-2xl font-semibold tracking-tight">{t('githubSync.runDetail.title')}</h1>
       <p className="break-all font-mono text-xs" style={{ color: 'var(--sync-subtle)' }}>{runId}</p>
     </div>
@@ -65,7 +65,7 @@ export function GithubSyncRunDetail({ runId, onBack, visible = true }: { runId: 
               </TableRow>)}</TableBody>
             </Table></div> : null}
           </Card>
-          {paths.data && (paths.data.total ?? 0) > PAGE_SIZE ? <Pagination page={pathPage} totalPages={Math.ceil((paths.data.total ?? 0) / PAGE_SIZE)} onPageChange={setPathPage} /> : null}
+          {paths.data && (paths.data.total ?? 0) > PAGE_SIZE ? <Pagination analyticsId="github.path.paginate" page={pathPage} totalPages={Math.ceil((paths.data.total ?? 0) / PAGE_SIZE)} onPageChange={setPathPage} /> : null}
           <Card className="sync-section overflow-hidden">
             <div className="sync-section-header"><h2 className="font-semibold">{t('githubSync.runDetail.tasks')}</h2><p className="mt-1 text-sm" style={{ color: 'var(--sync-subtle)' }}>{t('githubSync.runDetail.taskCount')}: {run.data.taskCount}</p></div>
             {tasks.isLoading ? <p className="p-5 text-sm text-muted-foreground">{t('githubSync.runDetail.loading')}</p> : null}
@@ -81,7 +81,7 @@ export function GithubSyncRunDetail({ runId, onBack, visible = true }: { runId: 
               </TableRow>)}</TableBody>
             </Table></div> : null}
           </Card>
-          {tasks.data && (tasks.data.total ?? 0) > PAGE_SIZE ? <Pagination page={taskPage} totalPages={Math.ceil((tasks.data.total ?? 0) / PAGE_SIZE)} onPageChange={setTaskPage} /> : null}
+          {tasks.data && (tasks.data.total ?? 0) > PAGE_SIZE ? <Pagination analyticsId="github.task.paginate" page={taskPage} totalPages={Math.ceil((tasks.data.total ?? 0) / PAGE_SIZE)} onPageChange={setTaskPage} /> : null}
       </div>
     </> : null}
   </div>

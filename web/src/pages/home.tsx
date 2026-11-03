@@ -49,17 +49,17 @@ export function HomePage() {
         </div>
 
         <div className="max-w-2xl mx-auto animate-fade-up delay-1">
-          <SearchBar onSearch={handleSearch} />
+          <SearchBar analyticsId="search.query.submit" onSearch={handleSearch} />
         </div>
 
         <div className="flex items-center justify-center gap-4 animate-fade-up delay-2">
-          <button
+          <button data-analytics-id="navigation.skills.open"
             className="px-8 py-3.5 rounded-xl text-base font-medium text-white bg-[#202020] shadow-sm hover:bg-[#111] transition-colors"
             onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0, starredOnly: false } })}
           >
             {t('home.browseSkills')}
           </button>
-          <button
+          <button data-analytics-id="skill.publish.open"
             className="px-8 py-3.5 rounded-xl text-base font-medium border transition-colors"
             style={{ background: 'var(--bg-secondary-btn, #F7FAFC)', borderColor: 'hsl(var(--muted-foreground))', color: 'hsl(var(--muted-foreground))' }}
             onClick={() => navigate({ to: '/dashboard/publish' })}
@@ -78,7 +78,7 @@ export function HomePage() {
             </h2>
             <p style={{ color: 'hsl(var(--text-secondary))' }}>{t('home.popularDescription')}</p>
           </div>
-          <Button
+          <Button data-analytics-id="discovery.popular.open"
             variant="ghost"
             onClick={() => navigate({ to: '/search', search: { q: '', sort: 'downloads', page: 0, starredOnly: false } })}
           >
@@ -91,7 +91,7 @@ export function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {popularSkills?.items.map((skill, idx) => (
               <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
-                <SkillCard
+                <SkillCard analyticsId="skill.card.open"
                   skill={skill}
                   onClick={() => handleSkillClick(skill.namespace, skill.slug)}
                 />
@@ -110,7 +110,7 @@ export function HomePage() {
             </h2>
             <p style={{ color: 'hsl(var(--text-secondary))' }}>{t('home.latestDescription')}</p>
           </div>
-          <Button
+          <Button data-analytics-id="discovery.latest.open"
             variant="ghost"
             onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0, starredOnly: false } })}
           >
@@ -123,7 +123,7 @@ export function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {latestSkills?.items.map((skill, idx) => (
               <div key={skill.id} className={`animate-fade-up delay-${Math.min(idx + 1, 6)}`}>
-                <SkillCard
+                <SkillCard analyticsId="skill.card.open"
                   skill={skill}
                   onClick={() => handleSkillClick(skill.namespace, skill.slug)}
                 />

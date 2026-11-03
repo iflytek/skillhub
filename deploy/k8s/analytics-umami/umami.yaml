@@ -1,0 +1,93 @@
+# Independent analytics deployment unit; create namespace stats and secret umami-credentials first.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: umami-postgres-data
+  namespace: stats
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: umami-postgres
+  namespace: stats
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {app: umami-postgres}
+  template:
+    metadata:
+      labels: {app: umami-postgres}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          env:
+            - {name: POSTGRES_DB, value: umami}
+            - {name: POSTGRES_USER, value: umami}
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: umami-credentials, key: db-password}
+          ports: [{containerPort: 5432}]
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, umami, -d, umami]
+            periodSeconds: 5
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/postgresql/data}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: umami-postgres-data}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: umami-postgres
+  namespace: stats
+spec:
+  selector: {app: umami-postgres}
+  ports: [{port: 5432}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: umami
+  namespace: stats
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: umami}
+  template:
+    metadata:
+      labels: {app: umami}
+    spec:
+      containers:
+        - name: umami
+          image: ghcr.io/umami-software/umami:3.4.1
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef: {name: umami-credentials, key: database-url}
+            - name: APP_SECRET
+              valueFrom:
+                secretKeyRef: {name: umami-credentials, key: app-secret}
+          ports: [{containerPort: 3000}]
+          readinessProbe:
+            httpGet: {path: /login, port: 3000}
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: umami
+  namespace: stats
+spec:
+  selector: {app: umami}
+  ports: [{port: 3000}]

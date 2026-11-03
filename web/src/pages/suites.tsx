@@ -41,10 +41,10 @@ export function SuitesPage() {
           <h1 className="text-4xl font-bold">{t('suite.listTitle')}</h1>
           <p className="mt-2 text-muted-foreground">{t('suite.listDescription')}</p>
         </div>
-        <Button onClick={() => navigate({ to: '/dashboard/suites/new' })}>{t('suite.create')}</Button>
+        <Button data-analytics-id="suite.create.open" onClick={() => navigate({ to: '/dashboard/suites/new' })}>{t('suite.create')}</Button>
       </div>
 
-      <form className="flex max-w-xl gap-2" onSubmit={event => { event.preventDefault(); setQuery(queryInput.trim()); setPage(0) }}>
+      <form data-analytics-id="suite.query.submit" className="flex max-w-xl gap-2" onSubmit={event => { event.preventDefault(); setQuery(queryInput.trim()); setPage(0) }}>
       <Input
         value={queryInput}
         placeholder={t('suite.searchPlaceholder')}
@@ -58,7 +58,7 @@ export function SuitesPage() {
           {t('suite.labelFilterTitle')}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button
+          <Button data-analytics-id="suite.label.clear"
             type="button"
             size="sm"
             variant={selectedLabel === '' ? 'default' : 'outline'}
@@ -72,7 +72,7 @@ export function SuitesPage() {
           {isLoadingLabels ? (
             <span className="px-2 py-1 text-sm text-muted-foreground">{t('suite.loadingLabels')}</span>
           ) : labels?.map(label => (
-            <Button
+            <Button data-analytics-id="suite.label.filter"
               key={label.slug}
               type="button"
               size="sm"
@@ -94,7 +94,7 @@ export function SuitesPage() {
         <>
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
             {data.items.map((suite) => (
-              <ResourceCard
+              <ResourceCard analyticsId="suite.card.open"
                 key={suite.id}
                 resource={suite}
                 onClick={() => navigate({
@@ -103,7 +103,7 @@ export function SuitesPage() {
               />
             ))}
           </div>
-          <Pagination
+          <Pagination analyticsId="suite.list.paginate"
             page={page}
             totalPages={Math.max(1, Math.ceil(data.total / data.size))}
             onPageChange={setPage}

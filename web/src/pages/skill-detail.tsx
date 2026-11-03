@@ -828,7 +828,7 @@ export function SkillDetailPage() {
         <div className="text-center py-20 animate-fade-up">
           <h2 className="text-2xl font-bold font-heading mb-2">{t('skillDetail.loginRequired')}</h2>
           <p className="text-muted-foreground mb-6">{t('skillDetail.loginRequiredDesc')}</p>
-          <Button onClick={requireLogin}>{t('common.login')}</Button>
+          <Button data-analytics-id="auth.login.open" onClick={requireLogin}>{t('common.login')}</Button>
         </div>
       )
     }
@@ -864,12 +864,12 @@ export function SkillDetailPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
+    <div data-analytics-id="skill.detail.render" className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
       {/* Main Content */}
       <div className="flex-1 min-w-0 space-y-8">
         {skill.ownerReadOnly && <p role="status" className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">{t('mySkills.ownerReadOnly')}</p>}
         <div className="space-y-3">
-          <Button
+          <Button data-analytics-id="skill.detail.back"
             variant="ghost"
             size="sm"
             className="gap-2 px-0 text-muted-foreground hover:text-foreground"
@@ -920,7 +920,7 @@ export function SkillDetailPage() {
           <div className="flex items-center gap-4"><SkillAvatar name={selectedDisplayName ?? skill.displayName} url={skill.avatarUrl} size="h-16 w-16 text-2xl" /><h1 className="text-balance break-words text-4xl font-bold font-heading text-foreground [overflow-wrap:anywhere]">{selectedDisplayName}</h1></div>
           <div className="flex min-w-0 items-center gap-2">
             <code className="min-w-0 break-all text-sm text-muted-foreground">@{skill.namespace}/{skill.slug}</code>
-            <CopyButton text={`@${skill.namespace}/${skill.slug}`} ariaLabel={t('skillDetail.copyCoordinate')} className="shrink-0" />
+            <CopyButton analyticsId="skill.coordinate.copy" text={`@${skill.namespace}/${skill.slug}`} ariaLabel={t('skillDetail.copyCoordinate')} className="shrink-0" />
           </div>
           {skill.avatarUrl && user?.userId !== skill.ownerId && (namespace === 'global'
             ? isPromotionAdmin
@@ -942,7 +942,7 @@ export function SkillDetailPage() {
           {(skill.labels?.length ?? 0) > 0 && (
             <div className="flex flex-wrap gap-2">
               {skill.labels!.map((label) => (
-                <Link
+                <Link data-analytics-id="search.label.open"
                   key={label.slug}
                   to="/search"
                   search={getSkillLabelSearch(label.slug)}
@@ -982,9 +982,9 @@ export function SkillDetailPage() {
 
         <Tabs defaultValue="readme">
           <TabsList>
-            <TabsTrigger value="readme">{t('skillDetail.tabOverview')}</TabsTrigger>
-            <TabsTrigger value="files">{t('skillDetail.tabFiles')}</TabsTrigger>
-            <TabsTrigger value="versions">{t('skillDetail.tabVersions')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="skill.overview.tab" value="readme">{t('skillDetail.tabOverview')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="skill.files.tab" value="files">{t('skillDetail.tabFiles')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="skill.versions.tab" value="versions">{t('skillDetail.tabVersions')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="readme" className="mt-6">
@@ -1012,7 +1012,7 @@ export function SkillDetailPage() {
                   </div>
                   {isOverviewCollapsible ? (
                     <div className="flex justify-center">
-                      <Button
+                      <Button data-analytics-id="skill.overview.toggle"
                         type="button"
                         variant="outline"
                         size="sm"
@@ -1055,7 +1055,7 @@ export function SkillDetailPage() {
 
           <TabsContent value="files" className="mt-6">
             {files && files.length > 0 ? (
-              <FileTree files={files} onFileClick={handleFileClick} />
+              <FileTree analyticsId="skill.file.open" files={files} onFileClick={handleFileClick} />
             ) : (
               <Card className="p-8 text-muted-foreground text-center">
                 {t('skillDetail.noFiles')}
@@ -1094,14 +1094,14 @@ export function SkillDetailPage() {
                           </span>
                           {skill.canManageLifecycle && canRereleaseVersion(version.status) && (
                             <>
-                              <Button
+                              <Button data-analytics-id="skill.comparison.open"
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleOpenDiff(version.version)}
                               >
                                 {t('skillDetail.compareVersions')}
                               </Button>
-                              <Button
+                              <Button data-analytics-id="skill.rerelease.open"
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleOpenRerelease(version.version)}
@@ -1111,7 +1111,7 @@ export function SkillDetailPage() {
                             </>
                           )}
                           {skill.canManageLifecycle && canDeleteVersion(version.status) && !isLastVersion && (
-                            <Button
+                            <Button data-analytics-id="skill.version.delete"
                               size="sm"
                               variant="outline"
                               onClick={() => setDeleteVersionTarget(version.version)}
@@ -1120,7 +1120,7 @@ export function SkillDetailPage() {
                             </Button>
                           )}
                           {skill.canManageLifecycle && canWithdrawVersion(version.status) && (
-                            <Button
+                            <Button data-analytics-id="skill.review.withdraw"
                               size="sm"
                               variant="outline"
                               onClick={() => setWithdrawVersionTarget(version.version)}
@@ -1129,7 +1129,7 @@ export function SkillDetailPage() {
                             </Button>
                           )}
                           {skill.canManageLifecycle && version.status === 'UPLOADED' && skill.visibility === 'PRIVATE' && (
-                            <Button
+                            <Button data-analytics-id="skill.version.publish"
                               size="sm"
                               variant="outline"
                               onClick={() => setConfirmPublishTarget(version.version)}
@@ -1138,7 +1138,7 @@ export function SkillDetailPage() {
                             </Button>
                           )}
                           {skill.canManageLifecycle && version.status === 'UPLOADED' && skill.visibility === 'PRIVATE' && (
-                            <Button
+                            <Button data-analytics-id="skill.review.submit"
                               size="sm"
                               variant="outline"
                               onClick={() => setSubmitReviewTarget(version.version)}
@@ -1175,7 +1175,7 @@ export function SkillDetailPage() {
         {/* File Tree Sidebar — collapsible, mirrors SecurityAuditSummary card pattern */}
         {files && files.length > 0 && (
           <Card className="p-5 space-y-3">
-            <button
+            <button data-analytics-id="skill.browser.toggle"
               type="button"
               className="flex w-full items-center gap-2 text-left"
               aria-expanded={fileBrowserOpen}
@@ -1197,7 +1197,7 @@ export function SkillDetailPage() {
             </button>
             {fileBrowserOpen && (
               <div className="max-h-[400px] overflow-y-auto -mx-5 px-5">
-                <FileTree files={files} onFileClick={handleFileClick} bare />
+                <FileTree analyticsId="skill.file.open" files={files} onFileClick={handleFileClick} bare />
               </div>
             )}
           </Card>
@@ -1250,7 +1250,7 @@ export function SkillDetailPage() {
                   </>
                 ) : null}
                 {canReport ? (
-                  <Button variant="outline" className="w-full" onClick={handleOpenReport} disabled={hasReported || reportMutation.isPending}>
+                  <Button data-analytics-id="report.create.open" variant="outline" className="w-full" onClick={handleOpenReport} disabled={hasReported || reportMutation.isPending}>
                     {hasReported ? t('skillDetail.reportedSkill') : reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.reportSkill')}
                   </Button>
                 ) : null}
@@ -1288,7 +1288,7 @@ export function SkillDetailPage() {
               {suiteMemberships.map((suite) => (
                 <div key={suite.suiteId} className="min-w-0 py-4 first:pt-3 last:pb-3">
                   <div className="flex min-w-0 items-start justify-between gap-3">
-                    <Link
+                    <Link data-analytics-id="suite.detail.open"
                       to="/suite/$namespace/$slug"
                       params={{ namespace: suite.namespace, slug: suite.slug }}
                       search={{ version: suite.version }}
@@ -1315,7 +1315,7 @@ export function SkillDetailPage() {
                       </p>
                       <div className="flex flex-wrap gap-1.5">
                         {(suite.visibleSiblingMembers ?? []).map((member) => member.available ? (
-                          <Link
+                          <Link data-analytics-id="skill.related.open"
                             key={member.skillId}
                             to="/space/$namespace/$slug"
                             params={{ namespace: member.namespace, slug: member.slug }}
@@ -1370,10 +1370,10 @@ export function SkillDetailPage() {
             {skill.status === 'ARCHIVED' && (
               <p className="text-sm text-muted-foreground">{t('skillDetail.archivedInstallHint')}</p>
             )}
-            <InstallCommand
+            <InstallCommand analyticsId="skill.command.copy"
               namespace={namespace}
               slug={slug}
-              version={publishedVersion.version}
+              version={publishedVersion.version} skillhubAnalyticsId="skill.command.skillhub.select" clawhubAnalyticsId="skill.command.clawhub.select"
             />
           </Card>
         )}
@@ -1410,7 +1410,7 @@ export function SkillDetailPage() {
                 </div>
               </div>
             </div>
-            <Button
+            <Button data-analytics-id="skill.review.withdraw"
               variant="outline"
               onClick={() => setWithdrawVersionTarget(ownerPreviewVersion.version)}
               disabled={!skill.canManageLifecycle || withdrawReviewMutation.isPending}
@@ -1420,7 +1420,7 @@ export function SkillDetailPage() {
           </Card>
         )}
 
-        <Button
+        <Button data-analytics-id="skill.download.request"
           className="w-full"
           variant="outline"
           size="lg"
@@ -1439,7 +1439,7 @@ export function SkillDetailPage() {
           description={skill.summary}
         />
 
-        <InstallForAgentButton
+        <InstallForAgentButton analyticsId="skill.prompt.copy"
           namespace={namespace}
           slug={slug}
           version={selectedVersionEntry?.version ?? publishedVersion?.version ?? ''}
@@ -1511,16 +1511,16 @@ export function SkillDetailPage() {
                 namespace={namespace} slug={slug} visibility={skill.visibility} disabled={hasPendingOwnerPreview} />}
 
               {skill.status === 'ARCHIVED' ? (
-                <Button variant="outline" onClick={() => setUnarchiveConfirmOpen(true)} disabled={unarchiveMutation.isPending}>
+                <Button data-analytics-id="skill.unarchive.request" variant="outline" onClick={() => setUnarchiveConfirmOpen(true)} disabled={unarchiveMutation.isPending}>
                   {unarchiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unarchiveSkill')}
                 </Button>
               ) : publishedVersion ? (
-                <Button variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
+                <Button data-analytics-id="skill.archive.request" variant="outline" onClick={() => setArchiveConfirmOpen(true)} disabled={archiveMutation.isPending}>
                   {archiveMutation.isPending ? t('skillDetail.processing') : t('skillDetail.archiveSkill')}
                 </Button>
               ) : null}
               {canHardDeleteSkill && (
-                <Button
+                <Button data-analytics-id="skill.delete.request"
                   variant="destructive"
                   onClick={() => setDeleteSkillConfirmOpen(true)}
                   disabled={deleteSkillMutation.isPending}
@@ -1552,12 +1552,12 @@ export function SkillDetailPage() {
                   <>
                     <label htmlFor="promotion-source-version" className="block text-sm font-medium text-foreground">{t('skillDetail.promotionSourceVersion')}</label>
                     <Select value={String(promotionVersion?.id ?? '')} onValueChange={setPromotionVersionId}>
-                      <SelectTrigger id="promotion-source-version" aria-label={t('skillDetail.promotionSourceVersion')}>
+                      <SelectTrigger data-analytics-id="skill.promotion.version.interact" id="promotion-source-version" aria-label={t('skillDetail.promotionSourceVersion')}>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {publishedVersions.map((version) => (
-                          <SelectItem key={version.id} value={String(version.id)}>v{version.version}</SelectItem>
+                          <SelectItem data-analytics-id="skill.promotion.version" key={version.id} value={String(version.id)}>v{version.version}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -1566,7 +1566,7 @@ export function SkillDetailPage() {
                 {promotionState.pendingPromotionId ? (
                   <p className="text-sm text-muted-foreground">{t('skillDetail.promotionPending')}</p>
                 ) : promotionVersion ? (
-                  <Button variant="outline" onClick={() => setPromotionConfirmOpen(true)} disabled={!(skill.canSubmitPromotion || isPromotionAdmin) || Boolean(pendingRevocation) || submitPromotionMutation.isPending || !promotionVersion}>
+                  <Button data-analytics-id={promotionState.requestKind === 'UPDATE' ? 'skill.promotion.update.request' : 'skill.promotion.create.request'} variant="outline" onClick={() => setPromotionConfirmOpen(true)} disabled={!(skill.canSubmitPromotion || isPromotionAdmin) || Boolean(pendingRevocation) || submitPromotionMutation.isPending || !promotionVersion}>
                     {submitPromotionMutation.isPending ? t('skillDetail.processing') : t(promotionState.requestKind === 'UPDATE' ? 'skillDetail.submitGlobalUpdate' : 'skillDetail.promoteToGlobal')}
                   </Button>
                 ) : null}
@@ -1579,11 +1579,11 @@ export function SkillDetailPage() {
                       <p className="text-sm text-muted-foreground">{t('skillDetail.revocationPending')}</p>
                     ) : !isLoadingRevocationHistory && !revocationHistoryError && (
                       <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" onClick={() => setRevocationMode('request')}>
+                        <Button data-analytics-id="skill.revocation.request" variant="outline" onClick={() => setRevocationMode('request')}>
                           {t('skillDetail.requestRevocation')}
                         </Button>
                         {isPromotionAdmin && (
-                          <Button variant="destructive" onClick={() => setRevocationMode('direct')}>
+                          <Button data-analytics-id="skill.revocation.direct" variant="destructive" onClick={() => setRevocationMode('direct')}>
                             {t('skillDetail.directRevocation')}
                           </Button>
                         )}
@@ -1618,17 +1618,17 @@ export function SkillDetailPage() {
             <div className="flex flex-col gap-3">
               {canHideSkill ? (
                 !skill.hidden ? (
-                  <Button variant="outline" onClick={() => hideMutation.mutate()} disabled={hideMutation.isPending}>
+                  <Button data-analytics-id="skill.hide.request" variant="outline" onClick={() => hideMutation.mutate()} disabled={hideMutation.isPending}>
                     {hideMutation.isPending ? t('skillDetail.processing') : t('skillDetail.hideSkill')}
                   </Button>
                 ) : (
-                  <Button variant="outline" onClick={() => unhideMutation.mutate()} disabled={unhideMutation.isPending}>
+                  <Button data-analytics-id="skill.unhide.request" variant="outline" onClick={() => unhideMutation.mutate()} disabled={unhideMutation.isPending}>
                     {unhideMutation.isPending ? t('skillDetail.processing') : t('skillDetail.unhideSkill')}
                   </Button>
                 )
               ) : null}
               {selectedVersionEntry && (
-                <Button variant="destructive" onClick={() => yankMutation.mutate()} disabled={yankMutation.isPending}>
+                <Button data-analytics-id="skill.version.yank" variant="destructive" onClick={() => yankMutation.mutate()} disabled={yankMutation.isPending}>
                   {yankMutation.isPending ? t('skillDetail.processing') : t('skillDetail.yankVersion')}
                 </Button>
               )}
@@ -1638,7 +1638,7 @@ export function SkillDetailPage() {
       </aside>
 
       <Dialog open={reportDialogOpen} onOpenChange={setReportDialogOpen}>
-        <DialogContent>
+        <DialogContent closeAnalyticsId="report.create.cancel">
           <DialogHeader>
             <DialogTitle>{t('skillDetail.reportDialogTitle')}</DialogTitle>
             <DialogDescription>{t('skillDetail.reportDialogDescription')}</DialogDescription>
@@ -1658,17 +1658,17 @@ export function SkillDetailPage() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setReportDialogOpen(false)}>
+            <Button data-analytics-id="report.create.cancel" variant="outline" onClick={() => setReportDialogOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button onClick={handleSubmitReport} disabled={reportMutation.isPending}>
+            <Button data-analytics-id="report.create.request" onClick={handleSubmitReport} disabled={reportMutation.isPending}>
               {reportMutation.isPending ? t('skillDetail.processing') : t('skillDetail.submitReport')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId={promotionState?.requestKind === 'UPDATE' ? 'skill.promotion.update.confirm' : 'skill.promotion.create.confirm'} cancelAnalyticsId={promotionState?.requestKind === 'UPDATE' ? 'skill.promotion.update.cancel' : 'skill.promotion.create.cancel'}
         open={promotionConfirmOpen}
         onOpenChange={setPromotionConfirmOpen}
         title={t(promotionState?.requestKind === 'UPDATE' ? 'skillDetail.globalUpdateConfirmTitle' : 'skillDetail.promotionConfirmTitle')}
@@ -1687,7 +1687,7 @@ export function SkillDetailPage() {
       />
 
       <Dialog open={revocationMode !== null} onOpenChange={(open) => { if (!open) setRevocationMode(null) }}>
-        <DialogContent aria-label={t('skillDetail.revocationConfirmTitle')}>
+        <DialogContent closeAnalyticsId={revocationMode === 'direct' ? 'skill.revocation.direct.cancel' : 'skill.revocation.request.cancel'} aria-label={t('skillDetail.revocationConfirmTitle')}>
           <DialogHeader>
             <DialogTitle>{t('skillDetail.revocationConfirmTitle')}</DialogTitle>
             <DialogDescription>{t('skillDetail.revocationConfirmDescription', { skill: skill.displayName, slug: skill.slug })}</DialogDescription>
@@ -1700,15 +1700,15 @@ export function SkillDetailPage() {
             rows={3}
           />
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRevocationMode(null)}>{t('dialog.cancel')}</Button>
-            <Button variant="destructive" onClick={handleSubmitRevocation} disabled={submitRevocationMutation.isPending || directRevocationMutation.isPending}>
+            <Button data-analytics-id={revocationMode === 'direct' ? 'skill.revocation.direct.cancel' : 'skill.revocation.request.cancel'} variant="outline" onClick={() => setRevocationMode(null)}>{t('dialog.cancel')}</Button>
+            <Button data-analytics-id={revocationMode === 'direct' ? 'skill.revocation.direct.submit' : 'skill.revocation.request.submit'} variant="destructive" onClick={handleSubmitRevocation} disabled={submitRevocationMutation.isPending || directRevocationMutation.isPending}>
               {t(revocationMode === 'direct' ? 'skillDetail.directRevocation' : 'skillDetail.requestRevocation')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.archive.confirm" cancelAnalyticsId="skill.archive.cancel"
         open={archiveConfirmOpen}
         onOpenChange={setArchiveConfirmOpen}
         title={t('skillDetail.archiveConfirmTitle')}
@@ -1717,7 +1717,7 @@ export function SkillDetailPage() {
         onConfirm={handleArchive}
       />
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.unarchive.confirm" cancelAnalyticsId="skill.unarchive.cancel"
         open={unarchiveConfirmOpen}
         onOpenChange={setUnarchiveConfirmOpen}
         title={t('skillDetail.unarchiveConfirmTitle')}
@@ -1726,7 +1726,7 @@ export function SkillDetailPage() {
         onConfirm={handleUnarchive}
       />
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.delete.continue" cancelAnalyticsId="skill.delete.continue.cancel"
         open={deleteSkillConfirmOpen}
         onOpenChange={setDeleteSkillConfirmOpen}
         title={t('skillDetail.deleteSkillConfirmTitle')}
@@ -1745,7 +1745,7 @@ export function SkillDetailPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent closeAnalyticsId="skill.delete.cancel">
           <DialogHeader>
             <DialogTitle>{t('skillDetail.deleteSkillInputTitle')}</DialogTitle>
             <DialogDescription>{t('skillDetail.deleteSkillInputDescription', { slug: skill.slug })}</DialogDescription>
@@ -1761,10 +1761,10 @@ export function SkillDetailPage() {
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteSkillInputOpen(false)}>
+            <Button data-analytics-id="skill.delete.cancel" variant="outline" onClick={() => setDeleteSkillInputOpen(false)}>
               {t('dialog.cancel')}
             </Button>
-            <Button
+            <Button data-analytics-id="skill.delete.confirm"
               variant="destructive"
               onClick={handleDeleteSkill}
               disabled={!isDeleteSlugConfirmationValid(skill.slug, deleteSkillInput) || deleteSkillMutation.isPending}
@@ -1775,7 +1775,7 @@ export function SkillDetailPage() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.version.delete.confirm" cancelAnalyticsId="skill.version.delete.cancel"
         open={!!deleteVersionTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -1789,7 +1789,7 @@ export function SkillDetailPage() {
         onConfirm={handleDeleteVersion}
       />
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.review.withdraw.confirm" cancelAnalyticsId="skill.review.withdraw.cancel"
         open={!!withdrawVersionTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -1813,7 +1813,7 @@ export function SkillDetailPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent closeAnalyticsId="skill.rerelease.cancel">
           <DialogHeader>
             <DialogTitle>{t('skillDetail.rereleaseDialogTitle')}</DialogTitle>
             <DialogDescription>
@@ -1833,17 +1833,17 @@ export function SkillDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRereleaseTarget(null)}>
+            <Button data-analytics-id="skill.rerelease.cancel" variant="outline" onClick={() => setRereleaseTarget(null)}>
               {t('dialog.cancel')}
             </Button>
-            <Button onClick={() => handleRereleaseVersion()} disabled={rereleaseVersionMutation.isPending || !targetVersionInput.trim()}>
+            <Button data-analytics-id="skill.rerelease.request" onClick={() => handleRereleaseVersion()} disabled={rereleaseVersionMutation.isPending || !targetVersionInput.trim()}>
               {rereleaseVersionMutation.isPending ? t('skillDetail.processing') : t('skillDetail.rereleaseVersion')}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.rerelease.confirm" cancelAnalyticsId="skill.rerelease.cancel"
         open={rereleaseWarningDialogOpen}
         onOpenChange={setRereleaseWarningDialogOpen}
         title={t('skillDetail.rereleaseWarningTitle')}
@@ -1864,7 +1864,7 @@ export function SkillDetailPage() {
         }}
       />
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.version.publish.confirm" cancelAnalyticsId="skill.version.publish.cancel"
         open={!!confirmPublishTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -1877,7 +1877,7 @@ export function SkillDetailPage() {
         onConfirm={handleConfirmPublish}
       />
 
-      <ConfirmDialog
+      <ConfirmDialog confirmAnalyticsId="skill.review.submit.confirm" cancelAnalyticsId="skill.review.submit.cancel"
         open={!!submitReviewTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -1899,7 +1899,7 @@ export function SkillDetailPage() {
           }
         }}
       >
-        <DialogContent>
+        <DialogContent closeAnalyticsId="skill.comparison.close">
           <DialogHeader>
             <DialogTitle>{t('skillDetail.compareDialogTitle')}</DialogTitle>
             <DialogDescription>
@@ -1964,7 +1964,7 @@ export function SkillDetailPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button
+            <Button data-analytics-id="skill.comparison.close"
               variant="outline"
               onClick={() => {
                 setDiffSourceVersion(null)
@@ -1978,7 +1978,7 @@ export function SkillDetailPage() {
       </Dialog>
 
       {/* File preview dialog */}
-      <FilePreviewDialog
+      <FilePreviewDialog closeAnalyticsId="skill.file.close" downloadAnalyticsId="skill.file.download"
         open={previewDialogOpen}
         onOpenChange={setPreviewDialogOpen}
         node={previewNode}
@@ -1986,7 +1986,7 @@ export function SkillDetailPage() {
         isLoading={isLoadingPreview}
         error={previewError}
         onDownload={handleDownloadFile}
-        onLinkClick={handlePreviewLinkClick}
+        onLinkClick={handlePreviewLinkClick} copyAnalyticsId="skill.file.copy"
       />
     </div>
   )

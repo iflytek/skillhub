@@ -46,7 +46,7 @@ export function GithubSyncReviewQueue({ namespaceId, namespaceSlug, enabled = tr
       </div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div role="group" aria-label={t('reviews.syncTitle')} className="flex flex-wrap gap-1 rounded-lg bg-muted p-1">
-          {REVIEW_STATUSES.map((value) => <button key={value}
+          {REVIEW_STATUSES.map((value) => <button data-analytics-id="review.sync.status" key={value}
             type="button" aria-pressed={status === value} onClick={() => setStatus(value)}
             className="rounded-md px-3 py-2 text-sm aria-pressed:bg-card aria-pressed:font-semibold aria-pressed:shadow-sm">
             {t(value === 'PENDING' ? 'reviews.tabPending' : value === 'APPROVED'
@@ -59,10 +59,10 @@ export function GithubSyncReviewQueue({ namespaceId, namespaceSlug, enabled = tr
             setSortDirection(value as 'ASC' | 'DESC')
             setPages(initialPages())
           }}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger data-analytics-id="review.sync.sort.interact"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="DESC">{t('reviews.sortNewest')}</SelectItem>
-              <SelectItem value="ASC">{t('reviews.sortOldest')}</SelectItem>
+              <SelectItem data-analytics-id="review.sync.sort" value="DESC">{t('reviews.sortNewest')}</SelectItem>
+              <SelectItem data-analytics-id="review.sync.sort" value="ASC">{t('reviews.sortOldest')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -90,7 +90,7 @@ export function GithubSyncReviewQueue({ namespaceId, namespaceSlug, enabled = tr
                           {formatLocalDateTime(item.review.reviewedAt ?? item.review.submittedAt, i18n.language)}
                         </p>
                       </div>
-                      <Link to={namespaceSlug
+                      <Link data-analytics-id="review.detail.open" to={namespaceSlug
                         ? buildNamespaceReviewDetailPath(namespaceSlug, item.review.id)
                         : `/dashboard/reviews/${item.review.id}`}
                         className="inline-flex shrink-0 items-center rounded-md border px-3 py-2 text-sm hover:bg-accent">
@@ -100,7 +100,7 @@ export function GithubSyncReviewQueue({ namespaceId, namespaceSlug, enabled = tr
                   </div>
                 </section>
               })}
-              {totalPages > 1 && <Pagination page={pages[status]} totalPages={totalPages}
+              {totalPages > 1 && <Pagination analyticsId="review.sync.paginate" page={pages[status]} totalPages={totalPages}
                 onPageChange={(page) => setPages((current) => ({ ...current, [status]: page }))} />}
               <p className="text-xs text-muted-foreground">{t('reviews.pageSummary', { total: query.data.total, page: pages[status] + 1 })}</p>
             </div>}

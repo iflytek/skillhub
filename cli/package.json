@@ -1,6 +1,6 @@
 {
   "name": "@astron-team/skillhub",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Manage and install skills for AI coding agents",
   "keywords": [
     "skillhub",

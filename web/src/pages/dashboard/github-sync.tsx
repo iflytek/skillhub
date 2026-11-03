@@ -43,15 +43,15 @@ export function GithubSyncPage() {
     <div className="sync-hero flex flex-wrap items-start justify-between gap-4">
       <div><DashboardPageHeader title={t('githubSync.unifiedTitle')} subtitle={t('githubSync.unifiedSubtitle')} /><span className="mt-2 inline-flex rounded border px-2 py-0.5 text-xs text-muted-foreground">@github</span></div>
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" variant="outline" onClick={() => updateSearch({ drawer: 'collection' })}><SlidersHorizontal className="h-4 w-4" />{t('githubSync.collectionConfig')}</Button>
-        <Button size="sm" variant="outline" onClick={() => updateSearch({ drawer: 'settings' })}><Settings2 className="h-4 w-4" />{t('githubSync.systemSettings')}</Button>
+        <Button data-analytics-id="github.collection.open" size="sm" variant="outline" onClick={() => updateSearch({ drawer: 'collection' })}><SlidersHorizontal className="h-4 w-4" />{t('githubSync.collectionConfig')}</Button>
+        <Button data-analytics-id="github.settings.open" size="sm" variant="outline" onClick={() => updateSearch({ drawer: 'settings' })}><Settings2 className="h-4 w-4" />{t('githubSync.systemSettings')}</Button>
       </div>
     </div>
     <Tabs value={tab} onValueChange={(value) => updateSearch({ tab: value as 'overview' | 'repositories' | 'runs', sourceId: undefined, repositoryId: undefined })} className="space-y-4">
       <TabsList className="sync-tabs flex w-full justify-start gap-4 overflow-x-auto sm:gap-6">
-        <TabsTrigger value="overview">{t('githubSync.overview')}</TabsTrigger>
-        <TabsTrigger value="repositories">{t('githubSync.repositoriesTab')}</TabsTrigger>
-        <TabsTrigger value="runs">{t('githubSync.runs')}</TabsTrigger>
+        <TabsTrigger data-analytics-id="github.overview.tab" value="overview">{t('githubSync.overview')}</TabsTrigger>
+        <TabsTrigger data-analytics-id="github.repositories.tab" value="repositories">{t('githubSync.repositoriesTab')}</TabsTrigger>
+        <TabsTrigger data-analytics-id="github.runs.tab" value="runs">{t('githubSync.runs')}</TabsTrigger>
       </TabsList>
       <TabsContent value="overview">
         <GithubSyncOverview visible={visible && tab === 'overview'} onCollection={() => updateSearch({ drawer: 'collection' })} onSettings={() => updateSearch({ drawer: 'settings' })} onRuns={() => updateSearch({ tab: 'runs' })} onRun={(runId) => updateSearch({ runId })} />
@@ -66,7 +66,7 @@ export function GithubSyncPage() {
     {drawer === 'collection' ? <GithubSyncCollectionDrawer visible={visible} onClose={() => updateSearch({ drawer: undefined })} onRepository={(repositoryId) => updateSearch({ drawer: undefined, tab: 'repositories', repositoryId })} /> : null}
     {drawer === 'settings' ? <GithubSyncSettingsDrawer visible={visible} onClose={() => updateSearch({ drawer: undefined })} /> : null}
     {search.sourceId ? <Dialog open onOpenChange={(open) => { if (!open) updateSearch({ sourceId: undefined }) }}>
-      <DialogContent className="github-sync-surface !left-auto !right-0 !top-0 !h-dvh !max-h-dvh !grid-rows-[auto_minmax(0,1fr)] !gap-0 !overflow-hidden w-[min(100vw,40rem)] !translate-x-0 !translate-y-0 !rounded-none p-0">
+      <DialogContent closeAnalyticsId="github.source.close" className="github-sync-surface !left-auto !right-0 !top-0 !h-dvh !max-h-dvh !grid-rows-[auto_minmax(0,1fr)] !gap-0 !overflow-hidden w-[min(100vw,40rem)] !translate-x-0 !translate-y-0 !rounded-none p-0">
         <DialogHeader className="border-b px-5 py-4 text-left"><DialogTitle>{t('githubSync.skillPaths')}</DialogTitle><DialogDescription>{t('githubSync.sourceDetailHelp')}</DialogDescription></DialogHeader>
         <div className="min-h-0 overflow-y-auto px-5 py-5"><GithubSyncSourceDetail sourceId={search.sourceId} visible={visible} /></div>
       </DialogContent>

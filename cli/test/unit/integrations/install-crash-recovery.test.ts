@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { recoverInstallation } from '../../../src/integrations/install-recovery'
 import { OperationStore } from '../../../src/integrations/operation-store'
-import { InventoryStore, type Inventory } from '../../../src/stores/inventory-store'
+import { inventoryWithoutState, InventoryStore, type Inventory } from '../../../src/stores/inventory-store'
 
 interface Fixture { operationId: string; ownerId: string; trustedTargetPaths: string[]; before: Inventory; oldContent: string; newContent: string }
 
@@ -52,7 +52,7 @@ test.skipIf(process.platform === 'win32')('real killed installers recover all pr
         expect(denied.outcome).toBe('unknown')
         expect((await operations.get(fixture.operationId, fixture.ownerId))!.operation.status)
           .toMatchObject({ phase: 'recovery-required', recovery: 'incomplete' })
-        expect(await inventory.read()).toEqual(fixture.before)
+        expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState(fixture.before))
         expect(await Promise.all(['user', 'project'].map(scope => readdir(join(root, scope))))).toEqual(directories)
       }
       const result = await recoverInstallation({ ...fixture, operations, inventory })
@@ -69,10 +69,10 @@ test.skipIf(process.platform === 'win32')('real killed installers recover all pr
         expect(await readdir(join(root, scope))).toEqual(first && boundary !== 'after-commit' ? [] : ['writer'])
         if (!first || boundary === 'after-commit') expect(await readFile(join(root, scope, 'writer/SKILL.md'), 'utf8')).toBe(boundary === 'after-commit' ? fixture.newContent : fixture.oldContent)
       }
-      if (boundary !== 'after-commit') expect(await inventory.read()).toEqual(fixture.before)
+      if (boundary !== 'after-commit') expect(inventoryWithoutState(await inventory.read())).toEqual(inventoryWithoutState(fixture.before))
       else {
         const committed = await inventory.read()
-        expect(committed).toEqual(saved.transaction!.inventoryCommit!.after)
+        expect(inventoryWithoutState(committed)).toEqual(inventoryWithoutState(saved.transaction!.inventoryCommit!.after))
         expect(committed.items[0]!.targets[0]!.version).toBe('2.0.0')
         expect(committed.items[0]!.targets).toHaveLength(2)
       }

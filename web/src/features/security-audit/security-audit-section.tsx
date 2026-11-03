@@ -111,7 +111,7 @@ function ScannerCard({ audit, versionStatus, compact }: { audit: SecurityAuditRe
 
       {sortedFindings.length > 0 && (
         <>
-          <Button
+          <Button data-analytics-id="security.findings.toggle"
             variant="ghost"
             size="sm"
             className={cn('w-full justify-between text-muted-foreground', compact && 'h-7 px-2 text-xs')}

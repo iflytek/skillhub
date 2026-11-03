@@ -3,12 +3,13 @@ import { Button } from '@/shared/ui/button'
 import { useCopyToClipboard } from '@/shared/lib/clipboard'
 
 interface CopyButtonProps {
+  analyticsId?: string
   text: string
   className?: string
   ariaLabel?: string
 }
 
-export function CopyButton({ text, className, ariaLabel }: CopyButtonProps) {
+export function CopyButton({ text, className, ariaLabel, analyticsId }: CopyButtonProps) {
   const { t } = useTranslation()
   const [copied, copy] = useCopyToClipboard()
 
@@ -22,6 +23,7 @@ export function CopyButton({ text, className, ariaLabel }: CopyButtonProps) {
 
   return (
     <Button
+      data-analytics-id={analyticsId}
       variant="outline"
       size="sm"
       onClick={handleCopy}

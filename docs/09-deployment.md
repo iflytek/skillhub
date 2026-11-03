@@ -1,6 +1,56 @@
 # skillhub 部署架构与运维
 
 对象存储可选部署、凭证和迁移说明见[对象存储手册](object-storage.md)。
+可选前端动作统计默认关闭。Docker／Compose 和 Helm 只填配置即可接入 Umami，
+详见[前端动作统计接入指南](frontend-analytics-integration.md)。
+
+### CLI 设备授权地址
+
+`skillhub login --no-open --registry https://skills.example.com` 先按 `--token`、
+`SKILLHUB_TOKEN`、该 registry 已保存凭据的顺序解析 Token。仅在未解析到 Token 时
+进入设备码授权；已解析的 Token 若验证失败，不会自动回退到设备码流程。`--no-open`
+只禁止自动打开浏览器，不会跳过 Token 解析。
+
+设备码流程中，CLI 请求 `/api/v1/auth/device/code`，用户打开返回的 `/device` 页面并登录、确认授权，
+CLI 再轮询兑换 Token。完成后用 `skillhub whoami --registry https://skills.example.com`
+确认登录身份；不要分享设备码、用户码或 Token。
+
+- `DEVICE_AUTH_VERIFICATION_URI` 未设置、为空或仅含空白时，服务端使用
+  `SKILLHUB_PUBLIC_BASE_URL` 加 `/device`，保留子路径并移除末尾重复斜杠。
+  例如 `https://skills.example.com/portal/` 对应 `https://skills.example.com/portal/device`。
+- 若公开地址也未设置，保留兼容的 `/device` 相对地址，由 CLI 按 registry 的源解析。
+  正式部署、子路径部署或 Web/API 分离部署应设置正确的 Web 公开地址。
+- 显式指定有效的 HTTP(S) 地址或根相对路径时原样使用，支持自定义页面和查询参数。
+  非法地址会阻止服务启动，错误提示只包含配置项名称，不回显配置值。
+  宿主机进程修改配置后需重启；Compose 部署修改 `.env.release` 后需重建受影响容器，
+  `docker compose restart` 不会更新容器环境变量。
+- Compose 的空配置交由后端处理；Helm 的 `deviceAuthVerificationUri` 默认对应
+  `<publicBaseUrl>/device`，也可显式覆盖。
+
+对已运行的单机交付栈，仅修改设备授权地址时，先编辑原部署目录中的 `.env.release`：
+
+- 源码部署：在包含 `Makefile` 和 `scripts/validate-release-config.sh` 的仓库根目录，
+  先执行 `make validate-release-config`，修正错误后再重建。
+- 一键脚本部署：进入脚本输出的 `Runtime dir`（即该实例的 `--home` 目录）。脚本仅下载
+  Compose 清单和环境模板，不提供上述 Make 校验入口，不要在该目录执行 `make`。
+
+以下重建命令适用于未自定义项目名、未使用 override 的标准栈：
+
+```bash
+docker compose --env-file .env.release -f compose.release.yml up -d --no-deps --force-recreate server
+```
+
+若原部署使用了 `-p`、`COMPOSE_PROJECT_NAME` 或额外的 `-f` 文件，重建时必须保留原项目名、
+环境文件及按原顺序排列的全部 `-f` 参数，不能直接照抄以上基础命令；否则可能操作另一实例
+或丢失 override 中的配置。此操作只重建已有后端容器，不重新下载部署文件。
+
+首次部署仍使用完整栈的 `up -d`。若同时修改公开地址等其他服务也使用的配置，
+应一并重建相应服务。验证设备授权地址时，使用未传 `--token`、未设置 `SKILLHUB_TOKEN`，
+且该 registry 没有保存凭据的 CLI 环境，再执行上述登录命令并核对返回地址；
+已有 Token 的登录成功不能证明设备授权地址已更新。不要仅凭配置文件内容判断已生效。
+
+`/cli/auth` 是旧版浏览器 loopback 回调入口，需要客户端附带回调参数；它不是输入设备码的页面。
+不要将设备授权地址设成这个旧入口。此次配置保护不改变旧客户端回调流程。
 
 ## 1 运行模型
 

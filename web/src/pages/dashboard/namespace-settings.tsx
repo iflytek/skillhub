@@ -42,14 +42,17 @@ export function NamespaceSettingsPage() {
         {namespace.type === 'TEAM' ? actions.filter((item) => item.allowed).map(({ action }) => (
           <div key={action} className="flex flex-wrap items-center justify-between gap-3 border-t border-border/50 pt-4">
             <p className="min-w-0 flex-1 text-sm text-muted-foreground">{t(`namespaceManagement.${action}Hint`)}</p>
-            <Button variant={action === 'archive' || action === 'delete' ? 'destructive' : 'outline'}
+            <Button data-analytics-id={action === 'freeze' ? 'namespace.freeze.request' : action === 'unfreeze' ? 'namespace.unfreeze.request' : action === 'archive' ? 'namespace.archive.request' : action === 'restore' ? 'namespace.restore.request' : 'namespace.delete.request'} variant={action === 'archive' || action === 'delete' ? 'destructive' : 'outline'}
               data-testid={`${action}-namespace-${slug}`} onClick={() => setPending({ action, slug, name: namespace.displayName })}>
               {t(`myNamespaces.${action}`)}
             </Button>
           </div>
         )) : null}
       </Card>
-      <ConfirmDialog open={!!pending} onOpenChange={(open) => { if (!open) setPending(null) }}
+      <ConfirmDialog
+        confirmAnalyticsId={pending?.action === 'freeze' ? 'namespace.freeze.confirm' : pending?.action === 'unfreeze' ? 'namespace.unfreeze.confirm' : pending?.action === 'archive' ? 'namespace.archive.confirm' : pending?.action === 'restore' ? 'namespace.restore.confirm' : pending?.action === 'delete' ? 'namespace.delete.confirm' : undefined}
+        cancelAnalyticsId={pending?.action === 'freeze' ? 'namespace.freeze.cancel' : pending?.action === 'unfreeze' ? 'namespace.unfreeze.cancel' : pending?.action === 'archive' ? 'namespace.archive.cancel' : pending?.action === 'restore' ? 'namespace.restore.cancel' : pending?.action === 'delete' ? 'namespace.delete.cancel' : undefined}
+        open={!!pending} onOpenChange={(open) => { if (!open) setPending(null) }}
         title={copy?.title ?? ''} description={copy?.description ?? ''} confirmText={copy?.confirmText} variant={copy?.variant}
         contentTestId={pending ? `namespace-action-dialog-${pending.action}` : undefined}
         confirmButtonTestId={pending ? `namespace-action-confirm-${pending.action}` : undefined}

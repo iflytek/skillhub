@@ -9,6 +9,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.net.URI;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
@@ -41,11 +42,47 @@ public class DeviceAuthService {
     public DeviceAuthService(RedisTemplate<String, Object> redisTemplate,
                              ApiTokenService apiTokenService,
                              ObjectMapper objectMapper,
-                             @Value("${skillhub.device-auth.verification-uri:/device}") String verificationUri) {
+                             @Value("${skillhub.device-auth.verification-uri:}") String verificationUri,
+                             @Value("${skillhub.public.base-url:}") String publicBaseUrl) {
         this.redisTemplate = redisTemplate;
         this.apiTokenService = apiTokenService;
         this.objectMapper = objectMapper;
-        this.verificationUri = verificationUri;
+        this.verificationUri = resolveVerificationUri(verificationUri, publicBaseUrl);
+    }
+
+    private static String resolveVerificationUri(String configuredUri, String publicBaseUrl) {
+        if (StringUtils.hasText(configuredUri)) {
+            validateUri(configuredUri, "skillhub.device-auth.verification-uri", true);
+            return configuredUri;
+        }
+        if (!StringUtils.hasText(publicBaseUrl)) {
+            // The CLI resolves this existing same-origin default against its registry URL.
+            return "/device";
+        }
+        URI base = validateUri(publicBaseUrl, "skillhub.public.base-url", false);
+        if (base.getRawQuery() != null || base.getRawFragment() != null) {
+            throw new IllegalArgumentException("skillhub.public.base-url must not contain a query or fragment");
+        }
+        return publicBaseUrl.replaceAll("/+$", "") + "/device";
+    }
+
+    private static URI validateUri(String value, String property, boolean allowRelative) {
+        String error = property + " must be an HTTP(S) URL" + (allowRelative ? " or a root-relative path" : "");
+        URI uri;
+        try {
+            uri = URI.create(value);
+        } catch (IllegalArgumentException ex) {
+            // Do not attach the parser exception: it includes the configured value.
+            throw new IllegalArgumentException(error);
+        }
+        boolean absolute = ("http".equalsIgnoreCase(uri.getScheme()) || "https".equalsIgnoreCase(uri.getScheme()))
+                && StringUtils.hasText(uri.getHost()) && uri.getRawUserInfo() == null && uri.getPort() <= 65535;
+        boolean relative = allowRelative && !uri.isAbsolute() && uri.getRawAuthority() == null
+                && value.startsWith("/") && !value.startsWith("//");
+        if (!absolute && !relative) {
+            throw new IllegalArgumentException(error);
+        }
+        return uri;
     }
 
     /**

@@ -25,7 +25,7 @@ export function SkillAvatarManager({ namespace, slug, disabled = false, previewO
   const retryCoolingDown = !!candidate?.machineNextRetryAt && Date.parse(candidate.machineNextRetryAt) > Date.now()
   const loadError = status.isError ? <div role="alert" className="flex flex-wrap items-center gap-2 text-xs text-destructive">
     <span>{t(candidate ? 'skillAvatar.statusRefreshFailed' : 'skillAvatar.statusLoadFailed')}</span>
-    <Button type="button" size="sm" variant="ghost" disabled={status.isFetching} onClick={() => void status.refetch()}>{t('skillAvatar.reloadStatus')}</Button>
+    <Button data-analytics-id="skill.avatar.refresh" type="button" size="sm" variant="ghost" disabled={status.isFetching} onClick={() => void status.refetch()}>{t('skillAvatar.reloadStatus')}</Button>
   </div> : null
   if (!candidate || !['PENDING', 'REJECTED'].includes(candidate.candidateStatus ?? '')) return loadError
   return (
@@ -46,8 +46,8 @@ export function SkillAvatarManager({ namespace, slug, disabled = false, previewO
       {!previewOnly && <div className="flex flex-wrap gap-2">
         {candidate?.candidateStatus === 'PENDING' && candidate.machineStatus === 'BLOCKED'
           && candidate.reviewStatus === 'NOT_REQUIRED' && candidate.candidateId
-          && <Button variant="outline" disabled={disabled || mutation.isPending} onClick={() => mutation.mutate({ kind: 'appeal', id: candidate.candidateId! })}>{t('skillAvatar.appeal')}</Button>}
-        {candidate?.machineStatus === 'ERROR' && candidate.candidateId && <Button variant="outline" disabled={disabled || mutation.isPending || retryCoolingDown} onClick={() => mutation.mutate({ kind: 'retry', id: candidate.candidateId! })}>{t('skillAvatar.retry')}</Button>}
+          && <Button data-analytics-id="skill.avatar.appeal" variant="outline" disabled={disabled || mutation.isPending} onClick={() => mutation.mutate({ kind: 'appeal', id: candidate.candidateId! })}>{t('skillAvatar.appeal')}</Button>}
+        {candidate?.machineStatus === 'ERROR' && candidate.candidateId && <Button data-analytics-id="skill.avatar.retry" variant="outline" disabled={disabled || mutation.isPending || retryCoolingDown} onClick={() => mutation.mutate({ kind: 'retry', id: candidate.candidateId! })}>{t('skillAvatar.retry')}</Button>}
       </div>}
       {loadError}
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

@@ -7,6 +7,9 @@ import { useCopyToClipboard } from '@/shared/lib/clipboard'
 import { resolvePublicRegistryUrl } from '@/shared/lib/registry-url'
 
 interface InstallCommandProps {
+  analyticsId?: string
+  skillhubAnalyticsId?: string
+  clawhubAnalyticsId?: string
   namespace: string
   slug: string
   version?: string
@@ -56,13 +59,14 @@ export function buildSkillhubInstallCommand(
 }
 
 interface CommandBlockProps {
+  analyticsId?: string
   command: string
 }
 
 const installMethodTabTriggerClass =
   "relative border-b-0 px-1 py-2 text-xs after:absolute after:bottom-[-1px] after:left-1/2 after:h-0.5 after:w-6 after:-translate-x-1/2 after:rounded-full after:bg-transparent after:content-[''] data-[state=active]:after:bg-primary"
 
-function CommandBlock({ command }: CommandBlockProps) {
+function CommandBlock({ command, analyticsId }: CommandBlockProps) {
   const { t } = useTranslation()
   const [copied, copy] = useCopyToClipboard()
 
@@ -77,6 +81,7 @@ function CommandBlock({ command }: CommandBlockProps) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-border/60 bg-muted/50">
       <Button
+        data-analytics-id={analyticsId}
         type="button"
         variant="ghost"
         size="icon"
@@ -96,7 +101,7 @@ function CommandBlock({ command }: CommandBlockProps) {
   )
 }
 
-export function InstallCommand({ namespace, slug, version }: InstallCommandProps) {
+export function InstallCommand({ namespace, slug, version, analyticsId, skillhubAnalyticsId, clawhubAnalyticsId }: InstallCommandProps) {
   const { t } = useTranslation()
   const baseUrl = useMemo(() => getBaseUrl(), [])
   const clawhubCommand = useMemo(() => buildInstallCommand(namespace, slug, baseUrl), [baseUrl, namespace, slug])
@@ -108,20 +113,20 @@ export function InstallCommand({ namespace, slug, version }: InstallCommandProps
   return (
     <Tabs defaultValue="skillhub" className="space-y-3">
       <TabsList className="w-full gap-6 border-border/70 bg-transparent p-0 text-xs">
-        <TabsTrigger value="skillhub" className={installMethodTabTriggerClass}>
+        <TabsTrigger data-analytics-id={skillhubAnalyticsId} value="skillhub" className={installMethodTabTriggerClass}>
           {t('skillDetail.installMethodSkillhub')}
         </TabsTrigger>
-        <TabsTrigger value="clawhub" className={installMethodTabTriggerClass}>
+        <TabsTrigger data-analytics-id={clawhubAnalyticsId} value="clawhub" className={installMethodTabTriggerClass}>
           {t('skillDetail.installMethodClawhub')}
         </TabsTrigger>
       </TabsList>
       <TabsContent value="skillhub">
         {skillhubCommand
-          ? <CommandBlock command={skillhubCommand} />
+          ? <CommandBlock analyticsId={analyticsId} command={skillhubCommand} />
           : <p role="alert" className="text-sm text-destructive">{t('skillDetail.installCommandUnsafeVersion')}</p>}
       </TabsContent>
       <TabsContent value="clawhub">
-        <CommandBlock command={clawhubCommand} />
+        <CommandBlock analyticsId={analyticsId} command={clawhubCommand} />
       </TabsContent>
     </Tabs>
   )

@@ -70,6 +70,7 @@ export default defineConfig({
             items: [
               { text: 'Docker 部署', link: '/guide/deployment' },
               { text: 'Kubernetes 部署', link: '/guide/kubernetes' },
+              { text: '前端动作统计', link: '/guide/frontend-analytics' },
               { text: '技能头像与审核', link: '/guide/skill-avatars' },
             ],
           },
@@ -144,6 +145,7 @@ export default defineConfig({
             items: [
               { text: 'Deploy with Docker', link: '/en/guide/deployment' },
               { text: 'Deploy on Kubernetes', link: '/en/guide/kubernetes' },
+              { text: 'Frontend analytics', link: '/en/guide/frontend-analytics' },
               { text: 'Skill avatars and moderation', link: '/en/guide/skill-avatars' },
             ],
           },

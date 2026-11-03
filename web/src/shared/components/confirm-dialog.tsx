@@ -11,6 +11,8 @@ import {
 import { Button } from '@/shared/ui/button'
 
 interface ConfirmDialogProps {
+  confirmAnalyticsId?: string
+  cancelAnalyticsId?: string
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
@@ -35,6 +37,8 @@ export function ConfirmDialog({
   onConfirm,
   contentTestId,
   confirmButtonTestId,
+  confirmAnalyticsId,
+  cancelAnalyticsId,
   closeOnConfirm = true,
 }: ConfirmDialogProps) {
   const { t } = useTranslation()
@@ -61,16 +65,16 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!pendingRef.current) onOpenChange(next) }}>
-      <DialogContent data-testid={contentTestId} aria-label={title} hideClose={pending}>
+      <DialogContent closeAnalyticsId={cancelAnalyticsId} data-testid={contentTestId} aria-label={title} hideClose={pending}>
         <DialogHeader className="min-w-0 text-center sm:text-center">
           <DialogTitle className="text-center">{title}</DialogTitle>
           {description && <DialogDescription className="text-center break-all">{description}</DialogDescription>}
         </DialogHeader>
         <DialogFooter className="sm:justify-center sm:space-x-3">
-          <Button variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>
+          <Button data-analytics-id={cancelAnalyticsId} variant="outline" disabled={pending} onClick={() => onOpenChange(false)}>
             {resolvedCancelText}
           </Button>
-          <Button data-testid={confirmButtonTestId} variant={variant} disabled={pending} onClick={handleConfirm}>
+          <Button data-analytics-id={confirmAnalyticsId} data-testid={confirmButtonTestId} variant={variant} disabled={pending} onClick={handleConfirm}>
             {pending ? t('dialog.processing') : resolvedConfirmText}
           </Button>
         </DialogFooter>

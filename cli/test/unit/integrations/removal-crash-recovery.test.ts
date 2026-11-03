@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { openNativeRuntime } from '../../../src/integrations/native-runtime'
-import { InventoryStore, type Inventory } from '../../../src/stores/inventory-store'
+import { inventoryWithoutState, InventoryStore, type Inventory } from '../../../src/stores/inventory-store'
 
 interface Fixture { operationId: string; ownerId: string; path: string; retainedPath: string;
   quarantine: string | null; before: Inventory; content: string }
@@ -41,9 +41,9 @@ test.skipIf(process.platform === 'win32')('killed removal and recovery processes
       const result = await runtime.recover(fixture.operationId, fixture.ownerId, [fixture.path], async () => {})
       expect(result.outcome, `${boundary}/${mode}: ${result.reason}`).toBe(committed ? 'committed' : 'restored')
       const beforeItem = fixture.before.items[0]!
-      expect(await new InventoryStore(join(root, 'home')).read()).toEqual(committed
+      expect(inventoryWithoutState(await new InventoryStore(join(root, 'home')).read())).toEqual(inventoryWithoutState(committed
         ? { items: [{ ...beforeItem, targets: beforeItem.targets.filter(target => target.installDir !== fixture.path) }] }
-        : fixture.before)
+        : fixture.before))
       expect(await readFile(join(fixture.retainedPath, 'SKILL.md'), 'utf8')).toBe(fixture.content)
       if (committed || mode === 'stale') await expect(readFile(join(fixture.path, 'SKILL.md'))).rejects.toMatchObject({ code: 'ENOENT' })
       else expect(await readFile(join(fixture.path, 'SKILL.md'), 'utf8')).toBe(fixture.content)

@@ -31,7 +31,7 @@ export function SubscribeButton({ skillId, subscriptionCount, onRequireLogin }: 
   }
 
   return (
-    <Button
+    <Button data-analytics-id={subscriptionStatus.subscribed ? 'skill.subscription.remove' : 'skill.subscription.add'}
       variant={subscriptionStatus.subscribed ? 'default' : 'outline'}
       size="sm"
       className="justify-between"

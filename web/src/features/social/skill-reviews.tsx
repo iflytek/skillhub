@@ -57,7 +57,7 @@ function ReviewStars({ value, onChange, disabled = false }: {
     <div className="flex items-center gap-1" role="radiogroup" aria-label={t('skillReviews.scoreLabel')}>
       {[1, 2, 3, 4, 5].map((score) => (
         <span key={score}>
-          <input
+          <input data-analytics-id={score === 1 ? 'skill.comment.rating.one' : score === 2 ? 'skill.comment.rating.two' : score === 3 ? 'skill.comment.rating.three' : score === 4 ? 'skill.comment.rating.four' : 'skill.comment.rating.five'}
             id={`${ratingName}-${score}`}
             className="peer sr-only"
             type="radio"
@@ -140,14 +140,14 @@ function ReviewEditor({ skillId, review, onDone }: {
         <span className="text-xs text-muted-foreground">{reviewText.length}/2000</span>
         <div className="ml-auto flex flex-wrap justify-end gap-2">
           {review?.reviewed ? (
-            <Button variant="ghost" size="sm" onClick={handleDelete} disabled={pending}>
+            <Button data-analytics-id="skill.comment.delete" variant="ghost" size="sm" onClick={handleDelete} disabled={pending}>
               {t('skillReviews.delete')}
             </Button>
           ) : null}
-          <Button variant="outline" size="sm" onClick={onDone} disabled={pending}>
+          <Button data-analytics-id="skill.comment.cancel" variant="outline" size="sm" onClick={onDone} disabled={pending}>
             {t('skillReviews.cancel')}
           </Button>
-          <Button size="sm" onClick={handleSave} disabled={pending || !reviewText.trim()}>
+          <Button data-analytics-id="skill.comment.save" size="sm" onClick={handleSave} disabled={pending || !reviewText.trim()}>
             {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             {t('skillReviews.save')}
           </Button>
@@ -209,7 +209,7 @@ function ReviewRow({ skillId, review, canModerate }: {
       </div>
       {canModerate ? (
         <div className="flex justify-end">
-          <Button variant="ghost" size="sm" onClick={moderate} disabled={moderation.isPending}>
+          <Button data-analytics-id={hidden ? 'skill.comment.restore' : 'skill.comment.hide'} variant="ghost" size="sm" onClick={moderate} disabled={moderation.isPending}>
             <ShieldAlert className="mr-2 h-4 w-4" />
             {t(hidden ? 'skillReviews.restore' : 'skillReviews.hide')}
           </Button>
@@ -266,11 +266,11 @@ export function SkillReviews({ skillId, canInteract, onRequireLogin }: SkillRevi
           </p>
         </div>
         {canInteract && !editing ? (
-          <Button variant="outline" onClick={startEditing}>
+          <Button data-analytics-id="skill.comment.edit" variant="outline" onClick={startEditing}>
             {mine.data?.reviewed ? t('skillReviews.edit') : t('skillReviews.write')}
           </Button>
         ) : !canInteract && isAuthenticated && mine.data?.reviewed ? (
-          <Button variant="outline" onClick={deleteUnavailableReview} disabled={clearMine.isPending}>
+          <Button data-analytics-id="skill.comment.delete" variant="outline" onClick={deleteUnavailableReview} disabled={clearMine.isPending}>
             {t('skillReviews.delete')}
           </Button>
         ) : null}
@@ -315,11 +315,11 @@ export function SkillReviews({ skillId, canInteract, onRequireLogin }: SkillRevi
 
       {page > 0 || totalPages > 1 ? (
         <div className="flex items-center justify-end gap-2 border-t border-border/50 pt-4">
-          <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>
+          <Button data-analytics-id="skill.comment.previous" variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((value) => value - 1)}>
             {t('skillReviews.previous')}
           </Button>
           <span className="text-xs text-muted-foreground">{page + 1}/{Math.max(totalPages, 1)}</span>
-          <Button variant="outline" size="sm" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => value + 1)}>
+          <Button data-analytics-id="skill.comment.next" variant="outline" size="sm" disabled={page + 1 >= totalPages} onClick={() => setPage((value) => value + 1)}>
             {t('skillReviews.next')}
           </Button>
         </div>

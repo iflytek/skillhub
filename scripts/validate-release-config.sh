@@ -98,6 +98,38 @@ validate_url() {
   esac
 }
 
+validate_device_auth_verification_uri() {
+  device_uri=${DEVICE_AUTH_VERIFICATION_URI:-}
+  # Unlike a base URL, this is a complete destination. Blank means derive it
+  # in the backend; custom destinations may include query/fragment components.
+  if [ -z "$(printf '%s' "$device_uri" | tr -d '[:space:]')" ]; then
+    return 0
+  fi
+  case "$device_uri" in
+    *[[:space:]]*|*'\'*)
+      error "DEVICE_AUTH_VERIFICATION_URI must be a valid HTTP(S) URL or root-relative path"
+      return 0
+      ;;
+    //*)
+      error "DEVICE_AUTH_VERIFICATION_URI must not be a scheme-relative URL"
+      return 0
+      ;;
+    /*) return 0 ;;
+  esac
+  case "$device_uri" in
+    [hH][tT][tT][pP]://*|[hH][tT][tT][pP][sS]://*)
+      device_authority=${device_uri#*://}
+      device_authority=${device_authority%%[/?#]*}
+      case "$device_authority" in
+        ""|:*|*@*)
+          error "DEVICE_AUTH_VERIFICATION_URI must include a host without credentials"
+          ;;
+      esac
+      ;;
+    *) error "DEVICE_AUTH_VERIFICATION_URI must be an HTTP(S) URL or root-relative path" ;;
+  esac
+}
+
 validate_web_api_base_url() {
   var_name="$1"
   eval "var_value=\${$var_name:-}"
@@ -139,7 +171,7 @@ validate_web_base_path_format() {
     first_segment=${value#/}
     first_segment=${first_segment%%/*}
     case "$first_segment" in
-      api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js)
+      api|oauth2|login|assets|registry|nginx-health|.well-known|runtime-config.js|_skillhub-analytics)
         error "SKILLHUB_WEB_BASE_PATH must not start with a segment reserved by the SkillHub server ($first_segment); it would shadow the server's own Nginx location: $value"
         ;;
     esac
@@ -381,9 +413,7 @@ validate_web_base_path_format
 validate_public_base_path_alignment
 validate_api_base_path_alignment
 
-if [ -n "${DEVICE_AUTH_VERIFICATION_URI:-}" ]; then
-  validate_url DEVICE_AUTH_VERIFICATION_URI
-fi
+validate_device_auth_verification_uri
 
 if [ "${SESSION_COOKIE_SECURE:-true}" != "true" ]; then
   warn "SESSION_COOKIE_SECURE is not true; only acceptable behind plain HTTP during temporary local verification"

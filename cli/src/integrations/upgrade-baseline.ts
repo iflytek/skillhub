@@ -1,3 +1,6 @@
+import { assertChangeTreeBudget } from './change-tree-budget'
+import { createHash } from 'node:crypto'
+import { snapshotSkillDirectory } from '../services/skill-fingerprint'
 import { captureInstallInventory } from '../services/inventory-cas'
 import { realpath } from 'node:fs/promises'
 import { isAbsolute, join, resolve } from 'node:path'
@@ -14,7 +17,7 @@ import { assertOwnedRegularTree } from './recovery-files'
 /** Read-only preparation. Execution must compare this complete snapshot again under mutation locks. */
 export async function inspectUpgradeBaseline(store: Pick<InventoryStore, 'read'>,
   selected: Pick<InventoryItem, 'registry' | 'namespace' | 'slug'> & { version: string },
-  approvedRoots: readonly InstalledProjectionTarget[]): Promise<UpgradeBaseline> {
+  approvedRoots: readonly InstalledProjectionTarget[], allowLocalChanges = false): Promise<UpgradeBaseline> {
   const inventory = structuredClone(await store.read())
   const matches = inventory.items.filter(item => sameInstalledSkillSource(item, selected))
   const whole = matches[0]
@@ -55,6 +58,7 @@ export async function inspectUpgradeBaseline(store: Pick<InventoryStore, 'read'>
       if (await realpath(target.rootDir) !== target.rootDir || await realpath(target.installDir) !== target.installDir) {
         return { status: 'blocked', reason: 'target-alias' }
       }
+      if (allowLocalChanges) await assertChangeTreeBudget(target.installDir)
       await assertOwnedRegularTree(target.installDir)
       const read = await readInstalledSkillMetadata(target.installDir)
       if (read.status !== 'valid') return { status: 'blocked', reason: 'metadata-invalid' }
@@ -64,8 +68,19 @@ export async function inspectUpgradeBaseline(store: Pick<InventoryStore, 'read'>
         || metadata.agent !== 'dsh' || metadata.installedAt !== target.installedAt) {
         return { status: 'blocked', reason: 'metadata-invalid' }
       }
-      const snapshot = await snapshotInstalledSkillDirectory(item, target)
-      if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) {
+      const original = createHash('sha256')
+      for (const path of Object.keys(metadata.files).sort()) original.update(`${path}:${metadata.files[path]}\n`, 'utf8')
+      if (`sha256:${original.digest('hex')}` !== target.fingerprint) return { status: 'blocked', reason: 'metadata-invalid' }
+      let snapshot
+      if (allowLocalChanges) {
+        snapshot = await snapshotSkillDirectory(target.installDir)
+        if (target.installationState === 'disabled') {
+          if ('SKILL.md' in snapshot.files || 'SKILL.md.disabled' in metadata.files) return { status: 'blocked', reason: 'entry-conflict' }
+          if (snapshot.files['SKILL.md.disabled']) snapshot.files['SKILL.md'] = snapshot.files['SKILL.md.disabled']!
+          delete snapshot.files['SKILL.md.disabled']
+        } else if ('SKILL.md.disabled' in snapshot.files && !('SKILL.md.disabled' in metadata.files)) return { status: 'blocked', reason: 'entry-conflict' }
+      } else snapshot = await snapshotInstalledSkillDirectory(item, target)
+      if (!allowLocalChanges && (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files))) {
         return { status: 'blocked', reason: 'local-changes' }
       }
       targets.push({ scope: approvedRoots.find(root => root.root === target.rootDir)!.scope,

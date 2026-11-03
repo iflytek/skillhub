@@ -45,7 +45,7 @@ export function NotificationDropdown({ onClose }: Props) {
         <span className="text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
           {t('notification.title')}
         </span>
-        <button
+        <button data-analytics-id="notification.all.read"
           type="button"
           onClick={handleMarkAllRead}
           disabled={markAllRead.isPending || notifications.length === 0}
@@ -72,7 +72,7 @@ export function NotificationDropdown({ onClose }: Props) {
               {(() => {
                 const display = resolveNotificationDisplay(item, i18n.language)
                 return (
-              <Link
+              <Link data-analytics-id={item.targetRoute?.startsWith('/') && !item.targetRoute.startsWith('//') ? 'notification.target.provided.open' : item.entityType?.toLowerCase() === 'review' ? item.entityId ? 'notification.review.detail.open' : 'notification.review.list.open' : item.entityType?.toLowerCase() === 'report' ? 'notification.report.open' : item.entityType?.toLowerCase() === 'promotion' ? 'notification.promotion.open' : 'notification.fallback.open'}
                 to={resolveNotificationTarget(item)}
                 onClick={() => handleItemClick(item)}
                 className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-muted"
@@ -102,7 +102,7 @@ export function NotificationDropdown({ onClose }: Props) {
 
       {/* Footer */}
       <div className="px-4 py-2.5 border-t text-center" style={{ borderColor: 'hsl(var(--border))' }}>
-        <Link
+        <Link data-analytics-id="notification.list.open"
           to="/dashboard/notifications"
           onClick={onClose}
           className="text-xs hover:opacity-70 transition-opacity"
