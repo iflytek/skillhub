@@ -25,18 +25,27 @@ async function boot(tab, catalog = true) {
   await tab.addLocatorHandler(gettingStarted, async () => { await gettingStarted.getByRole('button', { name: /^(Close|关闭)$/ }).click(); });
   if (catalog) {
     await center.click();
-    await tab.getByRole('combobox', { name: '技能来源', exact: true }).waitFor();
+    await tab.getByRole('button', { name: '查看当前来源', exact: true }).waitFor();
+    assert.equal(await tab.getByRole('combobox', { name: '技能来源', exact: true }).count(), 0);
   } else {
     await tab.getByText(/^(Plugins|插件)$/, { exact: true }).first().click();
   }
 }
 async function select(tab, label) {
-  await tab.getByRole('combobox', { name: '技能来源', exact: true }).click();
-  await tab.getByRole('option', { name: label, exact: true }).click();
+  await tab.getByText(/^(Plugins|插件)$/, { exact: true }).first().click();
+  await tab.getByText('@astron-team/skillhub-dsh', { exact: true }).first().click();
+  const form = tab.getByRole('form', { name: 'SkillHub 配置' }); await form.waitFor();
+  const radio = label === '未连接来源' ? form.getByRole('radio', { name: '不连接技能来源', exact: false }) : form.getByRole('radio', { name: new RegExp('^选择来源 \\d+：' + label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$') });
+  await radio.check();
+  await form.getByRole('button', { name: '保存配置', exact: true }).click();
+  await form.getByText('配置已保存。', { exact: true }).waitFor();
+  await tab.getByRole('button', { name: '技能中心', exact: true }).click();
 }
 async function selected(tab, label) {
-  await tab.waitForFunction(label => [...document.querySelectorAll('[role="combobox"]')].some(element => element.getAttribute('aria-label') === '技能来源' && element.textContent.trim() === label), label);
+  const expected = label === '未连接来源' ? '尚未配置来源' : label.startsWith('来源 A') ? 'http://127.0.0.1:43219' : 'http://127.0.0.1:43220';
+  await tab.waitForFunction(expected => document.querySelector('[aria-label="查看当前来源"]')?.getAttribute('title') === expected, expected);
 }
+
 try {
   stage = 'boot-primary'; await boot(page, verifyRestart);
   if (!verifyRestart) {
@@ -45,19 +54,15 @@ try {
     await page.getByText(/^(Plugins|插件)$/, { exact: true }).first().click();
     await page.getByText('@astron-team/skillhub-dsh', { exact: true }).first().click();
     const form = page.getByRole('form', { name: 'SkillHub 配置' }); await form.waitFor();
-    const names = form.getByRole('textbox', { name: /^来源 \d+ 名称$/ });
-    assert((await names.count()) <= 2, 'Dedicated fixture must not contain unrelated saved sources');
-    const existingSources = await names.count();
-    for (let index = existingSources; index < 2; index++) {
+    const rows = form.locator('.astron-sh-source-entry');
+    assert((await rows.count()) <= 3, 'Dedicated fixture must not contain unrelated saved sources');
+    while (await rows.count()) await form.getByRole('button', { name: '移除来源 1', exact: true }).click();
+    for (const [index, name, port] of [[1, '来源 A', 43219], [2, '来源 B', 43220]]) {
       await form.getByRole('button', { name: '添加来源', exact: true }).click();
-      await form.getByLabel(`来源 ${index + 1} 名称`, { exact: true }).waitFor();
+      await form.getByLabel(`来源 ${index} 名称`, { exact: true }).fill(name);
+      await form.getByLabel(`来源 ${index} 地址`, { exact: true }).fill(`http://127.0.0.1:${port}`);
     }
-    await form.getByLabel('来源 1 名称', { exact: true }).fill('来源 A（准备）');
-    await form.getByLabel('来源 1 名称', { exact: true }).fill('来源 A');
-    await form.getByLabel('来源 1 地址', { exact: true }).fill('http://127.0.0.1:43219');
-    await form.getByLabel('来源 2 名称', { exact: true }).fill('来源 B');
-    await form.getByLabel('来源 2 地址', { exact: true }).fill('http://127.0.0.1:43220');
-    await form.getByLabel('Registry 地址', { exact: true }).fill('http://127.0.0.1:43220');
+    await form.getByRole('radio', { name: '选择来源 2：来源 B', exact: true }).check();
     await form.getByRole('button', { name: '保存配置', exact: true }).click();
     await form.getByText('配置已保存。', { exact: true }).waitFor();
     await page.getByRole('button', { name: '技能中心', exact: true }).click();
@@ -69,9 +74,12 @@ try {
     await page.getByText(/^(Plugins|插件)$/, { exact: true }).first().click();
     await page.getByText('@astron-team/skillhub-dsh', { exact: true }).first().click();
     const form = page.getByRole('form', { name: 'SkillHub 配置' }); await form.waitFor();
+    assert(await form.getByRole('radio', { name: '选择来源 2：来源 B', exact: true }).isChecked());
+    await form.getByRole('button', { name: '编辑来源 1', exact: true }).click();
     assert.equal(await form.getByLabel('来源 1 名称', { exact: true }).inputValue(), '来源 A');
+    await form.getByRole('button', { name: '编辑来源 2', exact: true }).click();
     assert.equal(await form.getByLabel('来源 2 名称', { exact: true }).inputValue(), '来源 B');
-    assert.equal(await form.getByLabel('Registry 地址', { exact: true }).inputValue(), 'http://127.0.0.1:43220');
+    assert.equal(await form.getByLabel('来源 2 地址', { exact: true }).inputValue(), 'http://127.0.0.1:43220');
     await page.screenshot({ path: join(output, 'registry-switching-restart.png') });
     assert.deepEqual(errors, []);
     const result = { passed: true, realHost: true, modelCalled: false, restartVerified: true, namedSourcesPersisted: true, selectedSourcePersisted: true };
@@ -95,16 +103,19 @@ try {
   stage = 'config-cas'; await page.getByText(/^(Plugins|插件)$/, { exact: true }).first().click();
   await page.getByText('@astron-team/skillhub-dsh', { exact: true }).first().click();
   const form = page.getByRole('form', { name: 'SkillHub 配置' }); await form.waitFor();
+  await form.getByRole('button', { name: '编辑来源 1', exact: true }).click();
   await form.getByLabel('来源 1 名称', { exact: true }).fill('来源 A（保存验证）');
   await select(other, '来源 A');
   await form.getByRole('button', { name: '保存配置', exact: true }).click();
   await form.getByText('配置未保存，可能已被其他页面修改。请重置修改后再试。', { exact: true }).waitFor();
   await form.getByRole('button', { name: '重置修改', exact: true }).click();
+  await form.getByRole('button', { name: '编辑来源 1', exact: true }).click();
   await form.getByLabel('来源 1 名称', { exact: true }).fill('来源 A（保存验证）');
   await form.getByRole('button', { name: '保存配置', exact: true }).click();
   await form.getByText('配置已保存。', { exact: true }).waitFor();
   await selected(other, '来源 A（保存验证）');
   await page.screenshot({ path: join(output, 'registry-switching-settings.png') });
+  await form.getByRole('button', { name: '编辑来源 1', exact: true }).click();
   await form.getByLabel('来源 1 名称', { exact: true }).fill('来源 A');
   await form.getByRole('button', { name: '保存配置', exact: true }).click();
   await selected(other, '来源 A');

@@ -2,7 +2,6 @@ import { createRoot } from 'react-dom/client';
 import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client';
 import type { SkillHubConfig } from '../../src/host/types.js';
 import { ConfigPage } from '../../src/client/config-page.js';
-import { RegistryConfiguration, RegistrySelector } from '../../src/client/registry-selector.js';
 import { NativeControlStyles } from '../../src/client/native-control-styles.js';
 
 let snapshot: ConfigFormSnapshot<SkillHubConfig> = { status: 'ready', revision: 1, writable: true, base: {}, user: {}, value: {
@@ -11,12 +10,15 @@ let snapshot: ConfigFormSnapshot<SkillHubConfig> = { status: 'ready', revision: 
 } };
 const listeners = new Set<() => void>();
 const writes: { revision: number | undefined; paths: string[][] }[] = [];
+let releaseWrite: (() => void) | undefined;
+let holdWrites = false;
 const notify = () => listeners.forEach(listener => listener());
 const form: ConfigForm<SkillHubConfig> = {
   getSnapshot: () => snapshot,
   subscribe: listener => { listeners.add(listener); return () => { listeners.delete(listener); }; },
   mutate: async (operations, revision) => {
     writes.push({ revision, paths: operations.map(op => op.path.map(String)) });
+    if (holdWrites) await new Promise<void>(resolve => { releaseWrite = resolve; });
     if (!snapshot.writable || revision !== snapshot.revision) return false;
     const value = structuredClone(snapshot.value!);
     for (const operation of operations) {
@@ -31,15 +33,17 @@ const form: ConfigForm<SkillHubConfig> = {
   },
   set: async () => false, unset: async () => false,
 };
-const connection = new RegistryConfiguration();
-const unbind = connection.bind(form);
 Object.assign(window, { registryFixture: {
+  holdWrites: () => { holdWrites = true; },
+  releaseWrite: () => { holdWrites = false; releaseWrite?.(); },
   state: () => snapshot,
   writes: () => writes,
+  replaceSources: () => { snapshot = { ...snapshot, revision: snapshot.revision! + 1, value: { ...snapshot.value!, registryUrl: 'https://b.example', savedRegistries: [{ name: '替换来源', url: 'https://replacement.example' }, { name: '来源 B', url: 'https://b.example' }] } }; notify(); },
+  legacyCurrent: () => { snapshot = { ...snapshot, revision: snapshot.revision! + 1, value: { ...snapshot.value!, registryUrl: 'https://legacy.example', savedRegistries: [{ name: '来源 A', url: 'https://a.example' }, { name: '来源 B', url: 'https://b.example' }] } }; notify(); },
   readonly: () => { snapshot = { ...snapshot, writable: false }; notify(); },
-  unavailable: () => unbind(),
+  unavailable: () => { snapshot = { ...snapshot, status: 'unavailable', value: undefined }; notify(); },
+  externalSource: () => { snapshot = { ...snapshot, revision: snapshot.revision! + 1, value: { ...snapshot.value!, registryUrl: snapshot.value!.savedRegistries![1]!.url } }; notify(); },
 } });
 createRoot(document.getElementById('root')!).render(<main className="skillhub-controls"><NativeControlStyles />
-  <section aria-label="快速切换"><RegistrySelector configuration={connection} /></section>
   <ConfigPage form={form} testConnection={async () => { throw new Error('not exercised'); }} />
 </main>);
