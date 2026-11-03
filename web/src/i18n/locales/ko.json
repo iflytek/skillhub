@@ -533,6 +533,7 @@
     "userId": "사용자 ID"
   },
   "sidebar": {
+    "authoring": "스킬 작성",
     "account": "계정",
     "profile": "프로필",
     "security": "보안",
@@ -3579,6 +3580,96 @@
     "SUBSCRIPTION_VERSION_YANKED": {
       "title": "구독한 스킬 버전 배포 철회",
       "description": "{{skillName}}{{versionSuffix}} 버전의 배포가 철회되었습니다."
+    }
+  },
+  "authoring": {
+    "ui": {
+      "loading": "불러오는 중…",
+      "cancel": "취소",
+      "delete": "삭제",
+      "create": "만들기",
+      "submitting": "처리 중…",
+      "loadFailed": "데이터를 불러올 수 없습니다.",
+      "retry": "다시 시도"
+    },
+    "list": {
+      "title": "스킬 작성",
+      "subtitle": "비공개 초안을 만들고 편집한 후 패키지 구조를 검사합니다.",
+      "create": "새 초안",
+      "empty": "아직 초안이 없습니다.",
+      "colName": "이름",
+      "colRevision": "수정 버전",
+      "colValidated": "검증",
+      "colUpdated": "수정 시각",
+      "colActions": "작업",
+      "validated": "구조 검증 완료",
+      "notValidated": "검증되지 않음",
+      "deleteTitle": "초안 삭제",
+      "deleteDescription": "초안 “{{name}}”과 모든 파일을 삭제하시겠습니까? 되돌릴 수 없습니다.",
+      "created": "초안을 만들었습니다.",
+      "deleted": "초안을 삭제했습니다.",
+      "createTitle": "스킬 초안 만들기",
+      "createDescription": "편집하고 검증할 수 있는 SKILL.md 템플릿으로 시작합니다.",
+      "fieldNamespace": "네임스페이스",
+      "namespacePlaceholder": "네임스페이스 선택",
+      "fieldName": "스킬 이름",
+      "fieldRequirement": "요구 사항 (선택 사항)",
+      "requirementPlaceholder": "이 스킬은 어떤 작업을 해야 하나요?"
+    },
+    "detail": {
+      "back": "모든 초안",
+      "validate": "구조 검사",
+      "starting": "시작 중…",
+      "tabRuns": "검증 실행 기록",
+      "noRuns": "아직 검증 기록이 없습니다.",
+      "loadFailed": "초안을 불러올 수 없습니다.",
+      "structureOnly": "패키지 구조만 검사합니다. 스크립트를 실행하거나 동작을 평가하거나 스킬을 게시하지 않습니다.",
+      "saveFirst": "검증 전에 변경 사항을 저장하거나 취소하세요."
+    },
+    "files": {
+      "save": "저장",
+      "saved": "파일을 저장했습니다.",
+      "create": "파일 만들기",
+      "created": "파일을 만들었습니다.",
+      "exists": "같은 경로에 파일이 있습니다. 다른 경로를 선택하세요.",
+      "delete": "삭제",
+      "deleted": "파일을 삭제했습니다.",
+      "empty": "파일이 없습니다.",
+      "unsaved": "저장되지 않은 변경 사항",
+      "upload": "파일 업로드",
+      "uploadConfirm": "업로드",
+      "uploading": "업로드 중…",
+      "uploaded": "파일을 업로드했습니다.",
+      "path": "경로",
+      "size": "크기",
+      "binaryHint": "바이너리 파일은 텍스트로 편집할 수 없습니다. 새 파일을 업로드하여 교체하세요.",
+      "replaceHint": "기존 경로에 업로드하면 해당 파일이 교체됩니다.",
+      "discardTitle": "저장하지 않은 변경 사항을 취소할까요?",
+      "discardDescription": "저장하지 않은 변경 사항이 사라집니다.",
+      "deleteTitle": "파일을 삭제할까요?",
+      "deleteDescription": "초안에서 {{path}} 파일을 삭제할까요? 저장하지 않은 변경 사항도 사라집니다.",
+      "content": "파일 내용",
+      "title": "초안 파일",
+      "reload": "파일 다시 불러오기"
+    },
+    "run": {
+      "revision": "수정 버전",
+      "errors": "오류 {{count}}개",
+      "warnings": "경고 {{count}}개",
+      "cancel": "실행 취소",
+      "noFindings": "기록된 문제가 없습니다.",
+      "waiting": "검증 중입니다. 결과가 여기에 표시됩니다.",
+      "error": "오류",
+      "warning": "경고",
+      "status": {
+        "QUEUED": "대기 중",
+        "PREPARING": "준비 중",
+        "RUNNING": "실행 중",
+        "SUCCEEDED": "성공",
+        "FAILED": "실패",
+        "CANCELLED": "취소됨",
+        "TIMED_OUT": "시간 초과"
+      }
     }
   }
 }

@@ -62,6 +62,12 @@ import type {
   BatchMemberResponse,
   SkillSuite,
   SkillSuiteDraftInput,
+  AuthoringDraft,
+  DraftFileSummary,
+  DraftFileContent,
+  SaveDraftFileOutcome,
+  ValidationRunInfo,
+  ValidationFindingInfo,
 } from './types'
 import { ApiError } from '@/shared/lib/api-error'
 import i18n from '@/i18n/config'
@@ -2281,4 +2287,102 @@ export const notificationApi = {
       body: JSON.stringify({ preferences }),
     })
   },
+}
+
+export const authoringApi = {
+  async listDrafts(): Promise<AuthoringDraft[]> {
+    return fetchJson<AuthoringDraft[]>(`${WEB_API_PREFIX}/authoring/drafts`)
+  },
+
+  async createDraft(request: components['schemas']['CreateDraftRequest']): Promise<AuthoringDraft> {
+    return fetchJson<AuthoringDraft>(`${WEB_API_PREFIX}/authoring/drafts`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify(request),
+    })
+  },
+
+  async getDraft(draftId: number): Promise<AuthoringDraft> {
+    return fetchJson<AuthoringDraft>(`${WEB_API_PREFIX}/authoring/drafts/${draftId}`)
+  },
+
+  async deleteDraft(draftId: number): Promise<void> {
+    await fetchJson<null>(`${WEB_API_PREFIX}/authoring/drafts/${draftId}`, {
+      method: 'DELETE',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async listFiles(draftId: number): Promise<DraftFileSummary[]> {
+    return fetchJson<DraftFileSummary[]>(`${WEB_API_PREFIX}/authoring/drafts/${draftId}/files`)
+  },
+
+  async readFile(draftId: number, path: string): Promise<DraftFileContent> {
+    const query = new URLSearchParams({ path })
+    return fetchJson<DraftFileContent>(
+      `${WEB_API_PREFIX}/authoring/drafts/${draftId}/files/content?${query.toString()}`,
+    )
+  },
+
+  async saveFile(
+    draftId: number,
+    request: Omit<components['schemas']['SaveDraftFileRequest'], 'encoding'> & { base64?: boolean },
+  ): Promise<SaveDraftFileOutcome> {
+    return fetchJson<SaveDraftFileOutcome>(`${WEB_API_PREFIX}/authoring/drafts/${draftId}/files`, {
+      method: 'PUT',
+      headers: await ensureCsrfHeaders({
+        'Content-Type': 'application/json',
+      }),
+      body: JSON.stringify({
+        path: request.path,
+        content: request.content,
+        encoding: request.base64 ? 'base64' : undefined,
+        contentType: request.contentType,
+        expectedRevision: request.expectedRevision,
+      }),
+    })
+  },
+
+  async deleteFile(draftId: number, path: string, expectedRevision?: number): Promise<void> {
+    const query = new URLSearchParams({ path })
+    if (expectedRevision !== undefined) {
+      query.set('expectedRevision', String(expectedRevision))
+    }
+    await fetchJson<null>(
+      `${WEB_API_PREFIX}/authoring/drafts/${draftId}/files?${query.toString()}`,
+      {
+        method: 'DELETE',
+        headers: await ensureCsrfHeaders(),
+      },
+    )
+  },
+
+  async startRun(draftId: number): Promise<ValidationRunInfo> {
+    return fetchJson<ValidationRunInfo>(`${WEB_API_PREFIX}/authoring/drafts/${draftId}/runs`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async listRuns(draftId: number): Promise<ValidationRunInfo[]> {
+    return fetchJson<ValidationRunInfo[]>(`${WEB_API_PREFIX}/authoring/drafts/${draftId}/runs`)
+  },
+
+  async getRun(runId: number): Promise<ValidationRunInfo> {
+    return fetchJson<ValidationRunInfo>(`${WEB_API_PREFIX}/authoring/runs/${runId}`)
+  },
+
+  async cancelRun(runId: number): Promise<ValidationRunInfo> {
+    return fetchJson<ValidationRunInfo>(`${WEB_API_PREFIX}/authoring/runs/${runId}/cancel`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders(),
+    })
+  },
+
+  async listFindings(runId: number): Promise<ValidationFindingInfo[]> {
+    return fetchJson<ValidationFindingInfo[]>(`${WEB_API_PREFIX}/authoring/runs/${runId}/findings`)
+  },
+
 }
