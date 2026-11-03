@@ -1,30 +1,87 @@
 # 配置与查看安全扫描
 
-## 作者和审核员怎么查看
+本页说明技能作者、审核员如何判读版本扫描报告，以及部署方如何配置和诊断 Scanner。报告提供风险发现与执行证据，不代替人工审核，也不保证技能在 Agent 中的实际行为。头像机器审核属于另一条处理链路，参见[技能头像与审核](./skill-avatars.html)。
 
-发布后在技能详情或审核页查看本次版本的扫描状态、报告与发现项。先核对版本，再查看严重级别、受影响文件和说明；不能把旧版本报告用于新版本。
+## 前置条件与职责
 
-- `SCANNING`：尚未完成，普通提审版本不能据此批准。
-- `SCAN_FAILED`：执行失败，需要查看原因并重试，不等于判定有害。
-- 已完成且有发现项：根据风险与策略处理，不等于执行失败；人工审核仍需判断。
-- 未启用或没有报告：不是“零风险”。PRIVATE 路径可在禁用扫描时上传；普通 PUBLIC / NAMESPACE_ONLY 发布要求扫描启用。
-
-### 部署方排查顺序
-
-以下命令由有本实例容器或目标命名空间操作权限的部署方执行；普通技能作者提供版本与报告信息，不要把业务角色当作主机操作权限。先选择实际部署路径。Compose 命令在包含本次 `.env.release` 与 `compose.release.yml` 的目录执行；Kubernetes 命令以 Kustomize 默认命名空间 `skillhub` 为例。Helm 实例先按 [Chart README](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/README.md) 核对 Deployment 名称，不要混用两条部署路径。
-
-下列探测参数只约束本次诊断请求，不修改后台扫描任务配置。
-
-| 操作 | 示例值 | 影响范围 | 说明 |
+| 操作 | 执行主体 | 前置条件 | 说明 |
 | --- | --- | --- | --- |
-| `wget -T` | 5秒 | DNS、连接和读取阶段超时 | 不代表整个扫描任务的超时。 |
-| `wget -t` | 1次 | 本次健康请求的尝试次数 | 不触发技能扫描或修改任务状态。 |
+| 读取报告 | 已登录且有报告访问权限的账号 | 技能及目标版本可定位 | 技能详情或审核详情中核对版本；公开可见不代表匿名可读报告。 |
+| 修订内容 | 技能作者 | 具有版本更新权限 | 根据发现项修改包，再沿发布流程提交，不修改历史报告。 |
+| 审核决策 | 具有目标命名空间审核权限的账号 | 读取本次提交及扫描状态 | 扫描完成不等于批准。 |
+| 配置与诊断 | 部署方 | 具有容器或集群操作权限 | 业务角色不自动授予主机操作权限。 |
 
-1. 核对注册中心容器声明的开关和模式，再从同一容器检查默认 `/health`。命令只回显 `true` / `false`、`local` / `upload` 与三个官方默认地址的固定主机名；其他值使用固定脱敏标记，不回显原配置。包含用户信息、查询、fragment、空白或非保守 HTTP(S) 形态的 URL 会跳过探测；这只是诊断限制，不是注册中心的 URL 配置校验。缺失变量使用应用默认值；额外 Spring 配置与自定义健康路径须在实例受保护配置中核对。
+![扫描执行、报告判读与人工审核之间的关系](/diagrams/scan-result-flow.svg)
 
-   Compose：
+*图：扫描任务产生报告；执行失败与风险发现分别处置，人工审核独立判断。*
 
-   ```bash
+## 判读本次版本报告
+
+1. 在技能详情或审核详情选择目标版本。先记录版本与扫描时间，避免将旧报告用于新内容。
+2. 检查 `failureReason` 和 `scannedAt`，区分任务未完成、执行失败和已生成结果。`SCAN_FAILED` 表示执行失败，不表示已认定内容有害。
+3. 对已完成报告，结合 `verdict`、`isSafe`、`maxSeverity` 和 `findings` 阅读机器结果；逐项核对文件位置、说明与修复措施，不能只查看发现数量。
+4. 作者修订问题后提交新版本；审核员依据本次内容与报告作出批准或拒绝决定。版本仍在 `SCANNING` 时不能按普通提审路径批准，具体流程见[审核技能与套装](./review.html)。
+
+以下是报告字段的示例节选，不是真实实例结果；接口按技能和版本返回扫描报告列表。
+
+```json
+{
+  "verdict": "DANGEROUS",
+  "isSafe": false,
+  "maxSeverity": "HIGH",
+  "findingsCount": 1,
+  "findings": [{
+    "ruleId": "EXAMPLE_RULE",
+    "severity": "HIGH",
+    "filePath": "scripts/example.py",
+    "lineNumber": 12,
+    "message": "Example finding",
+    "remediation": "Review the indicated operation"
+  }],
+  "failureReason": null
+}
+```
+
+| 机器结果 | 映射依据 | 处置依据 | 说明 |
+| --- | --- | --- | --- |
+| `SAFE` | Scanner 返回 `is_safe=true` | 仍须核对内容、依赖及适用场景 | 是机器判定，不是安全保证。 |
+| `BLOCKED` | 非上述结果且最高级别为 `CRITICAL` | 重点核查发现项及危险操作 | 枚举名称不等于注册中心已自动拒绝审核。 |
+| `DANGEROUS` | 非上述结果且最高级别为 `HIGH` | 核查风险证据与修订内容 | 不等于扫描执行失败。 |
+| `SUSPICIOUS` | 其他非 `SAFE` 结果，包括级别缺失 | 阅读具体发现及报告完整性 | 不得因级别较低直接认定可发布。 |
+
+映射与字段依据：[Scanner 适配器](https://github.com/iflytek/skillhub/blob/main/server/skillhub-infra/src/main/java/com/iflytek/skillhub/infra/scanner/SkillScannerAdapter.java)、[报告接口](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/portal/SecurityAuditController.java)和[扫描状态处理](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/security/SecurityScanService.java)。
+
+## 配置扫描与确认生效
+
+下表是本页涉及的应用绑定。变量必须实际传入注册中心容器；仅在 `.env.release` 增加清单未引用的键不会生效。Compose 修改后重新创建注册中心；Kubernetes 更新覆盖配置并滚动受影响 Deployment。完整配置以[应用配置](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/resources/application.yml)及[Scanner 配置说明](https://github.com/iflytek/skillhub/blob/main/scanner/docs/configuration.md)为准。
+
+| 配置项 | 应用默认与部署覆盖 | 影响 | 说明 |
+| --- | --- | --- | --- |
+| `SKILLHUB_SECURITY_SCANNER_ENABLED` | 应用、release Compose、Kustomize、Helm 为 `true`；运行脚本 `--no-scanner` 为 `false` | 关闭后拒绝普通新非私有上传 | 生效需重建或滚动。 |
+| `SKILLHUB_SECURITY_SCANNER_URL` | 应用 `http://localhost:8000`；Compose `http://skill-scanner:8000`；Kustomize `http://skillhub-scanner:8000`；Helm 按 release 生成 | 注册中心访问 Scanner 的地址 | 生效需重建或滚动。 |
+| `SKILLHUB_SECURITY_SCANNER_MODE` | 应用 `local`；Compose、Kustomize、Helm 覆盖为 `upload` | `local` 需双方共享相同目录路径；`upload` 传包 | 生效需重建或滚动。 |
+| `SKILLHUB_SCANNER_POLICY_PRESET` | `balanced`；可选 `strict`、`permissive` | 传给 Scanner 的分析策略 | 显式透传并重建后生效。 |
+| `SKILLHUB_SCANNER_FAIL_ON_SEVERITY` | 配置声明为 `high` | 当前适配器未将此字段传入扫描选项 | 不得将其视为已实现的自动发布阻断保障。 |
+| `SKILLHUB_SCANNER_USE_BEHAVIORAL` / `SKILLHUB_SCANNER_USE_META` | `true` / `false` | 行为与元数据分析开关 | 显式透传并重建注册中心。 |
+| `SKILLHUB_SCANNER_USE_AI_DEFENSE` / `SKILLHUB_SCANNER_USE_VIRUSTOTAL` | 均为 `false` | 可选外部检测引擎 | 除开关外须配置相应服务凭据；重建受影响服务。 |
+| `SKILLHUB_SCANNER_USE_LLM` / `SKILLHUB_SCANNER_LLM_PROVIDER` | `false` / `anthropic`；提供方可选 `openai`、`azure` | 开启外部模型分析 | 注册中心重建；Scanner 侧另配 `SKILL_SCANNER_LLM_API_KEY`，可配 `SKILL_SCANNER_LLM_BASE_URL`、`SKILL_SCANNER_LLM_MODEL`；密钥变更后重建对应服务。 |
+
+策略选项依据[装配代码](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/config/SkillScannerConfig.java)与[扫描选项](https://github.com/iflytek/skillhub/blob/main/server/skillhub-infra/src/main/java/com/iflytek/skillhub/infra/scanner/ScanOptions.java)。LLM 分析可能向配置的外部服务发送内容并产生费用；启用前由部署方核对数据范围与服务条款，不公开密钥或完整环境输出。
+
+扫描关闭时，普通公开（`PUBLIC`）和空间成员可见（`NAMESPACE_ONLY`）新上传返回 `error.security.scanner.required`。私有（`PRIVATE`）仍可上传，但停留在 `UPLOADED`，须另行确认发布。已发布私有技能扩大范围时，最新版本已有可复用报告（`taskId`、`scannedAt` 非空，`failureReason=null`、`isSafe=true`）可继续审核；否则扫描关闭时拒绝。依据[发布前置](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillPublishService.java)、[可见范围变更](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillVisibilityService.java)与[私有发布确认](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillReviewSubmitService.java)。
+
+## 诊断连接与任务
+
+Compose 命令在含 `.env.release`、`compose.release.yml` 的运行目录执行。Kustomize 使用清单默认名称；Helm 名称按 [Chart README](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/README.md)核对，不得混用。探测仅输出固定允许值；异常配置脱敏，包含凭据或非保守 URL 形态时跳过。缺失变量取应用默认值，额外 Spring 覆盖须在受保护配置中核对。
+
+| 参数 | 值 | 影响范围 | 说明 |
+| --- | --- | --- | --- |
+| `wget -T` | 5秒 | 本次健康请求阶段超时 | 不修改扫描任务超时。 |
+| `wget -t` | 1次 | 本次请求尝试次数 | 不触发扫描。 |
+
+Compose：
+
+```bash
    docker compose --env-file .env.release -f compose.release.yml exec -T server sh -c '
      enabled=${SKILLHUB_SECURITY_SCANNER_ENABLED:-true}
      mode=${SKILLHUB_SECURITY_SCANNER_MODE:-local}
@@ -53,9 +110,9 @@
    '
    ```
 
-   Kustomize：
+Kustomize：
 
-   ```bash
+```bash
    kubectl -n skillhub exec deployment/skillhub-server -c server -- sh -c '
      enabled=${SKILLHUB_SECURITY_SCANNER_ENABLED:-true}
      mode=${SKILLHUB_SECURITY_SCANNER_MODE:-local}
@@ -84,10 +141,20 @@
    '
    ```
 
-2. 对照结果：标准 Compose 为 `enabled=true mode=upload scanner_host=skill-scanner:8000`；Kustomize 为 `enabled=true mode=upload scanner_host=skillhub-scanner:8000`；可达时显示 `health_exit=0`。这只证明健康端点可达，不能证明某个版本已扫描。`enabled=false` 时不做健康请求，按禁用后的发布限制处理。 `custom_or_unrecognized_redacted` 表示地址未在显示白名单中，需由部署方在受保护配置中核对，不能公开真实值；不含凭据的普通自定义 HTTP(S)／IPv6 地址仍可探测。`skipped_unrecognized_url`、`skipped_unrecognized_enabled` 或 `skipped_unrecognized_mode` 表示本次诊断已跳过，不代表产品判定该配置有效或无效。
-3. 关联本次版本与日志。在技能详情的本版本扫描报告中读取状态和失败原因，再在同一时间范围的日志中查找该版本 ID；不要用旧版本报告解释新版本。以下命令只读取本地日志，反馈前须脱敏，不能直接公开整份日志。
+标准结果如下；`health_exit=0` 仅表示健康端点可达。自定义地址显示 `custom_or_unrecognized_redacted`，不代表无效；普通自定义 HTTP(S)／IPv6 地址仍可探测。`skipped_*` 表示本次诊断跳过，不能据此判定产品配置有效或无效。
 
-   ```bash
+```text
+# Compose
+ enabled=true mode=upload scanner_host=skill-scanner:8000
+ health_exit=0
+# Kustomize
+ enabled=true mode=upload scanner_host=skillhub-scanner:8000
+ health_exit=0
+```
+
+随后以本版本的失败原因和时间关联日志；反馈前脱敏，不公开整份日志。
+
+```bash
    # Compose，仍在本次运行目录
    docker compose --env-file .env.release -f compose.release.yml logs --since=10m --tail=100 server skill-scanner
    # Kustomize，使用清单默认名称
@@ -95,119 +162,20 @@
    kubectl -n skillhub logs deployment/skillhub-scanner -c scanner --since=10m --tail=100
    ```
 
-4. 按下表处理后跟踪同一版本。临时不可达可进入重试/重领，持续失败也受实例重试与超时配置约束；不要仅凭等待时间断定“有害”，也不要重复上传来制造新版本。
+## 结果确认与失败处置
 
-| 现象 | 最可能原因 | 定位手段 | 检查与处理 |
+已生成报告应能定位目标版本、扫描时间及具体发现；普通非私有版本扫描执行完成后进入 `PENDING_REVIEW`，私有版本进入 `UPLOADED`。已发布版本补扫不改变其发布状态。上述结果均不等于人工已批准。
+
+| 现象 | 最可能原因 | 定位手段 | 处置 |
 | --- | --- | --- | --- |
-| 非私有上传被拒绝，出现 `error.security.scanner.required` | 扫描开关关闭 | 上方容器命令显示 `enabled=false`；核对本次是否使用 `--no-scanner` | 由部署方恢复扫描服务及注册中心配置后重试；不要重复上传或改写审核状态绕过检查。 |
-| 标准部署显示 `local` 或目标为 `localhost:8000` | 环境透传缺失或私有覆盖层改变默认配置 | 对照下方同格默认/覆盖值及本次 `server` 环境声明 | 修正 `SKILLHUB_SECURITY_SCANNER_MODE` / `SKILLHUB_SECURITY_SCANNER_URL` 的透传并重新创建受影响容器；不要把容器 localhost 当作宿主机。 |
-| `health_exit` 非零 | Scanner 未就绪、DNS/网络或地址错误 | Compose 用 `docker compose --env-file .env.release -f compose.release.yml ps skill-scanner`；Kustomize 用 `kubectl -n skillhub get pods -l app.kubernetes.io/name=skillhub-scanner` | 先恢复服务与连通性，再检查原任务；不要先删除数据库、Redis 或持久卷。 |
-| 健康可达但版本仍在 `SCANNING` 或变为 `SCAN_FAILED` | 请求未完成、扫描执行错误或恢复重试超限 | 读取本版本报告的失败原因，关联上方注册中心与 Scanner 日志 | 区分执行失败与发现风险；仅在版本页提供重试且有操作权限时重试，不要把健康响应当作扫描完成或人工批准。 |
+| 非私有上传返回 `error.security.scanner.required` | 扫描关闭 | 探测显示 `enabled=false` | 恢复服务与开关；不要修改数据库状态绕过检查。 |
+| 标准部署显示 `local` 或 `localhost` | 透传缺失或覆盖不正确 | 对照本页配置表与容器输出 | 修正配置并重建；不要将容器 localhost 当作宿主机。 |
+| `health_exit` 非零 | 服务未就绪或网络/地址错误 | Compose 执行 `docker compose --env-file .env.release -f compose.release.yml ps skill-scanner`；Kustomize 执行 `kubectl -n skillhub get pods -l app.kubernetes.io/name=skillhub-scanner` | 恢复连接后跟踪原任务；不要删除数据库或持久卷。 |
+| 健康可达但版本仍扫描或失败 | 执行错误、超时或恢复重试超限 | 本版本 `failureReason` 与上述日志 | 仅在页面提供重试且有权限时重试；不要重复上传制造新版本。 |
+| 报告非 `SAFE` 但任务已完成 | 扫描发现风险 | 核对 `findings` 与文件位置 | 修订或提交审核证据；不要把 `BLOCKED` 枚举当成自动拒绝记录。 |
 
-诊断命令依据 [Compose 清单](https://github.com/iflytek/skillhub/blob/main/compose.release.yml)、[Kustomize 后端清单](https://github.com/iflytek/skillhub/blob/main/deploy/k8s/base/backend-deployment.yaml) 与 [Server 镜像](https://github.com/iflytek/skillhub/blob/main/server/Dockerfile)；所用 `sh`、`wget` 在标准 Server 镜像中提供。
+诊断依据：[Compose](https://github.com/iflytek/skillhub/blob/main/compose.release.yml)、[Kustomize](https://github.com/iflytek/skillhub/blob/main/deploy/k8s/base/backend-deployment.yaml)与[Server 镜像](https://github.com/iflytek/skillhub/blob/main/server/Dockerfile)。标准镜像提供 `sh`、`wget`。
 
-## 功能描述
+## 边界与后续
 
-SkillHub 内置了 **Skill Scanner** 安全扫描服务，在技能包发布时自动检测潜在的安全风险。报告提供结构化发现与执行证据，不能据此承诺技能内容安全。
-
-启用扫描的上传会经过安全扫描，扫描结果会影响审核决策，供有权限的审核员结合使用场景判断；扫描完成不等于人工批准。
-
-**核心特性**：
-
-- **自动触发**：技能包发布后自动触发安全扫描，无需手动操作
-- **多引擎分析**：支持行为分析、LLM 分析、元数据分析等多种引擎
-- **策略可配**：内置 balanced 策略预设，支持自定义扫描策略
-- **严重级别阈值**：可配置在哪个严重级别自动阻止发布
-- **扫描报告**：详细的扫描结果展示在技能包详情页
-
-**分析引擎**：
-
-| 引擎 | 说明 | 默认状态 |
-|------|------|----------|
-| **元数据分析** | 元数据相关分析（不替代上传结构校验） | 默认关闭 |
-| **行为分析** | 分析代码行为模式，检测恶意操作 | 默认启用 |
-| **LLM 分析** | 使用大模型分析代码安全性 | 可选 |
-| **AI Defense** | Cisco AI Defense 集成 | 可选 |
-| **VirusTotal** | VirusTotal 病毒扫描 | 可选 |
-
-## 使用场景
-
-**场景一：发布时自动扫描**
-
-开发者发布技能包后，Scanner 自动在后台运行扫描，无需额外操作。
-
-**场景二：管理员查看扫描报告**
-
-管理员在审核技能包时，可以查看扫描报告，帮助做出审核决策。
-
-**场景三：自定义扫描策略**
-
-企业管理员可以根据安全需求，配置扫描策略和严重级别阈值。
-
-## 工作流程
-
-```
-开发者发布技能包
-    ↓
-SkillHub 后端接收上传
-    ↓
-触发安全扫描（通过 Redis Stream）
-    ↓
-Skill Scanner 执行多引擎分析
-    ↓
-扫描结果写入数据库
-    ↓
-技能包详情页展示扫描报告
-    ↓
-管理员结合扫描结果进行审核
-```
-
-## 配置说明
-
-### 基础配置
-
-下表列出本页排查所需的基本应用绑定；完整字段见表后的应用配置来源。环境变量必须实际传入 Server；仅在 `.env.release` 增加未被 Compose 引用的键不会生效。修改后重新创建 Server 容器；Kubernetes 须更新对应覆盖配置并滚动受影响 Deployment。
-
-| 配置项 | 用途 | 应用默认与部署覆盖 | 检查与处理 |
-| --- | --- | --- | --- |
-| `SKILLHUB_SECURITY_SCANNER_ENABLED` | 启用扫描 | 应用、release Compose、Kustomize 和 Helm 默认 `true`；`--no-scanner` 将运行实例设为 `false` | `false` 时拒绝新的非私有上传；已有版本扩大范围的报告复用条件见下文。 |
-| `SKILLHUB_SECURITY_SCANNER_URL` | Scanner 地址 | 应用 `http://localhost:8000`；release Compose 覆盖为 `http://skill-scanner:8000`；Kustomize 为 `http://skillhub-scanner:8000`；Helm 按 release 生成 Service 地址 | 用上方同容器健康请求验证，不能照搬宿主机 localhost。 |
-| `SKILLHUB_SECURITY_SCANNER_MODE` | `local` / `upload` 协议 | 应用默认 `local`；release Compose、Kustomize 和 Helm 均覆盖为 `upload` | `upload` 上传包；`local` 要求双方在相同路径可见同一目录。 |
-| `SKILLHUB_SCANNER_POLICY_PRESET` | 策略预设 | 应用默认 `balanced`；以实例透传为准 | 未被部署清单引用时须显式补入 Server 环境，修改后重建。 |
-| `SKILLHUB_SCANNER_FAIL_ON_SEVERITY` | 阻断严重级别 | 应用默认 `high`；以实例透传为准 | 阈值属于扫描策略，不等于人工批准条件。 |
-
-默认值与覆盖依据：[应用配置](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/resources/application.yml)、[Kustomize ConfigMap](https://github.com/iflytek/skillhub/blob/main/deploy/k8s/base/configmap.yaml) 和 [Helm ConfigMap](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/templates/configmap.yaml)。
-
-### LLM 分析配置（可选）
-
-启用 LLM 分析引擎可以提高安全检测的准确性：
-
-| 环境变量 | 说明 | 默认值 |
-|----------|------|--------|
-| `SKILLHUB_SCANNER_USE_LLM` | 启用 LLM 分析 | `false` |
-| `SKILLHUB_SCANNER_LLM_PROVIDER` | LLM 提供商（anthropic / openai / azure） | `anthropic` |
-| `SKILL_SCANNER_LLM_API_KEY` | LLM API 密钥 | - |
-| `SKILL_SCANNER_LLM_BASE_URL` | 本地/自定义 LLM 服务地址 | - |
-| `SKILL_SCANNER_LLM_MODEL` | LLM 模型名称 | - |
-
-### 部署说明
-
-使用运行脚本部署时，Scanner 默认启用。`--no-scanner` 不启动 Scanner，并关闭注册中心扫描开关。**禁用后，公开（`PUBLIC`）与空间成员可见（`NAMESPACE_ONLY`）的上传发布请求被拒绝**，返回 `error.security.scanner.required`。私有（`PRIVATE`）仍可上传，但上传后是 `UPLOADED`，还需有权限的操作者确认发布，不能把上传成功当成发布完成。
-
-已发布私有技能申请扩大可见范围时，最新发布版本若已有可复用报告（`taskId`、`scannedAt` 非空，`failureReason=null` 且 `isSafe=true`），可沿用该报告进入审核；没有此报告且扫描关闭时同样拒绝。这里的机器结果不代表内容安全或人工已批准。
-
-```bash
-# 部署时禁用 Scanner
-curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up --no-scanner
-```
-
-发布限制依据：[发布前置检查](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillPublishService.java)、[可见范围变更](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillVisibilityService.java) 与 [私有版本确认](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillReviewSubmitService.java)。
-
-## 注意事项
-
-> **异步上传不等于发布放行**：普通公开及空间成员可见新版本上传要求扫描已启用，扫描未完成时不能视为已发布。SCAN_FAILED 是执行失败；扫描发现风险与执行失败须分别处理。扫描通过也不等于人工审核通过。
-
-- **扫描耗时**：根据技能包大小和启用的引擎数量，扫描可能需要几秒到几分钟
-- **LLM 分析成本**：启用 LLM 分析会产生 API 调用费用，建议在生产环境中评估成本
-- **策略调优**：`balanced` 策略适合大多数场景，企业可以根据安全需求自定义策略
-- **健康检查**：使用上方[部署方排查顺序](#部署方排查顺序)从注册中心容器访问已配置的 Scanner；不要把宿主机或 Server 的 localhost 当作 Scanner 地址。
+扫描执行时长由包内容、分析引擎和外部依赖决定，本页不承诺固定完成时间。风险发现、执行失败、人工拒绝是不同结果；[审核实现](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewService.java)当前不会仅凭最高严重级别自动替代人工审核。完成本步骤后，作者在[发布与更新](./skill-publish.html)跟踪版本，审核员在[审核](./review.html)处理申请；部署方排障不得改写版本或审核记录。

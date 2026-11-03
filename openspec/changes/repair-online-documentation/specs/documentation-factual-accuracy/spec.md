@@ -41,3 +41,20 @@ Each batch SHALL preserve existing routes and product behavior, synchronize Chin
 - **THEN** P0-1 through P0-9 have explicit source and verification records
 - **AND** document build, links and browser checks are reported separately from application runtime tests
 - **AND** later depth and navigation work remains explicitly pending
+
+### Requirement: Provide formal and complete documentation depth samples
+The second batch SHALL improve the introduction, quickstart, namespace, review, social and scanner pages in both languages without moving routes or changing product behavior. The prose SHALL be formal, source-grounded and task-oriented. Diagrams and tables SHALL clarify relationships and decisions without replacing operational text.
+
+#### Scenario: Complete an operational task without external explanation
+- **WHEN** a reader follows an affected operational guide
+- **THEN** the applicable role, prerequisites, action sequence, decision basis, observable outcome, failure handling and downstream effects are explicit
+- **AND** duplicate legacy template sections are consolidated rather than retained in parallel
+
+#### Scenario: Understand the first installation
+- **WHEN** a reader follows the quickstart
+- **THEN** complete commands, representative output and a non-destructive failure example distinguish installation, Agent discovery and actual execution
+
+#### Scenario: Review a visual explanation
+- **WHEN** a reader opens the diagrams or tables at desktop or mobile width
+- **THEN** the visual and surrounding text describe the same verified behavior and remain readable in light and dark themes
+- **AND** the page does not depend on an added rendering service or package

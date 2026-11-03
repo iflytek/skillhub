@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="320" viewBox="0 0 360 320" role="img" aria-labelledby="title desc">
+<title id="title">技能分发的职责划分</title>
+<desc id="desc">作者提交技能包，注册中心管理版本、访问和治理，目标Agent环境加载并执行安装后的技能。</desc>
+<rect x="1" y="1" width="358" height="318" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#475569" stroke-width="1.4"/></marker></defs>
+<rect x="18" y="18" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="42" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">1  技能作者</text>
+<text x="32" y="64" font-family="system-ui,sans-serif" font-size="15" fill="#334155">提供 SKILL.md 与配套文件</text>
+<text x="32" y="82" font-family="system-ui,sans-serif" font-size="15" fill="#334155">声明用途、依赖和版本</text>
+<path d="M180 96 V112" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="18" y="118" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="142" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">2  SkillHub 注册中心</text>
+<text x="32" y="164" font-family="system-ui,sans-serif" font-size="15" fill="#334155">管理版本、权限、扫描与审核</text>
+<text x="32" y="182" font-family="system-ui,sans-serif" font-size="15" fill="#334155">提供搜索与文件分发</text>
+<path d="M180 196 V212" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="18" y="218" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="242" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">3  目标 Agent 环境</text>
+<text x="32" y="264" font-family="system-ui,sans-serif" font-size="15" fill="#334155">CLI 安装文件，Agent 加载技能</text>
+<text x="32" y="282" font-family="system-ui,sans-serif" font-size="15" fill="#334155">配置运行依赖并验收执行结果</text>
+</svg>
