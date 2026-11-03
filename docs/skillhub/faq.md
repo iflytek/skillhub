@@ -6,7 +6,7 @@ A: SkillHub 提供自托管注册中心、命名空间权限、发布审核、�
 
 ## Q: 如何备份数据？
 
-A: 备份 PostgreSQL、实际使用的存储后端及部署配置。默认 release Compose 使用本地文件存储，需要备份 `skillhub_storage` 数据卷；使用 S3 时备份对应 bucket/对象。数据库和技能文件需要来自一致的备份窗口。操作步骤见 [部署指南](./guide/deployment.md)，恢复能力应通过独立环境演练验证。
+A: 备份 PostgreSQL、实际使用的存储后端及部署配置。默认 release Compose 使用本地文件存储，需要备份 `skillhub_storage` 数据卷；使用 S3 时备份对应 bucket/对象。数据库和技能文件需要来自一致的备份窗口。操作步骤见 [部署指南](./guide/deployment.html)，恢复能力应通过独立环境演练验证。
 
 ## Q: 支持哪些认证方式？
 
@@ -39,11 +39,11 @@ npm install -g @astron-team/skillhub
 skillhub search pdf
 ```
 
-按 [快速开始](./quickstart.md) 选择注册中心、安装位置和 Agent。发布和受限资源访问需要登录。ClawHub 兼容接口的范围见 [集成说明](https://github.com/iflytek/skillhub/blob/main/docs/openclaw-integration.md)，不要将其发布协议与 SkillHub CLI 混用。
+按 [快速开始](./quickstart.html) 选择注册中心、安装位置和 Agent。发布和受限资源访问需要登录。ClawHub 兼容接口的范围见 [集成说明](https://github.com/iflytek/skillhub/blob/main/docs/openclaw-integration.md)，不要将其发布协议与 SkillHub CLI 混用。
 
 ## Q: 如何配置 HTTPS？
 
-A: 在外部代理终止 TLS，并转发到实际映射的 Web 端口（release Compose 默认 `WEB_PORT=80`），Web 已代理后端路由。设置真实 `SKILLHUB_PUBLIC_BASE_URL`，正确传递原始 Host 和代理协议头，并验证登录与 Cookie。见 [部署指南](./guide/deployment.md)。
+A: 在外部代理终止 TLS，并转发到实际映射的 Web 端口（release Compose 默认 `WEB_PORT=80`），Web 已代理后端路由。设置真实 `SKILLHUB_PUBLIC_BASE_URL`，正确传递原始 Host 和代理协议头，并验证登录与 Cookie。见 [部署指南](./guide/deployment.html)。
 
 ## Q: 如何监控 SkillHub？
 
@@ -57,11 +57,11 @@ A: SkillHub 通过命名空间实现了逻辑上的多租户隔离。每个命�
 
 ## Q: 如何升级 SkillHub？
 
-A: 按 [部署与升级指南](./guide/deployment.md) 选择目标版本，先备份数据库、技能存储和配置，再升级并验证健康、登录及代表性技能操作。Flyway 会执行数据库迁移；不能仅凭容器启动成功认定升级成功，也不能假设降级镜像即可回滚数据库。
+A: 按 [部署与升级指南](./guide/deployment.html) 选择目标版本，先备份数据库、技能存储和配置，再升级并验证健康、登录及代表性技能操作。Flyway 会执行数据库迁移；不能仅凭容器启动成功认定升级成功，也不能假设降级镜像即可回滚数据库。
 
 ## Q: 为什么管理员（admin）和普通用户都无法创建命名空间？
 
-A: 先查看页面或接口的错误信息和 `requestId`，核对当前账号权限、名称校验及实例限制。不要直接推断为版本太旧；管理员身份也不能绕过全部业务规则。参见 [命名空间管理](./guide/namespace.md)。
+A: 先查看页面或接口的错误信息和 `requestId`，核对当前账号权限、名称校验及实例限制。不要直接推断为版本太旧；管理员身份也不能绕过全部业务规则。参见 [命名空间管理](./guide/namespace.html)。
 
 ## Q: 如何搜索或操作指定命名空间中的技能包（Skill）？
 
@@ -69,15 +69,15 @@ A: 在网页中选择命名空间；CLI 安装可使用 `skillhub install @team/
 
 ## Q: 推荐的部署方式是什么？可以自己拉镜像手动部署吗？
 
-A: 支持官方 runtime 脚本、release Compose 和 Kubernetes/Helm。选择一种方式并保留对应的配置与数据目录，参见 [Docker 部署](./guide/deployment.md) 和 [Kubernetes 部署](./guide/kubernetes.md)。手动部署需要正确配置数据库、Redis、存储、认证和代理，不能只启动应用镜像。
+A: 可选 runtime 脚本、release Compose、Kubernetes Kustomize 或 Helm Chart。脚本与 Compose 见 [Docker 部署](./guide/deployment.html)；Kustomize 的工作目录是 `deploy/k8s`，见 [Kubernetes 部署](./guide/kubernetes.html)；Helm 使用独立的 `charts/skillhub` 和 values，见 [Chart README](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/README.md)。两种 Kubernetes 路径不能混用配置或升级命令。部署前须选定一条路径，保留对应配置和数据目录；仅启动应用镜像不能证明数据库、Redis、存储、认证和代理可用。
 
 ## Q: 用 Kubernetes 部署对集群版本有要求吗？
 
-A: 官方 [Kubernetes 部署指南](./guide/kubernetes.md) 要求 Kubernetes **v1.24 及以上**，并需要已配置好的 `kubectl` 与默认 StorageClass（用于 PVC）；如需域名访问，还需安装 nginx ingress controller。更低版本的集群未经验证，建议先升级集群再部署。
+A: 官方 [Kubernetes 部署指南](./guide/kubernetes.html) 要求 Kubernetes **v1.24 及以上**，并需要已配置好的 `kubectl` 与默认 StorageClass（用于 PVC）；如需域名访问，还需安装 nginx ingress controller。更低版本的集群未经验证，建议先升级集群再部署。
 
 ## Q: 部署后输入正确的账号密码，却又跳回登录页？
 
-A: 先在浏览器网络面板检查登录请求及后续身份请求的状态，核对实例公网 URL、代理转发、Cookie 和后端会话配置，并关联服务端 `requestId` 与日志。此现象本身不能确定是密码错误或数据库问题。不要清空 PostgreSQL 数据卷来尝试修复登录。部署参数见 [部署指南](./guide/deployment.md)。
+A: 先在浏览器网络面板检查登录请求及后续身份请求的状态，核对实例公网 URL、代理转发、Cookie 和后端会话配置，并关联服务端 `requestId` 与日志。此现象本身不能确定是密码错误或数据库问题。不要清空 PostgreSQL 数据卷来尝试修复登录。部署参数见 [部署指南](./guide/deployment.html)。
 
 ## Q: 如何修改 admin 密码？修改配置后不生效？
 
@@ -89,11 +89,11 @@ A: 网页找回密码使用邮箱验证码；已登录且知道原密码的修�
 
 ## Q: skill 可以起中文名吗？
 
-A: 技能标识 `name` / slug 使用符合校验规则的名称；面向用户的展示名支持中文，可通过 `metadata.display-name` 配置。展示名不改变安装坐标或目录名。见 [发布指南](./guide/skill-publish.md)。
+A: 技能标识 `name` / slug 使用符合校验规则的名称；面向用户的展示名支持中文，可通过 `metadata.display-name` 配置。展示名不改变安装坐标或目录名。见 [发布指南](./guide/skill-publish.html)。
 
 ## Q: 未审核的 skill 可以下载吗？
 
-A: 正常安装面向已发布且当前用户可访问的版本。能查看详情不等于能下载任意状态的版本；作者或审核人员的预览权限与公开分发权限不同。见 [审核与治理](./guide/review.md)。
+A: 正常安装面向已发布且当前用户可访问的版本。能查看详情不等于能下载任意状态的版本；作者或审核人员的预览权限与公开分发权限不同。见 [审核与治理](./guide/review.html)。
 
 ## Q: 如何隐藏或删除登录页的第三方 SSO 登录方式？
 
@@ -106,6 +106,14 @@ A: 登录入口是配置驱动的：`/api/v1/auth/methods` 只返回配置了真
 - 或修改 `application.yml`，注释/删除 `spring.security.oauth2.client.registration`
   下对应的注册块（`github`、`gitlab`、`feishu`、`dingtalk`）以及对应的 `provider` 段，
   Spring Boot 启动时便不会创建该注册。
+
+## Q: 关闭扫描后，还能上传和发布技能吗？
+
+A: `runtime.sh --no-scanner` 会关闭注册中心扫描开关，并不启动扫描容器。对**普通的新上传**，关闭扫描后使用 `PUBLIC`（公开）或 `NAMESPACE_ONLY`（空间成员可见）会被拒绝；`PRIVATE`（私有）可以上传，版本停在 `UPLOADED`，还需确认发布。上传成功不表示已发布，不要反复上传同一版本绕过扫描前置。
+
+已经发布的私有技能扩大可见范围是另一条路径：最新版本若有可复用的合格扫描报告，即使当前扫描关闭，仍可能继续提交范围审核；没有可复用报告时必须先恢复扫描。报告条件和诊断命令见[安全扫描](./guide/scanner.html)，不能仅凭“扫描已关闭”推断已有版本的所有动作都不可用。
+
+依据：[部署脚本](https://github.com/iflytek/skillhub/blob/main/scripts/runtime.sh)、[新上传规则](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillPublishService.java)与[范围变更规则](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillVisibilityService.java)。
 
 ## Q: SkillHub 的安全扫描（Skill Scanner）是讯飞自研的吗？使用什么协议？
 
@@ -174,7 +182,7 @@ SKILLHUB_PUBLISH_MAX_FILE_COUNT=500
 
 ## Q: 使用 CLI（发布 / 下载等）对服务端版本有要求吗？
 
-A: 兼容性取决于具体命令。旧版本支持基础 CLI 不代表支持 Device Flow、Suite 或同步；请核对 CLI 版本与目标服务端发行说明。Suite 要求服务端声明 `skill-suite-v1`。见 [CLI 指南](./guide/cli.md)。
+A: 兼容性取决于具体命令。旧版本支持基础 CLI 不代表支持 Device Flow、Suite 或同步；请核对 CLI 版本与目标服务端发行说明。Suite 要求服务端声明 `skill-suite-v1`。见 [CLI 指南](./guide/cli.html)。
 
 ## Q: SkillHub 支持 MySQL 数据库吗？
 
@@ -273,7 +281,7 @@ A: OAuth 首次登录创建的是普通用户。需要由已有的 `SUPER_ADMIN`
 
 ## Q: 如何批量安装多个技能包？
 
-A: 需要固定成员版本并统一升级时，使用 [技能套装](./guide/skill-suites.md) 的 `skillhub suite install`。同步团队命名空间工作区时，使用 [CLI](./guide/cli.md) 的 `skillhub sync pull`。若只是独立安装几个无关技能，可分别运行 `skillhub install`；Suite Bundle 是发布者的导入格式，不是本地安装命令。
+A: 需要固定成员版本并统一升级时，使用 [技能套装](./guide/skill-suites.html) 的 `skillhub suite install`。同步团队命名空间工作区时，使用 [CLI](./guide/cli.html) 的 `skillhub sync pull`。若只是独立安装几个无关技能，可分别运行 `skillhub install`；Suite Bundle 是发布者的导入格式，不是本地安装命令。
 
 ## Q: 技能套装保存草稿后，在哪里提交审核？按钮不显示或不可用怎么办？
 
@@ -282,20 +290,20 @@ A: 进入该版本的套装管理页，在「概览」中的发布检查清单�
 - **没有按钮**：先核对是否进入有管理权限的套装版本，而不是市场预览页；页面只在服务端允许当前账号提交审核或直接发布时显示该操作，版本状态和权限都会影响可用动作。
 - **按钮不可用**：补齐简介、概述，指定可用的入口技能，并处理成员版本的阻塞原因。只有全部检查项就绪，且没有提交中的请求时才能提交。
 
-参见 [创建与管理技能套装](./guide/skill-suites.md)。若旧版本页面与指南不一致，请附服务端/Web 版本、套装状态和脱敏截图反馈，不要把 Skill 或 Agent 的发布入口当作套装入口。
+参见 [创建与管理技能套装](./guide/skill-suites.html)。若旧版本页面与指南不一致，请附服务端/Web 版本、套装状态和脱敏截图反馈，不要把 Skill 或 Agent 的发布入口当作套装入口。
 
 ## Q: 安装技能套装后，概述会变成一个可调用的技能吗？
 
 A: 不会。概述说明套装适用任务、成员分工和使用边界，供审核者与使用者阅读；安装交付的是各成员的独立技能目录，不会将概述合成为一个新的套装 `SKILL.md`，也不提供通用的 `suite run` 命令。
 
-需要 Agent 遵循的执行顺序、成员调用规则和结果校验，应写进**入口技能及成员的 `SKILL.md`**。在安装目标项目中确认 Agent 已发现入口技能，再请求它使用该入口完成任务；套装坐标用于安装管理，运行时使用实际入口技能。安装成员文件不等于配置好它们依赖的工具或服务。详细步骤见 [安装后开始使用](./guide/skill-suites.md#安装后开始使用)。
+需要 Agent 遵循的执行顺序、成员调用规则和结果校验，应写进**入口技能及成员的 `SKILL.md`**。在安装目标项目中确认 Agent 已发现入口技能，再请求它使用该入口完成任务；套装坐标用于安装管理，运行时使用实际入口技能。安装成员文件不等于配置好它们依赖的工具或服务。详细步骤见 [安装后开始使用](./guide/skill-suites.html#安装后开始使用)。
 
 ## Q: 遇到问题怎么办？
 
 A: 可以通过以下方式获取帮助：
 
 - **GitHub Issues**: https://github.com/iflytek/skillhub/issues
-- **在线文档**: https://iflytek.github.io/skillhub/
+- **在线文档**：[SkillHub](./index.html)
 - **文档**: 参考项目 README.md
 - **社区讨论**: https://github.com/iflytek/skillhub/discussions
 

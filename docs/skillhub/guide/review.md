@@ -2,82 +2,84 @@
 
 ## 审核员的检查清单
 
-1. 核对审核对象、提交者和目标版本。技能版本、头像或资料变更、套装版本不能混用同一判断。
+1. 核对对象、提交者及目标版本；版本、头像资料和套装不能混用判断。
 2. 读取本次提交的文件与变更，不仅阅读当前公开版本。新版审核期间，旧公开版本可能仍可下载。
 3. 检查扫描状态及发现项。扫描执行失败、风险发现和未配置某项分析器分别处理；空报告不能当作安全结论。
 4. 检查可见范围与受众，特别是套装每个成员的可用性和入口身份。成员通过审核不自动批准套装。
 5. 批准前确认当前数据仍有效；拒绝时写明具体文件、问题及修订方向。点击失败时重新读取状态，避免对旧页面重复作出相反决定。
-6. 审核完成后查看记录和发布版本。审核操作成功不验证本地 Agent 的技能执行效果。
+6. 审核后核对记录及发布结果；Agent 执行效果需另验。
 
 ### 作者如何跟踪和修订
 
-在“我的提交”查看待审任务和意见，未完成审核前可按权限撤回。撤回是停止当前审核，不会删除已发布旧版本或撤销已批准的全局提升。被拒绝后根据意见修订，再通过当前版本页面提供的重新提交操作继续；不要把上传成功当成审核重开成功。
+普通 `PUBLIC / NAMESPACE_ONLY` 上传创建审核任务；`PRIVATE` 上传先保留，须确认发布或另行提审。在“我的提交”查看任务和意见；有权撤回者在待审任务选择「撤回」并确认。撤回是停止当前审核，不会删除已发布旧版本或撤销已批准的全局提升。被拒绝后根据意见修订，再通过当前版本页面提供的重新提交操作继续；不要把上传成功当成审核重开成功。
 
 
-## 功能描述
+## 状态对象对照
 
-SkillHub 提供了完整的审核工作流，确保发布到注册中心的技能包符合团队规范。
+先识别对象；同名枚举不表示同一流程。任务为 `PENDING` 时，版本可能仍在 `SCANNING`；不得用它替代版本的 `PENDING_REVIEW`。
 
-审核机制分为两层：
-- **命名空间审核**：团队管理员审核本命名空间的技能包
-- **平台审核**：平台管理员审核推广到全局的技能包
+### 审核任务状态
 
-![概念图](/diagrams/review-concept.png)
+| 状态 | 判断依据 | 处理者 | 下一步 |
+| --- | --- | --- | --- |
+| `PENDING` | 任务等待审核决定 | 有权限的空间审核员或平台技能管理员 | 执行上方检查清单后决定 |
+| `APPROVED` | 任务已批准 | 提交者 | 核对版本或资料生效结果 |
+| `REJECTED` | 任务已拒绝并保留意见 | 提交者 | 修订后重提 |
+| `SUPERSEDED` | 任务已被后续申请替代 | 提交者与审核员 | 查看当前申请，不处理旧任务 |
 
-**审核流程**：
+[ReviewTaskStatus](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewTaskStatus.java) 无 `WITHDRAWN`；技能版本撤回会删除待审任务并更新版本状态，见 [ReviewService](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewService.java)。
 
-1. 开发者发布技能包 → 进入「待审核」状态
-2. 管理员收到通知 → 查看技能包详情
-3. 管理员决策 → 批准或拒绝
-4. 批准后 → 技能包正式发布
-5. 拒绝后 → 开发者收到反馈，可修改后重新提交
+### 技能版本状态
 
-**审核状态**：
+版本 `DRAFT` 不是创作 API 草稿对象。
 
-| 状态 | 说明 |
-|------|------|
-| **PENDING** | 待审核 |
-| **APPROVED** | 已批准 |
-| **REJECTED** | 已拒绝 |
-| **WITHDRAWN** | 已撤回 |
+| 状态 | 判断依据 | 处理者 | 下一步 |
+| --- | --- | --- | --- |
+| `DRAFT` | 版本尚处草稿阶段 | 技能所有者 | 完成准备，尚未发布 |
+| `SCANNING` | 扫描尚在运行 | 扫描服务 | 等待报告后审核 |
+| `SCAN_FAILED` | 扫描执行失败 | 部署方与技能所有者 | 定位错误后重试 |
+| `UPLOADED` | 已上传但尚未发布 | 技能所有者 | 确认发布或提交审核 |
+| `PENDING_REVIEW` | 版本等待人工决定 | 有权审核员 | 核对本次版本并作决定 |
+| `PUBLISHED` | 版本已发布 | 使用者与技能所有者 | 按可见范围使用，执行效果另验 |
+| `REJECTED` | 版本未获批准 | 技能所有者 | 修订并重新提交 |
+| `YANKED` | 版本已撤下 | 技能所有者与使用者 | 检查可安装的替代版本 |
 
-**治理功能**：
+枚举以 [SkillVersionStatus](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillVersionStatus.java) 为准；操作入口见[发布与更新技能](./skill-publish.html)。
 
-- **审核工作流**：按权限逐项审核技能版本、资料变更和套装
-- **举报系统**：用户可以举报不当技能包
-- **推广管理**：将命名空间技能包推广到全局
-- **审计日志**：记录所有治理操作
+### 套装导入操作状态
 
-头像变更复用技能审核申请。机器阻止与人工拒绝是不同状态；开关组合、审核操作及云审核接入步骤详见 [技能头像与图片审核接入](/guide/skill-avatars)。
+| 状态 | 判断依据 | 处理者 | 下一步 |
+| --- | --- | --- | --- |
+| `RUNNING` | 导入正在执行 | 导入服务 | 跟踪原操作，不重复确认 |
+| `WAITING_FOR_MEMBERS` | 等待成员版本就绪 | 导入服务与成员审核员 | 查看成员进度 |
+| `BLOCKED_RETRYABLE` | 存在可重试阻塞 | 导入者 | 排障后重试原操作 |
+| `REPREVIEW_REQUIRED` | 原预览不能继续确认 | 导入者 | 重新预览并核对差异 |
+| `SUITE_DRAFT_CREATED` | 已创建技能套装草稿 | 套装所有者 | 管理页继续发布，尚未批准 |
+| `CANCELLED` | 操作已取消 | 导入者 | 核对成员动作，并非全部回滚 |
 
-## 先确认审核对象
+依据 [SkillSuiteBundleOperationStatus](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/suite/bundle/SkillSuiteBundleOperationStatus.java)；恢复步骤见[套装 Bundle 导入](./suite-bundle.html)。
 
-审核任务状态与技能版本状态不同：任务为 PENDING 时，版本可能仍在 SCANNING。先等待扫描完成并检查风险，再作审核决定。成员技能审核通过不代表引用它的 Suite 已通过；Suite 有独立审核。Bundle 导入先完成成员发布，再创建 Suite 草稿，详见[技能套装](/guide/skill-suites)与[批量导入](/guide/suite-bundle)。
+### 头像审核结果
 
-## 使用场景
+头像复用技能审核申请，但结果分三个字段维度。
 
-**场景一：命名空间管理员审核**
+| 字段与取值 | 判断依据 | 处理者 | 下一步 |
+| --- | --- | --- | --- |
+| 候选 `status`：`PENDING`、`ACTIVE`、`REJECTED`、`SUPERSEDED`、`REMOVED` | 依次为待处理、正在使用、已拒绝、已替代、已移除 | 技能所有者与有权审核员 | 核对当前候选和使用中的头像 |
+| `machineStatus`：`SKIPPED`、`PENDING`、`PROCESSING`、`PASSED`、`BLOCKED`、`ERROR` | 依次为跳过、待处理、执行中、机器允许、机器阻止、执行错误 | 机器审核服务与部署方 | `ERROR` 先排查服务；`BLOCKED` 不等同人工已拒绝 |
+| `reviewStatus`：`NOT_REQUIRED`、`PENDING`、`APPROVED`、`REJECTED`、`APPEAL_PENDING` | 依次为无需人工、待审、已批准、已拒绝、申诉待审 | 有权审核员与技能所有者 | 读取意见及当前候选，按允许动作处理 |
 
-团队管理员审核成员提交的技能包，确保符合团队规范。
+依据 [SkillAvatarCandidate](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillAvatarCandidate.java)；响应的 `candidateStatus` 是候选状态；配置与重试见[技能头像与审核](./skill-avatars.html)。
 
-![操作截图](/screenshots/review-list.png)
+## 审核入口
 
-**场景二：平台管理员审核推广**
+角色与自审限制见本页末尾；举报、提升申请另行处理。
 
-平台管理员审核从命名空间推广到全局的技能包。
+![审核对象及职责](/diagrams/review-concept.png)
 
-**场景三：举报处理**
-
-用户举报不当技能包，管理员调查并处理。
-
+![审核任务列表](/screenshots/review-list.png)
 
 ## 使用步骤
-
-**提交审核**：
-
-1. 普通 PUBLIC / NAMESPACE_ONLY 上传创建审核任务；PRIVATE 上传先保留，需确认发布或另行提审
-2. 开发者可以在「我的提交」中查看审核状态
-3. 等待管理员审核
 
 **审核技能包**：
 
@@ -119,15 +121,6 @@ SkillHub 提供了完整的审核工作流，确保发布到注册中心的技�
 
 SkillHub 能保证的是结构正确、证据可追溯、版本快照不可变；不能替作者保证“真的合规”。
 
-**撤回审核**：
-
-开发者发现问题，可以在审核通过前撤回提交：
-
-1. 访问「我的提交」
-2. 找到待审核的技能包
-3. 点击「撤回」
-4. 确认撤回
-
 ### 删除已提升到全局的技能
 
 如果永久删除时提示「已提升的技能须通过审核撤销流程删除」，请从团队来源技能的详情页处理全局发布。隐藏、归档或撤回待审提交不会删除已经批准的全局技能；提交撤销申请也不代表撤销已完成。
@@ -151,7 +144,7 @@ SkillHub 能保证的是结构正确、证据可追溯、版本快照不可变�
 ## API 接口
 
 **提交审核**：
-```bash
+```http
 POST /api/v1/reviews
 Content-Type: application/json
 
@@ -161,7 +154,7 @@ Content-Type: application/json
 ```
 
 **批准审核**：
-```bash
+```http
 POST /api/v1/reviews/{id}/approve
 Content-Type: application/json
 
@@ -171,7 +164,7 @@ Content-Type: application/json
 ```
 
 **拒绝审核**：
-```bash
+```http
 POST /api/v1/reviews/{id}/reject
 Content-Type: application/json
 
@@ -187,22 +180,22 @@ Content-Type: application/json
 | comment | string | 审核意见（批准时可选；拒绝时应填写明确原因） |
 
 **列出待审核任务**：
-```bash
+```http
 GET /api/v1/reviews/pending?namespaceId=123&page=0&size=20
 ```
 
 **列出我的提交**：
-```bash
+```http
 GET /api/v1/reviews/my-submissions?page=0&size=20
 ```
 
 **获取审核详情**：
-```bash
+```http
 GET /api/v1/reviews/{id}
 ```
 
 **获取审核中的技能包详情**：
-```bash
+```http
 GET /api/v1/reviews/{id}/skill-detail
 GET /api/v1/reviews/{id}/skill-detail?includeDocumentation=false
 ```
@@ -210,17 +203,17 @@ GET /api/v1/reviews/{id}/skill-detail?includeDocumentation=false
 `includeDocumentation` 缺省为 `true`，保持原响应行为。设为 `false` 时仍返回技能、版本、文件元数据与说明文件路径，`documentationContent` 为空且不读取对象存储正文；审核详情首屏使用此模式，进入“技能内容”后再取正文。
 
 **下载审核包**：
-```bash
+```http
 GET /api/v1/reviews/{id}/download
 ```
 
 **撤回审核**：
-```bash
+```http
 POST /api/v1/reviews/{id}/withdraw
 ```
 
 **举报技能包**：
-```bash
+```http
 POST /api/v1/skills/{namespace}/{slug}/reports
 Content-Type: application/json
 

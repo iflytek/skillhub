@@ -11,71 +11,75 @@
 
 ### Tracking and Revising as an Author
 
-Use My Submissions to read status and decisions. Pending requests can be withdrawn when authorized. Withdrawal stops that review; it does not delete the prior published version or undo an approved global promotion. After rejection, revise according to the comments and use the supported resubmission action. A successful upload does not by itself reopen review.
+Ordinary `PUBLIC / NAMESPACE_ONLY` uploads create review tasks; a `PRIVATE` upload is retained for explicit publishing confirmation or separate review submission. Use My Submissions to inspect tasks and feedback; an authorized submitter selects Withdraw on the pending task and confirms. Withdrawal stops that review; it does not delete the prior published version or undo an approved global promotion. After rejection, revise according to the comments and use the supported resubmission action. A successful upload does not by itself reopen review.
 
 
-## Overview
+## Identify the State Object
 
-SkillHub provides a complete review workflow to ensure that skill packages published to the registry comply with team standards.
+Identify the object first. A task can be `PENDING` while its version is `SCANNING`; the task state does not replace the version's `PENDING_REVIEW`.
 
-The review mechanism operates on two levels:
-- **Namespace Review**: Team administrators review skill packages within their namespace
-- **Platform Review**: Platform administrators review skill packages promoted to the global scope
+### Review Task States
 
-![Concept Diagram](/diagrams/review-concept.png)
+| State | Meaning | Responsible party | Next action |
+| --- | --- | --- | --- |
+| `PENDING` | Awaiting a decision | Authorized namespace reviewer or platform Skill Admin | Inspect the submitted content and scan result before deciding |
+| `APPROVED` | The task was approved | Submitter | Verify the resulting version or profile change |
+| `REJECTED` | Rejected with feedback | Submitter | Revise and submit again |
+| `SUPERSEDED` | Replaced by a later request | Submitter and reviewer | Find the current request; do not decide the old task |
 
-**Review Process**:
+[ReviewTaskStatus](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewTaskStatus.java) has no `WITHDRAWN` value. Withdrawal is an operation, not evidence of a similarly named enum: the skill-version withdrawal path deletes the pending task and updates the version. See [ReviewService](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewService.java).
 
-1. A developer publishes a skill package -> it enters the "Pending Review" state
-2. An administrator receives a notification -> reviews the skill package details
-3. The administrator makes a decision -> approve or reject
-4. Upon approval -> the skill package is officially published
-5. Upon rejection -> the developer receives feedback and can revise and resubmit
+### Skill Version States
 
-**Review Statuses**:
+These values belong to a version; `DRAFT` is not the authoring API draft object.
 
-| Status | Description |
-|------|------|
-| **PENDING** | Awaiting review |
-| **APPROVED** | Approved |
-| **REJECTED** | Rejected |
-| **WITHDRAWN** | Withdrawn |
+| State | Meaning | Responsible party | Next action |
+| --- | --- | --- | --- |
+| `DRAFT` | Draft version | Skill owner | Finish preparation; do not treat it as published |
+| `SCANNING` | Scan in progress | Scanner | Wait for the report before approving ordinary review submissions |
+| `SCAN_FAILED` | Scan execution failed | Operator and skill owner | Diagnose and retry; this is not a risk verdict |
+| `UPLOADED` | Uploaded but not published | Skill owner | Use the available confirmation or submission action |
+| `PENDING_REVIEW` | Awaiting a decision | Authorized reviewer | Inspect this version and decide |
+| `PUBLISHED` | Published version | User and skill owner | Apply normal visibility rules; Agent execution is not thereby verified |
+| `REJECTED` | Version not approved | Skill owner | Revise and resubmit |
+| `YANKED` | Version withdrawn from distribution | Skill owner and user | Check an alternative version rather than assuming installability |
 
-**Governance Features**:
+See [SkillVersionStatus](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillVersionStatus.java) and [publishing and updating skills](./skill-publish.html).
 
-- **Review Workflow**: Per-item review of versions, profile changes, and Suites
-- **Reporting System**: Users can report inappropriate skill packages
-- **Promotion Management**: Promote namespace skill packages to the global scope
-- **Audit Logs**: All governance actions are recorded
+### Suite Bundle Operation States
 
-## Identify what is being reviewed
+| State | Meaning | Responsible party | Next action |
+| --- | --- | --- | --- |
+| `RUNNING` | Import is running | Import service | Track the original operation; do not confirm it twice |
+| `WAITING_FOR_MEMBERS` | Waiting for member versions | Import service and member reviewers | Inspect member publishing or review progress |
+| `BLOCKED_RETRYABLE` | Retryable blocker | Import author | Resolve the blocker, then retry the original operation |
+| `REPREVIEW_REQUIRED` | Previous preview cannot be confirmed | Import author | Preview again and inspect differences |
+| `SUITE_DRAFT_CREATED` | Suite draft created | Suite owner | Continue publishing in Suite management; this is not approval |
+| `CANCELLED` | Operation cancelled | Import author | Inspect completed member actions; do not assume a full rollback |
 
-Review-task status and skill-version status are different: a task can be PENDING while the uploaded version is still SCANNING. Wait for scanning and inspect findings before deciding. Approval of a skill version does not approve a Suite that references it. Suites have their own review, while Bundle import first completes member publishing and then creates a Suite draft. See [Skill Suites](/en/guide/skill-suites) and [Bundle import](/en/guide/suite-bundle).
+See [SkillSuiteBundleOperationStatus](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/suite/bundle/SkillSuiteBundleOperationStatus.java) and [Bundle recovery](./suite-bundle.html).
 
-## Use Cases
+### Avatar Review Results
 
-**Case 1: Namespace Administrator Review**
+An avatar candidate has three state dimensions and reuses the skill review request; it is not another single review-task enum.
 
-A team administrator reviews skill packages submitted by team members to ensure compliance with team standards.
+| Field and values | Meaning | Responsible party | Next action |
+| --- | --- | --- | --- |
+| Candidate `status`: `PENDING`, `ACTIVE`, `REJECTED`, `SUPERSEDED`, `REMOVED` | Waiting, in use, rejected, replaced, removed | Skill owner and authorized reviewer | Inspect the current candidate; an old candidate is not the active avatar |
+| `machineStatus`: `SKIPPED`, `PENDING`, `PROCESSING`, `PASSED`, `BLOCKED`, `ERROR` | Skipped, waiting, running, allowed, blocked, execution error | Machine service and operator | Diagnose `ERROR`; `BLOCKED` is not a human rejection |
+| `reviewStatus`: `NOT_REQUIRED`, `PENDING`, `APPROVED`, `REJECTED`, `APPEAL_PENDING` | No manual review, waiting, approved, rejected, appeal pending | Authorized reviewer and skill owner | Read the decision and use the current candidate's allowed action |
 
-![Screenshot](/screenshots/review-list.png)
+See [SkillAvatarCandidate](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillAvatarCandidate.java); the response exposes candidate `status` as `candidateStatus`. Configuration, result locations and retry behavior are described in [skill avatar review](./skill-avatars.html).
 
-**Case 2: Platform Administrator Reviews Promotions**
+## Review Entry Points
 
-A platform administrator reviews skill packages being promoted from a namespace to the global scope.
+Role and self-review limits appear at the end of this page. Reports and promotion requests are handled separately.
 
-**Case 3: Report Handling**
+![Review subjects and responsibilities](/diagrams/review-concept.png)
 
-A user reports an inappropriate skill package, and an administrator investigates and takes action.
-
+![Review task list](/screenshots/review-list.png)
 
 ## Step-by-Step Guide
-
-**Submitting for Review**:
-
-1. Ordinary PUBLIC / NAMESPACE_ONLY uploads create review tasks; PRIVATE uploads require confirmation or a separate review submission
-2. The developer can check the review status under "My Submissions"
-3. Wait for an administrator to review
 
 **Reviewing Skill Packages**:
 
@@ -116,15 +120,6 @@ Review guidance:
 
 SkillHub guarantees structural validation, traceable evidence references, and immutable version snapshots. It does not certify that the author's declaration is objectively compliant.
 
-**Withdrawing a Review**:
-
-If a developer discovers an issue, they can withdraw the submission before it is approved:
-
-1. Navigate to "My Submissions"
-2. Find the skill package pending review
-3. Click "Withdraw"
-4. Confirm the withdrawal
-
 ### Deleting a Promoted Skill
 
 If permanent deletion reports "Use the reviewed revocation workflow to remove a promoted skill", manage the global publication from the source team skill's detail page. Hiding, archiving, or withdrawing a pending submission does not remove an approved global skill. Submitting a revocation request does not complete revocation either.
@@ -148,7 +143,7 @@ If the revocation record is already `APPROVED` but the same error persists after
 ## API Reference
 
 **Submit for Review**:
-```bash
+```http
 POST /api/v1/reviews
 Content-Type: application/json
 
@@ -158,7 +153,7 @@ Content-Type: application/json
 ```
 
 **Approve a Review**:
-```bash
+```http
 POST /api/v1/reviews/{id}/approve
 Content-Type: application/json
 
@@ -168,7 +163,7 @@ Content-Type: application/json
 ```
 
 **Reject a Review**:
-```bash
+```http
 POST /api/v1/reviews/{id}/reject
 Content-Type: application/json
 
@@ -184,37 +179,37 @@ Content-Type: application/json
 | comment | string | Review comment (optional for approval; provide a clear reason for rejection) |
 
 **List Pending Reviews**:
-```bash
+```http
 GET /api/v1/reviews/pending?namespaceId=123&page=0&size=20
 ```
 
 **List My Submissions**:
-```bash
+```http
 GET /api/v1/reviews/my-submissions?page=0&size=20
 ```
 
 **Get Review Details**:
-```bash
+```http
 GET /api/v1/reviews/{id}
 ```
 
 **Get Skill Package Details Under Review**:
-```bash
+```http
 GET /api/v1/reviews/{id}/skill-detail
 ```
 
 **Download Review Package**:
-```bash
+```http
 GET /api/v1/reviews/{id}/download
 ```
 
 **Withdraw a Review**:
-```bash
+```http
 POST /api/v1/reviews/{id}/withdraw
 ```
 
 **Report a Skill Package**:
-```bash
+```http
 POST /api/v1/skills/{namespace}/{slug}/reports
 Content-Type: application/json
 
