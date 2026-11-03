@@ -1,12 +1,10 @@
 # Passive frontend analytics contract
 
 <!-- #region analytics-body -->
-For deployment, use the [Chinese configuration guide][analytics-guide].
-The runtime script can install an independent Umami/PostgreSQL Compose project or
-connect Web to an existing platform; a separate Kubernetes unit provides Umami for
-Helm installations. Create a website UUID in Umami before enabling collection.
-Stopping analytics does not remove its data; refresh old tabs after disabling.
-Outage events are not replayed, and a well-formed but nonexistent UUID can still fail.
+For installation, platform initialization, upgrades, shutdown and acceptance, use the
+[Chinese configuration guide][analytics-guide]. It is the authoritative operator
+procedure for runtime Compose and Kubernetes/Helm. This document owns the event,
+module, configuration and privacy contracts; it does not duplicate deployment steps.
 Docker/Compose and Helm ship optional analytics with Web. No configuration means no
 controller/adapter chunk, SDK or collection request. The small configuration gate is
 part of bootstrap; the controller and SDK are not. Business components remain passive.

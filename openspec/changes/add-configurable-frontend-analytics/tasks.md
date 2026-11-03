@@ -50,3 +50,10 @@
 - [x] 8.4 Verify isolated Compose from an empty runtime directory, repeat secrets/data, Web recreation/network, analytics stop/restart, existing-platform enable, disable and business routes. Evidence: `skillhub-1037-oneclick/evidence/compose-smoke.log`.
 - [x] 8.5 Verify real kind: separate stats unit and SkillHub Helm release, Umami DB event increase via Web proxy, analytics-only Helm upgrade rolls Web while server Pod UID remains unchanged. Evidence: `skillhub-1037-oneclick/evidence/kind-smoke.log`.
 - [ ] 8.6 Independent maintainer review and PR acceptance remain external; do not close Issue #989 here.
+
+## 9. Maintainer deployment guard fixes
+- [x] 9.1 Keep installed-release smoke values isolated: reuse release values, remove implicit test credentials, and cover successful and rejected event/rollout paths plus incomplete-fix mutations.
+- [x] 9.2 Persist independent project/network identity, migrate only from known original configuration, and reject ambiguous legacy state before defaults are generated; cover custom/default multi-instance lifecycle and secret preservation.
+- [x] 9.3 Clarify file/image version pinning, the three operator paths, independent configuration ownership, cleanup/upgrade boundaries and smoke upgrade side effects; remove duplicate operational descriptions from the contract.
+- [ ] 9.4 Complete one consolidated independent review and the focused source/deployment validation matrix for these fixes.
+- [ ] 9.5 Build the affected documentation and verify the rendered operator instructions; keep real-cluster and publication status explicit.

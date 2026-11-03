@@ -108,9 +108,25 @@ Sentinel、实际 MinIO S3 连接，以及由 Kubernetes API 接受的 TLS Ingre
 ### 可选前端动作统计
 
 默认关闭。`web.analytics.config` 接受 JSON 字符串，`web.analytics.upstream` 接受仅部署可见的
-HTTP(S) origin。支持 Umami，不需要编辑 JS 或 Nginx；先在平台创建网站并取得 UUID。
+HTTP(S) origin。支持 Umami 和 DataFinder，不需要编辑 JS 或 Nginx；Umami 先创建网站取得 UUID，
+DataFinder 先取得应用 app_id 和采集域名。
 值放在 Web 专用 ConfigMap，只改统计配置时仅 Web 滚动更新、后端 Pod 不替换；旧标签页不会自动更新。字段、授权接口、初始化、隐私及验收见
 [前端动作统计接入指南](../../docs/frontend-analytics-integration.md)。
+
+统计专项验收脚本会发送测试事件、查询 `stats` 中的独立数据库，并对指定的已安装 Release
+执行真实 `helm upgrade --reuse-values`，将统计规则改为空对象；它不是只读检查，也不会自动恢复规则。
+仅用于隔离验收安装，要求单个 Ready Web/Server Pod、独立 `stats` 平台和提前配置好的 Web port-forward。
+从仓库根目录运行（先替换网站 UUID、values 和安装名称）：
+
+```sh
+ANALYTICS_SMOKE_WEB_URL=http://127.0.0.1:18082 \
+  bash charts/skillhub/tests/analytics-smoke.sh "<网站UUID>" values-acceptance.yaml sh1037 skillhub
+```
+
+第二个参数必须是该安装使用的配置；脚本复用已有 Release 值，不会隐式加载
+`tests/test-values.yaml`。显式文件仍可覆盖原值，勿混用其他环境的 values 或重新生成 Secret。
+脚本成功只证明代理入库及本次统计配置升级时 Web 滚动、Server 未替换；浏览器授权、
+业务回归和真实生产配置仍须按接入指南验证。验收后用原安装配置再次升级以恢复规则。
 
 ### 高可用模式
 

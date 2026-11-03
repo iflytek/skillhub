@@ -49,7 +49,11 @@ Nginx 通过独立 include 片段选择已注册适配器的精确端点：Umami
 
 ### 4. Deployment and lifecycle
 
-现有平台接入：填写 JSON 和内部 upstream，更新 Web。可选自托管组合：在 release Compose 上叠加统计服务与其持久化数据库，使用显式凭证，不新增 Nginx；创建网站/取得 UUID 等一次性平台步骤必须诚实说明。入口和 Helm 均默认关闭。
+现有平台接入：填写 JSON 和内部 upstream，更新 Web。可选自托管组合：统计服务与其持久化数据库使用独立 Compose 项目，仅 Web 和 Umami 加入共享私网，不新增 Nginx；创建网站/取得 UUID 等一次性平台步骤必须诚实说明。入口和 Helm 均默认关闭。
+
+独立统计目录中的 `analytics/.env` 同时保存凭据、项目名和网络名，初始化后成为这些标识的权威来源；外层业务配置和继承的 shell 环境不能将统计命令或 Web 接线重定向到其他实例。`clean` 删除业务运行文件但保留独立统计目录。旧配置缺少标识时，只从仍存在的原业务配置迁入；若原配置已丢失，则所有命令在生成默认文件之前明确失败，要求恢复已确认的标识，不猜测默认项目。
+
+针对已安装 Release 的 Helm 统计验收仅覆盖统计字段，复用现有 Release 值和 Secret；不得隐式叠加固定测试凭据。调用者提供的 values 仍必须与安装配置一致。该脚本会执行真实升级并改变事件规则，只用于有明确边界的隔离验收环境，不能描述为只读检查。
 
 部署配置变更需重新创建 Web（Compose restart 不重新注入环境变量；Helm 统计值放在 Web 专用 ConfigMap，只滚动 Web）使新页面生效；旧标签页不自动接收新环境参数。动态停止通过当前页面接口生效；紧急全局停止可关闭独立采集路由。文档不得宣称仅修改 env 即刻撤销已在发送的请求。模块使用正常发布构建产物与缓存策略，不把可变配置放入 immutable JS。
 
@@ -59,7 +63,7 @@ PR-2 不新增 jq 或 Node 运行时依赖。镜像已有 BusyBox awk 负责有�
 
 bootstrap 仅静态包含小型 gate 和注册参数校验；controller/helper 与 adapter 保持独立懒加载 chunk。在首个 React DOM commit 后的独立任务中启动 gate，不把正常挂载与 SDK 绑定。enabled=true 且 consent=denied 时不加载模块，但代理保留精确端点，供当前页显式 start() 授权后使用。静态 adapter factory 在动态导入返回后检查取消信号，迟到的导入不能重新创建 SDK。
 
-旧示例目录仅保留指南指针。helper/adapter 与全部断言迁入产品测试树；历史 edge/Compose 只保留为测试 fixture，不是部署路径，不维护第二份采集实现。
+旧示例目录仅保留指南指针。helper/adapter 与全部断言迁入产品测试树；部署回归直接检查当前生产配置，不保留已删除的历史 edge/Compose 副本。
 
 ### PR-3: second registered adapter
 

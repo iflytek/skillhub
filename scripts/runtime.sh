@@ -194,12 +194,13 @@ download_file() {
 set_env_value() {
   key="$1"
   value="$2"
+  target_env_file="${3:-$ENV_FILE}"
 
-  if [ ! -f "$ENV_FILE" ]; then
+  if [ ! -f "$target_env_file" ]; then
     return 0
   fi
 
-  tmp="$ENV_FILE.tmp"
+  tmp="$target_env_file.tmp"
   found=false
   old_umask="$(umask)"
   umask 077
@@ -214,14 +215,14 @@ set_env_value() {
           printf '%s\n' "$line"
           ;;
       esac
-    done <"$ENV_FILE"
+    done <"$target_env_file"
     if [ "$found" = "false" ]; then
       printf '%s=%s\n' "$key" "$value"
     fi
   } >"$tmp"
   umask "$old_umask"
-  mv "$tmp" "$ENV_FILE"
-  secure_env_file
+  mv "$tmp" "$target_env_file"
+  chmod 600 "$target_env_file"
 }
 
 secure_env_file() {
@@ -233,7 +234,7 @@ secure_env_file() {
 get_env_value() {
   key="$1"
   default_value="${2:-}"
-  value="$(grep "^$key=" "$ENV_FILE" | tail -n 1 | cut -d= -f2- || true)"
+  value="$(grep "^$key=" "${3:-$ENV_FILE}" | tail -n 1 | cut -d= -f2- || true)"
 
   if [ -n "$value" ]; then
     printf '%s' "$value"
@@ -341,6 +342,11 @@ SQL
 }
 
 prepare_runtime_files() {
+  # Migrate legacy identity before creating a replacement release file. Failed
+  # migration must not leave fresh defaults that a later retry could trust.
+  if [ -f "$ANALYTICS_ENV_FILE" ]; then
+    ensure_analytics_identity
+  fi
   mkdir -p "$SKILLHUB_HOME"
   download_file "$SKILLHUB_RAW_BASE/compose.release.yml" "$COMPOSE_FILE"
   # GitHub and OSS both publish this root-level overlay; fetch only when used.
@@ -415,6 +421,7 @@ run_compose() {
   compose_cmd="$(find_compose)"
   if [ "$(get_env_value SKILLHUB_ANALYTICS_NETWORK_ENABLED false)" = "true" ]; then
     ensure_analytics_network
+    set_env_value SKILLHUB_ANALYTICS_NETWORK "$SKILLHUB_ANALYTICS_NETWORK"
     # Preserve the normal default network and attach only Web to analytics.
     set -- -f "$OVERLAY_FILE" "$@"
   fi
@@ -422,26 +429,43 @@ run_compose() {
   $compose_cmd --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
 }
 
-analytics_project() {
-  get_env_value SKILLHUB_ANALYTICS_PROJECT skillhub-analytics
-}
-
-analytics_network() {
-  get_env_value SKILLHUB_ANALYTICS_NETWORK skillhub-analytics
+ensure_analytics_identity() {
+  # Once initialized, the independent directory owns both identifiers. Neither
+  # a recreated release file nor inherited Compose variables may redirect it.
+  for identity_key in SKILLHUB_ANALYTICS_PROJECT SKILLHUB_ANALYTICS_NETWORK; do
+    identity_value="$(get_env_value "$identity_key" "" "$ANALYTICS_ENV_FILE")"
+    if [ -z "$identity_value" ]; then
+      if [ "$ORIGINAL_ENV_FILE_EXISTS" != "true" ]; then
+        echo "Missing $identity_key in $ANALYTICS_ENV_FILE. Restore the original .env.release or set the verified original identifier in analytics/.env before retrying; no project discovery is performed." >&2
+        exit 1
+      fi
+      identity_value="$(get_env_value "$identity_key" skillhub-analytics)"
+      set_env_value "$identity_key" "$identity_value" "$ANALYTICS_ENV_FILE"
+    fi
+    case "$identity_key" in
+      SKILLHUB_ANALYTICS_PROJECT) SKILLHUB_ANALYTICS_PROJECT="$identity_value" ;;
+      SKILLHUB_ANALYTICS_NETWORK) SKILLHUB_ANALYTICS_NETWORK="$identity_value" ;;
+    esac
+  done
+  chmod 600 "$ANALYTICS_ENV_FILE"
+  # Shell variables take precedence over --env-file in Compose interpolation.
+  export SKILLHUB_ANALYTICS_PROJECT SKILLHUB_ANALYTICS_NETWORK
 }
 
 ensure_analytics_network() {
-  network_name="$(analytics_network)"
+  ensure_analytics_identity
+  network_name="$SKILLHUB_ANALYTICS_NETWORK"
   if ! docker network inspect "$network_name" >/dev/null 2>&1; then
     docker network create "$network_name" >/dev/null
   fi
 }
 
 run_analytics_compose() {
+  ensure_analytics_identity
   compose_cmd="$(find_compose)"
   # Explicit -p also protects against an inherited COMPOSE_PROJECT_NAME.
   # shellcheck disable=SC2086
-  $compose_cmd -p "$(analytics_project)" --env-file "$ANALYTICS_ENV_FILE" -f "$ANALYTICS_COMPOSE_FILE" "$@"
+  $compose_cmd -p "$SKILLHUB_ANALYTICS_PROJECT" --env-file "$ANALYTICS_ENV_FILE" -f "$ANALYTICS_COMPOSE_FILE" "$@"
 }
 
 prepare_analytics_files() {
@@ -455,11 +479,12 @@ prepare_analytics_files() {
       printf 'UMAMI_DB_PASSWORD=%s\n' "$(generate_secret)"
       printf 'UMAMI_APP_SECRET=%s\n' "$(generate_secret)"
       printf 'UMAMI_ADMIN_PORT=8300\n'
-      printf 'SKILLHUB_ANALYTICS_NETWORK=%s\n' "$(analytics_network)"
+      printf 'SKILLHUB_ANALYTICS_PROJECT=%s\n' "$(get_env_value SKILLHUB_ANALYTICS_PROJECT skillhub-analytics)"
+      printf 'SKILLHUB_ANALYTICS_NETWORK=%s\n' "$(get_env_value SKILLHUB_ANALYTICS_NETWORK skillhub-analytics)"
     } >"$ANALYTICS_ENV_FILE"
     umask "$old_umask"
   fi
-  chmod 600 "$ANALYTICS_ENV_FILE"
+  ensure_analytics_identity
 }
 
 validate_analytics_input() {
@@ -565,6 +590,9 @@ print_runtime_command() {
 
 build_runtime_lifecycle_args
 
+# Remember this before preparation can recreate defaults after clean.
+ORIGINAL_ENV_FILE_EXISTS=false
+[ ! -f "$ENV_FILE" ] || ORIGINAL_ENV_FILE_EXISTS=true
 prepare_runtime_files
 
 case "$COMMAND" in
@@ -615,8 +643,8 @@ EOF
     run_compose pull
     ;;
   analytics-up)
-    ensure_analytics_network
     prepare_analytics_files
+    ensure_analytics_network
     run_analytics_compose up -d
     admin_port="$(grep '^UMAMI_ADMIN_PORT=' "$ANALYTICS_ENV_FILE" | cut -d= -f2-)"
     printf 'Umami management: http://127.0.0.1:%s\nChange the default admin/umami password, create a website, copy its UUID, then run analytics-enable --website-id <UUID>.\nAnalytics files: %s\n' "$admin_port" "$ANALYTICS_HOME"

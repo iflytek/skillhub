@@ -117,14 +117,18 @@ product 只接受小写字母开头，后接小写字母、数字或下划线，
 
 ## 3. 一键脚本：新建独立 Umami
 
-无需克隆仓库。从发布分支下载脚本执行；`--ref` 固定脚本和配套文件的同一版本。
+无需克隆仓库。选择包含本功能的已审核 tag 或提交 SHA，下载同版本脚本和配套文件；
+下面的 `SKILLHUB_REF` 须替换为实际版本，并在后续所有命令的 shell 中保留。
+`--ref`（或环境变量 `SKILLHUB_REF`）固定文件来源，`--version` 单独选择 SkillHub 镜像标签；两者需匹配，不能把文件版本当作镜像版本。
 `runtime.sh` 从 GitHub raw 获取 `compose.release.yml`、`.env.release.example`，在启用时获取
 `compose.release.analytics.yml`，在部署统计平台时获取 `compose.analytics-umami.yml`。
 这些文件保存在 `--home` 指定目录。使用 `--aliyun` 时镜像 OSS 根目录须同时发布两个新增 Compose 文件；
-旧镜像仅可运行不含统计的 `up`。生产环境先锁定版本、备份数据，核对管理端访问控制。
+旧版 OSS 文件集仅可运行不含统计的 `up`，不能假定 GitHub 的 `--ref` 会固定 OSS 镜像文件版本。生产环境先锁定版本、备份数据，核对管理端访问控制。
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/main/scripts/runtime.sh -o runtime.sh
+export SKILLHUB_REF="<包含本功能的已审核tag或提交SHA>"
+export SKILLHUB_VERSION="<与该版本匹配的已发布镜像标签>"
+curl -fsSL "https://raw.githubusercontent.com/iflytek/skillhub/$SKILLHUB_REF/scripts/runtime.sh" -o runtime.sh
 sh runtime.sh up --home "$HOME/skillhub-runtime"
 sh runtime.sh analytics-up --home "$HOME/skillhub-runtime"
 ```
@@ -133,23 +137,33 @@ sh runtime.sh analytics-up --home "$HOME/skillhub-runtime"
 启动独立 Compose 项目 `skillhub-analytics`：Postgres 使用独立数据卷，Umami 管理端默认只绑定
 `127.0.0.1:8300`。重复执行不重置密钥或数据。远程机器通过 SSH 端口转发管理。
 如需改端口，编辑 `analytics/.env` 中的 `UMAMI_ADMIN_PORT`，再运行 `analytics-up` 使端口生效。
-若同机部署多个实例，先在 `.env.release` 中为每个实例指定唯一的
-`SKILLHUB_ANALYTICS_PROJECT`、`SKILLHUB_ANALYTICS_NETWORK`；已有平台不需要此网络。
+若同机部署多个实例，首次 `analytics-up` 前在各自 `.env.release` 中指定唯一的
+`SKILLHUB_ANALYTICS_PROJECT`、`SKILLHUB_ANALYTICS_NETWORK`。首次初始化会将这两个标识
+写入 `analytics/.env`；此后以独立统计配置中的标识为准，覆盖外层文件和 shell 中的同名值。
+不要通过修改标识迁移已有数据；它们决定实际 Compose 项目、网络和数据卷归属。已有平台不需要此网络。
 
 打开 `http://127.0.0.1:8300`，用初始账号 `admin` / `umami` 登录，**立即修改密码**。
 重新登录，在网站管理中新建网站并复制网站 **UUID**。这一步由管理员完成，脚本不会代建网站。
 密码或 API token 不得填入 Web 配置。拿到 UUID 后运行：
 
 ```sh
-sh runtime.sh analytics-enable --home "$HOME/skillhub-runtime" --website-id <网站UUID>
+sh runtime.sh analytics-enable --home "$HOME/skillhub-runtime" --website-id "<网站UUID>"
 ```
 
+`analytics-enable` 会立即以 `consent=granted` 开启采集；仅在部署方确认允许后执行。
+若需要逐用户同意，先按第 2、5 节配置 `denied` 并接入同意组件，不先运行此开启命令。
 脚本把公开 JSON 和内部 origin `http://umami:3000` 写入 `.env.release`，只重建 Web。
 Web 和 Umami 通过外部网络互通；SkillHub server/数据库只留在 SkillHub 默认网络。
 以后 `runtime.sh up` 自动带 Web 网络 overlay，容器重建仍可连通。
 两个项目各自执行 `up`/`analytics-up`、`down`/`analytics-down`、`pull`/`analytics-pull`。
 `analytics-down` 仅 stop，数据卷和密钥保留；重新运行 `analytics-up` 即恢复。
-`down` 不停 Umami，`clean` 只删除 SkillHub 运行目录，不删 Compose 数据卷；清理前备份 `analytics/.env`。
+`down` 不停 Umami；`clean` 停止 SkillHub 并删除其生成的运行文件，存在 `analytics/` 时保留该目录、
+凭证和独立项目标识，不停止统计平台、不删数据卷。执行前分别备份业务配置、
+`analytics/.env` 和统计数据库；`clean` 后重新 `up` 需恢复业务配置，再启用采集。
+旧版本生成的 `analytics/.env` 若缺少标识，会从原 `.env.release` 迁入；若原文件已经丢失，
+脚本会在生成默认配置前拒绝运行管理命令，包括重复重试。此时恢复原文件，或核实原项目/网络后补入
+`analytics/.env`，不要猜测默认名称。可通过 `docker compose ls --all` 确认仍存在的项目，
+再检查对应 Umami 容器实际加入的网络；不要直接改项目名来尝试连接原数据卷。
 不要用 `down -v`，除非已备份且明确要删除数据。
 
 ## 3.1 一键脚本：接入已有统计平台
@@ -159,7 +173,7 @@ Web 和 Umami 通过外部网络互通；SkillHub server/数据库只留在 Skil
 
 ```sh
 sh runtime.sh analytics-enable --home "$HOME/skillhub-runtime" \
-  --website-id <网站UUID> --upstream https://stats.example.com
+  --website-id "<网站UUID>" --upstream https://stats.example.com
 ```
 
 使用已有 DataFinder 时，把平台应用的数字 app_id 和采集域名（非管理域名）填入：
@@ -169,12 +183,14 @@ sh runtime.sh analytics-enable --home "$HOME/skillhub-runtime" \
   --adapter datafinder --app-id 123456 --upstream https://collector.example.com
 ```
 
+上述 `analytics-enable` 同样立即使用 `consent=granted`，逐用户同意请用第 2、5 节。
 两种已有平台均不创建本地统计服务或共享网络。关闭采集运行
 `sh runtime.sh analytics-disable --home "$HOME/skillhub-runtime"`，仅重建 Web，平台仍运行。
 现有手工 Compose 部署也可按第 2 节直接填写 `.env.release` 并重建 Web。
 
 ## 4. Helm：独立统计部署单元
 
+以下命令从检出的同一已审核版本仓库根目录运行；Chart、values schema 和 Kubernetes 清单应来自该版本。
 SkillHub Chart 不依赖 Umami。自建平台可先部署独立的 `deploy/k8s/analytics-umami/umami.yaml`。
 示例以 `stats` namespace、默认 StorageClass 的 PVC 为基础。先创建独立 namespace 和 Secret：
 
@@ -199,7 +215,8 @@ PVC 独立于 SkillHub Release；更新 Umami 镜像或密钥须单独滚动统�
 Postgres 大版本升级先备份数据库并按其升级流程迁移。删除 Deployment 不删除 PVC；
 删除 namespace/PVC 会删除数据，须先做可恢复备份。
 
-保留已有生产 values 和 Secret。在 values 中增加以下内容：
+以下针对已安装的 SkillHub Release。首次安装先按 [Chart README](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/README.md) 完成业务安装，
+已有平台可跳过上面的自建平台步骤。保留安装时的生产 values 和固定 Secret，在原 values 中增加以下内容：
 
 ```yaml
 web:
@@ -210,11 +227,14 @@ web:
 
 ```sh
 helm lint --strict charts/skillhub -f values-production.yaml
-helm upgrade --install skillhub ./charts/skillhub -n skillhub -f values-production.yaml
+helm upgrade skillhub ./charts/skillhub -n skillhub --reuse-values -f values-production.yaml
 kubectl -n skillhub rollout status deployment/skillhub-web
 kubectl -n skillhub logs deployment/skillhub-web --tail=100
 ```
 
+`helm upgrade` 是实际升级，`--reuse-values` 保留 Release 的已有值；显式传入的文件仍会覆盖旧值，
+必须使用该安装的配置，不要传入 `charts/skillhub/tests/test-values.yaml` 等测试夹具。
+保留现有 Secret 引用和固定凭证，不能为开启统计重新生成业务密钥。
 deployment 名称使用 Chart 默认 release 名 `skillhub`；自定义名称时替换命令中的名称。
 值写入 Web 专用的 `<release>-web-analytics` ConfigMap，只改统计配置时仅 Web 滚动更新，
 后端 Pod 不会被替换。
@@ -338,11 +358,17 @@ curl -i http://localhost/_skillhub-analytics/api/websites
 | 有点击但没有统计 | 规则未配置、宿主不支持、超过 Umami 名称 50 字符，或 best-effort 丢失。 |
 | 上传 413 | 检查整条外层代理链，正常 Web 仍是 100M，统计未降低它。 |
 
+runtime 升级时先备份 `.env.release`、`analytics/.env` 和数据库，下载目标版本的脚本并更新
+`SKILLHUB_REF` 和匹配的 `SKILLHUB_VERSION`；`pull` 只拉业务镜像，`analytics-pull` 只拉统计镜像，拉取不替换运行容器。
+分别运行 `up` 与 `analytics-up` 才应用变化，沿用原凭证和项目标识。不要以删除配置重建作为升级方法。
+
 升级先比较[manifest](https://github.com/iflytek/skillhub/blob/main/docs/frontend-analytics-manifest.json)，已有 ID 含义冻结，新 ID 不自动加入默认规则。
 消失的配置 ID 不再触发。SDK 固定 Umami 3.4.1；升级需重测真实 payload、stop、并发和
 根/子路径业务。回滚 Web 镜像要同时使用该版本支持的配置；先关闭统计最稳妥。
 
-持久关闭：把配置留空或 enabled 改 false，按第 2 节重新创建 Web。新页面应零模块/SDK/请求。
+持久关闭：runtime 用户运行 `analytics-disable`（第 3.1 节）；手工 Compose 用户将配置留空
+或 enabled 改 false，再按第 2 节重建 Web；Helm 用户将 `web.analytics.config` 留空或
+enabled 改 false，使用原生产 values 按第 4 节升级。新页面应零模块/SDK/请求。
 老标签页不自动更新；需让用户关闭/刷新，或在现有同意组件调用 stop。
 紧急全局阻断可在平台或独立采集路由禁用接收，再处理旧页；不能撤回已发出的请求。
 
@@ -353,7 +379,8 @@ sh runtime.sh analytics-down --home "$HOME/skillhub-runtime"
 ```
 
 Helm 自建平台可单独缩容 `kubectl -n stats scale deployment/umami --replicas=0`，
-恢复后扩容；SkillHub Release 保持运行。数据库卷保留。删除统计数据需另行备份、确认后只处理 `analytics_postgres_data` 对应的卷，
+恢复时将副本数改回 1；SkillHub Release 保持运行，PVC 保留。
+Compose 删除统计数据需另行备份、确认后只处理对应项目的 `analytics_postgres_data` 卷，
 不要使用整个项目的 `down -v`。
 
 ## 8. 隐私和自定义开发边界

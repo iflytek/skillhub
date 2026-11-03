@@ -31,12 +31,13 @@ send_code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$WEB_URL/_skillhub-
 after=$(count_events)
 [[ "$after" -gt "$before" ]] || { echo 'HTTP 200 but event not stored' >&2; exit 1; }
 echo "Independent stats DB: event count $before -> $after (script=$script_code send=$send_code)"
-# Change only Web analytics. All other values, including secrets, come from the same files.
+# Reuse installed values (including secrets); the caller file must reproduce the install.
+# Never apply chart test fixtures to an existing release.
 changed="{\"enabled\":true,\"adapter\":\"umami\",\"consent\":\"granted\",\"rules\":{},\"adapterConfig\":{\"websiteId\":\"$WEBSITE_ID\"}}"
 change_values=$(mktemp "${TMPDIR:-/tmp}/skillhub-analytics-smoke.XXXXXX")
 trap 'rm -f "$change_values"' EXIT
 printf "web:\n  analytics:\n    config: '%s'\n" "$changed" >"$change_values"
-helm upgrade "$RELEASE" "$CHART_DIR" -n "$NAMESPACE" -f "$CHART_DIR/tests/test-values.yaml" -f "$VALUES_FILE" \
+helm upgrade "$RELEASE" "$CHART_DIR" -n "$NAMESPACE" --reuse-values -f "$VALUES_FILE" \
   -f "$change_values" --wait --timeout 5m >/dev/null
 kubectl -n "$NAMESPACE" rollout status "deployment/$RELEASE-skillhub-web" --timeout=180s >/dev/null
 server_after=$(pod_uid server)
