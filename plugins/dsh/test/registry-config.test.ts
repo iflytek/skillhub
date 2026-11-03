@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { Config } from '../src/host/config.ts';
-import { editSavedRegistry, savedRegistryOptions, validateRegistryConfig } from '../src/client/registry-config.ts';
+import { editSavedRegistry, registryChoices, preserveCurrentRegistry, RegistryConfigError, savedRegistryOptions, validateRegistryConfig } from '../src/client/registry-config.ts';
 import type { SkillHubConfig } from '../src/host/types.ts';
 const base: SkillHubConfig = { registryUrl: 'https://a.example', detailTabs: { versions: 'auto', reviews: 'hide', securityAudit: 'show' },
   savedRegistries: [{ name: 'A', url: 'https://a.example/' }, { name: 'B', url: 'https://b.example' }] };
@@ -54,3 +54,21 @@ describe('saved registry configuration', () => {
     expect(validateRegistryConfig({ ...base, registryUrl: '' }).registryUrl).toBe('');
   });
 });
+
+ test('legacy current choices retain saved indexes and persist only after an explicit edit or switch', () => {
+   const legacy = { ...base, registryUrl: 'https://legacy.example' };
+   expect(registryChoices(legacy).map(entry => entry.savedIndex)).toEqual([null, 0, 1]);
+   expect(legacy.savedRegistries).toHaveLength(2);
+   const retained = preserveCurrentRegistry(legacy);
+   expect(retained.savedRegistries).toHaveLength(3);
+   expect(retained.savedRegistries?.[2]).toEqual({ name: '未命名来源', url: legacy.registryUrl });
+   expect(registryChoices(retained).map(entry => entry.savedIndex)).toEqual([0, 1, 2]);
+   expect(editSavedRegistry(retained, 1).registryUrl).toBe(legacy.registryUrl);
+   expect(editSavedRegistry(retained, 2).registryUrl).toBe('');
+   expect(preserveCurrentRegistry(retained)).toBe(retained);
+ });
+ test('source validation identifies the saved editor independently of duplicate names', () => {
+   const choices = { ...base, savedRegistries: [{ name: 'Same', url: 'https://a.example' }, { name: 'Same', url: 'https://a.example/' }] };
+   try { validateRegistryConfig(choices); throw new Error('expected rejection'); }
+   catch (error) { expect(error).toBeInstanceOf(RegistryConfigError); expect((error as RegistryConfigError).savedIndex).toBe(1); }
+ });
