@@ -61,3 +61,11 @@ Repair 2 exact commands/counts/evidence and proposed fixup are appended to the w
 - [x] Verify real clean retains deployment files byte-for-byte at mode 600; remove the identified test containers, project volumes/networks and test images, preserve pre-existing images, stop the authorized dind and local relay, and verify owned ports are closed.
 
 Repair 4 real runs, template-only checks, intermediate fixture failures and remaining deployment limits are recorded in acceptance.md and the worker report. Commits remain local; publication is left to the owner.
+
+## Repair 4a (independent review)
+
+- [x] Add and execute RED/GREEN regressions for independent file-ref selection with an existing analytics overlay, remembered private/Collector attachment across disable/enable, first-created Collector network seeding without rewriting an existing env, and the Helm same-origin metrics access documentation contract.
+- [x] Remove version-to-ref fallback; restore the base lifecycle function; preserve attachment intent independently of collection; seed only a newly created independent env; document both pinned arguments and Helm Service port-forward without ingress changes.
+- [x] Rerun every runtime shell suite, six Python deployment cases, Helm contracts/strict lint with Python installed, release validation, workflow-security, docs/weekly builds, source/privacy checks and range whitespace checks.
+- [x] Build the server image and run real private-receiver and optional-Collector disable/enable cycles, verify new publication/download facts and disabled zero-export behavior while attached, and exercise real ps with version but no ref against the file source.
+- [x] Remove this round's Docker resources, verify baseline image/volume/network sets, close the relay and stop the isolated daemon; record unchanged backend/Kubernetes/remote-publication limits in acceptance and the worker report.
