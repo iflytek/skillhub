@@ -11,7 +11,7 @@
 
 ## 使用技能
 
-| 你要做什么 | 阅读 |
+| 操作目标 | 阅读 |
 | --- | --- |
 | 找到适合任务的技能，查看版本和权限 | [搜索与安装技能](./skill-discovery.html) |
 | 一次安装一组固定版本技能，从入口技能开始使用 | [管理技能套装](./skill-suites.html) |
@@ -30,6 +30,7 @@
 - [管理命名空间](./namespace.html)：成员、角色和资源可见范围。
 - [审核技能与套装](./review.html)：处理技能与套装申请。
 - [安全扫描与报告](./scanner.html)：扫描服务接入及结果解读。
+- [技能头像与审核](./skill-avatars.html)：技能所有者提交头像，有权审核人处理申请，超级管理员调整审核策略。
 
 ## 部署与运维
 
@@ -38,7 +39,7 @@
 - [Docker 部署](./deployment.html)：安装、配置、升级和备份。
 - [Kubernetes 部署（Kustomize / Helm）](./kubernetes.html)：选择清单或独立 Chart 路径。
 - [前端动作统计](./frontend-analytics.html)：可选配置化接入、授权与故障验收，按部署版本选择配置。
-- [技能头像与审核](./skill-avatars.html)：管理员配置图片审核服务。
+- [配置头像机器审核服务](./avatar-moderation-configuration.html)：部署方选择供应商、注入凭据、更新服务并验证实际调用。
 
 ## 开发与集成
 

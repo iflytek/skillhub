@@ -1,0 +1,3 @@
+.vp-doc img[src*='/diagrams/'] {
+  margin-inline: auto;
+}

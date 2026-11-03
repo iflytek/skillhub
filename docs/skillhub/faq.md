@@ -275,7 +275,9 @@ A: SkillHub 默认的 Compose 和 `runtime.sh` 使用 Docker named volume（`pos
 
 ## Q: 通过 OAuth（GitHub / GitLab 等）登录的账号，如何取得管理员权限？
 
-A: OAuth 首次登录创建的是普通用户。需要由已有的 `SUPER_ADMIN`（例如初始化时的 bootstrap admin）在后台将其提升为管理员。
+A: 外部登录先按实例现有准入策略处理。首次创建且状态为 `ACTIVE` 的外部账号，如果身份来源提供已验证邮箱，并匹配启用的首次授权规则，可获得该规则配置的平台角色；没有匹配规则时不自动授予平台管理权限。规则仅在新账号创建时执行，不追溯已有账号，也不因邮箱相同而合并账号。已有账号由具有相应权限的平台角色在用户管理中授权；超级管理员（SUPER_ADMIN）的授予须由超级管理员执行。
+
+规则入口与操作说明见[账号与访问令牌](./guide/account-access.html)；执行条件见[首次外部授权服务](https://github.com/iflytek/skillhub/blob/main/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/settings/InitialExternalRoleGrantService.java)及[账号创建流程](https://github.com/iflytek/skillhub/blob/main/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/identity/IdentityBindingService.java)。
 
 `USER_ADMIN` 可以管理用户状态，并分配除 `SUPER_ADMIN` 之外的平台角色；但不能向任何账号授予 `SUPER_ADMIN`，也不能修改已有 `SUPER_ADMIN` 账号的角色。这两类操作只有 `SUPER_ADMIN` 可以执行。
 

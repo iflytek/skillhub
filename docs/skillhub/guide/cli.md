@@ -445,13 +445,10 @@ skillhub remove pdf-parser --json
 skillhub doctor --json
 ```
 
-成功响应格式：
+以下为成功标志的 JSON 节选，不是完整命令响应；结果字段取决于命令：
 
 ```json
-{
-  "ok": true,
-  ...
-}
+{"ok": true}
 ```
 
 错误响应格式：
@@ -666,14 +663,13 @@ skillhub search test --registry https://skillhub.example.com
 
 ### 安装目录冲突
 
-```bash
-# 使用 --force 覆盖
-skillhub install pdf-parser --force
+先核对当前注册中心、目标 Agent 和安装目录，再检查现有文件的来源及本地修改。以下以 Codex 为例；其他 Agent 应使用实际标识。
 
-# 或先删除再安装
-skillhub remove pdf-parser
-skillhub install pdf-parser
+```bash
+skillhub list --agent codex --json
 ```
+
+将记录中的 `installDir` 与冲突路径比较，并读取该目录的 `SKILL.md`。确认属于同一安装来源、完成备份且明确允许舍弃本地改动后，才可按更新计划使用 `--force`。该参数不能接管未管理目录、其他来源或已停用目标。无法确认来源时，应选择不同的目录或安装范围，不得直接删除文件或安装记录排障。
 
 ### 清单损坏
 
