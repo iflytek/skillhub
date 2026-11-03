@@ -23,7 +23,13 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Load the shipped logging config, including JUL-to-SLF4J routing used by Boot. */
+/**
+ * Load the shipped logging config, including JUL-to-SLF4J routing used by Boot.
+ * Surefire runs this tag in a dedicated, non-reused JVM: Boot logging/JUL are
+ * process-global, and raw SDK spans initialize OTel ContextStorage before Boot
+ * can install its MDC wrapper. Neither can be restored by LoggingSystem.cleanUp().
+ */
+@org.junit.jupiter.api.Tag("process-global-diagnostics")
 @ExtendWith(OutputCaptureExtension.class)
 class BusinessLogsDiagnosticsTest {
     private static final String CREDENTIAL = "SYNTHETIC-1009-CREDENTIAL";
