@@ -4,7 +4,7 @@ Find a skill in an existing registry, inspect an available version, then install
 
 ## Before you start
 
-Public skills can be browsed anonymously. For team or private resources, sign in to the correct instance and confirm namespace permissions. See [Quick Start](../quickstart.md) for CLI and Agent setup. Paths below are relative to your deployment, not a fixed development port.
+Public (`PUBLIC`) skills can be browsed anonymously. Searching namespace-only (`NAMESPACE_ONLY`) skills requires sign-in to the correct instance and the relevant membership. Ordinary marketplace search excludes private (`PRIVATE`) skills; owners manage them in My Skills instead of repeatedly changing search terms. See the [full-text query implementation](https://github.com/iflytek/skillhub/blob/main/server/skillhub-search/src/main/java/com/iflytek/skillhub/search/postgres/PostgresFullTextQueryService.java). See [Quick Start](../quickstart.md) for CLI and Agent setup. Paths below are relative to your deployment, not a fixed development port.
 
 ## Search in the Web UI
 

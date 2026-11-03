@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="420" viewBox="0 0 360 420" role="img" aria-labelledby="title desc">
+<title id="title">首次安装与使用的分阶段检查</title>
+<desc id="desc">先选择注册中心及身份，再安装文件、确认记录，最后验证Agent发现与任务结果。每一阶段都需要独立检查。</desc>
+<rect x="1" y="1" width="358" height="418" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#475569" stroke-width="1.4"/></marker></defs>
+<rect x="18" y="18" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="42" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">1  选择来源与身份</text>
+<text x="32" y="64" font-family="system-ui,sans-serif" font-size="15" fill="#334155">搜索真实坐标；受限资源需登录</text>
+<text x="32" y="82" font-family="system-ui,sans-serif" font-size="15" fill="#334155">核对用途、版本和访问权限</text>
+<path d="M180 96 V112" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="18" y="118" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="142" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">2  安装文件</text>
+<text x="32" y="164" font-family="system-ui,sans-serif" font-size="15" fill="#334155">明确项目、范围与目标 Agent</text>
+<text x="32" y="182" font-family="system-ui,sans-serif" font-size="15" fill="#334155">核对实际目录中的 SKILL.md</text>
+<path d="M180 196 V212" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="18" y="218" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="242" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">3  检查安装记录</text>
+<text x="32" y="264" font-family="system-ui,sans-serif" font-size="15" fill="#334155">核对坐标、Agent、路径与状态</text>
+<text x="32" y="282" font-family="system-ui,sans-serif" font-size="15" fill="#334155">目录存在不等于 Agent 已发现</text>
+<path d="M180 296 V312" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="18" y="318" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="342" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">4  验证发现与执行</text>
+<text x="32" y="364" font-family="system-ui,sans-serif" font-size="15" fill="#334155">在目标 Agent 中加载并使用技能</text>
+<text x="32" y="382" font-family="system-ui,sans-serif" font-size="15" fill="#334155">按任务预期验收实际结果</text>
+</svg>

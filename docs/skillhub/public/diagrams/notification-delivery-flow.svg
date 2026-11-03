@@ -1,0 +1,25 @@
+<svg width="360" height="530" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 530" role="img" aria-labelledby="title desc">
+<title id="title">站内通知处理流程</title><desc id="desc">业务事件根据接收条件与分类偏好创建站内通知。阅读通知不代表关联业务已处理。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#475569"/></marker></defs>
+<rect width="360" height="530" rx="14" fill="#f8fafc"/>
+<text x="180" y="32" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="17" font-weight="650">站内通知处理流程</text>
+<rect x="20" y="53" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="79" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">1. 业务事件</text>
+<text x="180" y="102" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">发布、审核、提升或举报</text>
+<path d="M180 120V138" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="20" y="145" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="171" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">2. 确定有效接收人</text>
+<text x="180" y="194" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">核对当前账号与访问规则</text>
+<path d="M180 212V230" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="20" y="237" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="263" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">3. 读取分类偏好</text>
+<text x="180" y="286" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">关闭时不创建该类新记录</text>
+<path d="M180 304V322" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="20" y="329" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="355" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">4. 保存站内通知</text>
+<text x="180" y="378" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">未读、已读与保留期清理</text>
+<path d="M180 396V414" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="20" y="421" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="447" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">5. 处理关联业务</text>
+<text x="180" y="470" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">已读不等于业务处理完成</text>
+</svg>

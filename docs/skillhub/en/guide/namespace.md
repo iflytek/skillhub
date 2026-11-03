@@ -1,226 +1,111 @@
 # Manage Namespaces
 
-The team-namespace creation action is shown to platform SKILL_ADMIN / SUPER_ADMIN roles. Other users should ask an authorized creator to create the space and invite them. Team ownership does not grant a platform role.
+This page covers team namespace creation, membership maintenance and lifecycle governance for authorized operators. Skill ownership, platform roles and namespace roles are managed separately. Creating or managing a namespace does not grant a platform role. Lifecycle actions on this page do not apply to `GLOBAL` or other non-team types.
 
-## A Team Onboarding Sequence
+## Prerequisites and Responsibilities
 
-1. Create a team namespace in My Namespaces with a stable slug and a readable display name. The slug is part of installation coordinates and cannot change with the team name.
-2. Add existing accounts or generate an invitation. Ordinary role selection offers MEMBER / ADMIN; ownership transfer is a separate action, not an Owner option in the role selector.
-3. Select this namespace when publishing. Choose NAMESPACE_ONLY for team sharing; PRIVATE does not mean all team members can read it.
-4. Administrators review submissions; authors track versions in My Skills.
-5. Arrange maintenance responsibilities before removing a member. Removal does not transfer skill ownership.
+A namespace supplies the ownership segment of a Skill coordinate, such as `@team/example-skill`. This is an example coordinate, not a guaranteed available resource. The namespace slug is immutable after creation; authorized operators can change its display name.
 
-### Why Available Actions Differ
+| Operation | Required identity | Entry and decision basis |
+| --- | --- | --- |
+| Create a team namespace | Platform Skill administrator (`SKILL_ADMIN`) or super administrator (`SUPER_ADMIN`) | Creation entry at `/dashboard/namespaces`; ordinary members cannot create one |
+| Maintain members and settings | Namespace Owner or Admin | Namespace is `ACTIVE` and the detail page exposes the action |
+| Publish Skills | Member or another authorized publisher | Select the namespace in the publishing form; scanning, review and Skill maintenance permissions still apply |
+| View members | Existing namespace member | Members tab; read access does not include membership mutation |
 
-The page uses namespace type, state and server-provided capabilities to display freeze, unfreeze, archive, restore and delete actions. Owner or Admin is not an unconditional grant for every action. Owners and Admins can edit an ACTIVE team namespace; authorized Owners have a separate ownership transfer action. Frozen or archived namespaces make membership management read-only, while eligible administrators can still read invitation history.
+Sources: [creation service](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/service/NamespacePortalCommandAppService.java) and [namespace policy](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceAccessPolicy.java).
 
-Freezing temporarily stops writes; unfreezing restores them. Archiving and permanent deletion are distinct. Check the target and impact in the confirmation, then verify the resulting namespace state and member page instead of relying only on a successful request.
+## Create a Namespace and Establish Collaboration
 
+1. An authorized creator opens the creation entry and supplies a display name, stable slug and purpose. The creator becomes the namespace Owner; this action does not add a platform role.
+2. Open Members in the namespace detail page and add an existing account or create an invitation. Select `MEMBER` or `ADMIN` when adding members. Use the separate ownership transfer entry for the namespace Owner; the ordinary role selector does not assign `OWNER`.
+3. Members select this namespace when publishing. Select namespace-member visibility (`NAMESPACE_ONLY`) for member sharing. Private (`PRIVATE`) content is not available to all members; public (`PUBLIC`) content does not require namespace membership for reading.
+4. An authorized reviewer handles the submission from the namespace review entry. The author follows My Review Progress. Membership does not prove publication or review completion.
 
-## Overview
+![Responsibilities from namespace creation and member acceptance to publishing and review](/diagrams/namespace-membership-flow-en.svg)
 
-Namespaces are the core organizational unit in SkillHub. Each namespace represents a team or project with its own members, permissions, and skill packages.
+Figure: Creation, membership acceptance and publishing are separate actions. An invitation grants membership, not publication.
 
-![Concept Diagram](/diagrams/namespace-concept.png)
+The following creation and membership requests use placeholder names, slugs and user identifiers. Programmatic callers must also satisfy the instance authentication and CSRF requirements.
 
-**Purpose of Namespaces**:
-
-- **Isolation**: Skill packages from different teams don't interfere with each other
-- **Permissions**: Role-based access control (RBAC)
-- **Collaboration**: Team members can jointly manage skill packages
-- **Governance**: Administrators can review, archive, and freeze skill packages
-
-**Role System**:
-
-| Role | Permissions |
-|------|-------------|
-| **Owner** | Own the team namespace; manage members and transfer ownership subject to namespace state and server-side permissions |
-| **Admin** | Manage members, review skill packages, modify settings |
-| **Member** | Publish skills and view namespace-only content |
-
-**Namespace States**:
-
-- **Active**: Normal operation
-- **Frozen**: Cannot publish new skill packages
-- **Archived**: Hidden from search results
-
-## Use Cases
-
-**Case 1: Create a Team Namespace**
-
-A team lead creates a new namespace to manage the team's skill packages.
-
-![Screenshot](/screenshots/namespace-create.png)
-
-**Case 2: Add Team Members**
-
-An administrator invites new members to join the namespace and assigns appropriate roles.
-
-![Screenshot](/screenshots/namespace-members.png)
-
-**Case 3: Permission Management**
-
-Adjust member roles to control who can publish, review, and manage skill packages.
-
-**Case 4: Namespace Freeze**
-
-Discover a security issue in the namespace and temporarily freeze all publish operations.
-
-## Step-by-Step Guide
-
-**Create a Namespace**:
-
-1. Navigate to `/dashboard/namespaces`
-2. Click "Create Namespace"
-3. Fill in the information:
-   - Name: Team name (e.g., "iFlytek AI Team")
-   - Slug: URL identifier (e.g., "iflytek")
-   - Description: Brief description of the team's responsibilities and skill package scope
-
-![Flow Diagram](/diagrams/namespace-create-flow.png)
-
-4. Submit to create; you are automatically set as the Owner
-
-**Add Members**:
-
-1. Go to the namespace detail page
-2. Click the "Members" tab
-3. Click "Add Member"
-4. Search for users (supports searching by username, email)
-5. Select Admin or Member; ownership transfer is a separate flow
-6. Confirm to add
-
-**Invite with a link**:
-
-1. An Owner or Admin opens the Members page of an ACTIVE team space and selects "Invite member".
-2. Share the copied link securely. It expires after 24 hours and can be redeemed once by one person who is not already a member.
-3. The recipient must first pass the usual SkillHub login and account access rules. The page shows the space, current account, and MEMBER permissions. Joining happens only after explicit confirmation.
-4. "Revoke invitation" invalidates the link immediately. Creating a new link asks for confirmation before replacing a still usable one; existing members remain members.
-
-Anyone who obtains the link can use it after normal account admission. Do not post it in a public channel. The login return URL does not contain the invitation token; the current browser tab stores it temporarily until joining or terminal invalidation.
-
-**Manage Permissions**:
-
-1. Find the target user in the member list
-2. Click "Change Role"
-3. Select a new role and confirm
-4. Permission changes are recorded in the audit log
-
-**Freeze a Namespace**:
-
-1. Go to namespace settings
-2. Click "Freeze Namespace"
-3. Provide a reason for freezing (optional)
-4. Confirm to freeze
-
-> After freezing, all skill packages in the namespace cannot publish new versions, but existing versions remain downloadable.
-
-## Skills After Member Removal
-
-Removing a member does not delete, move, transfer, or unpublish their skills. The namespace, address, current owner, and version history remain unchanged.
-
-An active account that still owns a skill can view and download its own content, including private content, drafts, and history, from My Skills. The management interface explains that membership has ended and the skill is read-only. The owner cannot upload or republish, change the avatar or visibility, withdraw requests, archive, or delete content. This exception does not grant access to another owner's internal skills.
-
-Rejoining restores normal maintenance permissions if the account is active and ownership is unchanged. Disabled accounts cannot use the owner read exception. Re-enabling an account does not recreate removed namespace membership. Previously submitted review requests remain in the existing review workflow; removal does not automatically approve or withdraw them.
-
-Existing namespace and platform governance permissions remain unchanged. Removal does not appoint a successor. This change adds no skill transfer, self-service namespace exit, or permanent account deletion feature.
-
-## API Reference
-
-**Create a Namespace**:
-```bash
+```http
 POST /api/v1/namespaces
 Content-Type: application/json
 
-{
-  "displayName": "iFlytek AI Team",
-  "slug": "iflytek",
-  "description": "iFlytek's AI agent skills"
-}
+{"displayName":"Example Team","slug":"example-team","description":"Shared authoring"}
 ```
 
-**Parameter Reference**:
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| displayName | string | Namespace name (required, up to 128 characters) |
-| slug | string | URL identifier (required, unique, 2-64 characters, lowercase letters, numbers, hyphens only) |
-| description | string | Description (optional, max 512 characters) |
-
-**Get Namespace Details**:
-```bash
-GET /api/v1/namespaces/{slug}
-```
-
-**Update a Namespace**:
-```bash
-PUT /api/v1/namespaces/{slug}
-Content-Type: application/json
-
-{
-  "displayName": "iFlytek AI Team (Updated)",
-  "description": "Updated description"
-}
-```
-
-**Add a Member**:
-```bash
+```http
 POST /api/v1/namespaces/{slug}/members
 Content-Type: application/json
 
-{
-  "userId": "user-123",
-  "role": "MEMBER"
-}
+{"userId":"example-user","role":"MEMBER"}
 ```
 
-**Update Member Role**:
-```bash
-PUT /api/v1/namespaces/{slug}/members/{userId}/role
-Content-Type: application/json
+## Invitations, Role Changes and History
 
-{
-  "role": "ADMIN"
-}
-```
+Create an invitation under Members → Invite Members in an `ACTIVE` team namespace, then share it through a controlled channel. The holder must complete login and existing admission checks, verify the target, account and `MEMBER` role, and confirm acceptance. Opening the link does not create membership. Links are not restricted to a particular email or account and must not be published in public channels.
 
-**Remove a Member**:
-```bash
-DELETE /api/v1/namespaces/{slug}/members/{userId}
-```
+| Item | Current rule | Effect and boundary |
+| --- | --- | --- |
+| Lifetime and use count | 24 hours from creation; one new member can use it once | Fixed rule; expiration or use prevents further joining |
+| Replacement and revocation | Confirmation immediately invalidates the old link | Existing members retain membership |
+| Web invitation history | Five entries per page, with pagination | Fixed web presentation; full account identifier is available on hover |
+| History API pagination | 1–50 entries per page | Controlled by request parameters; no invitation code or hash is returned |
+| History retention | Retained while the namespace exists | Permanent namespace deletion removes invitation business records; operation audit follows its existing retention rules |
 
-**Freeze a Namespace**:
-```bash
-POST /api/v1/namespaces/{slug}/freeze
-Content-Type: application/json
+Links use `/join#invite=invitation-code`. The creator's account in the same browser tab temporarily retains the link. After a refresh, reopening the dialog validates that the link is still active before enabling copying. Another account, tab or device cannot recover it from this temporary storage. History does not expose the original code. If the original link is lost, creating a new invitation requires confirming replacement. Login redirects do not contain the invitation Token.
 
-{
-  "reason": "Security investigation"
-}
-```
+History displays the creator, creation and expiration times, status, and accepted account. Account renaming or membership removal does not rewrite the original joining fact; history is not a current membership list. Only namespace Owners and Admins can read it; frozen or archived namespaces expose read-only history. Upgrades migrate only a verifiable current invitation and mark it as a legacy record; earlier history is not inferred.
 
-**Unfreeze a Namespace**:
-```bash
-POST /api/v1/namespaces/{slug}/unfreeze
-```
+To change a role, select the member-row role edit action and save from the actions column, then re-read the role. Member removal and namespace ownership transfer require separate confirmation. Transferring a namespace does not transfer its Skills. Sources: [invitation service](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceInvitationService.java) and [history presentation](https://github.com/iflytek/skillhub/blob/main/web/src/features/namespace/invitation-history.tsx).
 
-## Invite Members and View History
+## Lifecycle Governance
 
-Team Owners and Admins can create a link from **Members → Invite members**. It expires after 24 hours and permits one new member to join. The recipient must sign in, meet existing admission rules, and confirm joining. Replacing an active link or revoking it requires confirmation and does not remove existing members.
+The following matrices apply to `TEAM`. Server permissions and dependency checks take precedence over role names.
 
-New links use `/join#invite=token`. The creator's account stores the link temporarily in the current browser tab. After refreshing, reopen the invitation dialog to copy it again, provided the server confirms that it is still the current valid invitation. This temporary storage cannot recover the link in another account, tab, or device, and history never returns invitation tokens. If the original link was not saved, create a new invitation and confirm replacement of the old link.
+| Namespace state | Namespace role | Available actions | Restrictions |
+| --- | --- | --- | --- |
+| `ACTIVE` | Owner | Edit settings, manage members, transfer ownership, freeze, archive, delete | Deletion also requires no dependencies |
+| `ACTIVE` | Admin | Edit settings, manage members, freeze | Cannot archive, delete or transfer ownership |
+| `ACTIVE` | Member | None of these governance actions | Skill ownership does not add namespace governance permission |
+| `FROZEN` | Owner | Unfreeze, archive, delete | Membership management is read-only; deletion also requires no dependencies |
+| `FROZEN` | Admin | Unfreeze | Cannot archive or delete |
+| `FROZEN` | Member | None of these governance actions | No writes |
+| `ARCHIVED` | Owner | Restore to `ACTIVE`, delete | Deletion also requires no dependencies |
+| `ARCHIVED` | Admin or Member | None of these governance actions | Previous edit permission does not grant restoration |
 
-The dialog includes a read-only history (five records per page, up to 240px tall) showing the creator, creation and expiration times, status, and the account that successfully joined. Snapshot names are displayed first; full account IDs are available on hover, with abbreviated IDs used when names are missing. Each generated invitation has its own record. Replacement, revocation, expiration, or a member leaving does not erase history. History cannot restore expired links and does not indicate current membership. Only the space's Owner/Admin can view it; platform roles do not bypass this restriction. Frozen or archived spaces retain a history-only entry.
+| Namespace state | Platform identity | Dedicated platform governance entry | Restrictions |
+| --- | --- | --- | --- |
+| `ACTIVE` | Super administrator | Freeze, archive | Membership is not required; no permanent deletion entry |
+| `FROZEN` | Super administrator | Unfreeze, archive | Membership is not required |
+| `ARCHIVED` | Super administrator | Restore to `ACTIVE` | Membership is not required |
+| Any | Skill administrator or user administrator | These platform roles alone grant none of the dedicated actions above | Apply the previous table if the account also has a namespace role |
 
-An upgrade imports only the provable current invitation, marked as a legacy record; earlier links are not reconstructed from incomplete audit data. History remains while the space exists and is deleted when the space is permanently deleted. Existing audit records follow their original retention rules.
+Freezing pauses writes; it does not retrieve files already installed on clients. Existing versions remain readable under their access rules. Archiving removes the namespace from search while preserving existing Skill access. Permanent deletion is Owner-only and requires no Skills, review tasks, promotion requests targeting the namespace, or authoring drafts. Archiving does not remove these dependencies.
 
-The history endpoint requires a browser session: `GET /api/v1/namespaces/{slug}/invitations/history?page=0&size=10`. Page sizes are bounded to 1–50; tokens and hashes are never returned.
+Sources: [namespace service](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceService.java) and [platform governance controller](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/admin/AdminNamespaceController.java).
 
-## Notes
+## Completion Criteria and Failure Handling
 
-> **Slug Uniqueness**: Namespace slugs must be globally unique and cannot be changed after creation. Use a short identifier for your team or project.
+After creation, the list must show the target slug, `ACTIVE`, and the creator's Owner role. After acceptance, the member list must include the actual account with `MEMBER`. Re-read namespace details after governance actions and verify the target state, such as `ACTIVE` after unfreezing. A used invitation record does not prove that its account is still a member.
 
-- **Owner Requirement**: Each namespace must have at least one Owner; the last Owner cannot be removed
-- **Role Inheritance**: Membership grants access to NAMESPACE_ONLY content, not every PRIVATE skill; private access is reserved for its owner and authorized administrators
-- **Freeze Mechanism**: Administrators can freeze a namespace; no new skill packages can be published while frozen
-- **Archive Mechanism**: Archived namespaces are hidden from search results, but existing skill packages remain accessible
-- **Audit Logs**: All member changes and permission adjustments are recorded in the audit log
+| Symptom | Likely cause | Diagnosis | Resolution |
+| --- | --- | --- | --- |
+| Creation entry is absent | Required platform role is missing | Compare platform roles with the current page identity | Contact an authorized creator; do not repeatedly register accounts |
+| Invitation cannot be accepted | Expired, used, revoked or namespace is not writable | Read invitation status in the dialog and namespace status in Settings | The original operator creates a new invitation if required; do not reuse the invalid link |
+| Link cannot be copied after refresh | Temporary tab storage is unavailable or the link is invalid | Reopen the dialog in the original account and tab; read validation result | Retry validation first; confirm replacement if the code cannot be recovered; do not treat history as an invitation code |
+| Member actions are unavailable | Account is not Owner/Admin or namespace is frozen/archived | Check member role, state and read-only message | An authorized operator restores the namespace if appropriate; do not modify browser requests to bypass permission |
+| Permanent deletion is rejected | One of the four dependency types remains | Follow the response to Skills, reviews, promotions or drafts | Handle each resource through its own workflow first; do not delete database records directly |
+
+## Membership Removal and Maintenance Boundaries
+
+Removing a member does not delete, move or transfer their Skills. Published content retains its original visibility. The current Skill owner with an active account can still view and download their own content, including private content, unpublished versions and historical versions, from My Skills; the page displays a read-only message. Upload, republishing, avatar or visibility changes, withdrawal, archiving and deletion are unavailable on the basis of that ownership alone. This exception does not expose other members' restricted content.
+
+Rejoining restores maintenance under the original rules if ownership is unchanged. Disabled accounts cannot act; re-enabling an account does not restore removed membership. Existing submissions continue normal review and are not automatically approved or withdrawn. Existing namespace and platform governance permissions remain unchanged. This version does not add Skill transfer, self-service departure or permanent account deletion. The [owner access policy](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillOwnerAccessPolicy.java) does not replace other management permissions.
+
+## Further Reading
+
+- [Publish and Update Skills](./skill-publish.html): Submit versions for the intended visibility.
+- [Review Skills and Suites](./review.html): Identify pending objects and their results.
+- [Accounts and Access Tokens](./account-access.html): Separate login identities from API credentials.

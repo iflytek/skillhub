@@ -1,0 +1,28 @@
+<svg width="360" height="579" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 579" role="img" aria-labelledby="title desc">
+<title id="title">Namespace Collaboration</title>
+<desc id="desc">Authorized creator creates a team namespace. Owner or Admin adds or invites a member. An admitted user confirms acceptance. Publication and review remain separate.</desc>
+<defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#52657a"/></marker></defs>
+<rect x="1" y="1" width="358" height="577" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="180" y="35" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#172b4d">Namespace Collaboration</text>
+<rect x="20" y="58" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="83" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">1. Create namespace</text>
+<text x="36" y="106" font-family="Arial,sans-serif" font-size="14" fill="#334155">Platform SKILL_ADMIN / SUPER_ADMIN</text>
+<text x="36" y="126" font-family="Arial,sans-serif" font-size="14" fill="#334155">Creator becomes namespace Owner</text>
+<path d="M180 145V158" stroke="#52657a" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="20" y="162" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="187" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">2. Add or invite members</text>
+<text x="36" y="210" font-family="Arial,sans-serif" font-size="14" fill="#334155">Namespace Owner / Admin; ACTIVE</text>
+<text x="36" y="230" font-family="Arial,sans-serif" font-size="14" fill="#334155">Invitation alone does not add a member</text>
+<path d="M180 249V262" stroke="#52657a" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="20" y="266" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="291" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">3. Confirm membership</text>
+<text x="36" y="314" font-family="Arial,sans-serif" font-size="14" fill="#334155">Login and admission checks first</text>
+<text x="36" y="334" font-family="Arial,sans-serif" font-size="14" fill="#334155">Accepted invitation grants MEMBER</text>
+<path d="M180 353V366" stroke="#52657a" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="20" y="370" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="395" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">4. Submit and review</text>
+<text x="36" y="418" font-family="Arial,sans-serif" font-size="14" fill="#334155">Select visibility, then publish workflow</text>
+<text x="36" y="438" font-family="Arial,sans-serif" font-size="14" fill="#334155">Membership is not publication</text>
+<text x="180" y="533" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#475569">Namespace and platform roles are separate.</text>
+<text x="180" y="554" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#475569">A membership change does not transfer Skills.</text>
+</svg>

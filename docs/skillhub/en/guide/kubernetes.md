@@ -1,6 +1,6 @@
 # Kubernetes Deployment: Kustomize Configuration and Verification
 
-This document explains how to deploy SkillHub on a Kubernetes cluster.
+This page follows the Kustomize manifests under `deploy/k8s/`. Helm is a separate deployment path: use the [Chart README](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/README.md) for values, Secrets and upgrades. Choose one path for an installation; do not apply both resource sets to the same release. Return to the [Docker deployment guide](./deployment.html) for that deployment path.
 
 ## Prerequisites
 

@@ -1,0 +1,25 @@
+<svg width="360" height="530" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 530" role="img" aria-labelledby="title desc">
+<title id="title">扫描证据与人工审核</title><desc id="desc">扫描任务异步执行。报告分别呈现执行失败与风险发现；审核员独立作出发布决策。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10Z" fill="#475569"/></marker></defs>
+<rect width="360" height="530" rx="14" fill="#f8fafc"/>
+<text x="180" y="32" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="17" font-weight="650">扫描证据与人工审核</text>
+<rect x="20" y="53" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="79" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">1. 发起扫描</text>
+<text x="180" y="102" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">核对本次提交的版本</text>
+<path d="M180 120V138" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="20" y="145" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="171" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">2. 异步执行任务</text>
+<text x="180" y="194" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">扫描中不代表已批准</text>
+<path d="M180 212V230" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="20" y="237" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="263" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">3. 判读本次报告</text>
+<text x="180" y="286" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">区分失败原因与风险发现</text>
+<path d="M180 304V322" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="20" y="329" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="355" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">4. 按证据处置</text>
+<text x="180" y="378" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">恢复扫描执行，或修订内容</text>
+<path d="M180 396V414" fill="none" stroke="#475569" stroke-width="1.8" marker-end="url(#arrow)"/>
+<rect x="20" y="421" width="320" height="66" rx="9" fill="#ffffff" stroke="#94a3b8"/>
+<text x="180" y="447" text-anchor="middle" fill="#0f172a" font-family="system-ui, sans-serif" font-size="16" font-weight="600">5. 人工审核</text>
+<text x="180" y="470" text-anchor="middle" fill="#334155" font-family="system-ui, sans-serif" font-size="14">依据内容与证据批准或拒绝</text>
+</svg>

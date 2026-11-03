@@ -62,6 +62,7 @@ export default defineConfig({
               { text: '管理命名空间', link: '/guide/namespace' },
               { text: '审核技能与套装', link: '/guide/review' },
               { text: '安全扫描与报告', link: '/guide/scanner' },
+              { text: '技能头像与审核', link: '/guide/skill-avatars' },
             ],
           },
           {
@@ -71,7 +72,7 @@ export default defineConfig({
               { text: 'Docker 部署', link: '/guide/deployment' },
               { text: 'Kubernetes 部署', link: '/guide/kubernetes' },
               { text: '前端动作统计', link: '/guide/frontend-analytics' },
-              { text: '技能头像与审核', link: '/guide/skill-avatars' },
+              { text: '配置头像机器审核服务', link: '/guide/avatar-moderation-configuration' },
             ],
           },
           {
@@ -137,6 +138,7 @@ export default defineConfig({
               { text: 'Manage namespaces', link: '/en/guide/namespace' },
               { text: 'Review submissions', link: '/en/guide/review' },
               { text: 'Configure scanning', link: '/en/guide/scanner' },
+              { text: 'Skill avatars and moderation', link: '/en/guide/skill-avatars' },
             ],
           },
           {
@@ -146,7 +148,7 @@ export default defineConfig({
               { text: 'Deploy with Docker', link: '/en/guide/deployment' },
               { text: 'Deploy on Kubernetes', link: '/en/guide/kubernetes' },
               { text: 'Frontend analytics', link: '/en/guide/frontend-analytics' },
-              { text: 'Skill avatars and moderation', link: '/en/guide/skill-avatars' },
+              { text: 'Configure avatar machine moderation', link: '/en/guide/avatar-moderation-configuration' },
             ],
           },
           {
