@@ -134,7 +134,7 @@ async function inspectInstallation(options: InstallRecoveryOptions, mode: 'inspe
           const metadata = read.metadata
           if (!sameInstalledSkillSource(metadata, identity) || metadata.version !== target.version
             || metadata.fingerprint !== target.fingerprint || metadata.agent !== target.agent
-            || metadata.installedAt !== target.installedAt || metadata.source !== 'skillhub') {
+            || metadata.installedAt !== target.installedAt || metadata.source !== (identity.registry === 'local:import' ? 'local-import' : 'skillhub')) {
             return result('unknown', 'metadata-conflict')
           }
           const snapshot = await snapshotInstalledSkillDirectory(item, target)
@@ -265,7 +265,7 @@ async function assertBackupContent(stateDirectory: string, record: OperationReco
   const metadata = read.metadata
   if (!sameInstalledSkillSource(metadata, identity) || metadata.version !== target.version
     || metadata.fingerprint !== target.fingerprint || metadata.installedAt !== target.installedAt
-    || metadata.agent !== target.agent || metadata.source !== 'skillhub') throw new Error('Backup metadata does not match its baseline')
+    || metadata.agent !== target.agent || metadata.source !== (identity.registry === 'local:import' ? 'local-import' : 'skillhub')) throw new Error('Backup metadata does not match its baseline')
   const snapshot = await snapshotJournalInstallation(record, path)
   if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) {
     const proof = JSON.parse(await readFile(join(dirname(stateDirectory), 'dirty-upgrade-proofs', `${record.operationId}.json`), 'utf8')) as {

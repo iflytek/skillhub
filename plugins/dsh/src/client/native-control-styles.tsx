@@ -101,6 +101,21 @@ export function NativeControlStyles() {
 .astron-sh-modal-layer{position:relative;z-index:1000}
 .skillhub-controls .astron-sh-dialog-overlay{position:fixed;inset:0;z-index:1000;background:color-mix(in srgb,#000 40%,transparent)}
 .skillhub-controls .astron-sh-dialog{position:fixed;z-index:1001;top:50%;left:50%;transform:translate(-50%,-50%);width:min(460px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid var(--astron-sh-border);border-radius:12px;padding:24px;background:var(--astron-sh-bg);color:var(--astron-sh-fg);box-shadow:0 16px 60px #0003}
+.skillhub-controls .astron-sh-dialog.astron-sh-package-dialog{display:flex;flex-direction:column;gap:12px;overflow:visible;box-sizing:border-box;max-height:calc(100dvh - 32px);padding:20px}
+.skillhub-controls .astron-sh-package-dialog>h2,.skillhub-controls .astron-sh-package-dialog>p{flex:none;margin:0}
+.skillhub-controls .astron-sh-package-body{min-height:0;min-width:0;overflow:auto;overscroll-behavior:contain;overflow-wrap:anywhere}
+.skillhub-controls .astron-sh-package-preview{min-width:0;display:grid;gap:10px}
+.skillhub-controls .astron-sh-package-name{display:block;overflow-wrap:anywhere;font-size:15px;line-height:1.5}
+.skillhub-controls .astron-sh-package-summary{max-height:120px;overflow:auto;overscroll-behavior:contain;overflow-wrap:anywhere;white-space:pre-wrap;font-size:14px;line-height:1.6;color:var(--astron-sh-muted);padding-right:4px}
+.skillhub-controls .astron-sh-package-summary:focus-visible{outline:2px solid var(--astron-sh-accent);outline-offset:-2px;border-radius:3px}
+.skillhub-controls .astron-sh-package-dialog .astron-sh-package-count{margin:0;font-size:12px}
+.skillhub-controls .astron-sh-package-result{box-sizing:border-box;flex:none;min-height:132px;margin-top:0;padding:14px;border:1px solid var(--astron-sh-border);border-radius:8px;background:var(--astron-sh-soft)}
+.skillhub-controls .astron-sh-package-result>strong{font-size:14px}
+.skillhub-controls .astron-sh-package-result-action{min-height:32px;margin-top:14px}
+.skillhub-controls .astron-sh-package-scope{flex:none;min-width:0}
+.skillhub-controls .astron-sh-package-dialog>.astron-sh-dialog-actions{flex:none;margin-top:4px}
+@media(max-width:640px){.skillhub-controls .astron-sh-package-summary{max-height:96px}.skillhub-controls .astron-sh-dialog.astron-sh-package-dialog{padding:18px}}
+
 .skillhub-controls .astron-sh-dialog h2{font-size:18px}.skillhub-controls .astron-sh-dialog p{font-size:14px;color:var(--astron-sh-muted)}.skillhub-controls .astron-sh-dialog dl{font-size:13px;padding:14px;background:var(--astron-sh-soft);border-radius:7px;overflow-wrap:anywhere}.skillhub-controls .astron-sh-dialog dt{color:var(--astron-sh-muted)}.skillhub-controls .astron-sh-dialog dd{margin:0 0 8px}.skillhub-controls .astron-sh-dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
 .skillhub-controls .astron-sh-install-panel .astron-sh-scope-help{font-size:12px;line-height:1.5;margin:7px 0 16px;color:var(--astron-sh-muted)}
 .skillhub-controls .astron-sh-current-install{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--astron-sh-border);border-radius:8px;background:var(--astron-sh-bg);margin:12px 0}
@@ -236,11 +251,17 @@ export function NativeControlStyles() {
 .skillhub-controls .astron-sh-confirm-close{position:absolute;right:14px;top:14px}
 .skillhub-controls .astron-sh-detail-aside{align-self:start;position:sticky;top:16px}
 .astron-sh-detail-drawer{container-type:inline-size}
-@container(max-width:680px){.skillhub-controls .astron-sh-detail-aside{position:static;order:-1}.skillhub-controls .astron-sh-install-management{max-height:60dvh}}
-.skillhub-controls .astron-sh-management-location-row{border:1px solid var(--astron-sh-border);border-radius:8px;padding:12px;margin:10px 0;background:var(--astron-sh-bg)}
-.skillhub-controls .astron-sh-management-location-row header{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:12px;color:var(--astron-sh-muted)}
-.skillhub-controls .astron-sh-management-location-row h4{font-size:13px;margin:0;color:var(--astron-sh-fg)}
+@container(max-width:680px){.skillhub-controls .astron-sh-detail-aside{position:static;order:-1;align-self:stretch;width:100%}.skillhub-controls .astron-sh-install-management{max-height:60dvh}}
+.skillhub-controls .astron-sh-management-location-row{padding:14px 0;margin:0;border-top:1px solid var(--astron-sh-border);min-width:0}
+.skillhub-controls .astron-sh-position-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;min-width:0}
+.skillhub-controls .astron-sh-position-summary{min-width:0;display:grid;gap:4px}
+.skillhub-controls .astron-sh-position-title{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.skillhub-controls .astron-sh-position-title h4{font-size:13px;font-weight:600;margin:0;color:var(--astron-sh-fg)}
+.skillhub-controls .astron-sh-position-title .astron-sh-badge{font-size:11px;line-height:18px;padding:0 6px}
+.skillhub-controls .astron-sh-position-version{font-size:12px;color:var(--astron-sh-muted)}
+.skillhub-controls .astron-sh-position-heading>.astron-sh-button{flex-shrink:0;display:inline-flex;align-items:center;gap:6px}
 .skillhub-controls .astron-sh-management-location-row .astron-sh-button{font-size:12px;min-height:28px;height:28px;padding:3px 8px}
-.skillhub-controls .astron-sh-management-location-row .astron-sh-management-actions,.skillhub-controls .astron-sh-management-location-row .astron-sh-management-more-content{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.skillhub-controls .astron-sh-management-location-row .astron-sh-management-actions:empty{display:none}
+.skillhub-controls .astron-sh-management-location-row .astron-sh-management-more-content{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 `}</style>;
 }

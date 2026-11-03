@@ -1,3 +1,6 @@
+import { InstalledCardMetadata } from './installed-card-metadata.js';
+export { installedCardVersions } from './installed-card-metadata.js';
+import { PackageImport, type PackageTransferServices } from './package-transfer.js';
 import { ChangePreview } from './change-preview.js';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { checkInstalledUpdates, updateFailed, type UpdateResult } from './update-overview.js';
@@ -16,11 +19,12 @@ import { DetailContent } from './detail-content.js';
 import { RemovalHistory, type RemovalServices } from './removal-control.js';
 import { InstalledStyles } from './installed-styles.js';
 import type { InstalledNavigation } from './installed-navigation.js';
-import { Badge, Button, Card, CardHeader, CardTitle, CardDescription } from './ui.js';
+import { Badge, Button, Card, CardHeader, CardTitle } from './ui.js';
 import { SkillAvatar } from './skill-card.js';
 
 export interface InstalledServices extends UpgradeServices, RemovalServices {
   management?: ManagementViewServices;
+  packages?: PackageTransferServices;
   sessionId: string;
   context?: { getSnapshot(): number; subscribe(listener: () => void): () => void };
   skillUse?: SkillUseServices;
@@ -34,7 +38,8 @@ export interface InstalledServices extends UpgradeServices, RemovalServices {
 type Item = InstalledSkillList['items'][number];
 export function installedCardBadges(items: Item[], results: Record<string, UpdateResult>, verified: boolean) {
   const badges: { label: string; tone: 'neutral' | 'warning' | 'info' }[] = [];
-  if (items[0]?.currentSource === false) badges.push({ label: '其他来源', tone: 'info' });
+  if (items[0]?.sourceKind === 'local-import') badges.push({ label: '本地导入', tone: 'info' });
+  else if (items[0]?.currentSource === false) badges.push({ label: '其他来源', tone: 'info' });
   const summary = verified ? skillInstallationSummary(items) : '安装待核验';
   if (summary !== '已安装') badges.push({ label: summary, tone: summary === '已停用' ? 'neutral' : 'warning' });
   if (items.some(item => updateFailed(results[item.itemKey]))) badges.push({ label: '检查失败', tone: 'warning' });
@@ -44,11 +49,6 @@ export function installedCardBadges(items: Item[], results: Record<string, Updat
     badges.push({ label: items.length > 1 ? '可更新' : `可更新至 ${result && 'candidateVersion' in result ? result.candidateVersion ?? '新版本' : '新版本'}`, tone: 'info' });
   }
   return badges;
-}
-export function installedCardVersions(items: Item[]) {
-  const versions = [...new Set(items.map(item => item.version))];
-  return { label: versions.length === 1 ? `v${versions[0]}` : `多个版本 · ${versions.map(version => `v${version}`).join(' / ')}`,
-    title: items.map(item => `${item.scope === 'user' ? '所有项目' : '仅此项目'} · v${item.version}`).join('；') };
 }
 export function installedUpdateKeys(inventory: Item[], results: Record<string, UpdateResult>, retry: boolean, group?: Item[]) {
   return inventory.filter(item => item.currentSource !== false && (!group || group.some(target => target.itemKey === item.itemKey)))
@@ -172,19 +172,19 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
     <Button variant="ghost" onClick={() => { setChangeIntent(undefined); setSelected(null); }}>← 返回已安装</Button>
     <div className="astron-sh-detail-heading"><SkillAvatar slug={selected.slug} namespace={selected.namespace} /><h2 ref={heading} tabIndex={-1}>{selected.slug}</h2><SkillWebsiteLink webUrl={detail.data?.content.state === 'ready' ? detail.data.content.detail.webUrl : undefined}
       enabled={detailVerified && detail.data?.content.state === 'ready' && detail.data.content.detail.namespace === selected.namespace && detail.data.content.detail.slug === selected.slug} /></div>
-    <p>@{selected.namespace}/{selected.slug} · 文档版本 {selected.version}</p>
+    <p>{selected.sourceKind === 'local-import' ? '本地导入' : `@${selected.namespace}/${selected.slug} · 文档版本 ${selected.version}`}</p>
     <div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation">{changeIntent && services.changes ? <ChangePreview key={`${contextKey}:${selected.itemKey}:${changeIntent.upgrade}`} services={{ ...services, changes: services.changes }} revision={sourceRevision} itemKey={selected.itemKey} installationKey={JSON.stringify([selected.registry, selected.namespace, selected.slug, selected.scope])} upgrade={changeIntent.upgrade} targetVersion={changeIntent.version} onCompleted={() => { setSelected(null); void query.refetch(); }} onClose={() => { setChangeIntent(undefined); void query.refetch(); void detail.refetch(); void services.management?.client.invalidateQueries({ queryKey: ['skillhub-local-summary', services.sessionId, sourceRevision] }); }} /> : <>
       {detail.isPending ? <p role="status">正在读取技能说明…</p>
       : detail.isError ? <p role="alert">{detail.error.message}</p>
-        : detail.data.content.state === 'local-only' ? <p role="status">{selected.currentSource === false ? '此技能来自其他来源，可在右侧管理本地安装。' : '远端说明暂不可用，可在管理安装中查看本地状态。'}</p>
-          : <DetailContent detail={detail.data.content.detail} modes={modes} remote={remote} retry={() => { void detail.refetch(); }} cacheIdentity={JSON.stringify([services.sessionId, sourceRevision, selected.namespace, selected.slug, detail.data.content.detail.version])} onContextStale={() => { void detail.refetch(); }} />}</>}
+        : detail.data.content.state === 'local-only' ? <p role="status">{selected.sourceKind === 'local-import' ? '本地技能文件暂不可读取，请核对安装状态。' : selected.currentSource === false ? '此技能来自其他来源，可在右侧管理本地安装。' : '远端说明暂不可用，可在管理安装中查看本地状态。'}</p>
+          : <DetailContent localPackage={selected.sourceKind === 'local-import'} detail={detail.data.content.detail} modes={modes} remote={remote} retry={() => { void detail.refetch(); }} cacheIdentity={JSON.stringify([services.sessionId, sourceRevision, selected.namespace, selected.slug, detail.data.content.detail.version])} onContextStale={() => { void detail.refetch(); }} />}</>}
     </article><aside className="astron-sh-detail-aside">{management && <InstallationManagement identity={selected} primaryAction={!changeIntent ? actions(records(selected), '使用技能') : undefined} revision={sourceRevision} services={management} updateChecks={Object.fromEntries(Object.entries(results).filter((entry): entry is [string, InstalledUpdateCheck] => entry[1].state !== 'failed'))} useSkill={services.skillUse} onInstall={onInstall && selected.currentSource !== false ? () => onInstall(selected) : undefined} />}</aside></div>
   </section>;
   const term = keyword.trim().toLocaleLowerCase();
   const groups = allGroups.filter(items => filter === 'all' || items.some(item => filter === 'updates' ? results[item.itemKey]?.state === 'upgradable' : updateFailed(results[item.itemKey]))).filter(items => !term || items.some(item => `@${item.namespace}/${item.slug} ${item.displayName ?? ''} ${item.version}`.toLocaleLowerCase().includes(term)));
   return <section className="skillhub-installed skillhub-controls" aria-label="已安装技能">
     <InstalledStyles />
-    <div className="skillhub-installed-toolbar"><label className="skillhub-installed-search">
+    <div className="skillhub-installed-toolbar">{services.packages && <PackageImport transfer={services.packages} revision={sourceRevision} contextKey={contextKey} services={services} onCompleted={() => { void query.refetch(); }} />}<label className="skillhub-installed-search">
       <input type="search" aria-label="过滤已安装技能" placeholder="搜索已安装技能" value={keyword} onChange={event => setKeyword(event.target.value)} />
     </label><Button ref={refreshButton} onClick={() => { void query.refetch(); }} disabled={query.isFetching}>刷新已安装</Button>
       {keyword && <Button variant="ghost" onClick={() => setKeyword('')}>清空过滤</Button>}
@@ -206,7 +206,6 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
           const key = JSON.stringify([identity.registry, identity.namespace, identity.slug]);
           const presentation = items.find(item => item.summary) ?? identity;
           const displayName = presentation.displayName || identity.slug;
-          const versions = installedCardVersions(items);
           const usable = verified && services.management?.selectSkillUse && items.some(item => item.state === 'present' && item.installationState !== 'disabled');
           return <Card className="astron-sh-installed-card" key={key}>
             <button type="button" className="astron-sh-card-open" aria-label={`查看 ${displayName} @${identity.namespace}/${identity.slug} 详情`}
@@ -219,7 +218,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
             <CardHeader className="skillhub-installed-identity">
               <CardTitle title={displayName}>{displayName}</CardTitle>
               <p className="skillhub-installed-description" title={presentation.summary}>{presentation.summary || '暂无摘要'}</p>
-              <CardDescription className="skillhub-installed-version" title={`@${identity.namespace}/${identity.slug} · ${versions.title}`}>{versions.label} · @{identity.namespace}/{identity.slug}</CardDescription>
+              <InstalledCardMetadata items={items} />
             </CardHeader>
             <div className="skillhub-installed-side">
               <div className="skillhub-installed-badges">{installedCardBadges(items, results, verified).map(badge =>

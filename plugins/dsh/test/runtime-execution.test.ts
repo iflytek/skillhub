@@ -4,6 +4,9 @@ import type { NativeRuntime, NativeInstallExecution, NativeRecoveryResult, Nativ
 
 function native(): NativeRuntime {
   return {
+    previewPackage: async () => { throw new Error('Unexpected package preview'); },
+    exportPackage: async () => { throw new Error('Unexpected package export'); },
+    executePackageImport: async () => { throw new Error('Unexpected package import'); },
     inspectChanges: async () => { throw new Error('Unexpected change inspection'); },
     readChangeDiff: async () => { throw new Error('Unexpected file diff'); },
     prepareVersionChanges: async () => { throw new Error('Unexpected version changes'); },

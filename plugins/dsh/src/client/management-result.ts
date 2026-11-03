@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const text = z.string().min(1).max(2048);
 const item = z.object({ itemKey: text, namespace: text, slug: text, version: text,
-  scope: z.enum(['user', 'project']), registry: text.optional(), currentSource: z.boolean().optional(), locationKey: text.optional(), installationState: z.enum(['enabled', 'disabled']).optional(), state: z.enum(['present', 'missing', 'metadata-invalid', 'mismatch', 'unreadable']) });
+  sourceKind: z.literal('local-import').optional(), scope: z.enum(['user', 'project']), registry: text.optional(), currentSource: z.boolean().optional(), locationKey: text.optional(), installationState: z.enum(['enabled', 'disabled']).optional(), state: z.enum(['present', 'missing', 'metadata-invalid', 'mismatch', 'unreadable']) });
 const base = { schemaVersion: z.literal(1), toolCallId: text, sourceRevision: text, sourceLabel: text };
 const installed = z.object({ ...base, kind: z.literal('skillhub-installed'), items: z.array(item),
   complete: z.boolean(), issues: z.array(z.string()), unavailable: z.array(z.enum(['user', 'project'])) });

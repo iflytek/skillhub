@@ -459,6 +459,26 @@ The installed view SHALL check current managed installations only on explicit us
 - **THEN** a bounded Host-owned scan reads and indexes the trusted inventory once, validates only the requested target and inventory revision per result, and shares remote version resolution for the same source and skill within that scan
 - **AND** inventory or context changes invalidate the scan, scan resources expire or are released on cancellation, and mutation preparation retains its independent full validation
 
+### Requirement: Explicit single-skill local package transfer
+The plugin SHALL import a single ZIP with a valid root SKILL.md only after preview and explicit confirmation. Local imports SHALL remain distinct from Registry releases and SHALL NOT participate in Registry update checks. Import and export SHALL NOT execute packaged scripts or require Registry login. Implementation and limits are defined in package-transfer-design.md.
+
+#### Scenario: Import a valid package
+- **WHEN** the user selects a valid ZIP and confirms an available installation scope
+- **THEN** the Host revalidates the exact preview bytes, trusted target and effective write policy before installation
+- **AND** the installation appears as a local import with use, activation, diagnosis and precise removal
+- **AND** local records do not extend or migrate the shared CLI v2 inventory
+
+#### Scenario: Conflicting or untrusted import
+- **WHEN** the target is occupied, the archive is unsafe or oversized, the preview has expired, or its session context has changed
+- **THEN** the operation SHALL NOT overwrite an existing skill or accept an unverified Registry identity from the archive
+- **AND** a cancelled preview SHALL NOT create a target installation
+
+#### Scenario: Export current local content
+- **WHEN** a user selects export for an exact installation location
+- **THEN** the ZIP preserves the actual local content, resources and authored examples while excluding installer metadata
+- **AND** a disabled entry is normalized to SKILL.md in the ZIP without enabling the original installation
+- **AND** unsafe file trees, over-limit contents or reads inconsistent with the selected snapshot are rejected
+
 ### Requirement: Shared state remains compatible with released consumers
 New lifecycle operations SHALL retain the strict v2 shared inventory format readable by released CLI 0.2.0. Activation state SHALL be derived from the verified entry file of the exact managed installation, without an additional writable activation authority. Ordinary operation journals SHALL remain readable by released DSH 0.5.0; activation-specific journals SHALL NOT prevent unrelated ordinary operations in that consumer.
 

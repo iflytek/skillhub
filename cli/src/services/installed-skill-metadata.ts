@@ -37,7 +37,7 @@ export async function readInstalledSkillMetadata(skillDir: string): Promise<Inst
         return { status: 'invalid', reason: `metadata field "${field}" must be a non-empty string` }
       }
     }
-    if (value.source !== undefined && value.source !== 'skillhub') {
+    if (value.source !== undefined && value.source !== 'skillhub' && !(value.source === 'local-import' && value.registry === 'local:import' && value.namespace === 'local' && value.version === 'local')) {
       return { status: 'invalid', reason: 'metadata field "source" must be "skillhub"' }
     }
     if (value.schemaVersion !== undefined && value.schemaVersion !== 1) {

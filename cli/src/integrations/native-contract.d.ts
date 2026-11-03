@@ -92,6 +92,9 @@ export interface NativeFileResetExecution {
   authorize: NativeRemovalExecution['authorize']
 }
 export interface NativeRuntime {
+  previewPackage(archive: Uint8Array, validate: (directory: string) => Promise<{name: string; summary?: string}>): Promise<{name: string; summary?: string; files: number; bytes: number; fingerprint: string}>
+  exportPackage(selected: UpgradeSelection, target: InstalledProjectionTarget): Promise<{filename: string; archive: Uint8Array}>
+  executePackageImport(request: NativeInstallExecution & {archive: Uint8Array}): Promise<NativeRecoveryResult>
   inspectChanges(selected: UpgradeSelection, target: InstalledProjectionTarget): Promise<LocalChangesSnapshot>
   readChangeDiff(snapshot: Extract<LocalChangesSnapshot, {status: 'ready'}> | VersionChangesSnapshot, path: string): Promise<BoundedFileDiff>
   prepareVersionChanges(selected: UpgradeSelection, target: InstalledProjectionTarget,

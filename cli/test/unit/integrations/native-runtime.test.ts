@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test'
 import { randomUUID } from 'node:crypto'
-import { realpath, mkdir, mkdtemp, rm } from 'node:fs/promises'
+import { realpath, mkdir, mkdtemp, rm, readFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { openNativeRuntime } from '../../../src/integrations/native-runtime'
@@ -21,6 +21,7 @@ test('native acceptance survives restart, resolves retries before stale referenc
         sourceRevision: 'original', hostLabel: 'Host', initiatedFrom: 'plaza' } }
     const accepted = (await first.acceptInstall(request, async () => input))!
     expect(accepted.phase).toBe('accepted')
+    expect(JSON.parse(await readFile(join(options.stateDirectory, `${accepted.operationId}.json`), 'utf8')).schemaVersion).toBe(2)
     expect(JSON.stringify(accepted)).not.toContain(root)
     for (const privateField of ['targetPaths', 'transaction', 'ownerId', 'requestDigest', 'requestKey']) {
       expect(accepted).not.toHaveProperty(privateField)

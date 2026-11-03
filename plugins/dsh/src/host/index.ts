@@ -1,3 +1,6 @@
+import { readFile } from 'node:fs/promises';
+import { parseDocument } from 'yaml';
+import type { PackageImportPreview, PackageExport } from './types.js';
 import { installationContextError } from './installation-context.js';
 import type { InstallationContextReason } from './installation-context.js';
 import { Context, symbols } from '@deepseek-ai/cordis';
@@ -74,6 +77,8 @@ export class SkillHubService extends TypertRemoteService {
   private readonly installationTargets = new InstallationTargets();
   private readonly upgradePlans = new UpgradePlans();
   private readonly changeBackups = new Map<string, Promise<VerifiedBackupReceipt>>();
+  private readonly packageImports = new ConfirmationPlans<{ archive: Uint8Array; name: string; fingerprint: string; hostInstanceId: string }>();
+  private packagePreviewBytes = 0;
   private readonly changes = new ConfirmationPlans<{ itemKey: string; local: Extract<LocalChangesSnapshot, {status: 'ready'}>; version?: VersionChangesSnapshot; backup?: VerifiedBackupReceipt }>();
   private readonly resets = new ConfirmationPlans<{ itemKey: string; snapshot: Extract<LocalChangesSnapshot, {status: 'ready'}>; paths: string[] }>();
   private readonly removalPlans = new RemovalPlans();
@@ -99,7 +104,7 @@ export class SkillHubService extends TypertRemoteService {
         void runtime.start();
         return async () => {
           this.installationTargets.clear();
-          this.upgradePlans.clear(); this.changes.clear(); this.resets.clear(); this.changeBackups.clear();
+          this.packageImports.clear(); this.packagePreviewBytes = 0; this.upgradePlans.clear(); this.changes.clear(); this.resets.clear(); this.changeBackups.clear();
           this.removalPlans.clear(); this.togglePlans.clear();
           if (this.localRuntime === runtime) this.localRuntime = undefined;
           await runtime.dispose();
@@ -117,7 +122,7 @@ export class SkillHubService extends TypertRemoteService {
       ctx.effect(() => registerSearchTool(ctx.tools, (query, context, signal) => this.searchConversation(query, context, signal)));
       ctx.effect(() => registerInstallTool(ctx.tools, (request, context, signal) => this.installConversationWithChoice(request, context, signal), reason => { this.installationContextDiagnostic = reason; }));
     });
-    ctx.effect(() => () => { this.lifetime.abort(); for (const scan of this.installedUpdateScans.values()) scan.close(); this.pendingConversationInstalls.clear(); this.pendingConversationChoices.clear(); this.managementRequests.clear(); this.managementConfirmations.clear(); this.details.clear(); this.capabilities.clear(); this.selections.clear(); this.installationTargets.clear(); this.upgradePlans.clear(); this.changes.clear(); this.resets.clear(); this.changeBackups.clear(); this.removalPlans.clear(); this.togglePlans.clear(); });
+    ctx.effect(() => () => { this.lifetime.abort(); for (const scan of this.installedUpdateScans.values()) scan.close(); this.pendingConversationInstalls.clear(); this.pendingConversationChoices.clear(); this.managementRequests.clear(); this.managementConfirmations.clear(); this.details.clear(); this.capabilities.clear(); this.selections.clear(); this.installationTargets.clear(); this.packageImports.clear(); this.packagePreviewBytes = 0; this.upgradePlans.clear(); this.changes.clear(); this.resets.clear(); this.changeBackups.clear(); this.removalPlans.clear(); this.togglePlans.clear(); });
   }
 
   private installationContextDiagnostic?: InstallationContextReason;
@@ -147,7 +152,7 @@ export class SkillHubService extends TypertRemoteService {
     this.selections.clear();
     this.installationTargets.clear();
 
-    this.upgradePlans.clear(); this.changes.clear(); this.resets.clear(); this.changeBackups.clear();
+    this.packageImports.clear(); this.packagePreviewBytes = 0; this.upgradePlans.clear(); this.changes.clear(); this.resets.clear(); this.changeBackups.clear();
     this.removalPlans.clear(); this.togglePlans.clear();
     this.capabilities.clear();
     this.registry = registry;
@@ -351,7 +356,7 @@ export class SkillHubService extends TypertRemoteService {
     const items = result.items.map((item, index) => {
       const itemKey = this.installedItemKey(agent.session.id, cwd, sourceRevision, item);
       const locationKey = createHmac('sha256', this.installedReferenceKey).update(JSON.stringify([agent.session.id, cwd, sourceRevision, item.registry, item.namespace, item.slug, item.scope, item.targetPath])).digest('base64url');
-      return { ...presentation[index], registry: item.registry, currentSource: item.registry === this.getContext().registryUrl.replace(/\/+$/, ''), itemKey, locationKey, installationState: item.installationState, namespace: item.namespace, slug: item.slug, version: item.version, scope: item.scope, state: item.state };
+      return { ...presentation[index], ...(item.registry === 'local:import' ? { sourceKind: 'local-import' as const } : {}), registry: item.registry, currentSource: item.registry === this.getContext().registryUrl.replace(/\/+$/, ''), itemKey, locationKey, installationState: item.installationState, namespace: item.namespace, slug: item.slug, version: item.version, scope: item.scope, state: item.state };
     });
     return { items, complete: result.complete, issues: result.issues, unavailable };
   }
@@ -544,13 +549,122 @@ export class SkillHubService extends TypertRemoteService {
   }
 
   @RemoteScope('agent')
+  async previewPackageImport(sourceRevision: string, base64: string, signal: AbortSignal): Promise<PackageImportPreview> {
+    const context = this.packageContext(sourceRevision);
+    const combined = AbortSignal.any([signal, this.lifetime.signal]);
+    if (typeof base64 !== 'string' || base64.length > 11_184_812 || (base64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(base64))) {
+      throw new RemoteError('skillhub/invalid-installation-request', '请选择不超过 8 MiB 的 ZIP 技能包。', { retryable: false });
+    }
+    const archive = new Uint8Array(Buffer.from(base64, 'base64'));
+    if (!archive.length || archive.byteLength > 8 * 1024 * 1024 || Buffer.from(archive).toString('base64') !== base64) throw new RemoteError('skillhub/invalid-installation-request', '技能包为空或超过 8 MiB。', { retryable: false });
+    try {
+      const preview = await context.runtime.previewPackage(archive, async directory => {
+        combined.throwIfAborted();
+        await validateDshSkill(context.agent.ctx, directory, combined);
+        const content = await readFile(join(directory, 'SKILL.md'), 'utf8');
+        const match = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/.exec(content);
+        const doc = match ? parseDocument(match[1]!, { uniqueKeys: true }) : undefined;
+        const value: unknown = doc && !doc.errors.length ? doc.toJS({ maxAliasCount: 20 }) : undefined;
+        if (!value || typeof value !== 'object' || !('name' in value) || typeof value.name !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value.name) || value.name.length > 128) throw new Error('Invalid skill name');
+        return { name: value.name, ...('description' in value && typeof value.description === 'string' ? { summary: value.description.slice(0, 1000) } : {}) };
+      });
+      combined.throwIfAborted(); context.valid();
+      // Bound all retained archive bytes; evict previews together instead of retaining unbounded uploads.
+      if (this.packagePreviewBytes + archive.length > 32 * 1024 * 1024) { this.packageImports.clear(); this.packagePreviewBytes = 0; }
+      const plan = this.packageImports.issue(context.scope, { archive, name: preview.name, fingerprint: preview.fingerprint, hostInstanceId: context.hostInstanceId });
+      this.packagePreviewBytes += archive.length;
+      return { previewId: plan.planId, expiresAt: plan.expiresAt, name: preview.name, summary: preview.summary, files: preview.files, bytes: preview.bytes };
+    } catch (error) {
+      combined.throwIfAborted(); context.valid();
+      if (error instanceof RemoteError) throw error;
+      throw new RemoteError('skillhub/invalid-installation-request', '技能包无效：请检查根目录 SKILL.md、文件路径及大小限制。', { retryable: false });
+    }
+  }
+
+  @RemoteScope('agent')
+  async confirmPackageImport(sourceRevision: string, previewId: string, scope: 'user' | 'project', requestKey: string, signal: AbortSignal): Promise<NativeOperation | null> {
+    const context = this.packageContext(sourceRevision);
+    if (!['user', 'project'].includes(scope) || !/^[0-9a-f-]{36}$/i.test(previewId) || !/^[0-9a-f-]{36}$/i.test(requestKey)) throw new RemoteError('skillhub/invalid-installation-request', 'Invalid import request.', { retryable: false });
+    try {
+      return await context.runtime.submitPackageImport({ hostInstanceId: context.hostInstanceId, ownerId: context.agent.session.id,
+        requestKey, mode: 'new', parameters: { previewId, scope } }, async () => {
+        signal.throwIfAborted(); context.valid();
+        const snapshot = this.packageImports.claim(previewId, context.scope, requestKey);
+        if (snapshot.hostInstanceId !== context.hostInstanceId) throw installationContextError('HOST_MISMATCH');
+        const policy = context.agent.ctx.get('sandboxPolicy')?.resolve({ session: context.agent.session });
+        const target = await resolveInstallationPath({ scope, cwd: context.scope.cwd, fs: context.fs, policy, signal });
+        context.valid();
+        return { archive: snapshot.archive,
+          acceptance: { kind: 'install', namespace: 'local', slug: snapshot.name, version: 'local', targetLabel: scope === 'user' ? '所有项目' : '仅此项目', targetPaths: [join(target.root, snapshot.name)],
+            context: { sourceIdentity: 'local:import', sourceLabel: '本地导入', sourceRevision, hostLabel: 'DSH Host', initiatedFrom: 'plaza' } },
+          execution: { registry: 'local:import', namespace: 'local', slug: snapshot.name, version: 'local', versionId: 1, fingerprint: snapshot.fingerprint,
+            root: target.root, scope, validateStaged: directory => validateDshSkill(context.agent.ctx, directory, new AbortController().signal),
+            authorize: async paths => {
+              context.valid(false);
+              const currentPolicy = context.agent.ctx.get('sandboxPolicy')?.resolve({ session: context.agent.session });
+              const current = await resolveInstallationPath({ scope, cwd: context.scope.cwd, fs: context.fs, policy: currentPolicy, signal: this.lifetime.signal });
+              context.valid(false);
+              if (current.root !== target.root || current.dshHome !== target.dshHome) throw installationContextError('TARGET');
+              await assertInstallationMutation(target.root, paths, currentPolicy);
+            } } };
+      }) ?? null;
+    } catch (error) {
+      if (error instanceof RemoteError) throw error;
+      throw new RemoteError('skillhub/installation-unavailable', '导入未完成，请检查同名技能或安装权限后重试。', { retryable: true });
+    }
+  }
+
+  @RemoteScope('agent')
+  async exportInstalledPackage(sourceRevision: string, itemKey: string, signal: AbortSignal): Promise<PackageExport> {
+    const selected = await this.readInstalledItem(sourceRevision, itemKey, signal);
+    try {
+      const target = await resolveInstalledPath({ scope: selected.item.scope, cwd: selected.agent!.session.header.cwd!, fs: selected.fs!, signal });
+      selected.valid(); signal.throwIfAborted();
+      const result = await selected.runtime!.exportPackage(selected.item, target);
+      selected.valid(); signal.throwIfAborted();
+      return { filename: result.filename, base64: Buffer.from(result.archive).toString('base64') };
+    } catch (error) {
+      signal.throwIfAborted(); selected.valid();
+      if (error instanceof RemoteError) throw error;
+      throw new RemoteError('skillhub/installation-unavailable', '无法导出：文件已变化、存在不支持的文件或超过限制。', { retryable: true });
+    }
+  }
+
+  private packageContext(sourceRevision: string) {
+    const id = this.ctx.invocation?.request.args.agentId;
+    const agent = typeof id === 'string' ? this.ctx.get('agents')?.get(SessionId(id)) : undefined;
+    const runtime = this.localRuntime;
+    const fs = agent?.ctx.get('fs');
+    const cwd = agent?.session.header.cwd;
+    const hostInstanceId = runtime?.getStatus().hostInstanceId;
+    if (!agent || !runtime || !fs || !cwd || !hostInstanceId || runtime.getStatus().state !== 'ready') throw installationContextError('AGENT');
+    const scope = { sessionId: agent.session.id, cwd, sourceRevision };
+    const valid = (checkSource = true) => {
+      if (checkSource) this.assertSource(sourceRevision);
+      if (this.localRuntime !== runtime || runtime.getStatus().hostInstanceId !== hostInstanceId || agent.session.header.cwd !== cwd
+        || this.ctx.get('agents')?.get(SessionId(agent.session.id)) !== agent || serviceIdentity(agent.ctx.get('fs')) !== serviceIdentity(fs)) throw installationContextError('CWD');
+    };
+    valid(); return { agent, runtime, fs, scope, hostInstanceId, valid };
+  }
+
+  @RemoteScope('agent')
   async getInstalledDetail(sourceRevision: string, itemKey: string, signal: AbortSignal): Promise<InstalledSkillDetail> {
-    const { item, valid } = await this.readInstalledItem(sourceRevision, itemKey, signal);
+    const { item, valid, runtime, agent, fs } = await this.readInstalledItem(sourceRevision, itemKey, signal);
     const combined = AbortSignal.any([signal, this.lifetime.signal]);
     let content: InstalledSkillDetail['content'];
     try {
+      if (item.registry === 'local:import') {
+        const target = await resolveInstalledPath({ scope: item.scope, cwd: agent!.session.header.cwd!, fs: fs!, signal: combined });
+        const entry = await runtime!.readInstallationEntry(item, target);
+        valid(); combined.throwIfAborted();
+        if (!entry) throw new Error('local-content-unavailable');
+        content = { state: 'ready', detail: { detailToken: '', title: item.slug, summary: '', namespace: item.namespace, slug: item.slug,
+          version: item.version, versionId: 1, tabs: { versions: 'hidden', securityAudit: 'hidden', reviews: 'hidden' },
+          documentation: { state: 'ready', content: entry } } };
+      } else {
       if (item.registry !== this.getContext().registryUrl.replace(/\/+$/, '')) throw new Error('other-source');
       content = { state: 'ready', detail: await this.getSkillDetail(sourceRevision, item.namespace, item.slug, item.version, combined) };
+      }
     } catch (error) {
       combined.throwIfAborted();
       valid();
@@ -558,7 +672,7 @@ export class SkillHubService extends TypertRemoteService {
     }
     valid();
     combined.throwIfAborted();
-    return { item: { itemKey, registry: item.registry, namespace: item.namespace, slug: item.slug, version: item.version, scope: item.scope, state: item.state }, content };
+    return { item: { itemKey, installationState: item.installationState, currentSource: item.registry === this.getContext().registryUrl.replace(/\/+$/, ''), ...(item.registry === 'local:import' ? { sourceKind: 'local-import' as const } : {}), registry: item.registry, namespace: item.namespace, slug: item.slug, version: item.version, scope: item.scope, state: item.state }, content };
   }
 
   @RemoteScope('agent')
