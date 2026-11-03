@@ -115,3 +115,17 @@ test('unknown entry state remains unknown in model context', () => {
   expect(value.items[0]).not.toHaveProperty('installationState');
   expect(value.complete).toBe(false);
 });
+
+
+test('source eligibility is not an update result or a management routing token', () => {
+  const text = installationContext({ ...list, items: [
+    { ...item, registry: 'https://a.example', currentSource: true },
+    { ...item, registry: 'https://b.example', currentSource: false, scope: 'user' },
+  ] });
+  expect(snapshot(text).items.map((entry: { updateSource: string }) => entry.updateSource)).toEqual(['current', 'other']);
+  expect(text).toContain('NOT that an update exists');
+  expect(text).toContain('after switching to their source');
+  expect(text).toContain('source URLs are never sourceRevision');
+  expect(text).toContain('require no human confirmation');
+  expect(text).not.toContain(item.itemKey);
+});

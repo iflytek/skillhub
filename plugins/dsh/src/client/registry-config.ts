@@ -22,6 +22,20 @@ export function savedRegistryOptions(config: { registryUrl: string; savedRegistr
   }
   return entries;
 }
+/** Indexes always refer to savedRegistries; the legacy current address has no saved index. */
+export function registryChoices(config: Pick<SkillHubConfig, 'registryUrl' | 'savedRegistries'>): (SavedRegistry & { savedIndex: number | null })[] {
+  const entries = (config.savedRegistries ?? []).map((entry, savedIndex) => ({ ...entry, savedIndex }));
+  return config.registryUrl.trim() && !entries.some(entry => sameRegistry(entry.url, config.registryUrl))
+    ? [{ name: '未命名来源', url: config.registryUrl.trim(), savedIndex: null }, ...entries] : entries;
+}
+/** Preserve a legacy address only when the user edits/selects, never on initial read. */
+export function preserveCurrentRegistry(config: SkillHubConfig): SkillHubConfig {
+  const legacy = registryChoices(config).find(entry => entry.savedIndex === null);
+  return legacy ? { ...config, savedRegistries: [...(config.savedRegistries ?? []), { name: legacy.name, url: legacy.url }] } : config;
+}
+export class RegistryConfigError extends Error {
+  constructor(message: string, readonly savedIndex?: number) { super(message); }
+}
 export function editSavedRegistry(config: SkillHubConfig, index: number, next?: SavedRegistry): SkillHubConfig {
   const entries = [...(config.savedRegistries ?? [])];
   const current = entries[index];
@@ -33,15 +47,19 @@ export function editSavedRegistry(config: SkillHubConfig, index: number, next?: 
 }
 export function validateRegistryConfig(config: SkillHubConfig): SkillHubConfig {
   const registryUrl = config.registryUrl.trim();
-  if (registryUrl) registryAddress(registryUrl);
   const seen = new Set<string>();
-  const savedRegistries = (config.savedRegistries ?? []).map(entry => {
+  const savedRegistries = (config.savedRegistries ?? []).map((entry, savedIndex) => {
+    try {
     const name = entry.name.trim();
     if (!name) throw new Error('请填写来源名称。');
     const url = registryAddress(entry.url);
     if (seen.has(url)) throw new Error('此来源地址已存在，请保留一个条目。');
     seen.add(url);
     return { name, url };
+    } catch (error) { throw new RegistryConfigError(error instanceof Error ? error.message : '请检查来源地址。', savedIndex); }
   });
+  if (registryUrl) {
+    try { registryAddress(registryUrl); } catch (error) { throw new RegistryConfigError(error instanceof Error ? error.message : '请检查来源地址。'); }
+  }
   return { ...config, registryUrl, savedRegistries };
 }

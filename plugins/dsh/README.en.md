@@ -120,16 +120,16 @@ The Loader entry ID is `astron-skillhub`; `skillhub` is the Host/Remote service 
 
 Open DSH **Plugins → @astron-team/skillhub-dsh → SkillHub 设置**.
 
-1. Enter the HTTP(S) instance base address in **Registry 地址**. A deployment subpath is allowed; credentials, query parameters, fragments and API endpoint suffixes are not.
+1. Select, add or edit a source in the **技能来源** card. Use an HTTP(S) instance base address. A deployment subpath is allowed; credentials, query parameters, fragments and API endpoint suffixes are not.
 2. Select **测试连接** (Test connection) to test the current draft URL without saving it. The result reports public catalog or basic-search availability and elapsed time. Requests have a 10-second timeout; failures can be retried. Editing the address clears the previous result. Success does not establish download or all optional-module availability.
-3. Choose visibility for versions, security audit and reviews.
+3. Open **页面显示** (Page display) to choose visibility for versions, security audit and reviews. Switching tabs retains the draft and does not save it.
 4. Select **保存配置** (Save). After the saved confirmation, open **技能中心** and search for a public test skill.
 
-Add named addresses under **保存的来源** and save, then switch from the Skill Center header. The active source is shared across pages and conversations of the same Profile/plugin instance. Configuration revision checks reject conflicting edits rather than overwriting another page.
+Configure and switch sources under the **技能来源** tab in SkillHub settings. Selection and management share a single list; adding or editing reveals inline fields. Disconnecting takes effect only after saving and preserves installed skills. Both tabs share Save and Reset, applying all pending edits together. Select a saved source and save to apply it; the Skill Center header does not show a source selector. The active source is shared across pages and conversations of the same Profile/plugin instance. Configuration revision checks reject conflicting edits rather than overwriting another page.
 
 Switching preserves existing installations. Installed skills from other trusted sources remain locally usable and manageable, including availability checks, enable/disable and removal; only the current source participates in update checks and upgrades. Same-name skills from different sources remain distinct. Removing the active saved source disconnects without deleting installations; old-source details never borrow current-market content.
 
-**已配置** means a nonempty address is saved, not that connectivity has been tested. An empty address disconnects the source. **重置修改** (Reset changes) restores the current Host snapshot without a network reload or save. Read-only connections cannot edit configuration. On a revision conflict, reset the draft before editing the current values.
+**当前使用** identifies the saved active source; **待保存** identifies a pending selection. Neither indicates a successful connection test. Choose **不连接技能来源** and save to disconnect. **重置修改** (Reset changes) restores the current Host snapshot without a network reload or save. Read-only connections cannot edit configuration. On a revision conflict, reset the draft before editing the current values.
 
 | Field | Meaning |
 | --- | --- |
