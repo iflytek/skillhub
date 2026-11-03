@@ -1,0 +1,28 @@
+<svg width="360" height="579" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 579" role="img" aria-labelledby="title desc">
+<title id="title">审核决定流程</title>
+<desc id="desc">核对当前申请及处理权限，检查内容和证据；证据不足时排障或等待，不直接批准。提交决定后重新读取任务和目标对象的结果。</desc>
+<defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#52657a"/></marker></defs>
+<rect x="1" y="1" width="358" height="577" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="180" y="35" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#172b4d">审核决定流程</text>
+<rect x="20" y="58" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="83" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">1. 识别当前申请</text>
+<text x="36" y="106" font-family="Arial,sans-serif" font-size="14" fill="#334155">对象、提交者、版本和可见范围</text>
+<text x="36" y="126" font-family="Arial,sans-serif" font-size="14" fill="#334155">核对命名空间状态与审核权限</text>
+<path d="M180 145V158" stroke="#52657a" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="20" y="162" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="187" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">2. 核查证据</text>
+<text x="36" y="210" font-family="Arial,sans-serif" font-size="14" fill="#334155">文件、变更、扫描和资料</text>
+<text x="36" y="230" font-family="Arial,sans-serif" font-size="14" fill="#334155">证据缺失时先排障或等待</text>
+<path d="M180 249V262" stroke="#52657a" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="20" y="266" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="291" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">3. 提交决定</text>
+<text x="36" y="314" font-family="Arial,sans-serif" font-size="14" fill="#334155">申请仍待审，操作者具备权限</text>
+<text x="36" y="334" font-family="Arial,sans-serif" font-size="14" fill="#334155">批准，或拒绝并记录修订要求</text>
+<path d="M180 353V366" stroke="#52657a" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="20" y="370" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="395" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">4. 重新读取结果</text>
+<text x="36" y="418" font-family="Arial,sans-serif" font-size="14" fill="#334155">核对任务及目标对象状态</text>
+<text x="36" y="438" font-family="Arial,sans-serif" font-size="14" fill="#334155">审核批准不代表 Agent 执行成功</text>
+<text x="180" y="533" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#475569">审核以本次申请为准。</text>
+<text x="180" y="554" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#475569">状态冲突后不得重复提交决定。</text>
+</svg>

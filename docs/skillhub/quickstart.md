@@ -1,101 +1,136 @@
 # 快速开始：安装并使用技能
 
-安装第一个技能，并在 Agent 中使用。本页使用已有的注册中心，不需要先部署 SkillHub 服务。
+本页从已有可访问的注册中心开始，完成单个技能的安装、Agent 发现及首次使用检查。不涉及部署注册中心或发布技能。流程终点是 Agent 能读取技能并完成一次具体任务，而不只是 CLI 返回安装成功。
 
-## 开始前准备
+![选择注册中心、安装文件、确认发现与验收执行的顺序](/diagrams/first-install-flow.svg)
 
-- 一个支持技能目录的 Agent，例如 Codex 或 Claude Code。
-- Node.js 18 或更新版本，以及可用的 npm；可用 `node --version` 确认版本。
-- 一个准备使用技能的项目目录，以及能访问的 SkillHub 注册中心地址。
+图：每一步均有独立完成标准；后一步失败时，应先定位对应阶段，而不是重新安装全部内容。
 
-本页命令使用终端运行，`@team/example-skill` 是占位坐标，不是保证存在的公共技能。选择实际搜索结果后再替换。项目级安装前，先切换到准备让 Agent 打开的项目根目录。
+## 前置准备
 
-## 1. 安装 CLI，选择注册中心
+在终端执行命令，并先切换至目标 Agent 将打开的项目根目录。准备一个可访问的注册中心以及 Codex、Claude Code 等支持技能目录的 Agent。
+
+| 项目 | 要求或取值 | 检查与生效方式 |
+| --- | --- | --- |
+| Node.js | 最低18，且 npm 可用 | 执行 `node --version`、`npm --version`；更换运行环境后重新打开终端 |
+| 注册中心 | 内置地址为 `https://skill.xfyun.cn` | 选择顺序为命令参数、`SKILLHUB_REGISTRY`、本地配置、内置地址；环境变量在当前终端生效 |
+| 安装范围 | `project` 或 `user` | 本页显式使用项目级；用户级位于主目录，不等于所有 Agent 都会自动加载 |
+| 目标 Agent | 本页使用 `codex` | Claude Code 改用 `claude-code`；必须与实际打开项目的 Agent 一致 |
+
+`skillhub.example.com` 与 `@team/example-skill` 均为占位示例，不保证存在。必须分别替换为实际实例地址及搜索结果中的技能坐标。最低运行版本与参数来源见 [CLI 清单](https://github.com/iflytek/skillhub/blob/main/cli/package.json)及[命令定义](https://github.com/iflytek/skillhub/blob/main/cli/src/index.ts)。
+
+## 1. 安装 CLI 并选择注册中心
 
 ```bash
 npm install -g @astron-team/skillhub
 skillhub version
 ```
 
-默认使用 `https://skill.xfyun.cn`。使用自托管实例时，在当前终端设置实际地址：
+版本命令应输出 `SkillHub CLI` 及实际安装版本。出现命令不存在时，应先检查 npm 全局可执行目录是否位于当前终端的 `PATH`，不要继续执行安装技能命令。
+
+使用默认实例时无需设置地址。自托管实例在当前终端设置实际地址，随后所有命令保持同一来源：
 
 ```bash
 export SKILLHUB_REGISTRY=https://skillhub.example.com
 ```
 
-PowerShell 中设置注册中心使用：
+PowerShell 对应设置为：
 
 ```powershell
 $env:SKILLHUB_REGISTRY="https://skillhub.example.com"
 ```
 
-只想临时使用另一个实例时，可以在命令后添加 `--registry https://skillhub.example.com`。搜索、登录和安装应使用同一个注册中心；不同实例中的同名技能不是同一安装来源。
+单次操作也可添加 `--registry https://skillhub.example.com`。不同实例的同名技能不是同一来源；切换来源不会搬迁已安装文件。
 
-公开技能可匿名搜索和安装。发布、访问受限资源等操作需要登录：
+## 2. 搜索技能并核对身份
+
+```bash
+skillhub search pdf
+```
+
+输出每行依次为命名空间／技能标识、最新版本和摘要；无结果时显示 `No skills found.`。在同一实例的网页详情核对用途、版本、访问范围及依赖，然后复制真实坐标。
+
+公开技能支持匿名搜索和安装；受限资源需要登录，并仍受资源权限约束：
 
 ```bash
 skillhub login
 skillhub whoami
 ```
 
-没有从命令行、环境变量或该注册中心的保存记录读取到 Token 时，CLI 会进入设备授权；按终端提示在浏览器完成登录和设备码确认。已有 Token 时先用该 Token 验证身份，不会自动重新选账号。远程终端可用 `skillhub login --no-open`。账号是否可以注册、使用哪些登录方式，由实例配置决定。
+不存在命令参数、环境变量或该注册中心保存的 Token 时，登录进入设备授权，终端显示授权地址与设备码。浏览器登录后须完成设备码确认；网页已有登录态不等于 CLI 已获凭据。已有 Token 时会先验证该凭据，不会自动选择其他账号。远程终端使用 `skillhub login --no-open`；可用登录方式和注册入口由实例配置决定。`whoami` 应显示所选注册中心和账号，具体处理见[账号与访问令牌](./guide/account-access.html)。
 
-## 2. 找到技能并安装
+## 3. 安装并检查文件与记录
 
-```bash
-skillhub search pdf
-```
-
-在网页详情确认用途、版本、可见性及使用说明，然后复制真实坐标。下面的 `@team/example-skill` 是占位示例，必须替换成搜索结果中的坐标。
-
-在目标项目根目录执行：
+在目标项目根目录执行，先将占位坐标替换为真实结果：
 
 ```bash
 skillhub install @team/example-skill --scope project --agent codex
-skillhub list --agent codex
+skillhub list --agent codex --json
 ```
 
-Claude Code 用户改用 `--agent claude-code`。希望多个项目共用时，使用 `--scope user`。
-项目级 Codex 安装目录为 `.codex/skills/<slug>/`，Claude Code 为 `.claude/skills/<slug>/`；用户级路径位于用户主目录。
+以下为格式示例，不是真实下载结果。安装命令输出的路径应对应当前项目；项目级目录结构应包含 `SKILL.md`，其他文件取决于技能包内容：
 
-### 确认安装到了哪里
+```text
+Installed team/example-skill -> /work/project/.codex/skills/example-skill (codex)
 
-查看安装命令输出的目标路径，再查看 `skillhub list --agent codex` 的记录：坐标、版本、Agent、目录和状态应符合刚才选择的目标。`list` 按当前注册中心过滤；切换注册中心后列表变化不代表本地文件被删除。
+/work/project/.codex/skills/example-skill/
+└── SKILL.md
+```
 
-状态 `missing` 表示记录对应的目录不存在；`ok` 只表示目录存在，不代表 Agent 已加载或技能已执行成功。进入实际目录检查 `SKILL.md`，再继续下一步。
+`list` 的 JSON 中应存在对应记录。以下是完整结构示例，路径、时间及版本必须以本次实际输出为准：
 
-## 3. 在 Agent 中使用
+```json
+{"ok":true,"items":[{"namespace":"team","slug":"example-skill","version":"1.0.0","agent":"codex","installDir":"/work/project/.codex/skills/example-skill","installedAt":"2026-11-03T08:00:00.000Z","status":"ok"}]}
+```
 
-安装完成后，在目标 Agent 中打开项目，必要时新建会话或重新加载技能。先确认 Agent 能发现该技能，再提出具体任务，例如：
+核对坐标、Agent 与 `installDir`，并打开该目录的 `SKILL.md`。状态 `ok` 仅表示目录存在，不代表内容已执行；`missing` 表示记录对应目录缺失。列表按当前注册中心过滤，但并非仅列当前项目，必须同时核对路径。Claude Code 项目级目录为 `.claude/skills/<slug>/`。使用 `--scope user` 时目录位于主目录，对应文件发现规则由 Agent 决定。
 
-> 请使用 example-skill，按它的说明处理以下材料：……
+输出依据见[安装命令](https://github.com/iflytek/skillhub/blob/main/cli/src/commands/install.ts)与[安装清单命令](https://github.com/iflytek/skillhub/blob/main/cli/src/commands/list.ts)。
 
-实际调用名称以技能 `SKILL.md` 中的 `name` 和 Agent 显示结果为准。安装不会自动执行技能，也不会代为配置成员所需的工具或凭据。
-如果 Agent 没发现技能，检查 CLI 输出路径、当前项目、安装范围和目标 Agent，参见 [FAQ](./faq.html)。
+## 4. 验证 Agent 发现并执行任务
 
-整套安装使用 `skillhub suite install`，之后从套装的入口技能开始；详见 [技能套装使用指南](./guide/skill-suites.html)。
+在目标 Agent 中打开上述项目，按该产品的加载机制重载技能或新建会话。核对 Agent 可用技能中出现目标名称，再按技能说明提供一次具体任务、输入与预期产物。调用名称以实际 `SKILL.md` 的 `name` 及 Agent 识别结果为准。
 
-## 4. 更新和管理
+| 阶段 | 可观察完成标准 | 尚不能据此确认的事项 |
+| --- | --- | --- |
+| 文件安装 | 安装路径有 `SKILL.md`，清单记录匹配且 `status=ok` | Agent 是否已加载文件 |
+| Agent 发现 | Agent 的技能列表或会话上下文包含目标技能 | 外部工具、凭据与业务依赖是否可用 |
+| 任务执行 | Agent 按技能要求产出可核对的结果 | 其他输入、环境或后续版本是否同样适用 |
+
+安装不会自动执行技能或配置外部工具。多技能协作需核对入口与成员说明；共同安装使用 `skillhub suite install`，操作见[技能套装](./guide/skill-suites.html)。
+
+## 5. 验证参数错误的拒绝行为
+
+以下命令使用无效安装范围，演示本地参数校验的拒绝行为：
+
+```bash
+skillhub install @team/example-skill --scope invalid --agent codex
+```
+
+预期在标准错误输出中看到下列内容，退出码为5；命令在读取安装配置和发起下载前即停止，不会安装示例技能：
+
+```text
+Error: --scope must be "user" or "project"
+```
+
+改回 `--scope project`，并替换真实坐标后再执行。不要用 `--force` 处理参数错误。该示例的错误消息与执行顺序见[安装参数校验](https://github.com/iflytek/skillhub/blob/main/cli/src/commands/install.ts)。
+
+## 失败定位与处置
+
+| 现象 | 最可能原因 | 定位手段 | 处置 |
+| --- | --- | --- | --- |
+| 搜索无目标结果 | 来源、权限或发布状态不符 | 在同一终端检查 `skillhub search pdf`、`skillhub whoami`，并在同一实例核对坐标 | 核对来源与发布状态，必要时登录；不要通过重置账号排障 |
+| 安装提示同名目录已存在 | 既有安装或手工文件占用路径 | 对照提示路径与 `skillhub list --agent codex --json` 的 `installDir`，读取目录内 `SKILL.md` | 备份并辨明来源，选择正确项目或范围；不要覆盖未知内容 |
+| 安装后 Agent 未发现技能 | 项目、范围或目标 Agent 不符 | 核对清单中的 `agent`、`installDir`、`status`，确认 Agent 打开的项目 | 修正目标并按 Agent 机制重载；不要将 `ok` 当作加载完成 |
+| 已发现技能但执行失败 | 缺少运行依赖、输入或权限 | 读取本地 `SKILL.md`，对照 Agent 错误检查工具及凭据要求 | 在目标环境补齐依赖；不要把凭据写入共享技能包或公开日志 |
+
+## 更新与后续任务
+
+在已完成上述检查后，先查看升级计划，再决定执行更新：
 
 ```bash
 skillhub upgrade @team/example-skill --check
 skillhub upgrade @team/example-skill
 ```
 
-检查计划后再更新。保留需要的本地修改；不要把 `--force` 当作默认参数。卸载、同步团队工作区和完整命令说明见 [CLI 指南](./guide/cli.html)。
-
-## 常见问题与处理
-
-
-| 现象 | 定位动作 | 正常结果或原因 | 检查与处理 |
-| --- | --- | --- | --- |
-| 搜索不到目标技能 | 同一终端执行 `skillhub search pdf` 与 `skillhub whoami`；在同一注册中心网页查实际坐标 | 搜索返回有权查看的已发布资源；公开搜索可匿名，身份接口未登录不代表公开搜索故障 | 校对实例、坐标和发布状态；受限资源先完成登录，不要通过重置账号或删除本地目录排障 |
-| 安装时报同名目录冲突 | 执行 `skillhub list --agent codex --json`，将 `items[].installDir` 与冲突提示路径比较；打开该目录的 `SKILL.md` | 已记录安装应显示匹配的注册中心、版本与目录；无记录的已有目录也可能是手工文件 | 先备份并辨明目录来源，再选择正确项目或安装范围；不要用 `--force` 覆盖未知内容 |
-| 安装成功但 Agent 看不到 | 在目标项目根目录执行 `skillhub list --agent codex --json`，检查 `items[].agent`、`installDir`、`status`，再打开实际目录的 `SKILL.md` | `status=ok` 仅表示目录存在；`missing` 表示记录对应目录不存在；Agent 还须发现该目录 | 核对项目与 Agent 类型，按 Agent 的发现方式重载或新建会话；不要仅凭 `ok` 认定技能已被加载 |
-| Agent 已加载但执行失败 | 打开已安装目录的 `SKILL.md`，逐项核对所需工具、输入和凭据，并读取 Agent 返回的具体错误 | 文件安装正常仍可能缺运行依赖或权限；注册中心不代为配置外部工具 | 按技能说明在目标环境补齐依赖；不要把凭据写进共享技能包或公开错误报告 |
-
-以上命令在安装技能的项目目录执行，`--agent codex` 必须与实际 Agent 一致，Claude Code 使用 `--agent claude-code`。`pdf` 是可替换的搜索词；排障命令不保证存在同名技能。CLI 字段与过滤规则见 [list 实现](https://github.com/iflytek/skillhub/blob/main/cli/src/commands/list.ts)及 [CLI 参数定义](https://github.com/iflytek/skillhub/blob/main/cli/src/index.ts)。
-
-## 下一步
-
-需要配套技能时，阅读[技能套装](./guide/skill-suites.html)；需要更多命令时，查阅 [CLI 指南](./guide/cli.html)。发布技能、管理团队、自托管和源码开发，请从[文档导航](./guide/index.html)选择对应任务。
+升级可能受本地修改、共享目录或来源保护限制，必须先读取计划；不要默认添加 `--force`。本页终点是单技能首次可用，后续卸载、版本管理及完整选项见[CLI 参考](./guide/cli.html)；作者发布和部署任务从[文档导航](./guide/index.html)进入。

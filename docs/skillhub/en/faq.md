@@ -272,7 +272,9 @@ Check the following in order:
 
 ## Q: How does an account created through OAuth (GitHub / GitLab, etc.) get admin rights?
 
-A: The first OAuth login creates a regular user. An existing `SUPER_ADMIN` (for example the bootstrap admin created during initialization) has to promote it from the admin console.
+A: External sign-in first follows the existing admission policy. A newly created external account with status `ACTIVE` can receive a configured platform role when the provider supplies a verified email and an enabled initial-role rule matches it. Without a matching rule, no platform-management role is granted automatically. Rules apply only during new-account creation; they do not update existing accounts or merge accounts with the same email. Existing accounts use user management with the required platform permissions; only a super administrator (`SUPER_ADMIN`) may grant that role.
+
+For account and credential concepts, see [Accounts and access tokens](./guide/account-access.html). The applicable rule conditions are defined by the [initial-role service](https://github.com/iflytek/skillhub/blob/main/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/settings/InitialExternalRoleGrantService.java), and the [account creation flow](https://github.com/iflytek/skillhub/blob/main/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/identity/IdentityBindingService.java).
 
 A `USER_ADMIN` can manage user status and assign platform roles other than `SUPER_ADMIN`, but cannot grant `SUPER_ADMIN` to any account or change the role of an existing `SUPER_ADMIN`. Only a `SUPER_ADMIN` can perform those two operations.
 

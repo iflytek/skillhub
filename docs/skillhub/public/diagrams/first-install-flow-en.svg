@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="360" height="420" viewBox="0 0 360 420" role="img" aria-labelledby="title desc">
+<title id="title">Staged checks for first installation</title>
+<desc id="desc">Select the registry and identity, install files, verify records, then check Agent discovery and task results. Each stage requires independent verification.</desc>
+<rect x="1" y="1" width="358" height="418" rx="10" fill="#f8fafc" stroke="#cbd5e1"/>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8" fill="none" stroke="#475569" stroke-width="1.4"/></marker></defs>
+<rect x="18" y="18" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="42" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">1  Select source and identity</text>
+<text x="32" y="64" font-family="system-ui,sans-serif" font-size="15" fill="#334155">Find a coordinate; log in if required</text>
+<text x="32" y="82" font-family="system-ui,sans-serif" font-size="15" fill="#334155">Check purpose, version and access</text>
+<path d="M180 96 V112" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="18" y="118" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="142" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">2  Install files</text>
+<text x="32" y="164" font-family="system-ui,sans-serif" font-size="15" fill="#334155">Select project, scope and Agent</text>
+<text x="32" y="182" font-family="system-ui,sans-serif" font-size="15" fill="#334155">Check SKILL.md at the actual path</text>
+<path d="M180 196 V212" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="18" y="218" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="242" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">3  Inspect installation records</text>
+<text x="32" y="264" font-family="system-ui,sans-serif" font-size="15" fill="#334155">Match coordinate, Agent and path</text>
+<text x="32" y="282" font-family="system-ui,sans-serif" font-size="15" fill="#334155">Existing files do not prove discovery</text>
+<path d="M180 296 V312" stroke="#475569" stroke-width="1.7" marker-end="url(#arrow)"/>
+<rect x="18" y="318" width="324" height="74" rx="8" fill="#ffffff" stroke="#64748b"/>
+<text x="32" y="342" font-family="system-ui,sans-serif" font-size="18" font-weight="600" fill="#0f172a">4  Verify discovery and execution</text>
+<text x="32" y="364" font-family="system-ui,sans-serif" font-size="15" fill="#334155">Load the skill in the target Agent</text>
+<text x="32" y="382" font-family="system-ui,sans-serif" font-size="15" fill="#334155">Assess the actual task result</text>
+</svg>
