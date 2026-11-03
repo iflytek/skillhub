@@ -10,7 +10,9 @@
 - **安全**：TLS 证书管理、Secret 密码保护；Bitnami 数据组件默认提供 NetworkPolicy
 - **可观测性**：内置 Prometheus metrics exporter
 - **业务事件 Logs（默认关闭）**：`server.businessLogs.enabled`、`endpoint` 与 `headersSecretRef`（引用现有 Secret）；
-  其他预算/过滤配置使用 `server.extraEnv`，不增加默认 Collector。见[完整运行手册](../../docs/business-event-logs.md)。
+  其他预算/过滤配置使用 `server.extraEnv`，复用现有接收器，不增加 Collector 子 Chart。
+  指标默认只暴露 health/info；`server.actuatorExposureInclude: health,info,metrics,prometheus` 可打开受保护的查询入口。
+  Secret 创建、upgrade、产生事件、管理员查询与停用见[完整运行手册](../../docs/business-event-logs.md)。
 
 ## 快速开始
 

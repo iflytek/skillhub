@@ -40,13 +40,13 @@ Suite review writes are enabled by default in the single-server release Compose 
 
 ## Optional business-event OTLP Logs
 
-Business analytics is disabled by default and independent of all three Trace modes. With the matching
-official server image, enable `SKILLHUB_BUSINESS_LOGS_ENABLED=true` and a full
-`SKILLHUB_BUSINESS_LOGS_ENDPOINT`; Collector is optional and authentication headers belong in deployment
-Secrets. See the [business-event operations guide](https://github.com/iflytek/skillhub/blob/main/docs/business-event-logs.md)
-for publication, download preparation, review, promotion, archive, visibility and yank semantics, private-ID
-scope, every setting, a real receive/query example and loss/duplicate/shutdown limits. Download preparation
-is not completion or installation; this lossy stream is not audit, billing or reliable notification.
+Business analytics stays off by default and independent of tracing. Use `runtime.sh business-logs-enable`
+for an existing receiver, or `business-logs-up` for an optional Collector with an explicit downstream.
+For a local host Java process or container backend, use `make business-logs-demo-up`.
+Metrics require the explicit `health,info,metrics,prometheus` exposure list and a server recreation.
+The [operations guide](https://github.com/iflytek/skillhub/blob/main/docs/business-event-logs.md) covers both
+paths, Helm Secrets, admin queries, troubleshooting and cleanup. Download preparation is not completion
+or installation; this lossy stream is not an audit or billing system.
 
 ## CLI device authorization URL
 

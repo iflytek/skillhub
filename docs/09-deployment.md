@@ -667,8 +667,8 @@ override 或部署平台环境变量把上述 `SPRING_SECURITY_*` 变量注入 `
 | 请求关联 | 响应头和日志中的 `X-Request-Id` / `request.id` |
 | 日志 | 文本或 ECS 风格 JSON，均输出到容器 stdout / stderr |
 | Trace | `none`、Micrometer + OTel SDK、或外部 Java Agent 三选一 |
-| 业务事实 | 默认关闭的独立 OTLP Logs 出口；[事件目录、配置、Secret、Collector 实收查询与可靠性边界](./business-event-logs.md) |
-| 指标 | Spring Boot Actuator；Prometheus 是可选后端，不是 Trace 前置条件 |
+| 业务事实 | 默认关闭；生产 `runtime.sh business-logs-enable` / `business-logs-up`，本地 `make business-logs-demo-up`；[配置、实收查询、排障与停止](./business-event-logs.md) |
+| 指标 | 默认仅 health/info；`SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE=health,info,metrics,prometheus` 后重建 server，使用管理员会话查询 |
 
 ### 10.1 通用配置
 
