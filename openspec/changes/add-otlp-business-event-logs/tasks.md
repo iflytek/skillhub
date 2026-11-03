@@ -45,3 +45,19 @@ Repair 1 results and intermediate failures are recorded in acceptance.md and the
 - [x] Rerun full focused selector/environment: 307 tests green (81 business); real Collector query 27/9/27; deployment contracts 4/4 plus Helm/release shell suites green; diff and scoped cleanup checked.
 
 Repair 2 exact commands/counts/evidence and proposed fixup are appended to the worker report. No commit/push/comment was performed.
+
+## Repair 4
+
+- [x] Run the unmodified Diagnostics + Trace selector twice in default ordering and twice in diagnostic-first Surefire alphabetical ordering; retain the reproduced MDC failure and XML counts.
+- [x] Isolate process-global diagnostics in a dedicated, non-reused test fork without removing assertions; final minimal combination passes twice, exact focused selector passes 312 tests, full observability package passes 117.
+- [x] Add default-health/info metrics exposure passthrough in application, Compose and Helm with validation/schema contracts; prove live super-admin 200, ordinary-user 403, anonymous 401, and default admin 404.
+- [x] Add POSIX runtime entry points for existing receiver and optional downstream-forwarding Collector, shared private network overlay, repeatable updates/status/stop/disable, protected deployment env files and flat OSS retrieval contracts.
+- [x] Add Makefile demo entry points with automatic host/container endpoint selection, actual JSON queries and expected-event verification; preserve trial records with append mode and a project-scoped local volume across up/stop/start.
+- [x] Execute a branch Dockerfile build and real bootstrap-admin publication/download matrix for default off, existing receiver, optional Collector, application endpoint update, Collector downstream update, stop/start and disable on an isolated non-default-port deployment.
+- [x] Execute actual make dev-server with offline packaging, PostgreSQL/Redis and a demo Collector; execute the containerized backend path and prove new skill records plus retained records after restart.
+- [x] Extend the real Collector integration test with a restarted HTTP readiness probe and preservation of all 27 original UIDs; handle Docker's changed dynamic host-port binding; final broad focused/package runs include the assertion.
+- [x] Run fake-Docker lifecycle tests, six Python deployment contracts, relevant existing script suites, Helm contracts/strict lint, VitePress and weekly site validation; record platform prerequisite failures separately from passing reruns.
+- [x] Rewrite the guide as production integration/local trial, add short site/chart pointers, admin queries/counter meanings, operational updates and cleanup steps; document required release/OSS file upload.
+- [x] Verify real clean retains deployment files byte-for-byte at mode 600; remove the identified test containers, project volumes/networks and test images, preserve pre-existing images, stop the authorized dind and local relay, and verify owned ports are closed.
+
+Repair 4 real runs, template-only checks, intermediate fixture failures and remaining deployment limits are recorded in acceptance.md and the worker report. Commits remain local; publication is left to the owner.

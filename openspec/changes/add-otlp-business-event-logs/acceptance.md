@@ -109,3 +109,44 @@ The 13 added denial cases and two mapper edge assertions were finalized after th
 Docs site build was attempted. VitePress was absent; `npm ci` was blocked by the environment's network guard for both the lockfile registry and an explicit npmjs alternative. This is reported as BLOCKED, not passing. Markdown/source/link checks are separate from a built site. / 文档站构建受依赖下载网络限制，未冒称通过。
 
 Not executed: real external Java-agent/plugin installation, TLS/mTLS production deployment, a browser/CLI deployment smoke, forced-process-crash recovery or sustained throughput/heap profiling. There is no outbox/replay guarantee to test. Agent duplicate suppression, authorized egress/DNS/redirect policy, production Secret provisioning, receiver persistence and retention remain deployment responsibilities. All application mode combinations were exercised without installing a Java agent. / 未执行真实 Agent 注入、生产 TLS/mTLS、完整 Web/CLI 部署或持续负载测试；相关限制和部署责任明确保留。
+
+## Repair 4 — deployment integration and test isolation
+
+The maintainer's deployed receive test is the starting point, not a substitute for this round's executions. Evidence filenames below refer to the separate worker evidence directory; credentials and host-specific paths are not committed.
+
+### Process-global diagnostics test
+
+The unmodified minimal selector was run twice with Surefire's default filesystem ordering: Trace ran first and both runs passed 18 tests. With Surefire's real `alphabetical` ordering, diagnostics ran first and both RED runs had **18 tests, 1 failure, 0 errors, 0 skips**. The failure is `SkillHubTracingConfigurationTest.otelSdkScopeShouldPublishTraceCorrelationToMdc`, with a null MDC trace ID. The diagnostics fixture changes global Boot Logback/JUL state and creates raw SDK spans before Boot installs the OTel ContextStorage MDC wrapper. Reloading Logback does not reset that process-global SDK initialization. The managed ContextStorage wrapper behavior was inspected from the actual dependency bytecode.
+
+The fixture is now tagged and runs in a dedicated, non-reused Surefire fork. The ordinary execution excludes that tag; the isolated execution includes only the diagnostics class. All original assertions remain. This is isolation, not a claim of restoring every global singleton in-process.
+
+| Executed set | Final Surefire XML totals | Evidence |
+| --- | --- | --- |
+| Baseline minimal selector, alphabetical, twice | 18 each; 1 failure, 0 errors/skips | `red-3.log`, `red-4.log`, corresponding XML directories |
+| Isolated minimal selector, alphabetical, twice | 18 each; 0 failures/errors/skips | `green-1.log`, `green-2.log`, corresponding XML directories |
+| Exact Repair 3 selector (now also matches the new metrics security class) | 312; 0 failures/errors/skips | `focused.log`, `focused-xml/` |
+| Entire observability test package | 117; 0 failures/errors/skips | `observability.log`, `observability-xml/` |
+| Metrics opt-in/default-off security tests | 3; 0 failures/errors/skips | `metrics-java-final.log`, `metrics-xml/` |
+
+### Real deployment paths versus template contracts
+
+| Path | Real execution and assertion | Evidence |
+| --- | --- | --- |
+| Branch server image | Built with `server/Dockerfile`, the same context/Dockerfile as image CI; inspected the resulting arm64 image. Later server edits were test-only | `docker-build.log`, `image-inspect.log` |
+| Default off | Real bootstrap-admin PRIVATE publication and authenticated download return 200; existing receiver has 0 requests; no optional Collector; admin metrics/prometheus return 404 | `real-runtime-green2.log`, `default-off-received.json` |
+| Existing receiver | Independent plain OTLP/HTTP receiver on the private network receives the new publication and download; 2 records queried | `real-runtime-green2.log`, `existing-received.json` |
+| Application config update | Change endpoint to a second receiver, rerun enable; old receiver stays at 2 records, new receiver receives 2; deployment header bytes unchanged | `real-runtime-green2.log`, `endpoint-update-received.json` |
+| Optional production Collector | No host bindings, 128 MiB / 0.5 CPU, explicit downstream; downstream count rises from 2 to 4 records | `real-runtime-green2.log`, `collector-inspect.log`, `optional-collector-received.json` |
+| Stop and start | Stop Collector and SkillHub, then start both; external network ID, deployment env bytes and existing records retained; download the pre-existing package successfully, downstream count rises from 4 to 5 | `real-runtime-green2.log`, `stop-start-received.json` |
+| Disable | Recreate with collection off; new publication/download return 200 and receiver count stays at 5 | `real-runtime-green2.log`, `disabled-received.json` |
+| Collector config update | Change downstream endpoint, rerun up; new target rises from 2 to 4 records while old target stays at 5; downstream header bytes unchanged. Disable again and prove no new exports | `downstream-update.log`, `downstream-update-received.json`, `final-disabled-received.json` |
+| Host process | Actual `make dev-server`, offline wrapper packaging, real PostgreSQL/Redis, scanner disabled; automatic loopback receive address; new publication/download and records/verify pass, including rerunning demo up | `host-dev-final.log`, `host-query-final.log` |
+| Containerized backend | Make targets recreate the branch backend on the shared private network; actual JSON contains publication/download for the new skill ID; stop/start verify retains prior records | `demo-container-final.log`, `demo-container-records.log` |
+| Metrics | Explicit exposure list; real super-admin session gets 200 for business counter and Prometheus, normal session 403, anonymous 401. Counter and scrape both show 2 enqueued/exported | `real-runtime-green2.log`, `metrics-counter.txt`, `metrics-prometheus.txt` |
+| Cleanup | Real clean retains both operator env files byte-for-byte at mode 600; owned project containers, named volumes, networks and test images removed; pre-existing dind images preserved; authorized dind and local relay stopped | `cleanup.log`, `cleanup-summary.json`, `local-port-cleanup.json` |
+
+A real demo stop/start initially failed because the file exporter truncates its file by default. The fix uses `append: true` and a project-scoped local trial volume; up recreates the Collector so config-file changes apply without losing those trial records. This is not production storage. The real Collector Java test now restarts the container, waits for its HTTP pipeline and asserts all 27 original UIDs remain. Docker changed the dynamic host port on this host; an intermediate new test probe used stale cached mapping and failed. The final test inspects the actual restarted binding. Both the full focused run and observability package pass with this assertion (`collector-restart-final.log`, final suite logs).
+
+Contract checks are separate: the fake-Docker lifecycle script covers default off, existing receiver, optional Collector, repeated up, updates, stop/start, disable, permissions, secret retention, flat OSS paths, and both Make modes. Python deployment checks pass 6 cases, including rendered private-network/volume/metrics settings. Helm configuration contracts and strict lint pass; the supplied minimal Helm image command required adding Python 3 for the chart's pre-existing Python contract checks. Bash 3's pre-existing empty-array issue in the storage selector test was avoided by running that test in a Linux Bash container. No production data or credentials were used.
+
+`npm ci`, the VitePress build, weekly site generation/validation and `git diff --check` pass. No full backend rerun, browser/CLI E2E, production TLS/mTLS, live Helm install/upgrade, real external Java agent or durable downstream storage validation is claimed. Host dev verification intentionally used only PostgreSQL/Redis and PRIVATE admin publications rather than the full scanner/frontend stack. Versioned/flat retrieval was exercised through the same download function with a local file root because these new files are not published yet; OSS/release upload and PR publication remain with the owner. No push or PR mutation was performed.
