@@ -69,7 +69,7 @@ A: Select the namespace in the UI. To install with the CLI, use `skillhub instal
 
 ## Q: What is the recommended deployment method? Can I pull the images and deploy manually?
 
-A: Official runtime scripts, release Compose, and Kubernetes/Helm are supported. Choose one and retain its configuration and data directories. See [Docker deployment](./guide/deployment.md) and [Kubernetes](./guide/kubernetes.md). Running an application image alone does not configure its database, Redis, storage, authentication, or proxy.
+A: Choose the runtime script, release Compose, Kubernetes Kustomize, or the Helm Chart. The script and Compose paths are covered by [Docker deployment](./guide/deployment.html). Kustomize uses `deploy/k8s`; follow [Kubernetes deployment](./guide/kubernetes.html). Helm uses the separate `charts/skillhub` directory and values; follow the [Chart README (Chinese)](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/README.md). Do not mix configuration or upgrade commands between the two Kubernetes paths. Preserve the configuration and data directory for the selected path. Starting an application image alone does not verify database, Redis, storage, authentication, or proxy behavior.
 
 ## Q: What Kubernetes version does the Kubernetes deployment require?
 

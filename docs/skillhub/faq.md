@@ -69,7 +69,7 @@ A: 在网页中选择命名空间；CLI 安装可使用 `skillhub install @team/
 
 ## Q: 推荐的部署方式是什么？可以自己拉镜像手动部署吗？
 
-A: 支持官方 runtime 脚本、release Compose 和 Kubernetes/Helm。选择一种方式并保留对应的配置与数据目录，参见 [Docker 部署](./guide/deployment.md) 和 [Kubernetes 部署](./guide/kubernetes.md)。手动部署需要正确配置数据库、Redis、存储、认证和代理，不能只启动应用镜像。
+A: 可选 runtime 脚本、release Compose、Kubernetes Kustomize 或 Helm Chart。脚本与 Compose 见 [Docker 部署](./guide/deployment.html)；Kustomize 的工作目录是 `deploy/k8s`，见 [Kubernetes 部署](./guide/kubernetes.html)；Helm 使用独立的 `charts/skillhub` 和 values，见 [Chart README](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/README.md)。两种 Kubernetes 路径不能混用配置或升级命令。部署前须选定一条路径，保留对应配置和数据目录；仅启动应用镜像不能证明数据库、Redis、存储、认证和代理可用。
 
 ## Q: 用 Kubernetes 部署对集群版本有要求吗？
 
