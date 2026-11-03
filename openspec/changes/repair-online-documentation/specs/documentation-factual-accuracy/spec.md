@@ -58,3 +58,19 @@ The second batch SHALL improve the introduction, quickstart, namespace, review, 
 - **WHEN** a reader opens the diagrams or tables at desktop or mobile width
 - **THEN** the visual and surrounding text describe the same verified behavior and remain readable in light and dark themes
 - **AND** the page does not depend on an added rendering service or package
+
+
+### Requirement: Route avatar instructions by operator responsibility
+The documentation SHALL separate skill-avatar submission and review from moderation-provider deployment configuration, preserving the existing operational page URL and synchronizing both locales, navigation, and ordered page links.
+
+#### Scenario: Locate an avatar task
+- **WHEN** a skill owner or reviewer opens team-governance guidance
+- **THEN** avatar operations and review decisions are available there
+- **AND** provider credentials and deployment verification are linked to a distinct deployment guide
+
+### Requirement: State the scope and limitations of documentation review
+A scoped review SHALL NOT be reported as complete verification of all site content. Known unresolved structural issues and unverified technical behavior SHALL remain explicit.
+
+#### Scenario: Report an incremental review
+- **WHEN** a document batch passes source, build, and browser checks
+- **THEN** the report distinguishes verified changed paragraphs, site-structure observations, unresolved issues, and unexecuted business or external-service validation
