@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 579" role="img" aria-labelledby="title desc">
+<svg width="360" height="579" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 579" role="img" aria-labelledby="title desc">
 <title id="title">Namespace Collaboration</title>
 <desc id="desc">Authorized creator creates a team namespace. Owner or Admin adds or invites a member. An admitted user confirms acceptance. Publication and review remain separate.</desc>
 <defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#52657a"/></marker></defs>
