@@ -11,8 +11,11 @@ services:
       - "127.0.0.1:${SKILLHUB_BUSINESS_LOGS_DEMO_PORT:-4318}:4318"
     volumes:
       - ./collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - business_logs_demo_data:/data
     networks:
       - business-logs
+volumes:
+  business_logs_demo_data:
 networks:
   business-logs:
     external: true

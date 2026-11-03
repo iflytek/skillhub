@@ -90,6 +90,8 @@ class BusinessLogsDeploymentTest(unittest.TestCase):
         demo = json.loads(result.stdout)["services"]["business-logs-collector"]
         self.assertEqual(demo["ports"][0]["host_ip"], "127.0.0.1")
         self.assertNotIn("container_name", demo)
+        self.assertTrue(any(volume["target"] == "/data" and volume["type"] == "volume" for volume in demo["volumes"]))
+        self.assertIn("append: true", (ROOT / "docs/examples/business-event-logs/collector.yaml").read_text())
 
     @unittest.skipUnless(shutil.which("helm"), "helm executable required")
     def test_helm_defaults_secret_reference_and_invalid_enabled_config(self):

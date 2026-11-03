@@ -10,7 +10,8 @@ processors:
     spike_limit_mib: 16
 exporters:
   file:
-    path: /business-logs.json
+    path: /data/business-logs.json
+    append: true
     flush_interval: 100ms
 service:
   pipelines:

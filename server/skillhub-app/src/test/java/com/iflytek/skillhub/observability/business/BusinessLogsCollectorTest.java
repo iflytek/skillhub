@@ -41,6 +41,7 @@ class BusinessLogsCollectorTest {
             .withCreateContainerCmdModifier(cmd -> {
                 cmd.withName("skillhub-1009-collector-integration");
                 cmd.withUser("0:0");
+                cmd.withVolumes(new com.github.dockerjava.api.model.Volume("/data"));
                 cmd.getHostConfig().withMemory(128L * 1024 * 1024).withNanoCPUs(500_000_000L);
             })
             .waitingFor(Wait.forLogMessage(".*Everything is ready.*", 1));
@@ -105,6 +106,32 @@ class BusinessLogsCollectorTest {
         if (evidence != null) { Files.writeString(Path.of(evidence, "collector-received.jsonl"), raw); }
         System.out.println("BUSINESS_LOGS real Collector 0.111.0: queried 27 records / 9 event names / 27 unique uids; modes none,otel-sdk(sample=0),external-agent; 128 MiB, 0.5 CPU");
         String endpoint = "http://" + COLLECTOR.getHost() + ":" + COLLECTOR.getMappedPort(4318) + "/v1/logs";
+        // A real stop/start must not truncate the local trial's records. Wait for
+        // the restarted HTTP pipeline before reading, rather than racing file open.
+        int previousPort = COLLECTOR.getMappedPort(4318);
+        COLLECTOR.getDockerClient().stopContainerCmd(COLLECTOR.getContainerId()).exec();
+        COLLECTOR.getDockerClient().startContainerCmd(COLLECTOR.getContainerId()).exec();
+        // Docker may allocate another dynamic host port on restart. Inspect the
+        // actual binding rather than using GenericContainer's cached initial info.
+        String restartedPort = COLLECTOR.getDockerClient().inspectContainerCmd(COLLECTOR.getContainerId()).exec()
+                .getNetworkSettings().getPorts().getBindings()
+                .get(com.github.dockerjava.api.model.ExposedPort.tcp(4318))[0].getHostPortSpec();
+        endpoint = "http://" + COLLECTOR.getHost() + ":" + restartedPort + "/v1/logs";
+        System.out.printf("BUSINESS_LOGS Collector restart mapped port: %d -> %s%n", previousPort, restartedPort);
+        var client = java.net.http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(1)).build();
+        var probe = java.net.http.HttpRequest.newBuilder(java.net.URI.create(endpoint))
+                .timeout(Duration.ofSeconds(1)).header("Content-Type", "application/x-protobuf")
+                .POST(java.net.http.HttpRequest.BodyPublishers.noBody()).build();
+        try {
+            org.awaitility.Awaitility.await().atMost(Duration.ofSeconds(10)).ignoreExceptions().untilAsserted(() ->
+                    assertThat(client.send(probe, java.net.http.HttpResponse.BodyHandlers.discarding()).statusCode()).isEqualTo(200));
+        } finally {
+            client.close();
+        }
+        assertThat(records(awaitFile(27)).stream()
+                .map(record -> attributes(record).get("log.record.uid").asText())
+                .collect(java.util.stream.Collectors.toSet())).isEqualTo(uids);
+        System.out.println("BUSINESS_LOGS real Collector stop/start: all 27 original record UIDs retained");
         COLLECTOR.getDockerClient().pauseContainerCmd(COLLECTOR.getContainerId()).exec();
         try {
             outageRunner(endpoint).run(context -> {
@@ -151,7 +178,7 @@ class BusinessLogsCollectorTest {
         Exception lastError = null;
         do {
             try {
-                raw = COLLECTOR.copyFileFromContainer("/business-logs.json", stream -> new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+                raw = COLLECTOR.copyFileFromContainer("/data/business-logs.json", stream -> new String(stream.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
                 if (records(raw).size() >= expected) { return raw; }
             } catch (Exception ex) { lastError = ex; }
             TimeUnit.MILLISECONDS.sleep(100);

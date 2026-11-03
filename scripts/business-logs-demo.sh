@@ -33,7 +33,7 @@ case "$COMMAND" in
   up)
     case "$BACKEND" in host|container) ;; *) echo 'BUSINESS_LOGS_BACKEND must be host or container' >&2; exit 1 ;; esac
     docker network inspect "$SKILLHUB_BUSINESS_LOGS_NETWORK" >/dev/null 2>&1 || docker network create "$SKILLHUB_BUSINESS_LOGS_NETWORK" >/dev/null
-    compose up -d
+    compose up -d --force-recreate
     if [ "$BACKEND" = host ]; then
       mkdir -p "$STATE_DIR"
       printf '%s\n' "$SKILLHUB_BUSINESS_LOGS_DEMO_PORT" >"$STATE_DIR/host-port"
@@ -48,9 +48,9 @@ case "$COMMAND" in
   status) compose ps ;;
   records|verify)
     command -v jq >/dev/null || { echo 'Install jq to query demo records' >&2; exit 1; }
-    scratch=$(mktemp -d)
+    scratch=$(mktemp -d "${TMPDIR:-/tmp}/skillhub-business-logs.XXXXXX")
     trap 'rm -rf "$scratch"' EXIT HUP INT TERM
-    compose cp business-logs-collector:/business-logs.json "$scratch/records.jsonl" >/dev/null
+    compose cp business-logs-collector:/data/business-logs.json "$scratch/records.jsonl" >/dev/null
     if [ "$COMMAND" = records ]; then
       cat "$scratch/records.jsonl"
     else
