@@ -1,3 +1,4 @@
+import { ChangePreview } from './change-preview.js';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { checkInstalledUpdates, updateFailed, type UpdateResult } from './update-overview.js';
 import { SkillWebsiteLink } from './skill-website-link.js';
@@ -64,13 +65,14 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
   const resultContext = useRef(contextKey);
   const [keyword, setKeyword] = useState(navigation.keyword);
   const [selected, setSelected] = useState(navigation.selected);
+  const [changeIntent, setChangeIntent] = useState<{ upgrade: boolean; version?: string } | undefined>(() => ['upgrade', 'local-changes'].includes(navigation.intent) ? { upgrade: navigation.intent === 'upgrade', version: navigation.changeVersion } : undefined);
   const heading = useRef<HTMLHeadingElement>(null);
   const refreshButton = useRef<HTMLButtonElement>(null);
   const trigger = useRef<HTMLButtonElement | null>(null);
   const triggerKey = useRef<string | null>(null);
   const menuNavigating = useRef(false);
   const listScroll = useRef(navigation.listScroll);
-  useLayoutEffect(() => { Object.assign(navigation, { scope: 'all', keyword, selected, intent: 'detail', listScroll: listScroll.current }); });
+  useLayoutEffect(() => { Object.assign(navigation, { scope: 'all', keyword, selected, intent: changeIntent ? changeIntent.upgrade ? 'upgrade' : 'local-changes' : 'detail', listScroll: listScroll.current }); });
   useLayoutEffect(() => {
     if (selected) heading.current?.focus();
     else {
@@ -105,7 +107,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
     scan.current?.abort(); scan.current = null;
     const contextChanged = resultContext.current !== contextKey;
     resultContext.current = contextKey;
-    if (contextChanged) { setSelected(null); setKeyword(''); setFilter('all'); }
+    if (contextChanged) { setChangeIntent(undefined); setSelected(null); setKeyword(''); setFilter('all'); }
     setResults(previous => contextChanged ? {} : Object.fromEntries(Object.entries(previous).filter(([key]) => (query.data?.items ?? []).some(item => item.itemKey === key))));
     setProgress({ done: 0, total: 0, running: false });
     return () => { scan.current?.abort(); scan.current = null; };
@@ -163,19 +165,20 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
   const upgradable = allGroups.filter(items => items.some(item => results[item.itemKey]?.state === 'upgradable')).length;
   const failures = (query.data?.items ?? []).filter(item => updateFailed(results[item.itemKey])).length;
 
+  const management = services.management && { ...services.management, openChanges: (item: Item, upgrade: boolean, version?: string) => { setSelected(item); setChangeIntent({ upgrade, version }); } };
   const detailVerified = !!detail.data && !detail.isError && !detail.isFetching;
   if (selected) return <section className="skillhub-installed skillhub-controls" aria-label="已安装技能详情">
     <InstalledStyles />
-    <Button variant="ghost" onClick={() => setSelected(null)}>← 返回已安装</Button>
+    <Button variant="ghost" onClick={() => { setChangeIntent(undefined); setSelected(null); }}>← 返回已安装</Button>
     <div className="astron-sh-detail-heading"><SkillAvatar slug={selected.slug} namespace={selected.namespace} /><h2 ref={heading} tabIndex={-1}>{selected.slug}</h2><SkillWebsiteLink webUrl={detail.data?.content.state === 'ready' ? detail.data.content.detail.webUrl : undefined}
       enabled={detailVerified && detail.data?.content.state === 'ready' && detail.data.content.detail.namespace === selected.namespace && detail.data.content.detail.slug === selected.slug} /></div>
     <p>@{selected.namespace}/{selected.slug} · 文档版本 {selected.version}</p>
-    {actions(records(selected), '使用已安装版本')}
-    <div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation">{detail.isPending ? <p role="status">正在读取技能说明…</p>
+    <div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation">{changeIntent && services.changes ? <ChangePreview key={`${contextKey}:${selected.itemKey}:${changeIntent.upgrade}`} services={{ ...services, changes: services.changes }} revision={sourceRevision} itemKey={selected.itemKey} installationKey={JSON.stringify([selected.registry, selected.namespace, selected.slug, selected.scope])} upgrade={changeIntent.upgrade} targetVersion={changeIntent.version} onCompleted={() => { setSelected(null); void query.refetch(); }} onClose={() => { setChangeIntent(undefined); void query.refetch(); void detail.refetch(); void services.management?.client.invalidateQueries({ queryKey: ['skillhub-local-summary', services.sessionId, sourceRevision] }); }} /> : <>
+      {detail.isPending ? <p role="status">正在读取技能说明…</p>
       : detail.isError ? <p role="alert">{detail.error.message}</p>
         : detail.data.content.state === 'local-only' ? <p role="status">{selected.currentSource === false ? '此技能来自其他来源，可在右侧管理本地安装。' : '远端说明暂不可用，可在管理安装中查看本地状态。'}</p>
-          : <DetailContent detail={detail.data.content.detail} modes={modes} remote={remote} retry={() => { void detail.refetch(); }} cacheIdentity={JSON.stringify([services.sessionId, sourceRevision, selected.namespace, selected.slug, detail.data.content.detail.version])} onContextStale={() => { void detail.refetch(); }} />}
-    </article><aside className="astron-sh-detail-aside">{services.management && <InstallationManagement identity={selected} revision={sourceRevision} services={services.management} updateChecks={Object.fromEntries(Object.entries(results).filter((entry): entry is [string, InstalledUpdateCheck] => entry[1].state !== 'failed'))} useSkill={services.skillUse} onInstall={onInstall && selected.currentSource !== false ? () => onInstall(selected) : undefined} />}</aside></div>
+          : <DetailContent detail={detail.data.content.detail} modes={modes} remote={remote} retry={() => { void detail.refetch(); }} cacheIdentity={JSON.stringify([services.sessionId, sourceRevision, selected.namespace, selected.slug, detail.data.content.detail.version])} onContextStale={() => { void detail.refetch(); }} />}</>}
+    </article><aside className="astron-sh-detail-aside">{management && <InstallationManagement identity={selected} primaryAction={!changeIntent ? actions(records(selected), '使用技能') : undefined} revision={sourceRevision} services={management} updateChecks={Object.fromEntries(Object.entries(results).filter((entry): entry is [string, InstalledUpdateCheck] => entry[1].state !== 'failed'))} useSkill={services.skillUse} onInstall={onInstall && selected.currentSource !== false ? () => onInstall(selected) : undefined} />}</aside></div>
   </section>;
   const term = keyword.trim().toLocaleLowerCase();
   const groups = allGroups.filter(items => filter === 'all' || items.some(item => filter === 'updates' ? results[item.itemKey]?.state === 'upgradable' : updateFailed(results[item.itemKey]))).filter(items => !term || items.some(item => `@${item.namespace}/${item.slug} ${item.displayName ?? ''} ${item.version}`.toLocaleLowerCase().includes(term)));

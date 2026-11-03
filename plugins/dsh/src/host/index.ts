@@ -5,6 +5,7 @@ import type {} from '@deepseek-ai/dsh-user-questions';
 import type {} from '@deepseek-ai/dsh-session-query';
 import { historicalSearchCandidate } from './conversation-history.js';
 import type {} from '@deepseek-ai/dsh-sandbox-policy';
+import { canonicalizeWatchPath, resolveDshHome } from '@deepseek-ai/dsh-home-paths';
 import { SessionId } from '@deepseek-ai/dsh-session/types';
 import { createHmac, randomBytes, randomUUID } from 'node:crypto';
 import { dirname, isAbsolute, join, relative, sep } from 'node:path';
@@ -26,7 +27,7 @@ import { LocalRuntime } from './local-runtime.js';
 import { assertRuntimeCompatibility } from './runtime-compatibility.js';
 import type { HostCompatibility } from './types.js';
 import { InstallationTargets } from './installation-targets.js';
-import { UpgradePlans, RemovalPlans, TogglePlans } from './upgrade-plans.js';
+import { ConfirmationPlans, UpgradePlans, RemovalPlans, TogglePlans } from './upgrade-plans.js';
 import type { UpgradePlanView, UninstallPlanView, TogglePlanView, HostExecutePlanRequest, HostRecoveryRequest } from './types.js';
 import type { ResolvedInstallationTarget } from './installation-targets.js';
 import { assertInstallationMutation, assertRemovalMutation, resolveInstallationPath, resolveInstalledPath } from './installation-paths.js';
@@ -46,6 +47,8 @@ import type { LocalRuntimeStatus } from './local-runtime.js';
 import type { InstalledSkillList, InstalledSkillDetail, InstalledUpdateCheck, SkillUsePreparation, SkillUseSelection } from './types.js';
 import { readInstalledPresentations } from './installed-presentation.js';
 import { installationFailureCode } from './installation-failure.js';
+import type { LocalChangesSnapshot, VersionChangesSnapshot, VerifiedBackupReceipt } from './generated/native-contract.js';
+import type { ChangesView, ChangeDiffView, FileResetPlanView } from './types.js';
 import type { InstalledProjectionItem } from './generated/native-contract.js';
 
 declare module '@deepseek-ai/cordis' {
@@ -68,6 +71,9 @@ export class SkillHubService extends TypertRemoteService {
   private readonly managementConfirmations = new Map<string, { context: ConversationSearchContext; agent: unknown; runtime: LocalRuntime; sourceRevision: string; planId: string; requestKey: string; view: ConversationManagementResult; attempted?: boolean; execution?: Promise<ConversationManagementResult> }>();
   private readonly installationTargets = new InstallationTargets();
   private readonly upgradePlans = new UpgradePlans();
+  private readonly changeBackups = new Map<string, Promise<VerifiedBackupReceipt>>();
+  private readonly changes = new ConfirmationPlans<{ itemKey: string; local: Extract<LocalChangesSnapshot, {status: 'ready'}>; version?: VersionChangesSnapshot; backup?: VerifiedBackupReceipt }>();
+  private readonly resets = new ConfirmationPlans<{ itemKey: string; snapshot: Extract<LocalChangesSnapshot, {status: 'ready'}>; paths: string[] }>();
   private readonly removalPlans = new RemovalPlans();
   private readonly togglePlans = new TogglePlans();
   private readonly installedUpdateScans = new Map<string, {
@@ -91,7 +97,7 @@ export class SkillHubService extends TypertRemoteService {
         void runtime.start();
         return async () => {
           this.installationTargets.clear();
-          this.upgradePlans.clear();
+          this.upgradePlans.clear(); this.changes.clear(); this.resets.clear(); this.changeBackups.clear();
           this.removalPlans.clear(); this.togglePlans.clear();
           if (this.localRuntime === runtime) this.localRuntime = undefined;
           await runtime.dispose();
@@ -109,7 +115,7 @@ export class SkillHubService extends TypertRemoteService {
       ctx.effect(() => registerSearchTool(ctx.tools, (query, context, signal) => this.searchConversation(query, context, signal)));
       ctx.effect(() => registerInstallTool(ctx.tools, (request, context, signal) => this.installConversationWithChoice(request, context, signal)));
     });
-    ctx.effect(() => () => { this.lifetime.abort(); for (const scan of this.installedUpdateScans.values()) scan.close(); this.pendingConversationInstalls.clear(); this.pendingConversationChoices.clear(); this.managementRequests.clear(); this.managementConfirmations.clear(); this.details.clear(); this.capabilities.clear(); this.selections.clear(); this.installationTargets.clear(); this.upgradePlans.clear(); this.removalPlans.clear(); this.togglePlans.clear(); });
+    ctx.effect(() => () => { this.lifetime.abort(); for (const scan of this.installedUpdateScans.values()) scan.close(); this.pendingConversationInstalls.clear(); this.pendingConversationChoices.clear(); this.managementRequests.clear(); this.managementConfirmations.clear(); this.details.clear(); this.capabilities.clear(); this.selections.clear(); this.installationTargets.clear(); this.upgradePlans.clear(); this.changes.clear(); this.resets.clear(); this.changeBackups.clear(); this.removalPlans.clear(); this.togglePlans.clear(); });
   }
 
   /** Internal diagnostics, deliberately not a Remote method. */
@@ -132,7 +138,7 @@ export class SkillHubService extends TypertRemoteService {
     this.selections.clear();
     this.installationTargets.clear();
 
-    this.upgradePlans.clear();
+    this.upgradePlans.clear(); this.changes.clear(); this.resets.clear(); this.changeBackups.clear();
     this.removalPlans.clear(); this.togglePlans.clear();
     this.capabilities.clear();
     this.registry = registry;
@@ -702,6 +708,127 @@ export class SkillHubService extends TypertRemoteService {
   }
 
   @RemoteScope('agent')
+  async inspectLocalChanges(sourceRevision: string, itemKey: string, signal: AbortSignal): Promise<ChangesView> {
+    const { item, valid, agent, runtime, fs } = await this.readInstalledItem(sourceRevision, itemKey, signal);
+    const context = this.selectionScope(agent!);
+    const target = await resolveInstalledPath({ scope: item.scope, cwd: context.cwd, fs: fs!, signal });
+    const snapshot = await runtime!.inspectChanges({ registry: item.registry, namespace: item.namespace, slug: item.slug, version: item.version }, target);
+    valid(); signal.throwIfAborted();
+    if (snapshot.status !== 'ready') return { status: 'blocked', reason: snapshot.reason, snapshotId: null, expiresAt: null, kind: 'local', version: item.version, candidateVersion: null, changes: [] };
+    const reference = this.changes.issue(context, { itemKey, local: snapshot });
+    return { status: 'ready', reason: '', snapshotId: reference.planId, expiresAt: reference.expiresAt, kind: 'local', version: item.version, candidateVersion: null, changes: snapshot.changes };
+  }
+
+  @RemoteScope('agent')
+  async readFileChange(sourceRevision: string, itemKey: string, snapshotId: string, path: string, signal: AbortSignal): Promise<ChangeDiffView> {
+    const { valid, agent, runtime } = await this.readInstalledItem(sourceRevision, itemKey, signal);
+    const snapshot = this.changes.read(snapshotId, this.selectionScope(agent!));
+    if (snapshot.itemKey !== itemKey || !(snapshot.version?.changes ?? snapshot.local.changes).some(file => file.path === path)) throw new RemoteError('skillhub/context-stale', 'File reference changed.', { retryable: false });
+    const result = await runtime!.readChangeDiff(snapshot.version ?? snapshot.local, path);
+    valid(); signal.throwIfAborted(); return result;
+  }
+
+  @RemoteScope('agent')
+  async previewUpgradeChanges(sourceRevision: string, itemKey: string, snapshotId: string, version: string | null, backup: boolean, signal: AbortSignal): Promise<ChangesView> {
+    const { item, valid, agent, runtime, fs } = await this.readInstalledItem(sourceRevision, itemKey, signal);
+    const context = this.selectionScope(agent!);
+    const snapshot = this.changes.read(snapshotId, context);
+    if (snapshot.itemKey !== itemKey || item.registry !== this.getContext().registryUrl.replace(/\/+$/, '')) throw new RemoteError('skillhub/context-stale', 'Upgrade source changed.', { retryable: false });
+    if (runtime!.getStatus().pendingOperations) throw new Error('有未完成操作，请先核验。');
+    const current = await runtime!.inspectChanges(snapshot.local.selection, snapshot.local.target);
+    valid();
+    if (!isDeepStrictEqual(current, snapshot.local)) throw new RemoteError('skillhub/context-stale', 'Local files changed.', { retryable: false });
+    let receipt = snapshot.backup;
+    if (snapshot.local.changes.length) {
+      if (!backup) throw new Error('请先处理本地修改。');
+      const policy = agent!.ctx.get('sandboxPolicy')?.resolve({ session: agent!.session });
+      const target = await resolveInstallationPath({ scope: item.scope, cwd: context.cwd, fs: fs!, policy, signal });
+      let backupWork = this.changeBackups.get(snapshotId);
+      if (!backupWork) {
+      backupWork = runtime!.backupChanges(snapshot.local, async paths => {
+        valid(); signal.throwIfAborted();
+        const backups = join(target.dshHome, 'skillhub', 'backups');
+        const currentPolicy = agent!.ctx.get('sandboxPolicy')?.resolve({ session: agent!.session });
+        for (const path of paths) await assertInstallationMutation(path === backups || path.startsWith(backups + sep) ? backups : target.root, [path], currentPolicy);
+      });
+      this.changeBackups.set(snapshotId, backupWork);
+      void backupWork.catch(() => this.changeBackups.delete(snapshotId));
+      }
+      receipt = await backupWork;
+      valid();
+    }
+    const candidate = await this.readSource(sourceRevision, signal, (registry, active) => registry.resolve(item.namespace, item.slug, version ?? undefined, active));
+    const assessment = await runtime!.assessUpdate(item, candidate);
+    valid(); signal.throwIfAborted();
+    if (assessment.state !== 'upgradable') return { status: 'blocked', reason: assessment.reason, snapshotId: null, expiresAt: null, kind: 'version', version: item.version, candidateVersion: candidate.version, changes: [] };
+    const comparison = await runtime!.prepareVersionChanges(snapshot.local.selection, snapshot.local.target, candidate);
+    valid(); signal.throwIfAborted();
+    if (!isDeepStrictEqual(comparison.local, snapshot.local)) throw new RemoteError('skillhub/context-stale', 'Local files changed.', { retryable: false });
+    let backupLocation: string | undefined;
+    if (receipt) {
+      if (!/^[0-9a-f-]{36}$/i.test(receipt.id)) throw new Error('Invalid backup record');
+      backupLocation = join(await canonicalizeWatchPath(resolveDshHome()), 'skillhub', 'backups', receipt.id);
+    }
+    let changelog: string | undefined;
+    try { const versions = await this.readSource(sourceRevision, signal, (registry, active) => registry.versions(item.namespace, item.slug, 0, 20, active)); changelog = versions.items.find(entry => entry.version === candidate.version)?.changelog ?? undefined; } catch { signal.throwIfAborted(); }
+    valid();
+    const ref = this.changes.issue(context, { itemKey, local: snapshot.local, version: comparison, backup: receipt });
+    return { status: 'ready', reason: '', snapshotId: ref.planId, expiresAt: ref.expiresAt, kind: 'version', version: item.version, candidateVersion: candidate.version, changes: comparison.changes, backupSaved: !!receipt, backupLocation, changelog };
+  }
+
+  @RemoteScope('agent')
+  async confirmUpgradeChanges(sourceRevision: string, itemKey: string, snapshotId: string, signal: AbortSignal): Promise<UpgradePlanView> {
+    const { valid, agent, runtime } = await this.readInstalledItem(sourceRevision, itemKey, signal);
+    const context = this.selectionScope(agent!); const snapshot = this.changes.read(snapshotId, context);
+    if (snapshot.itemKey !== itemKey || !snapshot.version) throw new RemoteError('skillhub/context-stale', 'Preview expired.', { retryable: false });
+    const local = await runtime!.inspectChanges(snapshot.local.selection, snapshot.local.target);
+    valid(); signal.throwIfAborted();
+    if (!isDeepStrictEqual(local, snapshot.local)) throw new RemoteError('skillhub/context-stale', 'Local files changed.', { retryable: false });
+    const candidate = await this.readSource(sourceRevision, signal, (registry, active) => registry.resolve(snapshot.local.selection.namespace, snapshot.local.selection.slug, snapshot.version!.candidate.version, active));
+    if (candidate.versionId !== snapshot.version.candidate.versionId || candidate.fingerprint !== snapshot.version.candidate.fingerprint) throw new RemoteError('skillhub/context-stale', 'Release changed.', { retryable: false });
+    valid();
+    const plan = this.upgradePlans.issue(context, { baseline: snapshot.local.baseline, candidate,
+      ...(snapshot.local.changes.length && snapshot.backup ? { localChangesAuthorization: { snapshot: snapshot.local, backupReceipt: snapshot.backup } } : {}) });
+    return { ...plan, hostInstanceId: runtime!.getStatus().hostInstanceId!, status: 'ready', reason: 'newer-version', currentVersion: snapshot.local.selection.version, candidateVersion: candidate.version, targets: snapshot.local.baseline.targets.map(target => ({ scope: target.scope, path: target.path })) };
+  }
+
+  @RemoteScope('agent')
+  async prepareFileReset(sourceRevision: string, itemKey: string, snapshotId: string, paths: string[], signal: AbortSignal): Promise<FileResetPlanView> {
+    const { agent, valid, runtime } = await this.readInstalledItem(sourceRevision, itemKey, signal);
+    const context = this.selectionScope(agent!); const snapshot = this.changes.read(snapshotId, context);
+    if (snapshot.itemKey !== itemKey || snapshot.version || !Array.isArray(paths) || !paths.length || paths.length > snapshot.local.changes.length || new Set(paths).size !== paths.length || paths.some(path => !snapshot.local.changes.some(file => file.path === path))) throw new RemoteError('skillhub/context-stale', 'Reset selection changed.', { retryable: false });
+    const current = await runtime!.inspectChanges(snapshot.local.selection, snapshot.local.target);
+    valid(); signal.throwIfAborted();
+    if (!isDeepStrictEqual(current, snapshot.local)) throw new RemoteError('skillhub/context-stale', 'Local files changed.', { retryable: false });
+    const plan = this.resets.issue(context, { itemKey, snapshot: snapshot.local, paths });
+    return { ...plan, hostInstanceId: runtime!.getStatus().hostInstanceId!, paths: snapshot.local.changes.filter(file => paths.includes(file.path)) };
+  }
+
+  @RemoteScope('agent')
+  async executeFileReset(sourceRevision: string, itemKey: string, request: HostExecutePlanRequest & { hostInstanceId: string }, signal: AbortSignal): Promise<NativeOperation | null> {
+    this.assertRuntimeBaseline();
+    const { item, valid, agent, runtime, fs } = await this.readInstalledItem(sourceRevision, itemKey, signal);
+    const context = this.selectionScope(agent!);
+    if (request.hostInstanceId !== runtime!.getStatus().hostInstanceId) throw new RemoteError('skillhub/context-stale', 'Host changed.', { retryable: false });
+    return await runtime!.submitFileReset({ hostInstanceId: request.hostInstanceId, ownerId: agent!.session.id, requestKey: request.requestKey, mode: 'new', parameters: { planId: request.planId } }, async () => {
+      const snapshot = this.resets.claim(request.planId, context, request.requestKey);
+      if (snapshot.itemKey !== itemKey) throw new RemoteError('skillhub/context-stale', 'Reset target changed.', { retryable: false });
+      const policy = agent!.ctx.get('sandboxPolicy')?.resolve({ session: agent!.session });
+      const target = await resolveInstallationPath({ scope: item.scope, cwd: context.cwd, fs: fs!, policy, signal });
+      valid(); signal.throwIfAborted();
+      if (target.root !== snapshot.snapshot.target.root) throw new Error('Reset root changed');
+      return { acceptance: { namespace: item.namespace, slug: item.slug, version: item.version, targetLabel: item.scope === 'user' ? '当前用户' : '当前项目', targetPaths: [item.targetPath], context: { sourceIdentity: item.registry, sourceLabel: item.registry, sourceRevision, hostLabel: 'DSH Host', initiatedFrom: 'plaza' } },
+        execution: { snapshot: snapshot.snapshot, paths: snapshot.paths, authorize: async (paths: readonly string[]) => {
+          if (this.localRuntime !== runtime || agent!.session.header.cwd !== context.cwd || serviceIdentity(agent!.ctx.get('fs')) !== serviceIdentity(fs!) || this.ctx.get('agents')?.get(SessionId(agent!.session.id)) !== agent) throw new Error('Reset session changed');
+          const currentPolicy = agent!.ctx.get('sandboxPolicy')?.resolve({ session: agent!.session });
+          const current = await resolveInstallationPath({ scope: item.scope, cwd: context.cwd, fs: fs!, policy: currentPolicy, signal: new AbortController().signal });
+          if (current.root !== target.root || current.dshHome !== target.dshHome) throw new Error('Reset root changed');
+          await assertInstallationMutation(target.root, paths, currentPolicy);
+        } } };
+    }) ?? null;
+  }
+
+  @RemoteScope('agent')
   async prepareUpgrade(sourceRevision: string, itemKey: string, signal: AbortSignal): Promise<UpgradePlanView> {
     return this.prepareUpgradeForVersion(sourceRevision, itemKey, undefined, signal);
   }
@@ -984,7 +1111,7 @@ export class SkillHubService extends TypertRemoteService {
             context: { sourceIdentity: source.registryUrl, sourceLabel: source.registryUrl, sourceRevision: context.sourceRevision,
               hostLabel: 'DSH Host', initiatedFrom } },
           execution: { registry: source.registryUrl, namespace: candidate.namespace, slug: candidate.slug,
-            version: candidate.version, versionId: candidate.versionId, fingerprint: candidate.fingerprint, baseline: snapshot.baseline,
+            version: candidate.version, versionId: candidate.versionId, fingerprint: candidate.fingerprint, baseline: snapshot.baseline, localChangesAuthorization: snapshot.localChangesAuthorization,
             authorize: async (paths: readonly string[]) => {
               const fs = agent.ctx.get('fs');
               if (!fs || serviceIdentity(fs) !== serviceIdentity(filesystem) || agent.session.header.cwd !== context.cwd

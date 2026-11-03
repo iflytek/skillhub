@@ -219,3 +219,16 @@ export interface TogglePlanView {
   afterState: 'enabled' | 'disabled';
   target: { scope: 'user' | 'project'; path: string } | null;
 }
+
+/** Public views contain only logical release paths and opaque Host references. */
+export interface ChangesView {
+  status: 'ready' | 'blocked'; reason: string; snapshotId: string | null; expiresAt: string | null;
+  kind: 'local' | 'version'; version: string; candidateVersion: string | null;
+  changes: { path: string; kind: 'added' | 'modified' | 'deleted' }[];
+  backupSaved?: boolean;
+  /** Read-only Host path for locating a verified backup; never a mutation input. */
+  backupLocation?: string;
+  changelog?: string;
+}
+export interface ChangeDiffView { path: string; state: 'text' | 'binary' | 'too-large' | 'unavailable'; lines: {kind: 'context' | 'added' | 'deleted'; text: string}[]; truncated: boolean }
+export interface FileResetPlanView { planId: string; expiresAt: string; hostInstanceId: string; paths: {path: string; kind: 'added' | 'modified' | 'deleted'}[] }

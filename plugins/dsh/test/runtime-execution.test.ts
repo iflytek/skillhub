@@ -4,6 +4,12 @@ import type { NativeRuntime, NativeInstallExecution, NativeRecoveryResult, Nativ
 
 function native(): NativeRuntime {
   return {
+    inspectChanges: async () => { throw new Error('Unexpected change inspection'); },
+    readChangeDiff: async () => { throw new Error('Unexpected file diff'); },
+    prepareVersionChanges: async () => { throw new Error('Unexpected version changes'); },
+    backupChanges: async () => { throw new Error('Unexpected backup'); },
+    acceptFileReset: async () => undefined,
+    executeFileReset: async () => { throw new Error('Unexpected file reset'); },
     readInstallationEntry: async () => undefined,
     readSkillExamples: async () => ({ state: 'none' }),
     observeInstallation: async () => false,

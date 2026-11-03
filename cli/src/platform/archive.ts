@@ -3,8 +3,8 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { zipSync, unzipSync } from 'fflate'
 import { MAX_PACKAGE_BYTES } from './download.js'
 
-const MAX_ZIP_ENTRIES = 500
-const MAX_SINGLE_FILE_BYTES = 10 * 1024 * 1024
+export const MAX_ZIP_ENTRIES = 500
+export const MAX_SINGLE_FILE_BYTES = 10 * 1024 * 1024
 const EOCD_SIGNATURE = 0x06054b50
 const CENTRAL_DIRECTORY_SIGNATURE = 0x02014b50
 const ZIP64_MARKER_16 = 0xffff

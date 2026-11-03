@@ -544,3 +544,13 @@ node test/integration/registry-switching-browser.mjs
 它验证双页面共享选择、同名两来源分组、断开保留安装、更新数量和配置 CAS，保存截图及结果。先完成浏览器保存，再关闭本次 Host，以同一隔离根运行 `registry-switching-host.mjs --root /tmp/prepared-root --resume /absolute/previous-run/result.json --keep`，重启不运行安装观察器或覆盖配置。使用新运行目录执行浏览器探针并设置 `DSH_SWITCHING_PHASE=verify-restart`，才能声明来源名称及当前选择重启保留。
 
 `registry-config-probe.mjs` 是独立 React 组件测试，使用 mock ConfigForm；其结果不能替代以上真实 Host 验收。以上测试使用测试 Registry，均不能替代真实 SaaS 或真实模型对话验收。
+
+### 升级变化与本地文件撤销
+
+`change-preview-component.tsx` 是真实 React 组件的隔离夹具，模拟 Remote 响应，用于顺序步骤、取消、失败重试、只读门禁、长差异滚动和键盘焦点检查；其结果不代表 Host 文件事务通过。
+
+`change-preview-fixture.mjs` 由隔离 Web Profile 的 observer patch 加载，配置包含准备好的 `root` 与 `output`；要求隔离 HOME/DSH_HOME，复用 catalog-fixture 的 `change-demo` 命名空间。它实际安装、修改本地文件，验证原文差异、单文件撤销、确认后漂移拒绝、备份继续不改技能和授权升级。`previewOnly: true` 与独立 `projectName` 只准备一份 1.2.0 长差异安装供浏览器操作，不把已有 1.3.0 安装降级。不要对用户项目加载此 observer。
+
+`change-preview-browser.mjs` 使用 `DSH_PROBE_URL_FILE`、`DSH_PROBE_OUTPUT`、`DSH_CHANGE_RESULT` 指向上述 observer 结果，验证真实详情提前提示、文件查看与撤销。`change-upgrade-browser.mjs` 需要 `previewOnly` 夹具结果，验证本地处理 → 备份 → 发布版本预览 → 明确确认升级，以及实际 Host 的 Light/Dark 设置、1440/390 展开差异限高、键盘取消与升级后返回安装列表。浏览器可通过 `DSH_PROBE_CHROMIUM` 指定已验证的 Chromium 可执行文件。
+
+这些探针不调用模型，不证明所有操作系统的进程强杀恢复已完成。公共 Registry 夹具的 latest 状态须为 `newer` 才能通过页面检查发现 1.3.0；精确版本读取与 latest 状态独立。首次引导、定位器或夹具准备失败应保留原记录，与产品失败区分。

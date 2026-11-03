@@ -247,3 +247,15 @@ Detail installation checks use a dismissible top-right notification. Ordinary su
 Check notifications use a scope/version heading and one concise conclusion. Installation scope is directly visible without an advanced disclosure. Confirmation, progress and completion share a stable two-column layout (stacked on narrow screens), with a separate use action after completion. Default scope selection is unchanged.
 
 The installed page supports an explicit update check with up to three concurrent read-only requests and a 30-second timeout per installation. Progress, distinct upgradable skill counts, failed installation counts, filters, and failed-only retry are shown progressively. Opening details or leaving the list cancels pending checks; returning from details retains valid completed results. Source, session, workspace, or installation-reference changes invalidate old results. Details show checked target versions per location; execution still revalidates the target. Updates still require confirmation for the exact installation in details.
+
+### Release changes and local file modifications
+
+Installed skill details expose local changes before starting an upgrade. Comparisons use the original content from the installation's exact source, version and release fingerprint. An unavailable or invalid original is reported explicitly; another registry's same-named skill is never substituted.
+
+Upgrades check local changes first. Discard selected changes after confirmation, or choose **Back up changes and continue**. A successful backup opens a separate release preview; only **Confirm upgrade** replaces the installation. Cancelling leaves the installation intact and retains any completed backup. File differences load on demand, have bounded previews and independently scrollable content.
+
+Discarding changes restores files from the currently installed release: modified files are restored, local additions deleted and deleted release files recovered. Version, ownership and enabled/disabled state remain unchanged. Version downgrades and post-upgrade version rollback are not provided. Further file changes invalidate the prepared operation.
+
+Persistent backups live under `skillhub/backups` in DSH Home, outside skill directories. Limits are 100 MiB per backup, 1 GiB in total and 20 backups. Reaching a limit rejects the new backup; backups are not automatically deleted. Failed backups never authorize overwriting, and edits after backup require a fresh check. Local files are compared and backed up on the Host, never uploaded to the Registry.
+
+Manual update actions on conversation cards also open the change preview. Model tools retain their existing confirmation semantics for unmodified installations and cannot authorize backup-and-overwrite; local modifications still require handling in the page.

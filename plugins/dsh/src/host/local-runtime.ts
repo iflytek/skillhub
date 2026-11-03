@@ -112,6 +112,23 @@ export class LocalRuntime {
     return this.call(runtime => runtime.inspectUpgrade(identity, roots));
   }
 
+  inspectChanges(...args: Parameters<NativeRuntime['inspectChanges']>) { return this.call(runtime => runtime.inspectChanges(...args)); }
+  readChangeDiff(...args: Parameters<NativeRuntime['readChangeDiff']>) { return this.call(runtime => runtime.readChangeDiff(...args)); }
+  prepareVersionChanges(...args: Parameters<NativeRuntime['prepareVersionChanges']>) { return this.call(runtime => runtime.prepareVersionChanges(...args)); }
+  backupChanges(...args: Parameters<NativeRuntime['backupChanges']>) { this.assertWritableHost(); return this.call(runtime => runtime.backupChanges(...args)); }
+  submitFileReset(request: NativeOperationRequest, prepare: () => Promise<{ acceptance: NativeInstallAcceptance; execution: Omit<Parameters<NativeRuntime['executeFileReset']>[0], 'operationId' | 'ownerId'> }>): Promise<NativeOperation | undefined> {
+    const receipt = Promise.withResolvers<NativeOperation | undefined>();
+    const workflow = this.call(async runtime => {
+      let prepared: Awaited<ReturnType<typeof prepare>> | undefined;
+      const accepted = await runtime.acceptFileReset(request, async () => { this.assertWritableHost(); prepared = await prepare(); return prepared.acceptance; });
+      receipt.resolve(accepted);
+      if (!accepted || !prepared || accepted.phase !== 'accepted') return;
+      await this.executeAccepted(accepted, () => runtime.executeFileReset({ ...prepared!.execution, operationId: accepted.operationId, ownerId: request.ownerId }));
+    });
+    void workflow.catch(error => receipt.reject(error));
+    return receipt.promise;
+  }
+
   inspectRemoval(selected: UpgradeSelection, target: InstalledProjectionTarget): Promise<RemovalBaseline> {
     const identity = { ...selected }; const root = { ...target };
     return this.call(runtime => runtime.inspectRemoval(identity, root));
