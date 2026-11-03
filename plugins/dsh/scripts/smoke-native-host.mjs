@@ -133,6 +133,8 @@ export function safeAvailabilityCheckpoint(value) {
   if (statuses.includes(value.install?.status)) {
     result.install = { status: value.install.status };
     if (codes.includes(value.install.code)) result.install.code = value.install.code;
+    const reasons = ['AGENT', 'CWD', 'SOURCE', 'FS', 'POLICY', 'RUNTIME', 'DETAIL', 'TARGET', 'HOST_MISMATCH'];
+    if (value.install.code === 'CONTEXT_STALE' && reasons.includes(value.install.reason)) result.install.reason = value.install.reason;
   }
   return result;
 }

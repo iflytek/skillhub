@@ -1,3 +1,4 @@
+import { installationContextError } from '../src/host/installation-context.js';
 import { expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
 import type { ToolDefinition, ToolRunContext } from '@deepseek-ai/dsh-tools';
@@ -96,4 +97,24 @@ test('omitted scope returns visible confirmation without a fake operation or lea
   expect(text).toContain('Do not call this tool again');
   expect(text).not.toContain(pending.selectionRef);
   expect(tool.output.presentationMeta!({}, pending)).toEqual(pending);
+});
+
+
+test('installation diagnostics stay internal and clear between calls', async () => {
+  const tools = registry();
+  const observed: unknown[] = [];
+  let fail = true;
+  registerInstallTool(tools, async () => {
+    if (fail) throw installationContextError('FS');
+    throw new Error('/private/credential/token');
+  }, reason => observed.push(reason));
+  const tool = tools.get(INSTALL_TOOL_NAME)!;
+  const result = await tool.execute({ namespace: 'team', slug: 'writer', scope: 'user' }, context);
+  expect(result).toEqual({ schemaVersion: 1, kind: 'skillhub-install', status: 'not-confirmed', toolCallId: 'call', code: 'CONTEXT_STALE' });
+  expect(observed).toEqual([undefined, 'FS']);
+  expect(JSON.stringify(result)).not.toContain('FS');
+  fail = false;
+  const other = await tool.execute({ namespace: 'team', slug: 'writer', scope: 'user' }, context);
+  expect(observed).toEqual([undefined, 'FS', undefined, undefined]);
+  expect(JSON.stringify(other)).not.toContain('/private');
 });

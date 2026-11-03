@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { RemoteError } from '@deepseek-ai/dsh-typert-protocol';
+import { installationContextError } from './installation-context.js';
 import type { SelectionScope } from './conversation-selections.js';
 
 export interface TargetContext extends SelectionScope { detailToken: string }
@@ -41,12 +41,15 @@ export class InstallationTargets {
 
   private lookup(token: string, context: TargetContext): TargetRecord {
     const record = this.records.get(token);
-    if (!record || record.context.sessionId !== context.sessionId || record.context.cwd !== context.cwd
-      || record.context.sourceRevision !== context.sourceRevision || record.context.detailToken !== context.detailToken) this.stale();
+    if (!record) this.stale();
+    if (record.context.sessionId !== context.sessionId) throw installationContextError('AGENT', 'Reopen the skill detail and choose the installation target again.');
+    if (record.context.cwd !== context.cwd) throw installationContextError('CWD', 'Reopen the skill detail and choose the installation target again.');
+    if (record.context.sourceRevision !== context.sourceRevision) throw installationContextError('SOURCE', 'Reopen the skill detail and choose the installation target again.');
+    if (record.context.detailToken !== context.detailToken) throw installationContextError('DETAIL', 'Reopen the skill detail and choose the installation target again.');
     return record;
   }
 
   private stale(): never {
-    throw new RemoteError('skillhub/context-stale', 'Reopen the skill detail and choose the installation target again.', { retryable: false });
+    throw installationContextError('TARGET', 'Reopen the skill detail and choose the installation target again.');
   }
 }
