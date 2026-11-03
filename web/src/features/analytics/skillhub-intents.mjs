@@ -1,4 +1,4 @@
-// Optional deployment example, NOT imported or started by SkillHub.
+// Vendor-neutral passive intent observer. Importing never installs listeners.
 const activeRoots = new WeakMap()
 const handledEvents = new WeakSet()
 // Same grammar as web/scripts/analytics-manifest.mjs; manifest parity is tested.

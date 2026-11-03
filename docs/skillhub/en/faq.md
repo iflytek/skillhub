@@ -272,6 +272,21 @@ A `USER_ADMIN` can manage user status and assign platform roles other than `SUPE
 
 A: Use [Suites](./guide/skill-suites.md) and `skillhub suite install` for pinned members managed together, `skillhub sync pull` for team workspaces, or separate `skillhub install` commands for unrelated skills. Suite Bundle is an authoring import format, not a local installation command.
 
+## Q: Where do I submit a saved Skill Suite draft for review, and why is the button missing or disabled?
+
+A: Open the management page for that Suite version and use the publishing checklist on its Overview tab. Public (`PUBLIC`) and namespace-visible (`NAMESPACE_ONLY`) Suites require Suite-level review; private (`PRIVATE`) Suites show Publish directly. This is separate from the scanning and review of each member Skill.
+
+- **No button:** confirm that you are managing a version you can operate on, rather than viewing its marketplace preview. The action appears only when the server allows your account to submit or publish that version; both permissions and version state affect available actions.
+- **Disabled button:** complete the summary and overview, select an available entry Skill, and resolve blocked member versions. Every checklist item must be ready, with no submission already pending.
+
+See [creating and managing Skill Suites](./guide/skill-suites.md). If an older installation differs from the guide, report the Server/Web versions, Suite state and a redacted screenshot. Skill or Agent publishing pages are not substitutes for the Suite publishing page.
+
+## Q: Does a Suite overview become a callable skill after installation?
+
+A: No. The overview explains the intended tasks, member responsibilities and boundaries to reviewers and users. Installation delivers separate member skill directories; it does not combine the overview into a new Suite `SKILL.md`, and there is no universal `suite run` command.
+
+Put execution order, member-call instructions and result validation in the **entry and member `SKILL.md` files**. In the installation target project, confirm that the Agent has discovered the entry Skill, then ask it to use that entry for the task. The Suite coordinate manages installation; actual use starts with the entry Skill. Installing member files does not configure their required tools or services. Follow the [Skill Suite usage guide](./guide/skill-suites.md).
+
 ## Q: What should I do if I encounter issues?
 
 A: You can get help through the following channels:

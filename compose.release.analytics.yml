@@ -1,0 +1,10 @@
+# Optional network attachment; keep the normal Web default network for server.
+services:
+  web:
+    networks:
+      - default
+      - analytics
+networks:
+  analytics:
+    external: true
+    name: ${SKILLHUB_ANALYTICS_NETWORK:-skillhub-analytics}

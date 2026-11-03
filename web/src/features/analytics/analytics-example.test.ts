@@ -1,14 +1,14 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent } from '@testing-library/react'
-import { observeSkillhubIntents, DEFAULT_RULES, resolveRules } from '../docs/examples/analytics/observe/v1/skillhub-intents.mjs'
+import { observeSkillhubIntents, DEFAULT_RULES, resolveRules } from './skillhub-intents.mjs'
 
 const stops: Array<() => void> = []
 afterEach(() => { stops.splice(0).forEach(stop => stop()); document.body.replaceChildren(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
-function start(onIntent = vi.fn<(intent: { id: string; event: string }) => void>()) {
+function start(onIntent: (intent: { id: string; event: string }) => unknown = vi.fn<(intent: { id: string; event: string }) => void>()) {
   const stop = observeSkillhubIntents({ root: document, onIntent })
   stops.push(stop)
-  return { onIntent, stop }
+  return { onIntent: vi.mocked(onIntent), stop }
 }
 function fixture(html: string) { document.body.innerHTML = html; return document.body.firstElementChild as HTMLElement }
 

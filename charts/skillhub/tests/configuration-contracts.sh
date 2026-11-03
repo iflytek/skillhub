@@ -471,6 +471,75 @@ assert_rejected subpath-reserved-api --set-string web.basePath=/api/
 assert_rejected subpath-reserved-assets --set-string web.basePath=/assets/
 assert_rejected subpath-reserved-well-known --set-string web.basePath=/.well-known/
 assert_rejected subpath-reserved-nested --set-string web.basePath=/api/nested/
+assert_rejected subpath-reserved-analytics --set-string web.basePath=/_skillhub-analytics/
+assert_rejected subpath-reserved-analytics-nested --set-string web.basePath=/_skillhub-analytics/nested/
+
+render analytics-default "$CHART_DIR" >"$TMP_DIR/analytics-default.yaml"
+grep -Fq 'name: analytics-default-skillhub-web-analytics' "$TMP_DIR/analytics-default.yaml" \
+  || fail "analytics must render its Web-only ConfigMap"
+grep -Fq '  config: ""' "$TMP_DIR/analytics-default.yaml" || fail "analytics must default off"
+if grep -Eq '^  web-analytics-(config|upstream):' "$TMP_DIR/analytics-default.yaml"; then
+  fail "analytics keys must stay out of the shared ConfigMap hashed by the server"
+fi
+# --set treats {...} as a list, so pass the JSON string through a values file,
+# the same way the operator guide documents it.
+cat >"$TMP_DIR/analytics-values.yaml" <<'VALUES'
+web:
+  analytics:
+    config: '{"enabled":true,"adapter":"umami","consent":"granted","adapterConfig":{"websiteId":"4398de8e-40df-4483-9eea-ed213643525f"}}'
+    upstream: https://stats.example.com
+VALUES
+render analytics-default "$CHART_DIR" -f "$TMP_DIR/analytics-values.yaml" >"$TMP_DIR/analytics-enabled.yaml"
+for key in SKILLHUB_WEB_ANALYTICS_CONFIG SKILLHUB_WEB_ANALYTICS_UPSTREAM; do
+  grep -A4 -F "name: $key" "$TMP_DIR/analytics-enabled.yaml" \
+    | grep -Fq 'name: analytics-default-skillhub-web-analytics' \
+    || fail "$key must come from the Web-only analytics ConfigMap"
+done
+grep -Fq '  upstream: "https://stats.example.com"' "$TMP_DIR/analytics-enabled.yaml" || fail "missing analytics origin"
+
+# Pod template annotations: "<deployment-name> <annotation> <value>" per line.
+pod_checksums() {
+  awk '
+    $1 == "kind:" { kind=$2; name="" }
+    kind == "Deployment" && name == "" && $1 == "name:" { name=$2 }
+    kind == "Deployment" && $1 ~ /^checksum\// { print name, $1, $2 }
+  ' "$1" | sort
+}
+checksum_of() {
+  pod_checksums "$1" | awk -v d="$2" -v k="$3" '$1 == d && $2 == k { print $3 }'
+}
+assert_checksum() {
+  local before=$1 after=$2 deployment=$3 annotation=$4 expect=$5
+  local a b
+  a=$(checksum_of "$before" "$deployment" "$annotation")
+  b=$(checksum_of "$after" "$deployment" "$annotation")
+  [[ -n $a && -n $b ]] || fail "$deployment must render $annotation"
+  if [[ $expect == same && $a != "$b" ]]; then
+    fail "$deployment $annotation must not change"
+  elif [[ $expect == changed && $a == "$b" ]]; then
+    fail "$deployment $annotation must change"
+  fi
+}
+web=analytics-default-skillhub-web
+server=analytics-default-skillhub-server
+# Changing only analytics must roll Web and leave every other workload alone.
+assert_checksum "$TMP_DIR/analytics-default.yaml" "$TMP_DIR/analytics-enabled.yaml" "$web" checksum/config: changed
+diff <(pod_checksums "$TMP_DIR/analytics-default.yaml" | grep -v "^$web ") \
+  <(pod_checksums "$TMP_DIR/analytics-enabled.yaml" | grep -v "^$web ") >/dev/null \
+  || fail "analytics-only changes must not replace server or other pods"
+# A second adapter uses the same opaque JSON/ConfigMap contract, via a values file.
+render analytics-default "$CHART_DIR" -f "$CHART_DIR/tests/datafinder-values.yaml" >"$TMP_DIR/analytics-datafinder.yaml"
+grep -Fq 'appId\":123456' "$TMP_DIR/analytics-datafinder.yaml" || fail "DataFinder public config missing"
+grep -Fq '  upstream: "https://collector.example.com"' "$TMP_DIR/analytics-datafinder.yaml" || fail "DataFinder origin missing"
+assert_checksum "$TMP_DIR/analytics-default.yaml" "$TMP_DIR/analytics-datafinder.yaml" "$web" checksum/config: changed
+diff <(pod_checksums "$TMP_DIR/analytics-default.yaml" | grep -v "^$web ") \
+  <(pod_checksums "$TMP_DIR/analytics-datafinder.yaml" | grep -v "^$web ") >/dev/null \
+  || fail "DataFinder must not roll non-Web pods"
+
+# Backend configuration still rolls the server.
+render analytics-default "$CHART_DIR" -f "$TMP_DIR/analytics-values.yaml" \
+  --set-string bootstrapAdmin.displayName=Changed >"$TMP_DIR/analytics-server-change.yaml"
+assert_checksum "$TMP_DIR/analytics-enabled.yaml" "$TMP_DIR/analytics-server-change.yaml" "$server" checksum/config: changed
 
 # publicBaseUrl is concatenated with paths (/cli/auth, /.well-known/clawhub.json),
 # so a query or fragment corrupts the generated URLs. Reject it independently of
@@ -493,5 +562,74 @@ grep -Fq 'key: skillhub-storage-s3-access-key' "$TMP_DIR/storage-example.yaml" \
   || fail "Storage access key Secret mapping changed"
 grep -Fq 'key: skillhub-storage-s3-secret-key' "$TMP_DIR/storage-example.yaml" \
   || fail "Storage secret key Secret mapping changed"
+
+# Generated application secrets must be resolved once per render, including
+# independent Server/GitHub Sync checksum includes and the actual Secret output.
+python3 - "$CHART_DIR" "$TMP_DIR" <<'PY_SECRET_RENDER'
+import base64
+import hashlib
+import json
+from pathlib import Path
+import re
+import shutil
+import subprocess
+import sys
+
+chart = Path(sys.argv[2]) / 'secret-render-chart'
+shutil.copytree(Path(sys.argv[1]), chart)
+(chart / 'templates/secret-render-probe.yaml').write_text('''apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: secret-render-probe
+data:
+  first: {{ include (print $.Template.BasePath "/secret.yaml") . | b64enc | quote }}
+  second: {{ include (print $.Template.BasePath "/secret.yaml") . | b64enc | quote }}
+  values-cache: {{ hasKey .Values "_skillhubAppSecretManifest" | quote }}
+''')
+base = ['helm', 'template', 'secret-render', str(chart), '-f',
+        str(chart / 'tests/test-values.yaml'), '--set', 'githubSync.enabled=true',
+        '--set-string', 'secrets.githubSyncServiceToken=synthetic-github-sync-token-at-least-32-characters']
+
+def render(*args):
+    output = subprocess.check_output([*base, *args], text=True)
+    parts = re.split(r'^---\s*$', output, flags=re.M)
+    def resource(name):
+        return next(part for part in parts if '# Source: skillhub/templates/' + name in part)
+    probe = resource('secret-render-probe.yaml')
+    manifests = [base64.b64decode(re.search(r'^  ' + key + r': "([A-Za-z0-9+/=]*)"$', probe, re.M).group(1))
+                 for key in ['first', 'second']]
+    assert manifests[0] == manifests[1], 'Secret includes must share one generated result'
+    assert '  values-cache: "false"' in probe, 'Render cache must not mutate user Values'
+    digest = hashlib.sha256(manifests[0]).hexdigest()
+    for name in ['server-deployment.yaml', 'github-sync-deployment.yaml']:
+        checksum = re.search(r'checksum/secret: ([0-9a-f]+)', resource(name)).group(1)
+        assert checksum == digest, name + ' checksum must describe the emitted Secret'
+    if manifests[0].strip():
+        emitted = resource('secret.yaml').split('# Source: skillhub/templates/secret.yaml', 1)[1].strip()
+        assert emitted == manifests[0].decode().strip(), 'Actual Secret and checksum input must match'
+    else:
+        assert not any('# Source: skillhub/templates/secret.yaml' in part for part in parts), 'existingSecret must not emit an application Secret'
+    return digest, manifests[0]
+
+generated_args = ['--set', 'secrets.allowAutoGenerated=true',
+                  '--set-string', 'secrets.bootstrapAdminPassword=',
+                  '--set-string', 'secrets.downloadAnonCookieSecret=',
+                  '--set-string', 'bootstrapAdmin.password=']
+generated, manifest = render(*generated_args)
+assert re.search(rb'bootstrap-admin-password: "[A-Za-z0-9]{16}"', manifest), 'Bootstrap password must be generated'
+assert re.search(rb'skillhub-download-anon-cookie-secret: "[A-Za-z0-9]{48}"', manifest), 'Download signing secret must be generated'
+assert render(*generated_args)[0] != generated, 'A fresh offline render must not reuse another render context'
+fixed, _ = render()
+for key in ['bootstrapAdminPassword', 'downloadAnonCookieSecret']:
+    assert render('--set-string', 'secrets.' + key + '=rotated-synthetic-secret-at-least-48-characters-long')[0] != fixed, 'Explicit secret rotation must change checksums'
+analytics = chart / 'analytics-values.yaml'
+analytics.write_text(json.dumps({'web': {'analytics': {
+    'config': json.dumps({'enabled': True, 'adapter': 'umami', 'consent': 'granted',
+                         'adapterConfig': {'websiteId': '4398de8e-40df-4483-9eea-ed213643525f'}}),
+    'upstream': 'http://umami.stats.svc.cluster.local:3000'}}}))
+assert render('-f', str(analytics))[0] == fixed, 'Analytics-only changes must preserve explicit-secret checksums'
+assert not render('--set-string', 'existingSecret=external-application-secret')[1].strip(), 'External Secret path must not generate credentials'
+print('Helm application Secret render/rotation contracts passed')
+PY_SECRET_RENDER
 
 echo "Helm configuration contract tests passed"

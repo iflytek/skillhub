@@ -1,0 +1,4 @@
+web:
+  analytics:
+    config: '{"enabled":true,"adapter":"datafinder","consent":"granted","adapterConfig":{"appId":123456,"product":"skillhub"}}'
+    upstream: https://collector.example.com

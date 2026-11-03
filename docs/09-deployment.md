@@ -1,6 +1,8 @@
 # skillhub 部署架构与运维
 
 对象存储可选部署、凭证和迁移说明见[对象存储手册](object-storage.md)。
+可选前端动作统计默认关闭。Docker／Compose 和 Helm 只填配置即可接入 Umami，
+详见[前端动作统计接入指南](frontend-analytics-integration.md)。
 
 ### CLI 设备授权地址
 
