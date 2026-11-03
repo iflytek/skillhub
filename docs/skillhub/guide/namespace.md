@@ -2,9 +2,11 @@
 
 创建团队空间入口仅向平台 SKILL_ADMIN / SUPER_ADMIN 展示。普通成员先联系有权创建者建立空间并邀请加入；成为团队 Owner 不等于获得平台管理角色。
 
+创建权限依据 [NamespacePortalCommandAppService](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/service/NamespacePortalCommandAppService.java)。
+
 ## 团队开始协作的顺序
 
-1. 在“我的空间”创建团队空间，填写稳定的 slug 和易读的显示名称。slug 是安装坐标的一部分，不能随团队改名而修改。
+1. 先使用平台技能管理员（`SKILL_ADMIN`）或超级管理员（`SUPER_ADMIN`）账号登录；仅这两类平台角色可在“我的空间”创建团队命名空间，填写稳定的 slug 和易读的显示名称。slug 是安装坐标的一部分，不能随团队改名而修改。
 2. 在成员页添加已有账号或生成邀请链接。普通角色选择是 MEMBER / ADMIN；移交所有权使用独立的转让入口，不通过普通角色下拉框添加 Owner。
 3. 团队成员在发布页选择该空间。团队内共享请选择 NAMESPACE_ONLY；PRIVATE 不等于“全体团队成员可见”。
 4. 管理员在空间审核入口处理提交，成员在“我的技能”跟踪自己的版本。
@@ -12,9 +14,29 @@
 
 ### 设置按钮为什么不一样
 
-页面按空间类型、状态及服务端返回的操作权限展示冻结、解冻、归档、恢复和删除按钮。不要把 Owner / Admin 理解为所有操作永久可用。ACTIVE 团队空间的 Owner / Admin 可以编辑资料；所有权转让只向有权的 Owner 展示。冻结或归档后，成员管理进入只读状态，但符合条件的管理员仍可查看邀请历史。
+以下矩阵只适用于 `TEAM` 类型命名空间；服务端权限优先于角色名称。平台角色与命名空间成员角色分别校验，不能互相推导。
 
-冻结用于暂时停止写入，恢复写入使用解冻；归档与永久删除不是同一个操作。执行生命周期操作前核对确认框中的空间和影响范围，完成后检查状态和成员页面，而不是仅看请求成功提示。
+| 命名空间状态 | 命名空间角色 | 可用治理操作 | 条件与限制 |
+| --- | --- | --- | --- |
+| `ACTIVE` | 所有者（Owner） | 冻结、归档、删除；编辑资料、成员及所有权转让 | 删除另须满足下方依赖检查 |
+| `ACTIVE` | 空间管理员（Admin） | 冻结；编辑资料、管理成员 | 不能归档、删除或转让所有权 |
+| `ACTIVE` | 成员（Member） | 无上述治理操作 | 不能因技能所有者身份管理命名空间 |
+| `FROZEN` | 所有者（Owner） | 解冻、归档、删除 | 删除另须满足依赖检查；成员管理只读 |
+| `FROZEN` | 空间管理员（Admin） | 解冻 | 不能归档、删除；成员管理只读 |
+| `FROZEN` | 成员（Member） | 无上述治理操作 | 不可写入 |
+| `ARCHIVED` | 所有者（Owner） | 恢复、删除 | 恢复进入 `ACTIVE`；删除另须满足依赖检查 |
+| `ARCHIVED` | 空间管理员（Admin）或成员（Member） | 无上述治理操作 | 不因曾有编辑权限获得恢复权限 |
+
+| 命名空间状态 | 平台角色 | 平台专用入口的治理操作 | 条件与限制 |
+| --- | --- | --- | --- |
+| `ACTIVE` | 超级管理员（SUPER_ADMIN） | 冻结、归档 | 不要求命名空间成员身份；不包含永久删除 |
+| `FROZEN` | 超级管理员（SUPER_ADMIN） | 解冻、归档 | 不要求命名空间成员身份 |
+| `ARCHIVED` | 超级管理员（SUPER_ADMIN） | 恢复至 `ACTIVE` | 不要求命名空间成员身份 |
+| 任意状态 | 技能管理员（SKILL_ADMIN）或用户管理员（USER_ADMIN） | 单靠平台角色没有上述专用治理权限 | 若另有命名空间角色，按上一张表判断 |
+
+`GLOBAL` 等非团队类型不可变，上述生命周期操作不可用。永久删除只能由命名空间所有者发起，且必须没有技能、审核任务、指向该命名空间的提升申请或创作草稿；存在任一依赖时服务端拒绝。归档不清除这些依赖，也不会自动满足删除条件。不要为绕过检查而删除数据库记录；先在对应资源管理入口处理依赖，再刷新命名空间设置页核对删除按钮。
+
+依据：[NamespaceAccessPolicy](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceAccessPolicy.java)、[NamespaceService](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceService.java) 与仅向超级管理员开放的 [AdminNamespaceController](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/admin/AdminNamespaceController.java)。完成操作后核对目标命名空间状态，不仅查看请求提示。
 
 
 ## 功能描述
@@ -70,7 +92,7 @@
 
 **创建命名空间**：
 
-1. 访问 `/dashboard/namespaces`
+1. 核对当前账号具有平台技能管理员（`SKILL_ADMIN`）或超级管理员（`SUPER_ADMIN`）角色，再访问 `/dashboard/namespaces`；普通成员没有创建入口，须联系有权创建者。
 2. 点击「创建命名空间」
 3. 填写信息：
    - 名称：团队名称（例如 "iFlytek AI Team"）
@@ -79,7 +101,7 @@
 
 ![流程图](/diagrams/namespace-create-flow.png)
 
-4. 提交创建，系统自动将你设为 Owner
+4. 提交创建，注册中心将创建者设为该命名空间所有者（Owner）；这不会新增平台角色。
 
 **添加成员**：
 
@@ -128,7 +150,7 @@
 ## API 接口
 
 **创建命名空间**：
-```bash
+```http
 POST /api/v1/namespaces
 Content-Type: application/json
 
@@ -147,12 +169,12 @@ Content-Type: application/json
 | description | string | 描述（可选，最多 512 字符） |
 
 **获取命名空间详情**：
-```bash
+```http
 GET /api/v1/namespaces/{slug}
 ```
 
 **更新命名空间**：
-```bash
+```http
 PUT /api/v1/namespaces/{slug}
 Content-Type: application/json
 
@@ -163,7 +185,7 @@ Content-Type: application/json
 ```
 
 **添加成员**：
-```bash
+```http
 POST /api/v1/namespaces/{slug}/members
 Content-Type: application/json
 
@@ -174,7 +196,7 @@ Content-Type: application/json
 ```
 
 **更新成员角色**：
-```bash
+```http
 PUT /api/v1/namespaces/{slug}/members/{userId}/role
 Content-Type: application/json
 
@@ -184,12 +206,12 @@ Content-Type: application/json
 ```
 
 **移除成员**：
-```bash
+```http
 DELETE /api/v1/namespaces/{slug}/members/{userId}
 ```
 
 **冻结命名空间**：
-```bash
+```http
 POST /api/v1/namespaces/{slug}/freeze
 Content-Type: application/json
 
@@ -199,7 +221,7 @@ Content-Type: application/json
 ```
 
 **解冻命名空间**：
-```bash
+```http
 POST /api/v1/namespaces/{slug}/unfreeze
 ```
 

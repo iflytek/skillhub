@@ -2,9 +2,11 @@
 
 The team-namespace creation action is shown to platform SKILL_ADMIN / SUPER_ADMIN roles. Other users should ask an authorized creator to create the space and invite them. Team ownership does not grant a platform role.
 
+Creation permission source: [NamespacePortalCommandAppService](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/service/NamespacePortalCommandAppService.java).
+
 ## A Team Onboarding Sequence
 
-1. Create a team namespace in My Namespaces with a stable slug and a readable display name. The slug is part of installation coordinates and cannot change with the team name.
+1. Sign in with platform Skill Admin (`SKILL_ADMIN`) or Super Admin (`SUPER_ADMIN`) privileges, then create a team namespace in My Namespaces with a stable slug and a readable display name. The slug is part of installation coordinates and cannot change with the team name.
 2. Add existing accounts or generate an invitation. Ordinary role selection offers MEMBER / ADMIN; ownership transfer is a separate action, not an Owner option in the role selector.
 3. Select this namespace when publishing. Choose NAMESPACE_ONLY for team sharing; PRIVATE does not mean all team members can read it.
 4. Administrators review submissions; authors track versions in My Skills.
@@ -12,9 +14,29 @@ The team-namespace creation action is shown to platform SKILL_ADMIN / SUPER_ADMI
 
 ### Why Available Actions Differ
 
-The page uses namespace type, state and server-provided capabilities to display freeze, unfreeze, archive, restore and delete actions. Owner or Admin is not an unconditional grant for every action. Owners and Admins can edit an ACTIVE team namespace; authorized Owners have a separate ownership transfer action. Frozen or archived namespaces make membership management read-only, while eligible administrators can still read invitation history.
+The following matrix applies only to `TEAM` namespaces. Server-provided capabilities take precedence over role names. Platform roles and namespace membership roles are checked separately.
 
-Freezing temporarily stops writes; unfreezing restores them. Archiving and permanent deletion are distinct. Check the target and impact in the confirmation, then verify the resulting namespace state and member page instead of relying only on a successful request.
+| Namespace state | Namespace role | Governance actions | Conditions and limits |
+| --- | --- | --- | --- |
+| `ACTIVE` | Owner | Freeze, archive, delete; edit settings, manage members and transfer ownership | Deletion also requires the dependency check below |
+| `ACTIVE` | Admin | Freeze; edit settings and manage members | Cannot archive, delete or transfer ownership |
+| `ACTIVE` | Member | None of these governance actions | Owning a skill does not grant namespace management |
+| `FROZEN` | Owner | Unfreeze, archive, delete | Deletion requires the dependency check; membership management is read-only |
+| `FROZEN` | Admin | Unfreeze | Cannot archive or delete; membership management is read-only |
+| `FROZEN` | Member | None of these governance actions | Writes are unavailable |
+| `ARCHIVED` | Owner | Restore, delete | Restore enters `ACTIVE`; deletion requires the dependency check |
+| `ARCHIVED` | Admin or Member | None of these governance actions | Previous editing rights do not grant restore permission |
+
+| Namespace state | Platform role | Dedicated platform governance actions | Conditions and limits |
+| --- | --- | --- | --- |
+| `ACTIVE` | Super Admin (`SUPER_ADMIN`) | Freeze, archive | Namespace membership is not required; permanent deletion is not included |
+| `FROZEN` | Super Admin (`SUPER_ADMIN`) | Unfreeze, archive | Namespace membership is not required |
+| `ARCHIVED` | Super Admin (`SUPER_ADMIN`) | Restore to `ACTIVE` | Namespace membership is not required |
+| Any | Skill Admin (`SKILL_ADMIN`) or User Admin (`USER_ADMIN`) | No dedicated governance grant from this role alone | Apply the preceding matrix if the account separately holds namespace membership |
+
+Non-team types such as `GLOBAL` are immutable. Permanent deletion requires namespace ownership and the absence of skills, review tasks, promotion requests targeting the namespace, and authoring drafts. Any dependency blocks deletion; archiving does not remove it. Do not delete database records to bypass the check. Resolve dependencies through their resource management flows, then reload namespace settings to inspect the delete action.
+
+Sources: [NamespaceAccessPolicy](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceAccessPolicy.java), [NamespaceService](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceService.java), and the Super Admin-only [AdminNamespaceController](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/admin/AdminNamespaceController.java). Verify the resulting namespace state, not only the request notification.
 
 
 ## Overview
@@ -70,7 +92,7 @@ Discover a security issue in the namespace and temporarily freeze all publish op
 
 **Create a Namespace**:
 
-1. Navigate to `/dashboard/namespaces`
+1. Verify platform `SKILL_ADMIN` or `SUPER_ADMIN` privileges before opening `/dashboard/namespaces`; ordinary members must contact an authorized creator.
 2. Click "Create Namespace"
 3. Fill in the information:
    - Name: Team name (e.g., "iFlytek AI Team")
@@ -79,7 +101,7 @@ Discover a security issue in the namespace and temporarily freeze all publish op
 
 ![Flow Diagram](/diagrams/namespace-create-flow.png)
 
-4. Submit to create; you are automatically set as the Owner
+4. Submit to create; the registry sets the creator as namespace Owner. This does not grant a platform role.
 
 **Add Members**:
 
@@ -128,7 +150,7 @@ Existing namespace and platform governance permissions remain unchanged. Removal
 ## API Reference
 
 **Create a Namespace**:
-```bash
+```http
 POST /api/v1/namespaces
 Content-Type: application/json
 
@@ -147,12 +169,12 @@ Content-Type: application/json
 | description | string | Description (optional, max 512 characters) |
 
 **Get Namespace Details**:
-```bash
+```http
 GET /api/v1/namespaces/{slug}
 ```
 
 **Update a Namespace**:
-```bash
+```http
 PUT /api/v1/namespaces/{slug}
 Content-Type: application/json
 
@@ -163,7 +185,7 @@ Content-Type: application/json
 ```
 
 **Add a Member**:
-```bash
+```http
 POST /api/v1/namespaces/{slug}/members
 Content-Type: application/json
 
@@ -174,7 +196,7 @@ Content-Type: application/json
 ```
 
 **Update Member Role**:
-```bash
+```http
 PUT /api/v1/namespaces/{slug}/members/{userId}/role
 Content-Type: application/json
 
@@ -184,12 +206,12 @@ Content-Type: application/json
 ```
 
 **Remove a Member**:
-```bash
+```http
 DELETE /api/v1/namespaces/{slug}/members/{userId}
 ```
 
 **Freeze a Namespace**:
-```bash
+```http
 POST /api/v1/namespaces/{slug}/freeze
 Content-Type: application/json
 
@@ -199,7 +221,7 @@ Content-Type: application/json
 ```
 
 **Unfreeze a Namespace**:
-```bash
+```http
 POST /api/v1/namespaces/{slug}/unfreeze
 ```
 

@@ -71,9 +71,9 @@ Open the project in your Agent and start a new session or reload skills if requi
 > Use example-skill and follow its instructions to process the following material: …
 
 Use the name in `SKILL.md` and the Agent's discovery results. Installation does not execute a skill or configure its required tools and credentials.
-If discovery fails, check the CLI's destination, current project, scope, and target Agent; see the [FAQ](./faq.md).
+If discovery fails, check the CLI's destination, current project, scope, and target Agent; see the [FAQ](./faq.html).
 
-For a collection, use `skillhub suite install`, then start with its entry skill. See [Skill Suites](./guide/skill-suites.md).
+For a collection, use `skillhub suite install`, then start with its entry skill. See [Skill Suites](./guide/skill-suites.html).
 
 ## 4. Update and manage installations
 
@@ -82,17 +82,20 @@ skillhub upgrade @team/example-skill --check
 skillhub upgrade @team/example-skill
 ```
 
-Review the plan before updating and preserve local changes you need. Do not use `--force` by default. See the [CLI guide](./guide/cli.md) for removal, team workspace synchronization, and command details.
+Review the plan before updating and preserve local changes you need. Do not use `--force` by default. See the [CLI guide](./guide/cli.html) for removal, team workspace synchronization, and command details.
 
 ## Troubleshoot the first installation
 
-| Symptom | Check first | Next step |
-| --- | --- | --- |
-| Skill not found | Registry, spelling, login identity, and visibility | Confirm a published coordinate/version in the UI; see [discovery](./guide/skill-discovery.md) |
-| Directory conflict | Whether the destination belongs to another source or contains your own files | Preserve needed files; do not force an unknown directory; see [CLI reference](./guide/cli.md) |
-| Installed but not discovered | Agent profile, project root, and user/project scope | Check the printed path, then reload or start a session according to the Agent's discovery behavior |
-| Discovered but execution fails | Required tools, inputs, and credentials | Follow `SKILL.md`; the registry does not configure or execute those requirements |
+
+| Symptom | Locate the cause | Expected result or cause | Action |
+| --- | --- | --- | --- |
+| Skill not found | In the same terminal run `skillhub search pdf` and `skillhub whoami`; find the actual coordinate in the same registry's UI | Search returns published resources visible to the caller; anonymous public search can work even when the identity request is unauthenticated | Check registry, coordinate, and publication state; log in for restricted resources. Do not reset accounts or delete local files to troubleshoot search |
+| Directory conflict | Run `skillhub list --agent codex --json`; compare `items[].installDir` with the conflict path and open that directory's `SKILL.md` | A recorded install should match its source, version, and directory; an unrecorded directory may contain manual work | Back up and identify the contents, then choose the intended project or scope. Do not force-overwrite unknown files |
+| Installed but not discovered | From the target project run `skillhub list --agent codex --json`; inspect `items[].agent`, `installDir`, and `status`, then open the actual `SKILL.md` | `status=ok` only means the directory exists; `missing` means the recorded directory is absent. Agent discovery is a separate step | Check project and Agent profile, then reload or start a session according to the Agent's rules. Do not treat `ok` as proof of discovery |
+| Discovered but execution fails | Open the installed `SKILL.md`, check its tool/input/credential requirements, and read the actual Agent error | Files may be installed correctly while tools or permissions are missing; the registry does not configure external tools | Configure the target environment as instructed. Do not include credentials in shared packages or public error reports |
+
+Run these commands in the project containing the installation. Match `--agent codex` to the actual Agent; use `--agent claude-code` for Claude Code. `pdf` is a replaceable search term, not a guaranteed skill name. See the [list implementation](https://github.com/iflytek/skillhub/blob/main/cli/src/commands/list.ts) and [CLI option definitions](https://github.com/iflytek/skillhub/blob/main/cli/src/index.ts) for fields and filtering.
 
 ## Next steps
 
-Install a [Skill Suite](./guide/skill-suites.md) when you need a coordinated collection, or use the [CLI reference](./guide/cli.md) for more commands. For publishing, team administration, hosting, or development, choose your next task in the [documentation map](./guide/index.md).
+Install a [Skill Suite](./guide/skill-suites.html) when you need a coordinated collection, or use the [CLI reference](./guide/cli.html) for more commands. For publishing, team administration, hosting, or development, choose your next task in the [documentation map](./guide/index.html).

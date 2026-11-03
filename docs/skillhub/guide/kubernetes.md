@@ -2,7 +2,7 @@
 
 对象存储可选部署、凭证和迁移说明见[对象存储手册（GitHub）](https://github.com/iflytek/skillhub/blob/main/docs/object-storage.md)。
 
-本文档说明如何在 Kubernetes 集群中部署 SkillHub。
+本页按 `deploy/k8s/` 的 Kustomize 清单部署。Helm 是另一条独立路径，values、Secret 与升级步骤见 [Chart README](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/README.md)。同一实例选择一条路径，不要把两套资源叠加部署；Docker 路径见 [Docker 部署](./deployment.html)。
 
 ## 前置条件
 
