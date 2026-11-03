@@ -23,6 +23,30 @@ describe('SkillHubClient', () => {
     expect(requests).toEqual([expected])
   })
 
+  test.each([
+    ['https://registry.test', 'https://cdn.test/packages/skill.zip?signature=test'],
+    ['https://registry.test', '//cdn.test/api/packages/skill.zip'],
+    ['https://registry.test', 'https://registry.test.cdn.test/api/skill.zip'],
+    ['https://registry.test', 'http://registry.test/api/skill.zip'],
+    ['https://registry.test', 'https://registry.test:8443/api/skill.zip'],
+    ['https://registry.test', 'https://registry.test/packages/skill.zip'],
+    ['https://registry.test/skillhub', 'https://registry.test/api/skill.zip'],
+    ['https://registry.test/skillhub', 'https://registry.test/skillhub/api-other/skill.zip']
+  ])('omits registry credentials when %s downloads outside its API: %s', async (registry, downloadUrl) => {
+    const requests: Array<{ url: string; authorization: string | null }> = []
+    const fetchImpl = (async (input: URL | RequestInfo, init?: RequestInit) => {
+      const authorization = new Headers(init?.headers).get('Authorization')
+      requests.push({ url: String(input), authorization })
+      return authorization
+        ? new Response('InvalidArgument', { status: 400 })
+        : new Response('package-bytes')
+    }) as unknown as typeof fetch
+    const client = new SkillHubClient(registry, 'test-token', fetchImpl)
+
+    expect(await (await client.downloadFromUrl(downloadUrl)).text()).toBe('package-bytes')
+    expect(requests).toEqual([{ url: new URL(downloadUrl, registry).toString(), authorization: null }])
+  })
+
   test('uses the provided multipart file name when publishing', async () => {
     const fetchImpl = (async (_input: URL | RequestInfo, init?: RequestInit) => {
       const formData = init?.body as FormData
