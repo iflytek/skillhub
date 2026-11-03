@@ -1048,6 +1048,14 @@ export const skillLifecycleApi = {
         body: JSON.stringify({ visibility }),
       })
   },
+  async transferOwnership(namespace: string, slug: string, currentOwnerId: string, newOwnerId: string, reason: string) {
+    const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
+    return fetchJson<components['schemas']['SkillOwnerTransferResult']>(
+      `${WEB_API_PREFIX}/skills/${encodeURIComponent(cleanNamespace)}/${encodeURIComponent(slug)}/owner`, {
+        method: 'POST', headers: await ensureCsrfHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ currentOwnerId, newOwnerId, reason }),
+      })
+  },
   async archiveSkill(namespace: string, slug: string, reason?: string): Promise<void> {
     const cleanNamespace = namespace.startsWith('@') ? namespace.slice(1) : namespace
     await fetchJson<void>(`${WEB_API_PREFIX}/skills/${cleanNamespace}/${encodeURIComponent(slug)}/archive`, {

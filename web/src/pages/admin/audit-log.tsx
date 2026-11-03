@@ -40,6 +40,7 @@ const ACTION_OPTIONS = [
   { value: 'UNHIDE_SKILL', labelKey: 'auditLog.filterUnhideSkill' },
   { value: 'UNARCHIVE_SKILL', labelKey: 'auditLog.filterUnarchiveSkill' },
   { value: 'YANK_SKILL_VERSION', labelKey: 'auditLog.filterYankVersion' },
+  { value: 'SKILL_OWNER_CHANGED', labelKey: 'auditLog.filterSkillOwnerChanged' },
   { value: 'REBUILD_SEARCH_INDEX', labelKey: 'auditLog.filterRebuildSearchIndex' },
 ] as const
 

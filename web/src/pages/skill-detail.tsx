@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowUpCircle, Boxes, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { SkillVisibilityDialog } from '@/features/skill/skill-visibility-dialog'
+import { SkillOwnerDialog } from '@/features/skill/skill-owner-dialog'
 import { SkillAvatar } from '@/features/skill/skill-avatar'
 import { SkillAvatarTakedown } from '@/features/skill/skill-avatar-takedown'
 import { resolvePackageRelativeLink } from '@/features/skill/package-relative-link'
@@ -241,6 +242,8 @@ export function SkillDetailPage() {
   const canInteract = skill?.canInteract ?? true
   const canReport = skill?.canReport ?? true
   const canHardDeleteSkill = Boolean(skill && user && ((!skill.ownerReadOnly && skill.ownerId === user.userId) || hasRole('SUPER_ADMIN')))
+  const isNamespaceOwner = Boolean(myNamespaces?.some((item) => item.slug === namespace && item.currentUserRole === 'OWNER'))
+  const canTransferOwner = Boolean(skill && user && (isNamespaceOwner || hasRole('SUPER_ADMIN')))
   const canManageLabels = Boolean(skill && user && (skill.canManageLifecycle || hasRole('SUPER_ADMIN')))
   const canManageSecurityScan = Boolean(skill && user && (
     skill.canManageLifecycle || hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
@@ -935,6 +938,9 @@ export function SkillDetailPage() {
                 <span className="min-w-0 truncate">{t('skillDetail.authorLabel', { name: skill.ownerDisplayName })}</span>
               </div>
             </div>
+          )}
+          {canTransferOwner && skill.ownerId && (
+            <div><SkillOwnerDialog namespace={namespace} slug={slug} ownerId={skill.ownerId} asPlatformAdmin={!isNamespaceOwner} /></div>
           )}
           {selectedSummary && (
             <p className="text-lg text-muted-foreground leading-relaxed">{selectedSummary}</p>

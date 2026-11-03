@@ -1335,6 +1335,7 @@
     "filterUnhideSkill": "恢复隐藏",
     "filterUnarchiveSkill": "恢复归档",
     "filterYankVersion": "版本撤回",
+    "filterSkillOwnerChanged": "技能所有者变更",
     "filterRebuildSearchIndex": "重建搜索索引",
     "quickFilterSearchRebuild": "仅看搜索索引重建",
     "clearFilters": "清空筛选",
@@ -3227,6 +3228,17 @@
     "archiveHint": "归档后停止空间及其中技能的正常访问。可恢复归档。",
     "restoreHint": "恢复已归档空间。",
     "deleteHint": "永久删除空间，请先处理其中的技能和成员。"
+  },
+  "skillOwner": {
+    "title": "更改所有者",
+    "description": "将该技能交给本空间的其他成员维护。地址、版本和统计数据保持不变。",
+    "newOwner": "新所有者",
+    "selectPlaceholder": "选择成员",
+    "membersFailed": "无法加载空间成员。",
+    "reason": "原因",
+    "reasonPlaceholder": "原所有者已离开组织",
+    "submit": "转移",
+    "saved": "所有者已更改"
   },
   "skillVisibility": {
     "pendingList": "申请{{visibility}} · 审核中，批准前保持当前范围。",

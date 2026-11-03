@@ -1335,6 +1335,7 @@
     "filterUnhideSkill": "Skill Unhidden",
     "filterUnarchiveSkill": "Skill Restored",
     "filterYankVersion": "Version Yanked",
+    "filterSkillOwnerChanged": "Skill Owner Changed",
     "filterRebuildSearchIndex": "Search Index Rebuilt",
     "quickFilterSearchRebuild": "Search index rebuilds only",
     "clearFilters": "Clear filters",
@@ -3228,6 +3229,17 @@
     "archiveHint": "Stop normal access to the space and its skills. Archiving can be reversed.",
     "restoreHint": "Restore the archived space.",
     "deleteHint": "Permanently delete the space. Handle its skills and members first."
+  },
+  "skillOwner": {
+    "title": "Change owner",
+    "description": "Hand this skill to another namespace member. Its address, versions, and statistics stay the same.",
+    "newOwner": "New owner",
+    "selectPlaceholder": "Select a member",
+    "membersFailed": "Couldn't load namespace members.",
+    "reason": "Reason",
+    "reasonPlaceholder": "The previous owner left the organization",
+    "submit": "Transfer",
+    "saved": "Owner changed"
   },
   "skillVisibility": {
     "pendingList": "Requested {{visibility}} · review pending. Current access remains in effect.",

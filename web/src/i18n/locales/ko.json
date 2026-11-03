@@ -1613,6 +1613,7 @@
     "filterUnhideSkill": "스킬 숨김 해제",
     "filterUnarchiveSkill": "스킬 복원",
     "filterYankVersion": "버전 배포 철회",
+    "filterSkillOwnerChanged": "스킬 소유자 변경",
     "filterRebuildSearchIndex": "검색 인덱스 재구축",
     "quickFilterSearchRebuild": "검색 인덱스 재구축만",
     "clearFilters": "필터 초기화",
@@ -3509,6 +3510,17 @@
     "archiveHint": "공간과 해당 스킬에 대한 일반 접근을 중단합니다. 보관은 되돌릴 수 있습니다.",
     "restoreHint": "보관된 공간을 복원합니다.",
     "deleteHint": "공간을 영구 삭제합니다. 먼저 스킬과 멤버를 처리하세요."
+  },
+  "skillOwner": {
+    "title": "소유자 변경",
+    "description": "이 스킬을 네임스페이스의 다른 멤버에게 넘깁니다. 주소, 버전, 통계는 그대로 유지됩니다.",
+    "newOwner": "새 소유자",
+    "selectPlaceholder": "멤버 선택",
+    "membersFailed": "네임스페이스 멤버를 불러오지 못했습니다.",
+    "reason": "사유",
+    "reasonPlaceholder": "이전 소유자가 조직을 떠났습니다",
+    "submit": "이전",
+    "saved": "소유자가 변경되었습니다"
   },
   "skillVisibility": {
     "pendingList": "요청한 공개 범위: {{visibility}} · 검토 대기 중. 현재 접근 범위는 유지됩니다.",

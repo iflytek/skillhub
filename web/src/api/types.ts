@@ -228,6 +228,8 @@ export interface NamespaceMember {
   email?: string
   role: NamespaceRole
   createdAt: string
+  active?: boolean
+  systemAccount?: boolean
 }
 
 export interface NamespaceCandidateUser {
