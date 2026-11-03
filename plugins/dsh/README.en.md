@@ -23,6 +23,14 @@ In the installed card’s More menu, “管理安装” opens skill details, whe
 An active session is required. Shadowed skills, modified files, disabled user invocation or changed context are reported without modifying the draft. Historical receipts are not proof of current installation. This feature is available from `0.4.0`.
 
 
+## Local package transfer (in development, not published)
+
+Use **Import skill package** in the installed view to select a ZIP containing a root `SKILL.md`, preview it, choose the current project or all projects, and confirm. Existing same-name directories are never overwritten. The first version accepts one skill per archive, up to 8 MiB compressed; existing expanded-size, file-count and per-file limits still apply.
+
+Imports are identified as local packages, support use, diagnosis, activation and removal, and never receive Registry update checks. Import does not require Registry login or connectivity and does not execute packaged scripts. Import records remain in DSH-private state without extending the shared CLI inventory; older versions do not list these records.
+
+In the detail's installation management panel, each location's Manage menu exports that exact installation directly, without an extra location dialog. The ZIP contains its actual contents, including local edits, resources and `.skillhub/examples.json`, while excluding installer metadata. Exporting a disabled installation normalizes the entry inside the ZIP without enabling the original. Review authored files before sharing; export does not automatically redact private content.
+
 ## Requirements and validation scope
 
 | Component | Requirement or scope |

@@ -12,8 +12,8 @@ import { readCacheOptions } from './read-cache.js';
 type Remote = TypertRemoteNamespaceMap['skillhub'];
 type Tab = 'details' | 'versions' | 'securityAudit' | 'reviews';
 const names: Record<Tab, string> = { details: '详情', versions: '版本', securityAudit: '安全审核', reviews: '评论' };
-export function DetailTabs({ detail, modes, remote, children, onSelectVersion, versionActionLabel, cacheIdentity, onContextStale }: {
-  detail: SkillDetail; modes: SkillHubConfig['detailTabs']; remote: Remote; children: ReactNode; onSelectVersion?(version: string): void; versionActionLabel?: string; cacheIdentity?: string; onContextStale?(): void;
+export function DetailTabs({ detail, modes, remote, children, onSelectVersion, versionActionLabel, cacheIdentity, onContextStale, localPackage = false }: {
+  localPackage?: boolean; detail: SkillDetail; modes: SkillHubConfig['detailTabs']; remote: Remote; children: ReactNode; onSelectVersion?(version: string): void; versionActionLabel?: string; cacheIdentity?: string; onContextStale?(): void;
 }) {
   const identity = cacheIdentity ?? JSON.stringify([detail.namespace, detail.slug, detail.version]);
   const client = useQueryClient();
@@ -23,12 +23,12 @@ export function DetailTabs({ detail, modes, remote, children, onSelectVersion, v
   const [selected, setSelected] = useState<Tab>(saved?.selected ?? 'details');
   useEffect(() => { client.setQueryData(['skillhub-detail-ui', identity], { selected, pages }); }, [client, identity, selected, pages]);
   const visible = (Object.keys(names) as Tab[]).filter(tab => tab === 'details'
-    || modes[tab] === 'show' || (modes[tab] === 'auto' && detail.tabs[tab] === 'available'));
+    || !localPackage && (modes[tab] === 'show' || (modes[tab] === 'auto' && detail.tabs[tab] === 'available')));
   const active = visible.includes(selected) ? selected : 'details';
   return <Card className="astron-sh-reading-card"><Tabs value={active} onValueChange={value => setSelected(value as Tab)}>
     <TabsList aria-label="技能详情">{visible.map(tab => <TabsTrigger key={tab} value={tab}>{names[tab]}</TabsTrigger>)}</TabsList>
     {visible.map(tab => <TabsContent key={tab} value={tab}>
-      {active !== tab ? null : tab === 'details' ? <><div className="astron-sh-reading-body">{children}</div><footer className="astron-sh-panel-footer"><span>SKILL.md</span><span>当前版本 {detail.version}</span></footer></> : tab === 'securityAudit' ? <><div className="astron-sh-reading-body astron-sh-audit-empty"><Icon name="info" /><h3>当前来源未提供公开审核信息</h3><p>当前来源的审核信息不支持匿名读取。</p><p>请检查技能内容与来源，不能据此判断技能已通过安全审核。</p></div><footer className="astron-sh-panel-footer">审核状态取决于当前来源提供的信息</footer></>
+      {active !== tab ? null : tab === 'details' ? <><div className="astron-sh-reading-body">{children}</div><footer className="astron-sh-panel-footer"><span>SKILL.md</span>{!localPackage && <span>当前版本 {detail.version}</span>}</footer></> : tab === 'securityAudit' ? <><div className="astron-sh-reading-body astron-sh-audit-empty"><Icon name="info" /><h3>当前来源未提供公开审核信息</h3><p>当前来源的审核信息不支持匿名读取。</p><p>请检查技能内容与来源，不能据此判断技能已通过安全审核。</p></div><footer className="astron-sh-panel-footer">审核状态取决于当前来源提供的信息</footer></>
         : <>
           <ModulePage key={`${identity}/${tab}`} cacheIdentity={identity} page={pages[tab]} setPage={page => setPages(previous => ({ ...previous, [tab]: page }))} onContextStale={onContextStale} tab={tab} token={detail.detailToken} remote={remote} detail={detail} onSelectVersion={onSelectVersion} versionActionLabel={versionActionLabel} /></>}
     </TabsContent>)}

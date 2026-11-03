@@ -10,7 +10,7 @@ import { createInstallTransactionObserver } from './transaction-journal'
 import { confirmExistingNativeInstall } from './native-installed'
 
 /** Claim an accepted operation exactly once before performing network or target writes. */
-export async function executeNativeInstall(operations: OperationStore, inventory: InventoryStore, request: NativeInstallExecution): Promise<NativeRecoveryResult> {
+export async function executeNativeInstall(operations: OperationStore, inventory: InventoryStore, request: NativeInstallExecution & { archive?: Uint8Array }): Promise<NativeRecoveryResult> {
   request = { ...request }
   const record = await operations.get(request.operationId, request.ownerId)
   if (!record || record.operation.kind !== 'install' || record.operation.status.phase !== 'accepted') throw new Error('Installation is not owned and accepted')
@@ -28,16 +28,18 @@ export async function executeNativeInstall(operations: OperationStore, inventory
   try {
     if (await canonicalizeExistingPath(root) !== root) throw new Error('Installation target changed')
     await request.authorize([root, target], 'staging')
-    const existing = await confirmExistingNativeInstall(operations, inventory, request)
+    const existing = request.registry === 'local:import' ? undefined : await confirmExistingNativeInstall(operations, inventory, request)
     if (existing) return existing
     const client = new SkillHubClient(request.registry)
-    const resolved = await client.resolve(request.namespace, request.slug, request.version)
+    const imported = request.registry === 'local:import'
+    if (imported !== !!request.archive || imported && (request.namespace !== 'local' || request.version !== 'local')) throw new Error('Invalid local package source')
+    const resolved = imported ? { namespace: request.namespace, slug: request.slug, version: request.version, versionId: 1, fingerprint: request.fingerprint, downloadUrl: '' } : await client.resolve(request.namespace, request.slug, request.version)
     if (resolved.namespace !== request.namespace || resolved.slug !== request.slug || resolved.version !== request.version
       || resolved.versionId !== request.versionId || resolved.fingerprint !== request.fingerprint) throw new Error('Installation release changed')
     const observer = await createInstallTransactionObserver(operations, record.operationId, record.ownerId)
     coreStarted = true
     await installSkill({ registry: request.registry, namespace: request.namespace, slug: request.slug,
-      version: request.version, resolved, client, force: false, inventoryStore: inventory,
+      version: request.version, resolved, client, ...(imported ? {packageBytes: request.archive, metadataSource: 'local-import' as const} : {}), force: false, inventoryStore: inventory,
       targets: [{ agent: 'dsh', rootDir: root, scope: request.scope, source: 'explicit' }],
       transactionObserver: observer, authorizeTargetMutation: request.authorize, validateStagedSkill: request.validateStaged })
     const result = await reconcileCommittedInstallation({ operations, inventory,

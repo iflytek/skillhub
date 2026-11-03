@@ -210,6 +210,24 @@ export class LocalRuntime {
     return receipt.promise;
   }
 
+  previewPackage(...args: Parameters<NativeRuntime['previewPackage']>) { return this.call(runtime => runtime.previewPackage(...args)); }
+  exportPackage(...args: Parameters<NativeRuntime['exportPackage']>) { return this.call(runtime => runtime.exportPackage(...args)); }
+  submitPackageImport(request: NativeOperationRequest, prepare: () => Promise<PreparedNativeInstall & { archive: Uint8Array }>): Promise<NativeOperation | undefined> {
+    const receipt = Promise.withResolvers<NativeOperation | undefined>();
+    const workflow = this.call(async runtime => {
+      let prepared: Awaited<ReturnType<typeof prepare>> | undefined;
+      const accepted = await runtime.acceptInstall(request, async () => {
+        this.assertWritableHost(); prepared = await prepare(); return prepared.acceptance;
+      });
+      receipt.resolve(accepted);
+      if (!accepted || !prepared || accepted.phase !== 'accepted') return;
+      await this.executeAccepted(accepted, () => runtime.executePackageImport({ ...prepared!.execution,
+        archive: prepared!.archive, operationId: accepted.operationId, ownerId: request.ownerId }));
+    });
+    void workflow.catch(error => receipt.reject(error));
+    return receipt.promise;
+  }
+
   private call<T>(action: (runtime: NativeRuntime) => Promise<T>): Promise<T> {
     const runtime = this.runtime;
     if (this.disposed || !runtime || this.status.state !== 'ready') return Promise.reject(new Error('Local installation service is unavailable'));

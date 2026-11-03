@@ -142,7 +142,7 @@ async function assertContent(record: OperationRecord, path: string, expected: In
   const read = await readInstalledSkillMetadata(path)
   if (read.status !== 'valid') throw new Error('Recovery metadata is unavailable')
   const value = read.metadata
-  if (!sameInstalledSkillSource(value, expected) || value.source !== 'skillhub' || value.version !== expected.version
+  if (!sameInstalledSkillSource(value, expected) || value.source !== (expected.registry === 'local:import' ? 'local-import' : 'skillhub') || value.version !== expected.version
     || value.fingerprint !== expected.fingerprint || value.agent !== expected.agent || value.installedAt !== expected.installedAt) throw new Error('Recovery identity changed')
   const snapshot = await snapshotJournalInstallation(record, path)
   if (snapshot.fingerprint !== expected.fingerprint || !isDeepStrictEqual(snapshot.files, value.files)) throw new Error('Recovery content changed')

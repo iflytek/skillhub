@@ -103,7 +103,7 @@ export type SkillUseSelection = { status: 'ready'; itemKey: string }
     | 'multiple-usable-installations' | 'selection-timeout' };
 
 export interface InstalledSkillList {
-  items: { itemKey: string; registry?: string; currentSource?: boolean; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
+  items: { itemKey: string; sourceKind?: 'local-import'; registry?: string; currentSource?: boolean; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
     /** Optional local frontmatter for display only; never used for selection or authorization. */
     displayName?: string; summary?: string;
     state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'; installationState?: 'enabled' | 'disabled' }[];
@@ -232,3 +232,6 @@ export interface ChangesView {
 }
 export interface ChangeDiffView { path: string; state: 'text' | 'binary' | 'too-large' | 'unavailable'; lines: {kind: 'context' | 'added' | 'deleted'; text: string}[]; truncated: boolean }
 export interface FileResetPlanView { planId: string; expiresAt: string; hostInstanceId: string; paths: {path: string; kind: 'added' | 'modified' | 'deleted'}[] }
+
+export interface PackageImportPreview { previewId: string; name: string; summary?: string; files: number; bytes: number; expiresAt: string }
+export interface PackageExport { filename: string; base64: string }

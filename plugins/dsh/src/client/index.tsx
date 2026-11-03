@@ -193,6 +193,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
           receipt.assertCurrent();
           return { sourceRevision: source.value.sourceRevision, list: installed.value };
         }),
+        exportPackage: (revision, itemKey, signal) => call(remote => remote.skillhub.exportInstalledPackage(revision, itemKey, signal)),
         availability: (revision, itemKey, signal) => call(remote => remote.skillhub.checkAvailability(revision, itemKey, signal)),
         check: (revision, itemKey, signal) => call(remote => remote.skillhub.checkUpdate(revision, itemKey, signal)),
         begin: (revision, itemKey, action, version, requestKey, signal) => call(remote => remote.skillhub.beginConversationManagement(revision, itemKey, action, version, requestKey, signal)),
@@ -315,6 +316,9 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
             const scope = ctx.sessions.scope(SessionId(sessionId));
             if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');
             return withSessionRemote(scope, remote => remote.skillhub.listInstalled(revision, signal));
+          }, packages: {
+            preview: async (...args) => { const scope = ctx.sessions.scope(SessionId(sessionId)); if (!scope) throw new Error('当前会话不可用。'); return withSessionRemote(scope, remote => remote.skillhub.previewPackageImport(...args)); },
+            confirm: async (...args) => { const scope = ctx.sessions.scope(SessionId(sessionId)); if (!scope) throw new Error('当前会话不可用。'); return withSessionRemote(scope, remote => remote.skillhub.confirmPackageImport(...args)); },
           }, detail: async (revision, itemKey, signal) => {
             const scope = ctx.sessions.scope(SessionId(sessionId));
             if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');

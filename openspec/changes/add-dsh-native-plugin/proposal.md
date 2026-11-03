@@ -46,6 +46,7 @@
 - [详细实现方案](engineering-blueprint.md)
 - [本地生命周期](lifecycle-design.md)
 - [DSH 原生接入](dsh-integration-design.md)
+- [单技能包导入与导出](package-transfer-design.md)：DSH 本地 ZIP 预览与确认、导出实际内容、本地来源与旧版兼容。
 
 ## 安装级启停增量
 

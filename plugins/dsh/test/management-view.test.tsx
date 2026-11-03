@@ -224,7 +224,7 @@ test('disabled installation renders enable instead of use and remains an install
   expect(parseManagementResult(result, 'call-1')).toEqual(result);
   const html = render(result);
   expect(html).toContain('已停用'); expect(html).toContain('管理安装'); expect(html).not.toContain('>启用</button>');
-  const advanced = render(result, undefined, true); expect(advanced).toContain('>启用</button>'); expect(advanced).not.toContain('使用此位置');
+  const advanced = render(result, undefined, true); expect(advanced).toContain('管理所有项目'); expect(advanced).not.toContain('>启用</button>'); expect(advanced).not.toContain('使用此位置');
   expect(html).not.toContain('使用此技能'); expect(html).not.toContain('安装文件缺失');
   expect(html).not.toContain('location-a'); expect(html).not.toContain('更多操作');
 });
@@ -325,8 +325,8 @@ test('detail installation management is inline and survives an empty refreshed i
     client.setQueryData(key, { ...installed, items: [{ ...item, installationState: 'disabled' }, { ...item, itemKey: 'project-key', scope: 'project', version: '2', installationState: 'enabled' }] });
     const html = renderPanel();
     expect(html).toContain('aria-label="安装管理"'); expect(html).toContain('所有项目 v1.0.0'); expect(html).toContain('仅此项目 v2');
-    expect(html).toContain('>启用</button>'); expect(html).not.toContain('>停用</button>');
-    expect(html.match(/aria-label="更多操作"/g)).toHaveLength(2);
+    expect(html).not.toContain('>启用</button>'); expect(html).not.toContain('>停用</button>');
+    expect(html).toContain('aria-label="管理所有项目"'); expect(html).toContain('aria-label="管理仅此项目"'); expect(html).not.toContain('>···</button>');
     expect(html).not.toContain('使用此位置'); expect(html).not.toContain('检查可用性'); expect(html).not.toContain('>卸载</button>');
     expect(html).not.toContain('role="dialog"'); expect(html).not.toContain('role="combobox"'); expect(html).not.toContain('>管理安装</button>');
     client.setQueryData(key, { ...installed, items: [] });

@@ -26,3 +26,13 @@ test('reading view hides pending capability banners and raw frontmatter while ke
   expect(html).not.toContain('href="javascript:');
   expect(html).toContain('astron-sh-markdown');
 });
+
+test('local package details hide market version and modules explicitly, without interpreting version text', () => {
+  const client = new QueryClient();
+  const html = renderToStaticMarkup(<QueryClientProvider client={client}><DetailContent localPackage detail={{ ...detail, version: 'local' }} modes={{ versions: 'show', reviews: 'show', securityAudit: 'show' }} remote={remote} retry={() => {}} /></QueryClientProvider>);
+  expect(html).not.toContain('当前版本');
+  expect(html).not.toContain('role="tab" data-state="inactive"');
+  expect(html).toContain('正文标题');
+  const market = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><DetailContent detail={{ ...detail, version: 'local' }} modes={{ versions: 'hide', reviews: 'hide', securityAudit: 'hide' }} remote={remote} retry={() => {}} /></QueryClientProvider>);
+  expect(market).toContain('当前版本 local');
+});

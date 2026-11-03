@@ -57,7 +57,7 @@ export async function verifyExistingInstallation(current: Inventory,
   if (metadata.status !== 'valid' || !sameInstalledSkillSource(metadata.metadata, request)
     || metadata.metadata.version !== request.version || metadata.metadata.versionId !== request.versionId
     || metadata.metadata.fingerprint !== request.fingerprint || metadata.metadata.agent !== 'dsh'
-    || metadata.metadata.installedAt !== owner.entry.installedAt || metadata.metadata.source !== 'skillhub') throw new Error('Existing installation metadata does not match')
+    || metadata.metadata.installedAt !== owner.entry.installedAt || metadata.metadata.source !== (request.registry === 'local:import' ? 'local-import' : 'skillhub')) throw new Error('Existing installation metadata does not match')
   const snapshot = await snapshotSkillDirectory(target)
   if (snapshot.fingerprint !== request.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.metadata.files)) throw new Error('Existing installation has local changes')
   return { fingerprint: request.fingerprint, versionId: request.versionId,
