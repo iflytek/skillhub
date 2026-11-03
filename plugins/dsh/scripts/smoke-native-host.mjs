@@ -122,10 +122,12 @@ export async function selectTarball(input) {
 export function safeAvailabilityCheckpoint(value) {
   if (!value || typeof value !== 'object') return undefined;
   const scenarios = ['setup', 'user-install', 'user-winner', 'project-install', 'project-winner', 'user-shadowed', 'remote', 'by-name', 'content-modified', 'skill-missing', 'directory-missing', 'policy', 'absent', 'incomplete-provider', 'failed-provider'];
-  const checkpoints = ['setup', 'install', 'install-poll', 'reference', 'before-digest', 'execute', 'assertion', 'after-digest', 'mutation'];
+  const checkpoints = ['setup', 'install', 'install-poll', 'reference', 'before-digest', 'execute', 'assertion', 'after-digest', 'mutation', 'mutation-apply', 'mutation-restore'];
   const assertions = ['none', 'isError', 'kind', 'schemaVersion', 'association', 'scope', 'integrity', 'discovery', 'name', 'reason', 'invocation', 'installation', 'namespace', 'slug', 'version', 'fingerprint', 'render', 'privacy', 'unchanged', 'accepted', 'completed', 'reference'];
   if (!scenarios.includes(value.scenario) || !checkpoints.includes(value.checkpoint) || !assertions.includes(value.assertion)) return undefined;
   const result = { scenario: value.scenario, checkpoint: value.checkpoint, assertion: value.assertion };
+  const osCodes = ['EACCES', 'EPERM', 'EBUSY', 'ENOENT', 'ENOTEMPTY', 'EEXIST', 'EXDEV', 'EIO', 'ETIMEDOUT'];
+  for (const field of ['osCode', 'restoreOsCode']) if (osCodes.includes(value[field])) result[field] = value[field];
   const statuses = ['accepted', 'not-confirmed', 'awaiting-confirmation', 'cancelled'];
   // Mirror the public installationFailureCodes contract; never forward error messages or IDs.
   const codes = ['CONTEXT_STALE', 'REQUEST_CONFLICT', 'SOURCE_NOT_CONFIGURED', 'SOURCE_DENIED',
@@ -133,6 +135,8 @@ export function safeAvailabilityCheckpoint(value) {
   if (statuses.includes(value.install?.status)) {
     result.install = { status: value.install.status };
     if (codes.includes(value.install.code)) result.install.code = value.install.code;
+    const reasons = ['AGENT', 'CWD', 'SOURCE', 'FS', 'POLICY', 'RUNTIME', 'DETAIL', 'TARGET', 'HOST_MISMATCH'];
+    if (value.install.code === 'CONTEXT_STALE' && reasons.includes(value.install.reason)) result.install.reason = value.install.reason;
   }
   return result;
 }
