@@ -55,5 +55,5 @@
 - [x] 9.1 Keep installed-release smoke values isolated: reuse release values, remove implicit test credentials, and cover successful and rejected event/rollout paths plus incomplete-fix mutations.
 - [x] 9.2 Persist independent project/network identity, migrate only from known original configuration, and reject ambiguous legacy state before defaults are generated; cover custom/default multi-instance lifecycle and secret preservation.
 - [x] 9.3 Clarify file/image version pinning, the three operator paths, independent configuration ownership, cleanup/upgrade boundaries and smoke upgrade side effects; remove duplicate operational descriptions from the contract.
-- [ ] 9.4 Complete one consolidated independent review and the focused source/deployment validation matrix for these fixes.
-- [ ] 9.5 Build the affected documentation and verify the rendered operator instructions; keep real-cluster and publication status explicit.
+- [x] 9.4 Complete one consolidated independent review and the focused source/deployment validation matrix for these fixes. Script/model checks, Helm lint/render contracts and an isolated real two-instance Umami/PostgreSQL lifecycle passed; no real-cluster Helm upgrade or Secret lookup was repeated for these fixes.
+- [x] 9.5 Build the affected documentation and verify the rendered operator instructions; keep real-cluster and publication status explicit. VitePress build and Chromium 145 checks passed for Chinese/English navigation and 390px layout. These local fixes are not published or merged; full PR acceptance remains separate.
