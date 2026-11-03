@@ -42,7 +42,8 @@ Suite 审核写入在单机 release Compose 中默认开启；Suite Bundle 确�
 
 业务分析默认关闭，与 Trace 独立。生产使用 `runtime.sh business-logs-enable` 接已有接收端，
 或用 `business-logs-up` 启动有明确下游的可选 Collector。本地使用 `make business-logs-demo-up`，
-自动适配主机 Java 与容器后端。指标需显式启用 `health,info,metrics,prometheus` 并重建 server。
+自动适配主机 Java 与容器后端。runtime 发布部署同时传 `--ref <tag> --version <tag>`：前者选文件，后者只选镜像。
+指标需显式启用 `health,info,metrics,prometheus` 并重建 server。
 [运行手册](https://github.com/iflytek/skillhub/blob/main/docs/business-event-logs.md) 提供生产接入、
 本地试用、Helm Secret、管理员查询、排障与停止步骤。下载准备不代表完成或安装成功。
 

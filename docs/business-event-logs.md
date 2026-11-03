@@ -77,7 +77,7 @@ A generic OTLP base endpoint normally appends a signal path in OTel autoconfigur
 
 ### Retrieve and apply / 获取与应用
 
-使用包含本功能的同一版本脚本、Compose 和镜像。正式发布后把 `REF`、`VERSION` 固定为同一发布标签。开发验证可使用 `main` / `edge`。脚本的 `--version <tag>` 默认从同名 Git 标签取文件；显式 `--ref` 优先。浮动镜像别名需要显式指定文件版本。
+使用包含本功能的同一版本脚本、Compose 和镜像。正式发布后同时传入 `--ref <tag> --version <tag>`，把 `REF`、`VERSION` 固定为同一发布标签。开发验证可使用 `main` / `edge`。`--version` 只选择镜像标签；`--ref`（或环境变量 `SKILLHUB_REF`，默认 `main`）独立选择文件来源。
 
 ```sh
 REF=main
@@ -122,7 +122,7 @@ sh runtime.sh business-logs-up --home "$RUNTIME_HOME" --ref "$REF" --version "$V
 sh runtime.sh business-logs-ps --home "$RUNTIME_HOME" --ref "$REF" --version "$VERSION"
 ```
 
-下游设置是 OTLP base URL；Collector 自动追加 `/v1/logs`。应用指向 `http://business-logs-collector:4318/v1/logs`。脚本从同一 `REF` 获取根目录下的 `compose.business-logs-collector.yml`、`business-logs-collector.yaml` 和网络 overlay，自动接网并重建 server。下游负责持久存储、查询、访问控制和保留期。默认模板使用内存队列；生产容量与持久发送队列由部署方按接收系统配置。
+下游设置是 OTLP base URL；Collector 自动追加 `/v1/logs`。首次创建独立 env 时，`business-logs-up --logs-network <name>` 可指定网络；已有 env 的网络与密钥保持不变，后续以该文件为准。应用指向 `http://business-logs-collector:4318/v1/logs`。脚本从同一 `REF` 获取根目录下的 `compose.business-logs-collector.yml`、`business-logs-collector.yaml` 和网络 overlay，自动接网并重建 server。下游负责持久存储、查询、访问控制和保留期。默认模板使用内存队列；生产容量与持久发送队列由部署方按接收系统配置。
 
 更新 `.env.release` 后，重跑 `business-logs-enable` 应用地址、过滤或指标配置。更新 `business-logs/.env` 后，重跑 `business-logs-up` 应用下游配置。脚本保留已有文件中的密钥，不覆盖 `.env`。需要自定义 Collector 管道时，维护部署方自己的 Compose / 配置文件；脚本会更新下载的模板。
 
@@ -140,7 +140,7 @@ sh runtime.sh business-logs-down --home "$RUNTIME_HOME" --ref "$REF" --version "
 # 再启动：已有 SkillHub 依赖先 up，再 business-logs-up；已有下游数据和网络保留。
 ```
 
-`business-logs-disable` 重建 server 并关闭导出。`business-logs-down` 只停止可选 Collector；单独停止它时应用仍会尝试导出。`down` 停止 SkillHub，保留数据卷。已配置业务日志接收端或可选 Collector 时，`clean` 也保留部署环境、密钥和 Collector 文件。彻底删除前先停两个项目，备份部署配置，再由运维显式删除自己创建的项目和网络。
+`business-logs-disable` 重建 server 并关闭导出，保留已配置的私有网络连接。之后运行 `business-logs-enable` 即可恢复保存的接收端配置，无需再传网络参数。`business-logs-down` 只停止可选 Collector；单独停止它时应用仍会尝试导出。`down` 停止 SkillHub，保留数据卷。已配置业务日志接收端或可选 Collector 时，`clean` 也保留部署环境、密钥和 Collector 文件。彻底删除前先停两个项目，备份部署配置，再由运维显式删除自己创建的项目和网络。
 
 ### Helm endpoint and Secret / Helm 接入
 
@@ -161,6 +161,14 @@ server:
 ```
 
 将片段保存为部署侧 `business-logs-values.yaml`。执行 `helm upgrade --install skillhub charts/skillhub -n skillhub -f production-values.yaml -f business-logs-values.yaml`，再执行 `kubectl rollout status deployment/skillhub-server -n skillhub`。按上面的方式产生新事件并在下游查询。Secret 轮换后执行 `kubectl rollout restart deployment/skillhub-server -n skillhub`。停用时将 `enabled` 改为 `false` 后再次 upgrade；现有 Secret 和下游数据保留。其它预算、过滤和 Resource / Trace 配置使用 `server.extraEnv`，不重复内建变量。
+
+Helm 指标查询直接连接 server Service，不经过 Web / ingress。在一个终端保持端口转发（示例 release / namespace 均为 `skillhub`，Service 端口为默认的 8080；自定义名称或端口时对应替换）：
+
+```sh
+kubectl port-forward -n skillhub service/skillhub-server 18080:8080
+```
+
+在另一个终端设置 `BASE=http://127.0.0.1:18080`，然后执行下文“指标启用与管理员查询”的登录和查询命令，登录与指标请求都使用这个转发地址。无需添加 ingress 路由。关闭转发后，本地访问结束。
 
 <a id="local-trial"></a>
 
@@ -218,7 +226,7 @@ make business-logs-demo-down
 可复用浏览器中的超级管理员会话。命令行查询时，在仓库外准备仅本人可读的登录 JSON 文件，内容为管理员 username / password。以下命令不打印密码或 Cookie：
 
 ```sh
-BASE=http://127.0.0.1:8080
+BASE=${BASE:-http://127.0.0.1:8080}
 QUERY_DIR=$(mktemp -d)
 chmod 700 "$QUERY_DIR"
 # LOGIN_JSON=/secure/admin-login.json，文件 mode 600；由部署方创建。

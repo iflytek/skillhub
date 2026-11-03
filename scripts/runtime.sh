@@ -174,13 +174,6 @@ EOF
   esac
 done
 
-if [ "$EXPLICIT_REF" = "false" ] && [ -n "$SKILLHUB_VERSION_VALUE" ]; then
-  case "$SKILLHUB_VERSION_VALUE" in
-    latest|edge) ;; # Floating image aliases are not Git refs; pin --ref explicitly.
-    *) SKILLHUB_REF="$SKILLHUB_VERSION_VALUE" ;;
-  esac
-fi
-
 if [ "$USE_ALIYUN" = "true" ]; then
   SKILLHUB_RAW_BASE="${SKILLHUB_RAW_BASE:-https://imageless.oss-cn-beijing.aliyuncs.com}"
   RUNTIME_SCRIPT_URL="$SKILLHUB_RAW_BASE/runtime.sh"
@@ -489,7 +482,7 @@ prepare_business_logs_files() {
     umask 077
     {
       printf 'SKILLHUB_BUSINESS_LOGS_PROJECT=%s\n' "$(get_env_value SKILLHUB_BUSINESS_LOGS_PROJECT skillhub-business-logs)"
-      printf 'SKILLHUB_BUSINESS_LOGS_NETWORK=%s\n' "$(get_env_value SKILLHUB_BUSINESS_LOGS_NETWORK skillhub-business-logs)"
+      printf 'SKILLHUB_BUSINESS_LOGS_NETWORK=%s\n' "${BUSINESS_LOGS_NETWORK:-$(get_env_value SKILLHUB_BUSINESS_LOGS_NETWORK skillhub-business-logs)}"
       printf 'SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_ENDPOINT=\n'
       printf "SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_HEADERS='{}'\n"
     } >"$BUSINESS_LOGS_ENV_FILE"
@@ -641,7 +634,7 @@ build_runtime_lifecycle_args() {
 
   if [ "$USE_ALIYUN" = "true" ]; then
     append_runtime_flag "--aliyun"
-  elif [ "$EXPLICIT_REF" = "true" ] || { [ "$SKILLHUB_REF" != "main" ] && [ "$SKILLHUB_REF" != "$SKILLHUB_VERSION_VALUE" ]; }; then
+  elif [ "$EXPLICIT_REF" = "true" ] || [ "$SKILLHUB_REF" != "main" ]; then
     append_runtime_option "--ref" "$SKILLHUB_REF"
   fi
 
@@ -774,7 +767,7 @@ EOF
     ;;
   business-logs-disable)
     set_env_value SKILLHUB_BUSINESS_LOGS_ENABLED false
-    set_env_value SKILLHUB_BUSINESS_LOGS_NETWORK_ENABLED false
+    # Attachment intent survives collection being disabled, so enable can reuse it.
     run_compose up -d --no-deps --force-recreate server
     echo "Business Logs disabled; receiver data and network retained."
     ;;

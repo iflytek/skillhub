@@ -43,6 +43,7 @@ Suite review writes are enabled by default in the single-server release Compose 
 Business analytics stays off by default and independent of tracing. Use `runtime.sh business-logs-enable`
 for an existing receiver, or `business-logs-up` for an optional Collector with an explicit downstream.
 For a local host Java process or container backend, use `make business-logs-demo-up`.
+For a runtime release deployment, pass `--ref <tag> --version <tag>` together: ref selects files; version selects only images.
 Metrics require the explicit `health,info,metrics,prometheus` exposure list and a server recreation.
 The [operations guide](https://github.com/iflytek/skillhub/blob/main/docs/business-event-logs.md) covers both
 paths, Helm Secrets, admin queries, troubleshooting and cleanup. Download preparation is not completion
