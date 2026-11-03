@@ -11,6 +11,10 @@ on:
       - 'compose.release.yml'
       - 'compose.release.analytics.yml'
       - 'compose.analytics-umami.yml'
+      - 'compose.business-logs-collector.yml'
+      - 'compose.release.business-logs.yml'
+      - 'business-logs-collector.yaml'
+      - 'docs/examples/business-event-logs/**'
       - 'compose.storage.*.yml'
       - 'deploy/storage/**'
       - 'deploy/runtime-mirror-images.txt'
@@ -58,6 +62,12 @@ jobs:
       - run: bash scripts/tests/publish-cli-test.sh
       - run: bash scripts/tests/runtime-secret-test.sh
       - run: bash scripts/tests/runtime-analytics-test.sh
+      - run: bash scripts/tests/runtime-business-logs-test.sh
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.19.0
+      - run: helm dependency build charts/skillhub
+      - run: python3 scripts/tests/test_business_logs_config.py
       - run: bash scripts/tests/validate-release-config-test.sh
       - run: bash scripts/tests/storage-compose-test.sh
       - run: bash scripts/tests/storage-compose-render-test.sh

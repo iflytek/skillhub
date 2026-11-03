@@ -46,6 +46,10 @@ class BusinessLogsDeploymentTest(unittest.TestCase):
         self.assertIn("SKILLHUB_BUSINESS_LOGS_ENDPOINT is required", result.stderr)
         self.assertEqual(self.validate("SKILLHUB_BUSINESS_LOGS_ENABLED=true\nSKILLHUB_BUSINESS_LOGS_ENDPOINT=http://collector:4318/v1/logs\n").returncode, 0)
 
+    def test_metrics_opt_in_and_wildcard_rejection(self):
+        self.assertEqual(self.validate("SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE=health,info,metrics,prometheus\n").returncode, 0)
+        self.assertNotEqual(self.validate("SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE=*\n").returncode, 0)
+
     def test_release_rejects_secret_bearing_url_without_printing_it(self):
         result = self.validate("SKILLHUB_BUSINESS_LOGS_ENABLED=true\nSKILLHUB_BUSINESS_LOGS_ENDPOINT=https://user:fake-secret@receiver.invalid/v1/logs?token=fake-query\n")
         self.assertNotEqual(result.returncode, 0)
@@ -57,6 +61,7 @@ class BusinessLogsDeploymentTest(unittest.TestCase):
         result = self.run_command(*command)
         self.assertEqual(result.returncode, 0, result.stderr)
         environment = json.loads(result.stdout)["services"]["server"]["environment"]
+        self.assertEqual(environment["SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE"], "health,info")
         self.assertEqual(environment["SKILLHUB_BUSINESS_LOGS_ENABLED"], "false")
         self.assertEqual(environment["SKILLHUB_BUSINESS_LOGS_ENDPOINT"], "")
         self.assertEqual(environment["SKILLHUB_BUSINESS_LOGS_MAX_QUEUE_SIZE"], "2048")
@@ -68,6 +73,23 @@ class BusinessLogsDeploymentTest(unittest.TestCase):
         self.assertEqual(environment["SKILLHUB_BUSINESS_LOGS_ENDPOINT"], "http://collector:4318/v1/logs")
         self.assertEqual(environment["SKILLHUB_BUSINESS_LOGS_NAMESPACE_ALLOWLIST"], "7,12")
         self.assertEqual(environment["SKILLHUB_BUSINESS_LOGS_EVENT_ALLOWLIST"], "")
+
+    def test_collector_downstream_and_private_demo_network_contracts(self):
+        self.fixture.write_text(BASE + "SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_ENDPOINT=https://receiver.example.com\nSKILLHUB_BUSINESS_LOGS_DOWNSTREAM_HEADERS='{}'\n")
+        command = ("docker", "compose", "--env-file", str(self.fixture), "-p", "skillhub-business-contract")
+        result = self.run_command(*command, "-f", "compose.business-logs-collector.yml", "config", "--format", "json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        production = json.loads(result.stdout)
+        service = production["services"]["business-logs-collector"]
+        self.assertFalse(service.get("ports"))
+        self.assertEqual(service["environment"]["SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_HEADERS"], "{}")
+        self.assertEqual(service["mem_limit"], "134217728")
+        self.assertTrue(production["networks"]["business-logs"]["external"])
+        result = self.run_command(*command, "-f", "docs/examples/business-event-logs/compose.yaml", "config", "--format", "json")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        demo = json.loads(result.stdout)["services"]["business-logs-collector"]
+        self.assertEqual(demo["ports"][0]["host_ip"], "127.0.0.1")
+        self.assertNotIn("container_name", demo)
 
     @unittest.skipUnless(shutil.which("helm"), "helm executable required")
     def test_helm_defaults_secret_reference_and_invalid_enabled_config(self):
