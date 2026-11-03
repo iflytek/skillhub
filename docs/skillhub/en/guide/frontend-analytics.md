@@ -1,125 +1,50 @@
-# Frontend analytics: first local setup
+# Frontend analytics: deployment and setup
 
-This walkthrough adds a local demo entry in front of an existing SkillHub Web and verifies events stored in Umami. Collection is off by default.
+SkillHub supports configuration-only integration with Umami and DataFinder. Collection is off by default. Enabled collection observes configured actions without making normal business operations wait for the statistics platform. No business JS edits or hand-written Nginx injection are required.
 
-::: warning Current support scope
-The one-click script can install independent Umami from an empty directory or connect an existing platform; Helm can deploy analytics as a separate unit. Follow the [detailed guide](./frontend-analytics-guide.md) (Chinese). The remainder is the older manual local demo pinned to `v0.2.25`, kept for background.
-:::
+Use a **Web image containing this feature**. Pin deployment-file source and image tags separately and match their versions: updating `runtime.sh` alone cannot add an adapter to an older image. See the [detailed operator guide](./frontend-analytics-guide.md) (Chinese) and the [interface and privacy contract](./frontend-analytics-reference.md) (English).
 
-## 1. Prepare Web and the example files
+## Choose a deployment path
 
-Confirm your existing SkillHub Web opens and search works. Not deployed yet? Complete [Docker deployment](./deployment.md) first. This example assumes a local root-path deployment; use the [detailed guide](./frontend-analytics-guide.md) for sub-paths, production proxies, and CSP. Docker, Compose, Git, and unused local ports 8300 and 8081 are required.
+| Situation | Approach | Instructions |
+| --- | --- | --- |
+| Script-installed SkillHub, no statistics platform | Start independent Umami and PostgreSQL, obtain a website UUID, then enable collection | [Operator guide, section 3](./frontend-analytics-guide.md) |
+| Existing Umami or DataFinder | Supply the platform's public identifier and collection origin, then recreate Web; no local statistics services | [Operator guide, sections 2 and 3.1](./frontend-analytics-guide.md) |
+| Kubernetes / Helm | Deploy the statistics platform independently and connect SkillHub using Service DNS | [Operator guide, section 4](./frontend-analytics-guide.md) |
 
-| Address / port | Purpose |
-| --- | --- |
-| Original SkillHub Web (default 80) | Existing application; this demo does not redeploy it |
-| `http://localhost:8300` | Umami administration: create a website and inspect events |
-| `http://localhost:8081` | New demo SkillHub entry: edge injects the collector script |
+## Deploy the platform before obtaining its UUID
 
-One-click installation directories do not contain the example sources. Get the demo files from the fixed `v0.2.25` tag in a separate working directory:
+1. Follow the operator guide to fetch the selected version of `runtime.sh`, choose a persistent runtime directory, and retain existing business configuration.
+2. Run `analytics-up` to fetch the supporting files and start independent Umami and PostgreSQL.
+3. Open the printed administration URL. Its default binding is `127.0.0.1:8300`; use SSH forwarding for a remote host.
+4. Sign in, immediately change the initial password, create a website, and copy its **UUID**.
+5. Run `analytics-enable --website-id <website UUID>` to write the configuration and recreate Web.
+6. Refresh the page, trigger configured actions, and verify records in Umami.
 
-```sh
-git clone --depth 1 --branch v0.2.25 https://github.com/iflytek/skillhub.git skillhub-analytics-demo
-cd skillhub-analytics-demo
-```
+Starting Umami does not require a website UUID. SkillHub can also run normally with collection disabled while the platform is being prepared.
 
-Use an unused destination if that directory exists. This fetches demo assets, not a replacement SkillHub deployment; do not reinstall your existing application. If using an existing checkout, confirm it contains `docs/examples/analytics/compose.yaml`. Run every following shell command from the **repository root in the same terminal**, not the runtime installation directory.
+Existing-platform users skip platform installation. Umami needs its website UUID; DataFinder needs its numeric app ID and collection origin. Never place administration passwords, API tokens or App Keys in browser configuration.
 
-The example connects to the original Web on host port 80 by default. If its actual port is 18080, first set:
+## Independent lifecycle
 
-```sh
-export SKILLHUB_WEB_UPSTREAM=host.docker.internal:18080
-```
+The browser sends events to a same-origin SkillHub Web endpoint, which forwards them to the platform. For local Umami, only Web and Umami join the shared private network; the SkillHub backend and business database remain outside it.
 
-Replace `18080` with the actual **Web** port, not the backend port. Do not include `http://` or a path. Web must listen on an address reachable by containers; loopback-only binding or firewall rules can block edge. The example includes the `host-gateway` mapping for native Linux.
+- `.env.release` holds business and Web collection configuration.
+- `analytics/.env` holds independent credentials, project and network identity. Once initialized, those identifiers are authoritative; renaming them is not a data migration.
+- `analytics-disable` disables collection and recreates Web while the platform stays running.
+- `analytics-down` stops statistics services without deleting credentials or data.
+- `down` and `clean` affect SkillHub. When the independent analytics directory exists, `clean` retains it and its data. Restore business configuration before redeploying SkillHub.
 
-## 2. Start Umami and obtain a website UUID
+The operator guide covers legacy identity migration, multiple instances, upgrades and recovery.
 
-Before starting, run `docker compose ls --all` and confirm the dedicated project name `skillhub-analytics-demo` is not used by another project. If occupied, choose an unused name and replace it consistently in every command. Explicit `-p` prevents inheriting an existing terminal `COMPOSE_PROJECT_NAME` and targeting another deployment; cloning into a different directory does not itself isolate the Compose project.
+## Verify behavior
 
-Check the example configuration, then start only its database and Umami:
+Disabled or unauthorized new pages must load no collection module or SDK and send no events. Enabled pages should send only configured actions, without search text, real resource paths or login credentials. Platform failures must leave normal business behavior intact.
 
-```sh
-docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml config
-docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d postgres umami
-```
+HTTP 200 alone is not evidence of storage. Verify records in the platform; DataFinder additionally requires `e:0` and `sc:1`. Actions describe intent rather than successful download, installation or publication.
 
-Wait for `http://localhost:8300`, sign in with demo credentials **`admin` / `umami`**, and change the password immediately. Create a demo website in website management and copy its **UUID**, not its name, URL, or your password.
+`consent=granted` records the deployment's authorization; it does not mean every user clicked a consent dialog. Integrate an existing consent component when per-user approval is required.
 
-This Compose uses public demo secrets and a temporary database. It does not provide a production persistence, backup, or access-control solution; do not deploy it unchanged in production.
+## Historical manual demo
 
-## 3. Configure the demo actions
-
-Open `docs/examples/analytics/observe/v1/observer.mjs` in the repository. Preserve the imports, `start()`, `stop()`, and other code; replace only `const config` and `hasConsent()` with:
-
-```js
-const config = Object.freeze({
-  enabled: true,
-  website: 'REPLACE_WITH_YOUR_WEBSITE_UUID',
-  prefix: '/_skillhub-umami',
-  rules: DEFAULT_RULES,
-})
-
-// Only for an isolated demo where you explicitly consent to collection.
-// Production integrations must read the actual consent state.
-function hasConsent() { return true }
-```
-
-`DEFAULT_RULES` is already imported and covers existing actions such as search submission and skill cards. The original `skill.example.open` has no corresponding product element, so it is omitted here. Never put administration secrets or personal data in this file, and do not use a fixed `true` for other users.
-
-## 4. Start the demo entry and verify stored events
-
-```sh
-docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d --force-recreate edge
-docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml exec edge nginx -t
-```
-
-Expect a successful Nginx check. Open **`http://localhost:8081`**, rather than the original Web URL, to test collection.
-
-1. In developer tools Network, enable **Disable cache** and **Preserve log**, refresh, and filter `/_skillhub-umami/`. Expect `script.js` to load successfully, without an automatic pageview.
-2. Enter test text and click Search: expect one `api/send` POST. Search again with Enter: expect one additional event.
-3. Inspect the payload: `name` is `search.query.submit`, and `data.event` is `submit`. Search terms and identity fields must be absent. Open a skill card to check `skill.card.open`.
-4. In Umami on port 8300, open the website events view and select the current time range. Confirm matching events and counts. **HTTP 200 alone does not prove storage.** Click events express intent, not successful downloads, publishing, or execution.
-
-| Additional acceptance check | Expected result |
-| --- | --- |
-| Disable collection and refresh | No SDK / event requests; application still works |
-| Stop demo Umami while collection is enabled | Collection fails; search and skill pages still work |
-| Start Umami and refresh | New events are stored; lost events are not guaranteed to replay |
-
-The [detailed guide](./frontend-analytics-guide.md) provides fault-test controls and recovery steps. Operate only this demo, never stop a shared platform.
-
-## 5. Disable and clean up
-
-Run `window.skillhubAnalytics.stop()` in the current page to stop future dispatch; already dispatched requests cannot be recalled. For persistent disabling, restore `enabled: false` and make `hasConsent()` return `false`, then recreate edge and refresh with cache disabled.
-
-
-```sh
-docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml up -d --no-deps --force-recreate edge
-```
-
-To pause the demo while keeping its containers for continued use:
-
-```sh
-docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml stop
-```
-
-The demo database is not a production persistence solution. Back up required data first; stopping is not a durability guarantee. Only when demo data is no longer needed, run:
-
-```sh
-docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml down -v
-```
-
-This removes the example containers and volumes; treat demo data as deleted. Do not run cleanup against the existing SkillHub deployment. Return to the original Web URL afterward.
-
-## Common problems
-
-| Symptom | Check first |
-| --- | --- |
-| Compose file not found | Work from the cloned repository root, not the runtime installation directory |
-| Ports 8300 / 8081 cannot start | Local port conflicts; inspect `docker compose -p skillhub-analytics-demo -f docs/examples/analytics/compose.yaml logs` |
-| 8081 returns 502 | Web port, container-reachable binding, and firewall; do not use the backend port |
-| No collection requests | Visit 8081, verify enabled / consent, recreate after editing, and refresh with cache disabled |
-| Requests fail or no stored events | Correct UUID, Umami readiness, matching time range, and the actual Network response |
-
-Further reading: [complete setup guide (Chinese)](./frontend-analytics-guide.md) · [interface and privacy contract](./frontend-analytics-reference.md). Minimal fields do not mean anonymous transport: IP and User-Agent may still reach the platform. Deployment owners handle retention, access control, and compliance.
+The [manual setup for v0.2.25 (fixed historical documentation)](https://github.com/iflytek/skillhub/blob/250336d3e9a7446feed37e7c0790932bd9d1eef9/docs/skillhub/en/guide/frontend-analytics.md) describes the older edge and JS integration. Use the configuration-only paths above for current deployment.
