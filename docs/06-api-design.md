@@ -261,6 +261,15 @@ Public API 的可见性规则：
 
 已发布技能可独立调整范围，不上传新 ZIP、不创建内容版本。`GET/POST /api/v1/skills/{namespace}/{slug}/visibility`（Web 同时支持 `/api/web`）提供当前范围及申请提交；Token 写入需 `skill:publish`，仍需维护权限。扩大范围走统一技能审核，缩小立即生效。请求、响应、扫描和冲突说明见[可见范围使用指南](./skill-visibility.md)。
 
+### 技能所有权转移
+
+`POST /api/v1/skills/{namespace}/{slug}/owner`（Web 同时支持 `/api/web`），请求体 `{"currentOwnerId": "...", "newOwnerId": "...", "reason": "..."}`，返回 `{ownerId, previousOwnerId}`。用于原所有者离开组织等场景，由管理员把技能交给其他成员维护。`currentOwnerId` 指定要转移哪个所有者的同名技能，不按当前用户优先解析。
+
+- 仅空间 OWNER 或平台 SUPER_ADMIN 可操作；空间 ADMIN 和技能当前所有者不能发起。仅限浏览器会话，API Token 不可调用。
+- 新所有者须为账号正常、非系统账号的本空间成员，且在本空间没有同名 slug 的技能（否则 409）；空间须为正常状态。
+- 系统账号或 GitHub 同步维护的技能不能转移。已提升到全局的技能，其全局副本随来源技能一起转移；全局副本不能单独转移。
+- 只更新 `owner_id`：地址、版本、历史、下载统计和已有审核申请保持不变；`reason` 写入审计日志 `SKILL_OWNER_CHANGED`（每个转移的技能一条），搜索索引随后重建。
+
 ### 技能生命周期管理
 
 | 方法 | 路径 | 说明 |

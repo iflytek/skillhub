@@ -96,7 +96,9 @@ class AdminNamespaceControllerTest {
                         "alice@example.com",
                         NamespaceRole.MEMBER,
                         Instant.parse("2026-08-12T00:00:00Z"),
-                        Instant.parse("2026-08-12T00:00:00Z")));
+                        Instant.parse("2026-08-12T00:00:00Z"),
+                        true,
+                        false));
 
         mockMvc.perform(post("/api/v1/admin/namespaces/team-a/members")
                         .with(authentication(superAdminAuth()))

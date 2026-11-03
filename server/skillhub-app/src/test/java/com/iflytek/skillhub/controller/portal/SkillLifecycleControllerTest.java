@@ -30,6 +30,8 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
+import com.iflytek.skillhub.domain.skill.service.SkillOwnershipService;
+import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -79,6 +81,12 @@ class SkillLifecycleControllerTest {
     @MockBean
     private DeviceAuthService deviceAuthService;
 
+    @MockBean
+    private SkillOwnershipService skillOwnershipService;
+
+    @Autowired
+    private RouteSecurityPolicyRegistry routeSecurityPolicyRegistry;
+
     @Test
     void archiveSkill_returnsUnifiedEnvelope() throws Exception {
         Namespace namespace = new Namespace("global", "Global", "owner");
@@ -104,6 +112,46 @@ class SkillLifecycleControllerTest {
                 .andExpect(jsonPath("$.data.skillId").value(1))
                 .andExpect(jsonPath("$.data.action").value("ARCHIVE"))
                 .andExpect(jsonPath("$.data.status").value("ARCHIVED"));
+    }
+
+    @Test
+    void transferOwnership_auditsEveryMovedSkill() throws Exception {
+        Namespace namespace = new Namespace("team", "Team", "owner");
+        setNamespaceId(namespace, 1L);
+        Skill skill = new Skill(1L, "demo-skill", "successor", SkillVisibility.PUBLIC);
+        setSkillId(skill, 1L);
+        Skill globalCopy = new Skill(2L, "demo-skill", "successor", SkillVisibility.PUBLIC);
+        setSkillId(globalCopy, 5L);
+
+        given(namespaceRepository.findBySlug("team")).willReturn(java.util.Optional.of(namespace));
+        given(skillOwnershipService.transfer(eq(1L), eq("demo-skill"), eq("leaver"), eq("successor"), eq("usr_1"),
+                anyMap(), org.mockito.ArgumentMatchers.anySet()))
+                .willReturn(java.util.List.of(skill, globalCopy));
+
+        mockMvc.perform(post("/api/web/skills/team/demo-skill/owner")
+                        .requestAttr("userId", "usr_1")
+                        .requestAttr("userNsRoles", java.util.Map.of(1L, NamespaceRole.OWNER))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"currentOwnerId\":\"leaver\",\"newOwnerId\":\"successor\",\"reason\":\" Left the company \"}")
+                        .with(user("usr_1"))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.ownerId").value("successor"))
+                .andExpect(jsonPath("$.data.previousOwnerId").value("leaver"));
+        String detail = com.iflytek.skillhub.domain.audit.AuditDetail.builder().put("previousOwnerId", "leaver")
+                .put("ownerId", "successor").put("reason", "Left the company").build();
+        for (Long skillId : new Long[] {1L, 5L}) {
+            verify(auditLogService).record(eq("usr_1"), eq("SKILL_OWNER_CHANGED"), eq("SKILL"), eq(skillId),
+                    nullable(String.class), nullable(String.class), nullable(String.class), eq(detail));
+        }
+    }
+
+    @Test
+    void transferOwnership_rejectsApiTokens() {
+        for (String path : new String[] {"/api/v1/skills/team/demo-skill/owner", "/api/web/skills/team/demo-skill/owner"}) {
+            org.assertj.core.api.Assertions.assertThat(routeSecurityPolicyRegistry
+                    .authorizeApiToken("POST", path, java.util.Set.of("skill:publish", "skill:delete")).allowed()).isFalse();
+        }
     }
 
     @Test

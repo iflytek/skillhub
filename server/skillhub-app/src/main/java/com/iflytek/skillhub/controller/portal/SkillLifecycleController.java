@@ -11,7 +11,10 @@ import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
 import com.iflytek.skillhub.dto.SubmitReviewRequest;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
+import com.iflytek.skillhub.service.SkillLifecycleAppService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -24,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Endpoints that mutate skill lifecycle state, including archive, unarchive,
- * withdraw-review, delete-version, yank-version, and rerelease operations.
+ * withdraw-review, delete-version, yank-version, rerelease and owner transfer operations.
  */
 @RestController
 @RequestMapping({"/api/v1/skills", "/api/web/skills"})
@@ -50,6 +53,27 @@ public class SkillLifecycleController extends BaseApiController {
                         namespace,
                         slug,
                         request,
+                        userId,
+                        userNsRoles,
+                        AuditRequestContext.from(httpRequest)));
+    }
+
+    /** Browser-session only: API tokens are rejected because the route has no token policy. */
+    @io.swagger.v3.oas.annotations.Operation(operationId = "transferSkillOwnership")
+    @PostMapping("/{namespace}/{slug}/owner")
+    public ApiResponse<SkillLifecycleAppService.SkillOwnerTransferResult> transferOwnership(@PathVariable String namespace,
+                                                                                            @PathVariable String slug,
+                                                                                            @Valid @RequestBody SkillOwnerTransferRequest request,
+                                                                                            @RequestAttribute("userId") String userId,
+                                                                                            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                                            HttpServletRequest httpRequest) {
+        return ok("response.success.updated",
+                governanceWorkflowAppService.transferOwnership(
+                        namespace,
+                        slug,
+                        request.currentOwnerId(),
+                        request.newOwnerId(),
+                        request.reason().trim(),
                         userId,
                         userNsRoles,
                         AuditRequestContext.from(httpRequest)));
@@ -174,4 +198,6 @@ public class SkillLifecycleController extends BaseApiController {
                         userNsRoles,
                         AuditRequestContext.from(httpRequest)));
     }
+
+    public record SkillOwnerTransferRequest(@NotBlank String currentOwnerId, @NotBlank String newOwnerId, @NotBlank @Size(max = 500) String reason) {}
 }

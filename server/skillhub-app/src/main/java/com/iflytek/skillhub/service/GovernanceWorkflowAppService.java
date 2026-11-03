@@ -257,6 +257,17 @@ public class GovernanceWorkflowAppService {
         return skillLifecycleAppService.archiveSkill(namespace, slug, request, userId, userNsRoles, auditContext);
     }
 
+    public SkillLifecycleAppService.SkillOwnerTransferResult transferOwnership(String namespace,
+                                                                               String slug,
+                                                                               String currentOwnerId,
+                                                                               String newOwnerId,
+                                                                               String reason,
+                                                                               String userId,
+                                                                               Map<Long, NamespaceRole> userNsRoles,
+                                                                               AuditRequestContext auditContext) {
+        return skillLifecycleAppService.transferOwnership(namespace, slug, currentOwnerId, newOwnerId, reason, userId, userNsRoles, auditContext);
+    }
+
     public SkillLifecycleMutationResponse unarchiveSkill(String namespace,
                                                          String slug,
                                                          String userId,
