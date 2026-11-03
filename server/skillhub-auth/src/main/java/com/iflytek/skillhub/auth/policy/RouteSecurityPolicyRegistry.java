@@ -36,6 +36,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/swagger-ui/**"),
             RouteAuthorizationPolicy.permitAll(null, "/.well-known/**"),
             RouteAuthorizationPolicy.roles(null, "/actuator/prometheus", "SUPER_ADMIN", "AUDITOR"),
+            RouteAuthorizationPolicy.roles(null, "/actuator/metrics", "SUPER_ADMIN"),
+            RouteAuthorizationPolicy.roles(null, "/actuator/metrics/**", "SUPER_ADMIN"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/v1/skills/*/star"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/v1/skills/*/star"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/v1/skills/*/star"),

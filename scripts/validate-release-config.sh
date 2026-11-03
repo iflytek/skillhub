@@ -348,6 +348,10 @@ validate_boolean BOOTSTRAP_ADMIN_ENABLED
 validate_boolean SKILLHUB_TRUST_FORWARDED_PROTO
 validate_boolean SKILLHUB_BUILTIN_SKILLS_ENABLED
 validate_boolean SKILLHUB_BUSINESS_LOGS_ENABLED
+case "${SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE:-health,info}" in
+  health,info|health,info,metrics,prometheus) ;;
+  *) error "SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE must be health,info or health,info,metrics,prometheus" ;;
+esac
 # Do not echo the endpoint or authentication headers. Full URL/budget validation is at startup.
 if [ "${SKILLHUB_BUSINESS_LOGS_ENABLED:-false}" = "true" ]; then
   require_non_empty SKILLHUB_BUSINESS_LOGS_ENDPOINT

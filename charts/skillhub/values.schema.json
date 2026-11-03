@@ -452,6 +452,7 @@
             "enabled": { "type": "boolean" },
             "replicaCount": { "type": "integer", "minimum": 1 },
             "suiteReviewWritesEnabled": { "type": "boolean" },
+            "actuatorExposureInclude": { "enum": ["health,info", "health,info,metrics,prometheus"] },
             "businessLogs": {
               "type": "object",
               "additionalProperties": false,

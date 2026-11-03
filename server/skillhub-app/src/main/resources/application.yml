@@ -357,7 +357,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: ${SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE:health,info}
   endpoint:
     health:
       show-details: when-authorized
