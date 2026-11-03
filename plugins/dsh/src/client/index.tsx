@@ -31,6 +31,7 @@ import { CatalogPage, createCatalogNavigation } from './catalog-page.js';
 import { UpgradeRequests, RemovalRequests } from './upgrade-requests.js';
 import { InstallationRequests } from './installation-requests.js';
 import type { InstalledServices } from './installed-skills.js';
+import type { ChangeServices } from './change-preview.js';
 import type { UpgradeServices } from './upgrade-control.js';
 import type { InstallationServices } from './install-control.js';
 import { TYPERT_REMOTE } from '../../lib/typert.remote-client.js';
@@ -106,6 +107,21 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       props => <SkillUseBinding controller={useSkills} sessionId={props.sessionId} actions={props.inputActions}><SkillUseFocus controller={useSkills} sessionId={props.sessionId} /></SkillUseBinding>));
     ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({ name: 'conversation.input.dock', id: 'skillhub-case-choices' },
       props => <SkillUseBinding controller={useSkills} sessionId={props.sessionId} actions={props.inputActions}><SkillCaseChoices controller={useSkills} sessionId={props.sessionId} /></SkillUseBinding>));
+    function changesFor(sessionId: string): ChangeServices {
+      const call = async <T,>(action: (remote: AgentContext['remote']) => Promise<T>): Promise<T> => {
+        const scope = ctx.sessions.scope(SessionId(sessionId));
+        if (!scope) throw new Error('当前会话不可用。');
+        return withSessionRemote(scope, action);
+      };
+      return {
+        inspect: (...args) => call(remote => remote.skillhub.inspectLocalChanges(...args)),
+        diff: (...args) => call(remote => remote.skillhub.readFileChange(...args)),
+        preview: (...args) => call(remote => remote.skillhub.previewUpgradeChanges(...args)),
+        confirm: (...args) => call(remote => remote.skillhub.confirmUpgradeChanges(...args)),
+        prepareReset: (...args) => call(remote => remote.skillhub.prepareFileReset(...args)),
+        reset: (...args) => call(remote => remote.skillhub.executeFileReset(...args)),
+      };
+    }
     function installationFor(sessionId: string, catalog = false): InstallationServices {
       let management: ManagementViewServices | undefined;
       const call = async <T,>(action: (remote: AgentContext['remote']) => Promise<T>): Promise<T> => {
@@ -113,7 +129,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
         if (!scope) throw new Error('当前会话已关闭，请重新打开会话。');
         return withSessionRemote(scope, action);
       };
-      const upgrades: UpgradeServices = { sessionId, upgradeRequests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
+      const upgrades: UpgradeServices = { changes: changesFor(sessionId), sessionId, upgradeRequests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
         prepareUpgrade: (revision, itemKey, signal) => call(remote => remote.skillhub.prepareUpgrade(revision, itemKey, signal)),
         prepareVersionUpgrade: (revision, itemKey, version, signal) => call(remote => remote.skillhub.prepareVersionUpgrade(revision, itemKey, version, signal)),
         executePlan: (input, signal) => call(remote => remote.skillhub.executePlan(input, signal)),
@@ -160,7 +176,14 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
         if (!scope) throw new Error('当前会话已关闭。');
         return withSessionRemote(scope, action);
       };
-      const services: ManagementViewServices = { selectSkillUse: (revision, namespace, slug, signal) => call(remote => remote.skillhub.selectSkillUse(revision, namespace, slug, signal)), client, installation: installationFor(sessionId), assertCurrent: receipt.assertCurrent,
+      const services: ManagementViewServices = { openChanges: (item, upgrade, version, revision) => {
+        const layout = ctx.get('layout'); if (!layout) throw new Error('技能中心暂不可用。');
+        const sourceRevision = revision ?? navigation.sourceRevision;
+        if (!sourceRevision) throw new Error('请先打开技能中心。');
+        const installed = installedNavigationFor(navigation, sessionId, sourceRevision);
+        Object.assign(installed, { selected: item, intent: upgrade ? 'upgrade' : 'local-changes', changeVersion: version });
+        navigation.selected = null; navigation.tab = 'installed'; navigation.installedOrigin = { sessionId, sourceRevision }; layout.selectPanel(panelId);
+      }, selectSkillUse: (revision, namespace, slug, signal) => call(remote => remote.skillhub.selectSkillUse(revision, namespace, slug, signal)), client, installation: installationFor(sessionId), assertCurrent: receipt.assertCurrent,
         refreshInstalled: signal => call(async remote => {
           const source = await ctx.remote.skillhub.getContext();
           if (!source.ok) throw new Error('无法读取技能上下文。');
@@ -267,7 +290,7 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
       }, ({ renderSlot }) => renderSlot('skillhub.catalog', {})));
       ctx.slots.inject('skillhub.catalog', () => ctx.slots.register({ name: 'skillhub.catalog',
         inject: sessionId => ({ installation: sessionId ? installationFor(sessionId, true) : undefined,
-          installed: sessionId ? { sessionId, context: installedContext(() => ({ scope: ctx.sessions.scope(SessionId(sessionId)), cwd: ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.cwd, active: !!ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.retainedBy.mainView }), listener => ctx.sessions.list.subscribe(listener)), get management() { return managementFor(sessionId); }, skillUse: useSkills.catalogServices(sessionId), upgradeRequests, removalRequests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
+          installed: sessionId ? { changes: changesFor(sessionId), sessionId, context: installedContext(() => ({ scope: ctx.sessions.scope(SessionId(sessionId)), cwd: ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.cwd, active: !!ctx.sessions.list.getSnapshot().byId[SessionId(sessionId)]?.retainedBy.mainView }), listener => ctx.sessions.list.subscribe(listener)), get management() { return managementFor(sessionId); }, skillUse: useSkills.catalogServices(sessionId), upgradeRequests, removalRequests, compatibility: () => ctx.remote.skillhub.getCompatibility(),
             operation: installationFor(sessionId).operation,
             recoverOperation: async input => {
               const scope = ctx.sessions.scope(SessionId(sessionId));

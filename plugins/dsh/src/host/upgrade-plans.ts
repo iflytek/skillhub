@@ -7,6 +7,7 @@ import type { ResolvedSkill } from './registry-adapter.js';
 export interface UpgradePlanSnapshot {
   baseline: Extract<UpgradeBaseline, { status: 'ready' }>;
   candidate: ResolvedSkill;
+  localChangesAuthorization?: import('./generated/native-contract.js').NativeUpgradeExecution['localChangesAuthorization'];
 }
 interface PlanRecord<Snapshot> {
   context: SelectionScope;
@@ -16,7 +17,7 @@ interface PlanRecord<Snapshot> {
 }
 
 /** Pending confirmations only. Accepted requests must be replayed from the durable operation store first. */
-class ConfirmationPlans<Snapshot> {
+export class ConfirmationPlans<Snapshot> {
   private readonly records = new Map<string, PlanRecord<Snapshot>>();
   constructor(private readonly now: () => number = Date.now) {}
 

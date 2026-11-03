@@ -3,18 +3,19 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { parseManagementResult, type ManagementViewResult, type ManagementReceipt } from '../src/client/management-result.js';
 import { availabilityNotice, ManagementContent, InstallationManagement, ManagementLocations, ManagementConfirmation, refreshManagementLocation, groupManagementItems, managementTargetLabel, verifyManagementReference, verifiedManagementUse, type ManagementViewServices } from '../src/client/management-tool-view.js';
+import { UpgradeRequests } from '../src/client/upgrade-requests.js';
 import { InstallationRequests } from '../src/client/installation-requests.js';
 
 const base = { schemaVersion: 1 as const, toolCallId: 'call-1', sourceRevision: 'revision', sourceLabel: 'https://private-source.example' };
 const item = { itemKey: 'internal-key', namespace: 'global', slug: 'notes', version: '1.0.0', scope: 'user' as const, state: 'present' as const };
 const installed = { ...base, kind: 'skillhub-installed' as const, items: [item], complete: true, unavailable: [], issues: [] };
 const pending: ManagementReceipt = { ...base, kind: 'skillhub-management', action: 'upgrade', item, status: 'awaiting-confirmation', candidateVersion: '2.0.0', reason: '', confirmationRef: 'secret-confirmation-ref', operation: null };
-function render(result: ManagementViewResult, operation?: object, locations = false) {
+function render(result: ManagementViewResult, operation?: object, locations = false, changes = false) {
   const client = new QueryClient();
   if (operation && result.kind === 'skillhub-management' && result.operation) client.setQueryData(['skillhub-operation', 'session', result.operation.context.hostInstanceId, result.operation.operationId], operation);
   const requests = new InstallationRequests();
   const unexpected = async () => { throw new Error('Rendering cannot execute requests'); };
-  const services: ManagementViewServices = { selectSkillUse: unexpected, client, refreshInstalled: unexpected, check: unexpected, begin: unexpected, confirm: unexpected, assertCurrent() {},
+  const services: ManagementViewServices = { ...(changes ? { openChanges() {} } : {}), selectSkillUse: unexpected, client, refreshInstalled: unexpected, check: unexpected, begin: unexpected, confirm: unexpected, assertCurrent() {},
     installation: { manageInstalled() {}, skillUse: { useSkill: unexpected }, sessionId: 'session', requests, targets: unexpected, installed: unexpected, start: unexpected, operation: unexpected, compatibility: unexpected } };
   try { return renderToStaticMarkup(<QueryClientProvider client={client}>{locations && result.kind === 'skillhub-installed' ? <ManagementLocations items={result.items} revision={result.sourceRevision} services={services} /> : <ManagementContent result={result} services={services} />}</QueryClientProvider>); }
   finally { requests.dispose(); client.clear(); }
@@ -339,4 +340,33 @@ test('availability notices stay concise without converting discovery into invoca
   expect(availabilityNotice({ ...observed, association: 'not-associated', integrity: 'unknown', invocation: { userInvocable: false, modelInvocable: true } }).message).toContain('用户调用禁用');
   expect(availabilityNotice({ ...observed, association: 'not-associated', integrity: 'unknown', installationState: 'disabled' }).message).toContain('缓存');
   expect(availabilityNotice({ ...observed, association: 'not-associated', integrity: 'unknown', reason: 'same-name-winner' }).message).toBe('此安装暂不可用，当前会话使用了另一份同名技能。');
+});
+
+test('manual update confirmation links to change preview when the current client supports it', () => {
+ const html = render(pending, undefined, false, true);
+ expect(html).toContain('查看变化并更新');
+ expect(html).not.toContain('>确认更新<');
+ expect(html).toContain('取消');
+});
+
+test('local modification badges belong to their exact installation position', () => {
+  const client = new QueryClient();
+  const requests = new InstallationRequests();
+  const unexpected = async () => { throw new Error('SSR cannot execute a write'); };
+  const user = { ...item, itemKey: 'user-local', registry: 'https://registry.example', installationState: 'enabled' as const };
+  const project = { ...user, itemKey: 'project-clean', scope: 'project' as const };
+  for (const [position, changes] of [[user, [{ path: 'SKILL.md', kind: 'modified' }]], [project, []]] as const) {
+    client.setQueryData(['skillhub-local-summary', 'session', 'revision', position.itemKey], { status: 'ready', changes });
+  }
+  const services: ManagementViewServices = { openChanges() {}, client, refreshInstalled: unexpected, check: unexpected, begin: unexpected, confirm: unexpected, assertCurrent() {},
+    installation: { manageInstalled() {}, sessionId: 'session', requests, targets: unexpected, installed: unexpected, start: unexpected, operation: unexpected, compatibility: unexpected,
+      upgrades: { sessionId: 'session', upgradeRequests: new UpgradeRequests(() => { throw new Error('SSR storage'); }), compatibility: unexpected, prepareUpgrade: unexpected, executePlan: unexpected, operation: unexpected, recoverOperation: unexpected,
+        changes: { inspect: unexpected, diff: unexpected, preview: unexpected, confirm: unexpected, prepareReset: unexpected, reset: unexpected } } } };
+  try {
+    const html = renderToStaticMarkup(<QueryClientProvider client={client}><ManagementLocations items={[user, project]} revision="revision" services={services} /></QueryClientProvider>);
+    const split = html.indexOf('aria-label="仅此项目');
+    expect(html.slice(0, split)).toContain('本地修改 · 1');
+    expect(html.slice(split)).not.toContain('本地修改 ·');
+    expect(html).toContain('astron-sh-badge-warning');
+  } finally { services.installation.upgrades!.upgradeRequests.dispose(); requests.dispose(); client.clear(); }
 });

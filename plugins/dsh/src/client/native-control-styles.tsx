@@ -224,6 +224,14 @@ export function NativeControlStyles() {
 .skillhub-controls .astron-sh-primary-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
 .skillhub-controls .astron-sh-use-reason{font-size:12px;color:var(--astron-sh-muted)}
 .skillhub-controls .astron-sh-install-management{width:100%;min-width:0;max-height:calc(100dvh - 160px);overflow:auto;overscroll-behavior:contain;border:1px solid var(--astron-sh-border);border-radius:10px;padding:16px;background:var(--astron-sh-soft)}
+.skillhub-controls .astron-sh-management-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.skillhub-controls .astron-sh-management-heading h3{font-size:15px;margin:0}
+.skillhub-controls .astron-sh-management-heading .astron-sh-primary-actions{margin:0}
+.skillhub-controls .astron-sh-management-heading .astron-sh-button{height:30px;min-height:30px;font-size:12px;padding:4px 10px}
+.skillhub-controls .astron-sh-local-state:empty{display:none}
+.skillhub-controls .astron-sh-local-state-trigger.astron-sh-button{padding:0;height:auto;min-height:0;border:0;margin-top:8px}
+.skillhub-controls .astron-sh-local-state-trigger .astron-sh-badge{cursor:pointer}
+.skillhub-controls .astron-sh-local-state-unknown{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--astron-sh-muted);margin-top:6px}
 .skillhub-controls .astron-sh-install-management>h3{font-size:15px;margin:0 0 12px}
 .skillhub-controls .astron-sh-confirm-close{position:absolute;right:14px;top:14px}
 .skillhub-controls .astron-sh-detail-aside{align-self:start;position:sticky;top:16px}

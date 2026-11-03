@@ -356,7 +356,7 @@ accepted 不表示安装完成。工具立即返回 accepted 及 operationId，�
 
 ### 选定版本升级
 
-保留 `checkUpdate` 与 `prepareUpgrade` 的原签名及“检查最新版”行为，新增 Agent-scoped `checkVersionUpdate(sourceRevision,itemKey,version,signal)` 和 `prepareVersionUpgrade(sourceRevision,itemKey,version,signal)`。两组接口共享当前库存重读、所选目标基线、版本比较、文件修改保护与确认计划；定向接口必须按指定 version 解析，响应版本不一致即拒绝，不使用 latest 替换不可用版本。执行仍只提交原 executePlan，无新文件写入接口或 SaaS 安装接口。
+保留 `checkUpdate` 与 `prepareUpgrade` 的原签名及“检查最新版”行为，新增 Agent-scoped `checkVersionUpdate(sourceRevision,itemKey,version,signal)` 和 `prepareVersionUpgrade(sourceRevision,itemKey,version,signal)`。两组接口共享当前库存重读、所选目标基线、版本比较、文件修改保护与确认计划；定向接口必须按指定 version 解析，响应版本不一致即拒绝，不使用 latest 替换不可用版本。原有无修改升级仍只提交原 executePlan，不增加 SaaS 安装接口。后续本地变化查看、文件撤销与备份授权覆盖的增量 Host 私有契约以 [change-preview-design.md](./change-preview-design.md) 为准；旧调用路径继续拒绝未确认的本地漂移。
 
 详情按 source/session/itemKey/所选 version 隔离只读检查缓存，切换仅触发读取。较新且可核验的版本显示升级到该版本，相同版本不重复显示升级，旧版本或不可排序版本明确阻断。确认使用捕获的库存项与精确目标，不因后台库存刷新重建另一升级意图；升级完成使库存失效，旧 itemKey 的检查结果不会绑定到新记录。
 

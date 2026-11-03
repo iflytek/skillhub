@@ -134,7 +134,7 @@ The plugin SHALL prepare upgrade and uninstall plans on the Host with exact sour
 - **THEN** the Host rejects it rather than extending or reusing its authority
 
 ### Requirement: Protected explicit upgrade
-The plugin SHALL check for updates only on user request and SHALL upgrade only to a resolved newer exact version with a matching fingerprint. It SHALL preserve invocation restrictions and resources, refuse local drift and shared Suite ownership, and SHALL NOT silently downgrade or replace changed content under the same version.
+The plugin SHALL check for updates only on user request and SHALL upgrade only to a resolved newer exact version with a matching fingerprint. It SHALL preserve invocation restrictions and resources, refuse unconfirmed local drift and shared Suite ownership, and SHALL NOT downgrade or replace changed content under the same version. Explicit handling of local modifications SHALL follow the snapshot-bound backup and final-confirmation requirements in dsh-change-preview; this SHALL NOT introduce a general force option.
 
 #### Scenario: No valid newer release
 - **WHEN** the candidate is older, incomparable, or the same version with different content
@@ -148,9 +148,9 @@ The plugin SHALL check for updates only on user request and SHALL upgrade only t
 - **WHEN** the same source coordinate also has another project, Agent or Suite-owned installation
 - **THEN** that sibling is not included in the upgrade and is preserved; shared ownership or an alias of the selected physical target still blocks the operation
 
-#### Scenario: Local content modified or baseline missing
-- **WHEN** existing content differs from its recorded baseline or has no usable baseline
-- **THEN** upgrade is blocked with a reason and no force option
+#### Scenario: Unconfirmed local content modified or baseline missing
+- **WHEN** existing content differs from its recorded baseline without a verified backup and explicit snapshot-bound authorization, or has no usable original release baseline
+- **THEN** upgrade is blocked with a reason and no general force option; eligible local changes may enter the separate protected handling flow before a new final confirmation
 
 ### Requirement: Exact local uninstall
 The plugin SHALL uninstall only one confirmed trusted target, without remote deletion or changing other targets. It SHALL verify identity, path, baseline and ownership and SHALL isolate files before inventory commit so failure can be reconciled. It SHALL NOT treat arbitrary filesystem errors as absence.

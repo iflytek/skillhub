@@ -137,7 +137,9 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
     if (previous?.target.installationState !== 'disabled') continue
     if (!options.transactionObserver?.beforePreparation) throw new CliError('disabled installations require the native transactional upgrade manager', EXIT.validation)
     const snapshot = await snapshotInstalledSkillDirectory(previous.item, previous.target)
-    if (snapshot.fingerprint !== previous.target.fingerprint) throw new CliError('disabled installation has local changes', EXIT.validation)
+    if (snapshot.fingerprint !== previous.target.fingerprint
+      && (!options.expectedTargetFiles?.[prepared.skillDir] || options.allowTargetDrift !== false
+        || diffSkillFiles(options.expectedTargetFiles[prepared.skillDir], snapshot.files).length)) throw new CliError('disabled installation has local changes', EXIT.validation)
   }
   const canonicalDirs = new Set(preparedTargets.map(target => target.canonicalSkillDir))
   if (expectedItem !== undefined) {

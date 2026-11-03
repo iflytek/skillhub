@@ -9,12 +9,13 @@ import type { InstallationServices } from './install-control.js';
 import { parseManagementResult, managementReason, type ManagementViewResult, type ManagementReceipt } from './management-result.js';
 import { NativeControlStyles } from './native-control-styles.js';
 import { ConversationStyles } from './conversation-styles.js';
-import { Button, Dialog, DialogContent, DialogTitle, DialogDescription } from './ui.js';
+import { Badge, Button, Dialog, DialogContent, DialogTitle, DialogDescription } from './ui.js';
 import { SkillPrimaryActions, type SelectSkillUse, skillInstallationSummary } from './skill-primary-actions.js';
 import { UseSkillButton } from './use-skill.js';
 import { useInstallationOperation } from './use-installation-operation.js';
 
 export interface ManagementViewServices {
+  openChanges?(item: InstalledSkillList['items'][number], upgrade: boolean, version?: string, revision?: string): void;
   selectSkillUse?: SelectSkillUse;
   client: QueryClient;
   installation: InstallationServices;
@@ -201,8 +202,8 @@ function ManagementGroup({ items, revision, services, verified }: { items: Item[
 }
 
 /** Read-only position inventory rendered directly in a skill detail, never a management modal. */
-export function InstallationManagement({ identity, revision, services, useSkill, onInstall, onUsed, updateChecks }: {
-  updateChecks?: Record<string, InstalledUpdateCheck>; identity: Pick<Item, 'registry' | 'namespace' | 'slug'>; revision: string; services: ManagementViewServices; onInstall?(): void; onUsed?(): void; useSkill?: import('./use-skill.js').SkillUseServices;
+export function InstallationManagement({ identity, revision, services, useSkill, onInstall, onUsed, updateChecks, primaryAction }: {
+  primaryAction?: ReactNode; updateChecks?: Record<string, InstalledUpdateCheck>; identity: Pick<Item, 'registry' | 'namespace' | 'slug'>; revision: string; services: ManagementViewServices; onInstall?(): void; onUsed?(): void; useSkill?: import('./use-skill.js').SkillUseServices;
 }) {
   const [receipt, setReceipt] = useState<ConversationManagementResult>();
   const [container, setContainer] = useState<HTMLElement | null>(null);
@@ -214,7 +215,7 @@ export function InstallationManagement({ identity, revision, services, useSkill,
       services.assertCurrent(); signal.throwIfAborted(); return list;
     } });
   return <section ref={setContainer} className="skillhub-controls astron-sh-install-management" aria-label="安装管理"><NativeControlStyles /><ConversationStyles />
-    <ManagementNoticeBoundary container={container} key={`${revision}:${identity.namespace}/${identity.slug}:${services.installation.sessionId}`}><h3>安装管理</h3>
+    <ManagementNoticeBoundary container={container} key={`${revision}:${identity.namespace}/${identity.slug}:${services.installation.sessionId}`}><header className="astron-sh-management-heading"><h3>安装管理</h3>{primaryAction}</header>
     {query.isPending ? <p role="status">正在读取安装位置…</p> : query.isError ? <p role="alert">安装记录暂不可用。<Button size="sm" variant="ghost" onClick={() => void query.refetch()}>重新读取</Button></p> : <>
       {(!query.data.complete || query.data.unavailable.length > 0) && <p role="alert">部分位置无法读取，以下记录可能不完整。</p>}
       <ManagementLocations items={query.data.items.filter(item => (identity.registry ? item.registry === identity.registry : item.currentSource !== false) && item.namespace === identity.namespace && item.slug === identity.slug)} revision={revision} services={scoped} updateChecks={updateChecks} onUsed={onUsed} onManagement={setReceipt} />
@@ -285,6 +286,10 @@ function ManagementRow({ item, revision, services, initialCheck, checkOnly = fal
     if (availability.isError) notify({ title: noticeTitle, content: <p>{stale(availability.error) ? '安装记录已变化，请重新查询。' : '可用性暂时无法核验，请重试。'}</p> });
     else if (availability.data) { const summary = availabilityNotice(availability.data); notify({ title: noticeTitle, success: summary.success, content: <p>{summary.message}</p> }); }
   }, [expanded, notify, noticeTitle, availability.dataUpdatedAt, availability.errorUpdatedAt, availability.isFetching, availability.isError, availability.error, availability.data]);
+  const changes = services.installation.upgrades?.changes;
+  const localChanges = useQuery({ queryKey: ['skillhub-local-summary', services.installation.sessionId, revision, item.itemKey],
+    enabled: expanded && item.state === 'present' && !!changes && !!services.openChanges, retry: false, gcTime: 0,
+    queryFn: async ({ signal }) => { services.assertCurrent(); const result = read(await changes!.inspect(revision, item.itemKey, signal)); services.assertCurrent(); signal.throwIfAborted(); return result; } });
   const [moreOpen, setMoreOpen] = useState(false);
   const [useError, setUseError] = useState('');
   const moreTrigger = useRef<HTMLButtonElement>(null);
@@ -306,6 +311,7 @@ function ManagementRow({ item, revision, services, initialCheck, checkOnly = fal
         if (expanded && notify && ['current', 'unavailable'].includes(result.state)) notify({ title: noticeTitle, success: result.state === 'current', content: <p>{result.state === 'current' ? '已是最新版本' : '更新检查未完成，请重试。'}</p> });
       }
       else {
+        if (action === 'upgrade' && services.openChanges) { services.openChanges(item, true, check?.candidateVersion ?? undefined, revision); return; }
         const version = action === 'upgrade' ? check?.candidateVersion ?? null : null;
         if (!request.current || request.current.action !== action || request.current.version !== version) request.current = { action, version, key: crypto.randomUUID() };
         const result = read(await services.begin(revision, item.itemKey, action, version, request.current.key, signal));
@@ -319,6 +325,10 @@ function ManagementRow({ item, revision, services, initialCheck, checkOnly = fal
   return <article className={checkOnly ? 'astron-sh-management-check' : 'astron-sh-management-row'} aria-label={checkOnly ? '更新检查' : undefined}
     onBlur={event => { if (!expanded && !event.currentTarget.contains(event.relatedTarget as Node | null)) setMoreOpen(false); }}
     onKeyDown={event => { if (!expanded && event.key === 'Escape' && moreOpen) { event.preventDefault(); setMoreOpen(false); moreTrigger.current?.focus(); } }}>
+    {expanded && changes && services.openChanges && item.state === 'present' && <div className="astron-sh-local-state">
+      {localChanges.data?.status === 'ready' && localChanges.data.changes.length > 0 && <Button size="sm" variant="ghost" className="astron-sh-local-state-trigger" onClick={() => services.openChanges!(item, false, undefined, revision)}><Badge variant="warning">本地修改 · {localChanges.data.changes.length}</Badge></Button>}
+      {(localChanges.isError || localChanges.data?.status === 'blocked') && <span className="astron-sh-local-state-unknown">本地状态未确认 <Button size="sm" variant="ghost" aria-label={`重新检查${targetLabel ?? scopeLabel(item.scope)}的本地修改`} disabled={localChanges.isFetching} onClick={() => void localChanges.refetch()}>重试</Button></span>}
+    </div>}
     {!expanded && (grouped ? <span className="astron-sh-management-version">{targetLabel && `${targetLabel} · `}{check?.state !== 'upgradable' && `v${item.version}`}</span> : <Identity item={item} compact={checkOnly && check?.state === 'upgradable'} />)}
     {error ? <><p role="alert">{error}</p><RefreshInstalled /></> : <>
       {!expanded && item.installationState === 'disabled' && <span role="status">已停用</span>}
@@ -327,7 +337,7 @@ function ManagementRow({ item, revision, services, initialCheck, checkOnly = fal
       {checkOnly && check?.state === 'blocked' && ['local-record-unverified', 'record-changed', 'metadata-invalid'].includes(check.reason) && <RefreshInstalled />}
       {!checkOnly && item.state !== 'present' && item.state !== 'missing' && <RefreshInstalled />}
       <div className="astron-sh-management-actions">
-        {check?.state === 'upgradable' && <Button size="sm" variant="default" disabled={pending} onClick={() => void run('upgrade')}>更新</Button>}
+        {check?.state === 'upgradable' && <Button size="sm" variant={expanded ? 'outline' : 'default'} disabled={pending} onClick={() => void run('upgrade')}>更新</Button>}
         {!expanded && check?.state === 'unavailable' && <Button size="sm" variant="ghost" disabled={pending} onClick={() => void run('check')}>{pending ? '检查中…' : '重试检查'}</Button>}
         {!checkOnly && item.state === 'present' && item.installationState === 'disabled' && <Button size="sm" disabled={pending} onClick={() => void run('enable')}>启用</Button>}
         {!expanded && !checkOnly && !check && item.state === 'present' && item.installationState !== 'disabled' && <UseSkillButton services={skillUse} revision={revision} itemKey={item.itemKey} onUsed={onUsed} onHandoff={onUsed} label={expanded ? '使用此位置' : '使用此技能'} onError={setUseError} />}
@@ -337,6 +347,7 @@ function ManagementRow({ item, revision, services, initialCheck, checkOnly = fal
             <DropdownMenu.Portal container={moreTrigger.current?.closest('dialog') ?? undefined}>
               <DropdownMenu.Content className="skillhub-controls astron-sh-position-menu" align="end" sideOffset={4} collisionPadding={8}>
                 {item.state === 'present' && item.installationState !== 'disabled' && <DropdownMenu.Item disabled={useAction.disabled} onSelect={useAction.run}>使用此位置</DropdownMenu.Item>}
+                {services.openChanges && item.state === 'present' && <DropdownMenu.Item onSelect={() => services.openChanges!(item, false, undefined, revision)}>查看本地修改</DropdownMenu.Item>}
                 {services.availability && <DropdownMenu.Item disabled={availability.isFetching} onSelect={() => { void availability.refetch(); }}>检查可用性</DropdownMenu.Item>}
                 {item.currentSource !== false && item.state === 'present' && <DropdownMenu.Item onSelect={() => { void run('check'); }}>检查更新</DropdownMenu.Item>}
                 {item.state === 'present' && item.installationState !== 'disabled' && <DropdownMenu.Item onSelect={() => { void run('disable'); }}>停用</DropdownMenu.Item>}
@@ -369,6 +380,7 @@ export function ManagementConfirmation({ initial, services, onCancelled, onCompl
   const operation = useInstallationOperation(services.installation, result.operation?.context.hostInstanceId ?? '', result.status === 'accepted' ? result.operation?.operationId : undefined);
   async function confirm(confirmed: boolean) {
     if (!result.confirmationRef || lock.current || expired) return;
+    if (confirmed && result.action === 'upgrade' && services.openChanges) { services.openChanges(result.item, true, result.candidateVersion ?? undefined, result.sourceRevision); return; }
     lock.current = true; decision.current = confirmed; setPending(true); setError('');
     try { services.assertCurrent(); const next = read(await services.confirm(result.confirmationRef, confirmed, new AbortController().signal)); setResult(next); if (next.status === 'cancelled') onCancelled?.(); }
     catch (failure) { setExpired(stale(failure)); setError(stale(failure) ? failureMessage(failure) : '确认结果暂时无法读取，请查询原请求。'); }
@@ -385,7 +397,7 @@ export function ManagementConfirmation({ initial, services, onCancelled, onCompl
     {expired ? <><p role="alert">{error}</p><RefreshInstalled /></> : <>
       {toggle && result.status === 'awaiting-confirmation' && <p>{result.action === 'disable' ? '仅停用此位置，不撤回已加载内容；其他同名安装可能仍可用。' : '仅恢复此位置，保留原有调用权限。'}</p>}
       {result.status === 'awaiting-confirmation' && (error ? <><p role="alert">{error}</p><Button size="sm" disabled={pending} onClick={() => void confirm(decision.current)}>重试原请求</Button></> : <>{!(presentation === 'dialog' && toggle) && <p>确认{verb}这份安装？{result.item.scope === 'user' ? '影响当前用户的多个项目。' : '仅影响当前项目。'}</p>}
-        <div className={presentation === 'dialog' ? 'astron-sh-dialog-actions' : 'astron-sh-management-actions'}><Button size="sm" disabled={pending} onClick={() => void confirm(false)}>取消</Button><Button size="sm" variant={result.action === 'uninstall' ? 'destructive' : 'default'} disabled={pending || !result.confirmationRef} onClick={() => void confirm(true)}>{pending ? '处理中…' : `确认${verb}`}</Button></div></>)}
+        <div className={presentation === 'dialog' ? 'astron-sh-dialog-actions' : 'astron-sh-management-actions'}><Button size="sm" disabled={pending} onClick={() => void confirm(false)}>取消</Button><Button size="sm" variant={result.action === 'uninstall' ? 'destructive' : 'default'} disabled={pending || !result.confirmationRef} onClick={() => void confirm(true)}>{pending ? '处理中…' : result.action === 'upgrade' && services.openChanges ? '查看变化并更新' : `确认${verb}`}</Button></div></>)}
       {result.status === 'cancelled' && <><p role="status">已取消，未执行{verb}。</p></>}
       {result.status === 'blocked' && <><p role="alert">{managementReason(result.reason)}</p>{['record-changed', 'local-record-unverified', 'metadata-invalid'].includes(result.reason) && <RefreshInstalled />}</>}
       {result.status === 'accepted' && <div aria-live="polite">
