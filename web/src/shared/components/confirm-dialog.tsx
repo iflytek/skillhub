@@ -24,6 +24,7 @@ interface ConfirmDialogProps {
   contentTestId?: string
   confirmButtonTestId?: string
   closeOnConfirm?: boolean
+  onCloseAutoFocus?: (event: Event) => void
 }
 
 export function ConfirmDialog({
@@ -40,6 +41,7 @@ export function ConfirmDialog({
   confirmAnalyticsId,
   cancelAnalyticsId,
   closeOnConfirm = true,
+  onCloseAutoFocus,
 }: ConfirmDialogProps) {
   const { t } = useTranslation()
   const openRef = useRef(open)
@@ -65,7 +67,7 @@ export function ConfirmDialog({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!pendingRef.current) onOpenChange(next) }}>
-      <DialogContent closeAnalyticsId={cancelAnalyticsId} data-testid={contentTestId} aria-label={title} hideClose={pending}>
+      <DialogContent onCloseAutoFocus={onCloseAutoFocus} closeAnalyticsId={cancelAnalyticsId} data-testid={contentTestId} aria-label={title} hideClose={pending}>
         <DialogHeader className="min-w-0 text-center sm:text-center">
           <DialogTitle className="text-center">{title}</DialogTitle>
           {description && <DialogDescription className="text-center break-all">{description}</DialogDescription>}

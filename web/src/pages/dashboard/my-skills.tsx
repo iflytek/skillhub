@@ -23,6 +23,7 @@ import { useRestoreHiddenSkill } from '@/features/admin/use-admin-skills'
 import { getHeadlineVersion, getPublishedVersion, getOwnerPreviewVersion, hasPendingOwnerPreview } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { toast } from '@/shared/lib/toast'
+import { withBasePath } from '@/shared/lib/base-path'
 import { buildReturnTo } from '@/shared/lib/auth-route'
 import { SkillVisibilityDialog } from '@/features/skill/skill-visibility-dialog'
 import { SkillAvatar } from '@/features/skill/skill-avatar'
@@ -123,17 +124,17 @@ export function MySkillsPage() {
     return () => cancelAnimationFrame(frame)
   }, [isLoading, scrollKey])
 
+  const restoreMoreFocus = (event: Event) => {
+    event.preventDefault()
+    compareTrigger.current?.focus()
+  }
+
   const handleSkillClick = (namespace: string, slug: string, version?: string) => {
     rememberMySkillsScroll(scrollKey, window.scrollY)
     navigate({
       to: `/space/${namespace}/${encodeURIComponent(slug)}`,
       search: { returnTo: buildReturnTo(location), version },
     })
-  }
-
-  const handleClearSearch = () => {
-    setKeywordInput('')
-    updateSearch({ q: undefined, namespace: undefined, page: 0 })
   }
 
   const handleClearFilters = () => {
@@ -435,7 +436,7 @@ export function MySkillsPage() {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
                           <h3 className="min-w-0 break-words text-lg font-semibold [overflow-wrap:anywhere]">
-                            {hidden ? displayName : <a href={`/space/${skill.namespace}/${encodeURIComponent(skill.slug)}?${detailSearch}`}
+                            {hidden ? displayName : <a href={withBasePath(`/space/${skill.namespace}/${encodeURIComponent(skill.slug)}?${detailSearch}`)}
                               className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                               onClick={event => {
                                 event.stopPropagation()
@@ -466,7 +467,7 @@ export function MySkillsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56 p-1.5" onClick={event => event.stopPropagation()}
-                              onCloseAutoFocus={event => { if (compareTarget || visibilityTarget) event.preventDefault() }}>
+                              onCloseAutoFocus={event => { if (compareTarget || visibilityTarget || archiveTarget || unarchiveTarget || withdrawTarget || promotionTarget || restoreHiddenTarget) event.preventDefault() }}>
                               {!hidden && <DropdownMenuItem onSelect={openDetail}><Eye aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.viewDetail')}</DropdownMenuItem>}
                               <DropdownMenuItem onSelect={async () => {
                                 try { await copyToClipboard(coordinate); toast.success(t('mySkills.coordinateCopied')) }
@@ -531,7 +532,7 @@ export function MySkillsPage() {
           description={hasActiveSearch ? t('mySkills.emptySearchDescription') : t(emptyStateKey.description)}
           action={
             hasActiveSearch ? (
-              <Button data-analytics-id="skill.owned.clear" size="lg" variant="outline" onClick={handleClearSearch}>
+              <Button data-analytics-id="skill.owned.clear" size="lg" variant="outline" onClick={handleClearFilters}>
                 {t('mySkills.clearSearch')}
               </Button>
             ) : undefined
@@ -540,10 +541,10 @@ export function MySkillsPage() {
       )}
 
       {visibilityTarget && <SkillVisibilityDialog {...visibilityTarget} open hideTrigger onOpenChange={open => { if (!open) setVisibilityTarget(null) }}
-        onCloseAutoFocus={event => { event.preventDefault(); compareTrigger.current?.focus() }} />}
+        onCloseAutoFocus={restoreMoreFocus} />}
       <Dialog open={!!compareTarget} onOpenChange={open => { if (!open) setCompareTarget(null) }}>
         <DialogContent className="w-[calc(100vw-2rem)] max-w-6xl max-h-[85vh] gap-3 p-4 sm:p-6"
-          onCloseAutoFocus={event => { event.preventDefault(); compareTrigger.current?.focus() }}>
+          onCloseAutoFocus={restoreMoreFocus}>
           <DialogHeader className="pr-8">
             <DialogTitle>{t('mySkills.compareVersions')}</DialogTitle>
             <DialogDescription className="break-all">{compareTarget?.name}</DialogDescription>
@@ -553,7 +554,7 @@ export function MySkillsPage() {
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog confirmAnalyticsId="skill.restore.confirm" cancelAnalyticsId="skill.restore.cancel"
+      <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.restore.confirm" cancelAnalyticsId="skill.restore.cancel"
         open={!!restoreHiddenTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -567,6 +568,7 @@ export function MySkillsPage() {
       />
 
       <ConfirmDialog
+        onCloseAutoFocus={restoreMoreFocus}
         confirmAnalyticsId={skillPage?.items.find((skill) => skill.id === promotionTarget?.skillId)?.managementState?.promotionRole === 'TEAM_SOURCE' ? 'skill.promotion.update.confirm' : 'skill.promotion.create.confirm'}
         cancelAnalyticsId={skillPage?.items.find((skill) => skill.id === promotionTarget?.skillId)?.managementState?.promotionRole === 'TEAM_SOURCE' ? 'skill.promotion.update.cancel' : 'skill.promotion.create.cancel'}
         open={!!promotionTarget}
@@ -581,7 +583,7 @@ export function MySkillsPage() {
         onConfirm={handleSubmitPromotion}
       />
 
-      <ConfirmDialog confirmAnalyticsId="skill.archive.confirm" cancelAnalyticsId="skill.archive.cancel"
+      <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.archive.confirm" cancelAnalyticsId="skill.archive.cancel"
         open={!!archiveTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -594,7 +596,7 @@ export function MySkillsPage() {
         onConfirm={handleArchiveSkill}
       />
 
-      <ConfirmDialog confirmAnalyticsId="skill.unarchive.confirm" cancelAnalyticsId="skill.unarchive.cancel"
+      <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.unarchive.confirm" cancelAnalyticsId="skill.unarchive.cancel"
         open={!!unarchiveTarget}
         onOpenChange={(open) => {
           if (!open) {
@@ -607,7 +609,7 @@ export function MySkillsPage() {
         onConfirm={handleUnarchiveSkill}
       />
 
-      <ConfirmDialog confirmAnalyticsId="skill.review.withdraw.confirm" cancelAnalyticsId="skill.review.withdraw.cancel"
+      <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.review.withdraw.confirm" cancelAnalyticsId="skill.review.withdraw.cancel"
         open={!!withdrawTarget}
         onOpenChange={(open) => {
           if (!open) {

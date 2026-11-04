@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { StrictMode } from 'react'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigate = vi.fn()
 const copy = vi.fn()
@@ -9,7 +9,9 @@ const retryVersions = vi.fn()
 const retryCompare = vi.fn()
 const useVersions = vi.fn()
 const useCompare = vi.fn()
-let skill = makeSkill()
+vi.hoisted(() => { vi.stubEnv('BASE_URL', '/skillhub/') })
+let skill: ReturnType<typeof makeSkill> & { ownerPreviewVersion?: { id: number; version: string; status: string } } = makeSkill()
+let showEmpty = false
 let superAdmin = false
 let search: { filter?: string; q?: string; namespace?: string; page?: number } = {}
 
@@ -24,7 +26,7 @@ function makeSkill() {
 
 vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => navigate,
-  useLocation: () => ({ pathname: '/dashboard/skills', searchStr: '?page=2' }),
+  useLocation: () => ({ pathname: '/dashboard/skills', searchStr: `?${new URLSearchParams(Object.entries(search).map(([key, value]) => [key, String(value)]))}` }),
   useSearch: () => search,
 }))
 vi.mock('react-i18next', async () => ({
@@ -33,7 +35,7 @@ vi.mock('react-i18next', async () => ({
 }))
 vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ user: { userId: 'reader' }, hasRole: () => superAdmin }) }))
 vi.mock('@/shared/hooks/use-user-queries', () => ({
-  useMySkills: () => ({ data: { items: [skill], total: 1, size: 10 }, isLoading: false }),
+  useMySkills: () => ({ data: { items: showEmpty ? [] : [skill], total: showEmpty ? 0 : 1, size: 10 }, isLoading: false }),
   useSubmitPromotion: () => ({ mutateAsync: vi.fn() }),
 }))
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({ useMyNamespaces: () => ({ data: [] }) }))
@@ -62,6 +64,7 @@ async function openMenu() {
 
 beforeEach(() => {
   skill = makeSkill()
+  showEmpty = false
   search = {}
   superAdmin = false
   navigate.mockReset()
@@ -80,6 +83,7 @@ beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
 })
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
+afterAll(() => vi.unstubAllEnvs())
 
 describe('My Skills interactions with real menu and dialog', () => {
   it('loads comparison on demand and returns focus after Escape without navigating', async () => {
@@ -140,7 +144,7 @@ describe('My Skills interactions with real menu and dialog', () => {
     search = { filter: 'PUBLISHED', page: 2 }
     const first = render(<MySkillsPage />)
     fireEvent.click(screen.getByRole('link', { name: 'Demo' }))
-    expect(navigate.mock.calls[0][0].search.returnTo).toBe('/dashboard/skills?page=2')
+    expect(navigate.mock.calls[0][0].search.returnTo).toBe('/dashboard/skills?filter=PUBLISHED&page=2')
     first.unmount()
     render(<StrictMode><MySkillsPage /></StrictMode>)
     await waitFor(() => expect(window.scrollTo).toHaveBeenCalledWith({ top: 450, behavior: 'instant' }))
@@ -187,6 +191,62 @@ describe('My Skills interactions with real menu and dialog', () => {
     await openMenu()
     fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.compareVersions' }))
     await screen.findByText('skillCompare.loading')
+  })
+
+
+  it.each(['ordinary', 'ctrlKey', 'metaKey'] as const)('retains deployment prefix and return context when opening with %s', (modifier) => {
+    search = { filter: 'PUBLISHED', q: 'a skill', namespace: 'team', page: 2 }
+    skill.ownerPreviewVersion = { id: 12, version: '1.2.0', status: 'PENDING_REVIEW' }
+    render(<MySkillsPage />)
+    const link = screen.getByRole('link', { name: 'Demo' })
+    const href = new URL(link.getAttribute('href') ?? '', 'https://example.test')
+    expect(href.pathname).toBe('/skillhub/space/team/demo')
+    expect(href.searchParams.get('returnTo')).toBe('/dashboard/skills?filter=PUBLISHED&q=a+skill&namespace=team&page=2')
+    expect(href.searchParams.get('version')).toBe('1.2.0')
+    // Prevent jsdom's unsupported browser navigation after checking the native href.
+    link.addEventListener('click', event => event.preventDefault(), { once: true })
+    fireEvent.click(link, modifier === 'ordinary' ? {} : { [modifier]: true })
+    if (modifier === 'ordinary') {
+      expect(navigate).toHaveBeenCalledWith({
+        to: '/space/team/demo',
+        search: { returnTo: href.searchParams.get('returnTo'), version: '1.2.0' },
+      })
+    } else expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('clears all four URL conditions from the empty-state action', () => {
+    search = { filter: 'PUBLISHED', q: 'missing', namespace: 'team', page: 2 }
+    showEmpty = true
+    render(<MySkillsPage />)
+    const emptyStateClear = screen.getAllByRole('button', { name: 'mySkills.clearSearch' }).at(-1)
+    if (!emptyStateClear) throw new Error('Missing empty-state clear action')
+    fireEvent.click(emptyStateClear)
+    expect(navigate).toHaveBeenCalledOnce()
+    expect(navigate.mock.calls[0][0].search(search)).toEqual({ filter: undefined, q: undefined, namespace: undefined, page: 0 })
+  })
+
+  it.each([
+    ['archive', 'archiveConfirmTitle'],
+    ['unarchive', 'unarchiveConfirmTitle'],
+    ['withdrawReview', 'withdrawConfirmTitle'],
+    ['promoteToGlobal', 'promotionConfirmTitle'],
+    ['restoreHidden', 'restoreHiddenConfirmTitle'],
+  ])('restores the more trigger after Escape and Cancel on %s', async (action, title) => {
+    if (action === 'unarchive') skill.status = 'ARCHIVED'
+    if (action === 'withdrawReview') skill.ownerPreviewVersion = { id: 12, version: '1.2.0', status: 'PENDING_REVIEW' }
+    if (action === 'promoteToGlobal') skill.canSubmitPromotion = true
+    if (action === 'restoreHidden') { search = { filter: 'HIDDEN' }; superAdmin = true }
+    render(<MySkillsPage />)
+    for (const closeViaEscape of [true, false]) {
+      const trigger = await openMenu()
+      fireEvent.click(screen.getByRole('menuitem', { name: `mySkills.${action}` }))
+      const dialog = await screen.findByRole('dialog', { name: `mySkills.${title}` })
+      if (closeViaEscape) fireEvent.keyDown(dialog, { key: 'Escape' })
+      else fireEvent.click(screen.getByRole('button', { name: 'dialog.cancel' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+      await waitFor(() => expect(document.activeElement).toBe(trigger))
+      expect(navigate).not.toHaveBeenCalled()
+    }
   })
 
 })
