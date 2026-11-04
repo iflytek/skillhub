@@ -34,17 +34,18 @@ export function SkillMetrics({ item }: { item: SkillPresentation }) {
   </div>;
 }
 export const SkillCard = forwardRef<HTMLButtonElement, {
-  item: SkillPresentation; version: string; onOpen: MouseEventHandler<HTMLButtonElement>; status?: ReactNode;
-  actions?: ReactNode; accessibleLabel?: string; descriptionId?: string;
-}>(({ item, version, onOpen, status, actions, accessibleLabel, descriptionId }, ref) =>
+  item: SkillPresentation; version?: string; onOpen: MouseEventHandler<HTMLButtonElement>; status?: ReactNode;
+  actions?: ReactNode; favoriteAction?: ReactNode; accessibleLabel?: string; descriptionId?: string;
+}>(({ item, version, onOpen, status, actions, favoriteAction, accessibleLabel, descriptionId }, ref) =>
   <Card className="astron-sh-skill-card">
     <button ref={ref} type="button" className="astron-sh-card-open" onClick={onOpen}
-      aria-label={accessibleLabel || `查看 ${item.displayName || item.slug} @${item.namespace}/${item.slug} ${version} 详情`} aria-describedby={descriptionId} />
+      aria-label={accessibleLabel || `查看 ${item.displayName || item.slug} @${item.namespace}/${item.slug}${version ? ` ${version}` : ''} 详情`} aria-describedby={descriptionId} />
     <CardHeader className="astron-sh-skill-heading"><SkillAvatar name={item.displayName} slug={item.slug} namespace={item.namespace} />
       <div><CardTitle>{item.displayName || item.slug}</CardTitle><CardDescription title={`@${item.namespace}/${item.slug}`}>@{item.namespace}/{item.slug}</CardDescription></div>
+      {favoriteAction}
     </CardHeader>
     <CardContent className="astron-sh-skill-body"><p id={descriptionId} className="astron-sh-skill-summary" title={item.summary}>{item.summary || '暂无摘要'}</p>
-      <div className="astron-sh-skill-meta"><span title={version}>v{version}</span>{status}</div></CardContent>
+      {(version || status) && <div className="astron-sh-skill-meta">{version && <span title={version}>v{version}</span>}{status}</div>}</CardContent>
     <CardFooter><SkillMetrics item={item} /><div className="astron-sh-card-actions">{actions}</div></CardFooter>
   </Card>);
 SkillCard.displayName = 'SkillCard';

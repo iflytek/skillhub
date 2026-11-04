@@ -41,6 +41,8 @@ describe('native local favorites service', () => {
       await expect(ctx.skillhub.listFavorites(renewedA, signal)).rejects.toMatchObject({ code: 'skillhub/favorites-error', details: { reason: 'INVALID_STORE', retryable: false } });
       await expect(ctx.skillhub.setFavorite(renewedA, { ...item, slug: '' }, true, signal)).rejects.toMatchObject({ code: 'skillhub/favorites-error', details: { reason: 'INVALID_INPUT' } });
       expect(await readFile(file, 'utf8')).toBe('{damaged-private-path');
+      expect(ctx.skillhub.getStatus()).toBe('SkillHub: connected');
+      expect(ctx.skillhub.getContext()).toMatchObject({ configured: true, sourceRevision: renewedA });
     } finally { await fiber.dispose(); await server.stop(true); }
   }));
 

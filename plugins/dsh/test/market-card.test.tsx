@@ -5,6 +5,7 @@ import { SkillCard } from '../src/client/skill-card.js';
 import { MarketCardActions } from '../src/client/market-card-actions.js';
 import { InstallationStatus } from '../src/client/installation-status.js';
 import { catalogLabel } from '../src/client/catalog-label.js';
+import { FavoriteButton } from '../src/client/favorite-button.js';
 
 const item = { namespace: 'demo', slug: 'document', displayName: '文档助手' };
 describe('market presentation and action boundaries', () => {
@@ -25,6 +26,15 @@ describe('market presentation and action boundaries', () => {
     </QueryClientProvider>);
     expect(render(false)).toContain('disabled=""');
     expect(render(true)).not.toContain('disabled=""');
+  });
+  test('favorite control is separate from the detail trigger and snapshots have no invented version or metrics', () => {
+    const html = renderToStaticMarkup(<SkillCard item={item} onOpen={() => {}}
+      favoriteAction={<FavoriteButton item={item} pressed disabled={false} busy={false} onToggle={() => {}} />} />);
+    const detailEnd = html.indexOf('</button>', html.indexOf('class="astron-sh-card-open"'));
+    expect(html.indexOf('aria-label="取消收藏 文档助手 @demo/document"')).toBeGreaterThan(detailEnd);
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('aria-label="查看 文档助手 @demo/document 详情"');
+    expect(html).not.toContain('vundefined'); expect(html).not.toContain('收藏数');
   });
   test('hides only complete empty source records, preserving unsafe status', () => {
     const base = { checkedAt: '2026-10-20T00:00:00Z', complete: true, unavailable: [], records: [] };

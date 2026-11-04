@@ -90,6 +90,29 @@ describe('local favorites preferences', () => {
     expect(await readFile(file)).toEqual(before);
   }));
 
+  test('a live lock timeout preserves bytes, then a released lock permits a later retry', () => fixture(async (_root, store, file) => {
+    await store.set(source, item, true); const before = await readFile(file);
+    const held = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
+    const lock = withFileLock(file, async () => { held.resolve(); await release.promise; }); await held.promise;
+    try {
+      await expect(store.set(source, { ...item, slug: 'after-lock' }, true)).rejects.toMatchObject({ reason: 'UNAVAILABLE', message: 'UNAVAILABLE' });
+      expect(await readFile(file)).toEqual(before);
+    } finally { release.resolve(); await lock; }
+    await store.set(source, { ...item, slug: 'after-lock' }, true);
+    expect(JSON.parse(await readFile(file, 'utf8')).items.map((entry: { slug: string }) => entry.slug).sort()).toEqual(['after-lock', 'writer']);
+  }), 10000);
+
+  test('cancellation while waiting for a lock rejects before publishing', () => fixture(async (_root, store, file) => {
+    await store.set(source, item, true); const before = await readFile(file);
+    const held = Promise.withResolvers<void>(), release = Promise.withResolvers<void>();
+    const lock = withFileLock(file, async () => { held.resolve(); await release.promise; }); await held.promise;
+    const abort = new AbortController();
+    const outcome = store.set(source, { ...item, slug: 'cancelled' }, true, () => abort.signal.throwIfAborted()).then(() => null, (error: unknown) => error);
+    abort.abort(); release.resolve(); await lock;
+    expect(await outcome).toBe(abort.signal.reason);
+    expect(await readFile(file)).toEqual(before);
+  }));
+
   test('non-file or unavailable storage exposes stable reasons without raw diagnostics', () => fixture(async (root, store, file) => {
     await mkdir(join(root, 'skillhub')); await mkdir(file);
     await expect(store.set(source, item, true)).rejects.toMatchObject({ reason: 'INVALID_STORE', message: 'INVALID_STORE' });
@@ -106,8 +129,25 @@ describe('local favorites preferences', () => {
     await writeFile(join(root, 'store.mjs'), await build.outputs[0]!.text());
     await symlink(fileURLToPath(new URL('../node_modules', import.meta.url)), join(root, 'node_modules'), process.platform === 'win32' ? 'junction' : 'dir');
     const runner = join(root, 'writer.mjs');
-    await writeFile(runner, `import {FavoritesStore} from './store.mjs';
-process.send({type:'ready'});
+    await writeFile(runner, `import fs from 'node:fs/promises';
+import {syncBuiltinESMExports} from 'node:module';
+import {join} from 'node:path';
+const lock=join(process.argv[2],'skillhub/favorites.json.lock');
+const originalWrite=fs.writeFile;
+let observed=false;
+// Observe the SDK's real exclusive-create failure, never replace lock behavior.
+fs.writeFile=async function(filename,data,options){
+  try {return await originalWrite.call(this,filename,data,options);}
+  catch(error){
+    if(!observed&&String(filename)===lock&&options?.flag==='wx'){
+      const contention=error.code==='EEXIST'||(error.code==='EPERM'&&await fs.lstat(lock).then(value=>value.isFile(),()=>false));
+      if(contention){observed=true;process.send({type:'contended',code:error.code});}
+    }
+    throw error;
+  }
+};
+syncBuiltinESMExports();
+const {FavoritesStore}=await import('./store.mjs');
 try {const value=await new FavoritesStore(process.argv[2]).set(process.argv[3],{namespace:'team',slug:process.argv[4]},true);process.send({type:'saved',count:value.items.length});process.disconnect();} catch(error){process.send({type:'failed',reason:error.reason??error.name});process.disconnect();process.exitCode=1;}`);
     const children: ReturnType<typeof spawn>[] = [], counts: number[] = [], completions: Promise<void>[] = [], ready: Promise<void>[] = [];
     try {
@@ -115,13 +155,21 @@ try {const value=await new FavoritesStore(process.argv[2]).set(process.argv[3],{
         for (const slug of ['first', 'second']) {
           const child = spawn('node', [runner, root, source, slug], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] }); children.push(child);
           ready.push(new Promise<void>((resolve, reject) => {
-            child.on('message', message => { if (message && typeof message === 'object' && 'type' in message && message.type === 'ready') resolve(); });
-            child.once('error', reject); child.once('exit', code => { if (code !== 0) reject(new Error(`Writer exited ${code}`)); });
+            let contended = false;
+            const deadline = setTimeout(() => reject(new Error('Writer did not attempt the held lock')), 5000);
+            child.on('message', message => {
+              if (message && typeof message === 'object' && 'type' in message && message.type === 'contended'
+                && 'code' in message && (message.code === 'EEXIST' || message.code === 'EPERM')) { contended = true; clearTimeout(deadline); resolve(); }
+            });
+            child.once('error', error => { clearTimeout(deadline); reject(error); });
+            child.once('exit', code => { clearTimeout(deadline); if (!contended) reject(new Error(`Writer exited ${code} before attempting the held lock`)); });
           }));
-          completions.push(new Promise<void>((resolve, reject) => {
+          const completion = new Promise<void>((resolve, reject) => {
             child.on('message', message => { if (message && typeof message === 'object' && 'type' in message && message.type === 'saved' && 'count' in message && typeof message.count === 'number') counts.push(message.count); });
             child.once('error', reject); child.once('exit', code => code === 0 ? resolve() : reject(new Error(`Writer exited ${code}`)));
-          }));
+          });
+          void completion.catch(() => {});
+          completions.push(completion);
         }
         await Promise.all(ready);
         expect(JSON.parse(await readFile(file, 'utf8')).items.map((entry: { slug: string }) => entry.slug)).toEqual(['writer']);

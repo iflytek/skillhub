@@ -269,3 +269,9 @@ Discarding changes restores files from the currently installed release: modified
 Persistent backups live under `skillhub/backups` in DSH Home, outside skill directories. Limits are 100 MiB per backup, 1 GiB in total and 20 backups. Reaching a limit rejects the new backup; backups are not automatically deleted. Failed backups never authorize overwriting, and edits after backup require a fresh check. Local files are compared and backed up on the Host, never uploaded to the Registry.
 
 Manual update actions on conversation cards also open the change preview. Model tools retain their existing confirmation semantics for unmodified installations and cannot authorize backup-and-overwrite; local modifications still require handling in the page.
+
+## Local favorites
+
+The bookmark on market cards and details saves a local favorite. The browse view's “仅看收藏” filter reads the complete current-source list and searches it locally, independently of loaded market pages. Favorites require no login, install nothing, and do not change the website's star count. Opening an item resolves its current downloadable version; offline or missing items stay saved without automatically installing an old version.
+
+Favorites use `$DSH_HOME/skillhub/favorites.json`, with DSH_HOME resolved by the Host's path rules. Profiles and projects sharing that home share favorites; Registry sources and different DSH_HOME values remain isolated. Removing a favorite does not uninstall a skill, and switching or removing a source does not delete its favorites. Read/write failures are reported without silently clearing the list or overwriting unknown formats. This describes the source candidate, not the published npm `0.6.1` package.
