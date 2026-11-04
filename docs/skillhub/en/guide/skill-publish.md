@@ -29,6 +29,14 @@ Use Update in My Skills or publish again to the same namespace and skill name. V
 
 Existing local installations do not update automatically. Consumers explicitly upgrade through the CLI. Suite members remain pinned until a new Suite version is published.
 
+### Tracking and Managing My Skills
+
+At `/dashboard/skills`, submit a keyword and combine namespace and status capsule filters. Changing a filter resets pagination; clearing filters removes the keyword, namespace and status together. The result count comes from the server for the current conditions, not the cards on the current page or per-status totals.
+
+Select a card title to open its actual detail page; returning preserves filters, page and scroll position. **Update** opens the existing update form. **More** exposes visibility, review withdrawal, promotion or archive actions according to the current permissions and state. Changing the frontend entry does not grant permissions; owners who have left a namespace remain read-only. When a published version and a pending change coexist, one main status describes the change while the effective version or visibility remains separately identified.
+
+Version comparison opens in a centered dialog and only compares accessible published versions; at least two are required. Comparing and closing do not change publication state. Details show content and comparison shows differences; neither replaces installation and execution checks.
+
 ### Recovering from Submission Problems
 
 | Symptom | Next step |

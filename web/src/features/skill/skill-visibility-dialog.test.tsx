@@ -38,6 +38,24 @@ async function mount(visibility = 'PUBLIC', language = 'zh') {
 describe('SkillVisibilityDialog', () => {
   afterEach(() => { cleanup(); vi.clearAllMocks() })
 
+  it('opens from a controlled menu without changing the selected private scope', async () => {
+    api.getVisibility.mockResolvedValue({ visibility: 'PRIVATE' })
+    const i18n = createInstance()
+    await i18n.init({ lng: 'en', resources: { en: { translation: en } } })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const onOpenChange = vi.fn()
+    render(<I18nextProvider i18n={i18n}><QueryClientProvider client={client}>
+      <SkillVisibilityDialog namespace="team" slug="foo" visibility="PRIVATE" open hideTrigger onOpenChange={onOpenChange} />
+    </QueryClientProvider></I18nextProvider>)
+    await waitFor(() => expect(api.getVisibility).toHaveBeenCalledWith('team', 'foo'))
+    expect((screen.getByRole('combobox') as HTMLSelectElement).value).toBe('PRIVATE')
+    expect(screen.getByRole('button', { name: 'Save' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.queryByRole('button', { name: en.skillVisibility.title })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(api.changeVisibility).not.toHaveBeenCalled()
+  })
+
   it.each([
     ['zh', '取消', '保存'],
     ['en', 'Cancel', 'Save'],

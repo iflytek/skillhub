@@ -10,13 +10,15 @@ import { toast } from '@/shared/lib/toast'
 const scopes = ['PUBLIC', 'NAMESPACE_ONLY', 'PRIVATE'] as const
 type Visibility = typeof scopes[number]
 
-export function SkillVisibilityDialog({ namespace, slug, visibility, disabled = false }: {
-  namespace: string; slug: string; visibility: string; disabled?: boolean
+export function SkillVisibilityDialog({ namespace, slug, visibility, disabled = false, open: controlledOpen, onOpenChange, onCloseAutoFocus, hideTrigger = false }: {
+  namespace: string; slug: string; visibility: string; disabled?: boolean; open?: boolean; onOpenChange?: (open: boolean) => void; onCloseAutoFocus?: (event: Event) => void; hideTrigger?: boolean
 }) {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
-  const [open, setOpen] = useState(false)
-  const [target, setTarget] = useState<Visibility>('PUBLIC')
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = onOpenChange ?? setInternalOpen
+  const [target, setTarget] = useState<Visibility>(() => scopes.find(scope => scope === visibility) ?? 'PUBLIC')
   const [error, setError] = useState('')
   const state = useQuery({
     queryKey: ['skills', namespace, slug, 'visibility'],
@@ -41,14 +43,14 @@ export function SkillVisibilityDialog({ namespace, slug, visibility, disabled = 
   })
   const expanding = scopes.indexOf(target) < scopes.indexOf(scopes.find(scope => scope === currentVisibility) ?? 'PUBLIC')
   return <>
-    <Button data-analytics-id="skill.visibility.open" size="sm" variant="outline" disabled={disabled} onClick={(event) => {
+    {!hideTrigger && <Button data-analytics-id="skill.visibility.open" size="sm" variant="outline" disabled={disabled} onClick={(event) => {
       event.stopPropagation()
       setTarget(scopes.find(scope => scope === visibility) ?? 'PUBLIC')
       setError('')
       setOpen(true)
-    }}>{t('skillVisibility.title')}</Button>
+    }}>{t('skillVisibility.title')}</Button>}
     <Dialog open={open} onOpenChange={(value) => { if (!mutation.isPending) setOpen(value) }}>
-      <DialogContent closeAnalyticsId="skill.visibility.cancel" onClick={(event) => event.stopPropagation()}>
+      <DialogContent onCloseAutoFocus={onCloseAutoFocus} closeAnalyticsId="skill.visibility.cancel" onClick={(event) => event.stopPropagation()}>
         <DialogHeader>
           <DialogTitle>{t('skillVisibility.title')}</DialogTitle>
           <DialogDescription>{t('skillVisibility.description')}</DialogDescription>

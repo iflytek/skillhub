@@ -34,6 +34,7 @@ import { SkillVersionComparePage } from './skill-version-compare'
 describe('SkillVersionComparePage', () => {
   beforeEach(() => {
     navigateMock.mockReset()
+    HTMLElement.prototype.scrollIntoView = vi.fn()
 
     useSkillVersionsMock.mockReturnValue({
       data: [

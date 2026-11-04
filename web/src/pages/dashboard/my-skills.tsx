@@ -1,8 +1,13 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Search } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Archive, ArrowUpRight, Copy, Download, Eye, GitCompareArrows, Globe, MoreHorizontal, RotateCcw, Search, Undo2, Upload } from 'lucide-react'
 import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
+import { copyToClipboard } from '@/shared/lib/clipboard'
+import { SkillVersionCompareContent } from '@/features/skill/skill-version-compare-content'
+import { rememberMySkillsScroll, readMySkillsScroll, takeMySkillsScroll } from './my-skills-scroll'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -49,7 +54,7 @@ export function MySkillsPage() {
   const location = useLocation()
   const search = useSearch({ from: '/dashboard/skills' })
   const { t } = useTranslation()
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
 
   // The URL is the source of truth for page / filter / namespace / keyword so the
   // search context survives navigating into a skill and back via the returnTo link.
@@ -61,6 +66,11 @@ export function MySkillsPage() {
   // Input remains local until the user explicitly submits the search.
   const [keywordInput, setKeywordInput] = useState(keyword)
 
+  const [compareTarget, setCompareTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
+  const [compareVersions, setCompareVersions] = useState({ from: '', to: '' })
+  const compareTrigger = useRef<HTMLButtonElement | null>(null)
+  const [visibilityTarget, setVisibilityTarget] = useState<{ namespace: string; slug: string; visibility: string } | null>(null)
+  const scrollKey = JSON.stringify([user?.userId, keyword, namespaceFilter, filter, page])
   const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [withdrawTarget, setWithdrawTarget] = useState<{ namespace: string; slug: string; name: string; version: string } | null>(null)
@@ -102,7 +112,19 @@ export function MySkillsPage() {
   const submitPromotionMutation = useSubmitPromotion()
   const restoreHiddenMutation = useRestoreHiddenSkill()
 
+  useEffect(() => {
+    if (isLoading) return
+    const top = readMySkillsScroll(scrollKey)
+    if (top === undefined) return
+    const frame = requestAnimationFrame(() => {
+      takeMySkillsScroll(scrollKey)
+      window.scrollTo({ top, behavior: 'instant' })
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [isLoading, scrollKey])
+
   const handleSkillClick = (namespace: string, slug: string, version?: string) => {
+    rememberMySkillsScroll(scrollKey, window.scrollY)
     navigate({
       to: `/space/${namespace}/${encodeURIComponent(slug)}`,
       search: { returnTo: buildReturnTo(location), version },
@@ -380,186 +402,123 @@ export function MySkillsPage() {
 
       {skillPage && skillPage.total > 0 ? (
         <>
-          <div className="grid grid-cols-1 gap-4">
-            {skills.map((skill, idx) => (
-              (() => {
-                const ownerReadOnly = skill.managementState?.ownerReadOnly === true
-                const relatedNamespace = skill.managementState?.relatedNamespace
-                const relatedSlug = skill.managementState?.relatedSlug
-                const headlineVersion = getHeadlineVersion(skill)
-                const publishedVersion = getPublishedVersion(skill)
-                const ownerPreviewVersion = getOwnerPreviewVersion(skill)
-                const hasPendingPreview = hasPendingOwnerPreview(skill)
-                const preview = ownerPreviewVersion && ownerPreviewVersion.id !== publishedVersion?.id && ownerPreviewVersion.status !== 'YANKED'
-                  ? ownerPreviewVersion : null
-                const displayName = preview?.displayName ?? skill.displayName
-                const summary = preview?.summary ?? skill.summary
-                const mainStatus = filter === 'HIDDEN' ? 'HIDDEN' : skill.status === 'ARCHIVED' || skill.status === 'HIDDEN'
-                  ? skill.status : preview?.status ?? headlineVersion?.status ?? skill.status
+          <div className="grid grid-cols-1 gap-3">
+            {skills.map((skill) => {
+              const ownerReadOnly = skill.managementState?.ownerReadOnly === true
+              const hidden = filter === 'HIDDEN'
+              const relatedNamespace = skill.managementState?.relatedNamespace
+              const relatedSlug = skill.managementState?.relatedSlug
+              const headlineVersion = getHeadlineVersion(skill)
+              const publishedVersion = getPublishedVersion(skill)
+              const ownerPreviewVersion = getOwnerPreviewVersion(skill)
+              const hasPendingPreview = hasPendingOwnerPreview(skill)
+              const preview = ownerPreviewVersion && ownerPreviewVersion.id !== publishedVersion?.id && ownerPreviewVersion.status !== 'YANKED'
+                ? ownerPreviewVersion : null
+              const displayName = preview?.displayName ?? skill.displayName
+              const summary = preview?.summary ?? skill.summary
+              const mainStatus = hidden ? 'HIDDEN' : skill.status === 'ARCHIVED' || skill.status === 'HIDDEN'
+                ? skill.status : preview?.status ?? headlineVersion?.status ?? skill.status
+              const writable = !hidden && !ownerReadOnly
+              const canChangeVisibility = writable && skill.status === 'ACTIVE' && !!publishedVersion
+              const coordinate = `@${skill.namespace}/${skill.slug}`
+              const openDetail = () => handleSkillClick(skill.namespace, skill.slug, preview?.version)
+              const detailSearch = new URLSearchParams({ returnTo: buildReturnTo(location) })
+              if (preview?.version) detailSearch.set('version', preview.version)
 
-
-                return (
-                  <Card data-analytics-id={filter === "HIDDEN" ? undefined : "skill.owned.open"}
-                    key={skill.id}
-                    className={`p-5 group animate-fade-up delay-${Math.min(idx + 1, 6)} ${filter === 'HIDDEN' ? '' : 'cursor-pointer'}`}
-                    onClick={filter === 'HIDDEN' ? undefined : () => handleSkillClick(skill.namespace, skill.slug, preview?.version)}
-                  >
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-3 flex items-center gap-3">
-                          <SkillAvatar name={displayName} url={skill.avatarUrl} />
-                          <h3 className="min-w-0 break-words font-heading text-lg font-semibold group-hover:text-primary transition-colors">
-                            {displayName}
+              return (
+                <Card key={skill.id} data-analytics-id={hidden ? undefined : 'skill.owned.open'}
+                  className={`relative rounded-[12px] border-border/70 p-4 shadow-none hover:shadow-none sm:p-5 ${hidden ? '' : 'cursor-pointer hover:border-border'}`}
+                  onClick={hidden ? undefined : openDetail}>
+                  <div className="flex items-start gap-3">
+                    <SkillAvatar name={displayName} url={skill.avatarUrl} />
+                    <div className="min-w-0 flex-1 space-y-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+                          <h3 className="min-w-0 break-words text-lg font-semibold [overflow-wrap:anywhere]">
+                            {hidden ? displayName : <a href={`/space/${skill.namespace}/${encodeURIComponent(skill.slug)}?${detailSearch}`}
+                              className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              onClick={event => {
+                                event.stopPropagation()
+                                if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
+                                event.preventDefault()
+                                openDetail()
+                              }}>{displayName}</a>}
                           </h3>
+                          {mainStatus && <span className={`${resolveStatusClassName(mainStatus)} shrink-0`}>
+                            {hasPendingPreview && publishedVersion && mainStatus === 'PENDING_REVIEW'
+                              ? t('mySkills.statusUpdatePendingReview') : resolveStatusLabel(mainStatus)}
+                          </span>}
                         </div>
-                        {ownerReadOnly && <p role="status" className="mb-3 text-sm text-muted-foreground">{t('mySkills.ownerReadOnly')}</p>}
-                        {skill.managementState?.promotionRole && (
-                          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                            <span>{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</span>
-                            {relatedNamespace && relatedSlug && (
-                              <button data-analytics-id="skill.related.open" type="button" className="text-primary underline underline-offset-4"
-                                onClick={event => {
-                                  event.stopPropagation()
-                                  handleSkillClick(relatedNamespace, relatedSlug)
-                                }}>
-                                {t(skill.managementState.promotionRole === 'TEAM_SOURCE' ? 'mySkills.viewGlobalCopy' : 'mySkills.viewTeamSource')}
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        {skill.status === 'ACTIVE' && filter !== 'HIDDEN' && <SkillAvatarManager namespace={skill.namespace} slug={skill.slug} previewOnly />}
-                        {summary && (
-                          <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{summary}</p>
-                        )}
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                          <span className="handle-tag max-w-full break-all">@{skill.namespace}</span>
-                          <span className="text-xs">{t('skillVisibility.current', { visibility: t(`skillVisibility.${skill.visibility ?? 'PUBLIC'}`) })}</span>
-                          {preview && publishedVersion ? (
-                            <span className="text-xs">{t('mySkills.versionDifference', { version: preview.version, published: publishedVersion.version })}</span>
-                          ) : headlineVersion ? (
-                            <span className="font-mono text-xs">v{headlineVersion.version}</span>
-                          ) : null}
-                          <span className="flex items-center gap-1">
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
-                            </svg>
-                            {formatCompactCount(skill.downloadCount)}
-                          </span>
-                          {mainStatus && (
-                            <span className={resolveStatusClassName(mainStatus)}>
-                              {hasPendingPreview && publishedVersion && mainStatus === 'PENDING_REVIEW'
-                                ? t('mySkills.statusUpdatePendingReview') : resolveStatusLabel(mainStatus)}
-                            </span>
-                          )}
-                        </div>
-                        {skill.managementState?.requestedVisibility && (
-                          <p role="status" className="mt-3 text-sm text-muted-foreground">
-                            {t('skillVisibility.pendingList', { visibility: t(`skillVisibility.${skill.managementState.requestedVisibility}`) })}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex shrink-0 flex-wrap items-center gap-2 sm:max-w-[45%] sm:justify-end">
-                        {canRestoreHidden ? (
-                          <Button data-analytics-id="skill.restore.request"
-                            size="sm"
-                            variant="outline"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setRestoreHiddenTarget({ skillId: skill.id, name: skill.displayName })
-                            }}
-                          >
-                            {t('mySkills.restoreHidden')}
-                          </Button>
-                        ) : filter === 'HIDDEN' || ownerReadOnly ? null : skill.status !== 'ARCHIVED' && (
-                          <Button data-analytics-id="skill.update.open"
-                            size="sm"
-                            variant="outline"
-                            onClick={(event) => {
+                        <div className="flex shrink-0 items-center gap-2" onClick={event => event.stopPropagation()}>
+                          {writable && skill.status !== 'ARCHIVED' && <Button data-analytics-id="skill.update.open" size="sm" variant="outline"
+                            className="text-sm" onClick={event => {
                               event.stopPropagation()
                               handleUpdateSkill(skill.namespace, skill.slug, displayName, skill.visibility ?? 'PUBLIC')
-                            }}
-                          >
-                            {t('mySkills.update')}
-                          </Button>
-                        )}
-                        {!ownerReadOnly && filter !== 'HIDDEN' && skill.status === 'ACTIVE' && publishedVersion && (
-                          <SkillVisibilityDialog namespace={skill.namespace} slug={skill.slug}
-                            visibility={skill.visibility ?? 'PUBLIC'} disabled={hasPendingPreview} />
-                        )}
-                        {filter === 'HIDDEN' || ownerReadOnly ? null : hasPendingPreview && ownerPreviewVersion ? (
-                          <Button data-analytics-id="skill.review.withdraw"
-                            size="sm"
-                            variant="outline"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setWithdrawTarget({
-                                namespace: skill.namespace,
-                                slug: skill.slug,
-                                name: skill.displayName,
-                                version: ownerPreviewVersion.version,
-                              })
-                            }}
-                          >
-                            {t('mySkills.withdrawReview')}
-                          </Button>
-                        ) : skill.canSubmitPromotion && publishedVersion ? (
-                          <Button data-analytics-id={skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'skill.promotion.update.request' : 'skill.promotion.create.request'}
-                            size="sm"
-                            variant="outline"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setPromotionTarget({
-                                skillId: skill.id,
-                                versionId: publishedVersion.id,
-                                name: skill.displayName,
-                                version: publishedVersion.version,
-                              })
-                            }}
-                          >
-                            {t(skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'mySkills.updateGlobalVersion' : 'mySkills.promoteToGlobal')}
-                          </Button>
-                        ) : skill.status === 'ARCHIVED' ? (
-                          <Button data-analytics-id="skill.unarchive.request"
-                            size="sm"
-                            variant="outline"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setUnarchiveTarget({
-                                namespace: skill.namespace,
-                                slug: skill.slug,
-                                name: skill.displayName,
-                              })
-                            }}
-                          >
-                            {t('mySkills.unarchive')}
-                          </Button>
-                        ) : publishedVersion ? (
-                          <Button data-analytics-id="skill.archive.request"
-                            size="sm"
-                            variant="outline"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              setArchiveTarget({
-                                namespace: skill.namespace,
-                                slug: skill.slug,
-                                name: skill.displayName,
-                              })
-                            }}
-                          >
-                            {t('mySkills.archive')}
-                          </Button>
-                        ) : null}
-                        {filter === 'HIDDEN' ? null : (
-                          <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        )}
+                            }}><Upload aria-hidden="true" className="h-4 w-4" />{t('mySkills.update')}</Button>}
+                          {/* Keep the menu nonmodal so a new Dialog owns the focus trap during the handoff. */}
+                          <DropdownMenu modal={false}>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="icon" variant="outline" className="h-8 w-8"
+                                title={t('mySkills.moreActions')} aria-label={t('mySkills.moreActionsFor', { skill: displayName })}
+                                onClick={event => { event.stopPropagation(); compareTrigger.current = event.currentTarget }}
+                                onKeyDown={event => { compareTrigger.current = event.currentTarget }}>
+                                <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-56 p-1.5" onClick={event => event.stopPropagation()}
+                              onCloseAutoFocus={event => { if (compareTarget || visibilityTarget) event.preventDefault() }}>
+                              {!hidden && <DropdownMenuItem onSelect={openDetail}><Eye aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.viewDetail')}</DropdownMenuItem>}
+                              <DropdownMenuItem onSelect={async () => {
+                                try { await copyToClipboard(coordinate); toast.success(t('mySkills.coordinateCopied')) }
+                                catch { toast.error(t('mySkills.coordinateCopyFailed')) }
+                              }}><Copy aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.copyCoordinate')}</DropdownMenuItem>
+                              {!hidden && <DropdownMenuItem onSelect={() => {
+                                setCompareVersions({ from: '', to: '' })
+                                setCompareTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })
+                              }}><GitCompareArrows aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.compareVersions')}</DropdownMenuItem>}
+                              {skill.managementState?.promotionRole && relatedNamespace && relatedSlug && <DropdownMenuItem data-analytics-id="skill.related.open" onSelect={() => handleSkillClick(relatedNamespace, relatedSlug)}>
+                                <ArrowUpRight aria-hidden="true" className="mr-2 h-4 w-4" />{t(skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'mySkills.viewGlobalCopy' : 'mySkills.viewTeamSource')}
+                              </DropdownMenuItem>}
+                              {canChangeVisibility && <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.visibility.open" disabled={hasPendingPreview}
+                                onSelect={() => setVisibilityTarget({ namespace: skill.namespace, slug: skill.slug, visibility: skill.visibility ?? 'PUBLIC' })}>
+                                <Eye aria-hidden="true" className="mr-2 h-4 w-4" />{t('skillVisibility.title')}
+                              </DropdownMenuItem></>}
+                              {writable && (hasPendingPreview && ownerPreviewVersion ? <DropdownMenuItem data-analytics-id="skill.review.withdraw" onSelect={() => setWithdrawTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName, version: ownerPreviewVersion.version })}>
+                                <Undo2 aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.withdrawReview')}
+                              </DropdownMenuItem> : skill.canSubmitPromotion && publishedVersion ? <DropdownMenuItem data-analytics-id={skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'skill.promotion.update.request' : 'skill.promotion.create.request'}
+                                onSelect={() => setPromotionTarget({ skillId: skill.id, versionId: publishedVersion.id, name: displayName, version: publishedVersion.version })}>
+                                <Globe aria-hidden="true" className="mr-2 h-4 w-4" />{t(skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'mySkills.updateGlobalVersion' : 'mySkills.promoteToGlobal')}
+                              </DropdownMenuItem> : skill.status === 'ARCHIVED' ? <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.unarchive.request" onSelect={() => setUnarchiveTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })}>
+                                <RotateCcw aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.unarchive')}
+                              </DropdownMenuItem></> : publishedVersion ? <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.archive.request" className="text-destructive focus:text-destructive" onSelect={() => setArchiveTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })}>
+                                <Archive aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.archive')}
+                              </DropdownMenuItem></> : null)}
+                              {canRestoreHidden && <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.restore.request" onSelect={() => setRestoreHiddenTarget({ skillId: skill.id, name: displayName })}>
+                                <RotateCcw aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.restoreHidden')}
+                              </DropdownMenuItem></>}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </div>
+                      {summary && <p className="line-clamp-2 break-words text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{summary}</p>}
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                        <span className="min-w-0 break-all">{coordinate}</span>
+                        <span>{t('skillVisibility.current', { visibility: t(`skillVisibility.${skill.visibility ?? 'PUBLIC'}`) })}</span>
+                        {preview && publishedVersion ? <span>{t('mySkills.versionDifference', { version: preview.version, published: publishedVersion.version })}</span>
+                          : headlineVersion ? <span className="font-mono">v{headlineVersion.version}</span> : null}
+                        <span className="inline-flex items-center gap-1" title={t('mySkills.downloadCount')}><Download aria-hidden="true" className="h-4 w-4" />{formatCompactCount(skill.downloadCount)}</span>
+                      </div>
+                      {ownerReadOnly && <p role="status" className="text-sm text-muted-foreground">{t('mySkills.ownerReadOnly')}</p>}
+                      {skill.managementState?.promotionRole && <p className="text-sm text-muted-foreground">{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</p>}
+                      {skill.status === 'ACTIVE' && !hidden && <SkillAvatarManager namespace={skill.namespace} slug={skill.slug} previewOnly />}
+                      {skill.managementState?.requestedVisibility && <p role="status" className="text-sm text-muted-foreground">
+                        {t('skillVisibility.pendingList', { visibility: t(`skillVisibility.${skill.managementState.requestedVisibility}`) })}
+                      </p>}
                     </div>
-                  </Card>
-                )
-              })()
-            ))}
+                  </div>
+                </Card>
+              )
+            })}
           </div>
 
           {skillPage.total > PAGE_SIZE ? (
@@ -579,6 +538,20 @@ export function MySkillsPage() {
           }
         />
       )}
+
+      {visibilityTarget && <SkillVisibilityDialog {...visibilityTarget} open hideTrigger onOpenChange={open => { if (!open) setVisibilityTarget(null) }}
+        onCloseAutoFocus={event => { event.preventDefault(); compareTrigger.current?.focus() }} />}
+      <Dialog open={!!compareTarget} onOpenChange={open => { if (!open) setCompareTarget(null) }}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-6xl max-h-[85vh] gap-3 p-4 sm:p-6"
+          onCloseAutoFocus={event => { event.preventDefault(); compareTrigger.current?.focus() }}>
+          <DialogHeader className="pr-8">
+            <DialogTitle>{t('mySkills.compareVersions')}</DialogTitle>
+            <DialogDescription className="break-all">{compareTarget?.name}</DialogDescription>
+          </DialogHeader>
+          {compareTarget && <SkillVersionCompareContent key={`${compareTarget.namespace}/${compareTarget.slug}`}
+            namespace={compareTarget.namespace} slug={compareTarget.slug} {...compareVersions} onVersionsChange={setCompareVersions} />}
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog confirmAnalyticsId="skill.restore.confirm" cancelAnalyticsId="skill.restore.cancel"
         open={!!restoreHiddenTarget}

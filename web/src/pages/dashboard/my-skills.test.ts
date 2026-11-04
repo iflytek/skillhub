@@ -1,9 +1,15 @@
-import { createElement, type ReactNode } from 'react'
+import { createElement, isValidElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInstance, type i18n } from 'i18next'
 import zh from '@/i18n/locales/zh.json'
 import en from '@/i18n/locales/en.json'
+
+function textContent(node: ReactNode): string {
+  if (Array.isArray(node)) return node.map(textContent).join('')
+  if (isValidElement<{ children?: ReactNode }>(node)) return textContent(node.props.children)
+  return typeof node === 'string' || typeof node === 'number' ? String(node) : ''
+}
 
 const navigateMock = vi.fn()
 const buttonRecords: Array<{ label: string; onClick?: ((event?: { stopPropagation: () => void }) => void) | undefined }> = []
@@ -42,8 +48,19 @@ vi.mock('@/shared/ui/button', () => ({
     children?: ReactNode
     onClick?: (event?: { stopPropagation: () => void }) => void
   }) => {
-    const label = Array.isArray(children) ? children.join('') : String(children ?? '')
+    const label = textContent(children)
     buttonRecords.push({ label, onClick })
+    return createElement('button', null, children)
+  },
+}))
+
+vi.mock('@/shared/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children: ReactNode }) => children,
+  DropdownMenuTrigger: ({ children }: { children: ReactNode }) => children,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => children,
+  DropdownMenuSeparator: () => null,
+  DropdownMenuItem: ({ children, onSelect }: { children: ReactNode; onSelect?: () => void }) => {
+    buttonRecords.push({ label: textContent(children), onClick: onSelect })
     return createElement('button', null, children)
   },
 }))
@@ -229,7 +246,7 @@ describe('MySkillsPage', () => {
     })
 
     const markup = renderToStaticMarkup(createElement(MySkillsPage))
-    expect(markup).toMatch(/<h3[^>]*>示例技能<\/h3>/)
+    expect(markup).toMatch(/<h3[^>]*><a[^>]*>示例技能<\/a><\/h3>/)
   })
 
   it('navigates to publish page with namespace and visibility when update is clicked', () => {
