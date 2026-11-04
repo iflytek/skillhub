@@ -128,11 +128,14 @@
 .moreMenu [role="menuitem"] { min-height: 36px; padding: 0 10px; font-size: 12px; }
 
 @media (max-width: 767px) {
+  .page .downloads { display: none; }
   .page .desktopUpdate { display: none; }
   .page .skillTitle { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .page .skillTitle a { white-space: normal; overflow: visible; }
 }
 @media (min-width: 768px) {
+  .page .skillTitle { flex: 0 1 390px; }
+  .page .titleGroup { gap: 11px; }
   .moreMenu .mobileUpdate { display: none; }
 }
 

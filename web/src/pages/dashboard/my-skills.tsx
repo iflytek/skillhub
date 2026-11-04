@@ -461,7 +461,7 @@ export function MySkillsPage() {
                     <SkillAvatar name={displayName} url={skill.avatarUrl} size="h-8 w-8 text-xs" />
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                        <div className={`${styles.titleGroup} flex min-w-0 flex-1 items-center gap-3`}>
                           <h3 className={`${styles.skillTitle} min-w-0 flex-1 truncate`} title={displayName}>
                             {hidden ? displayName : <a href={withBasePath(`/space/${skill.namespace}/${encodeURIComponent(skill.slug)}?${detailSearch}`)}
                               className="block truncate rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -543,7 +543,7 @@ export function MySkillsPage() {
                         </span>
                         {preview && publishedVersion ? <span className={styles.pendingVersion}>{t('mySkills.versionDifference', { version: preview.version, published: publishedVersion.version })}</span>
                           : headlineVersion ? <span className="font-mono">v{headlineVersion.version}</span> : null}
-                        <span className={styles.metadataItem} title={t('mySkills.downloadCount')}><Download aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />{formatCompactCount(skill.downloadCount)}</span>
+                        <span className={`${styles.metadataItem} ${styles.downloads}`} title={t('mySkills.downloadCount')}><Download aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />{formatCompactCount(skill.downloadCount)}</span>
                       </div>
                       {ownerReadOnly && <p role="status" className={`${styles.note} text-muted-foreground`}>{t('mySkills.ownerReadOnly')}</p>}
                       {skill.managementState?.promotionRole && <p className={`${styles.note} text-muted-foreground`}>{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</p>}
