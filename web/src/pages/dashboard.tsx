@@ -2,7 +2,6 @@ import { Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
-import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import {
@@ -93,62 +92,40 @@ const OVERVIEW_CARDS = [
 ] as const
 
 /**
- * Dashboard home page with sidebar + overview cards.
+ * Dashboard overview content; the shared Layout owns its sidebar.
  */
 export function DashboardPage() {
   const { t } = useTranslation()
   const { user } = useAuth()
-  const governanceVisible = canViewGovernanceCenter(user?.platformRoles)
-
-  const filteredGroups = SIDEBAR_GROUPS
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => (
-        (!item.admin || governanceVisible)
-        && (!item.superAdmin || user?.platformRoles?.includes('SUPER_ADMIN'))
-        && (!item.passwordCapability || user?.canChangePassword === true)
-      )),
-    }))
-    .filter((group) => group.items.length > 0)
-
   return (
     <div className={APP_SHELL_PAGE_CLASS_NAME}>
       <DashboardPageHeader title={t('dashboard.title')} subtitle={t('dashboard.subtitle')} />
-      {/* Two-column layout */}
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left sidebar */}
-        <DashboardSidebar groups={filteredGroups} user={user} t={t} pathname="/dashboard" />
-
-        {/* Right content - overview cards */}
-        <div className="flex-1 min-w-0">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {OVERVIEW_CARDS.filter((card) => card.key !== 'security' || user?.canChangePassword === true).map((card) => {
-              const Icon = card.icon
-              return (
-                <Link data-analytics-id={card.analyticsId}
-                  key={card.key}
-                  to={card.to}
-                  className="group flex items-start gap-4 rounded-xl border border-border/60 p-5 transition-all duration-150 hover:bg-accent hover:border-border hover:shadow-sm"
-                >
-                  <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-secondary">
-                    <Icon className="w-5 h-5" style={{ color: 'hsl(var(--foreground))' }} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
-                        {t(card.label)}
-                      </span>
-                      <ChevronRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0" style={{ color: 'hsl(var(--muted-foreground))' }} />
-                    </div>
-                    <p className="mt-1 text-xs leading-relaxed" style={{ color: 'hsl(var(--text-secondary))' }}>
-                      {t(card.desc)}
-                    </p>
-                  </div>
-                </Link>
-              )
-            })}
-          </div>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {OVERVIEW_CARDS.filter((card) => card.key !== 'security' || user?.canChangePassword === true).map((card) => {
+        const Icon = card.icon
+        return (
+          <Link data-analytics-id={card.analyticsId}
+            key={card.key}
+            to={card.to}
+            className="group flex items-start gap-4 rounded-xl border border-border/60 p-5 transition-all duration-150 hover:bg-accent hover:border-border hover:shadow-sm"
+          >
+            <div className="flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center bg-secondary">
+              <Icon className="w-5 h-5" style={{ color: 'hsl(var(--foreground))' }} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold" style={{ color: 'hsl(var(--foreground))' }}>
+                  {t(card.label)}
+                </span>
+                <ChevronRight className="w-3.5 h-3.5 opacity-0 -translate-x-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0" style={{ color: 'hsl(var(--muted-foreground))' }} />
+              </div>
+              <p className="mt-1 text-xs leading-relaxed" style={{ color: 'hsl(var(--text-secondary))' }}>
+                {t(card.desc)}
+              </p>
+            </div>
+          </Link>
+        )
+      })}
       </div>
     </div>
   )

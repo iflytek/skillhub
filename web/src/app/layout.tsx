@@ -39,8 +39,7 @@ export function Layout() {
   const mainContentLayout = getAppMainContentLayout(contentLayoutPathname)
   const isAuthEntryRoute = AUTH_ENTRY_PATHS.includes(contentLayoutPathname as typeof AUTH_ENTRY_PATHS[number])
   const isSplitAuthRoute = SPLIT_AUTH_PATHS.includes(contentLayoutPathname as typeof SPLIT_AUTH_PATHS[number])
-  const isDashboardSubRoute = pathname !== '/dashboard' && pathname.startsWith('/dashboard')
-  const showSidebar = (isDashboardSubRoute && pathname !== '/dashboard/publish') || pathname.startsWith('/settings/')
+  const showSidebar = mainContentLayout.sidebarRowClassName !== undefined
   const governanceVisible = canViewGovernanceCenter(user?.platformRoles)
   const filteredDashboardGroups = SIDEBAR_GROUPS
     .map((group) => ({
@@ -220,9 +219,9 @@ export function Layout() {
           <div className={mainContentLayout.contentClassName}>
           {showSidebar ? (
             <div className={mainContentLayout.sidebarRowClassName ?? "flex flex-col lg:flex-row gap-6"}>
-              <DashboardSidebar groups={filteredDashboardGroups} user={user} t={t} pathname={pathname} />
+              <DashboardSidebar groups={filteredDashboardGroups} user={user} t={t} pathname={contentLayoutPathname} />
               <div className={mainContentLayout.sidebarContentClassName ?? "flex-1 min-w-0"}>
-                <Outlet />
+                {mainContentLayout.pageClassName ? <div className={mainContentLayout.pageClassName}><Outlet /></div> : <Outlet />}
               </div>
             </div>
           ) : (

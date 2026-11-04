@@ -15,11 +15,11 @@ let showEmpty = false
 let superAdmin = false
 let search: { filter?: string; q?: string; namespace?: string; page?: number } = {}
 
-function makeSkill() {
+function makeSkill(managementState: { ownerReadOnly: boolean; promotionRole?: string; requestedVisibility?: string } = { ownerReadOnly: false }) {
   return {
     id: 1, namespace: 'team', slug: 'demo', displayName: 'Demo', summary: 'Summary',
     status: 'ACTIVE', visibility: 'PRIVATE', downloadCount: 3, canSubmitPromotion: false,
-    managementState: { ownerReadOnly: false },
+    managementState,
     publishedVersion: { id: 11, version: '1.1.0', status: 'PUBLISHED' },
   }
 }
@@ -86,6 +86,28 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals() })
 afterAll(() => vi.unstubAllEnvs())
 
 describe('My Skills interactions with real menu and dialog', () => {
+  it('preserves long descriptions in the card and full-text title without slicing the source text', () => {
+    const summary = '用于汇总跨服务任务的输入、执行条件和人工复核结果。'.repeat(20) + 'UnbrokenIdentifier'.repeat(15)
+    skill.summary = summary
+    render(<MySkillsPage />)
+    const description = screen.getByText(summary)
+    expect(description.getAttribute('title')).toBe(summary)
+    expect(screen.getByRole('link', { name: 'Demo' })).toBeTruthy()
+  })
+
+  it('keeps ownership, promotion and requested visibility explanations in one supplemental group', () => {
+    skill = makeSkill({ ownerReadOnly: true, promotionRole: 'GLOBAL_COPY', requestedVisibility: 'PUBLIC' })
+    render(<MySkillsPage />)
+    const readonly = screen.getByText('mySkills.ownerReadOnly')
+    const promotion = screen.getByText('mySkills.promotionRoles.GLOBAL_COPY')
+    const visibility = screen.getByText('skillVisibility.pendingList')
+    expect(readonly.parentElement).toBe(promotion.parentElement)
+    expect(readonly.parentElement).toBe(visibility.parentElement)
+    expect(readonly.getAttribute('role')).toBe('status')
+    expect(visibility.getAttribute('role')).toBe('status')
+    expect(screen.queryByRole('button', { name: 'mySkills.update' })).toBeNull()
+  })
+
   it('loads comparison on demand and returns focus after Escape without navigating', async () => {
     render(<MySkillsPage />)
     expect(useVersions).not.toHaveBeenCalled()

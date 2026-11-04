@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   AUTH_MAIN_CLASS_NAME,
-  CENTERED_DASHBOARD_CONTENT_CLASS_NAME,
+  PUBLISH_CONTENT_CLASS_NAME,
   CENTERED_MAIN_CLASS_NAME,
   CENTERED_SEARCH_CONTENT_CLASS_NAME,
   DEFAULT_MAIN_CLASS_NAME,
-  MY_SKILLS_MAIN_CLASS_NAME,
-  MY_SKILLS_CONTENT_CLASS_NAME,
-  MY_SKILLS_SIDEBAR_ROW_CLASS_NAME,
-  MY_SKILLS_SIDEBAR_CONTENT_CLASS_NAME,
+  CONSOLE_MAIN_CLASS_NAME,
+  CONSOLE_CONTENT_CLASS_NAME,
+  CONSOLE_SIDEBAR_ROW_CLASS_NAME,
+  CONSOLE_SIDEBAR_CONTENT_CLASS_NAME,
   SPLIT_AUTH_MAIN_CLASS_NAME,
   getAppMainContentLayout,
   resolveAppMainContentPathname,
@@ -32,24 +32,35 @@ describe('getAppMainContentLayout', () => {
     expect(layout.contentClassName).toContain('max-w-[1200px]')
   })
 
-  it.each(['/dashboard/tokens', '/dashboard/stars', '/settings/profile', '/dashboard/skills/unrelated'])('keeps %s in the existing dashboard frame', (pathname) => {
-    const layout = getAppMainContentLayout(pathname)
-
-    expect(layout).toEqual({
-      mainClassName: CENTERED_MAIN_CLASS_NAME,
-      contentClassName: CENTERED_DASHBOARD_CONTENT_CLASS_NAME,
+  it.each(['/dashboard', '/dashboard/skills', '/dashboard/tokens', '/dashboard/stars', '/dashboard/namespaces', '/dashboard/suites', '/dashboard/reviews', '/dashboard/governance'])('shares the console frame and sidebar gutters on %s', (pathname) => {
+    expect(getAppMainContentLayout(pathname)).toEqual({
+      mainClassName: CONSOLE_MAIN_CLASS_NAME,
+      contentClassName: CONSOLE_CONTENT_CLASS_NAME,
+      sidebarRowClassName: CONSOLE_SIDEBAR_ROW_CLASS_NAME,
+      sidebarContentClassName: CONSOLE_SIDEBAR_CONTENT_CLASS_NAME,
     })
-    expect(layout.contentClassName).toContain('max-w-[1100px]')
   })
 
-  it('isolates the prototype-width frame and sidebar gutters to My Skills', () => {
-    expect(getAppMainContentLayout('/dashboard/skills')).toEqual({
-      mainClassName: MY_SKILLS_MAIN_CLASS_NAME,
-      contentClassName: MY_SKILLS_CONTENT_CLASS_NAME,
-      sidebarRowClassName: MY_SKILLS_SIDEBAR_ROW_CLASS_NAME,
-      sidebarContentClassName: MY_SKILLS_SIDEBAR_CONTENT_CLASS_NAME,
+  it.each(['/settings/profile', '/settings/security', '/settings/notifications', '/settings/accounts'])('keeps %s forms readable without shifting their content origin', (pathname) => {
+    expect(getAppMainContentLayout(pathname)).toEqual({
+      mainClassName: CONSOLE_MAIN_CLASS_NAME,
+      contentClassName: CONSOLE_CONTENT_CLASS_NAME,
+      sidebarRowClassName: CONSOLE_SIDEBAR_ROW_CLASS_NAME,
+      sidebarContentClassName: CONSOLE_SIDEBAR_CONTENT_CLASS_NAME,
+      pageClassName: 'w-full max-w-3xl',
     })
-    expect(MY_SKILLS_CONTENT_CLASS_NAME).toContain('max-w-[1440px]')
+  })
+
+  it('keeps publishing a standalone flow without console navigation', () => {
+    expect(getAppMainContentLayout('/dashboard/publish')).toEqual({
+      mainClassName: CENTERED_MAIN_CLASS_NAME,
+      contentClassName: PUBLISH_CONTENT_CLASS_NAME,
+    })
+  })
+
+  it.each(['/dashboard/reviews/42', '/dashboard/namespaces/team/reviews/42'])('retains a wider console frame for %s', (pathname) => {
+    expect(getAppMainContentLayout(pathname).contentClassName).toContain('max-w-[1500px]')
+    expect(getAppMainContentLayout(pathname).sidebarRowClassName).toBe(CONSOLE_SIDEBAR_ROW_CLASS_NAME)
   })
 
   it('uses the full-bleed split layout for login and registration', () => {

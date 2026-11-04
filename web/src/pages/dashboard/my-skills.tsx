@@ -104,6 +104,8 @@ export function MySkillsPage() {
   const { data: namespaceOptions } = useMyNamespaces()
 
   const skills = skillPage?.items ?? []
+  const hasSupplementalRows = skills.some(skill => skill.managementState?.ownerReadOnly
+    || skill.managementState?.promotionRole || skill.managementState?.requestedVisibility)
   const totalPages = skillPage ? Math.max(Math.ceil(skillPage.total / skillPage.size), 1) : 1
   const availableFilters = getMySkillFilters(hasRole('SUPER_ADMIN'))
   const canRestoreHidden = filter === 'HIDDEN' && hasRole('SUPER_ADMIN')
@@ -458,7 +460,7 @@ export function MySkillsPage() {
                   className={`${styles.skillCard} relative border-border/70 hover:shadow-none ${hidden ? '' : 'cursor-pointer hover:border-border'}`}
                   onClick={hidden ? undefined : openDetail}>
                   <div className="flex items-start gap-3">
-                    <SkillAvatar name={displayName} url={skill.avatarUrl} size="h-8 w-8 text-xs" />
+                    <SkillAvatar name={displayName} url={skill.avatarUrl} seed={`${skill.namespace}/${skill.slug}`} size="h-8 w-8 text-xs" />
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex items-start justify-between gap-3">
                         <div className={`${styles.titleGroup} flex min-w-0 flex-1 items-center gap-3`}>
@@ -532,7 +534,8 @@ export function MySkillsPage() {
                           </DropdownMenu>
                         </div>
                       </div>
-                      {summary && <p className={`${styles.description} line-clamp-2 break-words text-muted-foreground [overflow-wrap:anywhere]`}>{summary}</p>}
+                      <p title={summary || undefined} aria-hidden={!summary || undefined}
+                        className={`${styles.description} line-clamp-2 break-words text-muted-foreground [overflow-wrap:anywhere]`}>{summary}</p>
                       <div className={`${styles.metadata} flex flex-wrap items-center text-muted-foreground`}>
                         <span className={`${styles.metadataItem} ${styles.coordinate}`} title={coordinate}><Package aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" /><span className="truncate">{coordinate}</span></span>
                         <span className={styles.metadataItem} title={t('skillVisibility.current', { visibility: t(`skillVisibility.${skill.visibility ?? 'PUBLIC'}`) })}>
@@ -545,12 +548,16 @@ export function MySkillsPage() {
                           : headlineVersion ? <span className="font-mono">v{headlineVersion.version}</span> : null}
                         <span className={`${styles.metadataItem} ${styles.downloads}`} title={t('mySkills.downloadCount')}><Download aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />{formatCompactCount(skill.downloadCount)}</span>
                       </div>
-                      {ownerReadOnly && <p role="status" className={`${styles.note} text-muted-foreground`}>{t('mySkills.ownerReadOnly')}</p>}
-                      {skill.managementState?.promotionRole && <p className={`${styles.note} text-muted-foreground`}>{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</p>}
-                      {skill.status === 'ACTIVE' && !hidden && <SkillAvatarManager namespace={skill.namespace} slug={skill.slug} previewOnly />}
-                      {skill.managementState?.requestedVisibility && <p role="status" className={`${styles.note} text-muted-foreground`}>
-                        {t('skillVisibility.pendingList', { visibility: t(`skillVisibility.${skill.managementState.requestedVisibility}`) })}
-                      </p>}
+                      <div className={`${styles.supplementalArea} ${hasSupplementalRows ? styles.reserveSupplemental : ''}`}>
+                        {(ownerReadOnly || skill.managementState?.promotionRole || skill.managementState?.requestedVisibility) && <div className={styles.supplementalNotes}>
+                          {ownerReadOnly && <p role="status" className={`${styles.note} text-muted-foreground`}>{t('mySkills.ownerReadOnly')}</p>}
+                          {skill.managementState?.promotionRole && <p className={`${styles.note} text-muted-foreground`}>{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</p>}
+                          {skill.managementState?.requestedVisibility && <p role="status" className={`${styles.note} text-muted-foreground`}>
+                            {t('skillVisibility.pendingList', { visibility: t(`skillVisibility.${skill.managementState.requestedVisibility}`) })}
+                          </p>}
+                        </div>}
+                        {skill.status === 'ACTIVE' && !hidden && <SkillAvatarManager namespace={skill.namespace} slug={skill.slug} previewOnly />}
+                      </div>
                     </div>
                   </div>
                 </Card>

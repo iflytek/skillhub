@@ -62,12 +62,13 @@ describe('DashboardPage', () => {
     expect(typeof DashboardPage).toBe('function')
   })
 
-  it('renders the dashboard sidebar and overview cards', () => {
+  it('renders only overview content so Layout supplies the single sidebar', () => {
     const html = renderToStaticMarkup(<DashboardPage />)
 
-    expect(html).toContain('sidebar.skillsAndData')
+    expect(html).not.toContain('<aside')
+    expect(html).not.toContain('sidebar.skillsAndData')
     expect(html).toContain('overview.mySkills')
-    expect(html).toContain('sidebar.mySuites')
+    expect(html).not.toContain('sidebar.mySuites')
     expect(html).toContain('overview.mySuites')
     expect(html).not.toContain('overview.publish')
   })
