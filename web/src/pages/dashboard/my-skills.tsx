@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Search } from 'lucide-react'
 import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
@@ -93,6 +94,7 @@ export function MySkillsPage() {
   const availableFilters = getMySkillFilters(hasRole('SUPER_ADMIN'))
   const canRestoreHidden = filter === 'HIDDEN' && hasRole('SUPER_ADMIN')
   const hasActiveSearch = keyword.trim() !== '' || namespaceFilter !== ''
+  const hasActiveFilters = hasActiveSearch || filter !== 'ALL'
   const emptyStateKey = getMySkillEmptyStateKey(filter)
   const archiveMutation = useArchiveSkill()
   const unarchiveMutation = useUnarchiveSkill()
@@ -110,6 +112,11 @@ export function MySkillsPage() {
   const handleClearSearch = () => {
     setKeywordInput('')
     updateSearch({ q: undefined, namespace: undefined, page: 0 })
+  }
+
+  const handleClearFilters = () => {
+    setKeywordInput('')
+    updateSearch({ q: undefined, namespace: undefined, filter: undefined, page: 0 })
   }
 
   const handleUpdateSkill = (namespace: string, slug: string, name: string, visibility?: string) => {
@@ -301,21 +308,24 @@ export function MySkillsPage() {
         subtitle={t('mySkills.subtitle')}
       />
 
-      <div className="flex flex-col gap-3">
+      <section aria-label={t('mySkills.filterLabel')} className="rounded-[12px] border border-border/60 bg-muted/30 p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <form data-analytics-id="skill.owned.search" className="flex gap-2 sm:w-full sm:max-w-md" onSubmit={event => {
+          <form data-analytics-id="skill.owned.search" className="flex min-w-0 flex-1 gap-2" onSubmit={event => {
             event.preventDefault()
             updateSearch({ q: keywordInput.trim() || undefined, page: 0 }, { replace: true })
           }}>
-          <Input
-            type="search"
-            value={keywordInput}
-            onChange={(event) => setKeywordInput(event.target.value)}
-            placeholder={t('mySkills.searchPlaceholder')}
-            aria-label={t('mySkills.searchPlaceholder')}
-            className="sm:max-w-md"
-          />
-          <Button type="submit" variant="outline">{t('nav.search')}</Button>
+            <div className="relative min-w-0 flex-1">
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                type="search"
+                value={keywordInput}
+                onChange={(event) => setKeywordInput(event.target.value)}
+                placeholder={t('mySkills.searchPlaceholder')}
+                aria-label={t('mySkills.searchPlaceholder')}
+                className="h-10 bg-background pl-9"
+              />
+            </div>
+            <Button type="submit" variant="outline" className="h-10">{t('nav.search')}</Button>
           </form>
           {filter === 'HIDDEN' ? null : (
             <Select
@@ -324,7 +334,7 @@ export function MySkillsPage() {
                 updateSearch({ namespace: value === ALL_NAMESPACES_VALUE ? undefined : value, page: 0 })
               }}
             >
-              <SelectTrigger data-analytics-id="skill.owned.namespace.interact" aria-label={t('mySkills.namespaceFilterLabel')} className="sm:max-w-[14rem]">
+              <SelectTrigger data-analytics-id="skill.owned.namespace.interact" aria-label={t('mySkills.namespaceFilterLabel')} className="h-10 bg-background sm:w-60 sm:shrink-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -337,34 +347,36 @@ export function MySkillsPage() {
               </SelectContent>
             </Select>
           )}
-          {hasActiveSearch ? (
-            <Button data-analytics-id="skill.owned.clear"
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={handleClearSearch}
-            >
-              {t('mySkills.clearSearch')}
-            </Button>
-          ) : null}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {availableFilters.map((option) => (
-            <Button data-analytics-id="skill.owned.filter"
-              key={option}
-              type="button"
-              size="sm"
-              variant={filter === option ? 'default' : 'outline'}
-              onClick={() => {
-                updateSearch({ filter: option === 'ALL' ? undefined : option, page: 0 })
-              }}
-            >
-              {t(`mySkills.filters.${option}`)}
-            </Button>
-          ))}
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <div role="group" aria-label={t('mySkills.statusFilterLabel')} className="flex flex-wrap gap-2">
+            {availableFilters.map((option) => (
+              <Button data-analytics-id="skill.owned.filter"
+                key={option}
+                type="button"
+                size="sm"
+                className="rounded-full px-4 text-sm shadow-none"
+                variant={filter === option ? 'default' : 'outline'}
+                aria-pressed={filter === option}
+                onClick={() => {
+                  updateSearch({ filter: option === 'ALL' ? undefined : option, page: 0 })
+                }}
+              >
+                {t(`mySkills.filters.${option}`)}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+            {skillPage ? <span aria-live="polite" aria-atomic="true">{t('mySkills.resultCount', { count: skillPage.total })}</span> : null}
+            {hasActiveFilters ? (
+              <Button data-analytics-id="skill.owned.clear" type="button" size="sm" variant="ghost" onClick={handleClearFilters}>
+                {t('mySkills.clearSearch')}
+              </Button>
+            ) : null}
+          </div>
         </div>
-      </div>
+      </section>
 
       {skillPage && skillPage.total > 0 ? (
         <>

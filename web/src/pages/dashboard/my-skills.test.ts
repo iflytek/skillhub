@@ -8,7 +8,7 @@ import en from '@/i18n/locales/en.json'
 const navigateMock = vi.fn()
 const buttonRecords: Array<{ label: string; onClick?: ((event?: { stopPropagation: () => void }) => void) | undefined }> = []
 const useMySkillsMock = vi.fn()
-const searchMock: { filter?: string } = {}
+const searchMock: { filter?: string; q?: string; namespace?: string; page?: number } = {}
 let isSuperAdmin = false
 let renderI18n: i18n | undefined
 
@@ -133,7 +133,7 @@ describe('MySkillsPage', () => {
     renderI18n = undefined
     navigateMock.mockReset()
     buttonRecords.length = 0
-    delete searchMock.filter
+    for (const key of Object.keys(searchMock)) delete searchMock[key as keyof typeof searchMock]
     isSuperAdmin = false
     useMySkillsMock.mockReturnValue({
       data: {
@@ -156,6 +156,39 @@ describe('MySkillsPage', () => {
       },
       isLoading: false,
     })
+  })
+
+  it('shows the server result total instead of the number on the current page', async () => {
+    renderI18n = createInstance()
+    await renderI18n.init({ lng: 'en', resources: { en: { translation: en } } })
+    const result = useMySkillsMock()
+    useMySkillsMock.mockReturnValue({ ...result, data: { ...result.data, total: 37 } })
+
+    const markup = renderToStaticMarkup(createElement(MySkillsPage))
+
+    expect(markup).toContain('37 skills')
+    expect(markup).not.toContain('1 skill<')
+  })
+
+  it('clears keyword, namespace, status and page together from the filter panel', () => {
+    Object.assign(searchMock, { filter: 'PUBLISHED', q: 'agent', namespace: 'team-ai', page: 3 })
+    renderToStaticMarkup(createElement(MySkillsPage))
+
+    findButton('mySkills.clearSearch').onClick?.()
+
+    const navigation = navigateMock.mock.calls.at(-1)?.[0]
+    expect(navigation.to).toBe('/dashboard/skills')
+    expect(navigation.search(searchMock)).toEqual({ q: undefined, namespace: undefined, filter: undefined, page: 0 })
+  })
+
+  it('changes status without losing the keyword and namespace and resets pagination', () => {
+    Object.assign(searchMock, { q: 'agent', namespace: 'team-ai', page: 3 })
+    renderToStaticMarkup(createElement(MySkillsPage))
+
+    findButton('mySkills.filters.REJECTED').onClick?.()
+
+    const navigation = navigateMock.mock.calls.at(-1)?.[0]
+    expect(navigation.search(searchMock)).toEqual({ q: 'agent', namespace: 'team-ai', filter: 'REJECTED', page: 0 })
   })
 
   it.each(['ACTIVE', 'ARCHIVED'])('keeps a removed owner’s %s skill readable without write actions', (status) => {

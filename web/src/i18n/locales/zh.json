@@ -906,6 +906,9 @@
     "namespaceFilterLabel": "按命名空间过滤",
     "namespaceFilterAll": "全部命名空间",
     "clearSearch": "清除筛选",
+    "filterLabel": "技能筛选",
+    "statusFilterLabel": "按状态筛选",
+    "resultCount": "{{count}} 个技能",
     "emptySearchTitle": "未找到匹配的技能",
     "emptySearchDescription": "试试调整关键字或切换命名空间",
     "filters": {

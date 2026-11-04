@@ -906,6 +906,10 @@
     "namespaceFilterLabel": "Filter by namespace",
     "namespaceFilterAll": "All namespaces",
     "clearSearch": "Clear filters",
+    "filterLabel": "Skill filters",
+    "statusFilterLabel": "Filter by status",
+    "resultCount_one": "{{count}} skill",
+    "resultCount_other": "{{count}} skills",
     "emptySearchTitle": "No matching skills",
     "emptySearchDescription": "Try adjusting your keyword or switching namespace.",
     "filters": {
