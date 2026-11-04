@@ -177,7 +177,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   }
   function favoriteAction(item: FavoriteSkill) {
     const pressed = favorites.items.some(saved => favoriteIdentity(saved) === favoriteIdentity(item));
-    return <FavoriteButton item={item} pressed={pressed} disabled={!favorites.ready || favorites.saving} busy={favorites.loading || favorites.saving}
+    return <FavoriteButton item={item} pressed={pressed} disabled={!favorites.ready} busy={favorites.loading || favorites.saving}
       onToggle={() => {
         if (pressed && favoriteOpening?.key === favoriteIdentity(item)) cancelFavoriteOpen();
         void favorites.save(item, !pressed).then(saved => { if (saved && favoriteOnly && pressed) favoriteFilter.current?.focus({ preventScroll: true }); });

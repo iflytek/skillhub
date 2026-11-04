@@ -122,7 +122,7 @@ describe('local favorites preferences', () => {
     await expect(blocked.set(source, item, true)).rejects.toMatchObject({ reason: 'UNAVAILABLE', message: 'UNAVAILABLE' });
   }));
 
-  test('two Node writers contend behind an explicit lock barrier without losing either record', () => fixture(async (root, store, file) => {
+  test.each(['direct', 'home-alias'] as const)('two Node writers contend behind an explicit lock barrier without losing either record (%s)', variant => fixture(async (root, store, file) => {
     await store.set(source, item, true);
     const build = await Bun.build({ entrypoints: [fileURLToPath(new URL('../src/host/favorites-store.ts', import.meta.url))], target: 'node', format: 'esm', packages: 'external' });
     if (!build.success) throw new AggregateError(build.logs, 'Store test build failed');
@@ -132,7 +132,8 @@ describe('local favorites preferences', () => {
     await writeFile(runner, `import fs from 'node:fs/promises';
 import {syncBuiltinESMExports} from 'node:module';
 import {join} from 'node:path';
-const lock=join(process.argv[2],'skillhub/favorites.json.lock');
+const canonicalHome=await fs.realpath(process.argv[2]);
+const lock=join(canonicalHome,'skillhub/favorites.json.lock');
 const originalWrite=fs.writeFile;
 let observed=false;
 // Observe the SDK's real exclusive-create failure, never replace lock behavior.
@@ -141,37 +142,51 @@ fs.writeFile=async function(filename,data,options){
   catch(error){
     if(!observed&&String(filename)===lock&&options?.flag==='wx'){
       const contention=error.code==='EEXIST'||(error.code==='EPERM'&&await fs.lstat(lock).then(value=>value.isFile(),()=>false));
-      if(contention){observed=true;process.send({type:'contended',code:error.code});}
+      if(contention){observed=true;process.send({type:'contended',code:error.code,canonicalized:canonicalHome!==process.argv[2]});}
     }
     throw error;
   }
 };
 syncBuiltinESMExports();
 const {FavoritesStore}=await import('./store.mjs');
-try {const value=await new FavoritesStore(process.argv[2]).set(process.argv[3],{namespace:'team',slug:process.argv[4]},true);process.send({type:'saved',count:value.items.length});process.disconnect();} catch(error){process.send({type:'failed',reason:error.reason??error.name});process.disconnect();process.exitCode=1;}`);
-    const children: ReturnType<typeof spawn>[] = [], counts: number[] = [], completions: Promise<void>[] = [], ready: Promise<void>[] = [];
+try {const value=await new FavoritesStore(process.argv[2]).set(process.argv[3],{namespace:'team',slug:process.argv[4]},true);process.send({type:'saved',count:value.items.length});process.disconnect();} catch(error){process.send({type:'failed',reason:error.reason??error.name,observed,canonicalized:canonicalHome!==process.argv[2]});process.disconnect();process.exitCode=1;}`);
+    const childHome = variant === 'home-alias' ? join(root, 'home-alias') : root;
+    if (variant === 'home-alias') await symlink(root, childHome, process.platform === 'win32' ? 'junction' : 'dir');
+    const children: ReturnType<typeof spawn>[] = [], counts: number[] = [], canonicalized: boolean[] = [], completions: Promise<void>[] = [], ready: Promise<void>[] = [];
     try {
       await withFileLock(file, async () => {
         for (const slug of ['first', 'second']) {
-          const child = spawn('node', [runner, root, source, slug], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] }); children.push(child);
+          const child = spawn('node', [runner, childHome, source, slug], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] }); children.push(child);
+          let stderr = '', reportedFailure = '';
+          child.stderr?.setEncoding('utf8');
+          child.stderr?.on('data', chunk => { stderr = (stderr + chunk).slice(-4096); });
+          child.on('message', message => {
+            if (message && typeof message === 'object' && 'type' in message && message.type === 'failed') reportedFailure = JSON.stringify(message);
+          });
+          const failure = (note: string) => new Error([note, reportedFailure, stderr.trim()].filter(Boolean).join('\n'));
           ready.push(new Promise<void>((resolve, reject) => {
             let contended = false;
-            const deadline = setTimeout(() => reject(new Error('Writer did not attempt the held lock')), 5000);
+            const deadline = setTimeout(() => reject(failure('Writer did not attempt the held lock')), 5000);
             child.on('message', message => {
               if (message && typeof message === 'object' && 'type' in message && message.type === 'contended'
-                && 'code' in message && (message.code === 'EEXIST' || message.code === 'EPERM')) { contended = true; clearTimeout(deadline); resolve(); }
+                && 'code' in message && (message.code === 'EEXIST' || message.code === 'EPERM')) {
+                  contended = true;
+                  canonicalized.push('canonicalized' in message && message.canonicalized === true);
+                  clearTimeout(deadline); resolve();
+                }
             });
             child.once('error', error => { clearTimeout(deadline); reject(error); });
-            child.once('exit', code => { clearTimeout(deadline); if (!contended) reject(new Error(`Writer exited ${code} before attempting the held lock`)); });
+            child.once('close', code => { clearTimeout(deadline); if (!contended) reject(failure(`Writer exited ${code} before attempting the held lock`)); });
           }));
           const completion = new Promise<void>((resolve, reject) => {
             child.on('message', message => { if (message && typeof message === 'object' && 'type' in message && message.type === 'saved' && 'count' in message && typeof message.count === 'number') counts.push(message.count); });
-            child.once('error', reject); child.once('exit', code => code === 0 ? resolve() : reject(new Error(`Writer exited ${code}`)));
+            child.once('error', reject); child.once('close', code => code === 0 ? resolve() : reject(failure(`Writer exited ${code}`)));
           });
           void completion.catch(() => {});
           completions.push(completion);
         }
         await Promise.all(ready);
+        if (variant === 'home-alias') expect(canonicalized).toEqual([true, true]);
         expect(JSON.parse(await readFile(file, 'utf8')).items.map((entry: { slug: string }) => entry.slug)).toEqual(['writer']);
       });
       await Promise.all(completions);

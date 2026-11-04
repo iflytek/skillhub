@@ -36,6 +36,13 @@ describe('market presentation and action boundaries', () => {
     expect(html).toContain('aria-label="查看 文档助手 @demo/document 详情"');
     expect(html).not.toContain('vundefined'); expect(html).not.toContain('收藏数');
   });
+  test('saving favorites remains keyboard focusable while unavailable favorites use native disabled', () => {
+    const saving = renderToStaticMarkup(<FavoriteButton item={item} pressed disabled={false} busy onToggle={() => {}} />);
+    expect(saving).toContain('aria-disabled="true"'); expect(saving).toContain('aria-busy="true"');
+    expect(saving).not.toMatch(/<button[^>]*\sdisabled=/);
+    const unavailable = renderToStaticMarkup(<FavoriteButton item={item} pressed={false} disabled busy onToggle={() => {}} />);
+    expect(unavailable).toMatch(/<button[^>]*\sdisabled=""/);
+  });
   test('hides only complete empty source records, preserving unsafe status', () => {
     const base = { checkedAt: '2026-10-20T00:00:00Z', complete: true, unavailable: [], records: [] };
     expect(renderToStaticMarkup(<InstallationStatus hideEmpty installation={base} />)).toBe('');
