@@ -35,17 +35,19 @@ In the detail's installation management panel, each location's Manage menu expor
 
 | Component | Requirement or scope |
 | --- | --- |
-| DSH | `0.2.0-rc.2` or `0.2.1-rc.2`; Host, app-boot and injected Client modules must share the exact release |
-| Cordis | Old RC: both families below; `0.2.1-rc.2`: only `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7` |
+| DSH | source candidate: `0.2.0-rc.2`, `0.2.1-rc.2`, or `0.2.1-rc.5`; Host, app-boot and injected Client modules must share the exact release |
+| Cordis | Old RC: both families below; `0.2.1-rc.2` and `0.2.1-rc.5`: only `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7` |
 | Host Node | `>=24.2.0 <25`; Node 24.0.0 is unsuitable |
 | Build package manager | Bun `1.3.13`, using frozen lockfiles |
 | UI | Chinese, DSH light/dark themes and narrow layouts |
-| Verified environments | Both Linux DSH Hosts: strict installation, native probes and browser user/project install, upgrade, removal and cancellation; Windows browser UI and interactions against a real Host |
-| Validation boundary | The feature implementation has real-model and cross-platform CI evidence; built artifacts and public packages have separate acceptance records. These results do not substitute for desktop clients, native Windows/macOS manual interactions or SaaS acceptance |
+| Verified environments | Historical dual-RC2 acceptance remains separately recorded. This Linux round passes native RC5 probes on Node 24.2.0/24.17.0 and both RC2 regressions on Node 24.2.0; task 53 records browser evidence separately |
+| Validation boundary | Historical evidence does not automatically cover RC5. Remote CI, native Windows/macOS, real models and SaaS have not run in this round; candidate tarballs and public npm packages have separate acceptance |
 
 Windows browser acceptance does not establish complete native Windows Host filesystem support. CI results do not replace desktop, model, or target-instance acceptance. See the repository's [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and [acceptance criteria](../../openspec/changes/add-dsh-native-plugin/acceptance.md).
 
-Version `0.3.1` includes the merged [Issue #981 compatibility fix](https://github.com/iflytek/skillhub/pull/988). Published plugin `0.3.0` does not include it. Unknown releases and mixed Host/Client graphs reject new writes. Optional `userQuestions` is enabled by Host service availability; it is not part of the mandatory write-version gate. Its API is identical in the two enumerated RCs, both of which the peer declaration permits. An absent service falls back to the plugin confirmation dialog.
+Version `0.3.1` includes the merged [Issue #981 compatibility fix](https://github.com/iflytek/skillhub/pull/988). Published plugin `0.3.0` does not include it. Unknown releases and mixed Host/Client graphs reject new writes. Optional `userQuestions` is enabled by Host service availability; it is not part of the mandatory write-version gate. Its API is identical in the three enumerated RCs, each of which the peer declaration permits. An absent service falls back to the plugin confirmation dialog.
+
+The source candidate adds `0.2.1-rc.5`; compatibility and acceptance are tracked in the [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and task 53 verification. This does not extend the published npm `0.6.1` support declaration. Platform, Node boundary, browser, and model evidence remain separate; release is a separate step.
 
 ## Build and package
 
@@ -60,7 +62,7 @@ bun run check
 npm pack --dry-run --ignore-scripts
 ```
 
-`dsh-typert-generator` remains pinned to `0.2.0-rc.2` to emit the common RPC contract for both Hosts; other DSH development modules use `0.2.1-rc.2` for type checking. This compiler pin does not bypass the runtime release guard.
+`dsh-typert-generator` remains pinned to `0.2.0-rc.2` to emit the common RPC contract for the enumerated Hosts; other DSH development modules use `0.2.1-rc.2` for type checking. This compiler pin does not bypass the runtime release guard.
 
 `check` builds Host/Client, generated Remote bindings and declarations, then runs type checking, lint and tests. Lint uses the locked tools in `cli/`. Bun is a build dependency; the packaged Host runs under Node. React and React DOM are supplied by DSH.
 
