@@ -70,6 +70,8 @@ export function MySkillsPage() {
   const [compareTarget, setCompareTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [compareVersions, setCompareVersions] = useState({ from: '', to: '' })
   const compareTrigger = useRef<HTMLButtonElement | null>(null)
+  const searchInput = useRef<HTMLInputElement | null>(null)
+  const restoredTrigger = useRef<HTMLButtonElement | null>(null)
   const [visibilityTarget, setVisibilityTarget] = useState<{ namespace: string; slug: string; visibility: string } | null>(null)
   const scrollKey = JSON.stringify([user?.userId, keyword, namespaceFilter, filter, page])
   const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
@@ -124,9 +126,29 @@ export function MySkillsPage() {
     return () => cancelAnimationFrame(frame)
   }, [isLoading, scrollKey])
 
+  // Query invalidation can remove the row after its confirmation has already closed.
+  useEffect(() => {
+    const trigger = restoredTrigger.current
+    if (!trigger) return
+    const active = document.activeElement
+    if (!trigger.isConnected) {
+      if (active === document.body) searchInput.current?.focus()
+      restoredTrigger.current = null
+    } else if (active !== trigger && active !== document.body) {
+      restoredTrigger.current = null
+    }
+  }, [skillPage?.items])
+
   const restoreMoreFocus = (event: Event) => {
     event.preventDefault()
-    compareTrigger.current?.focus()
+    const trigger = compareTrigger.current
+    if (trigger?.isConnected) {
+      restoredTrigger.current = trigger
+      trigger.focus()
+    } else {
+      restoredTrigger.current = null
+      searchInput.current?.focus()
+    }
   }
 
   const handleSkillClick = (namespace: string, slug: string, version?: string) => {
@@ -340,6 +362,7 @@ export function MySkillsPage() {
             <div className="relative min-w-0 flex-1">
               <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
+                ref={searchInput}
                 type="search"
                 value={keywordInput}
                 onChange={(event) => setKeywordInput(event.target.value)}

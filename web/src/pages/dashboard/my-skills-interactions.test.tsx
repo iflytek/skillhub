@@ -249,4 +249,37 @@ describe('My Skills interactions with real menu and dialog', () => {
     }
   })
 
+
+  it('returns focus to search when query results remove the row before confirmation closes', async () => {
+    const view = render(<MySkillsPage />)
+    await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.archive' }))
+    const dialog = await screen.findByRole('dialog', { name: 'mySkills.archiveConfirmTitle' })
+    showEmpty = true
+    view.rerender(<MySkillsPage />)
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole('searchbox')))
+  })
+
+  it.each(['retained', 'removed', 'user-moved'] as const)('keeps focus deliberate after successful archive with row %s', async (result) => {
+    const view = render(<MySkillsPage />)
+    const trigger = await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.archive' }))
+    await screen.findByRole('dialog', { name: 'mySkills.archiveConfirmTitle' })
+    fireEvent.click(screen.getByRole('button', { name: 'mySkills.archive' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await waitFor(() => expect(document.activeElement).toBe(trigger))
+    const otherControl = screen.getByRole('button', { name: 'nav.search' })
+    if (result === 'user-moved') otherControl.focus()
+    // Change the hook's query-result fixture after the close, then rerender the page.
+    // React removes the source row; no DOM node is manually deleted.
+    if (result !== 'retained') showEmpty = true
+    view.rerender(<MySkillsPage />)
+    await waitFor(() => expect(document.activeElement).toBe(
+      result === 'retained' ? trigger : result === 'user-moved' ? otherControl : screen.getByRole('searchbox')
+    ))
+    expect(document.activeElement?.isConnected).toBe(true)
+  })
+
 })
