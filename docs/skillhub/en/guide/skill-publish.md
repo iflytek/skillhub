@@ -2,7 +2,7 @@
 
 ## From Local Files to an Installable Version
 
-A single-skill upload has one root `SKILL.md`. For multiple skills, use [Suite import](/en/guide/suite-bundle); do not place unrelated skills in one single-skill ZIP.
+A single-skill upload has one root `SKILL.md`. For multiple skills, use [Suite import](./suite-bundle.html); do not place unrelated skills in one single-skill ZIP.
 
 1. Exercise the instructions, scripts and relative references in your local Agent, then prepare a standalone directory.
 2. Choose a writable namespace and PUBLIC, NAMESPACE_ONLY or PRIVATE visibility. Document dependencies: publishing does not distribute your local environment.
@@ -21,11 +21,23 @@ my-skill/
 
 Relative references must resolve inside the package. Exclude credentials, caches and unrelated project files. `version` is optional: the server generates a time-based version when absent. Set it explicitly, for example `1.0.0` then `1.0.1`, for predictable releases. Top-level `version` takes precedence over `metadata.version`; do not supply conflicting values.
 
+Resolve versions by an exact version, tag, or fingerprint; `^` / `~` ranges are unsupported. Tags such as `latest`, `beta`, and `stable` locate versions; `latest` follows publication state and the published pointer rather than the highest SemVer. Details expose package files and version/tag downloads.
+
 ### Updating an Existing Skill
 
 Use Update in My Skills or publish again to the same namespace and skill name. Verify the coordinate: changing `name` may create a different skill. Published versions cannot be overwritten; use a new version for normal updates. While it awaits review, public users retain the previously published version. After approval, check the displayed version, title and summary.
 
 Existing local installations do not update automatically. Consumers explicitly upgrade through the CLI. Suite members remain pinned until a new Suite version is published.
+
+### Tracking and Managing My Skills
+
+At `/dashboard/skills`, submit a keyword and combine namespace and status capsule filters. Changing a filter resets pagination; clearing filters removes the keyword, namespace and status together. The result count comes from the server for the current conditions, not the cards on the current page or per-status totals.
+
+Select a card title to open its actual detail page; returning preserves filters, page and scroll position. **Update** opens the existing update form. **More** exposes visibility, review withdrawal, promotion or archive actions according to the current permissions and state. Changing the frontend entry does not grant permissions; owners who have left a namespace remain read-only. When a published version and a pending change coexist, one main status describes the change while the effective version or visibility remains separately identified.
+
+Desktop cards use three consistent rows for the title, description, and metadata. Descriptions occupy one line; empty descriptions show “No description yet”. Open details for the complete content. Metadata information controls expose promotion relationships, visibility requests, and read-only reasons; a compact avatar control opens the full candidate preview. Skills without an uploaded avatar use a stable soft color based on their coordinate: refreshing or changing a display name does not change it. Uploaded images remain preferred.
+
+Version comparison opens in a centered dialog and only compares accessible published versions; at least two are required. Comparing and closing do not change publication state. Details show content and comparison shows differences; neither replaces installation and execution checks.
 
 ### Recovering from Submission Problems
 
@@ -40,63 +52,11 @@ Existing local installations do not update automatically. Consumers explicitly u
 | Frozen namespace or removed membership | Restore legitimate write access first; a previously installed copy grants no publishing rights |
 
 
-## Overview
+## Prepare metadata and choose a publishing entry
 
-Skill publishing is the core feature of SkillHub. Developers can upload locally developed Agent skill packages to the registry with one click. The system automatically handles version management, metadata extraction, and file indexing.
+### Prepare metadata
 
-![Concept Diagram](/diagrams/skill-publish-concept.png)
-
-**Problems Solved**:
-
-Traditionally, team members distribute skill packages through Git repositories or file sharing. This approach has several pain points:
-
-- **Version Chaos**: Different versions scattered everywhere, hard to track
-- **Permission Control Lost**: Cannot finely control who can access which skill packages
-- **Discovery Difficulty**: New members don't know what skills are available
-
-SkillHub provides an npm-like publishing experience with enterprise-grade permission control and review mechanisms.
-
-**Core Features**:
-
-- **Semantic Versioning**: Supports `major.minor.patch` version specification
-- **Tag System**: `latest`, `beta`, `stable` and custom tags
-- **Multi-version Coexistence**: Same skill package can retain multiple historical versions
-- **Version Resolution**: Resolve exact versions, tags or fingerprints; `^` / `~` ranges are not supported
-- **File Browsing**: Browse skill package file structure online
-- **Download Distribution**: Download by version or tag
-
-## Use Cases
-
-**Case 1: Developer Publishes New Skill**
-
-You just completed a Claude Code skill package and want other team members to use it.
-
-![Screenshot](/screenshots/homepage.png)
-
-**Case 2: Version Iteration**
-
-Skill package needs bug fixes or new features, publish new version while maintaining backward compatibility.
-
-**Case 3: Beta Testing**
-
-New features are not stable yet, publish with `beta` tag for limited testing before promoting to `latest`.
-
-**Case 4: Version Rollback**
-
-New version has serious issues, need to point `latest` tag to previous stable version.
-
-## Steps
-
-1. **Prepare Skill Package**
-
-Prepare a skill directory with `SKILL.md` at its root:
-
-- Put both YAML frontmatter and the skill instructions in `SKILL.md`.
-- The frontmatter must contain `name` and `description`. Set `version` there when you need an explicit version.
-- `package.json` does not supply or replace this skill metadata.
-- Keep the package structure clear and exclude sensitive information.
-
-For example, save this as `my-skill/SKILL.md`:
+Frontmatter requires `name` and `description`; `package.json` cannot replace skill metadata. Save this example as `my-skill/SKILL.md`:
 
 ```markdown
 ---
@@ -136,31 +96,33 @@ On the web publish/update form, upload a package and edit **Display name**. The 
 
 **My Skills** shows the pending update's title and summary with one main status and a plain-text comparison to the published version. Open the card to preview that update; public readers still see the published version. Details always show the copyable `@namespace/slug`; renaming does not change links or install identifiers.
 
+`skillhub.example.com`, `YOUR_API_TOKEN`, and `my-team` are placeholders. Replace them with the instance, caller credential, and target namespace; never commit a real token.
+
 Web names are stored in platform version metadata without rewriting `SKILL.md` or other package files. Downloads use the existing ZIP repackaging process, so compressed archive bytes may differ. CLI publishing keeps using package metadata. Approval, rollback after yanking, and promotion use the corresponding version's name and summary.
 
-2. **Publish via CLI (Recommended)**
+### Upload with the CLI
 
 ```bash
 # Configure the SkillHub registry
-export SKILLHUB_REGISTRY=http://localhost:8080
+export SKILLHUB_REGISTRY=https://skillhub.example.com
 export SKILLHUB_TOKEN=YOUR_API_TOKEN
 
 # Publish to default namespace
-npx @astron-team/skillhub@latest publish ./my-skill
+skillhub publish ./my-skill
 
 # Publish to specific namespace
-npx @astron-team/skillhub@latest publish ./my-skill --namespace my-team
+skillhub publish ./my-skill --namespace my-team
 ```
 
 > The ClawHub CLI publish and sync protocols are not compatible with SkillHub. Use the SkillHub CLI above for publishing.
 
-3. **Publish via Web UI**
+### Upload through the web
 
-Visit `http://localhost:3000/dashboard/publish`, select namespace, upload zip file, choose visibility, and click "Publish".
+Open `/dashboard/publish` under the instance Web entry, select namespace, upload zip file, choose visibility, and click "Publish".
 
-4. **Publish via REST API**
+### Use the publishing API
 
-```bash
+```http
 POST /api/v1/skills/{namespace}/publish
 Content-Type: multipart/form-data
 
@@ -172,27 +134,52 @@ visibility: PUBLIC
 
 The diagram covers ordinary uploads; scan failures, review rejection and privileged publishing are described below.
 
-5. **Security Scan**
-
-After publishing, [Skill Scanner](/en/guide/scanner) automatically scans the skill package for potential security risks. Results appear on the skill package detail page.
-
-6. **Wait for Review** (follow the returned status)
-
-Team admins receive review notifications and approve skill packages for official release.
-
-7. **Publish Success**
-
-Skill package can be discovered through search, others can download via CLI or Web UI.
-
 ## Submission is not publication
 
 After uploading, inspect the returned status and the version in My Skills. For ordinary PUBLIC and NAMESPACE_ONLY submissions, scanning must be enabled: the version passes through `SCANNING` and then `PENDING_REVIEW`. Approval publishes it. A PRIVATE upload remains `UPLOADED` after any configured scan; use its publish confirmation action to publish it. Privileged automatic publishing follows a separate path.
 
 `SCAN_FAILED` means the scan could not complete, not that the package was proven unsafe. A completed scan can still contain findings. A successful upload, HTTP response, or CLI exit is not evidence of `PUBLISHED`. During an update, public readers continue to see the published version while authorized maintainers can preview the pending version.
 
-### Authoring drafts
+### Authoring drafts: create, edit, and validate structure
 
-The authoring API supports private drafts, file editing and structural validation. It does not yet provide a web workbench or automatic publication. Passing validation does not execute the skill or prove its security. Do not confuse an authoring draft with an uploaded skill version awaiting review.
+Use the ZIP or CLI upload path when a local skill directory already exists. Authoring drafts support file-by-file API editing; there is currently no web authoring workbench or endpoint that submits a draft as a published skill version. A draft does not automatically become an `UPLOADED` or review-pending version.
+
+Creation requires a writable namespace and membership. `SUPER_ADMIN` bypasses membership only, not frozen/archived namespace checks. Reads, edits, and validation of existing drafts check ownership or `SUPER_ADMIN` without rechecking namespace state or membership; leaving or freezing a namespace does not automatically make an existing draft read-only. Use an authenticated browser session and the instance's CSRF token for writes. The current API Token route allowlist does not expose authoring endpoints; a CLI login token is not an authoring credential. There is no separate authoring enable switch in the source. Check an older instance's `/v3/api-docs` before using these routes.
+
+These are HTTP contracts, not shell commands. Send requests through a same-origin API client in the authenticated instance, adding the deployment prefix for sub-path installations. `team`, `example-skill`, `{draftId}`, and `{runId}` are placeholders: replace them with an accessible namespace, a draft name, and IDs returned by the API.
+
+| Operation | Request | Completion evidence | Explanation |
+| --- | --- | --- | --- |
+| Create draft | `POST /api/v1/authoring/drafts` | Response contains `data.id` and `data.revision` | Body requires `namespaceSlug` and `name`; `requirement` is optional; a `SKILL.md` scaffold is created |
+| Read current content | `GET /api/v1/authoring/drafts/{draftId}`; `GET /api/v1/authoring/drafts/{draftId}/files` | Current revision and file inventory are readable | Read a file with `GET /api/v1/authoring/drafts/{draftId}/files/content?path=SKILL.md` |
+| Save file | `PUT /api/v1/authoring/drafts/{draftId}/files` | Read response `data.draft.revision` | `expectedRevision` is the pre-write concurrency condition; changed content advances the revision, while a no-op may retain it; old validation does not cover new content |
+| Start validation | `POST /api/v1/authoring/drafts/{draftId}/runs` | Response contains run `data.id` and `data.draftRevision` | The run captures that revision, not a publication request |
+| Inspect result | `GET /api/v1/authoring/runs/{runId}`; `GET /api/v1/authoring/runs/{runId}/findings`; read `GET /api/v1/authoring/drafts/{draftId}` again | Run has `status=SUCCEEDED`, `errorCount=0`, and draft has `validated=true` | The run's `draftRevision` must equal the current draft `revision`; an old result does not validate new content |
+
+Create request body:
+
+```json
+{"namespaceSlug":"team","name":"example-skill","requirement":"Turn meeting material into an action list"}
+```
+
+Text-file save body: replace `expectedRevision` with the revision just read, and `content` with the complete actual file. Do not keep reusing the example revision. `encoding` also accepts `base64` for binary files.
+
+```json
+{"path":"SKILL.md","content":"---\nname: example-skill\ndescription: Summarize meeting material\n---\n\n# Instructions\nExtract action items from the input.","encoding":"text","contentType":"text/markdown","expectedRevision":1}
+```
+
+Structure validation checks paths, duplicates, file counts and sizes, `SKILL.md` frontmatter, content/extension consistency, and compliance declaration structure. It does not execute skills, start a model or Agent, replace security scanning or human review, or establish compliance. For publication, assemble the edited files into a local directory and follow the normal upload path on this page. No draft ZIP export or direct-publication entry is currently delivered; reserved submission fields in a response do not establish that capability.
+
+| Symptom | Likely cause | Locate the cause | Action |
+| --- | --- | --- | --- |
+| Endpoint absent | Instance version lacks it | Find the authoring paths in `/v3/api-docs` | Use local files and ZIP upload; do not guess a submit endpoint |
+| Authentication or write rejected | Session, CSRF, or credential type mismatch | Check the post-login identity request and CSRF information | Log into the instance again; do not share cookies or tokens |
+| Creation rejected | Missing membership or namespace not writable | Check membership and namespace state | Restore the prerequisites; do not use super-admin privileges to bypass frozen/archived checks |
+| Existing draft rejected | Neither owner nor super administrator | Compare current account and draft ownership | Contact the owner; do not borrow credentials or assume leaving/freezing automatically removes existing draft write access |
+| Revision conflict | Another edit advanced the revision | Read draft `revision` and file content again | Compare and merge changes; do not bypass revision checking |
+| Errors or stale validation | Invalid structure or later edits | Inspect findings and compare run/draft revisions | Fix and validate again; do not treat an old successful run as publication |
+
+Sources: [controller](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/authoring/SkillAuthoringController.java), [draft access/revisions](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/authoring/service/SkillDraftService.java), [structure validator](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/authoring/service/DraftStructureValidator.java), and [Token route policy](https://github.com/iflytek/skillhub/blob/main/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/policy/RouteSecurityPolicyRegistry.java).
 
 ## Compliance Declarations
 
@@ -233,10 +220,10 @@ Field reference:
 | `title` | No | Human-readable control title; recommended for review and search |
 | `evidence` | No | Evidence list, supporting packaged files and external URLs |
 
-## API Reference
+## Publishing and version query contracts
 
 **Publish Skill Package**:
-```bash
+```http
 POST /api/v1/skills/{namespace}/publish
 Content-Type: multipart/form-data
 
@@ -253,42 +240,36 @@ visibility: PUBLIC | PRIVATE | NAMESPACE_ONLY (required)
 | visibility | enum | Visibility level: PUBLIC, PRIVATE, NAMESPACE_ONLY |
 
 **Get Skill Details**:
-```bash
+```http
 GET /api/v1/skills/{namespace}/{slug}
 ```
 
 **List Versions**:
-```bash
+```http
 GET /api/v1/skills/{namespace}/{slug}/versions?page=0&size=20
 ```
 
 **Get Version Details**:
-```bash
+```http
 GET /api/v1/skills/{namespace}/{slug}/versions/{version}
 ```
 
 **Download Specific Version**:
-```bash
+```http
 GET /api/v1/skills/{namespace}/{slug}/versions/{version}/download
 ```
 
 **Download by Tag**:
-```bash
+```http
 GET /api/v1/skills/{namespace}/{slug}/tags/{tagName}/download
 ```
 
 **Version Resolution**:
-```bash
+```http
 GET /api/v1/skills/{namespace}/{slug}/resolve?version=1.2.0
 ```
 
-## Notes
+## Package and identifier limits
 
-> **Version Specification**: Use explicit `major.minor.patch` versions such as `1.2.3` for predictable releases; omission produces a server-generated time version.
-
-- **First Publish**: Version should start from `0.1.0` or `1.0.0`
-- **Tag Management**: `latest` follows publication state and the published pointer, not client-side selection of the highest SemVer
-- **Review Process**: Ordinary PUBLIC / NAMESPACE_ONLY uploads require scanning and review; PRIVATE uploads require publish confirmation
-- **File Size Limit**: Single skill package max 100MB (configurable)
-- **Naming Convention**: Skill slug supports lowercase letters, numbers, hyphens, and Unicode characters
-- **Version Immutability**: Published versions cannot be modified, only new versions can be published
+- A skill package is limited to 100MB (configurable); size and file-count limits are separate.
+- Skill slugs support lowercase letters, numbers, hyphens, and Unicode characters; inspect the final coordinate before publishing.

@@ -5,6 +5,7 @@ FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 # Corepack uses Node fetch; explicitly honor the build proxy for its download.
 RUN NODE_USE_ENV_PROXY=1 pnpm install --frozen-lockfile
 COPY . .
@@ -28,7 +29,9 @@ COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY runtime-config.js.template /usr/share/nginx/html/runtime-config.js.template
 COPY docker-entrypoint.d/20-base-path.sh /docker-entrypoint.d/20-base-path.sh
 COPY docker-entrypoint.d/30-runtime-config.sh /docker-entrypoint.d/30-runtime-config.sh
-RUN chmod +x /docker-entrypoint.d/20-base-path.sh /docker-entrypoint.d/30-runtime-config.sh
+COPY analytics-config.awk /etc/skillhub/analytics-config.awk
+COPY docker-entrypoint.d/40-analytics.sh /docker-entrypoint.d/40-analytics.sh
+RUN chmod +x /docker-entrypoint.d/20-base-path.sh /docker-entrypoint.d/30-runtime-config.sh /docker-entrypoint.d/40-analytics.sh
 EXPOSE 80
 HEALTHCHECK --interval=10s --timeout=3s \
   CMD wget -qO- http://127.0.0.1/nginx-health || exit 1

@@ -99,7 +99,7 @@ export function SystemConfigPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-4 pb-12 sm:p-8">
+    <div className="space-y-6 pb-12">
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">{t('systemConfig.title')}</h1>
         <p className="text-sm text-muted-foreground">{t('systemConfig.intro')}</p>

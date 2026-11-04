@@ -6,7 +6,7 @@ A: SkillHub provides a self-hosted registry, namespace permissions, publication 
 
 ## Q: How do I back up data?
 
-A: Back up PostgreSQL, the configured skill storage, and deployment configuration. Release Compose defaults to local storage in the `skillhub_storage` volume; S3 deployments need the corresponding bucket/objects. Keep database and object snapshots consistent and verify restoration in an isolated environment. See [deployment](./guide/deployment.md).
+A: Back up PostgreSQL, the configured skill storage, and deployment configuration. Release Compose defaults to local storage in the `skillhub_storage` volume; S3 deployments need the corresponding bucket/objects. Keep database and object snapshots consistent and verify restoration in an isolated environment. See [deployment](./guide/deployment.html).
 
 ## Q: What authentication methods are supported?
 
@@ -39,11 +39,11 @@ npm install -g @astron-team/skillhub
 skillhub search pdf
 ```
 
-Follow [Quick Start](./quickstart.md) to select a registry, scope, and Agent. Publishing and restricted resources require login. See [OpenClaw integration](https://github.com/iflytek/skillhub/blob/main/docs/openclaw-integration-en.md) for compatibility boundaries; do not mix its publish protocol with SkillHub CLI.
+Follow [Quick Start](./quickstart.html) to select a registry, scope, and Agent. Publishing and restricted resources require login. See [OpenClaw integration](https://github.com/iflytek/skillhub/blob/main/docs/openclaw-integration-en.md) for compatibility boundaries; do not mix its publish protocol with SkillHub CLI.
 
 ## Q: How do I configure HTTPS?
 
-A: Terminate TLS at an external proxy forwarding to the published Web port (`WEB_PORT=80` by default in release Compose). Web already proxies backend routes. Set the real `SKILLHUB_PUBLIC_BASE_URL`, preserve the original Host and forwarded protocol, and validate login and cookies. See [deployment](./guide/deployment.md).
+A: Terminate TLS at an external proxy forwarding to the published Web port (`WEB_PORT=80` by default in release Compose). Web already proxies backend routes. Set the real `SKILLHUB_PUBLIC_BASE_URL`, preserve the original Host and forwarded protocol, and validate login and cookies. See [deployment](./guide/deployment.html).
 
 ## Q: How do I monitor SkillHub?
 
@@ -57,11 +57,11 @@ For physical isolation, you can deploy a separate SkillHub instance for each ten
 
 ## Q: How do I upgrade SkillHub?
 
-A: Follow the [deployment guide](./guide/deployment.md), select a target version, and back up the database, skill storage, and configuration. After upgrading, verify health, login, and representative skill operations. Flyway migrations mean that rolling back an image alone is not necessarily a database rollback.
+A: Follow the [deployment guide](./guide/deployment.html), select a target version, and back up the database, skill storage, and configuration. After upgrading, verify health, login, and representative skill operations. Flyway migrations mean that rolling back an image alone is not necessarily a database rollback.
 
 ## Q: Why can't administrators (admin) and regular users create namespaces?
 
-A: Inspect the actual error and `requestId`, then check permissions, name validation, and instance restrictions. Do not assume an old version is the cause. See [namespace management](./guide/namespace.md).
+A: Inspect the actual error and `requestId`, then check permissions, name validation, and instance restrictions. Do not assume an old version is the cause. See [namespace management](./guide/namespace.html).
 
 ## Q: How do I search for or operate on a skill package within a specific namespace?
 
@@ -69,15 +69,15 @@ A: Select the namespace in the UI. To install with the CLI, use `skillhub instal
 
 ## Q: What is the recommended deployment method? Can I pull the images and deploy manually?
 
-A: Official runtime scripts, release Compose, and Kubernetes/Helm are supported. Choose one and retain its configuration and data directories. See [Docker deployment](./guide/deployment.md) and [Kubernetes](./guide/kubernetes.md). Running an application image alone does not configure its database, Redis, storage, authentication, or proxy.
+A: Choose the runtime script, release Compose, Kubernetes Kustomize, or the Helm Chart. The script and Compose paths are covered by [Docker deployment](./guide/deployment.html). Kustomize uses `deploy/k8s`; follow [Kubernetes deployment](./guide/kubernetes.html). Helm uses the separate `charts/skillhub` directory and values; follow the [Chart README (Chinese)](https://github.com/iflytek/skillhub/blob/main/charts/skillhub/README.md). Do not mix configuration or upgrade commands between the two Kubernetes paths. Preserve the configuration and data directory for the selected path. Starting an application image alone does not verify database, Redis, storage, authentication, or proxy behavior.
 
 ## Q: What Kubernetes version does the Kubernetes deployment require?
 
-A: The official [Kubernetes deployment guide](./guide/kubernetes.md) requires Kubernetes **v1.24 or later**, a configured `kubectl`, and a default StorageClass for PVCs; an nginx ingress controller is needed if you want domain-based access. Older clusters have not been validated, so upgrade the cluster before deploying.
+A: The official [Kubernetes deployment guide](./guide/kubernetes.html) requires Kubernetes **v1.24 or later**, a configured `kubectl`, and a default StorageClass for PVCs; an nginx ingress controller is needed if you want domain-based access. Older clusters have not been validated, so upgrade the cluster before deploying.
 
 ## Q: After deployment, I enter the correct username and password but get redirected back to the login page?
 
-A: Inspect the login and subsequent identity requests in browser developer tools. Check the public URL, proxy forwarding, cookies, and backend session configuration, then correlate `requestId` with server logs. This symptom alone does not identify a password or database failure. Do not clear PostgreSQL volumes as a login troubleshooting step. See [deployment](./guide/deployment.md).
+A: Inspect the login and subsequent identity requests in browser developer tools. Check the public URL, proxy forwarding, cookies, and backend session configuration, then correlate `requestId` with server logs. This symptom alone does not identify a password or database failure. Do not clear PostgreSQL volumes as a login troubleshooting step. See [deployment](./guide/deployment.html).
 
 ## Q: How do I change the admin password? Why don't my config changes take effect?
 
@@ -89,11 +89,11 @@ A: The web password-reset flow uses email verification; the authenticated change
 
 ## Q: Can a skill have a Chinese name?
 
-A: The `name`/slug remains a validated identifier. The user-facing display name supports Chinese through `metadata.display-name`. Changing it does not change the coordinate or installation directory. See [publishing](./guide/skill-publish.md).
+A: The `name`/slug remains a validated identifier. The user-facing display name supports Chinese through `metadata.display-name`. Changing it does not change the coordinate or installation directory. See [publishing](./guide/skill-publish.html).
 
 ## Q: Can unreviewed skills be downloaded?
 
-A: Normal installation requires a published version that the caller can access. Visibility of a detail page does not grant downloads for every version state. Author/reviewer preview permissions differ from distribution permissions. See [review](./guide/review.md).
+A: Normal installation requires a published version that the caller can access. Visibility of a detail page does not grant downloads for every version state. Author/reviewer preview permissions differ from distribution permissions. See [review](./guide/review.html).
 
 ## Q: How do I hide or remove third-party SSO login options on the login page?
 
@@ -103,6 +103,14 @@ So there are two ways to hide one:
 
 - Leave the matching environment variable unset (for example, omit `OAUTH2_FEISHU_CLIENT_ID`). No config file change needed.
 - Or edit `application.yml` and comment out or delete the relevant registration block (`github`, `gitlab`, `feishu`, `dingtalk`) under `spring.security.oauth2.client.registration`, along with its `provider` section. Spring Boot then won't create that registration at startup.
+
+## Q: Can skills still be uploaded or published with scanning disabled?
+
+A: `runtime.sh --no-scanner` disables registry scanning and does not start the scanner container. For **ordinary new uploads**, `PUBLIC` or `NAMESPACE_ONLY` is rejected while scanning is disabled. A `PRIVATE` upload can remain in `UPLOADED` and still requires confirmation to publish. Upload success does not mean publication; do not repeatedly upload the same version to bypass this prerequisite.
+
+Expanding the visibility of an already published private skill is a separate path. A qualifying scan report for its latest version may be reused, allowing visibility review even while the scanner is disabled. Without a reusable report, scanning must be restored first. See [scanning](./guide/scanner.html) for report conditions and diagnostics; disabling the scanner does not imply that every action on an existing version is unavailable.
+
+Sources: [runtime script](https://github.com/iflytek/skillhub/blob/main/scripts/runtime.sh), [new-upload rules](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillPublishService.java), and [visibility-change rules](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/service/SkillVisibilityService.java).
 
 ## Q: Is SkillHub's security scanning (Skill Scanner) developed in-house by iFLYTEK? What license does it use?
 
@@ -171,7 +179,7 @@ Recreate the containers for the change to take effect; `restart` alone does not 
 
 ## Q: Is there a server version requirement for using the CLI (publish / download, etc.)?
 
-A: Compatibility depends on the command. Basic CLI support does not imply support for Device Flow, Suites or sync. Check CLI version and target-server release notes. Suites require the server to advertise `skill-suite-v1`. See [CLI](./guide/cli.md).
+A: Compatibility depends on the command. Basic CLI support does not imply support for Device Flow, Suites or sync. Check CLI version and target-server release notes. Suites require the server to advertise `skill-suite-v1`. See [CLI](./guide/cli.html).
 
 ## Q: Does SkillHub support MySQL?
 
@@ -264,20 +272,37 @@ Check the following in order:
 
 ## Q: How does an account created through OAuth (GitHub / GitLab, etc.) get admin rights?
 
-A: The first OAuth login creates a regular user. An existing `SUPER_ADMIN` (for example the bootstrap admin created during initialization) has to promote it from the admin console.
+A: External sign-in first follows the existing admission policy. A newly created external account with status `ACTIVE` can receive a configured platform role when the provider supplies a verified email and an enabled initial-role rule matches it. Without a matching rule, no platform-management role is granted automatically. Rules apply only during new-account creation; they do not update existing accounts or merge accounts with the same email. Existing accounts use user management with the required platform permissions; only a super administrator (`SUPER_ADMIN`) may grant that role.
+
+For account and credential concepts, see [Accounts and access tokens](./guide/account-access.html). The applicable rule conditions are defined by the [initial-role service](https://github.com/iflytek/skillhub/blob/main/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/settings/InitialExternalRoleGrantService.java), and the [account creation flow](https://github.com/iflytek/skillhub/blob/main/server/skillhub-auth/src/main/java/com/iflytek/skillhub/auth/identity/IdentityBindingService.java).
 
 A `USER_ADMIN` can manage user status and assign platform roles other than `SUPER_ADMIN`, but cannot grant `SUPER_ADMIN` to any account or change the role of an existing `SUPER_ADMIN`. Only a `SUPER_ADMIN` can perform those two operations.
 
 ## Q: How do I install multiple skills in bulk?
 
-A: Use [Suites](./guide/skill-suites.md) and `skillhub suite install` for pinned members managed together, `skillhub sync pull` for team workspaces, or separate `skillhub install` commands for unrelated skills. Suite Bundle is an authoring import format, not a local installation command.
+A: Use [Suites](./guide/skill-suites.html) and `skillhub suite install` for pinned members managed together, `skillhub sync pull` for team workspaces, or separate `skillhub install` commands for unrelated skills. Suite Bundle is an authoring import format, not a local installation command.
+
+## Q: Where do I submit a saved Skill Suite draft for review, and why is the button missing or disabled?
+
+A: Open the management page for that Suite version and use the publishing checklist on its Overview tab. Public (`PUBLIC`) and namespace-visible (`NAMESPACE_ONLY`) Suites require Suite-level review; private (`PRIVATE`) Suites show Publish directly. This is separate from the scanning and review of each member Skill.
+
+- **No button:** confirm that you are managing a version you can operate on, rather than viewing its marketplace preview. The action appears only when the server allows your account to submit or publish that version; both permissions and version state affect available actions.
+- **Disabled button:** complete the summary and overview, select an available entry Skill, and resolve blocked member versions. Every checklist item must be ready, with no submission already pending.
+
+See [creating and managing Skill Suites](./guide/skill-suites.html). If an older installation differs from the guide, report the Server/Web versions, Suite state and a redacted screenshot. Skill or Agent publishing pages are not substitutes for the Suite publishing page.
+
+## Q: Does a Suite overview become a callable skill after installation?
+
+A: No. The overview explains the intended tasks, member responsibilities and boundaries to reviewers and users. Installation delivers separate member skill directories; it does not combine the overview into a new Suite `SKILL.md`, and there is no universal `suite run` command.
+
+Put execution order, member-call instructions and result validation in the **entry and member `SKILL.md` files**. In the installation target project, confirm that the Agent has discovered the entry Skill, then ask it to use that entry for the task. The Suite coordinate manages installation; actual use starts with the entry Skill. Installing member files does not configure their required tools or services. Follow the [Skill Suite usage guide](./guide/skill-suites.html).
 
 ## Q: What should I do if I encounter issues?
 
 A: You can get help through the following channels:
 
 - **GitHub Issues**: https://github.com/iflytek/skillhub/issues
-- **Online Docs**: https://iflytek.github.io/skillhub/
+- **Online Docs**: [SkillHub](./index.html)
 - **Documentation**: Refer to the project README.md
 - **Community Discussions**: https://github.com/iflytek/skillhub/discussions
 

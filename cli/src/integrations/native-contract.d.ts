@@ -2,7 +2,7 @@
 export interface NativePendingOperation {
   operationId: string
   ownerId: string
-  kind: 'install' | 'upgrade' | 'uninstall' | 'remove-stale-record' | 'enable' | 'disable'
+  kind: 'install' | 'upgrade' | 'uninstall' | 'remove-stale-record' | 'enable' | 'disable' | 'reset-files'
   namespace: string
   slug: string
   targetPaths: string[]
@@ -28,6 +28,9 @@ export interface InstalledProjectionItem {
   recordRevision?: string
   installationState?: InstallationState
   state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'
+}
+export interface AllInstalledProjection extends InstalledProjection {
+  items: (InstalledProjectionItem & { registry: string })[]
 }
 export interface InstalledProjection {
   items: InstalledProjectionItem[]
@@ -61,7 +64,44 @@ export interface NativeToggleExecution {
   baseline: Extract<ToggleBaseline, { status: 'ready' }>
   authorize: NativeRemovalExecution['authorize']
 }
+export interface ChangeFile { path: string; kind: 'added' | 'modified' | 'deleted' }
+export interface BoundedFileDiff {
+  path: string
+  state: 'text' | 'binary' | 'too-large' | 'unavailable'
+  lines: { kind: 'context' | 'added' | 'deleted'; text: string }[]
+  truncated: boolean
+}
+export type LocalChangesSnapshot = Extract<UpgradeBaseline, { status: 'blocked' }>
+  | { status: 'ready'; kind: 'local'; baseline: Extract<UpgradeBaseline, { status: 'ready' }>;
+      selection: UpgradeSelection; target: InstalledProjectionTarget; installationState: InstallationState;
+      changes: ChangeFile[]; digest: string }
+export interface VersionChangesSnapshot {
+  status: 'ready'
+  kind: 'version'
+  local: Extract<LocalChangesSnapshot, { status: 'ready' }>
+  candidate: { version: string; versionId: number; fingerprint: string }
+  files: Record<string, string>
+  changes: ChangeFile[]
+}
+export interface VerifiedBackupReceipt { id: string; snapshotDigest: string; rawDigest: string; createdAt: string }
+export interface NativeFileResetExecution {
+  operationId: string
+  ownerId: string
+  snapshot: Extract<LocalChangesSnapshot, { status: 'ready' }>
+  paths: string[]
+  authorize: NativeRemovalExecution['authorize']
+}
 export interface NativeRuntime {
+  previewPackage(archive: Uint8Array, validate: (directory: string) => Promise<{name: string; summary?: string}>): Promise<{name: string; summary?: string; files: number; bytes: number; fingerprint: string}>
+  exportPackage(selected: UpgradeSelection, target: InstalledProjectionTarget): Promise<{filename: string; archive: Uint8Array}>
+  executePackageImport(request: NativeInstallExecution & {archive: Uint8Array}): Promise<NativeRecoveryResult>
+  inspectChanges(selected: UpgradeSelection, target: InstalledProjectionTarget): Promise<LocalChangesSnapshot>
+  readChangeDiff(snapshot: Extract<LocalChangesSnapshot, {status: 'ready'}> | VersionChangesSnapshot, path: string): Promise<BoundedFileDiff>
+  prepareVersionChanges(selected: UpgradeSelection, target: InstalledProjectionTarget,
+    candidate: {version: string; versionId: number; fingerprint: string}): Promise<VersionChangesSnapshot>
+  backupChanges(snapshot: Extract<LocalChangesSnapshot, {status: 'ready'}>, authorize: NativeRemovalExecution['authorize']): Promise<VerifiedBackupReceipt>
+  acceptFileReset(request: NativeOperationRequest, validateNew: () => Promise<NativeInstallAcceptance>): Promise<NativeOperation | undefined>
+  executeFileReset(request: NativeFileResetExecution): Promise<NativeRecoveryResult>
   /** Host-only verified raw entry, including disabled entries; never accept a Client path. */
   readInstallationEntry(selected: UpgradeSelection, target: InstalledProjectionTarget): Promise<string | undefined>
   inspectToggle(selected: UpgradeSelection, target: InstalledProjectionTarget, desiredState: InstallationState): Promise<ToggleBaseline>
@@ -82,6 +122,7 @@ export interface NativeRuntime {
   inspectUpgrade(selected: UpgradeSelection, targets: readonly InstalledProjectionTarget[]): Promise<UpgradeBaseline>
   assessUpdate(installed: UpdateIdentity, candidate: UpdateIdentity): UpdateAssessment
   openInstalledSnapshot(registry: string, targets: readonly InstalledProjectionTarget[]): Promise<{ projection: InstalledProjection; read(item: InstalledProjectionItem): Promise<InstalledProjectionItem> }>
+  listAllInstalled(targets: readonly InstalledProjectionTarget[]): Promise<AllInstalledProjection>
   listInstalled(registry: string, targets: readonly InstalledProjectionTarget[]): Promise<InstalledProjection>
   readonly hostInstanceId: string
   listPending(): Promise<NativePendingOperation[]>
@@ -132,14 +173,14 @@ export interface NativeInstallAcceptance {
 export interface NativeOperation {
   operationId: string
   revision: number
-  kind: 'install' | 'upgrade' | 'uninstall' | 'remove-stale-record' | 'enable' | 'disable'
+  kind: 'install' | 'upgrade' | 'uninstall' | 'remove-stale-record' | 'enable' | 'disable' | 'reset-files'
   namespace: string
   slug: string
   version: string
   targetLabel: string
   context: NativeInstallAcceptance['context'] & { hostInstanceId: string; createdAt: string; updatedAt: string }
   phase: 'accepted' | 'staging' | 'revalidating' | 'committing' | 'recovering' | 'completed' | 'failed' | 'recovery-required' | 'unknown'
-  files: 'pending' | 'installed' | 'already-installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'enabled' | 'disabled' | 'failed' | 'unknown'
+  files: 'pending' | 'installed' | 'already-installed' | 'upgraded' | 'removed' | 'stale-record-removed' | 'enabled' | 'disabled' | 'files-reset' | 'failed' | 'unknown'
   discovery: 'unconfirmed' | 'confirmed' | 'failed'
   recovery: 'not-needed' | 'restored' | 'incomplete' | 'unknown'
   warningCount: number
@@ -173,6 +214,7 @@ export interface NativeCore {
 }
 
 export interface NativeUpgradeExecution extends Omit<NativeInstallExecution, 'root' | 'scope'> {
+  localChangesAuthorization?: { snapshot: Extract<LocalChangesSnapshot, {status: 'ready'}>; backupReceipt: VerifiedBackupReceipt }
   baseline: Extract<UpgradeBaseline, { status: 'ready' }>
 }
 

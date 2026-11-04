@@ -64,7 +64,7 @@ export function InstallationProgressPanel({ job, services, onUsed }: { job: Inst
     <div className="astron-sh-install-progress-actions">{completed && <UseSkillButton services={services.skillUse} revision={job.sourceRevision} resolve={async signal => {
       const inventory = await services.installed(job.sourceRevision, signal);
       if (!inventory.ok) throw new Error('无法核验当前安装，请在已安装中重试。');
-      return exactInstalledSkill(inventory.value, job)?.itemKey ?? '';
+      return exactInstalledSkill(inventory.value, { ...job, registry: (operation.data ?? attempt?.operation)?.context.sourceIdentity })?.itemKey ?? '';
     }} onHandoff={onUsed} onUsed={onUsed} />}</div>
   </section>;
 }

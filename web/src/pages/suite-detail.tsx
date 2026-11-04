@@ -66,7 +66,7 @@ export function SuiteDetailPage() {
   }
 
   return (
-    <div className={cn(APP_SHELL_PAGE_CLASS_NAME, 'mx-auto max-w-7xl space-y-5')}>
+    <div className={cn(APP_SHELL_PAGE_CLASS_NAME, 'space-y-5')}>
       <header className="space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0 max-w-3xl space-y-3">

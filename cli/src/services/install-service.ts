@@ -24,6 +24,9 @@ import type { Inventory, InventoryItem } from '../stores/inventory-store'
 import { acquireSkillTargetLock, orderSkillTargetLocks } from './skill-target-lock'
 
 export interface InstallOptions {
+  /** Internal native import bytes; never read from CLI flags. */
+  packageBytes?: Uint8Array
+  metadataSource?: 'local-import'
   registry: string
   token?: string | undefined
   namespace: string
@@ -120,6 +123,9 @@ async function preflightInstallTargets(
 }
 
 export async function installSkill(options: InstallOptions): Promise<InstallResult> {
+  const imported = options.registry === 'local:import'
+  if (imported !== !!options.packageBytes || imported !== (options.metadataSource === 'local-import')
+    || imported && (options.namespace !== 'local' || options.version !== 'local' || options.force)) throw new Error('Invalid local package identity')
   const store = options.inventoryStore ?? new InventoryStore(options.home)
   await store.ensureWritable()
   const expectedItem = options.expectedInventoryItem === undefined ? undefined : structuredClone(options.expectedInventoryItem)
@@ -137,7 +143,9 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
     if (previous?.target.installationState !== 'disabled') continue
     if (!options.transactionObserver?.beforePreparation) throw new CliError('disabled installations require the native transactional upgrade manager', EXIT.validation)
     const snapshot = await snapshotInstalledSkillDirectory(previous.item, previous.target)
-    if (snapshot.fingerprint !== previous.target.fingerprint) throw new CliError('disabled installation has local changes', EXIT.validation)
+    if (snapshot.fingerprint !== previous.target.fingerprint
+      && (!options.expectedTargetFiles?.[prepared.skillDir] || options.allowTargetDrift !== false
+        || diffSkillFiles(options.expectedTargetFiles[prepared.skillDir], snapshot.files).length)) throw new CliError('disabled installation has local changes', EXIT.validation)
   }
   const canonicalDirs = new Set(preparedTargets.map(target => target.canonicalSkillDir))
   if (expectedItem !== undefined) {
@@ -152,7 +160,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
   await options.transactionObserver?.beforeTargetMutation?.([...canonicalDirs])
   const client = options.client ?? new SkillHubClient(options.registry, options.token)
   const resolved = options.resolved ?? await client.resolve(options.namespace, options.slug, options.version)
-  const response = resolved.downloadUrl
+  const response = options.packageBytes ? new Response(options.packageBytes.slice().buffer) : resolved.downloadUrl
     ? await client.downloadFromUrl(resolved.downloadUrl)
     : await client.download(options.namespace, options.slug, resolved.version)
   const buffer = await readBoundedResponseBody(response)
@@ -194,7 +202,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
           versionId: resolved.versionId,
           fingerprint: resolved.fingerprint,
           files: snapshot.files,
-          source: 'skillhub',
+          source: options.metadataSource ?? 'skillhub',
           agent: target.agent,
           installedAt
         }, null, 2))

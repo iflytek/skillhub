@@ -1,14 +1,23 @@
-# Quick Start: Install and Use a Skill
+# Quickstart: install and use a skill
 
-Install your first skill and use it in your Agent. This guide uses an existing registry; no SkillHub server deployment is needed.
+This page starts from an existing accessible registry and covers installation, Agent discovery and a first-use check for one skill. It does not cover registry deployment or skill publication. The endpoint is an Agent reading the skill and completing a concrete task, rather than only a successful CLI installation message.
 
-## Before you begin
+![Sequence for selecting a registry, installing files, checking discovery and assessing execution](/diagrams/first-install-flow-en.svg)
 
-- An Agent that supports skill directories, such as Codex or Claude Code.
-- Node.js 18 or later and npm; check with `node --version`.
-- A project directory and a reachable SkillHub registry.
+Figure: each stage has its own completion criterion. A later failure should be diagnosed at that stage instead of reinstalling everything.
 
-Run the commands in a terminal. `@team/example-skill` is a placeholder, not a guaranteed public package. Replace it with an actual search result. Before a project-scoped installation, enter the project root that your Agent will open.
+## Prerequisites
+
+Run commands in a terminal and first change to the project root that the target Agent will open. Prepare an accessible registry and an Agent supporting skill directories, such as Codex or Claude Code.
+
+| Item | Requirement or value | Check and activation |
+| --- | --- | --- |
+| Node.js | 18 or newer, with npm available | Run `node --version` and `npm --version`; reopen the terminal after changing the runtime environment |
+| Registry | Built-in address: `https://skill.xfyun.cn` | Priority: command argument, `SKILLHUB_REGISTRY`, local configuration, built-in address; environment changes apply to the current terminal |
+| Installation scope | `project` or `user` | This page selects project scope explicitly; user scope is under the home directory and does not imply automatic discovery by every Agent |
+| Target Agent | This page uses `codex` | Use `claude-code` for Claude Code; the selection must match the Agent opening the project |
+
+`skillhub.example.com` and `@team/example-skill` are placeholders, not guaranteed resources. Replace them with the actual instance address and a coordinate returned by search. Runtime requirements and options are defined by the [CLI manifest](https://github.com/iflytek/skillhub/blob/main/cli/package.json) and [command definitions](https://github.com/iflytek/skillhub/blob/main/cli/src/index.ts).
 
 ## 1. Install the CLI and select a registry
 
@@ -17,82 +26,111 @@ npm install -g @astron-team/skillhub
 skillhub version
 ```
 
-The default registry is `https://skill.xfyun.cn`. For a self-hosted instance, set its actual URL in your terminal:
+The version command should display `SkillHub CLI` followed by the installed version. If the command is unavailable, check that the npm global executable directory is on the current terminal's `PATH` before attempting skill installation.
+
+The default instance needs no address setting. For self-hosting, set the actual address in the current terminal and retain the same source for subsequent commands:
 
 ```bash
 export SKILLHUB_REGISTRY=https://skillhub.example.com
 ```
 
-For PowerShell, set the registry with:
+The PowerShell equivalent is:
 
 ```powershell
 $env:SKILLHUB_REGISTRY="https://skillhub.example.com"
 ```
 
-For a single command, append `--registry https://skillhub.example.com`. Use the same registry for search, login, and installation. Identically named skills from different registries are different installation sources.
+A single command can instead specify `--registry https://skillhub.example.com`. Identically named skills on different instances have different sources. Changing the source does not relocate installed files.
 
-Public skills support anonymous search and installation. Publishing and restricted resources require authentication:
+## 2. Search and verify identity
+
+```bash
+skillhub search pdf
+```
+
+Each output line contains namespace/slug, latest version and summary. An empty result displays `No skills found.`. Inspect the purpose, version, visibility and dependencies on the same instance's detail page, then copy the actual coordinate.
+
+Public skills support anonymous search and installation. Restricted resources require login and remain subject to resource permissions:
 
 ```bash
 skillhub login
 skillhub whoami
 ```
 
-If no token is resolved from command arguments, environment variables, or saved registry credentials, follow the device-authorization instructions in the browser. When a token is found, login validates that identity rather than automatically asking you to choose another account. Use `skillhub login --no-open` on a remote terminal. Available sign-up and login methods depend on the instance configuration.
+When no Token is available from command arguments, environment variables or the registry's saved credentials, login starts device authorization and prints an authorization address and device code. Browser login must be followed by device-code confirmation; an existing browser session is not a CLI credential. An existing Token is verified first, without automatically selecting another account. Remote terminals can use `skillhub login --no-open`. Available login methods and registration depend on instance configuration. `whoami` should identify the selected registry and account; see [accounts and access tokens](./guide/account-access.html).
 
-## 2. Find and install a skill
+## 3. Install and inspect files and records
 
-```bash
-skillhub search pdf
-```
-
-Review the skill's purpose, version, visibility, and instructions on its detail page. Replace the placeholder `@team/example-skill` below with a real search result.
-
-From the target project root:
+Run from the target project root after replacing the placeholder coordinate:
 
 ```bash
 skillhub install @team/example-skill --scope project --agent codex
-skillhub list --agent codex
+skillhub list --agent codex --json
 ```
 
-For Claude Code, use `--agent claude-code`. Use `--scope user` to share an installation across projects.
-Codex project installations use `.codex/skills/<slug>/`; Claude Code uses `.claude/skills/<slug>/`. User installations use the corresponding directory under your home directory.
+The following is an output-format example, not a real download result. The installation path should match the current project. The directory must contain `SKILL.md`; other files depend on the package:
 
-### Verify the destination
+```text
+Installed team/example-skill -> /work/project/.codex/skills/example-skill (codex)
 
-Read the destination printed by installation, then inspect `skillhub list --agent codex`: the coordinate, version, Agent, directory, and status should match your choice. `list` filters by the active registry; switching registries does not delete local files.
+/work/project/.codex/skills/example-skill/
+└── SKILL.md
+```
 
-`missing` means the recorded directory does not exist. `ok` only means the directory exists, not that the Agent loaded or successfully executed the skill. Check `SKILL.md` in the actual destination before continuing.
+The JSON returned by `list` should contain a matching record. This is a complete structure example; paths, time and version must be checked against actual output:
 
-## 3. Use it in your Agent
+```json
+{"ok":true,"items":[{"namespace":"team","slug":"example-skill","version":"1.0.0","agent":"codex","installDir":"/work/project/.codex/skills/example-skill","installedAt":"2026-11-03T08:00:00.000Z","status":"ok"}]}
+```
 
-Open the project in your Agent and start a new session or reload skills if required. Confirm that the Agent discovers the skill, then make a concrete request:
+Check the coordinate, Agent and `installDir`, then open that directory's `SKILL.md`. Status `ok` only establishes that the directory exists, not that its content executed; `missing` means that the recorded directory is absent. The list filters by the current registry, not only the current project, so the path must also be checked. Claude Code uses `.claude/skills/<slug>/` for project scope. With `--scope user`, installation is under the home directory and discovery follows the Agent's rules.
 
-> Use example-skill and follow its instructions to process the following material: …
+Output definitions are in the [install command](https://github.com/iflytek/skillhub/blob/main/cli/src/commands/install.ts) and [list command](https://github.com/iflytek/skillhub/blob/main/cli/src/commands/list.ts).
 
-Use the name in `SKILL.md` and the Agent's discovery results. Installation does not execute a skill or configure its required tools and credentials.
-If discovery fails, check the CLI's destination, current project, scope, and target Agent; see the [FAQ](./faq.md).
+## 4. Verify Agent discovery and execute a task
 
-For a collection, use `skillhub suite install`, then start with its entry skill. See [Skill Suites](./guide/skill-suites.md).
+Open that project in the target Agent, then reload skills or create a session according to that product's loading mechanism. Check that the target name appears in the Agent's available skills, then provide a concrete task, input and expected artifact as required by the skill. The invocation name depends on the actual `name` in `SKILL.md` and the Agent's discovery result.
 
-## 4. Update and manage installations
+| Stage | Observable completion criterion | What remains unproven |
+| --- | --- | --- |
+| File installation | `SKILL.md` exists at the installation path and the matching record has `status=ok` | Whether the Agent loaded the files |
+| Agent discovery | The Agent's skill list or session context contains the target skill | Whether external tools, credentials and business dependencies work |
+| Task execution | The Agent produces a verifiable result according to the instructions | Whether other inputs, environments or later versions are equally suitable |
+
+Installation does not execute skills or configure external tools. For cooperation between skills, inspect the entry and member instructions. Shared installation uses `skillhub suite install`; see [Skill Suites](./guide/skill-suites.html).
+
+## 5. Verify rejection of invalid arguments
+
+The following command uses an invalid scope to demonstrate rejection by local argument validation:
+
+```bash
+skillhub install @team/example-skill --scope invalid --agent codex
+```
+
+The expected standard-error output is shown below, with exit code 5. The command stops before reading installation configuration or downloading files, so it does not install the example skill:
+
+```text
+Error: --scope must be "user" or "project"
+```
+
+Restore `--scope project` and substitute a real coordinate before installation. Do not use `--force` to address an argument error. The message and execution order are defined by [installation argument validation](https://github.com/iflytek/skillhub/blob/main/cli/src/commands/install.ts).
+
+## Diagnose and resolve failures
+
+| Symptom | Most likely cause | Diagnostic action | Resolution |
+| --- | --- | --- | --- |
+| Search does not return the target | Source, permissions or publication state differ | Check `skillhub search pdf` and `skillhub whoami` in the same terminal; inspect the coordinate on the same instance | Correct the source and publication state, and log in when required; do not reset the account to troubleshoot |
+| Installation reports an existing directory | An existing installation or manual files occupy the path | Compare the reported path with `installDir` in `skillhub list --agent codex --json`, then read its `SKILL.md` | Back up and identify its source, then select the correct project or scope; do not overwrite unknown content |
+| The Agent does not discover the installed skill | The project, scope or target Agent differs | Check `agent`, `installDir` and `status` in the list and the project opened by the Agent | Correct the target and reload through the Agent's mechanism; do not interpret `ok` as successful loading |
+| The skill is discovered but execution fails | Missing dependencies, input or permissions | Read local `SKILL.md` and compare tool and credential requirements with the Agent's error | Supply dependencies in the target environment; do not place credentials in shared packages or public logs |
+
+## Updates and subsequent tasks
+
+After these checks, inspect an upgrade plan before choosing to apply it:
 
 ```bash
 skillhub upgrade @team/example-skill --check
 skillhub upgrade @team/example-skill
 ```
 
-Review the plan before updating and preserve local changes you need. Do not use `--force` by default. See the [CLI guide](./guide/cli.md) for removal, team workspace synchronization, and command details.
-
-## Troubleshoot the first installation
-
-| Symptom | Check first | Next step |
-| --- | --- | --- |
-| Skill not found | Registry, spelling, login identity, and visibility | Confirm a published coordinate/version in the UI; see [discovery](./guide/skill-discovery.md) |
-| Directory conflict | Whether the destination belongs to another source or contains your own files | Preserve needed files; do not force an unknown directory; see [CLI reference](./guide/cli.md) |
-| Installed but not discovered | Agent profile, project root, and user/project scope | Check the printed path, then reload or start a session according to the Agent's discovery behavior |
-| Discovered but execution fails | Required tools, inputs, and credentials | Follow `SKILL.md`; the registry does not configure or execute those requirements |
-
-## Next steps
-
-Install a [Skill Suite](./guide/skill-suites.md) when you need a coordinated collection, or use the [CLI reference](./guide/cli.md) for more commands. For publishing, team administration, hosting, or development, choose your next task in the [documentation map](./guide/index.md).
+Local changes, shared directories or source protections may block an upgrade, so the plan must be read first. Do not add `--force` by default. This page ends with first use of one skill. Removal, version management and full options are in the [CLI reference](./guide/cli.html); authoring and deployment tasks start from the [documentation navigator](./guide/index.html).

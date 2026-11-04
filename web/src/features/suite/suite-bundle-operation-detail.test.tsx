@@ -93,6 +93,37 @@ describe('SuiteBundleOperationDetail', () => {
     })
   })
 
+  it('clips a long immutable member version so it cannot bleed into the status column', () => {
+    const version = `snapshot-${'a'.repeat(60)}`
+    mocks.operation.data = {
+      operationId: 'operation-1',
+      status: 'CANCELLED',
+      mode: 'CREATE',
+      targetCoordinate: '@global/care-suite',
+      targetVersion: '1.0.0',
+      updatedAt: '2026-09-14T04:00:00Z',
+      members: [{
+        position: 0,
+        redacted: false,
+        coordinate: '@global/member-under-review',
+        status: 'CANCELLED',
+        version,
+        sourceType: 'PACKAGE',
+        relationship: 'ADDED',
+        publishAction: 'CREATE_VERSION',
+        visibility: 'PUBLIC',
+        errors: [],
+        warnings: [],
+      }],
+    }
+
+    render(<SuiteBundleOperationDetail operationId="operation-1" />)
+
+    const cell = screen.getByTitle(`v${version}`)
+    expect(cell.className).toContain('truncate')
+    expect(cell.textContent).toBe(`v${version}`)
+  })
+
   it('explains when a new member Skill does not exist yet', () => {
     mocks.operation.data = {
       operationId: 'operation-planned',

@@ -1,61 +1,58 @@
 # 项目简介
 
-SkillHub 是一个专为企业打造的自托管 Agent Skill 注册中心。
+SkillHub 是管理 Agent 技能分发与治理的自托管注册中心。技能作者提交带有 `SKILL.md` 的技能包，注册中心保存版本并执行访问控制、扫描和审核流程；使用者通过网页发现技能，再通过 CLI 将文件安装到目标 Agent 的技能目录。本页面向首次了解产品的使用者、作者和部署方，说明职责边界与对象选择，不代替具体操作手册。
 
-在 AI Agent 时代，每个团队都在积累自己的技能包（Skills）。但这些技能包散落在各处：有的在开发者本地，有的在 Git 仓库，有的在内部文档里。团队成员很难发现彼此的工作，更难复用已有的能力。
+## 注册中心的职责与边界
 
-SkillHub 解决了这个问题。它提供了一个**私有、可控、易用**的技能包注册中心，让团队可以像使用 npm、PyPI 一样管理 Agent Skills。
+注册中心解决技能来源分散、版本难以统一、访问范围与发布过程缺少管理入口的问题。它管理的是可分发的技能文件、版本及其治理记录，不负责在服务端直接执行已安装技能。
 
-![项目架构图](/diagrams/architecture.png)
+![技能作者、注册中心和 Agent 环境的职责划分](/diagrams/registry-responsibilities.svg)
 
-## 核心价值
+图：注册中心负责接收、治理与分发；技能安装后的加载和执行由目标 Agent 环境完成。
 
-- **统一分发**：上传技能包并跟踪扫描、审核和发布状态
-- **企业级权限**：基于命名空间的 RBAC，支持团队协作和审核流程
-- **完整生命周期**：版本管理、标签系统、审核工作流、归档机制
-- **部署选择**：Docker Compose 和 Kubernetes，按环境配置依赖和认证
-- **安全扫描**：内置 Skill Scanner，自动检测安全风险
-- **数据主权**：完全自托管，所有数据都在你的防火墙内
-
-## 技术栈
-
-![前端、后端、数据与存储技术组成](/diagrams/tech-stack-sketch.png)
-
-存储可选择本地文件或 S3 兼容后端；按部署需求显式配置。
-
-| 层级 | 技术 | 说明 |
-|------|------|------|
-| **前端** | React + Vite + TanStack Router | 现代化 SPA，支持多语言切换 |
-| **后端** | Java 21 + Spring Boot | 企业级 REST API |
-| **数据库** | PostgreSQL | 全文搜索、Flyway 自动迁移 |
-| **缓存** | Redis | 会话管理、热点缓存 |
-| **存储** | 本地文件 / S3 兼容存储 | 技能包文件存储，支持本地和云端 |
-| **部署** | Docker Compose / K8s | 按部署配置自托管 |
-
-## 核心功能一览
-
-| 功能 | 说明 |
-|------|------|
-| [Skill 发布与版本管理](/guide/skill-publish) | 一键发布技能包，语义化版本管理 |
-| [Skill 搜索与发现](/guide/skill-discovery) | 全文搜索、智能过滤、权限感知 |
-| [命名空间与团队管理](/guide/namespace) | 基于命名空间的 RBAC 权限体系 |
-| [审核与治理](/guide/review) | 技能与套装审核流程、举报系统 |
-| [安全扫描](/guide/scanner) | 内置 Skill Scanner，多引擎安全分析 |
-| [用户交互与社交](/guide/social) | 星标、评分、通知系统 |
-
-## 先理解三个对象
-
-| 对象 | 用途 | 下一步 |
+| 操作 | 注册中心承担的职责 | 使用者或作者承担的职责 |
 | --- | --- | --- |
-| Skill | 带有 `SKILL.md` 的单个技能包，安装后由 Agent 发现和使用 | [快速开始](./quickstart.md) |
-| Skill Suite | 固定成员版本的技能集合，指定一个成员作为入口技能 | [套装安装与使用](./guide/skill-suites.md) |
-| Suite Bundle | 发布者批量上传套装定义和成员包的格式 | [批量导入](./guide/suite-bundle.md) |
+| 提交与发布 | 校验技能包，按配置推进扫描、审核及发布 | 提供指令、依赖说明和可核查的内容；处理拒绝或失败结果 |
+| 发现与下载 | 按资源状态和访问权限提供搜索、详情及可下载版本 | 核对用途、来源、版本和目标环境，不将可见详情等同于可安装 |
+| 安装与执行 | CLI 下载文件并维护本地安装记录 | 确认 Agent 已发现技能，配置运行依赖，并验收执行结果 |
+| 更新与治理 | 管理版本以及隐藏、归档等治理状态 | 核对本地修改与更新计划；已下载文件不会因远端治理操作被自动收回 |
 
-注册中心负责分发和治理；技能的实际执行发生在使用者的 Agent 环境中。安装套装不会自动运行全部成员。
+技能不是托管运行中的应用；安装不等于启动服务。扫描结果和审核记录也不是执行效果或合规认证：扫描只能反映对应任务与策略下的检查结果，技能的适用性仍需在实际 Agent 环境中验证。
 
-## 按角色阅读
+## 区分技能、技能套装与套装 Bundle
 
-- 使用者：[CLI](./guide/cli.md)、[搜索与发现](./guide/skill-discovery.md)、[FAQ](./faq.md)。
-- 创作者：[发布与版本管理](./guide/skill-publish.md)、[套装](./guide/skill-suites.md)、[审核](./guide/review.md)。
-- 管理员：[命名空间](./guide/namespace.md)、[部署与升级](./guide/deployment.md)、[Kubernetes](./guide/kubernetes.md)。
-- 集成开发者：[Runtime 契约](./guide/runtime-integration.md)、[仓库文档索引](https://github.com/iflytek/skillhub/blob/main/docs/README.md)。
+三种对象服务不同阶段，不能相互替代。技能套装（Skill Suite）固定一组成员技能的精确版本，并指定一个成员作为入口；套装 Bundle（Suite Bundle）是作者批量导入成员和套装定义的格式。
+
+| 对象 | 保存或描述的内容 | 与相邻对象的区别 |
+| --- | --- | --- |
+| 技能 | 一个以 `SKILL.md` 为核心的技能包及其版本 | 可独立安装；关联某个技能套装不要求安装全部成员 |
+| 技能套装 | 成员坐标、精确版本和入口技能 | 是安装集合，不是工作流执行引擎；安装后成员仍为独立目录 |
+| 套装 Bundle | `SUITE.yaml` 与待上传的成员目录，或已发布成员的版本引用 | 是创作与导入输入，不是本地 Agent 的执行程序，也不绕过成员审核 |
+
+例如，会议资料处理需要“材料接收”和“摘要生成”两个技能。单独使用摘要功能时，只需安装摘要技能；共同分发时，可创建技能套装，固定各成员版本并将材料接收设为入口。成员尚在本地、需要同时上传时，作者才需要准备套装 Bundle。此例用于解释对象关系，不代表注册中心存在同名可安装资源。安装技能套装不会自动执行上述两步，实际协作由入口及成员指令与 Agent 决定。
+
+对象定义可核查[技能套装成员模型](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/suite/SkillSuiteVersionMember.java)及[套装 Bundle 定义](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/suite/bundle/SkillSuiteBundleManifest.java)。
+
+## 根据目标选择对象与入口
+
+| 目标 | 选择 | 判断依据与后续操作 |
+| --- | --- | --- |
+| 安装一个技能完成独立任务 | 技能 | 无需固定其他成员版本；从[快速开始](./quickstart.html)完成安装与 Agent 发现验证 |
+| 将多个技能按固定版本共同分发 | 技能套装 | 需要固定成员组合与入口；在[技能套装](./guide/skill-suites.html)中核对成员可安装状态 |
+| 同时上传多个本地技能并组成套装 | 套装 Bundle | 需要导入定义、预览差异并创建成员版本；阅读[Bundle 导入](./guide/suite-bundle.html) |
+| 管理可见范围、成员与审核 | 命名空间与治理流程 | 平台角色不等同于命名空间角色；先阅读[命名空间](./guide/namespace.html)的权限前置 |
+
+只有技能安装和使用需求时，不需要先部署注册中心或准备套装 Bundle。发布需求应按“准备技能包、提交、扫描、审核、确认发布”的实际路径处理，不能将上传结束当作全部流程结束；入口见[发布与版本管理](./guide/skill-publish.html)。
+
+## 部署形态与技术组成
+
+已有可访问实例时，可直接使用其网页和 CLI。自托管部署则需要维护服务、数据库、会话存储及技能文件存储，并配置所需认证与扫描能力。外部身份、扫描器和其他外部服务是否启用，以实例配置为准；自托管不代表所有外部请求均被禁用。
+
+| 组成 | 技术或实现 | 作用与配置边界 |
+| --- | --- | --- |
+| 网页与服务端 | React、Vite；Java、Spring Boot | 网页提供操作入口，服务端执行接口及业务规则 |
+| 数据库与会话存储 | PostgreSQL、Redis | 保存业务记录并支持服务端会话；必须与技能文件一起纳入运维设计 |
+| 技能文件存储 | 本地文件或 S3 兼容存储 | 后端按部署配置选择实现；存储选型不等于已有数据已完成迁移 |
+| 部署路径 | 部署脚本、release Compose、Kustomize、Helm | 路径各有配置入口，不应混用升级命令或持久化配置 |
+
+部署组成以[release Compose](https://github.com/iflytek/skillhub/blob/main/compose.release.yml)及[后端模块定义](https://github.com/iflytek/skillhub/blob/main/server/pom.xml)为依据。需要自托管时，从[文档导航](./guide/index.html)选择部署路径；集成开发者应区分注册中心接口与实际 Agent 执行环境，接口职责见[Runtime 集成](./guide/runtime-integration.html)。

@@ -242,7 +242,12 @@ export class SkillHubClient {
       // Keep the configured registry prefix, as direct download() does.
       const relativeUrl = downloadUrl.startsWith('/api/') ? downloadUrl.slice(1) : downloadUrl
       const registryBase = `${this.registry.replace(/\/+$/, '')}/`
-      response = await this.fetchImpl(new URL(relativeUrl, registryBase).toString(), { headers: this.headers() })
+      const url = new URL(relativeUrl, registryBase)
+      const registryApi = new URL('api/', registryBase)
+      const headers = url.origin === registryApi.origin && url.pathname.startsWith(registryApi.pathname)
+        ? this.headers()
+        : {}
+      response = await this.fetchImpl(url.toString(), { headers })
     } catch {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }

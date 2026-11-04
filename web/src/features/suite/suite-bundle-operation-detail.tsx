@@ -264,8 +264,11 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
                     {member.publishAction ? ` · ${t(`suite.bundle.action.${member.publishAction}`)}` : null}
                   </p>
                 ) : <span>—</span>}
-                <p className="font-mono text-xs text-muted-foreground">
-                  {member.visibility ?? '—'}<br />v{member.version ?? '—'}
+                <p className="min-w-0 font-mono text-xs text-muted-foreground">
+                  {member.visibility ?? '—'}<br />
+                  <span className="block truncate" title={member.version ? `v${member.version}` : undefined}>
+                    v{member.version ?? '—'}
+                  </span>
                 </p>
                 <div className="space-y-2">
                   <span className={cn(

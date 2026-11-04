@@ -82,12 +82,12 @@ export class OperationStore {
     // Validation must not run under the journal lock: lifecycle code acquires target locks first.
     const accepted = input.parse(await validateNew())
     const source = new URL(accepted.context.sourceIdentity)
-    if (!['http:', 'https:'].includes(source.protocol) || source.username || source.password || source.search || source.hash) throw new Error('Unsafe source identity')
+    if (!(accepted.context.sourceIdentity === 'local:import' && accepted.namespace === 'local' && accepted.version === 'local') && (!['http:', 'https:'].includes(source.protocol) || source.username || source.password || source.search || source.hash)) throw new Error('Unsafe source identity')
     return this.locked(async () => {
       const duplicate = await this.findRequest(request)
       if (duplicate) return duplicate
       const now = new Date().toISOString()
-      const value: OperationRecord = { schemaVersion: ['enable', 'disable'].includes(accepted.kind) ? 3 : 2, operationId: randomUUID(), ownerId: request.ownerId,
+      const value: OperationRecord = { schemaVersion: accepted.context.sourceIdentity === 'local:import' || ['enable', 'disable'].includes(accepted.kind) ? 3 : 2, operationId: randomUUID(), ownerId: request.ownerId,
         requestKey: request.requestKey, requestDigest: request.requestDigest, revision: 0,
         operation: { ...accepted, context: { ...accepted.context, hostInstanceId: this.hostInstanceId, createdAt: now, updatedAt: now },
           status: { phase: 'accepted', files: 'pending', discovery: 'unconfirmed', recovery: 'not-needed', warnings: [] } } }
@@ -394,10 +394,13 @@ export class OperationStore {
   private path(operationId: string): string { return join(this.root, `${id.parse(operationId)}.json`) }
   private async read(operationId: string): Promise<OperationRecord | undefined> {
     await this.validateExtendedDirectory()
+    await this.validateExtendedDirectory('local-packages')
+    const local = await readJson(this.localPackagePath(operationId))
     const extended = await readJson(this.extendedPath(operationId))
     const ordinary = await readJson(this.path(operationId))
     if (extended !== undefined && ordinary !== undefined && !isDeepStrictEqual(extended, ordinary)) throw new OperationStoreError('CORRUPT_RECORD')
-    const json = extended ?? ordinary
+    if (local !== undefined && [extended, ordinary].some(value => value !== undefined && !isDeepStrictEqual(local, value))) throw new OperationStoreError('CORRUPT_RECORD')
+    const json = local ?? extended ?? ordinary
     if (json === undefined) return undefined
     const parsed = record.safeParse(json)
     if (!parsed.success || parsed.data.operationId !== operationId || parsed.data.operation.context.hostInstanceId !== this.hostInstanceId) throw new OperationStoreError('CORRUPT_RECORD')
@@ -419,7 +422,9 @@ export class OperationStore {
     const values: OperationRecord[] = []
     await this.validateExtendedDirectory()
     const extended = await readdir(join(this.root, 'activation')).catch((error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return []; throw error })
-    for (const name of [...new Set([...(await readdir(this.root)), ...extended])].sort()) {
+    await this.validateExtendedDirectory('local-packages')
+    const local = await readdir(join(this.root, 'local-packages')).catch((error: NodeJS.ErrnoException) => { if (error.code === 'ENOENT') return []; throw error })
+    for (const name of [...new Set([...(await readdir(this.root)), ...extended, ...local])].sort()) {
       if (name === 'host.json' || !name.endsWith('.json')) continue
       const value = await this.read(name.slice(0, -5))
       if (!value) throw new OperationStoreError('CORRUPT_RECORD')
@@ -430,15 +435,17 @@ export class OperationStore {
 
   private extendedPath(operationId: string): string { return join(this.root, 'activation', `${id.parse(operationId)}.json`) }
 
-  private async validateExtendedDirectory(): Promise<void> {
+  private localPackagePath(operationId: string): string { return join(this.root, 'local-packages', `${id.parse(operationId)}.json`) }
+
+  private async validateExtendedDirectory(directory = 'activation'): Promise<void> {
     try {
-      const info = await lstat(join(this.root, 'activation'))
+      const info = await lstat(join(this.root, directory))
       if (!info.isDirectory() || info.isSymbolicLink() || (process.getuid && info.uid !== process.getuid())) throw new OperationStoreError('CORRUPT_RECORD')
     } catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error }
   }
 
-  private async prepareExtendedDirectory(): Promise<void> {
-    const path = join(this.root, 'activation')
+  private async prepareExtendedDirectory(directory = 'activation'): Promise<void> {
+    const path = join(this.root, directory)
     await mkdir(path, { recursive: true, mode: 0o700 })
     const info = await lstat(path)
     if (!info.isDirectory() || info.isSymbolicLink() || (process.getuid && info.uid !== process.getuid())) throw new OperationStoreError('CORRUPT_RECORD')
@@ -481,6 +488,11 @@ export class OperationStore {
   }
 
   private async writeRecord(value: OperationRecord): Promise<void> {
+    if (value.operation.context.sourceIdentity === 'local:import') {
+      await this.prepareExtendedDirectory('local-packages')
+      await writeOperationRecord(this.localPackagePath(value.operationId), {...value, schemaVersion: 3}, this.replaceFile)
+      return
+    }
     const extended = value.schemaVersion === 3 || await readJson(this.extendedPath(value.operationId)) !== undefined || operationSnapshots(value).some(snapshot => snapshot.items.some(item => item.targets.some(target => target.installationState === 'disabled')))
     if (extended) {
       await this.prepareExtendedDirectory()

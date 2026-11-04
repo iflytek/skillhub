@@ -4,6 +4,15 @@ import type { NativeRuntime, NativeInstallExecution, NativeRecoveryResult, Nativ
 
 function native(): NativeRuntime {
   return {
+    previewPackage: async () => { throw new Error('Unexpected package preview'); },
+    exportPackage: async () => { throw new Error('Unexpected package export'); },
+    executePackageImport: async () => { throw new Error('Unexpected package import'); },
+    inspectChanges: async () => { throw new Error('Unexpected change inspection'); },
+    readChangeDiff: async () => { throw new Error('Unexpected file diff'); },
+    prepareVersionChanges: async () => { throw new Error('Unexpected version changes'); },
+    backupChanges: async () => { throw new Error('Unexpected backup'); },
+    acceptFileReset: async () => undefined,
+    executeFileReset: async () => { throw new Error('Unexpected file reset'); },
     readInstallationEntry: async () => undefined,
     readSkillExamples: async () => ({ state: 'none' }),
     observeInstallation: async () => false,
@@ -21,6 +30,7 @@ function native(): NativeRuntime {
     inspectUpgrade: async () => { throw new Error('Unexpected inspection'); },
     inspectRemoval: async () => { throw new Error('Unexpected removal inspection'); },
     openInstalledSnapshot: async () => ({ projection: { items: [], complete: true, issues: [] }, read: async () => { throw new Error('Unexpected scan read'); } }),
+    listAllInstalled: async () => ({ items: [], complete: true, issues: [] }),
     listInstalled: async () => ({ items: [], complete: true, issues: [] }),
     executeInstall: async () => { throw new Error('Unexpected execution'); },
     recover: async () => { throw new Error('Unexpected recovery'); },

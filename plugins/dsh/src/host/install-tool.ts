@@ -1,3 +1,5 @@
+import { installationContextReason } from './installation-context.js';
+import type { InstallationContextReason } from './installation-context.js';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import type { Context } from '@deepseek-ai/cordis';
 import { conversationInstallRequest } from './conversation-install-request.js';
@@ -44,7 +46,9 @@ export const installOutputSchema = { oneOf: [acceptedSchema, {
 
 export function registerInstallTool(tools: Pick<Context['tools'], 'get' | 'register'>, install: (
   request: ConversationInstallRequest, context: ConversationSearchContext, signal: AbortSignal,
-) => Promise<NativeOperation | PendingConversationInstall | CancelledConversationInstall | undefined>) {
+) => Promise<NativeOperation | PendingConversationInstall | CancelledConversationInstall | undefined>,
+  diagnose: (reason: InstallationContextReason | undefined) => void = () => {},
+) {
   if (tools.get(INSTALL_TOOL_NAME)) throw new Error('SkillHub install tool name is already registered.');
   return tools.register(defineTool({
     name: INSTALL_TOOL_NAME,
@@ -71,10 +75,12 @@ export function registerInstallTool(tools: Pick<Context['tools'], 'get' | 'regis
       if (!parsed.success) throw new Error('Provide either selectionRef or namespace and slug, plus optional user/project scope. No other fields are allowed.');
       const session = exec.agent?.session;
       if (!session?.id || !session.header.cwd || !exec.callId) throw new Error('SkillHub install requires a trusted conversation context.');
+      diagnose(undefined);
       let operation: NativeOperation | PendingConversationInstall | CancelledConversationInstall | undefined;
       try {
         operation = await install(parsed.data, { sessionId: session.id, cwd: session.header.cwd, callId: exec.callId }, exec.signal);
       } catch (error) {
+        diagnose(installationContextReason(error));
         // Core failures can contain Host paths; they must not enter the model transcript.
         return { schemaVersion: 1 as const, kind: 'skillhub-install' as const, status: 'not-confirmed' as const,
           toolCallId: exec.callId, code: installationFailureCode(error) };

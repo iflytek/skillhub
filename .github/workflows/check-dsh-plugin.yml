@@ -136,6 +136,11 @@ jobs:
       matrix:
         dsh: ['0.2.1-rc.2']
         node: ['24.2.0', '24']
+        include:
+          - dsh: '0.2.1-rc.5'
+            node: '24.2.0'
+          - dsh: '0.2.1-rc.5'
+            node: '24'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -173,13 +178,24 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         dsh: ['0.2.0-rc.2', '0.2.1-rc.2']
+        node: ['24.2.0']
+        include:
+          - os: ubuntu-latest
+            dsh: '0.2.1-rc.5'
+            node: '24'
+          - os: macos-latest
+            dsh: '0.2.1-rc.5'
+            node: '24'
+          - os: windows-latest
+            dsh: '0.2.1-rc.5'
+            node: '24'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24.2.0'
+          node-version: ${{ matrix.node }}
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: '1.3.13'
@@ -188,7 +204,7 @@ jobs:
         run: bun install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
-          name: skillhub-dsh-development-package-${{ matrix.os }}-node-24.2.0
+          name: skillhub-dsh-development-package-${{ matrix.os }}-node-${{ matrix.node }}
           path: plugins/dsh/artifacts
       - name: Validate public download cache before restore
         working-directory: plugins/dsh

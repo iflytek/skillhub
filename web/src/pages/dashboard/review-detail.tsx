@@ -180,7 +180,7 @@ function ReviewDetailScreen({
 
   if (isLoading) {
     return (
-      <div className="space-y-6 max-w-3xl animate-fade-up">
+      <div className="space-y-6 animate-fade-up">
         <div className="h-10 w-48 animate-shimmer rounded-lg" />
         <div className="h-64 animate-shimmer rounded-xl" />
       </div>
@@ -203,7 +203,7 @@ function ReviewDetailScreen({
 
   if (hasNamespaceMismatch) {
     return (
-      <div className="space-y-6 max-w-3xl animate-fade-up">
+      <div className="space-y-6 animate-fade-up">
         <div className="text-center py-20">
           <h2 className="text-2xl font-bold font-heading mb-2">{t('review.notFound')}</h2>
         </div>
@@ -217,7 +217,7 @@ function ReviewDetailScreen({
   }
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-5.25rem)] w-full max-w-[1440px] flex-col gap-4 animate-fade-up">
+    <div className="flex min-h-[calc(100dvh-5.25rem)] w-full flex-col gap-4 animate-fade-up">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="mb-1 text-xs text-muted-foreground">

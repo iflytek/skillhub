@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Node-only CI entry; keep its helpers importable without starting a Host or downloading dependencies.
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
-import { summarizeNpmPreparation, prepareDownloadCache, scenarioProbes, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
+import { safeAvailabilityCheckpoint, summarizeNpmPreparation, prepareDownloadCache, scenarioProbes, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
 
 const roots: string[] = [];
 async function root() {
@@ -168,10 +168,13 @@ test('native smoke accepts only explicit DSH releases and rejects incompatible r
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   expect(manifest.peerDependencies['@deepseek-ai/dsh-fs']).toBe(supportedDshVersions.join(' || '));
   for (const version of supportedDshVersions) expect(selectDshVersion(version)).toBe(version);
-  for (const version of ['latest', 'next', '0.2.1', '0.2.2-rc.1', '0.2.1-rc.2 --ignore-scripts']) {
+  for (const version of ['latest', 'next', 'alpha', '0.2.1', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.2-rc.1', '0.2.1-rc.2 --ignore-scripts', '0.2.1-rc.5 --ignore-scripts']) {
     expect(() => selectDshVersion(version)).toThrow('Unsupported DSH release');
   }
-  expect(() => selectDshVersion('0.2.1-rc.2', 'retained')).toThrow('requires the current Cordis family');
+  expect(selectDshVersion('0.2.0-rc.2', 'retained')).toBe('0.2.0-rc.2');
+  for (const version of ['0.2.1-rc.2', '0.2.1-rc.5']) {
+    expect(() => selectDshVersion(version, 'retained')).toThrow('requires the current Cordis family');
+  }
 });
 
 
@@ -308,4 +311,16 @@ test('truncated npm diagnostic tails discard the partial first line', () => {
   const result = summarizeNpmPreparation('npm timing reify Completed in 1ms\nnpm timing idealTree Completed in 2ms', true);
   expect(result.completedTimingsMs).toEqual({ idealTree: 2 });
   expect(result.lastCompletedPhase).toBe('idealTree');
+});
+
+
+test('availability summary allows only fixed context reasons without messages or IDs', () => {
+  const checkpoint = { scenario: 'user-install', checkpoint: 'assertion', assertion: 'accepted',
+    install: { status: 'not-confirmed', code: 'CONTEXT_STALE', reason: 'FS', path: '/private/token', message: 'secret', operationId: 'private-id' } };
+  expect(safeAvailabilityCheckpoint(checkpoint)).toEqual({ scenario: 'user-install', checkpoint: 'assertion', assertion: 'accepted',
+    install: { status: 'not-confirmed', code: 'CONTEXT_STALE', reason: 'FS' } });
+  for (const reason of ['/private/token', 'secret', 'constructor', undefined, {}]) {
+    expect(safeAvailabilityCheckpoint({ ...checkpoint, install: { ...checkpoint.install, reason } }).install.reason).toBeUndefined();
+  }
+  expect(safeAvailabilityCheckpoint({ ...checkpoint, install: { ...checkpoint.install, code: 'UNCONFIRMED' } }).install.reason).toBeUndefined();
 });

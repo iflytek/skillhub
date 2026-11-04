@@ -2,6 +2,13 @@
 export function catalogErrorMessage(error: { code: string; details?: unknown }): string {
   if (error.code === 'skillhub/context-stale') return '来源已变化，请刷新后重试。';
   if (error.code === 'skillhub/source-not-configured') return '请先在插件配置中设置 SkillHub 地址。';
+  if (error.code === 'skillhub/favorites-error') {
+    const reason = error.details && typeof error.details === 'object' && 'reason' in error.details ? error.details.reason : undefined;
+    if (reason === 'INVALID_STORE') return '本地收藏文件无法读取，原有内容已保留。';
+    if (reason === 'LIMIT_REACHED') return '本机收藏已达上限，请先取消部分收藏。';
+    if (reason === 'INVALID_INPUT') return '此技能暂时无法收藏，请刷新后重试。';
+    return '本地收藏暂时不可用，请重试。';
+  }
   if (error.code !== 'skillhub/registry-error') return '请求失败，请稍后重试。';
   const reason = error.details && typeof error.details === 'object' && 'reason' in error.details
     ? error.details.reason : undefined;

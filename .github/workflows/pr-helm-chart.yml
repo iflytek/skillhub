@@ -50,6 +50,9 @@ jobs:
       - name: Validate configuration contracts
         run: bash tests/configuration-contracts.sh
 
+      - name: Verify analytics smoke isolation
+        run: bash tests/analytics-smoke-test.sh
+
       - name: Validate chart metadata
         run: |
           CHART_VERSION=$(helm show chart . | grep '^version:' | awk '{print $2}')

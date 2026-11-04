@@ -23,11 +23,11 @@ class PlanRequests {
   protected storageFailed = false;
   private revision = 0;
   getRevision = (): number => this.revision;
-  constructor(protected readonly storage: () => RequestStorage, private readonly kind: 'upgrade' | 'removal') {}
+  constructor(protected readonly storage: () => RequestStorage, private readonly kind: 'upgrade' | 'removal' | 'change') {}
   protected get prefix(): string { return `skillhub:${this.kind}:v1:`; }
-  private get label(): string { return this.kind === 'upgrade' ? '升级' : '卸载'; }
+  private get label(): string { return this.kind === 'upgrade' ? '升级' : this.kind === 'change' ? '文件操作' : '卸载'; }
   private accepts(operation: NativeOperation): boolean {
-    return this.kind === 'upgrade' ? operation.kind === 'upgrade' : ['uninstall', 'remove-stale-record'].includes(operation.kind);
+    return this.kind === 'change' ? ['upgrade', 'reset-files'].includes(operation.kind) : this.kind === 'upgrade' ? operation.kind === 'upgrade' : ['uninstall', 'remove-stale-record'].includes(operation.kind);
   }
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener); return () => { this.listeners.delete(listener); };
@@ -119,3 +119,5 @@ export class RemovalRequests extends PlanRequests {
     super(storage, 'removal');
   }
 }
+
+export class ChangeRequests extends PlanRequests { constructor(storage: () => RequestStorage) { super(storage, 'change'); } }

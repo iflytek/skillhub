@@ -1,235 +1,128 @@
 # Review Skills and Suites
 
-## Reviewer Checklist
+This page covers pending-content inspection, decision submission and result verification for authorized reviewers. Authors can use the responsibility table to track submissions. A decision applies to a specific request and version; it does not replace Agent execution testing, compliance certification or global promotion approval.
 
-1. Verify the subject, submitter and target version. A skill version, profile/avatar change and Suite version require different checks.
-2. Read the submitted files and changes, not only the current public version. The previous published version may remain downloadable during review.
-3. Inspect scan status and findings. Execution failure, detected risk and an unconfigured analyzer are different; an empty report is not a security conclusion.
-4. Check visibility and intended audience, including every Suite member and its entry role. Member approval does not approve the Suite.
-5. Before approval, ensure current data is still valid. For rejection, identify files, problems and required changes. After a failed decision request, reload status before trying again.
-6. Verify the decision history and resulting published version. Review success does not test skill execution in a local Agent.
+## Prerequisites and Responsibilities
 
-### Tracking and Revising as an Author
+| Operation | Identity and conditions | Entry |
+| --- | --- | --- |
+| Review within a team namespace | Namespace Owner or Admin | Review tab in namespace details |
+| Review across namespaces | Platform Skill administrator (`SKILL_ADMIN`) or super administrator (`SUPER_ADMIN`) | `/dashboard/reviews` |
+| Track an own submission | Submitter | My Review Progress; read access does not grant approval |
+| Global promotion and revocation | Submitter and authorized platform reviewer | `/dashboard/promotions`, separate from ordinary version reviews |
 
-Use My Submissions to read status and decisions. Pending requests can be withdrawn when authorized. Withdrawal stops that review; it does not delete the prior published version or undo an approved global promotion. After rejection, revise according to the comments and use the supported resubmission action. A successful upload does not by itself reopen review.
+Owners and Admins of a team namespace can review their own submissions; super administrators can self-review. Other own submissions cannot be self-reviewed solely through the platform Skill administrator role. Only a super administrator can review their own global promotion request. Ordinary review decisions also require an `ACTIVE` namespace. Source: [review permission policy](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewPermissionChecker.java).
 
+Ordinary public (`PUBLIC`) or namespace-member-visible (`NAMESPACE_ONLY`) uploads enter scanning and review. Private (`PRIVATE`) uploads are retained first and still require publication confirmation or a separate review submission. A previously published version may remain available while an update is pending.
 
-## Overview
+## Inspect Content and Submit a Decision
 
-SkillHub provides a complete review workflow to ensure that skill packages published to the registry comply with team standards.
+![Review flow: identify the request, inspect evidence, submit a decision and re-read the outcome](/diagrams/review-decision-flow-en.svg)
 
-The review mechanism operates on two levels:
-- **Namespace Review**: Team administrators review skill packages within their namespace
-- **Platform Review**: Platform administrators review skill packages promoted to the global scope
+Figure: A decision requires a pending request and current permission. Reading the old version does not verify the current submission.
 
-![Concept Diagram](/diagrams/review-concept.png)
+1. Open a pending request and verify its submitter, subject, target version, visibility and namespace. GitHub-synchronized items also provide a content revision, source repository and fixed commit. The technical version used for installation appears in technical information.
+2. Inspect the submitted documentation and file tree in Skill Content. Documentation is fetched when the tab is opened; individual file content is fetched on selection. GitHub updates initially open Changes; initial imports and ordinary Skills open Skill Content. An empty preview caused by an object-storage read failure is not evidence of acceptable content.
+3. Check license evidence, the scanning report and findings in Source & Security. Distinguish execution errors, risk findings and unconfigured analyzers. Ordinary version approval is unavailable while scanning is running. Unrecognized licenses or missing evidence require inspection of the specific status and supporting material; they do not confirm permission to use the content.
+4. For avatar or visibility changes, verify the candidate and requested target. For a Skill Suite, inspect the pending snapshot, Entry Skill and fixed member versions. Approval is unavailable before the snapshot loads. Member approval does not approve the Suite. A Suite definition and a Suite Bundle import operation are separate objects; see [Skill Suites](./skill-suites.html).
+5. Read previous decisions in Review History, then approve or reject after evidence checks. A rejection must identify the file, problem and correction conditions; approval comments are optional. Switching tabs preserves comments; switching requests clears comments and unconfirmed dialogs. This version has no conditional-approval state.
 
-**Review Process**:
+| Inspection result | Decision basis | Next action |
+| --- | --- | --- |
+| Current content, target and evidence agree | The current request has been inspected and no unresolved issue remains | Approve, then re-read the task and target object |
+| Files, evidence or declarations contain a specific issue | Record a traceable problem and correction conditions | Reject; the author revises the submission |
+| Scan, snapshot or files are unavailable | Evidence required for a decision is missing | Diagnose or wait; do not treat missing results as acceptable evidence |
 
-1. A developer publishes a skill package -> it enters the "Pending Review" state
-2. An administrator receives a notification -> reviews the skill package details
-3. The administrator makes a decision -> approve or reject
-4. Upon approval -> the skill package is officially published
-5. Upon rejection -> the developer receives feedback and can revise and resubmit
+Online preview limits are listed together below. Exceeding a limit does not mean the file was deleted; obtain it through an authorized download before inspection.
 
-**Review Statuses**:
+| Item | Fixed limit | Exceeding the limit |
+| --- | --- | --- |
+| Line-by-line comparison | File exceeds 64KiB or 1000 lines | Line comparison is skipped |
+| Current content loaded online | File exceeds 256KiB | Content is not loaded online |
+| Baseline download of a removed old file | File exceeds 1MiB | The old file cannot be downloaded from the review page |
 
-| Status | Description |
-|------|------|
-| **PENDING** | Awaiting review |
-| **APPROVED** | Approved |
-| **REJECTED** | Rejected |
-| **WITHDRAWN** | Withdrawn |
+These are frontend/API implementation limits, not review-page settings. Sources: [review detail page](https://github.com/iflytek/skillhub/blob/main/web/src/pages/dashboard/review-detail.tsx) and [review API](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/portal/ReviewController.java). `GET /api/v1/reviews/{id}/skill-detail?includeDocumentation=false` reads metadata and the documentation path without fetching object-storage content; the default is `true`.
 
-**Governance Features**:
+### Inspect Compliance Declarations
 
-- **Review Workflow**: Per-item review of versions, profile changes, and Suites
-- **Reporting System**: Users can report inappropriate skill packages
-- **Promotion Management**: Promote namespace skill packages to the global scope
-- **Audit Logs**: All governance actions are recorded
+Versions containing `x-astron-compliance` display a compliance snapshot and added, removed or modified declarations. A changed `complianceSnapshot.digest` indicates a change in normalized declarations. Match declarations to actual capability, control items, evidence paths and external material rather than standard names alone. Inaccessible evidence, mismatched content or removals affecting downstream references require a documented issue and revision. The registry stores structured declarations and version snapshots; it does not certify the author's actual compliance. See [compliance metadata](./skill-publish.html).
 
-## Identify what is being reviewed
+## State Object Reference
 
-Review-task status and skill-version status are different: a task can be PENDING while the uploaded version is still SCANNING. Wait for scanning and inspect findings before deciding. Approval of a skill version does not approve a Suite that references it. Suites have their own review, while Bundle import first completes member publishing and then creates a Suite draft. See [Skill Suites](/en/guide/skill-suites) and [Bundle import](/en/guide/suite-bundle).
+A task can be `PENDING` while its version is still `SCANNING`. Task and version states must not be substituted for each other. Read the following four objects separately.
 
-## Use Cases
+### Review Task States
 
-**Case 1: Namespace Administrator Review**
+| State | Meaning | Responsible party and next action |
+| --- | --- | --- |
+| `PENDING` | Awaiting a decision | Authorized reviewer reads the current request before acting |
+| `APPROVED` | Approved | Submitter verifies the version or metadata effect |
+| `REJECTED` | Rejected with comments retained | Submitter revises and resubmits |
+| `SUPERSEDED` | Replaced by a later request | Submitter and reviewer read the current request |
 
-A team administrator reviews skill packages submitted by team members to ensure compliance with team standards.
+The [task enum](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewTaskStatus.java) has no `WITHDRAWN`. Withdrawing an ordinary Skill version removes the pending task and changes its version state. It does not remove a previously published version or revoke an approved global promotion; see the [withdrawal service](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewService.java).
 
-![Screenshot](/screenshots/review-list.png)
+### Skill Version States
 
-**Case 2: Platform Administrator Reviews Promotions**
+| State | Meaning | Responsible party and next action |
+| --- | --- | --- |
+| `DRAFT` | Version draft, not an authoring API draft object | Skill owner completes preparation |
+| `SCANNING` | Scan is running | Scanning service completes before continuation |
+| `SCAN_FAILED` | Scan execution failed | Operator and owner diagnose before retrying |
+| `UPLOADED` | Uploaded but not published | Owner confirms publication or submits for review |
+| `PENDING_REVIEW` | Awaiting a human decision | Authorized reviewer inspects this version |
+| `PUBLISHED` | Published | Users access under visibility rules; execution needs separate verification |
+| `REJECTED` | Not approved | Owner revises and resubmits |
+| `YANKED` | Withdrawn from distribution | Users select an installable alternative |
 
-A platform administrator reviews skill packages being promoted from a namespace to the global scope.
+Source: [version enum](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillVersionStatus.java).
 
-**Case 3: Report Handling**
+### Suite Bundle Import Operation States
 
-A user reports an inappropriate skill package, and an administrator investigates and takes action.
+| State | Meaning | Responsible party and next action |
+| --- | --- | --- |
+| `RUNNING` | Executing | Importer tracks the original operation without duplicate confirmation |
+| `WAITING_FOR_MEMBERS` | Waiting for members | Import service and member reviewers handle members |
+| `BLOCKED_RETRYABLE` | Retryable block | Importer diagnoses and retries the original operation |
+| `REPREVIEW_REQUIRED` | Previous preview cannot continue | Importer previews again and checks differences |
+| `SUITE_DRAFT_CREATED` | Suite draft created, not approved | Suite owner continues publication |
+| `CANCELLED` | Cancelled; not a full rollback | Importer checks completed member actions |
 
+Source: [import states](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/suite/bundle/SkillSuiteBundleOperationStatus.java). Recovery instructions are in [Suite Bundle Import](./suite-bundle.html).
 
-## Step-by-Step Guide
+### Avatar Review Results
 
-**Submitting for Review**:
+Avatars reuse Skill review requests, but their state dimensions remain separate. A machine block is not a human rejection.
 
-1. Ordinary PUBLIC / NAMESPACE_ONLY uploads create review tasks; PRIVATE uploads require confirmation or a separate review submission
-2. The developer can check the review status under "My Submissions"
-3. Wait for an administrator to review
+| Field | Values and meanings | Responsible party and next action |
+| --- | --- | --- |
+| Candidate `status` | `PENDING` pending, `ACTIVE` in use, `REJECTED` rejected, `SUPERSEDED` replaced, `REMOVED` removed | Owner and reviewer compare the candidate with the active avatar; the response field is `candidateStatus` |
+| `machineStatus` | `SKIPPED` skipped, `PENDING` pending, `PROCESSING` running, `PASSED` allowed, `BLOCKED` blocked, `ERROR` execution error | Machine service processes it; deployment operator diagnoses `ERROR` |
+| `reviewStatus` | `NOT_REQUIRED` no human review, `PENDING` pending, `APPROVED` approved, `REJECTED` rejected, `APPEAL_PENDING` appeal pending | Authorized reviewer and owner act on current comments |
 
-**Reviewing Skill Packages**:
+Source: [avatar candidate model](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillAvatarCandidate.java). Configuration and retry rules are in [Skill Avatars](./skill-avatars.html).
 
-1. Navigate to `/dashboard/reviews`
-2. View the pending review list
-3. Click on a skill package to view details:
-   - Review metadata (name, description, version)
-   - Browse the file list
-   - View file contents online
-   - Download the full package for local testing
-   - Review the compliance snapshot and the diff from the previous published version
+## Completion Criteria and Failure Handling
 
-![Scan and review in the ordinary publication path](/diagrams/skill-publish-lifecycle-sketch.png)
+After ordinary version approval, the task is `APPROVED` and the target version is `PUBLISHED`; verify access with the intended identity. Metadata requests require checking the actual metadata effect, not only the version number. A rejected ordinary version is `REJECTED` with correction comments; the author revises and resubmits from the current-version entry. Approval does not prove Agent execution success or eliminate security risk.
 
-The review section follows the PUBLIC / NAMESPACE_ONLY branch: scanning completes before the version waits for a review decision.
+| Symptom | Likely cause | Diagnosis | Resolution |
+| --- | --- | --- | --- |
+| Request is listed but cannot be approved | Self-review, namespace state or identity condition is not met | Compare submitter, roles and namespace state | Assign an eligible reviewer; do not alter requests to bypass restrictions |
+| Approval button is disabled | Scan/avatar is pending or Suite snapshot failed to load | Read scan, candidate and snapshot errors | Complete dependencies or retry reads; do not treat absent results as acceptable evidence |
+| File or documentation is empty | Object read failed or preview limit was exceeded | Check file size and preview error; download with permission | Obtain readable material before deciding; do not approve an empty preview |
+| Decision reports a state conflict | Task was already processed or superseded | Refresh history and compare task ID and current state | Follow the new state; do not repeatedly approve or reject |
 
-4. Make a decision:
-   - **Approve**: The skill package is officially published and the developer is notified
-   - **Reject**: Provide a rejection reason; the developer can revise and resubmit
+## Global Revocation and Governance Boundaries
 
-5. Add review comments (optional)
+If deletion of a promoted Skill is blocked, request revocation from Promote to Global on its source Skill. A platform Skill administrator or super administrator handles it under Revocation Pending Review at `/dashboard/promotions`; own submissions follow the self-review restrictions above. After the revocation record is `APPROVED`, verify that the active relation is removed before deleting the source Skill with the required permission. Hiding, archiving or withdrawing ordinary review does not substitute for revocation.
 
-**Reviewing Compliance Declarations**:
+When no revocation request is pending, an authorized platform operator can revoke directly from details with a retained record. An existing pending request must be handled in the queue. Approved revocation deletes the entire global Skill, its versions, reviews and statistics, while retaining the source Skill. Client files cannot be retrieved, and the old address can be reused. If deletion remains blocked after approval, check for another promotion and record object IDs, request ID, deployed version and failed response. Do not modify database relations directly. Source: [revocation service](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/PromotionRevocationService.java).
 
-If the pending version contains `x-astron-compliance`, the review detail page shows the version-level compliance snapshot and a diff summary:
+Reports are handled at `/dashboard/reports` under existing governance permissions and the specific report evidence. Investigating a report does not automatically approve or reject a version. Withdrawal applies only to a pending review; historical comments and current request mutability must be evaluated separately.
 
-- Added declarations: standards, controls, or evidence newly added by the pending version.
-- Removed declarations: declarations that existed in the previous published version and are no longer present.
-- Modified declarations: standard metadata, control title, or evidence changed.
-- Digest changes: `complianceSnapshot.digest` changed, which means the normalized declaration content changed.
+## Further Reading
 
-Review guidance:
-
-1. Check whether each declaration matches the actual skill behavior. For example, a security response skill that declares a MITRE ATT&CK technique should provide supporting documentation or packaged evidence.
-2. Expand diff items to inspect evidence paths, external links, and digests instead of relying only on the declaration title.
-3. Treat removals and broad rewrites as higher-priority review items because downstream audit systems may reference those snapshots.
-4. Reject the submission if evidence is missing, paths are inaccessible, or declarations clearly do not match the skill capability.
-
-SkillHub guarantees structural validation, traceable evidence references, and immutable version snapshots. It does not certify that the author's declaration is objectively compliant.
-
-**Withdrawing a Review**:
-
-If a developer discovers an issue, they can withdraw the submission before it is approved:
-
-1. Navigate to "My Submissions"
-2. Find the skill package pending review
-3. Click "Withdraw"
-4. Confirm the withdrawal
-
-### Deleting a Promoted Skill
-
-If permanent deletion reports "Use the reviewed revocation workflow to remove a promoted skill", manage the global publication from the source team skill's detail page. Hiding, archiving, or withdrawing a pending submission does not remove an approved global skill. Submitting a revocation request does not complete revocation either.
-
-1. Open the source skill, such as `@it/translate-document`. In "Promote to Global", choose "Request global revocation", enter a reason, and confirm.
-2. Ask a platform `SKILL_ADMIN` or `SUPER_ADMIN` to open "Revocations to review" at `/dashboard/promotions`, verify the source and global skill, and choose "Approve revocation". A `SKILL_ADMIN` cannot review their own request; a `SUPER_ADMIN` can.
-3. Refresh the source skill and check that the current request shows "Revoked" (`APPROVED`) in "Revocation history". `PENDING` or `REJECTED` means that this request has not completed revocation; ordinary deletion remains blocked while an active global link exists. A historical request's status is not a substitute for checking the current promotion relationship.
-4. Approval deletes the linked `@global/translate-document` and all its global versions while keeping the source team skill. To remove the source too, use its permanent-delete action afterward with the required deletion permissions.
-
-A platform `SKILL_ADMIN` or `SUPER_ADMIN` can also choose "Revoke directly as admin" on the source detail page when no revocation request is pending. Confirmation completes global revocation immediately and retains the revocation record. When a request is already pending, the detail page only shows its pending status; handle it through "Revocations to review" as described above. Check the confirmation carefully: this removes the entire global skill, including independently uploaded global versions, ratings, and statistics. Installed client files cannot be recalled, and another skill may later use the same address.
-
-If the revocation record is already `APPROVED` but the same error persists after refreshing, record the source/global skill IDs, revocation request ID, deployed version or image tag, and the deletion response and request ID. Also check whether a new global promotion was approved after revocation. If the revocation controls are missing, first verify that the deployment and database migrations match the intended version and ask a maintainer to investigate. Do not edit promotion relationships directly in the database to bypass the workflow.
-
-**Handling Reports**:
-
-1. Navigate to `/dashboard/reports`
-2. View the report list
-3. Investigate the reported content
-4. Take action (archive the skill package, warn the user, etc.)
-
-## API Reference
-
-**Submit for Review**:
-```bash
-POST /api/v1/reviews
-Content-Type: application/json
-
-{
-  "skillVersionId": 123
-}
-```
-
-**Approve a Review**:
-```bash
-POST /api/v1/reviews/{id}/approve
-Content-Type: application/json
-
-{
-  "comment": "Looks good! Approved."
-}
-```
-
-**Reject a Review**:
-```bash
-POST /api/v1/reviews/{id}/reject
-Content-Type: application/json
-
-{
-  "comment": "Please fix the documentation and add more examples."
-}
-```
-
-**Parameter Reference**:
-| Parameter | Type | Description |
-|------|------|------|
-| id | number | Review task ID (path parameter) |
-| comment | string | Review comment (optional for approval; provide a clear reason for rejection) |
-
-**List Pending Reviews**:
-```bash
-GET /api/v1/reviews/pending?namespaceId=123&page=0&size=20
-```
-
-**List My Submissions**:
-```bash
-GET /api/v1/reviews/my-submissions?page=0&size=20
-```
-
-**Get Review Details**:
-```bash
-GET /api/v1/reviews/{id}
-```
-
-**Get Skill Package Details Under Review**:
-```bash
-GET /api/v1/reviews/{id}/skill-detail
-```
-
-**Download Review Package**:
-```bash
-GET /api/v1/reviews/{id}/download
-```
-
-**Withdraw a Review**:
-```bash
-POST /api/v1/reviews/{id}/withdraw
-```
-
-**Report a Skill Package**:
-```bash
-POST /api/v1/skills/{namespace}/{slug}/reports
-Content-Type: application/json
-
-{
-  "reason": "INAPPROPRIATE_CONTENT",
-  "details": "This skill contains malicious code"
-}
-```
-
-## Notes
-
-> **Review Permissions**: Team namespace Admins and Owners review their space; SKILL_ADMIN and SUPER_ADMIN have platform review roles. Personal spaces and self-review have additional rules; a generic administrator label is not sufficient.
-
-- **Review Turnaround**: It is recommended to complete reviews within 24 hours to avoid blocking developers
-- **Review Records**: All review actions are recorded in the audit log
-- **Compliance Audit**: Compliance declarations are recorded as version snapshots. Approval or rejection should consider the diff summary, but Agent execution traces are not recorded by SkillHub
-- **Review Comments**: When rejecting, it is recommended to provide detailed improvement suggestions
-- **Withdrawal Restrictions**: Only skill packages in the pending review state can be withdrawn
+- [Publish and Update Skills](./skill-publish.html): Preparation, submission and version management.
+- [Security Scanning](./scanner.html): Interpret reports and diagnose execution failures.
+- [Manage Namespaces](./namespace.html): Membership roles and namespace states.

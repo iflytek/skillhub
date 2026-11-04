@@ -481,13 +481,10 @@ skillhub remove pdf-parser --json
 skillhub doctor --json
 ```
 
-Success response format:
+The following JSON excerpt shows only the success flag, not a complete command response. Result fields depend on the command:
 
 ```json
-{
-  "ok": true,
-  ...
-}
+{"ok": true}
 ```
 
 Error response format:
@@ -719,17 +716,13 @@ skillhub search test --registry https://skillhub.example.com
 
 ### Installation Directory Conflict
 
-```bash
-# Reinstall only when the existing directory has matching SkillHub source metadata
-skillhub install pdf-parser --force
+Check the active registry, target Agent, installation directory, source metadata, and local changes before replacing files. The following example targets Codex; use the actual Agent identifier for other targets.
 
-# Or remove first then install
-skillhub remove pdf-parser
-skillhub install pdf-parser
+```bash
+skillhub list --agent codex --json
 ```
 
-`--force` never overwrites an unmanaged directory or a Skill installed from another registry,
-namespace, or slug. Move or explicitly remove that directory first.
+Compare `installDir` with the conflicting path and read that directory's `SKILL.md`. Use `--force` only after confirming the same installation source, making a backup, and explicitly accepting the loss of local changes. The option does not take over unmanaged, different-source, or disabled targets. If provenance is uncertain, choose another directory or scope; do not delete files or inventory records as a diagnostic step.
 
 ### Corrupted Inventory
 

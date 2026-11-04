@@ -865,7 +865,7 @@ export function SkillDetailPage() {
   }
 
   return (
-    <div data-analytics-id="skill.detail.render" className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8 animate-fade-up">
+    <div data-analytics-id="skill.detail.render" className="flex min-w-0 flex-col lg:flex-row gap-8 animate-fade-up">
       {/* Main Content */}
       <div className="flex-1 min-w-0 space-y-8">
         {skill.ownerReadOnly && <p role="status" className="rounded-lg border bg-muted/20 p-3 text-sm text-muted-foreground">{t('mySkills.ownerReadOnly')}</p>}

@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test'
 import { realpath, mkdtemp, mkdir, rm, rename, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
-import { readInstalledProjection } from '../../../src/integrations/installed-projection'
+import { readInstalledProjection, readAllInstalledProjection } from '../../../src/integrations/installed-projection'
 import type { InventoryItem } from '../../../src/stores/inventory-store'
 
 const registry = 'https://registry.example'
@@ -82,5 +82,32 @@ test('entry projection rejects missing, ambiguous and unsafe entries without inv
       expect(result.items[0]!.installationState).toBe(valid ? mode : undefined)
       expect(result.issues).toEqual(valid ? [] : ['target-unreadable'])
     }
+  } finally { await rm(root, { recursive: true, force: true }) }
+})
+
+
+test('all-source projection keeps trusted source identity and default source filtering', async () => {
+  const root = await realpath(await mkdtemp(join(tmpdir(), 'skillhub-all-sources-')))
+  try {
+    const items: InventoryItem[] = []
+    for (const [scope, source] of [['user', registry], ['project', 'https://other.example']] as const) {
+      const rootDir = join(root, scope)
+      const target = { version: '1.0.0', agent: 'dsh', rootDir, installDir: join(rootDir, 'writer'), installedAt: 'today' }
+      const item = { registry: source, namespace: 'demo', slug: 'writer', targets: [target] }
+      items.push(item)
+      await mkdir(join(target.installDir, '.skillhub'), { recursive: true })
+      await writeFile(join(target.installDir, '.skillhub/metadata.json'), JSON.stringify({ ...item, ...target }))
+      await writeFile(join(target.installDir, 'SKILL.md'), 'content')
+    }
+    const inventory = { read: async () => ({ items }) }
+    const targets = [{ scope: 'user' as const, root: join(root, 'user') }, { scope: 'project' as const, root: join(root, 'project') }]
+    const all = await readAllInstalledProjection(inventory, targets)
+    expect(all.complete).toBe(true)
+    expect(all.items.map(item => [item.registry, item.scope, item.state])).toEqual([
+      [registry, 'user', 'present'], ['https://other.example', 'project', 'present'],
+    ])
+    expect((await readInstalledProjection(inventory, registry, targets)).items).toHaveLength(1)
+    expect(await readAllInstalledProjection({ read: async () => { throw new Error('unreadable') } }, targets))
+      .toEqual({ items: [], complete: false, issues: ['inventory-unreadable'] })
   } finally { await rm(root, { recursive: true, force: true }) }
 })

@@ -525,6 +525,14 @@
             "service": { "$ref": "#/definitions/service" },
             "basePath": { "type": "string", "pattern": "^$|^/$|^(/[A-Za-z0-9_~-][A-Za-z0-9._~-]*)+/$" },
             "apiBaseUrl": { "type": "string" },
+            "analytics": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "config": { "type": "string" },
+                "upstream": { "type": "string" }
+              }
+            },
             "resources": { "$ref": "#/definitions/resources" },
             "extraEnv": { "type": "array", "items": { "type": "object" } },
             "podAnnotations": { "$ref": "#/definitions/stringMap" },

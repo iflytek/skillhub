@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { randomUUID } from 'node:crypto';
-import { UpgradeRequests, upgradeRequestKey } from '../src/client/upgrade-requests.js';
+import { ChangeRequests, UpgradeRequests, upgradeRequestKey } from '../src/client/upgrade-requests.js';
 import type { HostExecutePlanRequest, NativeOperation } from '../src/host/types.js';
 
 function fixture() {
@@ -110,4 +110,16 @@ test('invalid upgrade history blocks new writes instead of silently discarding t
   await expect(requests.submit('identity', randomUUID(), f.host, async () => { sent = true; return null; })).rejects.toThrow('无法读取');
   expect(sent).toBe(false);
   requests.dispose();
+});
+
+test('file reset receipts survive response loss and remain separate from upgrade history', async () => {
+ const f=fixture(); const saved=new ChangeRequests(()=>f.storage); const reset={...f.operation,kind:'reset-files' as const,version:'1'};
+ let original: HostExecutePlanRequest | undefined;
+ await saved.submit('reset',randomUUID(),f.host,async request=>{original=request;throw new Error('response lost');});
+ const reload=new ChangeRequests(()=>f.storage);
+ await reload.submit('reset',randomUUID(),f.host,async request=>{expect(request).toEqual(original!);return reset;});
+ expect(reload.get('reset')?.operationId).toBe(reset.operationId);
+ expect(new UpgradeRequests(()=>f.storage).get('reset')).toBeUndefined();
+ reload.closeResult('reset',{...reset,phase:'completed',files:'files-reset'});
+ expect(reload.get('reset')).toBeUndefined();
 });

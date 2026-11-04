@@ -241,3 +241,7 @@ flowchart TB
 ## 版本目录的开源接口增量
 
 排序、可安装状态过滤和分页总数由开源后端统一计算；DSH 每页请求一次 `downloadableOnly=true`，不全量拉取或逐项 resolve 探测。固定版本安装仍经既有目标、指纹与包校验，管理者缺省历史行为保留。完整参数和排序契约见 [Registry API](registry-api-contract.md#版本目录的开源接口增量)；SaaS 同步单独验收。
+
+### 本地收藏
+
+Issue #1064 的独立用户偏好、来源身份、轻量书签交互、原子写受理边界与验收见 [本地收藏设计](favorites-design.md)。该功能不改变上述Registry权威、匿名消费、库存v2或技能文件安装事务边界。

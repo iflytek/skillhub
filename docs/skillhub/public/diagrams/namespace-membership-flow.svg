@@ -1,0 +1,28 @@
+<svg width="360" height="579" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 579" role="img" aria-labelledby="title desc">
+<title id="title">命名空间协作流程</title>
+<desc id="desc">具备创建权限的平台操作者创建团队命名空间，所有者或空间管理员添加或邀请成员；受邀账号完成准入并确认加入后，再执行独立的发布与审核流程。</desc>
+<defs><marker id="arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto"><path d="M0 0L7 3.5L0 7Z" fill="#52657a"/></marker></defs>
+<rect x="1" y="1" width="358" height="577" rx="16" fill="#f8fafc" stroke="#cbd5e1"/>
+<text x="180" y="35" text-anchor="middle" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#172b4d">命名空间协作流程</text>
+<rect x="20" y="58" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="83" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">1. 创建命名空间</text>
+<text x="36" y="106" font-family="Arial,sans-serif" font-size="14" fill="#334155">平台技能管理员或超级管理员</text>
+<text x="36" y="126" font-family="Arial,sans-serif" font-size="14" fill="#334155">创建者成为命名空间所有者</text>
+<path d="M180 145V158" stroke="#52657a" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="20" y="162" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="187" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">2. 添加或邀请成员</text>
+<text x="36" y="210" font-family="Arial,sans-serif" font-size="14" fill="#334155">所有者或空间管理员；状态为 ACTIVE</text>
+<text x="36" y="230" font-family="Arial,sans-serif" font-size="14" fill="#334155">生成邀请不会直接建立成员关系</text>
+<path d="M180 249V262" stroke="#52657a" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="20" y="266" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="291" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">3. 确认成员资格</text>
+<text x="36" y="314" font-family="Arial,sans-serif" font-size="14" fill="#334155">先完成登录和现有准入检查</text>
+<text x="36" y="334" font-family="Arial,sans-serif" font-size="14" fill="#334155">确认接受邀请后授予 MEMBER</text>
+<path d="M180 353V366" stroke="#52657a" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="20" y="370" width="320" height="84" rx="10" fill="#fff" stroke="#b6c7dc"/>
+<text x="36" y="395" font-family="Arial,sans-serif" font-size="16" font-weight="700" fill="#174a7c">4. 提交并审核</text>
+<text x="36" y="418" font-family="Arial,sans-serif" font-size="14" fill="#334155">选择可见范围，进入发布流程</text>
+<text x="36" y="438" font-family="Arial,sans-serif" font-size="14" fill="#334155">取得成员资格不代表技能已发布</text>
+<text x="180" y="533" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#475569">命名空间角色与平台角色分别管理。</text>
+<text x="180" y="554" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#475569">成员变动不会转让技能所有权。</text>
+</svg>

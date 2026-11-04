@@ -77,7 +77,7 @@ function ConversationSkillActions({ detail, revision, services, close, children 
   const [install, setInstall] = useState(false);
   const inventory = useQuery({ queryKey: ['skillhub-installed', services.installation.sessionId, revision], retry: false,
     queryFn: async ({ signal }) => value(await services.installation.installed(revision, signal)) });
-  const records = inventory.data?.items.filter(item => item.namespace === detail.namespace && item.slug === detail.slug) ?? [];
+  const records = inventory.data?.items.filter(item => item.currentSource !== false && item.namespace === detail.namespace && item.slug === detail.slug) ?? [];
   const verified = !!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length;
   return <>
     {records.length ? <SkillPrimaryActions items={records} revision={revision} verified={verified} select={services.installation.management?.selectSkillUse}

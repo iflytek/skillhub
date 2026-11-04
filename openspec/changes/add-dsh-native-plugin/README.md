@@ -63,3 +63,7 @@
 - [使用优先页面与二级安装管理](skill-use-first-design.md)：日常动作、只读安装选择及精确管理边界。
 
 - [已安装技能统一检查更新](installed-update-check-design.md)：用户主动检查、技能级汇总筛选与逐位置更新，第46节跟踪验收。
+
+## 后续增量
+
+- [多来源保存与当前来源更新检查](registry-switching-design.md)：范围、设计与本地验证结果；版本发布另行安排。

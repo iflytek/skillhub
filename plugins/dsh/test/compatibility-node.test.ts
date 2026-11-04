@@ -58,6 +58,19 @@ console.log('verified');
       await writeFile(path, JSON.stringify({ name, version }));
     }
     await probe('matched');
+    for (const name of Object.keys(hostDependencyBaseline)) {
+      await writeFile(manifestPath(name), JSON.stringify({ name, version: name === '@deepseek-ai/cordis' ? '4.0.5' : '0.2.1-rc.5' }));
+    }
+    await probe('matched');
+    await writeFile(manifestPath('@deepseek-ai/cordis'), JSON.stringify({ name: '@deepseek-ai/cordis', version: '4.0.4' }));
+    await probe('Host dependency baseline does not match; local writes are disabled.');
+    await writeFile(manifestPath('@deepseek-ai/cordis'), JSON.stringify({ name: '@deepseek-ai/cordis', version: '4.0.5' }));
+    for (const name of Object.keys(hostDependencyBaseline).filter(name => name !== '@deepseek-ai/cordis')) {
+      await writeFile(manifestPath(name), JSON.stringify({ name, version: '0.2.1-rc.2' }));
+      await probe('Host dependency baseline does not match; local writes are disabled.');
+      await writeFile(manifestPath(name), JSON.stringify({ name, version: '0.2.1-rc.5' }));
+    }
+    await probe('matched');
   } finally {
     await rm(root, { recursive: true, force: true });
   }

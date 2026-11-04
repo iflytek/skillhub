@@ -30,3 +30,5 @@ export { inspectRemovalBaseline } from './removal-baseline'
 
 export { parseSkillExamples, readSkillExamples } from '../services/skill-examples'
 export type { SkillExample, SkillExamples } from '../services/skill-examples'
+
+export { previewPackage, exportPackage, LOCAL_PACKAGE_REGISTRY, MAX_TRANSFER_BYTES } from './package-transfer'

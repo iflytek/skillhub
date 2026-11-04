@@ -30,6 +30,7 @@ export interface HostInstallRequest {
 
 export interface SkillHubConfig {
   registryUrl: string;
+  savedRegistries?: { name: string; url: string }[];
   detailTabs: { versions: TabMode; securityAudit: TabMode; reviews: TabMode };
 }
 
@@ -47,6 +48,16 @@ export interface SkillList {
   returned: number;
   limit: number;
 }
+
+/** Local display snapshot; identity excludes versions and grants no install authority. */
+export interface FavoriteSkill {
+  namespace: string;
+  slug: string;
+  displayName?: string;
+  summary?: string;
+}
+export interface FavoriteList { items: FavoriteSkill[] }
+export interface FavoriteVersion { namespace: string; slug: string; version: string }
 
 export interface CatalogLabel { slug: string; type: 'RECOMMENDED' | 'PRIVILEGED'; displayName: string }
 export interface CatalogLabels { available: boolean; items: CatalogLabel[] }
@@ -102,7 +113,7 @@ export type SkillUseSelection = { status: 'ready'; itemKey: string }
     | 'multiple-usable-installations' | 'selection-timeout' };
 
 export interface InstalledSkillList {
-  items: { itemKey: string; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
+  items: { itemKey: string; sourceKind?: 'local-import'; registry?: string; currentSource?: boolean; locationKey?: string; namespace: string; slug: string; version: string; scope: 'user' | 'project';
     /** Optional local frontmatter for display only; never used for selection or authorization. */
     displayName?: string; summary?: string;
     state: 'present' | 'missing' | 'metadata-invalid' | 'mismatch' | 'unreadable'; installationState?: 'enabled' | 'disabled' }[];
@@ -157,6 +168,7 @@ export interface ReviewPage {
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
+    'skillhub/favorites-error': { reason: 'INVALID_INPUT' | 'UNAVAILABLE' | 'INVALID_STORE' | 'LIMIT_REACHED'; retryable: boolean };
     'skillhub/source-not-configured': { retryable: false };
     'skillhub/context-stale': { retryable: false };
     'skillhub/installation-unavailable': { retryable: boolean };
@@ -218,3 +230,19 @@ export interface TogglePlanView {
   afterState: 'enabled' | 'disabled';
   target: { scope: 'user' | 'project'; path: string } | null;
 }
+
+/** Public views contain only logical release paths and opaque Host references. */
+export interface ChangesView {
+  status: 'ready' | 'blocked'; reason: string; snapshotId: string | null; expiresAt: string | null;
+  kind: 'local' | 'version'; version: string; candidateVersion: string | null;
+  changes: { path: string; kind: 'added' | 'modified' | 'deleted' }[];
+  backupSaved?: boolean;
+  /** Read-only Host path for locating a verified backup; never a mutation input. */
+  backupLocation?: string;
+  changelog?: string;
+}
+export interface ChangeDiffView { path: string; state: 'text' | 'binary' | 'too-large' | 'unavailable'; lines: {kind: 'context' | 'added' | 'deleted'; text: string}[]; truncated: boolean }
+export interface FileResetPlanView { planId: string; expiresAt: string; hostInstanceId: string; paths: {path: string; kind: 'added' | 'modified' | 'deleted'}[] }
+
+export interface PackageImportPreview { previewId: string; name: string; summary?: string; files: number; bytes: number; expiresAt: string }
+export interface PackageExport { filename: string; base64: string }

@@ -282,10 +282,27 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 | Parameter | Description | Example |
 |-----------|-------------|---------|
 | `--public-url <url>` | Public access URL (recommended) | `--public-url https://skill.example.com` |
-| `--version <tag>` | Specific image tag | `--version v0.2.0` |
+| `--version <tag>` | Specific image tag | `--version v0.2.25` |
+| `--ref <git-ref>` | Git ref for deployment files (GitHub raw mode) | `--ref v0.2.25` |
 | `--aliyun` | Use Aliyun mirror (China) | `--aliyun` |
 | `--home <dir>` | Runtime directory | `--home /opt/skillhub` |
 | `--no-scanner` | Disable security scanner | `--no-scanner` |
+
+`--version` selects image tags; it does not pin the deployment files. By default,
+those files come from `main`. To pin the installer, Compose file, environment
+template and application image tag together, use a released Git ref and tag:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/v0.2.25/scripts/runtime.sh | sh -s -- up --ref v0.2.25 --version v0.2.25 --home /opt/skillhub --public-url https://skillhub.your-company.com
+```
+
+This example uses GitHub raw and requires access to it. `--aliyun` switches runtime
+file downloads to the OSS root, where `--ref` does not select a versioned directory.
+Likewise, a custom `SKILLHUB_RAW_BASE` takes precedence over the Git-ref URL.
+Neither should be described as pinning deployment files with `--ref`.
+The script preserves an existing `.env.release`; record its settings and explicit
+image overrides separately. Pinning the application tag does not freeze every
+dependency image or replace a database backup.
 
 > **Important**: Configure `--public-url` for production deployments to ensure CLI install commands and Agent setup instructions display the correct URLs.
 

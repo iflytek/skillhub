@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 const text = z.string().min(1).max(2048);
 const item = z.object({ itemKey: text, namespace: text, slug: text, version: text,
-  scope: z.enum(['user', 'project']), locationKey: text.optional(), installationState: z.enum(['enabled', 'disabled']).optional(), state: z.enum(['present', 'missing', 'metadata-invalid', 'mismatch', 'unreadable']) });
+  sourceKind: z.literal('local-import').optional(), scope: z.enum(['user', 'project']), registry: text.optional(), currentSource: z.boolean().optional(), locationKey: text.optional(), installationState: z.enum(['enabled', 'disabled']).optional(), state: z.enum(['present', 'missing', 'metadata-invalid', 'mismatch', 'unreadable']) });
 const base = { schemaVersion: z.literal(1), toolCallId: text, sourceRevision: text, sourceLabel: text };
 const installed = z.object({ ...base, kind: z.literal('skillhub-installed'), items: z.array(item),
   complete: z.boolean(), issues: z.array(z.string()), unavailable: z.array(z.enum(['user', 'project'])) });
@@ -45,6 +45,7 @@ export function managementReason(reason: string): string {
     'record-changed': '安装记录已变化，请重新查询。',
     'recovery-required': '有未完成的操作，请先核验恢复状态。',
     'metadata-invalid': '安装记录无法核验，暂不能修改。',
+    'other-source': '请切换到此技能的来源后检查更新。',
     'local-record-unverified': '安装记录无法核验，暂不能修改。',
     'missing-fingerprint': '缺少内容基线，暂不能更新。',
   };

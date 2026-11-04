@@ -46,7 +46,12 @@
 - [详细实现方案](engineering-blueprint.md)
 - [本地生命周期](lifecycle-design.md)
 - [DSH 原生接入](dsh-integration-design.md)
+- [单技能包导入与导出](package-transfer-design.md)：DSH 本地 ZIP 预览与确认、导出实际内容、本地来源与旧版兼容。
 
 ## 安装级启停增量
 
 为SkillHub可确认归属的DSH安装增加按位置停用与恢复，将入口重命名为 SKILL.md.disabled，保持目录、资源及正文内容不变。用户级与项目级互不隐式联动；会话级调用控制、外部技能管理与SaaS不纳入。扩展共享核心库存和操作日志，CLI兼容及迁移必须先通过门禁，不能将新字段伪装为现有v2。当前设计不代表已实现或已发布；见[启停设计](skill-toggle-design.md)及tasks.md第44节。
+
+## 后续增量：多来源切换
+
+允许保存多个具名来源，同一 Profile／插件实例共享一个当前来源；旧来源安装保留本地使用和管理，更新仅限当前来源。正式设计与验收见 [registry-switching-design.md](registry-switching-design.md)，本地实现与验证完成，尚未合并发布。

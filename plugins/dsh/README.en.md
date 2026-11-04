@@ -14,6 +14,8 @@ Version `0.4.0` uses the independent `dsh-v0.4.0` tag. It adds versioned example
 
 `0.6.1` includes managed enable/disable, unified read-only update checks, and compact horizontal installed cards with a More menu. Shared inventory remains v2 without a coordinated CLI upgrade. Compatibility acceptance with the actual CLI 0.2.0 package has passed. Check npm for public availability.
 
+`0.6.2` is the current patch candidate, combining source-isolated updates, release-change previews and local-file handling, single-skill ZIP transfer, local favorites, and DSH `0.2.1-rc.5` compatibility. Shared inventory remains v2 without a coordinated CLI upgrade. Candidate and public-package acceptance are separate; check npm before installation.
+
 ## Use an installed skill
 
 Market, installed and everyday conversation lists show one card per skill. “使用技能” asks the Host to verify the unique installation actually usable in the current session. Catalog use creates a conversation in the same workspace; conversation use keeps the current session. Choose an example or custom task to insert an editable draft. This never sends a message, invokes a model or overwrites the original draft.
@@ -23,21 +25,31 @@ In the installed card’s More menu, “管理安装” opens skill details, whe
 An active session is required. Shadowed skills, modified files, disabled user invocation or changed context are reported without modifying the draft. Historical receipts are not proof of current installation. This feature is available from `0.4.0`.
 
 
+## Local package transfer (0.6.2)
+
+Use **Import skill package** in the installed view to select a ZIP containing a root `SKILL.md`, preview it, choose the current project or all projects, and confirm. Existing same-name directories are never overwritten. The first version accepts one skill per archive, up to 8 MiB compressed; existing expanded-size, file-count and per-file limits still apply.
+
+Imports are identified as local packages, support use, diagnosis, activation and removal, and never receive Registry update checks. Import does not require Registry login or connectivity and does not execute packaged scripts. Import records remain in DSH-private state without extending the shared CLI inventory; older versions do not list these records.
+
+In the detail's installation management panel, each location's Manage menu exports that exact installation directly, without an extra location dialog. The ZIP contains its actual contents, including local edits, resources and `.skillhub/examples.json`, while excluding installer metadata. Exporting a disabled installation normalizes the entry inside the ZIP without enabling the original. Review authored files before sharing; export does not automatically redact private content.
+
 ## Requirements and validation scope
 
 | Component | Requirement or scope |
 | --- | --- |
-| DSH | `0.2.0-rc.2` or `0.2.1-rc.2`; Host, app-boot and injected Client modules must share the exact release |
-| Cordis | Old RC: both families below; `0.2.1-rc.2`: only `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7` |
+| DSH | `0.6.2` candidate: `0.2.0-rc.2`, `0.2.1-rc.2`, or `0.2.1-rc.5`; Host, app-boot and injected Client modules must share the exact release |
+| Cordis | Old RC: both families below; `0.2.1-rc.2` and `0.2.1-rc.5`: only `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7` |
 | Host Node | `>=24.2.0 <25`; Node 24.0.0 is unsuitable |
 | Build package manager | Bun `1.3.13`, using frozen lockfiles |
 | UI | Chinese, DSH light/dark themes and narrow layouts |
-| Verified environments | Both Linux DSH Hosts: strict installation, native probes and browser user/project install, upgrade, removal and cancellation; Windows browser UI and interactions against a real Host |
-| Validation boundary | The feature implementation has real-model and cross-platform CI evidence; built artifacts and public packages have separate acceptance records. These results do not substitute for desktop clients, native Windows/macOS manual interactions or SaaS acceptance |
+| Verified environments | Historical dual-RC2 acceptance remains separately recorded. This Linux round passes native RC5 probes on Node 24.2.0/24.17.0 and both RC2 regressions on Node 24.2.0; task 53 records browser evidence separately |
+| Validation boundary | Historical evidence does not automatically cover RC5. Remote CI, native Windows/macOS, real models and SaaS have not run in this round; candidate tarballs and public npm packages have separate acceptance |
 
 Windows browser acceptance does not establish complete native Windows Host filesystem support. CI results do not replace desktop, model, or target-instance acceptance. See the repository's [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and [acceptance criteria](../../openspec/changes/add-dsh-native-plugin/acceptance.md).
 
-Version `0.3.1` includes the merged [Issue #981 compatibility fix](https://github.com/iflytek/skillhub/pull/988). Published plugin `0.3.0` does not include it. Unknown releases and mixed Host/Client graphs reject new writes. Optional `userQuestions` is enabled by Host service availability; it is not part of the mandatory write-version gate. Its API is identical in the two enumerated RCs, both of which the peer declaration permits. An absent service falls back to the plugin confirmation dialog.
+Version `0.3.1` includes the merged [Issue #981 compatibility fix](https://github.com/iflytek/skillhub/pull/988). Published plugin `0.3.0` does not include it. Unknown releases and mixed Host/Client graphs reject new writes. Optional `userQuestions` is enabled by Host service availability; it is not part of the mandatory write-version gate. Its API is identical in the three enumerated RCs, each of which the peer declaration permits. An absent service falls back to the plugin confirmation dialog.
+
+The `0.6.2` candidate adds `0.2.1-rc.5`; compatibility and acceptance are tracked in the [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and task 53 verification. This does not extend the published npm `0.6.1` support declaration. Platform, Node boundary, browser, and model evidence remain separate; release is a separate step.
 
 ## Build and package
 
@@ -52,7 +64,7 @@ bun run check
 npm pack --dry-run --ignore-scripts
 ```
 
-`dsh-typert-generator` remains pinned to `0.2.0-rc.2` to emit the common RPC contract for both Hosts; other DSH development modules use `0.2.1-rc.2` for type checking. This compiler pin does not bypass the runtime release guard.
+`dsh-typert-generator` remains pinned to `0.2.0-rc.2` to emit the common RPC contract for the enumerated Hosts; other DSH development modules use `0.2.1-rc.2` for type checking. This compiler pin does not bypass the runtime release guard.
 
 `check` builds Host/Client, generated Remote bindings and declarations, then runs type checking, lint and tests. Lint uses the locked tools in `cli/`. Bun is a build dependency; the packaged Host runs under Node. React and React DOM are supplied by DSH.
 
@@ -78,8 +90,8 @@ Published `0.1.0` still requires the original Cordis `4.0.4` baseline and does n
 Query the exact npm version first and install only after confirming availability. Check DSH, Node and a complete Cordis combination listed above, stop the target Web Profile Host, then install the plugin. A verified local tarball can also be installed using the next section:
 
 ```sh
-npm view @astron-team/skillhub-dsh@0.6.1 version
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.1 --ignore-scripts
+npm view @astron-team/skillhub-dsh@0.6.2 version
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.2 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 
@@ -120,16 +132,21 @@ The Loader entry ID is `astron-skillhub`; `skillhub` is the Host/Remote service 
 
 Open DSH **Plugins → @astron-team/skillhub-dsh → SkillHub 设置**.
 
-1. Enter the HTTP(S) instance base address in **Registry 地址**. A deployment subpath is allowed; credentials, query parameters, fragments and API endpoint suffixes are not.
+1. Select, add or edit a source in the **技能来源** card. Use an HTTP(S) instance base address. A deployment subpath is allowed; credentials, query parameters, fragments and API endpoint suffixes are not.
 2. Select **测试连接** (Test connection) to test the current draft URL without saving it. The result reports public catalog or basic-search availability and elapsed time. Requests have a 10-second timeout; failures can be retried. Editing the address clears the previous result. Success does not establish download or all optional-module availability.
-3. Choose visibility for versions, security audit and reviews.
+3. Open **页面显示** (Page display) to choose visibility for versions, security audit and reviews. Switching tabs retains the draft and does not save it.
 4. Select **保存配置** (Save). After the saved confirmation, open **技能中心** and search for a public test skill.
 
-**已配置** means a nonempty address is saved, not that connectivity has been tested. An empty address disconnects the source. **重置修改** (Reset changes) restores the current Host snapshot without a network reload or save. Read-only connections cannot edit configuration. On a revision conflict, reset the draft before editing the current values.
+Configure and switch sources under the **技能来源** tab in SkillHub settings. Selection and management share a single list; adding or editing reveals inline fields. Disconnecting takes effect only after saving and preserves installed skills. Both tabs share Save and Reset, applying all pending edits together. Select a saved source and save to apply it; the Skill Center header does not show a source selector. The active source is shared across pages and conversations of the same Profile/plugin instance. Configuration revision checks reject conflicting edits rather than overwriting another page.
+
+Switching preserves existing installations. Installed skills from other trusted sources remain locally usable and manageable, including availability checks, enable/disable and removal; only the current source participates in update checks and upgrades. Same-name skills from different sources remain distinct. Removing the active saved source disconnects without deleting installations; old-source details never borrow current-market content.
+
+**当前使用** identifies the saved active source; **待保存** identifies a pending selection. Neither indicates a successful connection test. Choose **不连接技能来源** and save to disconnect. **重置修改** (Reset changes) restores the current Host snapshot without a network reload or save. Read-only connections cannot edit configuration. On a revision conflict, reset the draft before editing the current values.
 
 | Field | Meaning |
 | --- | --- |
 | `registryUrl` | Registry base URL; defaults to `https://skill.xfyun.cn` when omitted; explicit empty/whitespace disconnects without fallback; custom values are preserved |
+| `savedRegistries` | Optional named sources `[{ name, url }]`; defaults to an empty list. `registryUrl` remains the sole active source |
 | `detailTabs.versions` | Version history visibility |
 | `detailTabs.securityAudit` | Security audit visibility |
 | `detailTabs.reviews` | Read-only review visibility |
@@ -242,3 +259,25 @@ Detail installation checks use a dismissible top-right notification. Ordinary su
 Check notifications use a scope/version heading and one concise conclusion. Installation scope is directly visible without an advanced disclosure. Confirmation, progress and completion share a stable two-column layout (stacked on narrow screens), with a separate use action after completion. Default scope selection is unchanged.
 
 The installed page supports an explicit update check with up to three concurrent read-only requests and a 30-second timeout per installation. Progress, distinct upgradable skill counts, failed installation counts, filters, and failed-only retry are shown progressively. Opening details or leaving the list cancels pending checks; returning from details retains valid completed results. Source, session, workspace, or installation-reference changes invalidate old results. Details show checked target versions per location; execution still revalidates the target. Updates still require confirmation for the exact installation in details.
+
+### Release changes and local file modifications
+
+Installed skill details expose local changes before starting an upgrade. Comparisons use the original content from the installation's exact source, version and release fingerprint. An unavailable or invalid original is reported explicitly; another registry's same-named skill is never substituted.
+
+Upgrades check local changes first. Discard selected changes after confirmation, or choose **Back up changes and continue**. A successful backup opens a separate release preview; only **Confirm upgrade** replaces the installation. Cancelling leaves the installation intact and retains any completed backup. File differences load on demand, have bounded previews and independently scrollable content.
+
+Discarding changes restores files from the currently installed release: modified files are restored, local additions deleted and deleted release files recovered. Version, ownership and enabled/disabled state remain unchanged. Version downgrades and post-upgrade version rollback are not provided. Further file changes invalidate the prepared operation.
+
+Persistent backups live under `skillhub/backups` in DSH Home, outside skill directories. Limits are 100 MiB per backup, 1 GiB in total and 20 backups. Reaching a limit rejects the new backup; backups are not automatically deleted. Failed backups never authorize overwriting, and edits after backup require a fresh check. Local files are compared and backed up on the Host, never uploaded to the Registry.
+
+Manual update actions on conversation cards also open the change preview. Model tools retain their existing confirmation semantics for unmodified installations and cannot authorize backup-and-overwrite; local modifications still require handling in the page.
+
+## Local favorites
+
+The bookmark on market cards and details saves a local favorite. The browse view's “仅看收藏” filter reads the complete current-source list and searches it locally, independently of loaded market pages. Favorites require no login, install nothing, and do not change the website's star count. Opening an item resolves its current downloadable version; offline or missing items stay saved without automatically installing an old version.
+
+Favorites use `$DSH_HOME/skillhub/favorites.json`, with DSH_HOME resolved by the Host's path rules. Profiles and projects sharing that home share favorites; Registry sources and different DSH_HOME values remain isolated. Removing a favorite does not uninstall a skill, and switching or removing a source does not delete its favorites. Read/write failures are reported without silently clearing the list or overwriting unknown formats. This is part of the `0.6.2` candidate, not the published npm `0.6.1` package; verify that the target version is publicly available first.
+
+After a successful removal, a dismissible top-right notice names the skill and can undo the latest removal. Failed undo retains its retry action. Leaving the page, switching sources, or manually saving that skill again clears the old notice. Empty search results offer a clear-search action. A new search cancels an unfinished open request so late results cannot override the new intent.
+
+Successful writes use the complete list returned by the Host without an immediate extra read. Filtering and searching add no network requests. Re-entry, window focus, and reconnection can refresh changes from another Host; there is no polling or real-time multi-window push.

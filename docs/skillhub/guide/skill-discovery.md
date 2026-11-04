@@ -4,7 +4,7 @@
 
 ## 开始前
 
-公开技能可匿名浏览。查找团队或私有资源时先登录正确实例，并确认拥有对应命名空间权限。准备 CLI 和 Agent 的步骤见[快速开始](../quickstart.md)。以下路径相对于实际部署地址，不固定开发端口。
+公开（PUBLIC）技能可匿名浏览；检索空间成员可见（NAMESPACE_ONLY）技能时，须登录正确实例并具备对应成员资格。普通市场搜索不收录私有（PRIVATE）技能，所有者须从“我的技能”查看和管理，不应通过反复修改关键词排查私有技能。搜索边界见[全文搜索查询](https://github.com/iflytek/skillhub/blob/main/server/skillhub-search/src/main/java/com/iflytek/skillhub/search/postgres/PostgresFullTextQueryService.java)。准备 CLI 和 Agent 的步骤见[快速开始](../quickstart.md)。以下路径相对于实际部署地址，不固定开发端口。
 
 ## 在网页查找
 

@@ -15,8 +15,27 @@ export function apply(ctx, config) {
   const checkpoint = { scenario: 'setup', checkpoint: 'setup', assertion: 'none' };
   const abort = new AbortController();
   const timer = setTimeout(() => run(ctx, root, AbortSignal.any([abort.signal, AbortSignal.timeout(70000)]), checkpoint)
-    .catch(error => writeFile(join(root, 'skill-availability-result.json'), JSON.stringify({ passed: false, error: error.message, checkpoint, operation: checkpoint.operation }))), 1000);
+    .catch(error => writeFile(join(root, 'skill-availability-result.json'), JSON.stringify({ passed: false, error: error.message, checkpoint: { ...checkpoint, osCode: error.code }, operation: checkpoint.operation }))), 1000);
   return () => { clearTimeout(timer); abort.abort(); };
+}
+
+/** Preserve the failing mutation/inspection when cleanup also fails. No retry hides a Host failure. */
+export async function withRenamedAvailabilityPath(checkpoint, from, to, inspect, move = rename) {
+  Object.assign(checkpoint, { checkpoint: 'mutation-apply', assertion: 'none' });
+  // A failed rename leaves no backup owned by this fixture; do not try to restore it.
+  await move(from, to);
+  let inspectionFailed = false;
+  try { return await inspect(); }
+  catch (error) { inspectionFailed = true; throw error; }
+  finally {
+    if (inspectionFailed) {
+      try { await move(to, from); }
+      catch (error) { checkpoint.restoreOsCode = error.code; }
+    } else {
+      Object.assign(checkpoint, { checkpoint: 'mutation-restore', assertion: 'none' });
+      await move(to, from);
+    }
+  }
 }
 
 async function digest(directory) {
@@ -97,7 +116,7 @@ async function run(ctx, root, signal, checkpoint) {
     checkpoint.operation = { deadlineReached: false };
     mark('install');
     const result = await execute('astron_skillhub_install', { namespace, slug: 'document-helper', scope });
-    checkpoint.install = { status: result.value?.status, code: result.value?.code };
+    checkpoint.install = { status: result.value?.status, code: result.value?.code, reason: ctx.skillhub.getInstallationContextDiagnostic() };
     mark('assertion', 'isError');
     assert.equal(result.isError, false);
     mark('assertion', 'accepted');
@@ -151,13 +170,14 @@ async function run(ctx, root, signal, checkpoint) {
     checkpoint.scenario = mode;
     mark('mutation');
     const backup = join(root, 'availability-backup-' + randomUUID());
-    try {
-      if (mode === 'content-modified') await writeFile(skillPath, original + '\nAVAILABILITY_PRIVATE_SENTINEL');
-      else await rename(mode === 'skill-missing' ? skillPath : target, backup);
-      await check(await reference('project'), { integrity: mode === 'content-modified' ? 'changed' : 'missing' });
-    } finally {
-      if (mode === 'content-modified') await writeFile(skillPath, original);
-      else await rename(backup, mode === 'skill-missing' ? skillPath : target);
+    if (mode === 'content-modified') {
+      try {
+        await writeFile(skillPath, original + '\nAVAILABILITY_PRIVATE_SENTINEL');
+        await check(await reference('project'), { integrity: 'changed' });
+      } finally { await writeFile(skillPath, original); }
+    } else {
+      await withRenamedAvailabilityPath(checkpoint, mode === 'skill-missing' ? skillPath : target, backup,
+        async () => check(await reference('project'), { integrity: 'missing' }));
     }
   }
   checkpoint.scenario = 'policy';

@@ -70,7 +70,11 @@ async function fixture(run: (value: {
   const fiber = ctx.plugin(SkillHubService, { registryUrl: server.url.href }); await fiber;
   try {
     await run({ service: ctx.skillhub, project, home, session,
-      setRead: read => Reflect.set(ctx.skillhub, 'localRuntime', { listInstalled: read }),
+      setRead: read => Reflect.set(ctx.skillhub, 'localRuntime', { listAllInstalled: async (roots: { scope: string; root: string }[]) => {
+        const registry = ctx.skillhub.getContext().registryUrl;
+        const result = await read(registry, roots) as { items: object[] };
+        return { ...result, items: result.items.map(item => ({ ...item, registry: registry.replace(/\/+$/, '') })) };
+      } }),
       setSearch: read => { search = read; } });
   } finally {
     await fiber.dispose(); await remove(); server.stop(true);

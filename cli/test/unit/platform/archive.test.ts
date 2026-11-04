@@ -149,3 +149,23 @@ describe('archive helpers', () => {
     await expect(extractZip(archive.buffer as ArrayBuffer, target)).rejects.toThrow('zip total uncompressed size exceeds limit')
   })
 })
+
+test('rejects stored-size lies and reused local offsets before writing', async () => {
+  for (const attack of ['size', 'offset', 'method', 'payload'] as const) {
+    const target = await mkdtemp(join(tmpdir(), 'skillhub-invalid-zip-'))
+    try {
+      const archive = zipSync({'one.txt':new Uint8Array([1,2,3,4]),'two.txt':new Uint8Array([5,6,7,8])},{level:0})
+      const view = new DataView(archive.buffer,archive.byteOffset,archive.byteLength)
+      const headers: number[] = []
+      for (let i = 0; i + 46 <= archive.length; i++) if (view.getUint32(i,true) === 0x02014b50) headers.push(i)
+      const first = headers[0]!
+      const second = headers[1]!
+      if (attack === 'size') view.setUint32(first + 24,0,true)
+      if (attack === 'offset') view.setUint32(second + 42,view.getUint32(first + 42,true),true)
+      if (attack === 'method') view.setUint16(first + 10,99,true)
+      if (attack === 'payload') { view.setUint32(first + 20,archive.length,true); view.setUint32(first + 24,archive.length,true) }
+      await expect(extractZip(archive.slice().buffer,target,{rejectInternalMetadata:true})).rejects.toThrow()
+      await expect(readFile(join(target,'one.txt'))).rejects.toMatchObject({code:'ENOENT'})
+    } finally { await rm(target,{recursive:true,force:true}) }
+  }
+})

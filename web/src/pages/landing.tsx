@@ -23,6 +23,7 @@ import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { useInView } from '@/shared/hooks/use-in-view'
 import { Button } from '@/shared/ui/button'
+import { APP_FRAME_CLASS_NAME } from '@/shared/lib/layout-frame'
 
 interface HeroSkillItem {
   name: string
@@ -155,8 +156,8 @@ function EnterpriseSection() {
   const { t } = useTranslation()
 
   return (
-    <section className="w-full bg-background px-6 py-16 md:py-20">
-      <div className="mx-auto max-w-6xl">
+    <section className="w-full bg-background py-16 md:py-20">
+      <div className={APP_FRAME_CLASS_NAME}>
         <div className="text-center mb-12">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Enterprise</p>
           <h2 className="mb-3 text-2xl font-medium tracking-tight text-foreground md:text-3xl">{t('landing.experience.enterprise.title')}</h2>
@@ -335,11 +336,11 @@ export function LandingPage() {
 
   return (
     <>
-      <main ref={heroView.ref} className={`relative z-10 w-full overflow-hidden px-6 py-16 scroll-fade-up${heroView.inView ? ' in-view' : ''} md:py-20`}>
+      <main ref={heroView.ref} className={`relative z-10 w-full overflow-hidden py-16 scroll-fade-up${heroView.inView ? ' in-view' : ''} md:py-20`}>
         <div className="absolute inset-0 -z-10">
           <div className="absolute left-1/2 top-0 h-[400px] w-[900px] -translate-x-1/2 rounded-full bg-secondary blur-3xl" />
         </div>
-        <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-12 lg:grid-cols-2 lg:items-center lg:gap-16">
+        <div className={`${APP_FRAME_CLASS_NAME} grid grid-cols-1 items-start gap-12 lg:grid-cols-2 lg:items-center lg:gap-16`}>
           <div>
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/70 bg-secondary/80 px-3 py-1.5 text-xs font-medium text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
@@ -381,10 +382,10 @@ export function LandingPage() {
         </div>
       </main>
 
-      <div className="mx-auto max-w-6xl px-6"><div className="h-px bg-border/70" /></div>
+      <div className={APP_FRAME_CLASS_NAME}><div className="h-px bg-border/70" /></div>
 
-      <section ref={featuresView.ref} className={`relative z-10 w-full bg-background px-6 py-16 scroll-fade-up${featuresView.inView ? ' in-view' : ''} md:py-20`}>
-        <div className="mx-auto max-w-6xl">
+      <section ref={featuresView.ref} className={`relative z-10 w-full bg-background py-16 scroll-fade-up${featuresView.inView ? ' in-view' : ''} md:py-20`}>
+        <div className={APP_FRAME_CLASS_NAME}>
           <div className="mb-12 max-w-3xl">
             <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('landing.experience.capabilities.eyebrow')}</p>
             <h2 className="mb-4 text-3xl font-medium tracking-tight text-foreground md:text-4xl">
@@ -413,8 +414,8 @@ export function LandingPage() {
         <LandingQuickStartSection />
       </div>
 
-      <section ref={popularView.ref} className={`relative z-10 w-full bg-background px-6 py-16 scroll-fade-up${popularView.inView ? ' in-view' : ''} md:py-20`}>
-        <div className="mx-auto max-w-6xl space-y-6">
+      <section ref={popularView.ref} className={`relative z-10 w-full bg-background py-16 scroll-fade-up${popularView.inView ? ' in-view' : ''} md:py-20`}>
+        <div className={`${APP_FRAME_CLASS_NAME} space-y-6`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('landing.experience.marketplace')}</p>
@@ -442,8 +443,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section ref={latestView.ref} className={`relative z-10 w-full border-y border-border/70 bg-secondary/70 px-6 py-16 scroll-fade-up${latestView.inView ? ' in-view' : ''} md:py-20`}>
-        <div className="mx-auto max-w-6xl space-y-6">
+      <section ref={latestView.ref} className={`relative z-10 w-full border-y border-border/70 bg-secondary/70 py-16 scroll-fade-up${latestView.inView ? ' in-view' : ''} md:py-20`}>
+        <div className={`${APP_FRAME_CLASS_NAME} space-y-6`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('landing.experience.latest')}</p>
@@ -475,8 +476,8 @@ export function LandingPage() {
         <EnterpriseSection />
       </div>
 
-      <section className="relative z-10 w-full border-t border-border/70 bg-background px-6 py-16 text-center md:py-20">
-        <div className="mx-auto max-w-4xl">
+      <section className="relative z-10 w-full border-t border-border/70 bg-background py-16 text-center md:py-20">
+        <div className={APP_FRAME_CLASS_NAME}>
           <h2 className="mb-3 text-2xl font-medium tracking-tight text-foreground md:text-3xl">{t('landing.experience.cta.title')}</h2>
           <p className="mb-8 text-muted-foreground">{t('landing.experience.cta.description')}</p>
           <div className="flex flex-wrap items-center justify-center gap-3">

@@ -893,6 +893,9 @@
     "securityDesc": "修改密码和账户安全选项"
   },
   "mySkills": {
+    "noSummary": "暂无简介",
+    "metadataDetails": "技能信息",
+    "metadataDetailsFor": "查看“{{skill}}”的完整信息",
     "ownerReadOnly": "你已不在该空间，只能查看和下载自己的技能，不能修改。",
     "updateGlobalVersion": "更新全局版本",
     "viewGlobalCopy": "查看全局副本",
@@ -906,6 +909,18 @@
     "namespaceFilterLabel": "按命名空间过滤",
     "namespaceFilterAll": "全部命名空间",
     "clearSearch": "清除筛选",
+    "moreActions": "更多操作",
+    "moreActionsFor": "{{skill}}的更多操作",
+    "viewDetail": "查看详情",
+    "copyCoordinate": "复制技能坐标",
+    "coordinateCopied": "技能坐标已复制",
+    "coordinateCopyFailed": "复制技能坐标失败，请重试。",
+    "compareVersions": "版本比较",
+    "downloadCount": "下载次数",
+    "retry": "重试",
+    "filterLabel": "技能筛选",
+    "statusFilterLabel": "按状态筛选",
+    "resultCount": "{{count}} 个技能",
     "emptySearchTitle": "未找到匹配的技能",
     "emptySearchDescription": "试试调整关键字或切换命名空间",
     "filters": {

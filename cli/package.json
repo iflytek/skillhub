@@ -1,6 +1,6 @@
 {
   "name": "@astron-team/skillhub",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Manage and install skills for AI coding agents",
   "keywords": [
     "skillhub",
@@ -50,7 +50,7 @@
     "prompts": "^2.4.2",
     "proper-lockfile": "4.1.2",
     "semver": "^7.6.3",
-    "zod": "^3.24.1"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@types/bun": "^1.3.13",

@@ -1,6 +1,8 @@
+import { verifyBackup } from './native-changes'
+import type { NativeUpgradeExecution } from './native-contract'
 import { snapshotInstalledSkillDirectory, snapshotJournalInstallation } from '../services/installed-skill-snapshot'
-import { lstat, realpath, rm } from 'node:fs/promises'
-import { basename, dirname, isAbsolute, resolve } from 'node:path'
+import { readFile, lstat, realpath, rm } from 'node:fs/promises'
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import { captureInstallInventory } from '../services/inventory-cas'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
@@ -132,7 +134,7 @@ async function inspectInstallation(options: InstallRecoveryOptions, mode: 'inspe
           const metadata = read.metadata
           if (!sameInstalledSkillSource(metadata, identity) || metadata.version !== target.version
             || metadata.fingerprint !== target.fingerprint || metadata.agent !== target.agent
-            || metadata.installedAt !== target.installedAt || metadata.source !== 'skillhub') {
+            || metadata.installedAt !== target.installedAt || metadata.source !== (identity.registry === 'local:import' ? 'local-import' : 'skillhub')) {
             return result('unknown', 'metadata-conflict')
           }
           const snapshot = await snapshotInstalledSkillDirectory(item, target)
@@ -224,7 +226,7 @@ async function cleanupBackups(options: InstallRecoveryOptions, current: Operatio
         await options.authorizeMutation?.([path], 'cleanup')
         // Policy checks may yield; verify the same bound content again before deletion.
         if (await verifiedBackupPath(current, entry.move) !== path) throw new Error('Backup path changed')
-        await assertBackupContent(current, entry.move, path)
+        await assertBackupContent(options.operations.root, current, entry.move, path)
         if ((await options.operations.get(current.operationId, current.ownerId))?.revision !== revision) throw new Error('Operation changed before backup cleanup')
         await rm(path, { recursive: true })
       }
@@ -244,7 +246,7 @@ async function cleanupBackups(options: InstallRecoveryOptions, current: Operatio
   return { revision, results }
 }
 
-async function assertBackupContent(record: OperationRecord, move: InstallMove, path: string): Promise<void> {
+async function assertBackupContent(stateDirectory: string, record: OperationRecord, move: InstallMove, path: string): Promise<void> {
   await assertOwnedRegularTree(path)
   const identity = { registry: record.operation.context.sourceIdentity, namespace: record.operation.namespace, slug: record.operation.slug }
   const items = record.transaction!.inventoryCommit!.before.items.filter(item => sameInstalledSkillSource(item, identity))
@@ -263,9 +265,19 @@ async function assertBackupContent(record: OperationRecord, move: InstallMove, p
   const metadata = read.metadata
   if (!sameInstalledSkillSource(metadata, identity) || metadata.version !== target.version
     || metadata.fingerprint !== target.fingerprint || metadata.installedAt !== target.installedAt
-    || metadata.agent !== target.agent || metadata.source !== 'skillhub') throw new Error('Backup metadata does not match its baseline')
+    || metadata.agent !== target.agent || metadata.source !== (identity.registry === 'local:import' ? 'local-import' : 'skillhub')) throw new Error('Backup metadata does not match its baseline')
   const snapshot = await snapshotJournalInstallation(record, path)
-  if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) throw new Error('Backup content was modified')
+  if (snapshot.fingerprint !== target.fingerprint || !isDeepStrictEqual(snapshot.files, metadata.files)) {
+    const proof = JSON.parse(await readFile(join(dirname(stateDirectory), 'dirty-upgrade-proofs', `${record.operationId}.json`), 'utf8')) as {
+      ownerId: string; authorization: NonNullable<NativeUpgradeExecution['localChangesAuthorization']>
+    }
+    const authorization = proof.authorization
+    if (proof.ownerId !== record.ownerId || authorization.snapshot.baseline.targets.length !== 1
+      || authorization.snapshot.baseline.targets[0]!.path !== move.canonicalSkillDir
+      || !isDeepStrictEqual(metadata, authorization.snapshot.baseline.targets[0]!.metadata)
+      || !isDeepStrictEqual(snapshot.files, authorization.snapshot.baseline.targets[0]!.files)) throw new Error('Backup content was modified')
+    await verifyBackup(stateDirectory, authorization.snapshot, authorization.backupReceipt)
+  }
 }
 
 async function releaseLocks(releases: Array<() => Promise<void>>, operationError: unknown): Promise<void> {

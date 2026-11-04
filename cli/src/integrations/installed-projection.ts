@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { readInstallationState, type InventoryStore } from '../stores/inventory-store'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from '../services/installed-skill-metadata'
 
-import type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget } from './native-contract'
+import type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget, AllInstalledProjection } from './native-contract'
 export type { InstalledProjection, InstalledProjectionItem, InstalledProjectionTarget } from './native-contract'
 
 const text = z.string().min(1)
@@ -23,6 +23,33 @@ export async function readInstalledProjection(inventory: Pick<InventoryStore, 'r
     records = z.object({ items: z.array(z.unknown()) }).parse(raw).items
   } catch { return { items: [], complete: false, issues: ['inventory-unreadable'] } }
   return readInstalledProjectionRecords(records, registry, targets)
+}
+
+/** Read trusted DSH installations across sources, without changing the default source-filtered API. */
+export async function readAllInstalledProjection(inventory: Pick<InventoryStore, 'read'>,
+  targets: readonly InstalledProjectionTarget[]): Promise<AllInstalledProjection> {
+  let records: unknown[]
+  try {
+    records = z.object({ items: z.array(z.unknown()) }).parse(await inventory.read()).items
+  } catch { return { items: [], complete: false, issues: ['inventory-unreadable'] } }
+  const result: AllInstalledProjection = { items: [], complete: true, issues: [] }
+  const registries = new Map<string, unknown[]>()
+  for (const record of records) {
+    const parsed = itemSchema.safeParse(record)
+    if (parsed.success) {
+      const registry = parsed.data.registry.replace(/\/+$/, '')
+      const bucket = registries.get(registry) ?? []
+      bucket.push(record); registries.set(registry, bucket)
+    }
+    else { result.complete = false; result.issues = ['invalid-record'] }
+  }
+  for (const [registry, sourceRecords] of registries) {
+    const projection = await readInstalledProjectionRecords(sourceRecords, registry, targets)
+    result.items.push(...projection.items.map(item => ({ ...item, registry })))
+    result.complete &&= projection.complete
+    result.issues = [...new Set([...result.issues, ...projection.issues])]
+  }
+  return result
 }
 
 /** Internal projection primitive: callers must obtain records from a trusted inventory snapshot. */

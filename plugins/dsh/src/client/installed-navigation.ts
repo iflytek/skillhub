@@ -8,7 +8,8 @@ export interface InstalledNavigation {
   selected: InstalledSkillList['items'][number] | null;
   completed: { itemKey: string; version: string } | null;
   removalCompleted: string | null;
-  intent: 'detail' | 'upgrade' | 'remove';
+  intent: 'detail' | 'upgrade' | 'remove' | 'local-changes';
+  changeVersion?: string;
   listScroll: number;
   triggerKey: string | null;
 }

@@ -3,8 +3,8 @@ import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { zipSync, unzipSync } from 'fflate'
 import { MAX_PACKAGE_BYTES } from './download.js'
 
-const MAX_ZIP_ENTRIES = 500
-const MAX_SINGLE_FILE_BYTES = 10 * 1024 * 1024
+export const MAX_ZIP_ENTRIES = 500
+export const MAX_SINGLE_FILE_BYTES = 10 * 1024 * 1024
 const EOCD_SIGNATURE = 0x06054b50
 const CENTRAL_DIRECTORY_SIGNATURE = 0x02014b50
 const ZIP64_MARKER_16 = 0xffff
@@ -71,6 +71,7 @@ function validateZipCentralDirectory(archive: Uint8Array, rejectInternalMetadata
   }
 
   const destinations = new Map<string, boolean>()
+  const localRanges: Array<{ start: number; end: number }> = []
   let offset = centralDirectoryOffset
   let totalUncompressedSize = 0
   const decoder = new TextDecoder()
@@ -78,6 +79,10 @@ function validateZipCentralDirectory(archive: Uint8Array, rejectInternalMetadata
     if (offset + 46 > archive.byteLength || view.getUint32(offset, true) !== CENTRAL_DIRECTORY_SIGNATURE) {
       throw new Error('invalid zip central directory')
     }
+    const flags = view.getUint16(offset + 8, true)
+    const unixMode = view.getUint32(offset + 38, true) >>> 16
+    const kind = unixMode & 0xf000
+    if (rejectInternalMetadata && ((flags & 1) || (kind !== 0 && kind !== 0x8000 && kind !== 0x4000))) throw new Error('Unsupported zip entry type')
     const uncompressedSize = view.getUint32(offset + 24, true)
     const nameLength = view.getUint16(offset + 28, true)
     const extraLength = view.getUint16(offset + 30, true)
@@ -114,6 +119,23 @@ function validateZipCentralDirectory(archive: Uint8Array, rejectInternalMetadata
     if (totalUncompressedSize > MAX_PACKAGE_BYTES) {
       throw new Error('zip total uncompressed size exceeds limit')
     }
+    const method = view.getUint16(offset + 10, true)
+    const compressedSize = view.getUint32(offset + 20, true)
+    const localOffset = view.getUint32(offset + 42, true)
+    if ((flags & 1) || ![0, 8].includes(method) || method === 0 && compressedSize !== uncompressedSize) throw new Error('invalid zip compression sizes or method')
+    if (localOffset + 30 > centralDirectoryOffset || view.getUint32(localOffset, true) !== 0x04034b50) throw new Error('invalid zip local header')
+    const localNameLength = view.getUint16(localOffset + 26, true)
+    const payloadStart = localOffset + 30 + localNameLength + view.getUint16(localOffset + 28, true)
+    const payloadEnd = payloadStart + compressedSize
+    if (payloadStart > centralDirectoryOffset || payloadEnd > centralDirectoryOffset
+      || localNameLength !== nameLength || view.getUint16(localOffset + 6, true) !== flags
+      || view.getUint16(localOffset + 8, true) !== method
+      || archive.subarray(localOffset + 30, localOffset + 30 + localNameLength).some((byte, index) => byte !== archive[nameStart + index])) throw new Error('inconsistent zip local header')
+    if (!(flags & 8) && (view.getUint32(localOffset + 18, true) !== compressedSize
+      || view.getUint32(localOffset + 22, true) !== uncompressedSize
+      || view.getUint32(localOffset + 14, true) !== view.getUint32(offset + 16, true))) throw new Error('inconsistent zip local sizes')
+    if (localRanges.some(range => localOffset < range.end && payloadEnd > range.start)) throw new Error('overlapping zip entries')
+    localRanges.push({ start: localOffset, end: payloadEnd })
     offset = nextOffset
   }
 }
