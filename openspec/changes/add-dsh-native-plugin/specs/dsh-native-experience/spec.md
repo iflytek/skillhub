@@ -646,3 +646,21 @@ The source candidate SHALL enumerate `0.2.0-rc.2`, `0.2.1-rc.2` and `0.2.1-rc.5`
 - **WHEN** RC5 support is evaluated for release
 - **THEN** Node 24.2.0 and current Node 24, native Host behavior, browser interaction and platform CI are recorded separately
 - **AND** a local Linux pass does not imply native Windows/macOS, model execution or published-package acceptance
+
+### Requirement: Source-isolated local skill favorites
+The plugin MUST let users save and remove local skill favorites without login, installation, inventory changes, or a server-side star mutation. Identity MUST include the normalized Registry source, namespace and slug, but not a version. Favorites MUST survive Host restarts, remain shared across projects and Profiles using the same DSH_HOME, and remain isolated from other sources and DSH_HOME values.
+
+#### Scenario: Save and find a favorite independently of market pagination
+- **GIVEN** a public skill appears on a later market page
+- **WHEN** the user saves it from its card or detail and reopens the local favorites filter
+- **THEN** the complete current-source favorites list includes it without loading those market pages, the two controls agree, and no skill installation or server star count changes
+
+#### Scenario: Open current content without locking an old snapshot
+- **GIVEN** a saved skill has a newer downloadable release than when it was favorited
+- **WHEN** the user opens that favorite
+- **THEN** only that identity is resolved at the current source and the existing fixed-version detail/install flow is used; an offline or missing skill stays saved without silently installing the old snapshot
+
+#### Scenario: Preserve source and persistent-write boundaries
+- **GIVEN** two sources contain the same coordinates or multiple local Hosts save different favorites
+- **WHEN** the source changes or concurrent writes finish
+- **THEN** old responses do not enter the new source view, each source retains its own favorites, atomic locked read-modify-write preserves both records, and damaged or unknown storage is not overwritten

@@ -86,7 +86,8 @@
     "@deepseek-ai/dsh-skill-filesystem": "0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.5",
     "@deepseek-ai/dsh-tools": "0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.5",
     "@deepseek-ai/dsh-typert-protocol": "0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.5",
-    "@deepseek-ai/dsh-user-questions": "0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.5"
+    "@deepseek-ai/dsh-user-questions": "0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.5",
+    "@deepseek-ai/dsh-atomic-write": "0.2.0-rc.2 || 0.2.1-rc.2 || 0.2.1-rc.5"
   },
   "dependencies": {
     "@deepseek-ai/schemastery": "3.18.4",
@@ -142,7 +143,8 @@
     "@deepseek-ai/dsh-session-query": "0.2.1-rc.2",
     "@deepseek-ai/dsh-skill-filesystem": "0.2.1-rc.2",
     "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
-    "@deepseek-ai/dsh-typert-protocol": "0.2.1-rc.2"
+    "@deepseek-ai/dsh-typert-protocol": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-atomic-write": "0.2.1-rc.2"
   },
   "engines": {
     "node": ">=24.2.0 <25"

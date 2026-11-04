@@ -29,6 +29,8 @@ import type { ConversationSearchContext, ConversationSearchResult } from './sear
 import type { RegistryConnectionTest, CatalogContext, CatalogLabels, CatalogPageResult, CatalogSort, ModuleAvailability, ReviewPage, ConversationDetail, SkillDetail, SkillList, VersionPage } from './types.js';
 import { RegistryAdapter, RegistryError } from './registry-adapter.js';
 import { LocalRuntime } from './local-runtime.js';
+import { FavoritesStore, FavoritesError, validateFavoriteSkill } from './favorites-store.js';
+import type { FavoriteList, FavoriteSkill, FavoriteVersion } from './types.js';
 import { assertRuntimeCompatibility } from './runtime-compatibility.js';
 import { supportedDshVersions } from './compatibility.js';
 import type { HostCompatibility } from './types.js';
@@ -70,6 +72,7 @@ export class SkillHubService extends TypertRemoteService {
   private sourceInput = '';
   private readonly lifetime = new AbortController();
   private localRuntime?: LocalRuntime;
+  private readonly favorites = new FavoritesStore();
   private readonly selections = new ConversationSelections();
   private readonly pendingConversationInstalls = new Map<string, { parameters: string; agent: unknown; runtime: LocalRuntime; result: Promise<PendingConversationInstall>; confirmation?: Promise<NativeOperation | PendingConversationInstall | CancelledConversationInstall | undefined> }>();
   private readonly pendingConversationChoices = new Map<string, { agent: unknown; runtime: LocalRuntime }>();
@@ -213,6 +216,42 @@ export class SkillHubService extends TypertRemoteService {
       configured: !!this.registry,
       detailTabs: { ...this.configuration.get().detailTabs },
     };
+  }
+
+  @Remote
+  async listFavorites(sourceRevision: string, signal: AbortSignal): Promise<FavoriteList> {
+    return this.readSource(sourceRevision, signal, (registry, combined) => this.readFavorites(() =>
+      this.favorites.list(registry.source, () => { combined.throwIfAborted(); this.assertSource(sourceRevision); })));
+  }
+
+  @Remote
+  async setFavorite(sourceRevision: string, item: FavoriteSkill, favorite: boolean, signal: AbortSignal): Promise<FavoriteList> {
+    return this.readSource(sourceRevision, signal, (registry, combined) => this.readFavorites(() =>
+      this.favorites.set(registry.source, item, favorite, () => { combined.throwIfAborted(); this.assertSource(sourceRevision); })));
+  }
+
+  @Remote
+  async resolveFavoriteVersion(sourceRevision: string, namespace: string, slug: string, signal: AbortSignal): Promise<FavoriteVersion> {
+    return this.readSource(sourceRevision, signal, async (registry, combined) => {
+      this.readFavoriteCoordinates(namespace, slug);
+      const resolved = await registry.resolve(namespace, slug, undefined, combined);
+      return { namespace: resolved.namespace, slug: resolved.slug, version: resolved.version };
+    });
+  }
+
+  private readFavoriteCoordinates(namespace: string, slug: string): void {
+    try { validateFavoriteSkill({ namespace, slug }); }
+    catch { throw new RemoteError('skillhub/favorites-error', 'Invalid favorite identity.', { reason: 'INVALID_INPUT', retryable: false }); }
+  }
+
+  private async readFavorites<T>(read: () => Promise<T>): Promise<T> {
+    try { return await read(); }
+    catch (error) {
+      if (error instanceof FavoritesError) throw new RemoteError('skillhub/favorites-error', 'Local favorites are unavailable.', {
+        reason: error.reason, retryable: error.reason === 'UNAVAILABLE',
+      });
+      throw error;
+    }
   }
 
   @Remote

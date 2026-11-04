@@ -49,6 +49,16 @@ export interface SkillList {
   limit: number;
 }
 
+/** Local display snapshot; identity excludes versions and grants no install authority. */
+export interface FavoriteSkill {
+  namespace: string;
+  slug: string;
+  displayName?: string;
+  summary?: string;
+}
+export interface FavoriteList { items: FavoriteSkill[] }
+export interface FavoriteVersion { namespace: string; slug: string; version: string }
+
 export interface CatalogLabel { slug: string; type: 'RECOMMENDED' | 'PRIVILEGED'; displayName: string }
 export interface CatalogLabels { available: boolean; items: CatalogLabel[] }
 
@@ -158,6 +168,7 @@ export interface ReviewPage {
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
+    'skillhub/favorites-error': { reason: 'INVALID_INPUT' | 'UNAVAILABLE' | 'INVALID_STORE' | 'LIMIT_REACHED'; retryable: boolean };
     'skillhub/source-not-configured': { retryable: false };
     'skillhub/context-stale': { retryable: false };
     'skillhub/installation-unavailable': { retryable: boolean };
