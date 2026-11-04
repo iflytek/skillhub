@@ -295,7 +295,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-5 pb-28 animate-fade-up">
+    <div className="space-y-5 pb-28 animate-fade-up">
       <SuiteWorkspaceHeader
         title={editing
           ? t('suite.editTitle')
@@ -662,7 +662,7 @@ export function SuiteEditor({ namespace: routeNamespace, slug: routeSlug, versio
       ) : null}
 
       <div className="sticky bottom-0 z-20 -mx-4 border-t bg-background/95 px-4 py-3 shadow-[0_-8px_24px_-20px_rgb(0_0_0/0.45)] backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 text-sm font-medium">
               <span>{t('suite.selectedMembers', { count: selected.length })}</span>

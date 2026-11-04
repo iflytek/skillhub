@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCancelAccountMerge, useConfirmAccountMerge, useInitiateAccountMerge, useInspectAccountMerge, useVerifyAccountMerge } from '@/features/auth/use-account-merge'
 import { truncateErrorMessage } from '@/shared/lib/error-display'
+import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Button } from '@/shared/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import { Input } from '@/shared/ui/input'
@@ -106,14 +107,15 @@ export function AccountSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="space-y-6">
+      <DashboardPageHeader title={t('sidebar.accounts')} />
       <Card className="glass-strong">
         <CardHeader>
           <CardTitle>{t('accounts.initiateTitle')}</CardTitle>
           <CardDescription>{t('accounts.initiateDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleInitiate}>
+          <form className="max-w-3xl space-y-4" onSubmit={handleInitiate}>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="secondary-identifier">{t('accounts.secondaryLabel')}</label>
               <Input
@@ -136,7 +138,7 @@ export function AccountSettingsPage() {
           <CardDescription>{t('accounts.verifyDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleVerify}>
+          <form className="max-w-3xl space-y-4" onSubmit={handleVerify}>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="merge-request-id">{t('accounts.mergeRequestId')}</label>
               <Input

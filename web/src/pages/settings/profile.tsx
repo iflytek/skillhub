@@ -212,7 +212,7 @@ export function ProfileSettingsPage() {
             <p className="text-sm text-muted-foreground">{user?.userId || '-'}</p>
           </div>
 
-          <form data-analytics-id="account.profile.save" className="space-y-4" onSubmit={handleSubmit}>
+          <form data-analytics-id="account.profile.save" className="max-w-3xl space-y-4" onSubmit={handleSubmit}>
             {/* Dynamic fields */}
             {Object.entries(fieldPolicies).map(([field, policy]) => {
               const label = t(`profile.${field}`)
