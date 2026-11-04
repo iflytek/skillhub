@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams, useNavigate, useRouterState, useSearch } from '@tanstack/react-router'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowUpCircle, Boxes, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
+import { SkillInstructions } from '@/features/skill/skill-instructions'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { SkillVisibilityDialog } from '@/features/skill/skill-visibility-dialog'
 import { SkillAvatar } from '@/features/skill/skill-avatar'
@@ -198,23 +199,44 @@ export function SkillDetailPage() {
     ?? publishedVersions[0]
   const ownerPreviewVersion = skill ? getOwnerPreviewVersion(skill) : null
   const requestedVersion = search.version
-  const selectedVersion = versions?.some(version => version.version === requestedVersion)
-    ? requestedVersion
-    : headlineVersion?.version ?? versions?.[0]?.version
-  const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion) ?? versions?.[0]
+  const selectedVersion = requestedVersion ?? headlineVersion?.version ?? versions?.[0]?.version
   const selectedMetadata = selectedVersion === ownerPreviewVersion?.version ? ownerPreviewVersion
     : selectedVersion === publishedVersion?.version ? publishedVersion
       : selectedVersion === headlineVersion?.version ? headlineVersion : null
-  const { data: selectedVersionDetail } = useSkillVersionDetail(qns, qslug, selectedVersion, skillReady)
+  const { data: selectedVersionDetail, error: versionDetailError, isLoading: versionDetailLoading, refetch: retryVersionDetail } = useSkillVersionDetail(qns, qslug, selectedVersion, skillReady)
+  const unavailableVersion = Boolean(requestedVersion && versionDetailError instanceof ApiError && [403, 404].includes(versionDetailError.status))
+  const selectedVersionEntry = versions?.find((version) => version.version === selectedVersion)
+    ?? (selectedVersionDetail ? { ...selectedVersionDetail, downloadAvailable: false, syncRevision: undefined } : undefined)
   const historicalMetadata = getVersionPresentation(selectedVersionDetail?.parsedMetadataJson)
   const selectedDisplayName = selectedMetadata?.displayName ?? historicalMetadata.displayName ?? skill?.displayName
   const selectedSummary = selectedMetadata?.summary ?? historicalMetadata.summary ?? skill?.summary
   const showingUnpublishedPreview = selectedVersionEntry != null && selectedVersionEntry.status !== 'PUBLISHED'
 
-  const { data: files } = useSkillFiles(qns, qslug, selectedVersion, skillReady)
+  const { data: files, isLoading: filesLoading, error: filesError, refetch: retryFiles } = useSkillFiles(qns, qslug, selectedVersion, skillReady && !unavailableVersion)
   const documentationPath = resolveDocumentationFilePath(files)
-  const { data: readme, error: readmeError } = useSkillReadme(qns, qslug, selectedVersion, documentationPath, skillReady)
+  const { data: readme, error: readmeError } = useSkillReadme(qns, qslug, selectedVersion, documentationPath, skillReady && !unavailableVersion)
   const renderedDocumentation = historicalMetadata.overview ?? readme
+  useEffect(() => {
+    setIsOverviewExpanded(false)
+    setPreviewDialogOpen(false)
+    setPreviewNode(null)
+  }, [namespace, slug, selectedVersion])
+  const overviewTabRef = useRef<HTMLButtonElement>(null)
+  const focusOverviewAfterSwitch = useRef(false)
+  useEffect(() => {
+    if (focusOverviewAfterSwitch.current && overviewTabRef.current && !versionDetailLoading) {
+      overviewTabRef.current.focus()
+      focusOverviewAfterSwitch.current = false
+    }
+  }, [selectedVersion, versionDetailLoading])
+  const [tabState, setTabState] = useState({ version: selectedVersion, value: 'readme' })
+  const activeTab = tabState.version === selectedVersion ? tabState.value : 'readme'
+  const showVersion = (version?: string) => {
+    focusOverviewAfterSwitch.current = true
+    overviewTabRef.current?.focus()
+    setTabState({ version: selectedVersion, value: 'readme' })
+    void navigate({ to: '/space/$namespace/$slug', params: { namespace, slug }, search: { ...search, version } })
+  }
   const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useSkillFile(
     qns,
     qslug,
@@ -860,6 +882,32 @@ export function SkillDetailPage() {
     )
   }
 
+  if (requestedVersion && versionDetailError && !unavailableVersion) {
+    return (
+      <Card className="p-6 space-y-4" role="alert">
+        <p>{t('skillDetail.versionLoadError')}</p>
+        <Button variant="outline" data-analytics-id="skill.version.retry" onClick={() => void retryVersionDetail()}>
+          {t('skillDetail.instructionsRetry')}
+        </Button>
+      </Card>
+    )
+  }
+  if (requestedVersion && versionDetailLoading) {
+    return <Card className="p-6" role="status">{t('skillDetail.versionLoading')}</Card>
+  }
+  if (unavailableVersion) {
+    return (
+      <Card className="p-6 space-y-4" role="alert">
+        <p>{t('skillDetail.versionUnavailable', { version: requestedVersion })}</p>
+        {publishedVersion && (
+          <Button variant="outline" data-analytics-id="skill.version.latest" onClick={() => showVersion(publishedVersion.version)}>
+            {t('skillDetail.returnLatestPublished')}
+          </Button>
+        )}
+      </Card>
+    )
+  }
+
   if (skillDeleted) {
     return null
   }
@@ -981,20 +1029,19 @@ export function SkillDetailPage() {
           )}
         </div>
 
-        <Tabs defaultValue="readme">
-          <TabsList>
-            <TabsTrigger data-analytics-id="skill.overview.tab" value="readme">{t('skillDetail.tabOverview')}</TabsTrigger>
+        {(requestedVersion || showingUnpublishedPreview) && <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm">
+          <span>{t(unavailableVersion ? 'skillDetail.versionUnavailable' : showingUnpublishedPreview ? 'skillDetail.viewingUnpublishedVersion' : selectedVersion !== publishedVersion?.version ? 'skillDetail.viewingHistoricalVersion' : 'skillDetail.viewingVersion', { version: selectedVersion })}</span>
+          {publishedVersion && selectedVersion !== publishedVersion.version && <Button variant="outline" size="sm" data-analytics-id="skill.version.latest" onClick={() => showVersion(publishedVersion.version === headlineVersion?.version ? undefined : publishedVersion.version)}>{t('skillDetail.returnLatestPublished')}</Button>}
+        </div>}
+        <Tabs value={activeTab} onValueChange={(value) => setTabState({ version: selectedVersion, value })}>
+          <TabsList className="max-w-full flex-wrap h-auto">
+            <TabsTrigger ref={overviewTabRef} data-analytics-id="skill.overview.tab" value="readme">{t('skillDetail.tabOverview')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="skill.instructions.tab" value="instructions">{t('skillDetail.tabInstructions')}</TabsTrigger>
             <TabsTrigger data-analytics-id="skill.files.tab" value="files">{t('skillDetail.tabFiles')}</TabsTrigger>
             <TabsTrigger data-analytics-id="skill.versions.tab" value="versions">{t('skillDetail.tabVersions')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="readme" className="mt-6">
-            {files?.find(file => file.filePath === 'SKILL.md') && (
-              <Button type="button" variant="outline" className="mb-4" onClick={() => {
-                const skillFile = files.find(file => file.filePath === 'SKILL.md')
-                if (skillFile) handleFileClick(createPackageFilePreviewNode(skillFile))
-              }}>{t('skillDetail.viewSkillMd')}</Button>
-            )}
             {renderedDocumentation ? (
               <Card className="p-8 space-y-4">
                 {!historicalMetadata.overview && documentationPath ? (
@@ -1060,6 +1107,9 @@ export function SkillDetailPage() {
             )}
           </TabsContent>
 
+          <TabsContent value="instructions" className="mt-6">
+            <SkillInstructions key={`${namespace}/${slug}/${selectedVersion}`} namespace={qns} slug={qslug} version={selectedVersion} available={!unavailableVersion && Boolean(files?.some(file => file.filePath === 'SKILL.md'))} loading={Boolean(filesLoading)} error={filesError} retryFiles={() => void retryFiles()} onLinkClick={(href, event) => handlePackageMarkdownLinkClick(href, event, 'SKILL.md')} />
+          </TabsContent>
           <TabsContent value="files" className="mt-6">
             {files && files.length > 0 ? (
               <FileTree analyticsId="skill.file.open" files={files} onFileClick={handleFileClick} />
@@ -1076,7 +1126,7 @@ export function SkillDetailPage() {
                 <div className="space-y-0 divide-y divide-border/40">
                   {versions.map((version) => (
                     <div key={version.id} className="py-5 first:pt-0 last:pb-0">
-                      <div className="flex items-start justify-between gap-4 mb-2">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
                         <span className="font-semibold font-heading text-foreground flex items-center gap-2 flex-wrap min-w-0">
                           <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-sm font-mono">
                             {version.syncRevision ? t('review.githubRevisionValue', { count: version.syncRevision }) : `v${version.version}`}
@@ -1095,7 +1145,8 @@ export function SkillDetailPage() {
                             </span>
                           )}
                         </span>
-                        <div className="flex items-center gap-3 flex-shrink-0">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Button size="sm" variant="outline" disabled={version.version === selectedVersion} data-analytics-id="skill.version.view" onClick={() => showVersion(version.version)}>{t(version.version === selectedVersion ? 'skillDetail.viewingThisVersion' : 'skillDetail.viewThisVersion')}</Button>
                           <span className="text-sm text-muted-foreground">
                             {formatLocalDateTime(version.publishedAt, i18n.language)}
                           </span>
@@ -1368,7 +1419,7 @@ export function SkillDetailPage() {
           )}
         </Card>
 
-        {publishedVersion && canInteract && (
+        {selectedVersionEntry && isVersionInstallable && canInteract && (
           <Card className="p-5 space-y-4">
             <div className="flex items-center gap-2">
               <Terminal className="w-4 h-4 text-muted-foreground" />
@@ -1380,7 +1431,7 @@ export function SkillDetailPage() {
             <InstallCommand analyticsId="skill.command.copy"
               namespace={namespace}
               slug={slug}
-              version={publishedVersion.version} skillhubAnalyticsId="skill.command.skillhub.select" clawhubAnalyticsId="skill.command.clawhub.select"
+              version={selectedVersionEntry.version} skillhubAnalyticsId="skill.command.skillhub.select" clawhubAnalyticsId="skill.command.clawhub.select"
             />
           </Card>
         )}

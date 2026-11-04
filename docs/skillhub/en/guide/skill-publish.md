@@ -27,6 +27,12 @@ Resolve versions by an exact version, tag, or fingerprint; `^` / `~` ranges are 
 
 Use Update in My Skills or publish again to the same namespace and skill name. Verify the coordinate: changing `name` may create a different skill. Published versions cannot be overwritten; use a new version for normal updates. While it awaits review, public users retain the previously published version. After approval, check the displayed version, title and summary.
 
+### Browse historical versions and original instructions
+
+The detail page separates Overview, Skill instructions, Files, and Versions. Overview displays the selected version's introduction; Skill instructions reads that version's original `SKILL.md` with rendered and source modes; Files retains the complete package tree. To browse a historical version, open Versions and choose View this version. The page returns to Overview and identifies the historical version, with an action to return to the latest published version. The summary, documentation, file inventory, and install/download targets follow the selected version. Refresh and browser back/forward retain the version represented by the URL.
+
+Browsing changes only the reading target: it does not publish, rerelease, submit a review, or update an installed skill. Existing access restrictions still apply, including unpublished versions.
+
 Existing local installations do not update automatically. Consumers explicitly upgrade through the CLI. Suite members remain pinned until a new Suite version is published.
 
 ### Tracking and Managing My Skills
@@ -50,7 +56,6 @@ Version comparison opens in a centered dialog and only compares accessible publi
 | `SCAN_FAILED` | Read the failure and use the retry action offered by the page; ask an operator to resolve infrastructure failures |
 | Review rejected | Read the decision, revise the package and use the supported resubmission flow |
 | Frozen namespace or removed membership | Restore legitimate write access first; a previously installed copy grants no publishing rights |
-
 
 ## Prepare metadata and choose a publishing entry
 
