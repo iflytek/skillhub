@@ -12,12 +12,15 @@ import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.service.SkillGovernanceService;
+import com.iflytek.skillhub.domain.skill.service.SkillOwnershipService;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillReviewSubmitService;
 import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService;
 import com.iflytek.skillhub.dto.AdminSkillActionRequest;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
+import com.iflytek.skillhub.observability.RequestIdAccessor;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +41,8 @@ public class SkillLifecycleAppService {
     private final SkillReviewSubmitService skillReviewSubmitService;
     private final AuditLogService auditLogService;
     private final SkillSlugResolutionService skillSlugResolutionService;
+    private final SkillOwnershipService skillOwnershipService;
+    private final RequestIdAccessor requestIdAccessor;
 
     public SkillLifecycleAppService(RbacService rbacService, NamespaceRepository namespaceRepository,
                                     SkillVersionRepository skillVersionRepository,
@@ -46,7 +51,9 @@ public class SkillLifecycleAppService {
                                     SkillPublishService skillPublishService,
                                     SkillReviewSubmitService skillReviewSubmitService,
                                     AuditLogService auditLogService,
-                                    SkillSlugResolutionService skillSlugResolutionService) {
+                                    SkillSlugResolutionService skillSlugResolutionService,
+                                    SkillOwnershipService skillOwnershipService,
+                                    RequestIdAccessor requestIdAccessor) {
         this.rbacService = rbacService;
         this.namespaceRepository = namespaceRepository;
         this.skillVersionRepository = skillVersionRepository;
@@ -56,6 +63,8 @@ public class SkillLifecycleAppService {
         this.skillReviewSubmitService = skillReviewSubmitService;
         this.auditLogService = auditLogService;
         this.skillSlugResolutionService = skillSlugResolutionService;
+        this.skillOwnershipService = skillOwnershipService;
+        this.requestIdAccessor = requestIdAccessor;
     }
 
     @Transactional
@@ -276,17 +285,42 @@ public class SkillLifecycleAppService {
         );
     }
 
+    @Transactional
+    public SkillOwnerTransferResult transferOwnership(String namespace,
+                                                      String slug,
+                                                      String currentOwnerId,
+                                                      String newOwnerId,
+                                                      String reason,
+                                                      String userId,
+                                                      Map<Long, NamespaceRole> userNamespaceRoles,
+                                                      AuditRequestContext auditContext) {
+        List<Skill> moved = skillOwnershipService.transfer(findNamespace(namespace).getId(), slug, currentOwnerId,
+                newOwnerId, userId, normalizeRoles(userNamespaceRoles), rbacService.getUserRoleCodes(userId));
+        for (Skill skill : moved) {
+            auditLogService.record(userId, "SKILL_OWNER_CHANGED", "SKILL", skill.getId(), requestIdAccessor.current(),
+                    auditContext.clientIp(), auditContext.userAgent(),
+                    AuditDetail.builder().put("previousOwnerId", currentOwnerId).put("ownerId", newOwnerId)
+                            .put("reason", reason).build());
+        }
+        return new SkillOwnerTransferResult(newOwnerId, currentOwnerId);
+    }
+
+    public record SkillOwnerTransferResult(String ownerId, String previousOwnerId) {}
+
     private java.util.Set<String> ownerPlatformRoles(Skill skill, String userId) {
         // These legacy owner endpoints did not grant a new write path to non-owner platform admins.
         return skill.getOwnerId().equals(userId) ? rbacService.getUserRoleCodes(userId) : java.util.Set.of();
     }
 
-    private Skill findSkill(String namespaceSlug, String skillSlug, String currentUserId) {
+    private Namespace findNamespace(String namespaceSlug) {
         String cleanNamespace = namespaceSlug.startsWith("@") ? namespaceSlug.substring(1) : namespaceSlug;
-        Namespace namespace = namespaceRepository.findBySlug(cleanNamespace)
+        return namespaceRepository.findBySlug(cleanNamespace)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", cleanNamespace));
+    }
+
+    private Skill findSkill(String namespaceSlug, String skillSlug, String currentUserId) {
         return skillSlugResolutionService.resolve(
-                namespace.getId(),
+                findNamespace(namespaceSlug).getId(),
                 skillSlug,
                 currentUserId,
                 SkillSlugResolutionService.Preference.CURRENT_USER

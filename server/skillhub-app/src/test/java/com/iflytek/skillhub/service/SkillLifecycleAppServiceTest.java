@@ -47,7 +47,9 @@ class SkillLifecycleAppServiceTest {
             skillPublishService,
             skillReviewSubmitService,
             auditLogService,
-            skillSlugResolutionService
+            skillSlugResolutionService,
+            mock(com.iflytek.skillhub.domain.skill.service.SkillOwnershipService.class),
+            mock(com.iflytek.skillhub.observability.RequestIdAccessor.class)
     );
 
     @Test

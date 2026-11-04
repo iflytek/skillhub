@@ -262,6 +262,10 @@ public class Skill {
 
     public void setPendingAvatarId(Long pendingAvatarId) { this.pendingAvatarId = pendingAvatarId; }
 
+    public void setOwnerId(String ownerId) {
+        this.ownerId = ownerId;
+    }
+
     public void setCreatedBy(String createdBy) {
         this.createdBy = createdBy;
     }

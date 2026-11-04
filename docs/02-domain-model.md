@@ -63,7 +63,7 @@
 | slug | varchar(128) | URL 友好标识 |
 | display_name | varchar(256) | |
 | summary | varchar(512) | |
-| owner_id | varchar(128) | 当前技能所有者；不等同于命名空间 OWNER，当前无独立技能转让入口 |
+| owner_id | varchar(128) | 当前技能所有者；不等同于命名空间 OWNER。空间 OWNER 或平台 SUPER_ADMIN 可将其转给本空间的正常成员，见 [API 设计](./06-api-design.md#技能所有权转移) |
 | source_skill_id | bigint | 派生来源（团队技能提升到全局时记录原 skill ID），nullable |
 | visibility | enum | `PUBLIC` / `NAMESPACE_ONLY` / `PRIVATE` |
 | status | enum | `ACTIVE` / `ARCHIVED` |
