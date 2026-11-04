@@ -1,7 +1,22 @@
 # SkillHub DSH 原生插件发布说明
 
 
-## 0.6.1 候选：启停、检查更新与紧凑卡片
+## 0.6.2 补丁候选：来源、变更预览、技能包与收藏
+
+本轮仅发布 `@astron-team/skillhub-dsh@0.6.2`，使用独立标签 `dsh-v0.6.2`。不重复发布 CLI，不创建 SkillHub 服务端 Release、不发布服务镜像或部署 SaaS。当前仍为候选；发布工作流、公开字节与干净安装通过前不宣称已发布。
+
+- **多来源与更新隔离**：[#1047](https://github.com/iflytek/skillhub/pull/1047) 保留不同来源的安装记录，切换来源后仅检查当前来源技能的更新，不认领其他来源同名技能。[#1052](https://github.com/iflytek/skillhub/pull/1052) 将来源选择与编辑集中于设置卡片，简化日常入口并明确管理引用。
+- **升级前查看变化**：[#1055](https://github.com/iflytek/skillhub/pull/1055) 先核对本地修改，支持确认后还原当前安装版本的文件修改，或备份后继续查看新版本变化；只有再次确认才执行升级。按文件懒加载、有高度限制；不提供技能版本降级或升级后回滚。
+- **文件操作可靠性**：[#1057](https://github.com/iflytek/skillhub/pull/1057) 补齐中断文件清理的恢复保护，并提供上下文失效诊断；不将诊断补充宣称为所有宿主失效原因均已修复。Windows 可用性测试保留真实失败信息。
+- **单技能 ZIP 导入导出**：[#1061](https://github.com/iflytek/skillhub/pull/1061) 本机预检、确认导入与按安装位置导出，保留修改和资源；本地导入不冒充市场来源、不参与市场更新检查，导入拒绝覆盖已有同名目录。
+- **本机收藏**：[#1065](https://github.com/iflytek/skillhub/pull/1065) 卡片和详情书签、当前来源完整收藏筛选及本地搜索；不需要登录、不修改市场收藏数。取消支持撤销最近一次操作，失败可重试；来源切换与迟到响应隔离，搜索不会被旧打开请求打断。
+- **性能与交互修正**：收藏成功采用 Host 返回的完整列表，避免写后重复读取；失败仍补读核对。详情主操作归入右侧安装管理，指标明确区分市场收藏和本机书签，并补键盘焦点与窄屏处理。收藏不后台逐项解析版本，只有打开某项详情或安装时读取其当前版本；缺失或离线时保留收藏。
+- **宿主兼容与依赖维护**：[#1063](https://github.com/iflytek/skillhub/pull/1063) 增加 DSH `0.2.1-rc.5`，保留两个旧 RC2 与完整依赖组合的校验；[#1058](https://github.com/iflytek/skillhub/pull/1058) 更新受影响的锁定依赖。Host Node 范围仍为 `>=24.2.0 <25`。
+- **兼容边界**：共享 inventory 继续保持 v2；收藏与本地导入使用 DSH 私有状态，不要求用户同步升级 CLI。本轮不新增 SaaS Registry API；浏览器、真实 Host、CI、模型与公开包验收分别记录，既有结果不能替代最终包验证。
+
+**完整插件变化**：[dsh-v0.6.1...dsh-v0.6.2](https://github.com/iflytek/skillhub/compare/dsh-v0.6.1...dsh-v0.6.2)。
+
+## 0.6.1：启停、检查更新与紧凑卡片
 
 - **受管理技能启停**：[#1025](https://github.com/iflytek/skillhub/pull/1025) 按确认的位置将 `SKILL.md` 转换为 `SKILL.md.disabled`，启用恢复入口，保留目录和资源。更新停用安装后仍保持停用；文件修改、共享归属、目标被占用及不可信记录仍阻止写操作。停用不撤回已加载会话内容，也不停止任务。
 - **统一检查、逐项更新**：[#1030](https://github.com/iflytek/skillhub/pull/1030) 主动只读检查当前来源库存，渐进显示结果和失败重试。一次可信快照、有界并发、同来源技能共用远端 resolve；取消及上下文变化不接纳迟到结果。真正更新仍进入详情按位置确认，不提供批量自动覆盖。
@@ -9,7 +24,7 @@
 - **库存兼容**：共享库存保持严格 v2，不写入 `installationState`；启停状态从可信的 `SKILL.md` / `SKILL.md.disabled` 入口派生，不要求 CLI 用户同步升级。已发布 CLI `0.2.0` 的正常查询和普通目标管理必须继续兼容；默认更新、同步及 Suite 不得无意重新启用停用目标。旧 CLI 显式 force 重装、更新、同步仍按原覆盖语义执行，可能恢复标准入口；显式 remove 仍可删除，新版重新读取须反映真实变化。 [#1033](https://github.com/iflytek/skillhub/pull/1033) 已完成未发布 v3 的安全转换、普通/启停日志兼容隔离及真实旧包交替验收。
 - **交付边界**：保留现有双 RC、Node/Cordis 与来源边界；详情官网链接仅使用 API 的安全 `webUrl`，缺失即隐藏。该增量不包含 SaaS 部署、场景助手或技能清单导入导出。
 
-上述功能及库存兼容修复已合并。CLI `0.3.0` 已发布；DSH `0.6.1` 仍是候选，不把历史功能验收等同最终版本包或公开包验收。发布顺序和限制见 [发布指南](release-guide.md)，结果由 [验证记录](verification.md) 单独维护。
+上述功能及库存兼容修复已合并，CLI `0.3.0` 与 DSH `0.6.1` 已公开发布；不把历史功能验收等同后续最终版本包或公开包验收。发布顺序和限制见 [发布指南](release-guide.md)，结果由 [验证记录](verification.md) 单独维护。
 
 ## 0.5.0 技能可用性诊断
 
@@ -20,7 +35,7 @@
 
 ## 版本与交付状态
 
-当前准备版本为 DSH `0.6.1`；CLI `0.3.0` 已发布并完成公开包验收，不重复发布。保留已存在的 `dsh-v0.6.0` 标签，DSH 候选使用新标签 `dsh-v0.6.1`，尚不据此声明 DSH 已公开发布。历史版本说明保留；实际公开状态以对应 npm 版本和专用发布工作流为准。
+当前准备版本为 DSH `0.6.2`；公开 npm 最新版本为 `0.6.1`。CLI `0.3.0` 已发布，本轮不重复发布。保留既有 `dsh-v0.6.0`、`dsh-v0.6.1` 标签，不移动历史引用；新候选使用 `dsh-v0.6.2`。实际公开状态以对应 npm 版本和专用发布工作流为准。
 
 `@astron-team/skillhub-dsh@0.3.1` 已发布，独立标签为 `dsh-v0.3.1`。[发布准备 PR #995](https://github.com/iflytek/skillhub/pull/995) 已合并，[专用发布工作流](https://github.com/iflytek/skillhub/actions/runs/39556075587) 成功；[公开 npm 包](https://www.npmjs.com/package/@astron-team/skillhub-dsh/v/0.3.1) 与工作流产物逐字节一致，发布时 `latest` 指向 `0.3.1`。两版 Linux 的严格安装、原生探针及浏览器操作复验通过，测试工件与公开包字节一致，结果见 [验证摘要](verification.md)。历史已发布版本保持不变。
 
@@ -110,7 +125,7 @@ Node 保持 `>=24.2.0 <25`。精确兼容与验证边界见 [兼容设计](compa
 
 ## 安装、更新与维护
 
-`0.6.1` 公开可用后，可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.1 --ignore-scripts` 安装到已有 Web Profile；发布前使用本地候选 tarball。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
+`0.6.2` 公开可用后，可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.2 --ignore-scripts` 安装到已有 Web Profile；发布前使用本地候选 tarball。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
 
 更新或回退前保留原包和校验值、停止新操作并处理待恢复事务，然后停止 Host、安装兼容包并重新启动。浏览器旧资源可强制刷新；这不能代替 Host 依赖重载。禁用或移除包不会卸载技能，不应删除技能目录、inventory 或操作日志。
 
