@@ -496,6 +496,7 @@
     "userId": "User ID"
   },
   "sidebar": {
+    "authoring": "Skill authoring",
     "account": "Account",
     "profile": "Profile",
     "security": "Security",
@@ -3298,6 +3299,96 @@
     "SUBSCRIPTION_VERSION_YANKED": {
       "title": "Subscribed skill version yanked",
       "description": "{{skillName}}{{versionSuffix}} version was yanked."
+    }
+  },
+  "authoring": {
+    "ui": {
+      "loading": "Loading…",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "create": "Create",
+      "submitting": "Submitting…",
+      "loadFailed": "Unable to load this resource.",
+      "retry": "Retry"
+    },
+    "list": {
+      "title": "Skill authoring",
+      "subtitle": "Create and edit private drafts, then check their package structure.",
+      "create": "New draft",
+      "empty": "No drafts yet. Create one to start authoring a skill.",
+      "colName": "Name",
+      "colRevision": "Revision",
+      "colValidated": "Validation",
+      "colUpdated": "Updated",
+      "colActions": "Actions",
+      "validated": "Structure checked",
+      "notValidated": "Not validated",
+      "deleteTitle": "Delete draft",
+      "deleteDescription": "Delete draft “{{name}}” and all of its files? This cannot be undone.",
+      "created": "Draft created",
+      "deleted": "Draft deleted",
+      "createTitle": "Create a skill draft",
+      "createDescription": "Starts from a SKILL.md scaffold you can edit and validate.",
+      "fieldNamespace": "Namespace",
+      "namespacePlaceholder": "Select a namespace",
+      "fieldName": "Skill name",
+      "fieldRequirement": "Requirement (optional)",
+      "requirementPlaceholder": "What should this skill do?"
+    },
+    "detail": {
+      "back": "All drafts",
+      "validate": "Check structure",
+      "starting": "Starting…",
+      "tabRuns": "Validation runs",
+      "noRuns": "No validation runs yet. Start one to check the draft.",
+      "loadFailed": "Failed to load the draft.",
+      "structureOnly": "This checks the skill package structure. It does not execute scripts, assess behavior or publish the skill.",
+      "saveFirst": "Save or discard file changes before starting validation."
+    },
+    "files": {
+      "save": "Save",
+      "saved": "File saved",
+      "create": "Create file",
+      "created": "File created",
+      "exists": "A file already exists at this path. Choose another path.",
+      "delete": "Delete",
+      "deleted": "File deleted",
+      "empty": "No files yet.",
+      "unsaved": "Unsaved changes",
+      "upload": "Upload file",
+      "uploadConfirm": "Upload",
+      "uploading": "Uploading…",
+      "uploaded": "File uploaded",
+      "path": "Path",
+      "size": "Size",
+      "binaryHint": "This is a binary file and cannot be edited as text. Upload a new file to replace it.",
+      "replaceHint": "Uploading to an existing path replaces that resource.",
+      "discardTitle": "Discard unsaved changes?",
+      "discardDescription": "Your unsaved edits will be lost.",
+      "deleteTitle": "Delete file?",
+      "deleteDescription": "Delete {{path}} from this draft? Unsaved edits to this file will be lost.",
+      "content": "File content",
+      "title": "Draft files",
+      "reload": "Reload file"
+    },
+    "run": {
+      "revision": "revision",
+      "errors": "{{count}} error(s)",
+      "warnings": "{{count}} warning(s)",
+      "cancel": "Cancel run",
+      "noFindings": "No findings recorded for this run.",
+      "waiting": "Validation is in progress. Findings will appear here.",
+      "error": "Error",
+      "warning": "Warning",
+      "status": {
+        "QUEUED": "Queued",
+        "PREPARING": "Preparing",
+        "RUNNING": "Running",
+        "SUCCEEDED": "Succeeded",
+        "FAILED": "Failed",
+        "CANCELLED": "Cancelled",
+        "TIMED_OUT": "Timed out"
+      }
     }
   }
 }

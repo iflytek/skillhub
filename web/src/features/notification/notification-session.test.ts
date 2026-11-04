@@ -125,3 +125,25 @@ describe('clearSessionScopedQueries', () => {
     }
   })
 })
+
+
+describe('authoring session isolation', () => {
+  it('drops private draft caches and ignores a late response after the viewer changes', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    let finishPrevious: (value: string[]) => void = () => {}
+    const previous = new Promise<string[]>(resolve => { finishPrevious = resolve })
+    const loader = vi.fn().mockReturnValueOnce(previous).mockResolvedValue(['viewer-b-draft'])
+    client.setQueryData(['authoring', 'draft', 42, 'content', 'SKILL.md'], { content: 'viewer-a-private' })
+    const observer = new QueryObserver(client, { queryKey: ['authoring', 'drafts'], queryFn: loader })
+    const unsubscribe = observer.subscribe(() => {})
+    try {
+      clearSessionScopedQueries(client)
+      expect(client.getQueryData(['authoring', 'draft', 42, 'content', 'SKILL.md'])).toBeUndefined()
+      await vi.waitFor(() => expect(observer.getCurrentResult().data).toEqual(['viewer-b-draft']))
+      finishPrevious(['viewer-a-draft'])
+      await previous
+      await Promise.resolve()
+      expect(observer.getCurrentResult().data).toEqual(['viewer-b-draft'])
+    } finally { unsubscribe(); client.clear() }
+  })
+})

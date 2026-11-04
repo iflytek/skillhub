@@ -885,3 +885,11 @@ export type NamespaceInvitationHistory = Required<components['schemas']['Invitat
 export type NamespaceInvitationHistoryPage = Omit<Required<components['schemas']['InvitationHistoryPage']>, 'items'> & {
   items: NamespaceInvitationHistory[]
 }
+
+// Existing authoring API contracts; no backend/schema changes are needed for the workbench.
+export type AuthoringDraft = components['schemas']['DraftResponse']
+export type DraftFileSummary = components['schemas']['DraftFileResponse']
+export type DraftFileContent = components['schemas']['DraftFileContentResponse']
+export type SaveDraftFileOutcome = components['schemas']['SaveDraftFileResponse']
+export type ValidationRunInfo = components['schemas']['ValidationRunResponse']
+export type ValidationFindingInfo = components['schemas']['ValidationFindingResponse']

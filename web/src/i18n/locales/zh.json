@@ -496,6 +496,7 @@
     "userId": "用户 ID"
   },
   "sidebar": {
+    "authoring": "技能创作",
     "account": "账号管理",
     "profile": "个人设置",
     "security": "安全设置",
@@ -3297,6 +3298,96 @@
     "SUBSCRIPTION_VERSION_YANKED": {
       "title": "订阅技能版本撤回",
       "description": "{{skillName}}{{versionSuffix}} 版本已撤回。"
+    }
+  },
+  "authoring": {
+    "ui": {
+      "loading": "加载中…",
+      "cancel": "取消",
+      "delete": "删除",
+      "create": "创建",
+      "submitting": "提交中…",
+      "loadFailed": "加载失败，请重试。",
+      "retry": "重试"
+    },
+    "list": {
+      "title": "Skill 创作工作台",
+      "subtitle": "创建、编辑私有草稿，并检查技能包结构。",
+      "create": "新建草稿",
+      "empty": "还没有草稿。创建一个开始编写 Skill。",
+      "colName": "名称",
+      "colRevision": "版本",
+      "colValidated": "验证状态",
+      "colUpdated": "更新时间",
+      "colActions": "操作",
+      "validated": "结构已验证",
+      "notValidated": "未验证",
+      "deleteTitle": "删除草稿",
+      "deleteDescription": "删除草稿“{{name}}”及其所有文件？该操作不可撤销。",
+      "created": "草稿已创建",
+      "deleted": "草稿已删除",
+      "createTitle": "创建 Skill 草稿",
+      "createDescription": "以 SKILL.md 脚手架为起点，可编辑并验证。",
+      "fieldNamespace": "命名空间",
+      "namespacePlaceholder": "选择命名空间",
+      "fieldName": "Skill 名称",
+      "fieldRequirement": "需求（可选）",
+      "requirementPlaceholder": "这个 Skill 应该做什么？"
+    },
+    "detail": {
+      "back": "返回草稿列表",
+      "validate": "验证结构",
+      "starting": "启动中…",
+      "tabRuns": "验证记录",
+      "noRuns": "还没有验证记录。先运行一次验证。",
+      "loadFailed": "草稿加载失败。",
+      "structureOnly": "此处仅检查技能包结构，不执行脚本、不评估行为，也不发布技能。",
+      "saveFirst": "请先保存或放弃文件修改，再开始验证。"
+    },
+    "files": {
+      "save": "保存",
+      "saved": "文件已保存",
+      "create": "新建文件",
+      "created": "文件已创建",
+      "exists": "该路径已有文件，请使用其他路径。",
+      "delete": "删除",
+      "deleted": "文件已删除",
+      "empty": "暂无文件。",
+      "unsaved": "有未保存的修改",
+      "upload": "上传文件",
+      "uploadConfirm": "上传",
+      "uploading": "上传中…",
+      "uploaded": "文件已上传",
+      "path": "路径",
+      "size": "大小",
+      "binaryHint": "这是二进制文件，无法作为文本编辑。可上传新文件替换。",
+      "replaceHint": "上传到已有路径会替换对应文件。",
+      "discardTitle": "放弃未保存的修改？",
+      "discardDescription": "未保存的编辑内容将丢失。",
+      "deleteTitle": "删除文件？",
+      "deleteDescription": "确认从草稿删除 {{path}}？该文件未保存的修改也将丢失。",
+      "content": "文件内容",
+      "title": "草稿文件",
+      "reload": "重新加载文件"
+    },
+    "run": {
+      "revision": "版本",
+      "errors": "{{count}} 个错误",
+      "warnings": "{{count}} 个警告",
+      "cancel": "取消运行",
+      "noFindings": "本次运行没有记录问题。",
+      "waiting": "验证进行中，发现的问题将在此显示。",
+      "error": "错误",
+      "warning": "警告",
+      "status": {
+        "QUEUED": "排队中",
+        "PREPARING": "准备中",
+        "RUNNING": "运行中",
+        "SUCCEEDED": "通过",
+        "FAILED": "失败",
+        "CANCELLED": "已取消",
+        "TIMED_OUT": "已超时"
+      }
     }
   }
 }
