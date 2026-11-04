@@ -380,7 +380,7 @@
     {"file":"web/src/features/suite/suite-version-ledger.tsx","line":191,"host":"Button","prop":"data-analytics-id","event":"click","ids":["suite.draft.edit"]},
     {"file":"web/src/features/suite/suite-version-ledger.tsx","line":197,"host":"Button","prop":"data-analytics-id","event":"click","ids":["suite.publish.direct.request","suite.review.submit.request"],"conditional":true},
     {"file":"web/src/features/suite/suite-version-ledger.tsx","line":221,"host":"Link","prop":"data-analytics-id","event":"click","ids":["skill.detail.open"]},
-    {"file":"web/src/features/suite/suite-workspace-header.tsx","line":26,"host":"Button","prop":"data-analytics-id","event":"click","ids":["suite.workspace.back"]},
+    {"file":"web/src/features/suite/suite-workspace-header.tsx","line":27,"host":"Button","prop":"data-analytics-id","event":"click","ids":["suite.workspace.back"]},
     {"file":"web/src/features/token/create-token-dialog.tsx","line":144,"host":"DialogContent","prop":"closeAnalyticsId","event":"click","ids":["account.token.create.cancel","account.token.created.close"],"conditional":true},
     {"file":"web/src/features/token/create-token-dialog.tsx","line":156,"host":"Input","prop":"data-analytics-id","event":"keydown-enter","ids":["account.token.create"]},
     {"file":"web/src/features/token/create-token-dialog.tsx","line":193,"host":"SelectTrigger","prop":"data-analytics-id","event":"click+keydown-intent","ids":["account.token.create.expiry.interact"]},
