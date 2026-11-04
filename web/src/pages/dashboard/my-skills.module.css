@@ -1,0 +1,157 @@
+/* Page-local density follows the confirmed My Skills prototype, not shared UI defaults. */
+.page .filterPanel {
+  border-radius: 12px;
+  margin-top: 26px;
+  padding: 16px;
+  background: #fafafa;
+  border-color: #e9e9ed;
+}
+
+.page .filterControl {
+  height: 40px;
+  border-radius: 8px;
+  font-size: 13px;
+  box-shadow: none;
+  border-color: #dedee5;
+}
+
+.page .filterButton {
+  height: 32px;
+  min-width: 85px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  box-shadow: none;
+}
+
+.page .resultCount {
+  gap: 12px;
+  font-size: 11px;
+  line-height: 20px;
+}
+
+.page .clearButton {
+  height: 24px;
+  padding: 0;
+  font-size: 11px;
+}
+
+.page .skillCard {
+  padding: 18px 20px;
+  border-radius: 12px;
+  box-shadow: none;
+  border-color: #dedee5;
+}
+
+.page .skillTitle {
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 24px;
+  letter-spacing: .05px;
+}
+
+.page .status {
+  display: inline-flex;
+  margin: 0;
+  padding: 0 7px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 20px;
+  color: #666670;
+  background: #f1f2f4;
+}
+
+.page .statusPublished { color: #357548; background: #eef7f0; }
+.page .statusReview { color: #8b631f; background: #fff5e6; }
+.page .statusRejected { color: #a64d46; background: #fff0ef; }
+
+:global(.dark) .page .status { color: #b9b9c2; background: #303039; }
+:global(.dark) .page .statusPublished { color: #97d5ac; background: #193329; }
+:global(.dark) .page .statusReview { color: #e7bf78; background: #3b2d19; }
+:global(.dark) .page .statusRejected { color: #efa49b; background: #402625; }
+
+.page .description {
+  font-size: 12px;
+  line-height: 20px;
+  color: #666670;
+}
+
+.page .metadata {
+  gap: 8px 17px;
+  font-size: 11px;
+  line-height: 18px;
+  color: #73737d;
+}
+
+.page .metadataItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.page .coordinate { max-width: 210px; color: #60738d; }
+:global(.dark) .page .coordinate { color: #a1b5d0; }
+.page .pendingVersion { color: #8b631f; }
+:global(.dark) .page .pendingVersion { color: #d9b77e; }
+
+.page .updateButton,
+.page .moreButton {
+  height: 32px;
+  border-radius: 8px;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.page .updateButton { gap: 6px; padding: 0 8px; min-width: 72px; }
+.page .moreButton { width: 32px; padding: 0; color: hsl(var(--muted-foreground)); }
+.page .note { font-size: 12px; line-height: 20px; }
+
+@media (max-width: 639px) {
+  .page .filterPanel,
+  .page .skillCard { padding: 14px; }
+  .page .filterButton { min-width: 0; padding: 0 12px; }
+  .page .metadata { gap: 6px 12px; }
+  .page .coordinate { max-width: 150px; }
+}
+
+:global(.dark) .page .filterPanel { background: hsl(var(--muted) / .3); border-color: hsl(var(--border) / .6); }
+:global(.dark) .page .skillCard,
+:global(.dark) .page .filterControl { border-color: hsl(var(--border) / .7); }
+:global(.dark) .page .description,
+:global(.dark) .page .metadata { color: hsl(var(--muted-foreground)); }
+
+.page h1 { font-size: 27px; line-height: 36px; font-weight: 500; letter-spacing: -.8px; }
+.page .publishButton { height: 36px; padding: 0 12px; border-radius: 8px; font-size: 12px; }
+.moreMenu.moreMenu { width: 208px; padding: 6px; border-radius: 10px; }
+.moreMenu [role="menuitem"] { min-height: 36px; padding: 0 10px; font-size: 12px; }
+
+@media (max-width: 767px) {
+  .page .desktopUpdate { display: none; }
+  .page .skillTitle { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .page .skillTitle a { white-space: normal; overflow: visible; }
+}
+@media (min-width: 768px) {
+  .moreMenu .mobileUpdate { display: none; }
+}
+
+.page .skillList { margin-top: 20px; }
+.page h1 + p { font-size: 13px; line-height: 20px; }
+.page .skillCard:hover { border-color: #c7c7d1; }
+:global(.dark) .page .skillCard:hover { border-color: hsl(var(--border)); }
+.page .updateButton:hover,
+.page .moreButton:hover,
+.page .publishButton { box-shadow: none; }
+.page .updateButton svg,
+.page .publishButton svg,
+.moreMenu svg { stroke-width: 1.65; }
+
+.page .filterControl::placeholder { color: #73737d; opacity: 1; }
+:global(.dark) .page .filterControl::placeholder { color: #aaaab5; }
+.moreMenu .dangerAction,
+.moreMenu .dangerAction:focus,
+.moreMenu .dangerAction[data-highlighted] { color: #b42318; }
+:global(.dark) .moreMenu .dangerAction,
+:global(.dark) .moreMenu .dangerAction:focus,
+:global(.dark) .moreMenu .dangerAction[data-highlighted] { color: #ffb4ab; }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Archive, ArrowUpRight, Copy, Download, Eye, GitCompareArrows, Globe, MoreHorizontal, RotateCcw, Search, Undo2, Upload } from 'lucide-react'
+import { Archive, ArrowUpRight, Copy, Download, Eye, GitCompareArrows, Globe, LockKeyhole, MoreHorizontal, Package, Plus, RotateCcw, Search, Undo2, Upload, Users } from 'lucide-react'
+import styles from './my-skills.module.css'
 import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
@@ -201,28 +202,28 @@ export function MySkillsPage() {
 
   const resolveStatusClassName = (status?: string) => {
     if (status === 'HIDDEN') {
-      return 'status-pill status-pill--archived'
+      return 'status-pill'
     }
     if (status === 'ARCHIVED') {
-      return 'status-pill status-pill--archived'
+      return 'status-pill'
     }
     if (status === 'PENDING_REVIEW') {
-      return 'status-pill status-pill--review'
+      return `status-pill ${styles.statusReview}`
     }
     if (status === 'PUBLISHED') {
-      return 'status-pill status-pill--published'
+      return `status-pill ${styles.statusPublished}`
     }
     if (status === 'REJECTED') {
-      return 'status-pill status-pill--rejected'
+      return `status-pill ${styles.statusRejected}`
     }
     if (status === 'SCANNING') {
-      return 'status-pill status-pill--review'
+      return `status-pill ${styles.statusReview}`
     }
     if (status === 'SCAN_FAILED') {
-      return 'status-pill status-pill--rejected'
+      return `status-pill ${styles.statusRejected}`
     }
     if (status === 'UPLOADED') {
-      return 'status-pill status-pill--review'
+      return `status-pill ${styles.statusReview}`
     }
     return 'status-pill'
   }
@@ -347,13 +348,16 @@ export function MySkillsPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fade-up">
+    <div className={`${styles.page} animate-fade-up`}>
       <DashboardPageHeader
         title={t('mySkills.title')}
         subtitle={t('mySkills.subtitle')}
+        actions={<Button size="sm" className={styles.publishButton} onClick={() => navigate({ to: '/dashboard/publish' })}>
+          <Plus aria-hidden="true" className="h-4 w-4" />{t('mySkills.publishNew')}
+        </Button>}
       />
 
-      <section aria-label={t('mySkills.filterLabel')} className="rounded-[12px] border border-border/60 bg-muted/30 p-4">
+      <section aria-label={t('mySkills.filterLabel')} className={`${styles.filterPanel} border border-border/60`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <form data-analytics-id="skill.owned.search" className="flex min-w-0 flex-1 gap-2" onSubmit={event => {
             event.preventDefault()
@@ -368,10 +372,10 @@ export function MySkillsPage() {
                 onChange={(event) => setKeywordInput(event.target.value)}
                 placeholder={t('mySkills.searchPlaceholder')}
                 aria-label={t('mySkills.searchPlaceholder')}
-                className="h-10 bg-background pl-9"
+                className={`${styles.filterControl} bg-background pl-9`}
               />
             </div>
-            <Button type="submit" variant="outline" className="h-10">{t('nav.search')}</Button>
+            <Button type="submit" variant="outline" className={styles.filterControl}>{t('nav.search')}</Button>
           </form>
           {filter === 'HIDDEN' ? null : (
             <Select
@@ -380,7 +384,7 @@ export function MySkillsPage() {
                 updateSearch({ namespace: value === ALL_NAMESPACES_VALUE ? undefined : value, page: 0 })
               }}
             >
-              <SelectTrigger data-analytics-id="skill.owned.namespace.interact" aria-label={t('mySkills.namespaceFilterLabel')} className="h-10 bg-background sm:w-60 sm:shrink-0">
+              <SelectTrigger data-analytics-id="skill.owned.namespace.interact" aria-label={t('mySkills.namespaceFilterLabel')} className={`${styles.filterControl} bg-background sm:w-60 sm:shrink-0`}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -402,7 +406,7 @@ export function MySkillsPage() {
                 key={option}
                 type="button"
                 size="sm"
-                className="rounded-full px-4 text-sm shadow-none"
+                className={styles.filterButton}
                 variant={filter === option ? 'default' : 'outline'}
                 aria-pressed={filter === option}
                 onClick={() => {
@@ -413,10 +417,10 @@ export function MySkillsPage() {
               </Button>
             ))}
           </div>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+          <div className={`${styles.resultCount} flex items-center text-muted-foreground`}>
             {skillPage ? <span aria-live="polite" aria-atomic="true">{t('mySkills.resultCount', { count: skillPage.total })}</span> : null}
             {hasActiveFilters ? (
-              <Button data-analytics-id="skill.owned.clear" type="button" size="sm" variant="ghost" onClick={handleClearFilters}>
+              <Button data-analytics-id="skill.owned.clear" type="button" size="sm" variant="ghost" className={styles.clearButton} onClick={handleClearFilters}>
                 {t('mySkills.clearSearch')}
               </Button>
             ) : null}
@@ -426,7 +430,7 @@ export function MySkillsPage() {
 
       {skillPage && skillPage.total > 0 ? (
         <>
-          <div className="grid grid-cols-1 gap-3">
+          <div className={`${styles.skillList} grid grid-cols-1 gap-3`}>
             {skills.map((skill) => {
               const ownerReadOnly = skill.managementState?.ownerReadOnly === true
               const hidden = filter === 'HIDDEN'
@@ -451,16 +455,16 @@ export function MySkillsPage() {
 
               return (
                 <Card key={skill.id} data-analytics-id={hidden ? undefined : 'skill.owned.open'}
-                  className={`relative rounded-[12px] border-border/70 p-4 shadow-none hover:shadow-none sm:p-5 ${hidden ? '' : 'cursor-pointer hover:border-border'}`}
+                  className={`${styles.skillCard} relative border-border/70 hover:shadow-none ${hidden ? '' : 'cursor-pointer hover:border-border'}`}
                   onClick={hidden ? undefined : openDetail}>
                   <div className="flex items-start gap-3">
-                    <SkillAvatar name={displayName} url={skill.avatarUrl} />
-                    <div className="min-w-0 flex-1 space-y-3">
-                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-                          <h3 className="min-w-0 break-words text-lg font-semibold [overflow-wrap:anywhere]">
+                    <SkillAvatar name={displayName} url={skill.avatarUrl} size="h-8 w-8 text-xs" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <h3 className={`${styles.skillTitle} min-w-0 flex-1 truncate`} title={displayName}>
                             {hidden ? displayName : <a href={withBasePath(`/space/${skill.namespace}/${encodeURIComponent(skill.slug)}?${detailSearch}`)}
-                              className="rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              className="block truncate rounded-sm hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                               onClick={event => {
                                 event.stopPropagation()
                                 if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
@@ -468,28 +472,28 @@ export function MySkillsPage() {
                                 openDetail()
                               }}>{displayName}</a>}
                           </h3>
-                          {mainStatus && <span className={`${resolveStatusClassName(mainStatus)} shrink-0`}>
+                          {mainStatus && <span className={`${resolveStatusClassName(mainStatus)} ${styles.status} shrink-0`}>
                             {hasPendingPreview && publishedVersion && mainStatus === 'PENDING_REVIEW'
                               ? t('mySkills.statusUpdatePendingReview') : resolveStatusLabel(mainStatus)}
                           </span>}
                         </div>
                         <div className="flex shrink-0 items-center gap-2" onClick={event => event.stopPropagation()}>
                           {writable && skill.status !== 'ARCHIVED' && <Button data-analytics-id="skill.update.open" size="sm" variant="outline"
-                            className="text-sm" onClick={event => {
+                            className={`${styles.updateButton} ${styles.desktopUpdate}`} onClick={event => {
                               event.stopPropagation()
                               handleUpdateSkill(skill.namespace, skill.slug, displayName, skill.visibility ?? 'PUBLIC')
                             }}><Upload aria-hidden="true" className="h-4 w-4" />{t('mySkills.update')}</Button>}
                           {/* Keep the menu nonmodal so a new Dialog owns the focus trap during the handoff. */}
                           <DropdownMenu modal={false}>
                             <DropdownMenuTrigger asChild>
-                              <Button size="icon" variant="outline" className="h-8 w-8"
+                              <Button size="icon" variant="outline" className={styles.moreButton}
                                 title={t('mySkills.moreActions')} aria-label={t('mySkills.moreActionsFor', { skill: displayName })}
                                 onClick={event => { event.stopPropagation(); compareTrigger.current = event.currentTarget }}
                                 onKeyDown={event => { compareTrigger.current = event.currentTarget }}>
                                 <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-56 p-1.5" onClick={event => event.stopPropagation()}
+                            <DropdownMenuContent align="end" className={styles.moreMenu} onClick={event => event.stopPropagation()}
                               onCloseAutoFocus={event => { if (compareTarget || visibilityTarget || archiveTarget || unarchiveTarget || withdrawTarget || promotionTarget || restoreHiddenTarget) event.preventDefault() }}>
                               {!hidden && <DropdownMenuItem onSelect={openDetail}><Eye aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.viewDetail')}</DropdownMenuItem>}
                               <DropdownMenuItem onSelect={async () => {
@@ -500,6 +504,10 @@ export function MySkillsPage() {
                                 setCompareVersions({ from: '', to: '' })
                                 setCompareTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })
                               }}><GitCompareArrows aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.compareVersions')}</DropdownMenuItem>}
+                              {writable && skill.status !== 'ARCHIVED' && <DropdownMenuItem data-analytics-id="skill.update.open" className={styles.mobileUpdate}
+                                onSelect={() => handleUpdateSkill(skill.namespace, skill.slug, displayName, skill.visibility ?? 'PUBLIC')}>
+                                <Upload aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.update')}
+                              </DropdownMenuItem>}
                               {skill.managementState?.promotionRole && relatedNamespace && relatedSlug && <DropdownMenuItem data-analytics-id="skill.related.open" onSelect={() => handleSkillClick(relatedNamespace, relatedSlug)}>
                                 <ArrowUpRight aria-hidden="true" className="mr-2 h-4 w-4" />{t(skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'mySkills.viewGlobalCopy' : 'mySkills.viewTeamSource')}
                               </DropdownMenuItem>}
@@ -514,7 +522,7 @@ export function MySkillsPage() {
                                 <Globe aria-hidden="true" className="mr-2 h-4 w-4" />{t(skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'mySkills.updateGlobalVersion' : 'mySkills.promoteToGlobal')}
                               </DropdownMenuItem> : skill.status === 'ARCHIVED' ? <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.unarchive.request" onSelect={() => setUnarchiveTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })}>
                                 <RotateCcw aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.unarchive')}
-                              </DropdownMenuItem></> : publishedVersion ? <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.archive.request" className="text-destructive focus:text-destructive" onSelect={() => setArchiveTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })}>
+                              </DropdownMenuItem></> : publishedVersion ? <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.archive.request" className={styles.dangerAction} onSelect={() => setArchiveTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })}>
                                 <Archive aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.archive')}
                               </DropdownMenuItem></> : null)}
                               {canRestoreHidden && <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.restore.request" onSelect={() => setRestoreHiddenTarget({ skillId: skill.id, name: displayName })}>
@@ -524,18 +532,23 @@ export function MySkillsPage() {
                           </DropdownMenu>
                         </div>
                       </div>
-                      {summary && <p className="line-clamp-2 break-words text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">{summary}</p>}
-                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
-                        <span className="min-w-0 break-all">{coordinate}</span>
-                        <span>{t('skillVisibility.current', { visibility: t(`skillVisibility.${skill.visibility ?? 'PUBLIC'}`) })}</span>
-                        {preview && publishedVersion ? <span>{t('mySkills.versionDifference', { version: preview.version, published: publishedVersion.version })}</span>
+                      {summary && <p className={`${styles.description} line-clamp-2 break-words text-muted-foreground [overflow-wrap:anywhere]`}>{summary}</p>}
+                      <div className={`${styles.metadata} flex flex-wrap items-center text-muted-foreground`}>
+                        <span className={`${styles.metadataItem} ${styles.coordinate}`} title={coordinate}><Package aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" /><span className="truncate">{coordinate}</span></span>
+                        <span className={styles.metadataItem} title={t('skillVisibility.current', { visibility: t(`skillVisibility.${skill.visibility ?? 'PUBLIC'}`) })}>
+                          {skill.visibility === 'PRIVATE' ? <LockKeyhole aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />
+                            : skill.visibility === 'NAMESPACE_ONLY' ? <Users aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />
+                              : <Globe aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />}
+                          {t(`publish.visibilityOptions.${skill.visibility === 'PRIVATE' ? 'private' : skill.visibility === 'NAMESPACE_ONLY' ? 'namespaceOnly' : 'public'}`)}
+                        </span>
+                        {preview && publishedVersion ? <span className={styles.pendingVersion}>{t('mySkills.versionDifference', { version: preview.version, published: publishedVersion.version })}</span>
                           : headlineVersion ? <span className="font-mono">v{headlineVersion.version}</span> : null}
-                        <span className="inline-flex items-center gap-1" title={t('mySkills.downloadCount')}><Download aria-hidden="true" className="h-4 w-4" />{formatCompactCount(skill.downloadCount)}</span>
+                        <span className={styles.metadataItem} title={t('mySkills.downloadCount')}><Download aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />{formatCompactCount(skill.downloadCount)}</span>
                       </div>
-                      {ownerReadOnly && <p role="status" className="text-sm text-muted-foreground">{t('mySkills.ownerReadOnly')}</p>}
-                      {skill.managementState?.promotionRole && <p className="text-sm text-muted-foreground">{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</p>}
+                      {ownerReadOnly && <p role="status" className={`${styles.note} text-muted-foreground`}>{t('mySkills.ownerReadOnly')}</p>}
+                      {skill.managementState?.promotionRole && <p className={`${styles.note} text-muted-foreground`}>{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</p>}
                       {skill.status === 'ACTIVE' && !hidden && <SkillAvatarManager namespace={skill.namespace} slug={skill.slug} previewOnly />}
-                      {skill.managementState?.requestedVisibility && <p role="status" className="text-sm text-muted-foreground">
+                      {skill.managementState?.requestedVisibility && <p role="status" className={`${styles.note} text-muted-foreground`}>
                         {t('skillVisibility.pendingList', { visibility: t(`skillVisibility.${skill.managementState.requestedVisibility}`) })}
                       </p>}
                     </div>

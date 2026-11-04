@@ -5,6 +5,10 @@ import {
   CENTERED_MAIN_CLASS_NAME,
   CENTERED_SEARCH_CONTENT_CLASS_NAME,
   DEFAULT_MAIN_CLASS_NAME,
+  MY_SKILLS_MAIN_CLASS_NAME,
+  MY_SKILLS_CONTENT_CLASS_NAME,
+  MY_SKILLS_SIDEBAR_ROW_CLASS_NAME,
+  MY_SKILLS_SIDEBAR_CONTENT_CLASS_NAME,
   SPLIT_AUTH_MAIN_CLASS_NAME,
   getAppMainContentLayout,
   resolveAppMainContentPathname,
@@ -28,14 +32,24 @@ describe('getAppMainContentLayout', () => {
     expect(layout.contentClassName).toContain('max-w-[1200px]')
   })
 
-  it('centers all dashboard sub-pages within a slightly narrower content frame', () => {
-    const layout = getAppMainContentLayout('/dashboard/skills')
+  it.each(['/dashboard/tokens', '/dashboard/stars', '/settings/profile', '/dashboard/skills/unrelated'])('keeps %s in the existing dashboard frame', (pathname) => {
+    const layout = getAppMainContentLayout(pathname)
 
     expect(layout).toEqual({
       mainClassName: CENTERED_MAIN_CLASS_NAME,
       contentClassName: CENTERED_DASHBOARD_CONTENT_CLASS_NAME,
     })
     expect(layout.contentClassName).toContain('max-w-[1100px]')
+  })
+
+  it('isolates the prototype-width frame and sidebar gutters to My Skills', () => {
+    expect(getAppMainContentLayout('/dashboard/skills')).toEqual({
+      mainClassName: MY_SKILLS_MAIN_CLASS_NAME,
+      contentClassName: MY_SKILLS_CONTENT_CLASS_NAME,
+      sidebarRowClassName: MY_SKILLS_SIDEBAR_ROW_CLASS_NAME,
+      sidebarContentClassName: MY_SKILLS_SIDEBAR_CONTENT_CLASS_NAME,
+    })
+    expect(MY_SKILLS_CONTENT_CLASS_NAME).toContain('max-w-[1440px]')
   })
 
   it('uses the full-bleed split layout for login and registration', () => {

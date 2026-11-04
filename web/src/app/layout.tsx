@@ -219,9 +219,9 @@ export function Layout() {
         >
           <div className={mainContentLayout.contentClassName}>
           {showSidebar ? (
-            <div className="flex flex-col lg:flex-row gap-6">
+            <div className={mainContentLayout.sidebarRowClassName ?? "flex flex-col lg:flex-row gap-6"}>
               <DashboardSidebar groups={filteredDashboardGroups} user={user} t={t} pathname={pathname} />
-              <div className="flex-1 min-w-0">
+              <div className={mainContentLayout.sidebarContentClassName ?? "flex-1 min-w-0"}>
                 <Outlet />
               </div>
             </div>

@@ -282,4 +282,16 @@ describe('My Skills interactions with real menu and dialog', () => {
     expect(document.activeElement?.isConnected).toBe(true)
   })
 
+
+  it('opens the existing prefilled update form from the mobile menu action', async () => {
+    render(<MySkillsPage />)
+    await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.update' }))
+    expect(navigate).toHaveBeenCalledOnce()
+    expect(navigate).toHaveBeenCalledWith({
+      to: '/dashboard/publish',
+      search: { namespace: 'team', updateSkill: 'demo', updateName: 'Demo', visibility: 'PRIVATE' },
+    })
+  })
+
 })
