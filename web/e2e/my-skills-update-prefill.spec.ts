@@ -21,7 +21,7 @@ test.describe('My Skills Update Prefill (Real API)', () => {
       await page.goto('/dashboard/skills')
       await expect(page.getByRole('heading', { name: 'My Skills' })).toBeVisible()
 
-      const skillCard = page.locator('.group').filter({
+      const skillCard = page.locator('[data-analytics-id="skill.owned.open"]').filter({
         has: page.getByRole('heading', { name: skillName, exact: true }),
       }).first()
       await expect(skillCard).toBeVisible()
