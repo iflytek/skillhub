@@ -1,13 +1,21 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SkillCard } from '../src/client/skill-card.js';
+import { SkillCard, SkillMetrics } from '../src/client/skill-card.js';
 import { MarketCardActions } from '../src/client/market-card-actions.js';
 import { InstallationStatus } from '../src/client/installation-status.js';
 import { catalogLabel } from '../src/client/catalog-label.js';
+import { FavoriteButton } from '../src/client/favorite-button.js';
 
 const item = { namespace: 'demo', slug: 'document', displayName: '文档助手' };
 describe('market presentation and action boundaries', () => {
+  test('detail metrics name market counts separately from local bookmark actions', () => {
+    const html = renderToStaticMarkup(<SkillMetrics labeled item={{ ...item, starCount: 42, downloadCount: 10, ratingAvg: 4 }} />);
+    expect(html).toContain('市场收藏 '); expect(html).toContain('aria-label="市场收藏数 42"');
+    expect(html).toContain('下载 '); expect(html).toContain('评分 ');
+    expect(html).not.toContain('<button');
+  });
+
   test('whole-card details trigger and installation action are sibling buttons', () => {
     const html = renderToStaticMarkup(<SkillCard item={item} version="1.0" onOpen={() => {}}
       actions={<button>安装</button>} />);
@@ -25,6 +33,22 @@ describe('market presentation and action boundaries', () => {
     </QueryClientProvider>);
     expect(render(false)).toContain('disabled=""');
     expect(render(true)).not.toContain('disabled=""');
+  });
+  test('favorite control is separate from the detail trigger and snapshots have no invented version or metrics', () => {
+    const html = renderToStaticMarkup(<SkillCard item={item} onOpen={() => {}}
+      favoriteAction={<FavoriteButton item={item} pressed disabled={false} busy={false} onToggle={() => {}} />} />);
+    const detailEnd = html.indexOf('</button>', html.indexOf('class="astron-sh-card-open"'));
+    expect(html.indexOf('aria-label="取消收藏 文档助手 @demo/document"')).toBeGreaterThan(detailEnd);
+    expect(html).toContain('aria-pressed="true"');
+    expect(html).toContain('aria-label="查看 文档助手 @demo/document 详情"');
+    expect(html).not.toContain('vundefined'); expect(html).not.toContain('收藏数');
+  });
+  test('saving favorites remains keyboard focusable while unavailable favorites use native disabled', () => {
+    const saving = renderToStaticMarkup(<FavoriteButton item={item} pressed disabled={false} busy onToggle={() => {}} />);
+    expect(saving).toContain('aria-disabled="true"'); expect(saving).toContain('aria-busy="true"');
+    expect(saving).not.toMatch(/<button[^>]*\sdisabled=/);
+    const unavailable = renderToStaticMarkup(<FavoriteButton item={item} pressed={false} disabled busy onToggle={() => {}} />);
+    expect(unavailable).toMatch(/<button[^>]*\sdisabled=""/);
   });
   test('hides only complete empty source records, preserving unsafe status', () => {
     const base = { checkedAt: '2026-10-20T00:00:00Z', complete: true, unavailable: [], records: [] };

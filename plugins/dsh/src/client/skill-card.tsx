@@ -26,25 +26,26 @@ export interface SkillPresentation {
   namespace: string; slug: string; displayName?: string; summary?: string;
   downloadCount?: number; starCount?: number; ratingAvg?: number; ratingCount?: number;
 }
-export function SkillMetrics({ item }: { item: SkillPresentation }) {
-  return <div className="astron-sh-metrics">
-    {validCount(item.downloadCount) && <span title={`下载量：${item.downloadCount.toLocaleString('zh-CN')}`} aria-label={`下载量 ${item.downloadCount}`}><Icon name="download" />{formatCount(item.downloadCount)}</span>}
-    {validCount(item.starCount) && <span title={`收藏数：${item.starCount.toLocaleString('zh-CN')}`} aria-label={`收藏数 ${item.starCount}`}><Icon name="bookmark" />{formatCount(item.starCount)}</span>}
-    {validRating(item.ratingAvg) && <span title={`评分：${item.ratingAvg} / 5${validCount(item.ratingCount) ? `，${item.ratingCount} 人评分` : ''}`} aria-label={`评分 ${item.ratingAvg} / 5`}><Icon name="star" />{item.ratingAvg.toFixed(1)}</span>}
+export function SkillMetrics({ item, labeled = false }: { item: SkillPresentation; labeled?: boolean }) {
+  return <div className={labeled ? 'astron-sh-metrics astron-sh-metrics-labeled' : 'astron-sh-metrics'}>
+    {validCount(item.downloadCount) && <span title={`下载量：${item.downloadCount.toLocaleString('zh-CN')}`} aria-label={`下载量 ${item.downloadCount}`}><Icon name="download" />{labeled && '下载 '}{formatCount(item.downloadCount)}</span>}
+    {validCount(item.starCount) && <span title={`市场收藏数：${item.starCount.toLocaleString('zh-CN')}`} aria-label={`市场收藏数 ${item.starCount}`}><Icon name="bookmark" />{labeled && '市场收藏 '}{formatCount(item.starCount)}</span>}
+    {validRating(item.ratingAvg) && <span title={`评分：${item.ratingAvg} / 5${validCount(item.ratingCount) ? `，${item.ratingCount} 人评分` : ''}`} aria-label={`评分 ${item.ratingAvg} / 5`}><Icon name="star" />{labeled && '评分 '}{item.ratingAvg.toFixed(1)}</span>}
   </div>;
 }
 export const SkillCard = forwardRef<HTMLButtonElement, {
-  item: SkillPresentation; version: string; onOpen: MouseEventHandler<HTMLButtonElement>; status?: ReactNode;
-  actions?: ReactNode; accessibleLabel?: string; descriptionId?: string;
-}>(({ item, version, onOpen, status, actions, accessibleLabel, descriptionId }, ref) =>
+  item: SkillPresentation; version?: string; onOpen: MouseEventHandler<HTMLButtonElement>; status?: ReactNode;
+  actions?: ReactNode; favoriteAction?: ReactNode; accessibleLabel?: string; descriptionId?: string;
+}>(({ item, version, onOpen, status, actions, favoriteAction, accessibleLabel, descriptionId }, ref) =>
   <Card className="astron-sh-skill-card">
     <button ref={ref} type="button" className="astron-sh-card-open" onClick={onOpen}
-      aria-label={accessibleLabel || `查看 ${item.displayName || item.slug} @${item.namespace}/${item.slug} ${version} 详情`} aria-describedby={descriptionId} />
+      aria-label={accessibleLabel || `查看 ${item.displayName || item.slug} @${item.namespace}/${item.slug}${version ? ` ${version}` : ''} 详情`} aria-describedby={descriptionId} />
     <CardHeader className="astron-sh-skill-heading"><SkillAvatar name={item.displayName} slug={item.slug} namespace={item.namespace} />
       <div><CardTitle>{item.displayName || item.slug}</CardTitle><CardDescription title={`@${item.namespace}/${item.slug}`}>@{item.namespace}/{item.slug}</CardDescription></div>
+      {favoriteAction}
     </CardHeader>
     <CardContent className="astron-sh-skill-body"><p id={descriptionId} className="astron-sh-skill-summary" title={item.summary}>{item.summary || '暂无摘要'}</p>
-      <div className="astron-sh-skill-meta"><span title={version}>v{version}</span>{status}</div></CardContent>
+      {(version || status) && <div className="astron-sh-skill-meta">{version && <span title={version}>v{version}</span>}{status}</div>}</CardContent>
     <CardFooter><SkillMetrics item={item} /><div className="astron-sh-card-actions">{actions}</div></CardFooter>
   </Card>);
 SkillCard.displayName = 'SkillCard';
