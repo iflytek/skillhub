@@ -129,7 +129,7 @@ export function SkillVersionCompareContent({ namespace, slug, from = '', to = ''
   }
 
   return (
-    <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 py-6 lg:flex-row">
+    <div className="flex min-w-0 flex-col gap-6 py-6 lg:flex-row">
       <aside className="w-full shrink-0 space-y-4 rounded-xl border border-border/60 p-4 lg:w-80">
         <div>
           <h1 className="text-lg font-semibold text-foreground">{t('skillCompare.pageTitle')}</h1>

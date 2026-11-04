@@ -115,7 +115,7 @@ export function AccountSettingsPage() {
           <CardDescription>{t('accounts.initiateDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleInitiate}>
+          <form className="max-w-3xl space-y-4" onSubmit={handleInitiate}>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="secondary-identifier">{t('accounts.secondaryLabel')}</label>
               <Input
@@ -138,7 +138,7 @@ export function AccountSettingsPage() {
           <CardDescription>{t('accounts.verifyDesc')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={handleVerify}>
+          <form className="max-w-3xl space-y-4" onSubmit={handleVerify}>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="merge-request-id">{t('accounts.mergeRequestId')}</label>
               <Input

@@ -292,7 +292,8 @@ describe('ReviewDetailPage', () => {
   it('renders the shared review overview and content tab in a single-column flow', () => {
     const html = renderToStaticMarkup(<ReviewDetailPage />)
 
-    expect(html).toContain('mx-auto flex min-h-[calc(100dvh-5.25rem)] w-full max-w-[1440px]')
+    expect(html).toContain('flex min-h-[calc(100dvh-5.25rem)] w-full flex-col')
+    expect(html).not.toContain('max-w-[1440px]')
     expect(html).toContain('review.tabContent')
     expect(html).toContain('review.tabChanges')
     expect(html).toContain('review.tabHistory')

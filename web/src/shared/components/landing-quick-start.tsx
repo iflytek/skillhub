@@ -5,6 +5,7 @@ import { buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import { copyToClipboard, useCopyToClipboard } from '@/shared/lib/clipboard'
 import { resolvePublicRegistryUrl } from '@/shared/lib/registry-url'
 import { toast } from '@/shared/lib/toast'
+import { APP_FRAME_CLASS_NAME } from '@/shared/lib/layout-frame'
 
 type AccessMode = 'agent' | 'cli' | 'web'
 type AgentView = 'registry' | 'discovery'
@@ -354,9 +355,9 @@ export function LandingQuickStartSection() {
   const [activeMode, setActiveMode] = useState<AccessMode>('agent')
 
   return (
-    <section id="quickstart" className="relative z-10 w-full overflow-hidden bg-secondary/70 px-6 py-16 md:py-20">
+    <section id="quickstart" className="relative z-10 w-full overflow-hidden bg-secondary/70 py-16 md:py-20">
       <div className="absolute inset-0 bg-dots opacity-40" aria-hidden />
-      <div className="relative mx-auto max-w-6xl">
+      <div className={`relative ${APP_FRAME_CLASS_NAME}`}>
         <div className="mb-12 max-w-3xl">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('landing.quickStart.title')}</p>
           <h2 className="mb-4 text-3xl font-medium tracking-tight text-foreground md:text-4xl">{t('landing.experience.quickStart.title')}</h2>

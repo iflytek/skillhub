@@ -12,7 +12,8 @@ import { dismissOpenOverlays } from '@/shared/lib/dismiss-open-overlays'
 import { syncDocumentLanguage } from '@/shared/lib/document-language'
 import { DashboardSidebar, SIDEBAR_GROUPS } from '@/pages/dashboard'
 import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
-import { getAppHeaderClassName } from './layout-header-style'
+import { APP_HEADER_CONTENT_CLASS_NAME, getAppHeaderClassName } from './layout-header-style'
+import { APP_FRAME_CLASS_NAME } from '@/shared/lib/layout-frame'
 import { AUTH_ENTRY_PATHS, SPLIT_AUTH_PATHS, getAppMainContentLayout, resolveAppMainContentPathname } from './layout-main-content'
 
 const FOOTER_LINK_CLASS_NAME = 'group relative inline-flex py-0.5 transition-colors duration-150 hover:text-foreground focus-visible:outline-none focus-visible:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-secondary after:absolute after:inset-x-0 after:-bottom-0.5 after:h-px after:origin-left after:scale-x-0 after:bg-foreground/60 after:transition-transform after:duration-200 hover:after:scale-x-100 motion-reduce:after:transition-none'
@@ -121,15 +122,16 @@ export function Layout() {
         className={isSplitAuthRoute ? 'absolute right-5 top-4 z-50 flex items-center sm:right-10' : getAppHeaderClassName(isHeaderElevated)}
         style={isSplitAuthRoute ? undefined : { borderColor: 'hsl(var(--border))' }}
       >
+        <div className={isSplitAuthRoute ? 'flex items-center' : APP_HEADER_CONTENT_CLASS_NAME}>
         {!isSplitAuthRoute ? (
           <Link data-analytics-id="navigation.home.open" to="/" className="text-xl font-semibold tracking-tight flex-shrink-0" style={{ color: 'hsl(var(--foreground))' }}>
             SkillHub
           </Link>
         ) : null}
 
-        {/* Desktop nav — lg+ only */}
+        {/* Desktop nav — xl+ leaves room for localized labels and account controls. */}
         {!isAuthEntryRoute ? (
-          <nav className="hidden lg:flex items-center gap-5 text-[15px] font-normal" style={{ color: 'hsl(var(--text-secondary))' }}>
+          <nav className="hidden xl:flex items-center gap-5 text-[15px] font-normal" style={{ color: 'hsl(var(--text-secondary))' }}>
             {navItems.map((item) => {
               if (item.auth && !user) return null
               const active = isActive(item.to, item.exact)
@@ -153,11 +155,11 @@ export function Layout() {
         ) : null}
 
         <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0" style={{ color: 'hsl(var(--text-secondary))' }}>
-          {/* Hamburger — visible below lg */}
+          {/* Hamburger — visible below xl */}
           {!isAuthEntryRoute ? (
             <button data-analytics-id="navigation.menu.toggle"
               type="button"
-              className="lg:hidden inline-flex items-center justify-center rounded-lg p-2 hover:bg-accent transition-colors"
+              className="xl:hidden inline-flex items-center justify-center rounded-lg p-2 hover:bg-accent transition-colors"
               onClick={() => setMobileMenuOpen((prev) => !prev)}
               aria-expanded={mobileMenuOpen}
               aria-label={t(mobileMenuOpen ? 'layout.closeNavigation' : 'layout.openNavigation')}
@@ -179,12 +181,13 @@ export function Layout() {
             </Link>
           ) : null}
         </div>
+        </div>
       </header>
 
       {/* Mobile nav dropdown */}
       {mobileMenuOpen && !isAuthEntryRoute ? (
-        <div className="lg:hidden sticky top-[52px] z-40 border-b border-border bg-background/95 backdrop-blur-xl">
-          <nav className="flex flex-col px-4 py-3 gap-1">
+        <div className="xl:hidden sticky top-[57px] z-40 border-b border-border bg-background/95 backdrop-blur-xl">
+          <nav className={`${APP_FRAME_CLASS_NAME} flex flex-col gap-1 py-3`}>
             {navItems.map((item) => {
               if (item.auth && !user) return null
               const active = isActive(item.to, item.exact)
@@ -209,7 +212,7 @@ export function Layout() {
       <main className={mainContentLayout.mainClassName}>
         <Suspense
           fallback={
-            <div className="space-y-3 animate-fade-up">
+            <div className={`${APP_FRAME_CLASS_NAME} space-y-3 py-8 animate-fade-up`}>
               <div className="h-8 w-36 animate-shimmer rounded-md" />
               <div className="h-4 w-56 animate-shimmer rounded-md" />
               <div className="h-48 animate-shimmer rounded-lg" />
@@ -221,7 +224,7 @@ export function Layout() {
             <div className={mainContentLayout.sidebarRowClassName ?? "flex flex-col lg:flex-row gap-6"}>
               <DashboardSidebar groups={filteredDashboardGroups} user={user} t={t} pathname={contentLayoutPathname} />
               <div className={mainContentLayout.sidebarContentClassName ?? "flex-1 min-w-0"}>
-                {mainContentLayout.pageClassName ? <div className={mainContentLayout.pageClassName}><Outlet /></div> : <Outlet />}
+                <Outlet />
               </div>
             </div>
           ) : (
@@ -234,7 +237,7 @@ export function Layout() {
       {/* Footer */}
       {!isAuthEntryRoute ? (
       <footer className="relative z-10 mt-auto border-t bg-secondary/70" style={{ borderColor: 'hsl(var(--border))' }}>
-        <div className="mx-auto max-w-6xl px-6 py-12 md:px-12 md:py-16">
+        <div className={`${APP_FRAME_CLASS_NAME} py-12 md:py-16`}>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
             <div className="col-span-2 md:col-span-1">
               <div className="mb-4 flex items-center gap-2.5">
