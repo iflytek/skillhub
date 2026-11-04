@@ -25,7 +25,7 @@ test.describe('My Skills Update Prefill (Real API)', () => {
         has: page.getByRole('heading', { name: skillName, exact: true }),
       }).first()
       await expect(skillCard).toBeVisible()
-      await skillCard.getByRole('button', { name: 'Update' }).click()
+      await skillCard.getByRole('button', { name: 'Update', exact: true }).click()
 
       await expect(page).toHaveURL(/\/dashboard\/publish/)
 
