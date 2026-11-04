@@ -1164,6 +1164,9 @@
     "securityDesc": "비밀번호와 계정 보안 옵션을 변경하세요"
   },
   "mySkills": {
+    "noSummary": "요약 없음",
+    "metadataDetails": "스킬 정보",
+    "metadataDetailsFor": "{{skill}} 전체 정보 보기",
     "ownerReadOnly": "더 이상 이 공간의 멤버가 아닙니다. 내 스킬을 조회하고 다운로드할 수 있지만 수정할 수는 없습니다.",
     "updateGlobalVersion": "글로벌 버전 업데이트",
     "viewGlobalCopy": "글로벌 사본 보기",

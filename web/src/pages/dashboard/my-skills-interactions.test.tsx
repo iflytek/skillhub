@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { StrictMode } from 'react'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const navigate = vi.fn()
@@ -15,7 +15,7 @@ let showEmpty = false
 let superAdmin = false
 let search: { filter?: string; q?: string; namespace?: string; page?: number } = {}
 
-function makeSkill(managementState: { ownerReadOnly: boolean; promotionRole?: string; requestedVisibility?: string } = { ownerReadOnly: false }) {
+function makeSkill(managementState: { ownerReadOnly: boolean; promotionRole?: string; requestedVisibility?: string; relatedNamespace?: string; relatedSlug?: string } = { ownerReadOnly: false }) {
   return {
     id: 1, namespace: 'team', slug: 'demo', displayName: 'Demo', summary: 'Summary',
     status: 'ACTIVE', visibility: 'PRIVATE', downloadCount: 3, canSubmitPromotion: false,
@@ -95,25 +95,40 @@ describe('My Skills interactions with real menu and dialog', () => {
     expect(screen.getByRole('link', { name: 'Demo' })).toBeTruthy()
   })
 
-  it.each(['', '   '])('omits a blank description without removing metadata or actions', summary => {
+  it.each(['', '   '])('shows a one-line placeholder for blank descriptions without removing metadata or actions', summary => {
     skill.summary = summary
     render(<MySkillsPage />)
     const card = screen.getByRole('link', { name: 'Demo' }).closest('[data-analytics-id="skill.owned.open"]')
-    expect(card?.querySelector('p')).toBeNull()
+    expect(card?.querySelector('p')?.textContent).toBe('mySkills.noSummary')
     expect(screen.getByText('@team/demo')).toBeTruthy()
     expect(screen.getByRole('button', { name: 'mySkills.update' })).toBeTruthy()
   })
 
-  it('keeps ownership, promotion and requested visibility explanations in one supplemental group', () => {
+  it('keeps all management explanations discoverable through a read-only information dialog', async () => {
     skill = makeSkill({ ownerReadOnly: true, promotionRole: 'GLOBAL_COPY', requestedVisibility: 'PUBLIC' })
     render(<MySkillsPage />)
-    const readonly = screen.getByText('mySkills.ownerReadOnly')
-    const promotion = screen.getByText('mySkills.promotionRoles.GLOBAL_COPY')
-    const visibility = screen.getByText('skillVisibility.pendingList')
-    expect(readonly.parentElement).toBe(promotion.parentElement)
-    expect(readonly.parentElement).toBe(visibility.parentElement)
-    expect(readonly.getAttribute('role')).toBe('status')
-    expect(visibility.getAttribute('role')).toBe('status')
+    const trigger = screen.getByRole('button', { name: 'mySkills.metadataDetailsFor' })
+    expect(within(trigger).getByText('mySkills.ownerReadOnly')).toBeTruthy()
+    expect(within(trigger).getByText('+2')).toBeTruthy()
+    expect(screen.queryByText('mySkills.promotionRoles.GLOBAL_COPY')).toBeNull()
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog', { name: 'mySkills.metadataDetails' })
+    expect(within(dialog).getByText('@team/demo')).toBeTruthy()
+    expect(within(dialog).getByText('Summary')).toBeTruthy()
+    for (const text of ['mySkills.ownerReadOnly', 'mySkills.promotionRoles.GLOBAL_COPY', 'skillVisibility.pendingList']) {
+      expect(within(dialog).getByText(text).getAttribute('role')).toBe('status')
+    }
+    fireEvent.click(within(dialog).getByText('mySkills.promotionRoles.GLOBAL_COPY'))
+    expect(navigate).not.toHaveBeenCalled()
+    expect(useVersions).not.toHaveBeenCalled()
+    const overlay = document.querySelector<HTMLElement>('[data-state="open"].inset-0')
+    expect(overlay).toBeTruthy()
+    fireEvent.click(overlay!)
+    expect(navigate).not.toHaveBeenCalled()
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(document.activeElement).toBe(trigger)
     expect(screen.queryByRole('button', { name: 'mySkills.update' })).toBeNull()
   })
 
@@ -314,11 +329,27 @@ describe('My Skills interactions with real menu and dialog', () => {
   })
 
 
-  it('opens the existing prefilled update form from the mobile menu action', async () => {
+  it.each([
+    ['mySkills.viewDetail', '/space/team/demo'],
+    ['mySkills.viewGlobalCopy', '/space/global/promoted-copy'],
+  ])('closes the menu before navigating from %s with the original return context', async (action, to) => {
+    skill = makeSkill({ ownerReadOnly: false, promotionRole: 'TEAM_SOURCE', relatedNamespace: 'global', relatedSlug: 'promoted-copy' })
     render(<MySkillsPage />)
     await openMenu()
+    navigate.mockImplementation(() => expect(screen.queryByRole('menu')).toBeNull())
+    fireEvent.click(screen.getByRole('menuitem', { name: action }))
+    expect(navigate).not.toHaveBeenCalled()
+    await waitFor(() => expect(navigate).toHaveBeenCalledOnce())
+    expect(navigate).toHaveBeenCalledWith({ to, search: { returnTo: '/dashboard/skills?', version: undefined } })
+  })
+
+  it('closes the mobile menu before opening the existing prefilled update form', async () => {
+    render(<MySkillsPage />)
+    await openMenu()
+    navigate.mockImplementation(() => expect(screen.queryByRole('menu')).toBeNull())
     fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.update' }))
-    expect(navigate).toHaveBeenCalledOnce()
+    expect(navigate).not.toHaveBeenCalled()
+    await waitFor(() => expect(navigate).toHaveBeenCalledOnce())
     expect(navigate).toHaveBeenCalledWith({
       to: '/dashboard/publish',
       search: { namespace: 'team', updateSkill: 'demo', updateName: 'Demo', visibility: 'PRIVATE' },

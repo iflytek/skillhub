@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 const api = vi.hoisted(() => ({ status: vi.fn(), delete: vi.fn(), submit: vi.fn(), retry: vi.fn(), appeal: vi.fn() }))
@@ -115,6 +115,64 @@ describe('SkillAvatarManager appeal', () => {
     expect(await screen.findByText('skillAvatar.statusRefreshFailed')).toBeTruthy()
     expect(screen.getByRole('img', { name: 'skillAvatar.submittedImage' }).getAttribute('src')).toBe('/private-candidate/8')
     expect(screen.getByRole('button', { name: 'skillAvatar.reloadStatus' })).toBeTruthy()
+  })
+
+  it('opens the complete submitted avatar from a compact read-only trigger without bubbling to the card', async () => {
+    api.status.mockResolvedValue({ candidateId: 8, candidateStatus: 'PENDING', machineStatus: 'BLOCKED',
+      reviewStatus: 'NOT_REQUIRED', candidateUrl: '/private-candidate/8', reviewReason: 'Complete review reason' })
+    const openCard = vi.fn()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(<QueryClientProvider client={client}><div onClick={openCard}><SkillAvatarManager namespace="team" slug="foo" previewOnly compactPreview /></div></QueryClientProvider>)
+    const trigger = await screen.findByRole('button', { name: 'skillAvatar.submittedImage' })
+    expect(screen.queryByRole('dialog')).toBeNull()
+    trigger.focus()
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog', { name: 'skillAvatar.submittedImage' })
+    expect(within(dialog).getByRole('img', { name: 'skillAvatar.submittedImage' }).getAttribute('src')).toBe('/private-candidate/8')
+    fireEvent.click(within(dialog).getByText('Complete review reason'))
+    expect(openCard).not.toHaveBeenCalled()
+    expect(api.status).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: 'skillAvatar.appeal' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'skillAvatar.retry' })).toBeNull()
+    const overlay = document.querySelector<HTMLElement>('[data-state="open"].inset-0')
+    expect(overlay).toBeTruthy()
+    fireEvent.click(overlay!)
+    expect(openCard).not.toHaveBeenCalled()
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(document.activeElement).toBe(trigger)
+    expect(openCard).not.toHaveBeenCalled()
+  })
+
+  it('keeps a compact status-load failure discoverable and reloads inside the dialog', async () => {
+    api.status.mockRejectedValueOnce(new Error('unavailable')).mockResolvedValue({ candidateId: 8,
+      candidateStatus: 'PENDING', machineStatus: 'SKIPPED', reviewStatus: 'PENDING', candidateUrl: '/private-candidate/8' })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(<QueryClientProvider client={client}><SkillAvatarManager namespace="team" slug="foo" previewOnly compactPreview /></QueryClientProvider>)
+    expect(await screen.findByText('skillAvatar.statusLoadFailed')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'skillAvatar.submittedImage' }))
+    const dialog = await screen.findByRole('dialog', { name: 'skillAvatar.submittedImage' })
+    expect(within(dialog).getByRole('alert')).toBeTruthy()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'skillAvatar.reloadStatus' }))
+    expect(await within(dialog).findByRole('img', { name: 'skillAvatar.submittedImage' })).toBeTruthy()
+    expect(within(dialog).queryByRole('alert')).toBeNull()
+    expect(api.status).toHaveBeenCalledTimes(2)
+  })
+
+  it('describes a compact cached-candidate refresh failure consistently in the trigger and dialog', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(['skill-avatar', 'team', 'foo'], { candidateId: 8, candidateStatus: 'PENDING',
+      machineStatus: 'SKIPPED', reviewStatus: 'PENDING', candidateUrl: '/private-candidate/8' })
+    api.status.mockRejectedValue(new Error('unavailable'))
+    render(<QueryClientProvider client={client}><SkillAvatarManager namespace="team" slug="foo" previewOnly compactPreview /></QueryClientProvider>)
+    const trigger = screen.getByRole('button', { name: 'skillAvatar.submittedImage' })
+    expect(await within(trigger).findByText('skillAvatar.statusRefreshFailed')).toBeTruthy()
+    expect(screen.queryByText('skillAvatar.statusLoadFailed')).toBeNull()
+    fireEvent.click(trigger)
+    const dialog = await screen.findByRole('dialog', { name: 'skillAvatar.submittedImage' })
+    expect(within(dialog).getByText('skillAvatar.statusRefreshFailed')).toBeTruthy()
+    expect(within(dialog).getByRole('img', { name: 'skillAvatar.submittedImage' }).getAttribute('src')).toBe('/private-candidate/8')
+    expect(within(dialog).getByRole('button', { name: 'skillAvatar.reloadStatus' })).toBeTruthy()
   })
 
   it('does not render approved reasons, duplicate image or editing controls', async () => {

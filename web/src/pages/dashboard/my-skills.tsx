@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Archive, ArrowUpRight, Copy, Download, Eye, GitCompareArrows, Globe, LockKeyhole, MoreHorizontal, Package, Plus, RotateCcw, Search, Undo2, Upload, Users } from 'lucide-react'
+import { Archive, ArrowUpRight, Copy, Download, Eye, GitCompareArrows, Globe, Info, LockKeyhole, MoreHorizontal, Package, Plus, RotateCcw, Search, Undo2, Upload, Users } from 'lucide-react'
 import styles from './my-skills.module.css'
 import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { copyToClipboard } from '@/shared/lib/clipboard'
 import { SkillVersionCompareContent } from '@/features/skill/skill-version-compare-content'
@@ -34,6 +34,11 @@ import { getMySkillEmptyStateKey, getMySkillFilters, type MySkillFilter } from '
 
 const PAGE_SIZE = 10
 const ALL_NAMESPACES_VALUE = '__all_namespaces__'
+
+// Let Radix close its menu and remove outside-pointer listeners before route effects run.
+function deferMenuNavigation(action: () => void) {
+  setTimeout(action, 0)
+}
 
 /**
  * Dashboard page for skills owned by the current user.
@@ -449,6 +454,15 @@ export function MySkillsPage() {
               const writable = !hidden && !ownerReadOnly
               const canChangeVisibility = writable && skill.status === 'ACTIVE' && !!publishedVersion
               const coordinate = `@${skill.namespace}/${skill.slug}`
+              const visibilityLabel = t(`publish.visibilityOptions.${skill.visibility === 'PRIVATE' ? 'private' : skill.visibility === 'NAMESPACE_ONLY' ? 'namespaceOnly' : 'public'}`)
+              const versionLabel = preview && publishedVersion
+                ? t('mySkills.versionDifference', { version: preview.version, published: publishedVersion.version })
+                : headlineVersion ? `v${headlineVersion.version}` : ''
+              const managementNotes = [
+                ...(ownerReadOnly ? [t('mySkills.ownerReadOnly')] : []),
+                ...(skill.managementState?.promotionRole ? [t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)] : []),
+                ...(skill.managementState?.requestedVisibility ? [t('skillVisibility.pendingList', { visibility: t(`skillVisibility.${skill.managementState.requestedVisibility}`) })] : []),
+              ]
               const openDetail = () => handleSkillClick(skill.namespace, skill.slug, preview?.version)
               const detailSearch = new URLSearchParams({ returnTo: buildReturnTo(location) })
               if (preview?.version) detailSearch.set('version', preview.version)
@@ -459,8 +473,8 @@ export function MySkillsPage() {
                   onClick={hidden ? undefined : openDetail}>
                   <div className="flex items-start gap-3">
                     <SkillAvatar name={displayName} url={skill.avatarUrl} seed={`${skill.namespace}/${skill.slug}`} size="h-8 w-8 text-xs" />
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="flex items-start justify-between gap-3">
+                    <div className={`${styles.cardContent} min-w-0 flex-1`}>
+                      <div className={`${styles.cardHeader} flex items-start justify-between gap-3`}>
                         <div className={`${styles.titleGroup} flex min-w-0 flex-1 items-center gap-3`}>
                           <h3 className={`${styles.skillTitle} min-w-0 flex-1 truncate`} title={displayName}>
                             {hidden ? displayName : <a href={withBasePath(`/space/${skill.namespace}/${encodeURIComponent(skill.slug)}?${detailSearch}`)}
@@ -495,7 +509,7 @@ export function MySkillsPage() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className={styles.moreMenu} onClick={event => event.stopPropagation()}
                               onCloseAutoFocus={event => { if (compareTarget || visibilityTarget || archiveTarget || unarchiveTarget || withdrawTarget || promotionTarget || restoreHiddenTarget) event.preventDefault() }}>
-                              {!hidden && <DropdownMenuItem onSelect={openDetail}><Eye aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.viewDetail')}</DropdownMenuItem>}
+                              {!hidden && <DropdownMenuItem onSelect={() => deferMenuNavigation(openDetail)}><Eye aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.viewDetail')}</DropdownMenuItem>}
                               <DropdownMenuItem onSelect={async () => {
                                 try { await copyToClipboard(coordinate); toast.success(t('mySkills.coordinateCopied')) }
                                 catch { toast.error(t('mySkills.coordinateCopyFailed')) }
@@ -505,10 +519,10 @@ export function MySkillsPage() {
                                 setCompareTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })
                               }}><GitCompareArrows aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.compareVersions')}</DropdownMenuItem>}
                               {writable && skill.status !== 'ARCHIVED' && <DropdownMenuItem data-analytics-id="skill.update.open" className={styles.mobileUpdate}
-                                onSelect={() => handleUpdateSkill(skill.namespace, skill.slug, displayName, skill.visibility ?? 'PUBLIC')}>
+                                onSelect={() => deferMenuNavigation(() => handleUpdateSkill(skill.namespace, skill.slug, displayName, skill.visibility ?? 'PUBLIC'))}>
                                 <Upload aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.update')}
                               </DropdownMenuItem>}
-                              {skill.managementState?.promotionRole && relatedNamespace && relatedSlug && <DropdownMenuItem data-analytics-id="skill.related.open" onSelect={() => handleSkillClick(relatedNamespace, relatedSlug)}>
+                              {skill.managementState?.promotionRole && relatedNamespace && relatedSlug && <DropdownMenuItem data-analytics-id="skill.related.open" onSelect={() => deferMenuNavigation(() => handleSkillClick(relatedNamespace, relatedSlug))}>
                                 <ArrowUpRight aria-hidden="true" className="mr-2 h-4 w-4" />{t(skill.managementState?.promotionRole === 'TEAM_SOURCE' ? 'mySkills.viewGlobalCopy' : 'mySkills.viewTeamSource')}
                               </DropdownMenuItem>}
                               {canChangeVisibility && <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.visibility.open" disabled={hasPendingPreview}
@@ -532,29 +546,45 @@ export function MySkillsPage() {
                           </DropdownMenu>
                         </div>
                       </div>
-                      {summary?.trim() && <p title={summary}
-                        className={`${styles.description} line-clamp-2 break-words text-muted-foreground [overflow-wrap:anywhere]`}>{summary}</p>}
-                      <div className={`${styles.metadata} flex flex-wrap items-center text-muted-foreground`}>
+                      <p title={summary?.trim() ? summary : undefined}
+                        className={`${styles.description} truncate text-muted-foreground`}>{summary?.trim() ? summary : t('mySkills.noSummary')}</p>
+                      <div className={`${styles.metadata} flex items-center text-muted-foreground`}>
                         <span className={`${styles.metadataItem} ${styles.coordinate}`} title={coordinate}><Package aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" /><span className="truncate">{coordinate}</span></span>
-                        <span className={styles.metadataItem} title={t('skillVisibility.current', { visibility: t(`skillVisibility.${skill.visibility ?? 'PUBLIC'}`) })}>
+                        <span className={`${styles.metadataItem} ${styles.visibility}`} title={t('skillVisibility.current', { visibility: t(`skillVisibility.${skill.visibility ?? 'PUBLIC'}`) })}>
                           {skill.visibility === 'PRIVATE' ? <LockKeyhole aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />
                             : skill.visibility === 'NAMESPACE_ONLY' ? <Users aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />
                               : <Globe aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />}
-                          {t(`publish.visibilityOptions.${skill.visibility === 'PRIVATE' ? 'private' : skill.visibility === 'NAMESPACE_ONLY' ? 'namespaceOnly' : 'public'}`)}
+                          <span className="truncate">{visibilityLabel}</span>
                         </span>
-                        {preview && publishedVersion ? <span className={styles.pendingVersion}>{t('mySkills.versionDifference', { version: preview.version, published: publishedVersion.version })}</span>
-                          : headlineVersion ? <span className="font-mono">v{headlineVersion.version}</span> : null}
+                        {versionLabel && <span className={`${styles.version} truncate ${preview && publishedVersion ? styles.pendingVersion : 'font-mono'}`}>{versionLabel}</span>}
                         <span className={`${styles.metadataItem} ${styles.downloads}`} title={t('mySkills.downloadCount')}><Download aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />{formatCompactCount(skill.downloadCount)}</span>
-                      </div>
-                      <div className={styles.supplementalArea}>
-                        {(ownerReadOnly || skill.managementState?.promotionRole || skill.managementState?.requestedVisibility) && <div className={styles.supplementalNotes}>
-                          {ownerReadOnly && <p role="status" className={`${styles.note} text-muted-foreground`}>{t('mySkills.ownerReadOnly')}</p>}
-                          {skill.managementState?.promotionRole && <p className={`${styles.note} text-muted-foreground`}>{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</p>}
-                          {skill.managementState?.requestedVisibility && <p role="status" className={`${styles.note} text-muted-foreground`}>
-                            {t('skillVisibility.pendingList', { visibility: t(`skillVisibility.${skill.managementState.requestedVisibility}`) })}
-                          </p>}
-                        </div>}
-                        {skill.status === 'ACTIVE' && !hidden && <SkillAvatarManager namespace={skill.namespace} slug={skill.slug} previewOnly />}
+                        {/* Portal overlays also bubble through the card React tree. */}
+                        <span className="contents" onClick={event => event.stopPropagation()}>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <button type="button" className={styles.infoButton} aria-label={t('mySkills.metadataDetailsFor', { skill: displayName })}>
+                              <Info aria-hidden="true" className="h-[13px] w-[13px] shrink-0" />
+                              <span className="truncate">{managementNotes[0] ?? t('mySkills.metadataDetails')}</span>
+                              {managementNotes.length > 1 && <span className="shrink-0">+{managementNotes.length - 1}</span>}
+                            </button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>{t('mySkills.metadataDetails')}</DialogTitle>
+                              <DialogDescription className="break-words [overflow-wrap:anywhere]">{displayName}</DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-3 text-sm [overflow-wrap:anywhere]">
+                              <p className="font-mono">{coordinate}</p>
+                              <p>{summary?.trim() ? summary : t('mySkills.noSummary')}</p>
+                              <p>{t('skillVisibility.current', { visibility: t(`skillVisibility.${skill.visibility ?? 'PUBLIC'}`) })}</p>
+                              {versionLabel && <p>{versionLabel}</p>}
+                              <p>{t('mySkills.downloadCount')}: {skill.downloadCount}</p>
+                              {managementNotes.map(note => <p key={note} role="status">{note}</p>)}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        </span>
+                        {skill.status === 'ACTIVE' && !hidden && <SkillAvatarManager namespace={skill.namespace} slug={skill.slug} previewOnly compactPreview />}
                       </div>
                     </div>
                   </div>

@@ -893,6 +893,9 @@
     "securityDesc": "Change password and account security options"
   },
   "mySkills": {
+    "noSummary": "No summary",
+    "metadataDetails": "Skill info",
+    "metadataDetailsFor": "View full information for {{skill}}",
     "ownerReadOnly": "You are no longer a member of this space. You can view and download your skills, but cannot modify them.",
     "updateGlobalVersion": "Update global version",
     "viewGlobalCopy": "View global copy",

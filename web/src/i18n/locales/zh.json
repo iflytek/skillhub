@@ -893,6 +893,9 @@
     "securityDesc": "修改密码和账户安全选项"
   },
   "mySkills": {
+    "noSummary": "暂无简介",
+    "metadataDetails": "技能信息",
+    "metadataDetailsFor": "查看“{{skill}}”的完整信息",
     "ownerReadOnly": "你已不在该空间，只能查看和下载自己的技能，不能修改。",
     "updateGlobalVersion": "更新全局版本",
     "viewGlobalCopy": "查看全局副本",
