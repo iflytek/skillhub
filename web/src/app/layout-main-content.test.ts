@@ -7,6 +7,7 @@ import {
   DEFAULT_MAIN_CLASS_NAME,
   CONSOLE_MAIN_CLASS_NAME,
   CONSOLE_CONTENT_CLASS_NAME,
+  SETTINGS_CONTENT_CLASS_NAME,
   CONSOLE_SIDEBAR_ROW_CLASS_NAME,
   CONSOLE_SIDEBAR_CONTENT_CLASS_NAME,
   SPLIT_AUTH_MAIN_CLASS_NAME,
@@ -41,14 +42,20 @@ describe('getAppMainContentLayout', () => {
     })
   })
 
-  it.each(['/settings/profile', '/settings/security', '/settings/notifications', '/settings/accounts'])('keeps %s forms readable without shifting their content origin', (pathname) => {
+  it.each(['/settings/profile', '/settings/security', '/settings/notifications', '/settings/accounts'])('centers %s inside a compact sidebar-and-form frame', (pathname) => {
     expect(getAppMainContentLayout(pathname)).toEqual({
       mainClassName: CONSOLE_MAIN_CLASS_NAME,
-      contentClassName: CONSOLE_CONTENT_CLASS_NAME,
+      contentClassName: SETTINGS_CONTENT_CLASS_NAME,
       sidebarRowClassName: CONSOLE_SIDEBAR_ROW_CLASS_NAME,
       sidebarContentClassName: CONSOLE_SIDEBAR_CONTENT_CLASS_NAME,
       pageClassName: 'w-full max-w-3xl',
     })
+  })
+
+  it('fits the settings sidebar, desktop gutters and readable form without trailing content space', () => {
+    expect(SETTINGS_CONTENT_CLASS_NAME).toContain('mx-auto')
+    expect(SETTINGS_CONTENT_CLASS_NAME).toContain('max-w-[1072px]')
+    expect(CONSOLE_CONTENT_CLASS_NAME).toContain('max-w-[1440px]')
   })
 
   it('keeps publishing a standalone flow without console navigation', () => {

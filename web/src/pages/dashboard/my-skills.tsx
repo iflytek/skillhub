@@ -104,8 +104,6 @@ export function MySkillsPage() {
   const { data: namespaceOptions } = useMyNamespaces()
 
   const skills = skillPage?.items ?? []
-  const hasSupplementalRows = skills.some(skill => skill.managementState?.ownerReadOnly
-    || skill.managementState?.promotionRole || skill.managementState?.requestedVisibility)
   const totalPages = skillPage ? Math.max(Math.ceil(skillPage.total / skillPage.size), 1) : 1
   const availableFilters = getMySkillFilters(hasRole('SUPER_ADMIN'))
   const canRestoreHidden = filter === 'HIDDEN' && hasRole('SUPER_ADMIN')
@@ -534,8 +532,8 @@ export function MySkillsPage() {
                           </DropdownMenu>
                         </div>
                       </div>
-                      <p title={summary || undefined} aria-hidden={!summary || undefined}
-                        className={`${styles.description} line-clamp-2 break-words text-muted-foreground [overflow-wrap:anywhere]`}>{summary}</p>
+                      {summary?.trim() && <p title={summary}
+                        className={`${styles.description} line-clamp-2 break-words text-muted-foreground [overflow-wrap:anywhere]`}>{summary}</p>}
                       <div className={`${styles.metadata} flex flex-wrap items-center text-muted-foreground`}>
                         <span className={`${styles.metadataItem} ${styles.coordinate}`} title={coordinate}><Package aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" /><span className="truncate">{coordinate}</span></span>
                         <span className={styles.metadataItem} title={t('skillVisibility.current', { visibility: t(`skillVisibility.${skill.visibility ?? 'PUBLIC'}`) })}>
@@ -548,7 +546,7 @@ export function MySkillsPage() {
                           : headlineVersion ? <span className="font-mono">v{headlineVersion.version}</span> : null}
                         <span className={`${styles.metadataItem} ${styles.downloads}`} title={t('mySkills.downloadCount')}><Download aria-hidden="true" strokeWidth={1.65} className="h-[13px] w-[13px] shrink-0" />{formatCompactCount(skill.downloadCount)}</span>
                       </div>
-                      <div className={`${styles.supplementalArea} ${hasSupplementalRows ? styles.reserveSupplemental : ''}`}>
+                      <div className={styles.supplementalArea}>
                         {(ownerReadOnly || skill.managementState?.promotionRole || skill.managementState?.requestedVisibility) && <div className={styles.supplementalNotes}>
                           {ownerReadOnly && <p role="status" className={`${styles.note} text-muted-foreground`}>{t('mySkills.ownerReadOnly')}</p>}
                           {skill.managementState?.promotionRole && <p className={`${styles.note} text-muted-foreground`}>{t(`mySkills.promotionRoles.${skill.managementState.promotionRole}`)}</p>}

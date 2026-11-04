@@ -74,7 +74,6 @@
 .page .description {
   font-size: 12px;
   line-height: 20px;
-  min-height: 40px;
   color: #666670;
 }
 
@@ -82,10 +81,6 @@
 .page .supplementalArea:empty { display: none; }
 .page .supplementalNotes { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 16px; }
 .page .supplementalNotes .note { margin: 0; min-width: 0; overflow-wrap: anywhere; }
-
-@media (min-width: 768px) {
-  .page .supplementalArea.reserveSupplemental { display: flex; min-height: 20px; }
-}
 
 .page .metadata {
   gap: 8px 17px;

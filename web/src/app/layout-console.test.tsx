@@ -62,6 +62,20 @@ describe('shared console layout composition', () => {
     expect(within(sidebar).getByText('sidebar.githubSync')).toBeTruthy()
   })
 
+  it('keeps the settings frame until the wider dashboard route resolves', () => {
+    pathname = '/dashboard/skills'
+    resolvedPathname = '/settings/profile'
+    const view = render(<Layout />)
+    const main = screen.getByRole('main')
+    expect(main.firstElementChild?.classList.contains('max-w-[1072px]')).toBe(true)
+    expect(within(screen.getByRole('complementary')).getByRole('link', { name: 'sidebar.profile' }).classList.contains('bg-accent')).toBe(true)
+    resolvedPathname = pathname
+    view.rerender(<Layout />)
+    expect(main.firstElementChild?.classList.contains('max-w-[1440px]')).toBe(true)
+    expect(main.firstElementChild?.classList.contains('max-w-[1072px]')).toBe(false)
+    expect(screen.getAllByRole('complementary')).toHaveLength(1)
+  })
+
   it('keeps the previous console shell while navigation to standalone publish is pending', () => {
     pathname = '/dashboard/publish'
     resolvedPathname = '/dashboard'

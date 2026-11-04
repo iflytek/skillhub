@@ -95,6 +95,15 @@ describe('My Skills interactions with real menu and dialog', () => {
     expect(screen.getByRole('link', { name: 'Demo' })).toBeTruthy()
   })
 
+  it.each(['', '   '])('omits a blank description without removing metadata or actions', summary => {
+    skill.summary = summary
+    render(<MySkillsPage />)
+    const card = screen.getByRole('link', { name: 'Demo' }).closest('[data-analytics-id="skill.owned.open"]')
+    expect(card?.querySelector('p')).toBeNull()
+    expect(screen.getByText('@team/demo')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'mySkills.update' })).toBeTruthy()
+  })
+
   it('keeps ownership, promotion and requested visibility explanations in one supplemental group', () => {
     skill = makeSkill({ ownerReadOnly: true, promotionRole: 'GLOBAL_COPY', requestedVisibility: 'PUBLIC' })
     render(<MySkillsPage />)
