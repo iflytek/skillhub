@@ -12,10 +12,11 @@ import { UiAvailabilityNotice, type UiAvailability } from './ui-availability.js'
 import { NativeControlStyles } from './native-control-styles.js';
 import { catalogErrorMessage } from './catalog-error.js';
 import { FavoriteButton } from './favorite-button.js';
-import { favoriteIdentity, filterFavorites, resolvedFavoriteItem } from './favorites.js';
+import { favoriteIdentity, favoriteSnapshot, filterFavorites, resolvedFavoriteItem } from './favorites.js';
 import { useFavorites } from './use-favorites.js';
 import { QueryClient, QueryClientProvider, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol';
 import { installedNavigationFor, type InstalledNavigation } from './installed-navigation.js';
 import { InstalledSkills } from './installed-skills.js';
@@ -70,6 +71,9 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   const [favoriteDraft, setFavoriteDraft] = useState(navigation.favoriteDraft ?? '');
   const [favoriteOpening, setFavoriteOpening] = useState<{ revision: string; key: string } | null>(null);
   const [favoriteOpenError, setFavoriteOpenError] = useState<{ revision: string; item: FavoriteSkill; intent: 'detail' | 'install'; message: string } | null>(null);
+  const [favoriteUndo, setFavoriteUndo] = useState<{ revision: string; item: FavoriteSkill } | null>(null);
+  const favoriteFeedbackGeneration = useRef(0);
+  const undoPending = useRef(false);
   const [sort, setSort] = useState<Sort>(navigation.sort ?? 'newest');
   const [labelSelection, setLabelSelection] = useState(navigation.labelSelection);
   const [selected, setSelected] = useState(navigation.selected);
@@ -84,6 +88,11 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   const compatibility = useQuery({ queryKey: ['skillhub-compatibility'], queryFn: async () => unwrap(await remote.getCompatibility()), retry: false });
   const revision = context.data?.sourceRevision;
   const latestRevision = useRef(revision); latestRevision.current = revision;
+  useLayoutEffect(() => {
+    favoriteFeedbackGeneration.current++;
+    setFavoriteUndo(null);
+    return () => { favoriteFeedbackGeneration.current++; };
+  }, [revision, selected, tab]);
   const favorites = useFavorites(remote, revision, !!context.data?.configured && tab === 'browse');
   const favoriteItems = useRef(favorites.items); favoriteItems.current = favorites.items;
   useLayoutEffect(() => () => { favoriteRequest.current?.abort(); favoriteRequest.current = null; }, [revision]);
@@ -135,7 +144,10 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
     const filterChanged = previousFavoriteOnly.current !== favoriteOnly; previousFavoriteOnly.current = favoriteOnly;
     if (scroller.current) scroller.current.scrollTop = selected ? 0 : favoriteOnly ? navigation.favoriteScrollTop ?? 0 : navigation.scrollTop;
     if (selected) heading.current?.focus();
-    else if (!filterChanged) lastCard.current?.focus({ preventScroll: true });
+    else if (!filterChanged) {
+      if (lastCard.current?.isConnected) lastCard.current.focus({ preventScroll: true });
+      else if (favoriteOnly) favoriteFilter.current?.focus({ preventScroll: true });
+    }
   }, [selected, navigation, tab, favoriteOnly]);
   function back() { navigation.selected = null; setSelected(null); }
   function rememberScroll() {
@@ -179,9 +191,47 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
     const pressed = favorites.items.some(saved => favoriteIdentity(saved) === favoriteIdentity(item));
     return <FavoriteButton item={item} pressed={pressed} disabled={!favorites.ready} busy={favorites.loading || favorites.saving}
       onToggle={() => {
+        if (!revision) return;
+        const captured = revision, generation = favoriteFeedbackGeneration.current;
+        const focused = document.activeElement;
+        const removedCard = !selected && favoriteOnly && pressed;
         if (pressed && favoriteOpening?.key === favoriteIdentity(item)) cancelFavoriteOpen();
-        void favorites.save(item, !pressed).then(saved => { if (saved && favoriteOnly && pressed) favoriteFilter.current?.focus({ preventScroll: true }); });
+        void favorites.save(item, !pressed).then(saved => {
+          if (latestRevision.current !== captured || favoriteFeedbackGeneration.current !== generation) return;
+          // Reconciliation can remove the card even when the write response was lost.
+          if (removedCard) returnFavoriteNoticeFocus(focused, generation);
+          if (!saved) return;
+          if (pressed) {
+            setFavoriteUndo({ revision: captured, item: favoriteSnapshot(item) });
+            setFavoriteOpenError(current => current && favoriteIdentity(current.item) === favoriteIdentity(item) ? null : current);
+          } else setFavoriteUndo(current => current && favoriteIdentity(current.item) === favoriteIdentity(item) ? null : current);
+        });
       }} />;
+  }
+  async function undoFavorite() {
+    if (!favoriteUndo || favoriteUndo.revision !== revision || !favorites.ready || favorites.saving || undoPending.current) return;
+    const removed = favoriteUndo, generation = favoriteFeedbackGeneration.current, focused = document.activeElement;
+    undoPending.current = true;
+    try {
+      if (await favorites.save(removed.item, true) && latestRevision.current === removed.revision && favoriteFeedbackGeneration.current === generation) {
+        setFavoriteUndo(current => current === removed ? null : current);
+        returnFavoriteNoticeFocus(focused, generation);
+      }
+    } finally { undoPending.current = false; }
+  }
+  function returnFavoriteNoticeFocus(focused: Element | null, generation: number) {
+    if (!(focused instanceof HTMLElement)) return;
+    requestAnimationFrame(() => {
+      if (favoriteFeedbackGeneration.current === generation && !focused.isConnected && document.activeElement === document.body) {
+        (favoriteFilter.current ?? heading.current)?.focus({ preventScroll: true });
+      }
+    });
+  }
+  function leaveCatalog() {
+    favoriteFeedbackGeneration.current++;
+    setFavoriteUndo(null); cancelFavoriteOpen();
+    if (!selected && tab === 'browse') rememberScroll();
+    onReturn();
   }
   function manageSkill(item: NonNullable<typeof inventory.data>['items'][number], intent: 'remove' | 'upgrade') {
     if (intent === 'remove') { if (revision && context.data) setRemovalCandidate({ item, revision, source: item.registry ?? context.data.registryUrl }); return; }
@@ -213,6 +263,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
     if (next === query) void listing.refetch();
   }
   function searchFavorites(next: string) {
+    cancelFavoriteOpen();
     navigation.favoriteQuery = next; navigation.favoriteScrollTop = 0; setFavoriteQuery(next);
     if (scroller.current) scroller.current.scrollTop = 0;
   }
@@ -222,6 +273,11 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   }
   return <section ref={scroller} className="skillhub-controls astron-sh-catalog" aria-label="SkillHub 技能广场">
     <NativeControlStyles /><UiAvailabilityNotice availability={availability} />
+    {favoriteUndo && favoriteUndo.revision === revision && tab === 'browse' && createPortal(<aside className="skillhub-controls astron-sh-management-notice" aria-label={`收藏通知：${favoriteUndo.item.displayName || favoriteUndo.item.slug}`}>
+      <div role="status"><strong>已取消收藏</strong> <Button size="sm" variant="ghost" disabled={!favorites.ready} aria-disabled={favorites.saving || undefined} aria-busy={favorites.saving || undefined} onClick={() => { void undoFavorite(); }}>撤销</Button>
+        <p className="astron-sh-favorite-undo-name" title={`@${favoriteUndo.item.namespace}/${favoriteUndo.item.slug}`}>{favoriteUndo.item.displayName || favoriteUndo.item.slug}</p></div>
+      <Button size="icon" variant="ghost" aria-label="关闭收藏通知" onClick={() => { const focused = document.activeElement; setFavoriteUndo(null); returnFavoriteNoticeFocus(focused, favoriteFeedbackGeneration.current); }}>×</Button>
+    </aside>, scroller.current?.closest('dialog') ?? document.body)}
     {upgradeCandidate && installed && <UpgradeControl key={`${installed.sessionId}:${upgradeCandidate.revision}:${upgradeCandidate.item.itemKey}`} presentation="dialog" eligible
       services={installed} sourceRevision={upgradeCandidate.revision} source={upgradeCandidate.source} item={upgradeCandidate.item} onClosed={() => setUpgradeCandidate(null)} />}
     {removalCandidate && installed && <RemovalControl key={`${installed.sessionId}:${removalCandidate.revision}:${removalCandidate.item.itemKey}`} presentation="dialog"
@@ -237,7 +293,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
 
     <header className="astron-sh-catalog-header"><div className="astron-sh-location"><Icon name="grid" /><strong>SkillHub</strong><span>/</span><span>{selected ? '技能详情' : '技能广场'}</span></div>
       <div className="astron-sh-toolbar-actions"><Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
-      {(installation || installed) && <Button variant="ghost" className="astron-sh-icon-button" aria-label="返回会话" title="关闭 SkillHub，返回会话" onClick={() => { cancelFavoriteOpen(); if (!selected && tab === 'browse') rememberScroll(); onReturn(); }}><Icon name="close" /></Button>}</div>
+      {(installation || installed) && <Button variant="ghost" className="astron-sh-icon-button" aria-label="返回会话" title="关闭 SkillHub，返回会话" onClick={leaveCatalog}><Icon name="close" /></Button>}</div>
     </header>
     {sourceOpen && <p className="astron-sh-source-info" role="status">当前来源：{context.data?.registryUrl || '尚未配置来源'}</p>}
     {(compatibility.isError || compatibility.data?.dependencyBaseline === 'unverified') && <div role="alert" className="astron-sh-error">
@@ -257,10 +313,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
           {!sourceMatches ? error('来源已变化，请返回技能广场重新选择。', back)
             : detail.isPending ? <DetailSkeleton />
               : detail.isError ? error(detail.error.message, () => { void detail.refetch(); })
-                 : <><SkillMetrics item={detail.data} />
-                  {installation && installed && <MarketCardActions label="使用已安装版本" records={inventory.data?.items.filter(item => sameRegistry(item.registry, context.data.registryUrl) && item.namespace === selected.namespace && item.slug === selected.slug) ?? []}
-                    sourceRevision={revision!} services={installed} verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
-                    onInstall={() => setInstallCandidate({ item: selected, revision: revision! })} />}
+                 : <><SkillMetrics item={detail.data} labeled />
                   <div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation" aria-label="技能说明">
                   <DetailContent detail={detail.data} modes={context.data.detailTabs} remote={remote} retry={() => { void detail.refetch(); }}
                     cacheIdentity={JSON.stringify([installation?.sessionId ?? installed?.sessionId, revision, selected.namespace, selected.slug, selected.latestVersion])}
@@ -268,6 +321,9 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
                     onSelectVersion={version => { const next = { ...selected, latestVersion: version }; navigation.selected = next; setSelected(next); }} />
                 </article><aside className="astron-sh-detail-aside">
                   {installed?.management ? <InstallationManagement identity={{ ...selected, registry: context.data.registryUrl }} revision={revision!} services={installed.management} useSkill={installed.skillUse}
+                    primaryAction={installation && <MarketCardActions label="使用技能" records={inventory.data?.items.filter(item => sameRegistry(item.registry, context.data.registryUrl) && item.namespace === selected.namespace && item.slug === selected.slug) ?? []}
+                      sourceRevision={revision!} services={installed} verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
+                      onInstall={() => setInstallCandidate({ item: selected, revision: revision! })} />}
                     onInstall={inventory.data?.items.some(item => sameRegistry(item.registry, context.data.registryUrl) && item.namespace === selected.namespace && item.slug === selected.slug) ? () => setInstallCandidate({ item: selected, revision: revision! }) : undefined} />
                     : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话。</p><Button onClick={onReturn}>前往会话</Button></div>}
                 </aside></div></>}
@@ -306,7 +362,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
               {installed && !inventory.isFetching && (inventory.isError || !inventory.data || !inventory.data.complete || inventory.data.unavailable.length > 0) && <p className="astron-sh-label-note" role="status">部分本地安装状态暂时无法核实，安装和管理操作暂不可用。<Button size="sm" variant="ghost" onClick={() => { void inventory.refetch(); }}>重新核对</Button></p>}
               {!favoriteOnly && limited && <p role="status" className="astron-sh-source">当前来源仅支持首批搜索，不支持分页与排序。可输入更具体的关键词缩小范围。</p>}
               {favoriteOnly ? favorites.loading ? <CardSkeletons /> : !favorites.ready ? null : visibleFavorites.length === 0
-                ? <div className="astron-sh-empty"><p>{favorites.items.length ? '没有匹配的收藏。' : '当前来源还没有收藏。'}</p>{!favorites.items.length && <Button variant="outline" onClick={toggleFavorites}>浏览技能</Button>}</div>
+                ? <div className="astron-sh-empty"><p>{favorites.items.length ? '没有匹配的收藏。' : '当前来源还没有收藏。'}</p>{favorites.items.length ? <Button variant="outline" onClick={() => { navigation.favoriteDraft = ''; setFavoriteDraft(''); searchFavorites(''); }}>清空搜索</Button> : <Button variant="outline" onClick={toggleFavorites}>浏览技能</Button>}</div>
                 : <div className="astron-sh-card-grid">{visibleFavorites.map(item => <SkillCard key={favoriteIdentity(item)} item={item} favoriteAction={favoriteAction(item)}
                   status={inventory.data && !inventory.isError && inventory.data.items.some(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug)
                     ? <span>{skillInstallationSummary(inventory.data.items.filter(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug))}</span> : undefined}

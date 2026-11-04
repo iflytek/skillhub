@@ -26,11 +26,11 @@ export interface SkillPresentation {
   namespace: string; slug: string; displayName?: string; summary?: string;
   downloadCount?: number; starCount?: number; ratingAvg?: number; ratingCount?: number;
 }
-export function SkillMetrics({ item }: { item: SkillPresentation }) {
-  return <div className="astron-sh-metrics">
-    {validCount(item.downloadCount) && <span title={`下载量：${item.downloadCount.toLocaleString('zh-CN')}`} aria-label={`下载量 ${item.downloadCount}`}><Icon name="download" />{formatCount(item.downloadCount)}</span>}
-    {validCount(item.starCount) && <span title={`收藏数：${item.starCount.toLocaleString('zh-CN')}`} aria-label={`收藏数 ${item.starCount}`}><Icon name="bookmark" />{formatCount(item.starCount)}</span>}
-    {validRating(item.ratingAvg) && <span title={`评分：${item.ratingAvg} / 5${validCount(item.ratingCount) ? `，${item.ratingCount} 人评分` : ''}`} aria-label={`评分 ${item.ratingAvg} / 5`}><Icon name="star" />{item.ratingAvg.toFixed(1)}</span>}
+export function SkillMetrics({ item, labeled = false }: { item: SkillPresentation; labeled?: boolean }) {
+  return <div className={labeled ? 'astron-sh-metrics astron-sh-metrics-labeled' : 'astron-sh-metrics'}>
+    {validCount(item.downloadCount) && <span title={`下载量：${item.downloadCount.toLocaleString('zh-CN')}`} aria-label={`下载量 ${item.downloadCount}`}><Icon name="download" />{labeled && '下载 '}{formatCount(item.downloadCount)}</span>}
+    {validCount(item.starCount) && <span title={`市场收藏数：${item.starCount.toLocaleString('zh-CN')}`} aria-label={`市场收藏数 ${item.starCount}`}><Icon name="bookmark" />{labeled && '市场收藏 '}{formatCount(item.starCount)}</span>}
+    {validRating(item.ratingAvg) && <span title={`评分：${item.ratingAvg} / 5${validCount(item.ratingCount) ? `，${item.ratingCount} 人评分` : ''}`} aria-label={`评分 ${item.ratingAvg} / 5`}><Icon name="star" />{labeled && '评分 '}{item.ratingAvg.toFixed(1)}</span>}
   </div>;
 }
 export const SkillCard = forwardRef<HTMLButtonElement, {

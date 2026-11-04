@@ -23,8 +23,14 @@ export function favoriteMutationOptions(remote: Pick<Remote, 'setFavorite'>, cli
       return unwrap(await remote.setFavorite(input.sourceRevision, input.item, input.favorite, input.signal));
     },
     onMutate: input => client.cancelQueries({ queryKey: favoritesKey(input.sourceRevision), exact: true }),
-    onSuccess: (value, input) => { client.setQueryData(favoritesKey(input.sourceRevision), value); },
-    onSettled: (_data, _error, input) => client.invalidateQueries({ queryKey: favoritesKey(input.sourceRevision), exact: true }),
+    onSuccess: async (value, input) => {
+      // Focus/reconnect may have started another read while the write was pending.
+      await client.cancelQueries({ queryKey: favoritesKey(input.sourceRevision), exact: true });
+      client.setQueryData(favoritesKey(input.sourceRevision), value);
+    },
+    // Success already returns the complete confirmed list. Only reconcile ambiguous failures,
+    // including a committed write whose transport response was lost.
+    onError: (_error, input) => client.invalidateQueries({ queryKey: favoritesKey(input.sourceRevision), exact: true }),
   };
 }
 
@@ -36,6 +42,7 @@ export function useFavorites(remote: Remote, sourceRevision: string | undefined,
     controllers.current.clear();
   }, [sourceRevision]);
   const query = useQuery({ queryKey: favoritesKey(sourceRevision), enabled: enabled && !!sourceRevision,
+    // Re-entry/focus/reconnect can discover changes from another Host; filtering stays in memory.
     retry: false, staleTime: 0,
     queryFn: async ({ signal }) => {
       if (!sourceRevision) throw new Error('请先连接技能来源。');

@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { MutationObserver, QueryClient, isCancelledError } from '@tanstack/react-query';
+import { MutationObserver, QueryClient, QueryObserver, isCancelledError } from '@tanstack/react-query';
 import type { FavoriteList, FavoriteSkill } from '../src/host/types.js';
 import { favoriteIdentity, favoriteSnapshot, favoritesKey, filterFavorites, resolvedFavoriteItem } from '../src/client/favorites.js';
 import { favoriteMutationOptions } from '../src/client/use-favorites.js';
@@ -93,4 +93,63 @@ test('a queued cancelled save never transports or changes another source', async
     expect(calls).toBe(1); expect(client.getQueryData<FavoriteList>(favoritesKey('old-source'))).toEqual({ items: [first] });
     expect(client.getQueryData<FavoriteList>(favoritesKey('new-source'))).toEqual({ items: [second] });
   } finally { client.clear(); }
+});
+
+test('a confirmed write updates active readers without another read, while a lost response reconciles from disk', async () => {
+  const client = new QueryClient();
+  let reads = 0, writes = 0, loseResponse = false;
+  let stored: FavoriteList = { items: [] };
+  const reader = new QueryObserver(client, {
+    queryKey: favoritesKey('source-a'), initialData: stored, staleTime: Infinity,
+    queryFn: async () => { reads++; return stored; },
+  });
+  const unsubscribe = reader.subscribe(() => {});
+  const mutation = new MutationObserver(client, favoriteMutationOptions({ setFavorite: async (_revision, item, favorite) => {
+    writes++; stored = { items: favorite ? [item] : [] };
+    if (loseResponse) throw new Error('response lost after write');
+    return { ok: true, value: stored };
+  } }, client, 'source-a'));
+  try {
+    client.setQueryData(favoritesKey('source-b'), { items: [second] });
+    const input = { sourceRevision: 'source-a', item: first, favorite: true, signal: new AbortController().signal };
+    await mutation.mutate(input);
+    expect(writes).toBe(1); expect(reads).toBe(0);
+    expect(reader.getCurrentResult().data).toEqual({ items: [first] });
+    for (const text of ['', '文档', 'writer', 'not-found']) filterFavorites(reader.getCurrentResult().data!.items, text);
+    expect(reads).toBe(0); expect(writes).toBe(1);
+    loseResponse = true;
+    await expect(mutation.mutate({ ...input, favorite: false })).rejects.toThrow('response lost after write');
+    expect(writes).toBe(2); expect(reads).toBe(1);
+    expect(reader.getCurrentResult().data).toEqual({ items: [] });
+    expect(client.getQueryData<FavoriteList>(favoritesKey('source-b'))).toEqual({ items: [second] });
+  } finally { unsubscribe(); client.clear(); }
+});
+
+test('a read started during a pending write cannot replace the confirmed list with its older snapshot', async () => {
+  const client = new QueryClient();
+  const entered = deferred<void>(), release = deferred<void>(), stale = deferred<FavoriteList>();
+  const mutation = new MutationObserver(client, favoriteMutationOptions({ setFavorite: async () => {
+    entered.resolve(); await release.promise;
+    return { ok: true, value: { items: [first] } };
+  } }, client, 'source-a'));
+  let reads = 0, readAborted = false;
+  try {
+    client.setQueryData(favoritesKey('source-a'), { items: [] });
+    client.setQueryData(favoritesKey('source-b'), { items: [second] });
+    const saving = mutation.mutate({ sourceRevision: 'source-a', item: first, favorite: true, signal: new AbortController().signal });
+    await entered.promise;
+    // A focus/reconnect read may begin after onMutate cancelled earlier reads.
+    const reading = client.fetchQuery({ queryKey: favoritesKey('source-a'), queryFn: ({ signal }) => {
+      reads++; signal.addEventListener('abort', () => { readAborted = true; }, { once: true });
+      return stale.promise;
+    } }).catch(error => error);
+    release.resolve(); await saving;
+    expect(client.getQueryData<FavoriteList>(favoritesKey('source-a'))).toEqual({ items: [first] });
+    stale.resolve({ items: [] });
+    await reading;
+    expect(readAborted).toBe(true);
+    expect(client.getQueryData<FavoriteList>(favoritesKey('source-a'))).toEqual({ items: [first] });
+    expect(client.getQueryData<FavoriteList>(favoritesKey('source-b'))).toEqual({ items: [second] });
+    expect(reads).toBe(1);
+  } finally { release.resolve(); stale.resolve({ items: [] }); client.clear(); }
 });

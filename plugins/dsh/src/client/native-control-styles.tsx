@@ -3,6 +3,7 @@ export function NativeControlStyles() {
   return <style>{`
 .astron-sh-management-notice{position:fixed;top:20px;right:20px;z-index:1100;display:flex;align-items:flex-start;gap:12px;width:min(360px,calc(100vw - 32px));box-sizing:border-box;padding:14px;border:1px solid var(--astron-sh-border);border-radius:8px;background:var(--astron-sh-bg);color:var(--astron-sh-fg);box-shadow:0 4px 18px #0003;font-size:13px;overflow-wrap:anywhere}
 .astron-sh-management-notice>div{flex:1;min-width:0}.astron-sh-management-notice p{margin:6px 0 0}.astron-sh-management-notice>button{flex-shrink:0}
+.astron-sh-management-notice .astron-sh-favorite-undo-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .astron-sh-position-menu{z-index:1000;min-width:150px;max-width:calc(100vw - 16px);padding:4px;border:1px solid var(--astron-sh-border);border-radius:6px;background:var(--astron-sh-bg);color:var(--astron-sh-fg);box-shadow:0 4px 18px #0003;font-size:13px}
 .astron-sh-position-menu [role=menuitem]{padding:6px 10px;border-radius:3px;outline:none;cursor:pointer}
 .astron-sh-position-menu [data-highlighted]{background:var(--astron-sh-soft)}
@@ -80,6 +81,7 @@ export function NativeControlStyles() {
 .skillhub-controls .astron-sh-installation-status[data-tone=warning]{background:light-dark(#fff3df,#3e3020);color:light-dark(#945414,#f0c27c)}
 .skillhub-controls .astron-sh-skill-card>.astron-sh-card-footer{margin-top:auto;padding:10px 17px;min-height:43px;border-top:1px solid var(--astron-sh-border);display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .skillhub-controls .astron-sh-metrics{display:flex;gap:12px;align-items:center;font-size:12px;line-height:18px;color:var(--astron-sh-muted);font-variant-numeric:tabular-nums}.skillhub-controls .astron-sh-metrics>span{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.skillhub-controls .astron-sh-metrics-labeled{flex-wrap:wrap}
 .skillhub-controls .astron-sh-metrics svg,.skillhub-controls .astron-sh-card-open svg{width:13px;height:13px;flex-shrink:0}
 .skillhub-controls .astron-sh-card-open{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:11px;background:transparent;padding:0;z-index:1}
 .skillhub-controls .astron-sh-card-open:not(:disabled):hover{background:transparent}

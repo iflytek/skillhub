@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SkillCard } from '../src/client/skill-card.js';
+import { SkillCard, SkillMetrics } from '../src/client/skill-card.js';
 import { MarketCardActions } from '../src/client/market-card-actions.js';
 import { InstallationStatus } from '../src/client/installation-status.js';
 import { catalogLabel } from '../src/client/catalog-label.js';
@@ -9,6 +9,13 @@ import { FavoriteButton } from '../src/client/favorite-button.js';
 
 const item = { namespace: 'demo', slug: 'document', displayName: '文档助手' };
 describe('market presentation and action boundaries', () => {
+  test('detail metrics name market counts separately from local bookmark actions', () => {
+    const html = renderToStaticMarkup(<SkillMetrics labeled item={{ ...item, starCount: 42, downloadCount: 10, ratingAvg: 4 }} />);
+    expect(html).toContain('市场收藏 '); expect(html).toContain('aria-label="市场收藏数 42"');
+    expect(html).toContain('下载 '); expect(html).toContain('评分 ');
+    expect(html).not.toContain('<button');
+  });
+
   test('whole-card details trigger and installation action are sibling buttons', () => {
     const html = renderToStaticMarkup(<SkillCard item={item} version="1.0" onOpen={() => {}}
       actions={<button>安装</button>} />);
