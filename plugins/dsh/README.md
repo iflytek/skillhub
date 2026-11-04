@@ -35,17 +35,19 @@ SkillHub 的 DSH 原生插件。在 DSH 侧栏打开 **技能中心**，匿名�
 
 | 项目 | 要求或范围 |
 | --- | --- |
-| DSH | `0.2.0-rc.2` 或 `0.2.1-rc.2`；Host、app-boot 与注入 Client 模块必须属于同一精确发行版 |
-| Cordis | `0.2.0-rc.2` 保留以下两组完整组合；`0.2.1-rc.2` 仅使用 `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7` |
+| DSH | 源码候选支持 `0.2.0-rc.2`、`0.2.1-rc.2`、`0.2.1-rc.5`；Host、app-boot 与注入 Client 模块必须属于同一精确发行版 |
+| Cordis | `0.2.0-rc.2` 保留以下两组完整组合；`0.2.1-rc.2` 与 `0.2.1-rc.5` 仅使用 `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7` |
 | Host Node | `>=24.2.0 <25`；不能使用 Node 24.0.0 |
 | 开发包管理器 | Bun `1.3.13`，按锁文件安装 |
 | 当前 UI | 中文；支持 DSH 深浅主题和窄屏 |
-| 已验证环境 | Linux 两版 DSH Host 严格安装、原生探针及浏览器用户/项目安装、升级、卸载与取消；Windows 浏览器访问真实 Host 的界面和交互 |
-| 验证边界 | 功能实现已进行真实模型对话及跨平台 CI；构建产物与公开包的验收分别记录。真实桌面客户端、原生 Windows/macOS 人工交互和 SaaS 验收不由这些结果替代 |
+| 已验证环境 | 历史双RC2验收见既有记录。本轮Linux：RC5在Node 24.2.0/24.17.0原生探针通过，两个RC2在Node 24.2.0回归通过；浏览器及其他维度按第53节分别记录 |
+| 验证边界 | 历史功能证据不自动覆盖RC5。本轮远程CI、原生Windows/macOS、真实模型和SaaS未执行；候选包与公开npm包分开验收 |
 
 Windows 浏览器验证不等于 Windows 原生 Host 的全部文件操作已经验证。CI 的平台矩阵也不替代真实桌面、模型及目标实例验收。完整支持边界见仓库内的 [兼容设计](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) 和 [验收标准](../../openspec/changes/add-dsh-native-plugin/acceptance.md)。
 
-`0.3.1` 包含已合并的 [Issue #981 兼容修复](https://github.com/iflytek/skillhub/pull/988)；已发布的 `0.3.0` 不包含此修复。其他 RC、未来发行版、混装模块和 Host/Client 版本不一致均拒绝新写入。可选 `userQuestions` 按宿主服务是否可用启用，缺失时仍回退插件确认框；其版本不属于必需写入门禁。两个已列 RC 的问答 API 一致，peer 声明允许二者，不据此承诺其他版本兼容。
+`0.3.1` 包含已合并的 [Issue #981 兼容修复](https://github.com/iflytek/skillhub/pull/988)；已发布的 `0.3.0` 不包含此修复。其他 RC、未来发行版、混装模块和 Host/Client 版本不一致均拒绝新写入。可选 `userQuestions` 按宿主服务是否可用启用，缺失时仍回退插件确认框；其版本不属于必需写入门禁。三个已列 RC 的问答 API 一致，peer 声明允许这些精确版本，不据此承诺其他版本兼容。
+
+源码候选新增 `0.2.1-rc.5` 的支持范围与验收按 [兼容设计](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) 及任务第53节的验证记录维护；新增版本不表示公开 npm `0.6.1` 已具备同等支持。平台、Node边界、浏览器与模型验收分别记录，发布另行安排。
 
 ## 构建与打包
 
@@ -60,7 +62,7 @@ bun run check
 npm pack --dry-run --ignore-scripts
 ```
 
-`dsh-typert-generator` 固定在 `0.2.0-rc.2` 以生成两个宿主共用的 RPC 契约；其他 DSH 开发依赖按 `0.2.1-rc.2` 类型检查。生成器版本不是宿主版本绕过条件。
+`dsh-typert-generator` 固定在 `0.2.0-rc.2` 以生成已列宿主共用的 RPC 契约；其他 DSH 开发依赖按 `0.2.1-rc.2` 类型检查。生成器版本不是宿主版本绕过条件。
 
 `check` 依次构建 Host、Client、Remote 绑定与类型声明，执行 typecheck、lint 和测试。插件 lint 使用 `cli/` 中锁定的工具。Bun 仅用于开发构建，包内 Host 在 Node 上运行；React/React DOM 由 DSH 提供。
 

@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 
-export const supportedDshVersions = ['0.2.0-rc.2', '0.2.1-rc.2'] as const;
+export const supportedDshVersions = ['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5'] as const;
 export type SupportedDshVersion = typeof supportedDshVersions[number];
 
 /** Retained Host dependency baseline; a match is necessary, not full product acceptance. */
@@ -42,7 +42,7 @@ export function assertHostDependencies(readManifest: (name: string) => unknown =
     if (name === '@deepseek-ai/cordis') cordis = manifest.version;
     else release = manifest.version;
   }
-  if (release === '0.2.1-rc.2' && cordis !== '4.0.5') {
+  if (release !== '0.2.0-rc.2' && cordis !== '4.0.5') {
     throw new Error('Host dependency baseline does not match; local writes are disabled.');
   }
   return release as SupportedDshVersion;

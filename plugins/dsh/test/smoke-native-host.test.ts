@@ -168,10 +168,13 @@ test('native smoke accepts only explicit DSH releases and rejects incompatible r
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   expect(manifest.peerDependencies['@deepseek-ai/dsh-fs']).toBe(supportedDshVersions.join(' || '));
   for (const version of supportedDshVersions) expect(selectDshVersion(version)).toBe(version);
-  for (const version of ['latest', 'next', '0.2.1', '0.2.2-rc.1', '0.2.1-rc.2 --ignore-scripts']) {
+  for (const version of ['latest', 'next', 'alpha', '0.2.1', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.2-rc.1', '0.2.1-rc.2 --ignore-scripts', '0.2.1-rc.5 --ignore-scripts']) {
     expect(() => selectDshVersion(version)).toThrow('Unsupported DSH release');
   }
-  expect(() => selectDshVersion('0.2.1-rc.2', 'retained')).toThrow('requires the current Cordis family');
+  expect(selectDshVersion('0.2.0-rc.2', 'retained')).toBe('0.2.0-rc.2');
+  for (const version of ['0.2.1-rc.2', '0.2.1-rc.5']) {
+    expect(() => selectDshVersion(version, 'retained')).toThrow('requires the current Cordis family');
+  }
 });
 
 
