@@ -47,6 +47,11 @@ describe('native M0 package', () => {
     const fiber = ctx.plugin(SkillHubService);
     await fiber;
     expect(ctx.skillhub.getStatus()).toBe('SkillHub: connected');
+    expect(ctx.skillhub.getCompatibility()).toEqual({
+      dependencyBaseline: 'unverified',
+      candidateDshVersion: '0.2.0-rc.2 / 0.2.1-rc.2 / 0.2.1-rc.5',
+      localWritesAllowed: false,
+    });
     expect(ctx.skillhub.typertRemote.namespace).toBe('skillhub');
     await expect(ctx.skillhub.listInstallTargets('forged-detail', new AbortController().signal)).rejects.toThrow('Conversation unavailable');
     await expect(ctx.skillhub.getOperation('forged', 'forged')).rejects.toThrow('Conversation unavailable');

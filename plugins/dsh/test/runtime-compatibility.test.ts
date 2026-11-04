@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { supportedDshVersions } from '../src/host/compatibility.js';
 import { assertNodeRuntime, nodeRuntimeRange, assertRuntimeCompatibility, clientPackageBaseline, runtimePackageBaseline } from '../src/host/runtime-compatibility.js';
 
 function fixture() {
@@ -150,7 +151,7 @@ test('plugin peer copies cannot mask mismatched or absent Host dependency resolu
   }
 });
 
-for (const release of ['0.2.0-rc.2', '0.2.1-rc.2'] as const) {
+for (const release of supportedDshVersions) {
   test(`complete ${release} Host and Client graph matches; every mixed release is rejected`, () => {
     const { packages, clients, check } = fixture();
     for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
@@ -160,25 +161,41 @@ for (const release of ['0.2.0-rc.2', '0.2.1-rc.2'] as const) {
     packages.get('@deepseek-ai/cordis-plugin-timer')!.version = '1.1.7';
     for (const name of clients.keys()) clients.set(name, { name, version: release });
     expect(check()).toBe(release);
-    const other = release === '0.2.0-rc.2' ? '0.2.1-rc.2' : '0.2.0-rc.2';
-    for (const value of packages.values()) {
-      if (!value.name.startsWith('@deepseek-ai/dsh')) continue;
-      value.version = other;
-      expect(check).toThrow('local writes are disabled');
-      value.version = release;
-      expect(check()).toBe(release);
-    }
-    for (const name of clients.keys()) {
-      clients.set(name, { name, version: other });
-      expect(check).toThrow('local writes are disabled');
-      clients.set(name, { name, version: release });
+    for (const other of supportedDshVersions.filter(candidate => candidate !== release)) {
+      for (const value of packages.values()) {
+        if (!value.name.startsWith('@deepseek-ai/dsh')) continue;
+        value.version = other;
+        expect(check).toThrow('local writes are disabled');
+        value.version = release;
+        expect(check()).toBe(release);
+      }
+      for (const name of clients.keys()) {
+        clients.set(name, { name, version: other });
+        expect(check).toThrow('local writes are disabled');
+        clients.set(name, { name, version: release });
+      }
     }
   });
 }
 
-test('new RC rejects a complete retained Cordis family below its official minimum', () => {
+for (const release of ['0.2.1-rc.2', '0.2.1-rc.5']) {
+  test(`${release} rejects a complete retained Cordis family below its official minimum`, () => {
+    const { packages, clients, check } = fixture();
+    for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
+    for (const name of clients.keys()) clients.set(name, { name, version: release });
+    expect(check).toThrow('local writes are disabled');
+  });
+}
+
+test('coherent but unvalidated intermediate RCs are not implicitly supported', () => {
   const { packages, clients, check } = fixture();
-  for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = '0.2.1-rc.2';
-  for (const name of clients.keys()) clients.set(name, { name, version: '0.2.1-rc.2' });
-  expect(check).toThrow('local writes are disabled');
+  packages.get('@deepseek-ai/cordis')!.version = '4.0.5';
+  packages.get('@deepseek-ai/cordis-plugin-loader')!.version = '1.0.6';
+  packages.get('@deepseek-ai/cordis-plugin-include')!.version = '1.0.10';
+  packages.get('@deepseek-ai/cordis-plugin-timer')!.version = '1.1.7';
+  for (const release of ['0.2.1-rc.3', '0.2.1-rc.4', '0.2.2-alpha.3']) {
+    for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
+    for (const name of clients.keys()) clients.set(name, { name, version: release });
+    expect(check).toThrow('local writes are disabled');
+  }
 });

@@ -218,3 +218,20 @@ The candidate branch adds `0.2.1-rc.2` alongside retained `0.2.0-rc.2`; this sup
 Upstream npm artifacts for the two releases were compared: user-questions declarations/implementation are unchanged; Gateway now requires an explicit Peer for direct in-process calls, while the plugin uses generated Remote bindings. The integration observers must use the official Connection Peer API on the new release. The retained generator emits the shared RPC contract while source checks use current Host/Client declarations. Both generators enforce registered workspace boundaries for merged declarations. The new generator also emits an import from `@deepseek-ai/dsh-typert-protocol/remote-info`, a subpath absent from the retained RC. Keeping the retained compiler preserves the common generated format; it has no runtime protocol dependency and does not downgrade the current protocol module.
 
 CI preserves the old RC's OS/Node coverage and retained Cordis smoke, adding an independent new-RC official Host matrix at Node 24.2.0 and current Node 24 on Linux. Native initialization, package installation, runtime-baseline and plugin-lifecycle probes must pass without peer overrides on fresh graphs. These probes do not replace browser/settings/search/install/upgrade/uninstall acceptance, macOS/Windows native operations, or real-model evidence. Final verification records passed and pending dimensions separately in acceptance.md.
+
+
+## 2026-11-04：新增RC5候选与保留基线
+
+本轮目标为验证并适配官方 `0.2.1-rc.5`，保留已支持的 `0.2.0-rc.2` 与 `0.2.1-rc.2` 回归。此处是候选实施范围，不表示公开npm支持声明已改变。精确版本支持必须绑定实际依赖组合、Node条件、Host/Remote协议和Client行为；不仅增加peer字符串，不以本机插件副本掩盖宿主混装。alpha不自动纳入本轮。
+
+先对照已发布包的清单、声明和实际实现，完成原候选在RC5上的阻断复现，再确定适配文件。生成器保持现有共同协议，除非具体不兼容证据证明必须变更；若需要变更，应同时验证旧Host而不是只验证新版本。会话导航的空白对话复用与草稿接管行为须在真实RC5中单独核对。
+
+新增版本仍遵守可信上下文、逐次重新核验解析图、精确目标、确认、幂等、既有事务恢复和库存v2兼容。依赖不受支持时新写入保持拒绝，原操作查询不丢失。SaaS API、技能创作、UI重设计及发布不在本轮实施范围。实际结果按第53章逐项记录，平台、浏览器、模型及发布证据分开。
+
+本轮实施结果：精确peer与Host/Client实际解析图增加RC5，Node范围维持 `>=24.2.0 <25`；两个0.2.1候选仅接受Cordis 4.0.5完整家族，旧0.2.0候选保留两组家族。已发布包比对表明使用到的Remote协议、技能文件系统及路径接口一致，因此保留生成器0.2.0-rc.2及现有新建会话API，不引入导航或事务重写。新增源码回归覆盖RC5、不同发行版混装、未知RC/alpha、不可读和变化的清单，以及未验证状态中的支持版本说明。
+
+Linux隔离验收使用官方RC5依赖图；原候选被官方插件安装门禁拒绝，适配后的私有候选无需 `allow-version`、风险或peer覆盖即可安装。Node 24.2.0和24.17.0分别执行真实Host探针；两个旧RC2在24.2.0复验。旧宿主依赖图只读复用，新Profile、HOME和库存隔离，不把该回归描述为旧宿主全新下载。首次RC5冷安装下载超时后，在独立环境使用现有公共镜像和下载缓存完成重试；未修改全局npm配置。
+
+CI保留原14个组合，扩展为19个：6个构建检查、4个官方Host组合、9个启停组合。RC5官方Host包含Node 24.2.0及当前24，启停覆盖三个OS；这只是工作流配置和矩阵校验，远程CI尚未运行。原生Windows/macOS、RC5真实模型和生产SaaS未在本轮执行，发布后置。
+
+浏览器需区分新建会话与返回空白草稿：官方RC5侧栏不展示非当前空白会话，原生“新会话”也不保证定位精确旧草稿。因此不得声称原生侧栏返回已经通过；验收驱动仅保存会话ID，通过公开 `uiWorkspace.openSession` 返回原会话，再检查真实编辑器和附件。该驱动只位于外部验收目录，不进入插件，不保活会话、不修改草稿、不发送模型消息。

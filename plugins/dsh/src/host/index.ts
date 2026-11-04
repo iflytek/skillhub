@@ -30,6 +30,7 @@ import type { RegistryConnectionTest, CatalogContext, CatalogLabels, CatalogPage
 import { RegistryAdapter, RegistryError } from './registry-adapter.js';
 import { LocalRuntime } from './local-runtime.js';
 import { assertRuntimeCompatibility } from './runtime-compatibility.js';
+import { supportedDshVersions } from './compatibility.js';
 import type { HostCompatibility } from './types.js';
 import { InstallationTargets } from './installation-targets.js';
 import { ConfirmationPlans, UpgradePlans, RemovalPlans, TogglePlans } from './upgrade-plans.js';
@@ -199,7 +200,7 @@ export class SkillHubService extends TypertRemoteService {
       const candidateDshVersion = this.assertRuntimeBaseline();
       return { dependencyBaseline: 'matched', candidateDshVersion, localWritesAllowed: true };
     } catch {
-      return { dependencyBaseline: 'unverified', candidateDshVersion: '0.2.0-rc.2 / 0.2.1-rc.2', localWritesAllowed: false };
+      return { dependencyBaseline: 'unverified', candidateDshVersion: supportedDshVersions.join(' / '), localWritesAllowed: false };
     }
   }
 

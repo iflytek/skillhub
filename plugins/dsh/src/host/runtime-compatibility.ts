@@ -79,7 +79,7 @@ export function assertRuntimeCompatibility(
     const family = cordisFamilies.find(candidate => Object.entries(candidate).every(([name, version]) => packages.get(name)?.version === version));
     const release = packages.get('@deepseek-ai/dsh')?.version;
     if (!supportedDshVersions.some(version => version === release)) throw new Error('Unsupported DSH release');
-    if (!family || (release === '0.2.1-rc.2' && family['@deepseek-ai/cordis'] !== '4.0.5')) throw new Error('Runtime Cordis family mismatch');
+    if (!family || (release !== '0.2.0-rc.2' && family['@deepseek-ai/cordis'] !== '4.0.5')) throw new Error('Runtime Cordis family mismatch');
     for (const [name, version] of Object.entries({ ...runtimePackageBaseline, ...family })) {
       const expected = name.startsWith('@deepseek-ai/dsh') ? release : version;
       if (packages.get(name)?.version !== expected) throw new Error('Runtime package mismatch');
