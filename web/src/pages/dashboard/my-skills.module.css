@@ -77,7 +77,7 @@
   color: #666670;
 }
 
-.page .cardContent { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 32px 20px auto; gap: 4px; }
+.page .cardContent { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 32px 20px auto; gap: 8px; }
 .page .cardHeader { min-width: 0; min-height: 32px; }
 .page .infoButton { display: inline-flex; align-items: center; gap: 4px; min-width: 0; height: 18px; flex: 1 1 90px; text-align: left; border-radius: 3px; }
 .page .infoButton:hover { color: hsl(var(--foreground)); }
@@ -86,7 +86,7 @@
 .page .version { max-width: 220px; min-width: 0; }
 
 @media (min-width: 768px) {
-  .page .skillCard { height: 108px; }
+  .page .skillCard { height: 124px; padding: 18px 20px; }
   .page .cardContent { grid-template-rows: 32px 20px 18px; }
   .page .metadata { flex-wrap: nowrap; }
 }
@@ -156,7 +156,7 @@
   .moreMenu .mobileUpdate { display: none; }
 }
 
-.page .skillList { margin-top: 20px; }
+.page .skillList { margin-top: 20px; gap: 16px; }
 .page h1 + p { font-size: 13px; line-height: 20px; }
 .page .skillCard:hover { border-color: #c7c7d1; }
 :global(.dark) .page .skillCard:hover { border-color: hsl(var(--border)); }
