@@ -715,6 +715,12 @@ public class SkillPublishService {
             version.setGithubSyncIngestionId(syncTarget.ingestionId());
         }
         boolean autoPublish = forceAutoPublish || isSuperAdmin;
+        boolean trustedPublish = !autoPublish && syncTarget == null && bundleTarget == null
+                && visibility == SkillVisibility.NAMESPACE_ONLY && securityScanService.isEnabled()
+                && namespace.getType() == NamespaceType.TEAM && namespace.isTrustedPublishEnabled()
+                && namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), publisherId)
+                    .filter(member -> member.getRole() == NamespaceRole.MEMBER && member.isReviewExempt())
+                    .isPresent();
         if (autoPublish) {
             version.setStatus(SkillVersionStatus.PUBLISHED);
             version.setPublishedAt(currentTime());
@@ -867,8 +873,9 @@ public class SkillPublishService {
                     : ReviewTask.forGithubSyncSkillVersion(version.getId(), skill.getId(),
                             namespace.getId(), version.getVersion(), publisherId,
                             syncTarget.ingestionId());
+            reviewTask.setAutoApproveOnSafeScan(trustedPublish);
             ReviewTask savedReviewTask = reviewTaskRepository.save(reviewTask);
-            eventPublisher.publishEvent(new ReviewSubmittedEvent(
+            if (!trustedPublish) eventPublisher.publishEvent(new ReviewSubmittedEvent(
                     savedReviewTask.getId(),
                     skill.getId(),
                     version.getId(),

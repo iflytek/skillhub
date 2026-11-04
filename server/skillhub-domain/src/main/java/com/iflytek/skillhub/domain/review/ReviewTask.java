@@ -80,6 +80,9 @@ public class ReviewTask {
     @Column(name = "submitted_by", nullable = false)
     private String submittedBy;
 
+    @Column(name = "auto_approve_on_safe_scan", nullable = false)
+    private boolean autoApproveOnSafeScan;
+
     @Column(name = "reviewed_by")
     private String reviewedBy;
 
@@ -212,6 +215,8 @@ public class ReviewTask {
 
     public String getSubmittedBy() { return submittedBy; }
 
+    public boolean isAutoApproveOnSafeScan() { return autoApproveOnSafeScan; }
+    public void setAutoApproveOnSafeScan(boolean enabled) { this.autoApproveOnSafeScan = enabled; }
     public String getReviewedBy() { return reviewedBy; }
 
     public void setReviewedBy(String reviewedBy) { this.reviewedBy = reviewedBy; }

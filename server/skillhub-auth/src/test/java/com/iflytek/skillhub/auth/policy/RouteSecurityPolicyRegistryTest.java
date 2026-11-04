@@ -19,6 +19,14 @@ class RouteSecurityPolicyRegistryTest {
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
     @Test
+    void trustedPublishGovernanceWritesRejectApiTokens() {
+        assertFalse(registry.authorizeApiToken("PUT", "/api/web/namespaces/team-a/trusted-publish-policy",
+                Set.of("skill:publish")).allowed());
+        assertFalse(registry.authorizeApiToken("PUT", "/api/web/namespaces/team-a/members/publisher/review-exemption",
+                Set.of("skill:publish")).allowed());
+    }
+
+    @Test
     void visibilityWritesRequirePublishScopeAndAuthenticatedReads() {
         for (String prefix : List.of("/api/v1", "/api/web")) {
             String route = prefix + "/skills/team/foo/visibility";
