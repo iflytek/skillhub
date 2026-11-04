@@ -5,6 +5,7 @@ FROM --platform=$BUILDPLATFORM node:22-alpine AS build
 RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 # Corepack uses Node fetch; explicitly honor the build proxy for its download.
 RUN NODE_USE_ENV_PROXY=1 pnpm install --frozen-lockfile
 COPY . .
