@@ -20,4 +20,3 @@ networks:
   business-logs:
     external: true
     name: ${SKILLHUB_BUSINESS_LOGS_NETWORK:-skillhub-business-logs-demo}
-
