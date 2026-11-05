@@ -30,6 +30,10 @@ class ValidationRunOrchestratorTest {
     private final SkillDraftService drafts = mock(SkillDraftService.class);
     private final DraftStructureValidator validator = mock(DraftStructureValidator.class);
     private final ValidationEventBroadcaster broadcaster = mock(ValidationEventBroadcaster.class);
+    private final com.iflytek.skillhub.domain.authoring.service.RuntimeBindingService bindings =
+            mock(com.iflytek.skillhub.domain.authoring.service.RuntimeBindingService.class);
+    private final com.iflytek.skillhub.domain.authoring.service.RuntimeBindingValidator bindingValidator =
+            mock(com.iflytek.skillhub.domain.authoring.service.RuntimeBindingValidator.class);
 
     @Test
     void duplicateClaimCannotEmitAnActiveRunAsFinished() {
@@ -135,6 +139,7 @@ class ValidationRunOrchestratorTest {
                                                    ScheduledExecutorService timer, long timeout) {
         AuthoringProperties properties = new AuthoringProperties();
         properties.setRunTimeoutMs(timeout);
-        return new ValidationRunOrchestrator(runs, drafts, validator, broadcaster, executor, timer, properties);
+        return new ValidationRunOrchestrator(runs, drafts, bindings, validator, bindingValidator,
+                java.util.List.of(), broadcaster, properties, executor, timer);
     }
 }

@@ -1,12 +1,12 @@
 package com.iflytek.skillhub.config;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Feature configuration for the skill authoring and validation platform
- * ({@code skillhub.authoring.*}). This layer covers the draft authoring and
- * structure-validation core; runtime-binding configuration (script execution
- * backends, LLM endpoints, MCP servers) arrives with the runtime layer.
+ * ({@code skillhub.authoring.*}).
  */
 @ConfigurationProperties(prefix = "skillhub.authoring")
 public class AuthoringProperties {
@@ -22,6 +22,8 @@ public class AuthoringProperties {
 
     /** Active runs older than this are swept to TIMED_OUT by the maintenance task. */
     private int staleRunMinutes = 30;
+
+    private final LocalScript localScript = new LocalScript();
 
     public String getWorkspaceRoot() {
         return workspaceRoot;
@@ -54,4 +56,105 @@ public class AuthoringProperties {
     public void setStaleRunMinutes(int staleRunMinutes) {
         this.staleRunMinutes = staleRunMinutes;
     }
+
+    public LocalScript getLocalScript() {
+        return localScript;
+    }
+
+    /** Local script execution runtime. */
+    public static class LocalScript {
+        private boolean enabled = true;
+
+        /** Where scripts run: INLINE on the server host (dev), DOCKER in a locked-down container (production). */
+        private ScriptExecutionMode executionMode = ScriptExecutionMode.INLINE;
+
+        /** Deployment-owned variable names available to all local-script draft owners. Empty denies all. */
+        private List<String> environmentAllowlist = List.of();
+
+        public List<String> getEnvironmentAllowlist() {
+            return environmentAllowlist;
+        }
+
+        public void setEnvironmentAllowlist(List<String> environmentAllowlist) {
+            this.environmentAllowlist = environmentAllowlist == null ? List.of() : List.copyOf(environmentAllowlist);
+        }
+
+        private final Docker docker = new Docker();
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public ScriptExecutionMode getExecutionMode() {
+            return executionMode;
+        }
+
+        public void setExecutionMode(ScriptExecutionMode executionMode) {
+            this.executionMode = executionMode;
+        }
+
+        public Docker getDocker() {
+            return docker;
+        }
+
+        /** Container isolation profile for the docker execution mode. */
+        public static class Docker {
+            private String image = "alpine:3.20";
+            private String memory = "256m";
+            private String cpus = "1.0";
+            private int pidsLimit = 128;
+            private String tmpfsSize = "64m";
+
+            public String getImage() {
+                return image;
+            }
+
+            public void setImage(String image) {
+                this.image = image;
+            }
+
+            public String getMemory() {
+                return memory;
+            }
+
+            public void setMemory(String memory) {
+                this.memory = memory;
+            }
+
+            public String getCpus() {
+                return cpus;
+            }
+
+            public void setCpus(String cpus) {
+                this.cpus = cpus;
+            }
+
+            public int getPidsLimit() {
+                return pidsLimit;
+            }
+
+            public void setPidsLimit(int pidsLimit) {
+                this.pidsLimit = pidsLimit;
+            }
+
+            public String getTmpfsSize() {
+                return tmpfsSize;
+            }
+
+            public void setTmpfsSize(String tmpfsSize) {
+                this.tmpfsSize = tmpfsSize;
+            }
+        }
+    }
+
+    /** Script execution backend selection. */
+    public enum ScriptExecutionMode {
+        INLINE,
+        DOCKER
+    }
+
 }
