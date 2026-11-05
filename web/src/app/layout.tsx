@@ -12,6 +12,8 @@ import { dismissOpenOverlays } from '@/shared/lib/dismiss-open-overlays'
 import { syncDocumentLanguage } from '@/shared/lib/document-language'
 import { DashboardSidebar, SIDEBAR_GROUPS } from '@/pages/dashboard'
 import { canViewGovernanceCenter } from '@/shared/lib/governance-access'
+import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
+import { canAccessReviewCenter } from '@/features/review/review-paths'
 import { APP_HEADER_CONTENT_CLASS_NAME, getAppHeaderClassName } from './layout-header-style'
 import { APP_FRAME_CLASS_NAME } from '@/shared/lib/layout-frame'
 import { AUTH_ENTRY_PATHS, SPLIT_AUTH_PATHS, getAppMainContentLayout, resolveAppMainContentPathname } from './layout-main-content'
@@ -42,11 +44,14 @@ export function Layout() {
   const isSplitAuthRoute = SPLIT_AUTH_PATHS.includes(contentLayoutPathname as typeof SPLIT_AUTH_PATHS[number])
   const showSidebar = mainContentLayout.sidebarRowClassName !== undefined
   const governanceVisible = canViewGovernanceCenter(user?.platformRoles)
+  const { data: managedNamespaces } = useMyNamespaces(Boolean(user) && showSidebar)
+  const reviewVisible = canAccessReviewCenter(user?.platformRoles, managedNamespaces)
   const filteredDashboardGroups = SIDEBAR_GROUPS
     .map((group) => ({
       ...group,
       items: group.items.filter((item) => (
         (!item.admin || governanceVisible)
+        && (!item.review || reviewVisible)
         && (!item.superAdmin || user?.platformRoles?.includes('SUPER_ADMIN'))
         && (!item.passwordCapability || user?.canChangePassword === true)
       )),

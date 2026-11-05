@@ -1574,6 +1574,9 @@ export const suiteApi = {
 }
 
 export const reviewApi = {
+  async scopes(): Promise<import('./types').ReviewScope[]> {
+    return fetchJson<import('./types').ReviewScope[]>(`${WEB_API_PREFIX}/reviews/scopes`)
+  },
   async listSync(params: { status: string; namespaceId?: number; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
     const result = await client.GET('/api/v1/reviews/sync', {
       params: { query: { status: params.status, namespaceId: params.namespaceId,
@@ -1587,9 +1590,12 @@ export const reviewApi = {
   async getSyncSource(id: number): Promise<GithubSyncReviewSource> {
     return fetchJson<GithubSyncReviewSource>(`${WEB_API_PREFIX}/reviews/sync/${id}/source`)
   },
-  async list(params: { status: string; namespaceId?: number; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
+  async list(params: { status: string; namespaceId?: number; q?: string; reviewKind?: string; originType?: string; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
     const searchParams = new URLSearchParams()
     searchParams.set('status', params.status)
+    if (params.q?.trim()) searchParams.set('q', params.q.trim())
+    if (params.reviewKind && params.reviewKind !== 'ALL') searchParams.set('reviewKind', params.reviewKind)
+    if (params.originType && params.originType !== 'ALL') searchParams.set('originType', params.originType)
     if (params.namespaceId !== undefined) {
       searchParams.set('namespaceId', String(params.namespaceId))
     }

@@ -7,6 +7,7 @@ let pathname = '/dashboard'
 let resolvedPathname = '/dashboard'
 let roles: string[] = []
 let canChangePassword = false
+let namespaceRole: 'OWNER' | 'ADMIN' | 'MEMBER' | undefined
 
 vi.mock('@tanstack/react-router', () => ({
   Outlet: () => <div data-testid="outlet">page-content</div>,
@@ -17,6 +18,7 @@ vi.mock('react-i18next', async () => ({
   ...await vi.importActual<typeof import('react-i18next')>('react-i18next'),
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }))
+vi.mock('@/shared/hooks/use-namespace-queries', () => ({ useMyNamespaces: () => ({ data: namespaceRole ? [{ type: 'TEAM', currentUserRole: namespaceRole, status: 'ACTIVE', slug: 'design' }] : [] }) }))
 vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ user: { userId: 'test-reader', displayName: 'Reader', platformRoles: roles, canChangePassword }, isLoading: false }) }))
 vi.mock('@/shared/components/language-switcher', () => ({ LanguageSwitcher: () => null }))
 vi.mock('@/shared/components/theme-toggle', () => ({ ThemeToggle: () => null }))
@@ -26,7 +28,7 @@ vi.mock('@/features/notification/notification-bell', () => ({ NotificationBell: 
 import { APP_FRAME_CLASS_NAME } from '@/shared/lib/layout-frame'
 import { Layout } from './layout'
 
-beforeEach(() => { pathname = '/dashboard'; resolvedPathname = pathname; roles = []; canChangePassword = false })
+beforeEach(() => { pathname = '/dashboard'; resolvedPathname = pathname; roles = []; canChangePassword = false; namespaceRole = undefined })
 afterEach(cleanup)
 
 describe('shared console layout composition', () => {
@@ -109,6 +111,18 @@ describe('shared console layout composition', () => {
     roles = ['SUPER_ADMIN']
     view.rerender(<Layout />)
     expect(within(sidebar).getByText('sidebar.githubSync')).toBeTruthy()
+  })
+
+  it('shows the unified review entry only for authorized namespace managers', () => {
+    const view = render(<Layout />)
+    const sidebar = screen.getByRole('complementary')
+    expect(within(sidebar).queryByRole('link', { name: 'reviewCenter.title' })).toBeNull()
+    namespaceRole = 'OWNER'
+    view.rerender(<Layout />)
+    expect(within(sidebar).getByRole('link', { name: 'reviewCenter.title' }).getAttribute('href')).toBe('/dashboard/reviews')
+    namespaceRole = 'MEMBER'
+    view.rerender(<Layout />)
+    expect(within(sidebar).queryByRole('link', { name: 'reviewCenter.title' })).toBeNull()
   })
 
   it('keeps a single frame while settings-to-dashboard navigation resolves', () => {

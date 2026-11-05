@@ -68,6 +68,21 @@ function createDetail(): ReviewSkillDetail {
 }
 
 describe('ReviewSkillDetailSection', () => {
+  it('shows the effective review presentation before the original package files', () => {
+    const detail = createDetail()
+    detail.skill.summary = 'Old public summary'
+    detail.presentation = { displayName: 'Pending display name', summary: 'Custom pending summary', overview: '# Custom pending overview', overviewSource: 'WEB' }
+    detail.documentationContent = '# Original README content'
+    const html = renderToStaticMarkup(<ReviewSkillDetailSection detail={detail} />)
+    expect(html).toContain('Custom pending summary')
+    expect(html).toContain('Custom pending overview')
+    expect(html).not.toContain('Old public summary')
+    expect(html).toContain('Original README content')
+    expect(html.indexOf('Custom pending overview')).toBeLessThan(html.indexOf('Original README content'))
+    expect(html).toContain('reviewWorkbench.originalFiles')
+    expect(html).toContain('<details')
+  })
+
   it('renders the download link, file tree, and review-bound documentation together', () => {
     const html = renderToStaticMarkup(<ReviewSkillDetailSection detail={createDetail()} />)
 

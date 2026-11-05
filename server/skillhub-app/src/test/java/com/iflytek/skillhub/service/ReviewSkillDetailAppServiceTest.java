@@ -260,6 +260,76 @@ class ReviewSkillDetailAppServiceTest {
         assertThat(service.getReviewSkillDetail(42L, "admin", Map.of()).avatarChange().readyForApproval()).isFalse();
     }
 
+    @Test
+    void reviewPresentationUsesPendingOverridesAndComparesOnlyPublishedBaseline() {
+        ReviewTask task = createReviewTask(42L, 101L, 20L, "submitter");
+        Namespace namespace = createNamespace(20L, "team-a");
+        Skill skill = createSkill(101L, 20L, "skill-a");
+        SkillVersion pending = createVersion(101L, 101L, "2.0.0", SkillVersionStatus.PENDING_REVIEW);
+        pending.setParsedMetadataJson("""
+                {"name":"package","description":"原包描述","shortDescriptionOverride":"待审自定义简介",
+                 "overviewOverride":"# 待审自定义概述","frontmatter":{"metadata":{"overview":"包内概述"}}}
+                """);
+        SkillVersion published = createVersion(100L, 101L, "1.0.0", SkillVersionStatus.PUBLISHED);
+        published.setParsedMetadataJson("{\"name\":\"old\",\"description\":\"旧简介\"}");
+        published.setPublishedAt(Instant.parse("2020-01-01T00:00:00Z"));
+        SkillVersion future = createVersion(102L, 101L, "3.0.0", SkillVersionStatus.PUBLISHED);
+        setField(future, "publishedAt", Instant.parse("2099-01-01T00:00:00Z"));
+        SkillFile same = new SkillFile(101L, "same.md", 10L, "text/markdown", "same", "same");
+        SkillFile changed = new SkillFile(101L, "changed.md", 12L, "text/markdown", "new", "new");
+        given(reviewTaskRepository.findById(42L)).willReturn(Optional.of(task));
+        given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
+        given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
+        given(reviewService.canViewReview(task, "admin", namespace.getType(), Map.of(), Set.of("SKILL_ADMIN"))).willReturn(true);
+        given(reviewService.canReviewNamespace(task, "admin", namespace.getType(), Map.of(), Set.of("SKILL_ADMIN"))).willReturn(true);
+        given(skillQueryService.getReviewSkillSnapshot(101L, false)).willReturn(
+                new SkillQueryService.ReviewSkillSnapshotDTO(skill, "Owner", pending, future,
+                        List.of(future, pending, published), List.of(same, changed,
+                        new SkillFile(101L, "added.md", 2L, "text/plain", "added", "added")), "README.md", null));
+        given(skillQueryService.getReviewSkillSnapshot(100L, false)).willReturn(
+                new SkillQueryService.ReviewSkillSnapshotDTO(skill, "Owner", published, published,
+                        List.of(published), List.of(new SkillFile(100L, "same.md", 10L, "text/markdown", "same", "old-same"),
+                        new SkillFile(100L, "changed.md", 11L, "text/markdown", "old", "old"),
+                        new SkillFile(100L, "removed.md", 2L, "text/plain", "removed", "removed")), "README.md", null));
+
+        ReviewSkillDetailResponse response = service.getReviewSkillDetail(42L, "admin", Map.of(), false);
+
+        assertThat(response.skill().summary()).isEqualTo("待审自定义简介");
+        assertThat(response.presentation().summary()).isEqualTo("待审自定义简介");
+        assertThat(response.presentation().overview()).isEqualTo("# 待审自定义概述");
+        assertThat(response.presentation().overviewSource()).isEqualTo("WEB");
+        assertThat(response.documentationContent()).isNull();
+        assertThat(response.comparison().baseVersion()).isEqualTo("1.0.0");
+        assertThat(response.comparison().baseline().summary()).isEqualTo("旧简介");
+        assertThat(response.comparison().files()).extracting("path", "changeType").containsExactly(
+                org.assertj.core.groups.Tuple.tuple("added.md", "ADDED"),
+                org.assertj.core.groups.Tuple.tuple("changed.md", "MODIFIED"),
+                org.assertj.core.groups.Tuple.tuple("removed.md", "REMOVED"),
+                org.assertj.core.groups.Tuple.tuple("same.md", "UNCHANGED"));
+        org.mockito.Mockito.verify(skillQueryService, org.mockito.Mockito.never()).getReviewSkillSnapshot(102L, false);
+    }
+
+    @Test
+    void readableSubmitterDoesNotGainPrivatePublishedHistory() {
+        ReviewTask task = createReviewTask(42L, 101L, 20L, "submitter");
+        Namespace namespace = createNamespace(20L, "team-a");
+        Skill skill = createSkill(101L, 20L, "skill-a");
+        SkillVersion pending = createVersion(101L, 101L, "2.0.0", SkillVersionStatus.PENDING_REVIEW);
+        pending.setParsedMetadataJson("{\"name\":\"test\",\"description\":\"summary\"}");
+        SkillVersion published = createVersion(100L, 101L, "1.0.0", SkillVersionStatus.PUBLISHED);
+        given(reviewTaskRepository.findById(42L)).willReturn(Optional.of(task));
+        given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
+        given(rbacService.getUserRoleCodes("submitter")).willReturn(Set.of());
+        given(reviewService.canViewReview(task, "submitter", namespace.getType(), Map.of(), Set.of())).willReturn(true);
+        given(skillQueryService.getReviewSkillSnapshot(101L, false)).willReturn(
+                new SkillQueryService.ReviewSkillSnapshotDTO(skill, "Owner", pending, published,
+                        List.of(pending, published), List.of(), "SKILL.md", null));
+        ReviewSkillDetailResponse response = service.getReviewSkillDetail(42L, "submitter", Map.of(), false);
+        assertThat(response.presentation().overviewSource()).isEqualTo("SKILL_MD");
+        assertThat(response.comparison()).isNull();
+        org.mockito.Mockito.verify(skillQueryService, org.mockito.Mockito.never()).getReviewSkillSnapshot(100L, false);
+    }
+
     private ReviewTask createReviewTask(Long reviewId, Long versionId, Long namespaceId, String submittedBy) {
         ReviewTask task = new ReviewTask(versionId, namespaceId, submittedBy);
         setField(task, "id", reviewId);

@@ -248,7 +248,7 @@ function pickBaseVersion(versions: SkillVersion[], activeVersion: string) {
       return right.id - left.id
     })[0]
   }
-  return versions.find((version) => version.version !== activeVersion) ?? null
+  return null
 }
 
 export function ReviewComplianceDiffPanel({ baseVersion, pendingVersion, className, concealVersionIdentifiers = false }: ReviewComplianceDiffPanelProps) {

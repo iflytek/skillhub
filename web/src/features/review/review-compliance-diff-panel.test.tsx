@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import type { SkillVersion } from '@/api/types'
-import { ReviewComplianceDiffPanel } from './review-compliance-diff-panel'
+import { ReviewComplianceDiffPanel, pickBaseVersion } from './review-compliance-diff-panel'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -37,6 +37,11 @@ function createVersion(overrides: Partial<SkillVersion> = {}): SkillVersion {
 }
 
 describe('ReviewComplianceDiffPanel', () => {
+  it('never uses a different unpublished version as the published baseline', () => {
+    const pending = createVersion({ id: 2, version: '1.1.0', status: 'PENDING_REVIEW' })
+    expect(pickBaseVersion([pending, createVersion({ status: 'REJECTED' })], '1.1.0')).toBeNull()
+  })
+
   it('renders a clickable diff summary and item details', () => {
     const html = renderToStaticMarkup(
       <ReviewComplianceDiffPanel

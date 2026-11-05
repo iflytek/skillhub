@@ -665,7 +665,7 @@ public class SkillQueryService {
                 .orElse(null);
         String documentationPath = documentationFile == null ? null : documentationFile.getFilePath();
         String documentationContent = !includeDocumentation || documentationFile == null
-                ? null : readTextContent(documentationFile);
+                ? null : readReviewDocumentation(documentationFile);
         SkillVersion publishedVersion = versions.stream()
                 .filter(version -> version.getStatus() == SkillVersionStatus.PUBLISHED)
                 .findFirst()
@@ -904,6 +904,16 @@ public class SkillQueryService {
             return objectStorageService.getObject(file.getStorageKey());
         } catch (UncheckedIOException e) {
             throw new DomainBadRequestException("error.skill.file.notFound", file.getFilePath());
+        }
+    }
+
+    private String readReviewDocumentation(SkillFile file) {
+        if (file.getFileSize() != null && file.getFileSize() > MAX_REVIEW_PREVIEW_BYTES) return null;
+        try (InputStream content = readFileContent(file)) {
+            byte[] bytes = content.readNBytes(MAX_REVIEW_PREVIEW_BYTES + 1);
+            return bytes.length > MAX_REVIEW_PREVIEW_BYTES ? null : new String(bytes, StandardCharsets.UTF_8);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to read review documentation", exception);
         }
     }
 

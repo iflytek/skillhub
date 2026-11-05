@@ -15,6 +15,7 @@ const api = vi.hoisted(() => ({
   updateAvatarReview: vi.fn(),
 }))
 
+vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ hasRole: () => false }) }))
 vi.mock('@/api/client', () => ({
   systemConfigApi: api,
   ApiError: class ApiError extends Error {

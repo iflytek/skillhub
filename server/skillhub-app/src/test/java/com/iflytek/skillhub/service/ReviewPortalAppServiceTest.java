@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,6 +32,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ReviewPortalAppServiceTest {
 
+    @Mock private com.iflytek.skillhub.repository.ReviewQueueQueryRepository reviewQueueQueryRepository;
+    @Mock private com.iflytek.skillhub.domain.review.ReviewPermissionChecker reviewPermissionChecker;
     @Mock private ReviewService reviewService;
     @Mock private ReviewTaskRepository reviewTaskRepository;
     @Mock private NamespaceRepository namespaceRepository;
@@ -54,7 +57,9 @@ class ReviewPortalAppServiceTest {
                 rbacService,
                 auditLogService,
                 requestIdAccessor,
-                suiteLifecycleService);
+                suiteLifecycleService,
+                reviewQueueQueryRepository,
+                reviewPermissionChecker);
     }
 
     @Test
@@ -104,6 +109,76 @@ class ReviewPortalAppServiceTest {
                 org.mockito.ArgumentMatchers.any(SkillSuiteActionContext.class));
         verify(reviewService, never()).withdrawReview(
                 org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void userAdminDoesNotReceiveSkillReviewQueuePermission() {
+        when(rbacService.getUserRoleCodes("user-admin")).thenReturn(Set.of("USER_ADMIN"));
+        assertThatThrownBy(() -> service.listReviewQueue("PENDING", null, "", null, null,
+                0, 20, "DESC", "user-admin", Map.of()))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException.class);
+        verify(reviewQueueQueryRepository, never()).list(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.anyBoolean(), org.mockito.ArgumentMatchers.anySet(),
+                org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void teamQueuePassesOnlyOwnerAndAdminScopesToDatabaseFiltering() {
+        when(rbacService.getUserRoleCodes("team-admin")).thenReturn(Set.of("USER_ADMIN"));
+        when(reviewQueueQueryRepository.list(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.eq(false), org.mockito.ArgumentMatchers.eq(Set.of(7L, 9L)),
+                org.mockito.ArgumentMatchers.any())).thenReturn(org.springframework.data.domain.Page.empty());
+        when(governanceQueryRepository.getReviewTaskResponses(java.util.List.of())).thenReturn(java.util.List.of());
+        service.listReviewQueue("ALL", null, "name", "ALL", "ALL", 0, 20, "ASC", "team-admin",
+                Map.of(7L, NamespaceRole.OWNER, 9L, NamespaceRole.ADMIN, 11L, NamespaceRole.MEMBER));
+        verify(reviewQueueQueryRepository).list(
+                new com.iflytek.skillhub.repository.ReviewQueueQueryRepository.Filter(null, null, "name", null, null),
+                false, Set.of(7L, 9L), org.springframework.data.domain.PageRequest.of(0, 20,
+                        org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "submittedAt")
+                                .and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "id"))));
+    }
+
+    @Test
+    void readableOwnTaskUsesDomainPermissionForApprovalControls() {
+        ReviewTask task = suiteTask(91L);
+        var namespace = new com.iflytek.skillhub.domain.namespace.Namespace("team", "Team", "owner");
+        when(reviewTaskRepository.findById(91L)).thenReturn(Optional.of(task));
+        when(namespaceRepository.findById(7L)).thenReturn(Optional.of(namespace));
+        when(rbacService.getUserRoleCodes("author")).thenReturn(Set.of("SKILL_ADMIN"));
+        when(reviewService.canViewReview(task, "author", namespace.getType(), Map.of(), Set.of("SKILL_ADMIN")))
+                .thenReturn(true);
+        when(governanceQueryRepository.getReviewTaskResponse(task)).thenReturn(response(91L));
+        when(reviewPermissionChecker.canReview(task, "author", namespace.getType(), Map.of(), Set.of("SKILL_ADMIN")))
+                .thenReturn(false);
+        assertThat(service.getReviewDetail(91L, "author", Map.of()).canReview()).isFalse();
+        when(reviewPermissionChecker.canReview(task, "author", namespace.getType(), Map.of(), Set.of("SKILL_ADMIN")))
+                .thenReturn(true);
+        assertThat(service.getReviewDetail(91L, "author", Map.of()).canReview()).isTrue();
+    }
+
+    @Test
+    void platformReviewScopesIncludeNamespacesWithoutMembershipAndAreSorted() {
+        when(rbacService.getUserRoleCodes("platform")).thenReturn(Set.of("SKILL_ADMIN"));
+        var team = new com.iflytek.skillhub.domain.namespace.Namespace("z-team", "Team", "owner");
+        var global = new com.iflytek.skillhub.domain.namespace.Namespace("global", "Global", "owner");
+        global.setType(com.iflytek.skillhub.domain.namespace.NamespaceType.GLOBAL);
+        when(namespaceRepository.findAll()).thenReturn(java.util.List.of(team, global));
+        assertThat(service.listReviewScopes("platform", Map.of())).extracting("slug")
+                .containsExactly("global", "z-team");
+    }
+
+    @Test
+    void teamReviewScopesExcludeNonTeamsAndUserAdminDoesNotGainAccess() {
+        when(rbacService.getUserRoleCodes("team")).thenReturn(Set.of("USER_ADMIN"));
+        var team = new com.iflytek.skillhub.domain.namespace.Namespace("team", "Team", "owner");
+        team.setType(com.iflytek.skillhub.domain.namespace.NamespaceType.TEAM);
+        var catalog = new com.iflytek.skillhub.domain.namespace.Namespace("catalog", "Catalog", "owner");
+        catalog.setType(com.iflytek.skillhub.domain.namespace.NamespaceType.CATALOG);
+        when(namespaceRepository.findByIdIn(org.mockito.ArgumentMatchers.anyList())).thenReturn(java.util.List.of(team, catalog));
+        assertThat(service.listReviewScopes("team", Map.of(7L, NamespaceRole.OWNER, 9L, NamespaceRole.ADMIN)))
+                .extracting("slug").containsExactly("team");
+        assertThatThrownBy(() -> service.listReviewScopes("team", Map.of()))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException.class);
     }
 
     private ReviewTask suiteTask(Long id) {
