@@ -548,7 +548,7 @@
     "tokens": "API 토큰",
     "reviewProgress": "검토 진행 상황",
     "admin": "관리",
-    "governance": "거버넌스",
+    "governance": "거버넌스 센터",
     "reports": "신고",
     "githubSync": "스킬 동기화",
     "deepDiscovery": "심층 탐색"
@@ -1743,6 +1743,22 @@
     "accessDeniedDesc": "이 스킬을 볼 권한이 없습니다",
     "tabReadme": "README",
     "tabOverview": "개요",
+    "versionLoadError": "버전을 불러오지 못했습니다. 다시 시도하세요.",
+    "versionLoading": "버전 내용을 불러오는 중…",
+    "tabInstructions": "스킬 지침",
+    "instructionsError": "지침을 불러오지 못했습니다. 다시 시도하세요.",
+    "instructionsRetry": "다시 시도",
+    "instructionsLoading": "지침을 불러오는 중…",
+    "instructionsMissing": "이 버전에는 SKILL.md가 없습니다.",
+    "instructionsRendered": "읽기 보기",
+    "instructionsSource": "소스 보기",
+    "versionUnavailable": "접근할 수 없는 버전: {{version}}",
+    "viewingUnpublishedVersion": "미게시 버전 v{{version}} 미리보기",
+    "viewingHistoricalVersion": "이전 버전 v{{version}} 보는 중",
+    "viewingVersion": "v{{version}} 보는 중",
+    "returnLatestPublished": "최신 게시 버전으로",
+    "viewingThisVersion": "현재 보는 버전",
+    "viewThisVersion": "이 버전 보기",
     "tabFiles": "파일",
     "tabVersions": "버전",
     "noReadme": "README 없음",
@@ -2253,10 +2269,19 @@
     "saveErrorTitle": "네임스페이스를 업데이트하지 못했습니다"
   },
   "upload": {
-    "dropHint": "놓아서 업로드하세요...",
-    "dragHint": "ZIP 파일을 여기로 끌어 놓거나 클릭하여 선택하세요",
+    "dropHint": "놓아서 ZIP 파일 읽기",
+    "dragHint": "ZIP 파일을 여기에 놓으세요",
     "formatHint": ".zip 형식만 지원합니다",
-    "folderHint": "또는 폴더를 선택하여 패키지로 묶어 업로드하세요"
+    "folderHint": "폴더 선택",
+    "selectZip": "ZIP 파일 선택",
+    "folderPackagingHint": "폴더를 ZIP으로 묶은 다음 처리합니다.",
+    "packaging": "선택한 폴더를 압축하는 중…",
+    "errors": {
+      "singleZip": "ZIP 파일은 한 번에 하나만 선택하세요.",
+      "zipRequired": ".zip 형식의 스킬 패키지를 선택하세요.",
+      "folderDropUnsupported": "폴더 선택을 사용하거나 먼저 폴더를 ZIP으로 압축하세요.",
+      "emptySelection": "파일을 읽지 못했습니다. 다시 선택하세요."
+    }
   },
   "layout": {
     "openNavigation": "탐색 메뉴 열기",
@@ -2492,7 +2517,7 @@
       "stars": "즐겨찾기됨",
       "subscriptions": "내 구독",
       "reviewProgress": "내 검토 진행 상황",
-      "reviews": "검토 관리",
+      "reviews": "검토 센터",
       "promotions": "승격 관리",
       "reports": "신고 관리",
       "users": "사용자 관리",
@@ -2526,11 +2551,28 @@
     "copyright": "© 2026 SkillHub. Apache-2.0."
   },
   "publish": {
+    "packageFormatHint": "ZIP 최상위 경로에 SKILL.md가 있어야 합니다",
+    "form": {
+      "identity": "기본 정보",
+      "nameHelp": "패키지 제목을 기본으로 사용합니다. 비워 두면 패키지 이름을 사용합니다.",
+      "presentation": "소개",
+      "presentationHelp": "사용자에게 용도, 입력, 출력 및 사용 제한을 설명하세요.",
+      "customized": "이번 버전에서 수정됨",
+      "packageContent": "현재 패키지에서 가져옴",
+      "restore": "패키지 내용 복원",
+      "restoreTitle": "패키지의 {{field}} 내용을 복원할까요?",
+      "restoreDescription": "직접 편집한 내용을 현재 패키지의 내용으로 바꿉니다. 패키지 파일 자체는 변경되지 않습니다.",
+      "confirmHelp": "제출하기 전에 버전과 소개를 다시 확인합니다."
+    },
     "retryPackagePreview": "다시 시도",
     "packageName": "패키지 이름",
     "displayName": "표시 이름",
     "displayNamePlaceholder": "예: 회의록 도우미",
     "displayNameHelp": "최대 200자이며 기본값은 패키지 제목입니다. 변경 사항은 이 버전의 검토를 따르며 식별자나 패키지 파일을 변경하지 않습니다. 비워 두면 패키지 제목을 사용합니다.",
+    "shortDescription": "짧은 설명",
+    "overview": "상세 개요 (Markdown)",
+    "presentationInheritance": "웹과 패키지에 값이 없으면 제출 시 게시된 버전 {{version}}의 사용자 지정 값을 상속합니다.",
+    "resetPresentation": "패키지 기본값으로 복원 (상속 안 함)",
     "readingPackage": "패키지 메타데이터를 읽는 중…",
     "examplesReady": "전체 언어에서 작업 예제 {{count}}개를 인식했습니다.",
     "examplesNone": "제공된 작업 예제가 없습니다. 게시와 사용은 계속 가능합니다.",
@@ -2540,7 +2582,7 @@
     "subtitle": "SkillHub에 스킬 패키지 업로드",
     "reviewNotice": {
       "title": "검토 안내",
-      "description": "제출된 스킬 패키지는 게시 전에 관리자 검토가 필요합니다."
+      "description": "제출 후 처리는 공개 범위와 보안 스캔 정책에 따라 달라집니다. 이번 제출 결과와 버전 상태에서 다음 단계를 확인하세요."
     },
     "resubmitNotice": {
       "title": "{{skill}} v{{version}} 재제출",
@@ -2584,7 +2626,137 @@
     "updateSubtitle": "아바타 변경만 저장하거나 패키지를 업로드하여 새 버전을 게시하세요.",
     "optionalPackage": "아바타만 변경할 때는 패키지가 필요하지 않습니다.",
     "saveAvatar": "아바타 저장",
-    "avatarSaved": "아바타 변경을 제출했습니다"
+    "avatarSaved": "아바타 변경을 제출했습니다",
+    "overviewPreview": "개요 미리보기",
+    "editOverview": "개요 편집",
+    "emptyOverview": "미리 볼 개요가 없습니다",
+    "emptyOverviewHelp": "사용 가능한 설명이 없습니다. 개요 편집기에서 목적, 입력, 출력 및 제한 사항을 추가하세요.",
+    "settings": "게시 설정",
+    "cardPreview": "스킬 카드 미리보기",
+    "confirmDetails": "제출 정보 확인",
+    "backToEdit": "편집으로 돌아가기",
+    "readingOverview": "패키지 설명 읽는 중…",
+    "overviewPreviewUnavailable": "패키지 설명을 미리 볼 수 없습니다. 개요를 편집하거나 패키지를 다시 선택하세요. 제출 시 서버에서 검증합니다.",
+    "stepsLabel": "게시 단계",
+    "stepUpload": "패키지 업로드",
+    "stepPresentation": "표시 정보",
+    "stepConfirm": "제출 확인",
+    "nextConfirm": "다음: 확인",
+    "packageParsed": "구조 분석 완료",
+    "replacePackage": "교체",
+    "editor": {
+      "title": "상세 개요 편집",
+      "description": "목적, 입력, 출력 및 제한 사항을 작성하세요.",
+      "visual": "시각 편집",
+      "source": "Markdown 소스",
+      "preview": "게시 미리보기",
+      "sourceOnly": "소스",
+      "split": "분할",
+      "unsaved": "저장되지 않은 변경",
+      "unchanged": "저장되지 않은 변경 없음",
+      "apply": "편집 완료",
+      "cancel": "변경 취소",
+      "returnHint": "완료하면 양식 미리보기만 업데이트되며 심사에 제출되지 않습니다.",
+      "discardTitle": "변경 사항을 버릴까요?",
+      "discardDescription": "적용하지 않은 개요 변경 사항이 삭제됩니다.",
+      "discard": "변경 버리기",
+      "keepEditing": "계속 편집",
+      "sourceRecovery": "시각 편집을 지원하지 않는 내용입니다. 원본을 보존했습니다. Markdown 소스에서 계속 편집하세요.",
+      "tooLong": "개요는 {{max}}자를 초과할 수 없습니다.",
+      "loading": "편집기 로딩 중…",
+      "loadFailed": "편집기를 불러오지 못했습니다. Markdown 소스에서 계속하세요.",
+      "insertImage": "이미지 삽입",
+      "imageUrl": "이미지 HTTPS 주소",
+      "imageAlt": "이미지 설명",
+      "insert": "삽입",
+      "invalidImageUrl": "유효한 HTTPS 이미지 주소를 입력하세요.",
+      "insertMore": "삽입",
+      "visualUnavailable": "이 내용은 시각 편집을 지원하지 않습니다. Markdown 소스로 편집하세요. 원본은 보존됩니다.",
+      "markdownLabel": "개요 Markdown 소스"
+    },
+    "source": {
+      "package": "스킬 패키지 사용",
+      "custom": "직접 작성",
+      "view": "개요 전체 보기",
+      "shortRequired": "패키지 내용 또는 직접 작성한 내용으로 200자 이내의 짧은 설명을 입력하세요. 공백만 있는 내용은 사용할 수 없습니다.",
+      "overviewRequired": "20,000자 이내의 비어 있지 않은 상세 개요를 입력하세요. 패키지 문서가 너무 길면 직접 작성으로 전환해 정리하세요.",
+      "requiredSummary": "필수 정보가 누락되었습니다. 패키지, 네임스페이스, 짧은 설명과 상세 개요를 확인하세요.",
+      "historyUnavailable": "게시 버전의 소개를 불러오지 못했습니다. 다시 불러온 후 제출하세요."
+    },
+    "result": {
+      "submitting": {
+        "title": "이 버전을 제출하는 중",
+        "description": "{{skill}} {{version}} 버전을 전송하고 있습니다. 잠시 기다려 주세요.",
+        "button": "제출 중…"
+      },
+      "version-conflict": {
+        "title": "{{version}} 버전이 이미 존재합니다",
+        "description": "작성한 소개와 내용 출처 선택은 유지됩니다. 새 버전 번호가 포함된 패키지로 교체하고 내용을 확인한 후 제출하세요."
+      },
+      "unknown": {
+        "title": "제출 결과를 확인할 수 없습니다",
+        "description": "다시 제출하기 전에 내 스킬에서 이 버전이 생성되었는지 확인하세요."
+      },
+      "error": {
+        "forbidden": {
+          "title": "제출 권한이 없습니다",
+          "description": "작성한 소개는 유지됩니다. 현재 네임스페이스 권한을 확인한 후 계속하세요."
+        },
+        "invalid": {
+          "title": "패키지를 제출할 수 없습니다",
+          "description": "작성한 소개는 유지됩니다. 패키지 구조와 입력 내용을 수정한 후 다시 확인하세요."
+        },
+        "failed": {
+          "title": "제출이 완료되지 않았습니다",
+          "description": "작성한 소개는 유지됩니다. 문제를 확인한 후 양식으로 돌아가 수정하세요."
+        }
+      },
+      "accepted": {
+        "SCANNING": {
+          "title": "제출됨 · 보안 검사 단계",
+          "description": "이 버전은 아직 게시되지 않았습니다. 검사 이후에는 플랫폼 설정에 따라 처리됩니다."
+        },
+        "PENDING_REVIEW": {
+          "title": "제출됨 · 검토 대기",
+          "description": "이 버전은 아직 게시되지 않았습니다. 내 스킬에서 검토 진행 상황을 확인하세요."
+        },
+        "UPLOADED": {
+          "title": "업로드됨 · 아직 게시되지 않음",
+          "description": "내 스킬에서 현재 공개 범위와 권한에 따라 게시 확인 또는 검토 제출을 진행하세요."
+        },
+        "PUBLISHED": {
+          "title": "이 버전이 게시되었습니다",
+          "description": "이 버전의 상세 페이지에서 게시된 내용을 확인할 수 있습니다."
+        },
+        "SCAN_FAILED": {
+          "title": "보안 검사 실행 실패",
+          "description": "검사가 완료되지 않았으며 유해한 콘텐츠로 판정되었다는 의미는 아닙니다. 버전 상세 정보에서 실패 원인을 확인하세요."
+        },
+        "REJECTED": {
+          "title": "이 버전이 거부되었습니다",
+          "description": "검토 의견을 확인하고 내용을 수정한 새 버전을 제출하세요."
+        },
+        "YANKED": {
+          "title": "이 버전이 철회되었습니다",
+          "description": "버전 상세 페이지에서 현재 상태와 사용할 수 있는 작업을 확인하세요."
+        },
+        "DRAFT": {
+          "title": "이 버전은 초안 상태입니다",
+          "description": "이 버전은 아직 게시되지 않았습니다."
+        },
+        "unrecognized": {
+          "title": "제출 응답을 받았습니다",
+          "description": "내 스킬에서 이 버전의 실제 상태를 확인하세요."
+        }
+      },
+      "previousPublished": "기존 게시 버전은 원래 접근 권한에 따라 계속 표시됩니다.",
+      "viewVersion": "이 버전 보기",
+      "mySkills": "내 스킬로 돌아가기",
+      "replacePackage": "버전 패키지 교체",
+      "checkMySkills": "내 스킬에서 확인",
+      "returnToForm": "양식으로 돌아가기",
+      "receiptHint": "이 화면은 제출 당시의 응답입니다. 최신 진행 상황은 이 버전의 상세 페이지에서 확인하세요."
+    }
   },
   "toast": {
     "success": "성공",
@@ -3595,5 +3767,140 @@
       "title": "구독한 스킬 버전 배포 철회",
       "description": "{{skillName}}{{versionSuffix}} 버전의 배포가 철회되었습니다."
     }
+  },
+  "reviewCenter": {
+    "title": "검토 센터",
+    "description": "권한이 있는 범위에서 신청을 검색하고 처리합니다.",
+    "profileDescription": "사용자 프로필 변경 사항을 검토합니다. 스킬 및 스킬 모음 신청은 검토 대기열에서 처리합니다.",
+    "profileQueue": "프로필 검토",
+    "skillQueue": "스킬 및 스킬 모음 검토",
+    "governanceTitle": "거버넌스 센터",
+    "governanceDescription": "신고와 전역 승격 신청을 처리하고 의사 결정 기록을 조회합니다. 게시, 아바타 및 공개 범위 신청은 검토 센터에서 처리합니다.",
+    "openingScope": "검토 센터에서 이 네임스페이스를 여는 중…",
+    "unknownObject": "이름 없는 리소스",
+    "loading": "신청을 불러오는 중…",
+    "scopeFailed": "검토 범위를 불러오지 못했습니다. 다시 시도하세요.",
+    "noPermission": "이 계정에는 검토 권한이 없습니다.",
+    "retry": "다시 불러오기",
+    "loadFailed": "검토 신청을 불러오지 못했습니다. 필터는 유지됩니다.",
+    "results": "검색 결과",
+    "resultsCount": "검색 결과 · 신청 {{count}}건",
+    "empty": "조건에 맞는 신청이 없습니다",
+    "emptyDescription": "조건을 변경하거나 필터를 초기화한 후 다시 검색하세요.",
+    "sortLabel": "제출 순서",
+    "newest": "최신 제출순",
+    "oldest": "오래된 제출순",
+    "open": "보기",
+    "pageSummary": "신청 {{total}}건 · {{page}}페이지",
+    "governanceReviewLink": "검토 센터 열기",
+    "governancePendingPromotions": "대기 중인 전역 승격",
+    "governancePendingReports": "대기 중인 신고",
+    "governanceActivity": "최근 의사 결정",
+    "governanceSearchMoved": "검색 인덱스 유지 관리는 시스템 설정으로 이동했습니다.",
+    "filters": {
+      "title": "신청 필터",
+      "q": "검색어",
+      "status": "검토 상태",
+      "namespace": "검토 범위",
+      "reviewKind": "신청 유형",
+      "originType": "출처",
+      "searchPlaceholder": "이름, 좌표 또는 제출자 검색",
+      "allScopes": "권한이 있는 모든 범위",
+      "apply": "검색",
+      "reset": "초기화"
+    },
+    "status": {
+      "ALL": "모든 상태",
+      "PENDING": "검토 대기",
+      "APPROVED": "승인됨",
+      "REJECTED": "거부됨",
+      "SUPERSEDED": "대체됨"
+    },
+    "kind": {
+      "ALL": "모든 신청 유형",
+      "FIRST_PUBLISH": "최초 게시",
+      "VERSION_UPDATE": "버전 업데이트",
+      "SUITE_PUBLISH": "스킬 모음 게시",
+      "VISIBILITY_CHANGE": "공개 범위 확대",
+      "AVATAR_CHANGE": "아바타 변경",
+      "AVATAR_REMOVAL": "아바타 삭제",
+      "SKILL_VERSION": "스킬 버전 신청"
+    },
+    "origin": {
+      "ALL": "모든 출처",
+      "USER": "사용자 제출",
+      "GITHUB_SYNC": "GitHub 동기화"
+    },
+    "columns": {
+      "object": "리소스",
+      "kind": "신청",
+      "source": "출처 / 네임스페이스",
+      "submitter": "제출자 / 시간",
+      "action": "작업"
+    },
+    "viewAll": "모두 보기",
+    "pageEmpty": "이 페이지에는 신청이 없습니다. 첫 페이지로 돌아가세요.",
+    "firstPage": "첫 페이지",
+    "governanceNotifications": "거버넌스 알림 및 처리 결과",
+    "notificationReadFailed": "거버넌스 알림을 읽음으로 표시하지 못했습니다"
+  },
+  "reviewWorkbench": {
+    "displayContent": "이 버전의 표시 정보",
+    "boundContent": "이 내용은 검토에 연결된 {{version}} 버전을 기준으로 고정됩니다. 원본 패키지 파일은 별도로 확인합니다.",
+    "summary": "간단한 설명",
+    "overview": "상세 개요",
+    "packageFiles": "원본 패키지 파일",
+    "originalFiles": "업로드된 파일은 변경되지 않으며 표시 정보와 별도로 검토합니다.",
+    "browseFiles": "파일 살펴보기",
+    "retry": "다시 불러오기",
+    "requestSummary": "검토 신청",
+    "request": "신청",
+    "boundVersion": "연결된 버전",
+    "checks": "검토 근거",
+    "scanBoundary": "검사는 검토 근거를 제공합니다. 내용, 용도 및 요청된 공개 범위는 사람이 검토해야 합니다.",
+    "boundScan": "연결된 버전의 검사 근거",
+    "boundScanDescription": "이 공개 범위 신청에는 연결된 버전의 검사 스냅샷이 사용됩니다. 검사 상태가 공개 범위 변경 완료를 의미하지는 않습니다.",
+    "contentNavigation": "검토 내용 탐색",
+    "viewOnly": "읽기 전용: 이 계정은 신청을 처리할 수 없습니다.",
+    "presentationChanges": "표시 정보 및 파일 변경 사항",
+    "baseline": "게시된 기준 버전",
+    "pending": "검토 중",
+    "modified": "변경됨",
+    "unchanged": "변경 없음",
+    "unavailableComparison": "비교 미완료",
+    "notProvided": "제공된 내용이 없습니다.",
+    "overviewUnavailable": "전체 개요를 읽지 못했습니다. 내용이 비어 있거나 변경되지 않았다는 의미는 아닙니다.",
+    "noBaseline": "이 검토에는 게시된 기준 버전이 없습니다.",
+    "before": "변경 전",
+    "after": "변경 후",
+    "fileChanges": "패키지 파일 변경 사항",
+    "fileADDED": "추가됨",
+    "fileMODIFIED": "변경됨",
+    "fileREMOVED": "삭제됨",
+    "fileUNCHANGED": "변경 없음",
+    "kind": {
+      "publish": "최초 게시",
+      "update": "버전 업데이트",
+      "visibility": "공개 범위 확대",
+      "avatar": "스킬 아바타 변경",
+      "avatarRemoval": "스킬 아바타 삭제",
+      "suite": "스킬 모음 게시",
+      "sync": "GitHub 동기화"
+    },
+    "approve": {
+      "publish": "게시 승인",
+      "update": "업데이트 승인",
+      "visibility": "공개 범위 변경 승인",
+      "avatar": "아바타 변경 승인",
+      "avatarRemoval": "아바타 삭제 승인",
+      "suite": "스킬 모음 버전 승인",
+      "sync": "동기화 업데이트 승인"
+    },
+    "approveContentUnavailable": "검토할 내용을 불러오는 중이거나 확인할 수 없습니다. 현재 승인할 수 없습니다.",
+    "viewScanEvidence": "검사 근거 보기",
+    "complianceIncomplete": "일부 버전의 준수 선언을 사용할 수 없어 전체 비교가 불가능합니다.",
+    "complianceUnchanged": "준수 선언이 변경되지 않았습니다",
+    "complianceAbsentBase": "기준 버전에는 이 선언이 없습니다.",
+    "complianceAbsentPending": "현재 버전에는 이 선언이 없습니다."
   }
 }

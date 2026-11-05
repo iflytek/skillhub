@@ -86,6 +86,18 @@ public class GovernanceWorkflowAppService {
         return reviewPortalAppService.listReviews(status, namespaceId, page, size, sortDirection, userId, userNsRoles);
     }
 
+    public List<com.iflytek.skillhub.dto.ReviewScopeResponse> listReviewScopes(
+            String userId, Map<Long, NamespaceRole> userNsRoles) {
+        return reviewPortalAppService.listReviewScopes(userId, userNsRoles);
+    }
+
+    public PageResponse<ReviewTaskResponse> listReviewQueue(String status, Long namespaceId,
+            String query, String reviewKind, String originType, int page, int size,
+            String sortDirection, String userId, Map<Long, NamespaceRole> userNsRoles) {
+        return reviewPortalAppService.listReviewQueue(status, namespaceId, query, reviewKind,
+                originType, page, size, sortDirection, userId, userNsRoles);
+    }
+
     public PageResponse<ReviewTaskResponse> listSyncReviews(String status,
                                                             Long namespaceId,
                                                             int page,

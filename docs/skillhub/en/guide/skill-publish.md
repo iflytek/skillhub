@@ -1,5 +1,21 @@
 # Publish and Update Skills
 
+## Write the public introduction
+
+After selecting a package, inspect its parsed identifier and version. Structural parsing does not complete scanning, review, or publication. The empty dropzone accepts a ZIP by dropping, clicking, or pressing Enter or Space while focused. A distinct folder picker is available in supporting browsers. A selected package replaces the empty dropzone with a file row showing reading, parsed, or failed state. Cancelling or rejecting a replacement retains the preceding file. Recheck the identifier, version, and retained edits after replacement.
+
+The main form places the package, avatar, and display name before the introduction. Desktop publishing settings appear on the right; narrow layouts place them before the introduction. Edit the summary directly. The overview remains a read-only preview with Edit overview consistently at the field header’s upper right. Its separate editor provides visual, Markdown source, and publication-preview modes, including single-pane and split source layouts.
+
+Valid package content needs no duplicate entry or source-mode switch. Unmodified fields follow the current package defaults; actual changes become custom introduction values and survive package replacement. Restoring package content requires confirmation and affects only that field. Cancelling retains its custom content; confirming restores default behavior so later packages supply their current defaults. Merely viewing or completing an unchanged editor does not create an override.
+
+Web submission of a new version requires both effective introduction values to be nonblank, within 200 and 20,000 characters respectively; document frontmatter alone is not an overview. Retry a failed read or enter the content manually rather than treating read failure as missing content. Package metadata fields remain optional for CLI/API uploads. Missing required content produces field errors and focus targets without sending a version.
+
+Complete editing returns the content to the current form without submitting a review or saving a server draft. Cancel changes discards edits made since entering the editor, with confirmation when necessary. If no custom overview exists, available package documentation supplies the preview; an empty state means no usable content could be obtained. A failed preview does not itself reject the package: registry validation and authorization still govern submission.
+
+Inspect the namespace, identifier, version, visibility, and summary in the final confirmation before submitting. This confirmation does not replace package prechecks, scanning, or review. Precheck warnings retain their own confirmation flow. Unsubmitted form content is not guaranteed to survive a page refresh.
+
+Do not send a duplicate request during submission. The result page is a receipt that distinguishes scanning, pending review, uploaded-only and published states. View this version for current progress. If the version already exists, replace the package with a new version number; introductions and their source state remain available, and the application does not rewrite the version. A timeout or interrupted network may leave the write outcome unknown. Inspect My Skills before retrying rather than immediately sending the package again.
+
 ## From Local Files to an Installable Version
 
 A single-skill upload has one root `SKILL.md`. For multiple skills, use [Suite import](./suite-bundle.html); do not place unrelated skills in one single-skill ZIP.
@@ -27,6 +43,12 @@ Resolve versions by an exact version, tag, or fingerprint; `^` / `~` ranges are 
 
 Use Update in My Skills or publish again to the same namespace and skill name. Verify the coordinate: changing `name` may create a different skill. Published versions cannot be overwritten; use a new version for normal updates. While it awaits review, public users retain the previously published version. After approval, check the displayed version, title and summary.
 
+### Browse historical versions and original instructions
+
+The detail page separates Overview, Skill instructions, Files, and Versions. Overview displays the selected version's introduction; Skill instructions reads that version's original `SKILL.md` with rendered and source modes; Files retains the complete package tree. To browse a historical version, open Versions and choose View this version. The page returns to Overview and identifies the historical version, with an action to return to the latest published version. The summary, documentation, file inventory, and install/download targets follow the selected version. Refresh and browser back/forward retain the version represented by the URL.
+
+Browsing changes only the reading target: it does not publish, rerelease, submit a review, or update an installed skill. Existing access restrictions still apply, including unpublished versions.
+
 Existing local installations do not update automatically. Consumers explicitly upgrade through the CLI. Suite members remain pinned until a new Suite version is published.
 
 ### Tracking and Managing My Skills
@@ -50,7 +72,6 @@ Version comparison opens in a centered dialog and only compares accessible publi
 | `SCAN_FAILED` | Read the failure and use the retry action offered by the page; ask an operator to resolve infrastructure failures |
 | Review rejected | Read the decision, revise the package and use the supported resubmission flow |
 | Frozen namespace or removed membership | Restore legitimate write access first; a previously installed copy grants no publishing rights |
-
 
 ## Prepare metadata and choose a publishing entry
 

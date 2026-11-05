@@ -133,7 +133,7 @@ describe('UserMenu navigation', () => {
       )
 
       expect(html).toContain('href="/dashboard/reviews"')
-      expect(html).toContain('user.menu.reviews')
+      expect(html).toContain('reviewCenter.title')
     },
   )
 

@@ -158,7 +158,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
             ) : null}
             {canReview ? (
               <Link data-analytics-id="review.queue.open" to="/dashboard/reviews" className={menuItemClassName} onClick={closeMenu}>
-                {t('user.menu.reviews')}
+                {t('reviewCenter.title')}
               </Link>
             ) : null}
             {canReview || isUserAdmin || isAuditor || isSuperAdmin ? <div className="-mx-1 my-1 h-px bg-muted" /> : null}

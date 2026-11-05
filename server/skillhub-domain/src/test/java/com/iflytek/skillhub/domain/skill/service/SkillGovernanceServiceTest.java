@@ -297,6 +297,8 @@ class SkillGovernanceServiceTest {
         fallback.setParsedMetadataJson(new ObjectMapper().writeValueAsString(Map.of(
                 "name", "example-skill",
                 "description", "Published summary from v1",
+                "shortDescriptionOverride", "Restored custom summary",
+                "overviewOverride", "# Restored overview",
                 "displayNameOverride", displayNameCase.equals("override") ? "网页旧版标题" : "",
                 "frontmatter", switch (displayNameCase) {
                     case "custom" -> Map.of("metadata", Map.of("display-name", "示例技能一"));
@@ -321,7 +323,9 @@ class SkillGovernanceServiceTest {
 
         assertThat(skill.getLatestVersionId()).isEqualTo(11L);
         assertThat(skill.getDisplayName()).isEqualTo(displayNameCase.equals("override") ? "网页旧版标题" : displayNameCase.equals("custom") ? "示例技能一" : "example-skill");
-        assertThat(skill.getSummary()).isEqualTo("Published summary from v1");
+        assertThat(skill.getSummary()).isEqualTo("Restored custom summary");
+        assertThat(new ObjectMapper().readTree(fallback.getParsedMetadataJson()).path("overviewOverride").asText())
+                .isEqualTo("# Restored overview");
         verify(skillRepository).save(skill);
     }
 

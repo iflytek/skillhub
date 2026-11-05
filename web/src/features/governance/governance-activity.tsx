@@ -1,7 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { GovernanceActivityItem } from '@/api/types'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
-import { Card } from '@/shared/ui/card'
 
 interface GovernanceActivityProps {
   items?: GovernanceActivityItem[]
@@ -21,13 +20,13 @@ export function GovernanceActivity({ items, isLoading }: GovernanceActivityProps
   }
 
   if (!items || items.length === 0) {
-    return <Card className="p-10 text-center text-muted-foreground">{t('governance.emptyActivity')}</Card>
+    return <div className="rounded-lg border border-dashed px-5 py-8 text-center text-sm text-muted-foreground">{t('governance.emptyActivity')}</div>
   }
 
   return (
-    <div className="space-y-3">
+    <div className="divide-y divide-border/70">
       {items.map((item) => (
-        <Card key={item.id} className="p-4 space-y-2">
+        <div key={item.id} className="space-y-2 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="font-medium">{item.action}</div>
             <div className="text-xs text-muted-foreground">
@@ -38,7 +37,7 @@ export function GovernanceActivity({ items, isLoading }: GovernanceActivityProps
             {item.actorDisplayName || item.actorUserId || t('governance.unknownActor')}
           </div>
           {item.details ? <div className="text-sm text-foreground break-all">{item.details}</div> : null}
-        </Card>
+        </div>
       ))}
     </div>
   )

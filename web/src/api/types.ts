@@ -620,6 +620,10 @@ export interface SkillDeleteResult {
 }
 
 export interface ReviewTask {
+  displayName?: string | null
+  summary?: string | null
+  reviewKind?: 'FIRST_PUBLISH' | 'VERSION_UPDATE' | 'SUITE_PUBLISH' | 'VISIBILITY_CHANGE' | 'AVATAR_CHANGE' | null
+  canReview?: boolean
   id: number
   skillVersionId: number | null
   namespace: string
@@ -643,6 +647,8 @@ export interface ReviewTask {
   avatarRemoval?: boolean
   originType?: 'USER' | 'GITHUB_SYNC'
 }
+
+export type ReviewScope = Required<components['schemas']['ReviewScopeResponse']>
 
 export interface GithubSyncReviewSource {
   ingestionId: string
@@ -721,6 +727,8 @@ export interface ReviewProgressPage {
 }
 
 export interface ReviewSkillDetail {
+  presentation?: ReviewPresentation | null
+  comparison?: ReviewComparison | null
   visibilityChange?: components['schemas']['VisibilityChange']
   skill: SkillDetail
   versions: SkillVersion[]
@@ -730,6 +738,16 @@ export interface ReviewSkillDetail {
   downloadUrl: string | null
   activeVersion: string | null
   avatarChange?: ReviewAvatarChange | null
+}
+
+export type ReviewPresentation = {
+  [K in keyof Required<components['schemas']['ReviewPresentation']>]: Required<components['schemas']['ReviewPresentation']>[K] | null
+}
+
+export type ReviewComparison = Omit<Required<components['schemas']['ReviewComparison']>, 'baseline' | 'current' | 'files'> & {
+  baseline: ReviewPresentation
+  current: ReviewPresentation
+  files: Required<components['schemas']['ReviewFileChange']>[]
 }
 
 export interface ReviewAvatarChange {

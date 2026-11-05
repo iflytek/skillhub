@@ -22,6 +22,9 @@ import com.iflytek.skillhub.dto.ReviewTaskResponse;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
 import com.iflytek.skillhub.repository.GovernanceQueryRepository;
 import com.iflytek.skillhub.repository.ReviewProgressQueryRepository;
+import com.iflytek.skillhub.repository.ReviewQueueQueryRepository;
+import com.iflytek.skillhub.domain.review.ReviewPermissionChecker;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -35,6 +38,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class ReviewPortalAppService {
+
+    private final ReviewQueueQueryRepository reviewQueueQueryRepository;
+    private final ReviewPermissionChecker reviewPermissionChecker;
 
     private final ReviewService reviewService;
     private final ReviewTaskRepository reviewTaskRepository;
@@ -54,7 +60,9 @@ public class ReviewPortalAppService {
                                   RbacService rbacService,
                                   AuditLogService auditLogService,
                                   RequestIdAccessor requestIdAccessor,
-                                  SkillSuiteLifecycleService suiteLifecycleService) {
+                                  SkillSuiteLifecycleService suiteLifecycleService,
+                                  ReviewQueueQueryRepository reviewQueueQueryRepository,
+                                  ReviewPermissionChecker reviewPermissionChecker) {
         this.reviewService = reviewService;
         this.reviewTaskRepository = reviewTaskRepository;
         this.namespaceRepository = namespaceRepository;
@@ -64,6 +72,8 @@ public class ReviewPortalAppService {
         this.auditLogService = auditLogService;
         this.requestIdAccessor = requestIdAccessor;
         this.suiteLifecycleService = suiteLifecycleService;
+        this.reviewQueueQueryRepository = reviewQueueQueryRepository;
+        this.reviewPermissionChecker = reviewPermissionChecker;
     }
 
     @Transactional
@@ -159,6 +169,74 @@ public class ReviewPortalAppService {
                                                         Map<Long, NamespaceRole> userNsRoles) {
         return listReviewsByOrigin(status, namespaceId, page, size, sortDirection,
                 userId, userNsRoles, ReviewOriginType.USER);
+    }
+
+    @Transactional(readOnly = true)
+    public List<com.iflytek.skillhub.dto.ReviewScopeResponse> listReviewScopes(
+            String userId, Map<Long, NamespaceRole> userNsRoles) {
+        boolean platformReviewer = hasPlatformReviewRole(platformRoles(userId));
+        Map<Long, NamespaceRole> roles = normalizeRoles(userNsRoles);
+        List<Long> managed = roles.entrySet().stream()
+                .filter(entry -> entry.getValue() == NamespaceRole.OWNER || entry.getValue() == NamespaceRole.ADMIN)
+                .map(Map.Entry::getKey).toList();
+        if (!platformReviewer && managed.isEmpty()) throw new DomainForbiddenException("review.no_permission");
+        List<Namespace> namespaces = platformReviewer ? namespaceRepository.findAll()
+                : namespaceRepository.findByIdIn(managed);
+        return namespaces.stream()
+                .filter(namespace -> platformReviewer || namespace.getType() == com.iflytek.skillhub.domain.namespace.NamespaceType.TEAM)
+                .sorted(java.util.Comparator.comparing(Namespace::getSlug))
+                .map(namespace -> new com.iflytek.skillhub.dto.ReviewScopeResponse(
+                        namespace.getId(), namespace.getSlug(), namespace.getDisplayName())).toList();
+    }
+
+    public PageResponse<ReviewTaskResponse> listReviewQueue(String status, Long namespaceId,
+            String query, String reviewKind, String originType, int page, int size,
+            String sortDirection, String userId, Map<Long, NamespaceRole> userNsRoles) {
+        String normalizedStatus = normalizeFilter(status, Set.of("PENDING", "APPROVED", "REJECTED", "SUPERSEDED"));
+        String normalizedOrigin = normalizeFilter(originType, Set.of("USER", "GITHUB_SYNC"));
+        String normalizedKind = normalizeFilter(reviewKind, Set.of("FIRST_PUBLISH", "VERSION_UPDATE",
+                "SUITE_PUBLISH", "VISIBILITY_CHANGE", "AVATAR_CHANGE"));
+        if (page < 0 || size < 1 || size > 100 || query != null && query.length() > 200) {
+            throw new DomainBadRequestException("error.review.queue.invalidFilter");
+        }
+        Map<Long, NamespaceRole> roles = normalizeRoles(userNsRoles);
+        Set<String> platform = platformRoles(userId);
+        boolean platformReviewer = hasPlatformReviewRole(platform);
+        Set<Long> managed = roles.entrySet().stream()
+                .filter(entry -> entry.getValue() == NamespaceRole.OWNER || entry.getValue() == NamespaceRole.ADMIN)
+                .map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet());
+        if (!platformReviewer && managed.isEmpty()) throw new DomainForbiddenException("review.no_permission");
+        if (namespaceId != null) {
+            Namespace namespace = namespaceRepository.findById(namespaceId)
+                    .orElseThrow(() -> new DomainNotFoundException("namespace.not_found", namespaceId));
+            if (!reviewService.canReviewNamespace(new ReviewTask(0L, namespaceId, userId), userId,
+                    namespace.getType(), roles, platform)) throw new DomainForbiddenException("review.no_permission");
+        }
+        Sort.Direction direction;
+        try { direction = Sort.Direction.fromString(sortDirection); }
+        catch (IllegalArgumentException exception) {
+            throw new DomainBadRequestException("error.review.queue.invalidFilter");
+        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, "submittedAt").and(Sort.by(direction, "id")));
+        Page<ReviewQueueQueryRepository.Entry> result = reviewQueueQueryRepository.list(
+                new ReviewQueueQueryRepository.Filter(normalizedStatus,
+                        namespaceId, query == null ? "" : query, normalizedKind, normalizedOrigin),
+                platformReviewer, managed, pageable);
+        List<ReviewTaskResponse> responses = governanceQueryRepository.getReviewTaskResponses(
+                result.getContent().stream().map(ReviewQueueQueryRepository.Entry::task).toList());
+        List<ReviewTaskResponse> entries = java.util.stream.IntStream.range(0, responses.size())
+                .mapToObj(index -> responses.get(index).withPresentation(result.getContent().get(index).displayName(),
+                        result.getContent().get(index).summary(), result.getContent().get(index).reviewKind())).toList();
+        return new PageResponse<>(entries, result.getTotalElements(), result.getNumber(), result.getSize());
+    }
+
+    private String normalizeFilter(String value, Set<String> allowed) {
+        if (value == null || value.isBlank() || "ALL".equalsIgnoreCase(value)) return null;
+        String normalized = value.strip().toUpperCase(java.util.Locale.ROOT);
+        if (!allowed.contains(normalized)) {
+            throw new DomainBadRequestException("error.review.queue.invalidFilter");
+        }
+        return normalized;
     }
 
     public PageResponse<ReviewTaskResponse> listSyncReviews(String status,
@@ -358,7 +436,8 @@ public class ReviewPortalAppService {
                 platformRoles(userId))) {
             throw new DomainForbiddenException("review.no_permission");
         }
-        return governanceQueryRepository.getReviewTaskResponse(task);
+        return governanceQueryRepository.getReviewTaskResponse(task).withReviewPermission(
+                reviewPermissionChecker.canReview(task, userId, namespace.getType(), normalizeRoles(userNsRoles), platformRoles(userId)));
     }
 
     private boolean canViewReview(ReviewTask task, String userId, Map<Long, NamespaceRole> namespaceRoles) {

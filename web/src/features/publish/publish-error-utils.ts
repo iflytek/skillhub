@@ -14,6 +14,7 @@ const VERSION_EXISTS_MARKERS = [
   'error.skill.version.exists',
   'Version already exists',
   '版本已存在',
+  'Версия уже существует',
 ]
 
 const FRONTMATTER_FAILURE_MARKERS = [

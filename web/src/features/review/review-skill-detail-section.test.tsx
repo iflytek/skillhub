@@ -1,7 +1,9 @@
+/** @vitest-environment jsdom */
 import { renderToStaticMarkup } from 'react-dom/server'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ReviewSkillDetail } from '@/api/types'
-import { ReviewSkillDetailSection } from './review-skill-detail-section'
+import { ReviewSkillDetailSection, ReviewSkillChangesSection } from './review-skill-detail-section'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -15,10 +17,10 @@ vi.mock('react-i18next', async () => {
   }
 })
 
-// Mock the review file hook to avoid QueryClient dependency in static rendering
-vi.mock('./use-review-file', () => ({
-  useReviewFile: () => ({ data: null, isLoading: false, error: null }),
-}))
+const mocks = vi.hoisted(() => ({ file: vi.fn(), refetch: vi.fn() }))
+vi.mock('./use-review-file', () => ({ useReviewFile: (...args: unknown[]) => mocks.file(...args) }))
+beforeEach(() => { vi.clearAllMocks(); mocks.file.mockReturnValue({ data: null, isLoading: false, error: null, refetch: mocks.refetch }) })
+afterEach(cleanup)
 
 function createDetail(): ReviewSkillDetail {
   return {
@@ -68,13 +70,114 @@ function createDetail(): ReviewSkillDetail {
 }
 
 describe('ReviewSkillDetailSection', () => {
+  it('shows the effective review presentation before the original package files', () => {
+    const detail = createDetail()
+    detail.skill.summary = 'Old public summary'
+    detail.presentation = { displayName: 'Pending display name', summary: 'Custom pending summary', overview: '# Custom pending overview', overviewSource: 'WEB' }
+    detail.documentationContent = '# Original README content'
+    const html = renderToStaticMarkup(<ReviewSkillDetailSection detail={detail} />)
+    expect(html).toContain('Custom pending summary')
+    expect(html).toContain('Custom pending overview')
+    expect(html).not.toContain('Old public summary')
+    expect(html).not.toContain('Original README content')
+    expect(html).toContain('reviewWorkbench.browseFiles')
+    expect(html).toContain('aria-expanded="false"')
+  })
+
   it('renders the download link, file tree, and review-bound documentation together', () => {
     const html = renderToStaticMarkup(<ReviewSkillDetailSection detail={createDetail()} />)
 
     expect(html).toContain('/api/v1/reviews/1/download')
-    expect(html).toContain('README.md')
+    expect(html).toContain('reviewWorkbench.browseFiles')
     expect(html).toContain('Demo Skill')
-    expect(html).toContain('fileTree.title')
+    expect(html).not.toContain('fileTree.title')
+  })
+
+  it('opens original files near the summary before a long overview and closes them from the same toolbar', () => {
+    const detail = createDetail()
+    detail.presentation = { displayName: 'Pending name', summary: 'Summary for review', overview: '# Long custom overview\n\n' + 'Overview paragraph. '.repeat(300), overviewSource: 'WEB' }
+    detail.documentationContent = '# Original README content'
+    render(<ReviewSkillDetailSection detail={detail} reviewId={1} />)
+    const browse = screen.getByRole('button', { name: 'reviewWorkbench.browseFiles' })
+    const summary = screen.getByRole('region', { name: 'reviewWorkbench.summary' })
+    const overview = screen.getByRole('region', { name: 'reviewWorkbench.overview' })
+    expect(browse.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getAllByRole('link', { name: 'review.downloadSkillZip' })).toHaveLength(1)
+    expect(screen.queryByText('Original README content')).toBeNull()
+    fireEvent.click(browse)
+    expect(browse.getAttribute('aria-expanded')).toBe('true')
+    const files = screen.getByRole('region', { name: 'reviewWorkbench.packageFiles' })
+    expect(files.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(within(files).getByText('Original README content')).toBeTruthy()
+    fireEvent.click(browse)
+    expect(browse.getAttribute('aria-expanded')).toBe('false')
+    expect(screen.queryByRole('region', { name: 'reviewWorkbench.packageFiles' })).toBeNull()
+  })
+
+  it('requests missing original documentation only after browsing, and preserves the preview size limit', () => {
+    const detail = createDetail()
+    detail.documentationContent = null
+    const view = render(<ReviewSkillDetailSection detail={detail} reviewId={1} />)
+    expect(mocks.file).toHaveBeenCalledWith(1, 'README.md', false)
+    fireEvent.click(screen.getByRole('button', { name: 'reviewWorkbench.browseFiles' }))
+    expect(mocks.file).toHaveBeenCalledWith(1, 'README.md', true)
+    mocks.file.mockClear()
+    view.rerender(<ReviewSkillDetailSection detail={detail} reviewId={1} documentationTooLarge />)
+    expect(mocks.file).toHaveBeenCalledWith(1, 'README.md', false)
+    expect(screen.getByRole('link', { name: 'filePreview.downloadFile' })).toBeTruthy()
+  })
+
+  it('keeps original-document retry and download available without replacing a custom overview', () => {
+    const detail = createDetail()
+    detail.documentationContent = null
+    detail.presentation = { displayName: 'Pending name', summary: 'Custom summary', overview: '# Custom overview', overviewSource: 'WEB' }
+    mocks.file.mockReturnValue({ data: null, isLoading: false, error: new Error('read failed'), refetch: mocks.refetch })
+    render(<ReviewSkillDetailSection detail={detail} reviewId={1} />)
+    fireEvent.click(screen.getByRole('button', { name: 'reviewWorkbench.browseFiles' }))
+    expect(screen.getByText('review.documentationLoadFailed')).toBeTruthy()
+    expect(screen.getByText('Custom overview')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'reviewWorkbench.retry' }))
+    expect(mocks.refetch).toHaveBeenCalledOnce()
+    expect(screen.getByRole('link', { name: 'filePreview.downloadFile' })).toBeTruthy()
+  })
+
+  it('shows the task-bound declaration on content even when a first publication has no changes tab', () => {
+    const detail = createDetail()
+    detail.comparison = null
+    detail.versions[0].complianceSnapshot = { items: [{ standard: 'current-standard', controlId: 'CURRENT' }] }
+    detail.versions.push({ ...detail.versions[0], id: 9, version: '1.1.0', status: 'PUBLISHED', complianceSnapshot: { items: [{ standard: 'other-standard', controlId: 'OTHER' }] } })
+    render(<ReviewSkillDetailSection detail={detail} />)
+    expect(screen.getByText(/current-standard/)).toBeTruthy()
+    expect(screen.queryByText(/other-standard/)).toBeNull()
+    expect(screen.queryByText('reviewWorkbench.baseline')).toBeNull()
+  })
+
+  it('does not display an empty declaration shell or borrow another version declaration', () => {
+    const detail = createDetail()
+    detail.versions.push({ ...detail.versions[0], id: 9, version: '1.1.0', status: 'PUBLISHED', complianceSnapshot: { items: [{ standard: 'other-standard', controlId: 'OTHER' }] } })
+    const view = render(<ReviewSkillDetailSection detail={detail} />)
+    expect(screen.queryByText('compliance.title')).toBeNull()
+    expect(screen.queryByText(/other-standard/)).toBeNull()
+    detail.versions[0].complianceSnapshot = { items: [] }
+    view.rerender(<ReviewSkillDetailSection detail={detail} />)
+    expect(screen.queryByText('compliance.title')).toBeNull()
+  })
+
+  it('does not create empty compliance or full historical-version disclosures', () => {
+    render(<ReviewSkillChangesSection detail={createDetail()} />)
+    expect(screen.queryByText('review.complianceChanges')).toBeNull()
+    expect(screen.queryByText('skillDetail.tabVersions')).toBeNull()
+    expect(screen.queryByText('review.technicalDetails')).toBeNull()
+  })
+
+  it('does not take an arbitrary published version as an unavailable comparison baseline', () => {
+    const detail = createDetail()
+    detail.versions[0].complianceSnapshot = { items: [{ standard: 'pending-declaration', controlId: 'NEW' }] }
+    detail.versions.push({ ...detail.versions[0], id: 9, version: '1.1.0', status: 'PUBLISHED', complianceSnapshot: { items: [{ standard: 'unrelated-published', controlId: 'OLD' }] } })
+    render(<ReviewSkillChangesSection detail={detail} />)
+    expect(screen.getByText(/pending-declaration/)).toBeTruthy()
+    expect(screen.queryByText(/unrelated-published/)).toBeNull()
+    expect(screen.queryByText('review.complianceDiffRemovedLabel')).toBeNull()
   })
 
   it('renders loading state while review detail is being fetched', () => {

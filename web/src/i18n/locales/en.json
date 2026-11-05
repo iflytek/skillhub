@@ -511,7 +511,7 @@
     "tokens": "API Tokens",
     "reviewProgress": "Review Progress",
     "admin": "Admin",
-    "governance": "Governance",
+    "governance": "Governance center",
     "reports": "Reports",
     "githubSync": "Skill Sync",
     "deepDiscovery": "Deep Discovery"
@@ -1466,6 +1466,22 @@
     "accessDeniedDesc": "You don't have permission to view this skill",
     "tabReadme": "README",
     "tabOverview": "Overview",
+    "versionLoadError": "Could not load this version. Please retry.",
+    "versionLoading": "Loading version content…",
+    "tabInstructions": "Skill instructions",
+    "instructionsError": "Could not load instructions. Please retry.",
+    "instructionsRetry": "Retry",
+    "instructionsLoading": "Loading instructions…",
+    "instructionsMissing": "This version does not contain SKILL.md.",
+    "instructionsRendered": "Read rendered",
+    "instructionsSource": "View source",
+    "versionUnavailable": "Version unavailable or inaccessible: {{version}}",
+    "viewingUnpublishedVersion": "Previewing unpublished v{{version}}",
+    "viewingHistoricalVersion": "Viewing historical v{{version}}",
+    "viewingVersion": "Viewing v{{version}}",
+    "returnLatestPublished": "Return to latest published",
+    "viewingThisVersion": "Currently viewing",
+    "viewThisVersion": "View this version",
     "tabFiles": "Files",
     "tabVersions": "Versions",
     "noReadme": "No README",
@@ -1552,7 +1568,7 @@
     "rejectedFeedbackTitle": "Review Rejected",
     "rejectedFeedbackLabel": "Reviewer feedback",
     "rejectedFeedbackFallback": "No rejection feedback was provided.",
-    "governance": "Governance",
+    "governance": "Governance center",
     "processing": "Processing...",
     "archiveSkill": "Archive Skill",
     "unarchiveSkill": "Restore Skill",
@@ -1972,10 +1988,19 @@
     "saveErrorTitle": "Failed to update namespace"
   },
   "upload": {
-    "dropHint": "Drop to upload...",
-    "dragHint": "Drag a ZIP file here, or click to select",
-    "formatHint": "Only .zip format supported",
-    "folderHint": "Or select a folder to package and upload"
+    "dropHint": "Release to read the ZIP file",
+    "dragHint": "Drop a ZIP file here",
+    "formatHint": "Only .zip files are supported",
+    "folderHint": "Choose a folder",
+    "selectZip": "Choose ZIP file",
+    "folderPackagingHint": "The folder will be packaged as a ZIP before processing.",
+    "packaging": "Packaging the selected folder…",
+    "errors": {
+      "singleZip": "Choose one ZIP file at a time.",
+      "zipRequired": "Choose a skill package in .zip format.",
+      "folderDropUnsupported": "Use Choose a folder, or compress the folder as a ZIP first.",
+      "emptySelection": "No files were found. Choose again."
+    }
   },
   "layout": {
     "openNavigation": "Open navigation menu",
@@ -2212,7 +2237,7 @@
       "stars": "Starred",
       "subscriptions": "My Subscriptions",
       "reviewProgress": "My Review Progress",
-      "reviews": "Review Management",
+      "reviews": "Review center",
       "promotions": "Promotion Management",
       "reports": "Report Management",
       "users": "User Management",
@@ -2246,11 +2271,28 @@
     "copyright": "© 2026 SkillHub. Apache-2.0."
   },
   "publish": {
+    "packageFormatHint": "The ZIP root must contain SKILL.md",
+    "form": {
+      "identity": "Basic information",
+      "nameHelp": "Starts with the package title. Leave empty to use the package name.",
+      "presentation": "Presentation",
+      "presentationHelp": "Explain the purpose, inputs, outputs and limitations for users.",
+      "customized": "Customized for this version",
+      "packageContent": "From the current package",
+      "restore": "Restore package content",
+      "restoreTitle": "Restore package {{field}}?",
+      "restoreDescription": "This replaces the manually edited content with content from the current package. The package file itself will not change.",
+      "confirmHelp": "Review the version and presentation before submitting."
+    },
     "retryPackagePreview": "Retry",
     "packageName": "Package name",
     "displayName": "Display name",
     "displayNamePlaceholder": "For example: Meeting notes assistant",
     "displayNameHelp": "Up to 200 characters. Defaults to the package title. Changes follow this version’s review and do not alter the identifier or package files. Leave blank to use the package title.",
+    "shortDescription": "Short description",
+    "overview": "Detailed overview (Markdown)",
+    "presentationInheritance": "Without web or package presentation values, custom values from published version {{version}} are inherited when submitted.",
+    "resetPresentation": "Restore package defaults (do not inherit)",
     "readingPackage": "Reading package metadata…",
     "examplesReady": "Recognized {{count}} task examples across all languages.",
     "examplesNone": "No task examples provided. Publishing and use remain available.",
@@ -2260,7 +2302,7 @@
     "subtitle": "Upload skill package to SkillHub",
     "reviewNotice": {
       "title": "Review Notice",
-      "description": "Submitted skill packages require admin review before publication."
+      "description": "Processing depends on visibility and the security scanning policy. Check the submission receipt and version status for the next step."
     },
     "resubmitNotice": {
       "title": "Resubmit {{skill}} v{{version}}",
@@ -2304,7 +2346,137 @@
     "updateSubtitle": "Save avatar changes independently, or upload a package to publish a new version.",
     "optionalPackage": "A package is optional when changing only the avatar.",
     "saveAvatar": "Save avatar",
-    "avatarSaved": "Avatar changes submitted"
+    "avatarSaved": "Avatar changes submitted",
+    "overviewPreview": "Overview preview",
+    "editOverview": "Edit overview",
+    "emptyOverview": "No overview to preview",
+    "emptyOverviewHelp": "No usable introduction was found. Add the purpose, inputs, outputs and limitations in the overview editor.",
+    "settings": "Publishing settings",
+    "cardPreview": "Skill card preview",
+    "confirmDetails": "Confirm submission",
+    "backToEdit": "Back to editing",
+    "readingOverview": "Reading package introduction…",
+    "overviewPreviewUnavailable": "Package introduction cannot be previewed. Edit the overview or choose the package again; the server still validates submissions.",
+    "stepsLabel": "Publishing steps",
+    "stepUpload": "Upload package",
+    "stepPresentation": "Presentation",
+    "stepConfirm": "Confirm submission",
+    "nextConfirm": "Next: confirm",
+    "packageParsed": "Structure parsed",
+    "replacePackage": "Replace",
+    "editor": {
+      "title": "Edit detailed overview",
+      "description": "Describe the purpose, inputs, outputs and limitations.",
+      "visual": "Visual",
+      "source": "Markdown source",
+      "preview": "Publish preview",
+      "sourceOnly": "Source",
+      "split": "Split",
+      "unsaved": "Unsaved changes",
+      "unchanged": "No unsaved changes",
+      "apply": "Done editing",
+      "cancel": "Cancel changes",
+      "returnHint": "Finishing updates the form preview; it does not submit for review.",
+      "discardTitle": "Discard these changes?",
+      "discardDescription": "Overview changes that have not been applied will be discarded.",
+      "discard": "Discard changes",
+      "keepEditing": "Keep editing",
+      "sourceRecovery": "This content cannot be edited visually. The source is preserved; continue in Markdown source mode.",
+      "tooLong": "Overview cannot exceed {{max}} characters.",
+      "loading": "Loading editor…",
+      "loadFailed": "The editor failed to load. Continue in Markdown source mode.",
+      "insertImage": "Insert image",
+      "imageUrl": "Image HTTPS URL",
+      "imageAlt": "Image description",
+      "insert": "Insert",
+      "invalidImageUrl": "Enter a valid HTTPS image URL.",
+      "insertMore": "Insert",
+      "visualUnavailable": "This content cannot be edited visually. Continue in Markdown source mode; the original content is preserved.",
+      "markdownLabel": "Overview Markdown source"
+    },
+    "source": {
+      "package": "Use package",
+      "custom": "Custom",
+      "view": "Read full overview",
+      "shortRequired": "Provide a non-empty summary of up to 200 characters, from the package or custom content.",
+      "overviewRequired": "Provide a non-empty overview of up to 20,000 characters; select Custom to shorten package documentation.",
+      "requiredSummary": "Required information is incomplete. Check the package, namespace, summary and overview.",
+      "historyUnavailable": "The published introduction could not be read. Retry before submitting to avoid overwriting it."
+    },
+    "result": {
+      "submitting": {
+        "title": "Submitting this version",
+        "description": "Sending {{skill}} {{version}}. Please wait.",
+        "button": "Submitting…"
+      },
+      "version-conflict": {
+        "title": "Version {{version}} already exists",
+        "description": "Your introduction is retained. Replace the package with a new version and review before submitting."
+      },
+      "unknown": {
+        "title": "Submission result is uncertain",
+        "description": "Check My skills for this version before submitting again."
+      },
+      "error": {
+        "forbidden": {
+          "title": "Submission not permitted",
+          "description": "Your introduction is retained. Check permissions and package contents before proceeding."
+        },
+        "invalid": {
+          "title": "Submission failed",
+          "description": "Your introduction is retained. Check permissions and package contents before proceeding."
+        },
+        "failed": {
+          "title": "Submission failed",
+          "description": "Your introduction is retained. Check permissions and package contents before proceeding."
+        }
+      },
+      "accepted": {
+        "SCANNING": {
+          "title": "Submitted; awaiting security scanning",
+          "description": "This version is not published. After scanning, the configured review workflow applies."
+        },
+        "PENDING_REVIEW": {
+          "title": "Submitted; awaiting review",
+          "description": "This version is not published. Open this version to follow the review outcome."
+        },
+        "UPLOADED": {
+          "title": "Uploaded; not published",
+          "description": "Open this version and use the available publish or review action for its visibility."
+        },
+        "PUBLISHED": {
+          "title": "Version published",
+          "description": "This version has been published. Open its details to inspect the released content."
+        },
+        "SCAN_FAILED": {
+          "title": "Security scan failed to run",
+          "description": "This is an execution failure, not a harmful-content verdict. Inspect the scan report and ask the deployment operator to investigate."
+        },
+        "REJECTED": {
+          "title": "Version rejected",
+          "description": "Read the review feedback before preparing another version."
+        },
+        "YANKED": {
+          "title": "Version withdrawn",
+          "description": "Open the version details to inspect its current availability."
+        },
+        "DRAFT": {
+          "title": "Draft version",
+          "description": "The version has not been published."
+        },
+        "unrecognized": {
+          "title": "Submission response received",
+          "description": "Open My skills to confirm the current state of this version."
+        }
+      },
+      "previousPublished": "The published version remains visible under its existing permissions.",
+      "viewVersion": "View this version",
+      "mySkills": "My skills",
+      "replacePackage": "Replace package",
+      "checkMySkills": "Check My skills",
+      "returnToForm": "Return to editing",
+      "receiptHint": "This is the submission receipt. Open this version to check its latest progress."
+    }
   },
   "toast": {
     "success": "Success",
@@ -3315,5 +3487,140 @@
       "title": "Subscribed skill version yanked",
       "description": "{{skillName}}{{versionSuffix}} version was yanked."
     }
+  },
+  "reviewCenter": {
+    "title": "Review center",
+    "description": "Find and process requests within your authorized scope.",
+    "profileDescription": "Review user profile changes. Skill and suite requests use the review queue.",
+    "profileQueue": "Profile reviews",
+    "skillQueue": "Skill and suite reviews",
+    "governanceTitle": "Governance center",
+    "governanceDescription": "Handle reports and global promotion requests, and read governance records. Publishing, avatar and visibility requests belong in the review center.",
+    "openingScope": "Opening this namespace in the review center…",
+    "unknownObject": "Unnamed resource",
+    "loading": "Loading requests…",
+    "scopeFailed": "Unable to load the review scope. Try again.",
+    "noPermission": "This account does not have review permission.",
+    "retry": "Reload",
+    "loadFailed": "Unable to load review requests. Your filters have been kept.",
+    "results": "Results",
+    "resultsCount": "Results · {{count}} requests",
+    "empty": "No matching requests",
+    "emptyDescription": "Adjust the conditions or reset the filters and search again.",
+    "sortLabel": "Submission order",
+    "newest": "Newest first",
+    "oldest": "Oldest first",
+    "open": "View",
+    "pageSummary": "{{total}} requests · Page {{page}}",
+    "governanceReviewLink": "Open review center",
+    "governancePendingPromotions": "Pending global promotions",
+    "governancePendingReports": "Pending reports",
+    "governanceActivity": "Recent decisions",
+    "governanceSearchMoved": "Search index maintenance is now in system settings.",
+    "filters": {
+      "title": "Filter requests",
+      "q": "Keywords",
+      "status": "Review status",
+      "namespace": "Review scope",
+      "reviewKind": "Request type",
+      "originType": "Source",
+      "searchPlaceholder": "Search name, coordinate or submitter",
+      "allScopes": "All authorized scopes",
+      "apply": "Search",
+      "reset": "Reset"
+    },
+    "status": {
+      "ALL": "All statuses",
+      "PENDING": "Pending",
+      "APPROVED": "Approved",
+      "REJECTED": "Rejected",
+      "SUPERSEDED": "Superseded"
+    },
+    "kind": {
+      "ALL": "All request types",
+      "FIRST_PUBLISH": "First publication",
+      "VERSION_UPDATE": "Version update",
+      "SUITE_PUBLISH": "Suite publication",
+      "VISIBILITY_CHANGE": "Expand visibility",
+      "AVATAR_CHANGE": "Replace avatar",
+      "AVATAR_REMOVAL": "Remove avatar",
+      "SKILL_VERSION": "Skill version request"
+    },
+    "origin": {
+      "ALL": "All sources",
+      "USER": "User submission",
+      "GITHUB_SYNC": "GitHub sync"
+    },
+    "columns": {
+      "object": "Resource",
+      "kind": "Request",
+      "source": "Source / Namespace",
+      "submitter": "Submitter / Time",
+      "action": "Action"
+    },
+    "viewAll": "View all",
+    "pageEmpty": "This page has no requests. Return to the first page.",
+    "firstPage": "First page",
+    "governanceNotifications": "Governance notifications and outcomes",
+    "notificationReadFailed": "Could not mark governance notification as read"
+  },
+  "reviewWorkbench": {
+    "displayContent": "Presentation for this version",
+    "boundContent": "This content is fixed to version {{version}} bound to the review. Inspect the original package files separately.",
+    "summary": "Short description",
+    "overview": "Detailed overview",
+    "packageFiles": "Original package files",
+    "originalFiles": "The uploaded files are unchanged and reviewed separately from the presentation.",
+    "browseFiles": "Browse files",
+    "retry": "Reload",
+    "requestSummary": "Review request",
+    "request": "Request",
+    "boundVersion": "Bound version",
+    "checks": "Review evidence",
+    "scanBoundary": "Scanning provides evidence; content, purpose and requested visibility still require human review.",
+    "boundScan": "Bound-version scan evidence",
+    "boundScanDescription": "This visibility request uses its bound version’s scan snapshot. The scan status does not mean visibility has already changed.",
+    "contentNavigation": "Review content navigation",
+    "viewOnly": "Read only: this account cannot process this request.",
+    "presentationChanges": "Presentation and file changes",
+    "baseline": "Published baseline",
+    "pending": "Under review",
+    "modified": "Modified",
+    "unchanged": "Unchanged",
+    "unavailableComparison": "Comparison incomplete",
+    "notProvided": "No content provided.",
+    "overviewUnavailable": "The full overview could not be read. This does not establish that it is empty or unchanged.",
+    "noBaseline": "No published baseline is available for this review.",
+    "before": "Before",
+    "after": "After",
+    "fileChanges": "Package file changes",
+    "fileADDED": "Added",
+    "fileMODIFIED": "Modified",
+    "fileREMOVED": "Removed",
+    "fileUNCHANGED": "Unchanged",
+    "kind": {
+      "publish": "First publication",
+      "update": "Version update",
+      "visibility": "Expand visibility",
+      "avatar": "Replace skill avatar",
+      "avatarRemoval": "Remove skill avatar",
+      "suite": "Publish suite",
+      "sync": "GitHub sync"
+    },
+    "approve": {
+      "publish": "Approve publication",
+      "update": "Approve update",
+      "visibility": "Approve visibility change",
+      "avatar": "Approve avatar change",
+      "avatarRemoval": "Approve avatar removal",
+      "suite": "Approve suite version",
+      "sync": "Approve sync update"
+    },
+    "approveContentUnavailable": "Pending content is still loading or cannot be verified. Approval is unavailable.",
+    "viewScanEvidence": "View scan evidence",
+    "complianceIncomplete": "Some version declarations are unavailable, so a complete comparison is not possible.",
+    "complianceUnchanged": "Compliance declarations unchanged",
+    "complianceAbsentBase": "This declaration is absent from the baseline version.",
+    "complianceAbsentPending": "This declaration is absent from the current version."
   }
 }

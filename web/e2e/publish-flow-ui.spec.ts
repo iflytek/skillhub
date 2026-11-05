@@ -49,7 +49,13 @@ test.describe('Publish Flow UI (Real API)', () => {
       // Scope this regression test to the existing ZIP picker.
       await page.locator('input[type="file"][accept*=".zip"]').setInputFiles(packagePath)
       await expect(page.getByText(path.basename(packagePath))).toBeVisible()
-      const confirmButton = page.getByRole('button', { name: 'Confirm Publish' })
+      // Publishing is a two-step flow: review the form, then confirm in the dialog.
+      const nextButton = page.getByRole('button', { name: 'Next: confirm' })
+      await expect(nextButton).toBeEnabled()
+      await nextButton.click()
+      const confirmDialog = page.getByRole('dialog')
+      await expect(confirmDialog).toContainText(`@${namespace.slug}/${skillName}`)
+      const confirmButton = confirmDialog.getByRole('button', { name: 'Confirm Publish' })
       await expect(confirmButton).toBeEnabled()
       const publishResponsePromise = page.waitForResponse(
         (response) =>

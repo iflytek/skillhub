@@ -4957,6 +4957,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reviews/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List namespace scopes the caller is authorized to review */
+        get: operations["listScopes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List namespace scopes the caller is authorized to review */
+        get: operations["listScopes_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/reviews/pending": {
         parameters: {
             query?: never;
@@ -8187,6 +8221,8 @@ export interface components {
             name?: string;
             displayName?: string;
             description?: string;
+            shortDescription?: string;
+            overview?: string;
             version?: string;
             /** @enum {string} */
             examplesStatus?: "ready" | "none" | "invalid";
@@ -8250,6 +8286,10 @@ export interface components {
             previousVisibility?: string;
             requestedVisibility?: string;
             originType?: string;
+            displayName?: string;
+            summary?: string;
+            reviewKind?: string;
+            canReview?: boolean;
         };
         ReviewTaskRequest: {
             /** Format: int64 */
@@ -9525,6 +9565,22 @@ export interface components {
             readyForApproval?: boolean;
             removal?: boolean;
         };
+        ReviewComparison: {
+            baseVersion?: string;
+            baseline?: components["schemas"]["ReviewPresentation"];
+            current?: components["schemas"]["ReviewPresentation"];
+            files?: components["schemas"]["ReviewFileChange"][];
+        };
+        ReviewFileChange: {
+            path?: string;
+            changeType?: string;
+        };
+        ReviewPresentation: {
+            displayName?: string;
+            summary?: string;
+            overview?: string;
+            overviewSource?: string;
+        };
         ReviewSkillDetailResponse: {
             skill?: components["schemas"]["SkillDetailResponse"];
             versions?: components["schemas"]["SkillVersionResponse"][];
@@ -9535,6 +9591,8 @@ export interface components {
             activeVersion?: string;
             avatarChange?: components["schemas"]["AvatarChange"];
             visibilityChange?: components["schemas"]["VisibilityChange"];
+            presentation?: components["schemas"]["ReviewPresentation"];
+            comparison?: components["schemas"]["ReviewComparison"];
         };
         VisibilityChange: {
             previousVisibility?: string;
@@ -9638,6 +9696,21 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        ApiResponseListReviewScopeResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ReviewScopeResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ReviewScopeResponse: {
+            /** Format: int64 */
+            id?: number;
+            slug?: string;
+            displayName?: string;
         };
         ApiResponsePageResponseReviewTaskResponse: {
             /** Format: int32 */
@@ -15503,6 +15576,9 @@ export interface operations {
                 avatarUploadId?: string;
                 expectedSlug?: string;
                 displayName?: string;
+                shortDescription?: string;
+                overview?: string;
+                resetPresentation?: boolean;
             };
             header?: never;
             path: {
@@ -15539,6 +15615,9 @@ export interface operations {
                 avatarUploadId?: string;
                 expectedSlug?: string;
                 displayName?: string;
+                shortDescription?: string;
+                overview?: string;
+                resetPresentation?: boolean;
             };
             header?: never;
             path: {
@@ -15824,9 +15903,12 @@ export interface operations {
     };
     listReviews: {
         parameters: {
-            query: {
-                status: string;
+            query?: {
+                status?: string;
                 namespaceId?: number;
+                q?: string;
+                reviewKind?: string;
+                originType?: string;
                 page?: number;
                 size?: number;
                 sortDirection?: string;
@@ -15874,9 +15956,12 @@ export interface operations {
     };
     listReviews_1: {
         parameters: {
-            query: {
-                status: string;
+            query?: {
+                status?: string;
                 namespaceId?: number;
+                q?: string;
+                reviewKind?: string;
+                originType?: string;
                 page?: number;
                 size?: number;
                 sortDirection?: string;
@@ -20852,6 +20937,46 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePageResponseGithubSyncReviewQueueItemResponse"];
+                };
+            };
+        };
+    };
+    listScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListReviewScopeResponse"];
+                };
+            };
+        };
+    };
+    listScopes_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListReviewScopeResponse"];
                 };
             };
         };

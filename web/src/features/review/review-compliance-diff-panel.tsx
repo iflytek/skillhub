@@ -1,6 +1,7 @@
 import { ChevronDown, ShieldAlert, ShieldCheck } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { ComplianceMapping, ComplianceSnapshot, SkillVersion } from '@/api/types'
+import { ComplianceSnapshotPanel } from '@/features/skill/compliance-snapshot-panel'
 import { cn } from '@/shared/lib/utils'
 
 interface ReviewComplianceDiffPanelProps {
@@ -8,6 +9,7 @@ interface ReviewComplianceDiffPanelProps {
   pendingVersion?: SkillVersion | null
   className?: string
   concealVersionIdentifiers?: boolean
+  baselineExpected?: boolean
 }
 
 type DiffKind = 'added' | 'removed' | 'modified'
@@ -52,7 +54,7 @@ function mappingSignature(mapping: ComplianceMapping) {
   })
 }
 
-function compareComplianceSnapshots(baseSnapshot?: ComplianceSnapshot | null, pendingSnapshot?: ComplianceSnapshot | null) {
+function compareComplianceSnapshots(baseSnapshot: ComplianceSnapshot, pendingSnapshot: ComplianceSnapshot) {
   const baseItems = new Map((baseSnapshot?.items ?? []).map((item) => [mappingKey(item), item]))
   const pendingItems = new Map((pendingSnapshot?.items ?? []).map((item) => [mappingKey(item), item]))
   const keys = new Set<string>([...baseItems.keys(), ...pendingItems.keys()])
@@ -219,7 +221,7 @@ function DiffItem({ entry }: { entry: DiffEntry }) {
           </div>
           <MappingDetails
             mapping={entry.base}
-            emptyMessage={t('review.complianceDiffBaseRemoved')}
+            emptyMessage={t('reviewWorkbench.complianceAbsentBase')}
           />
         </div>
         <div className="space-y-2">
@@ -228,7 +230,7 @@ function DiffItem({ entry }: { entry: DiffEntry }) {
           </div>
           <MappingDetails
             mapping={entry.pending}
-            emptyMessage={t('review.complianceDiffPendingAdded')}
+            emptyMessage={t('reviewWorkbench.complianceAbsentPending')}
           />
         </div>
       </div>
@@ -236,30 +238,32 @@ function DiffItem({ entry }: { entry: DiffEntry }) {
   )
 }
 
-function pickBaseVersion(versions: SkillVersion[], activeVersion: string) {
-  const publishedVersions = versions.filter((version) => version.status === 'PUBLISHED' && version.version !== activeVersion)
-  if (publishedVersions.length > 0) {
-    return publishedVersions.sort((left, right) => {
-      const leftTime = new Date(left.publishedAt).getTime()
-      const rightTime = new Date(right.publishedAt).getTime()
-      if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
-        return rightTime - leftTime
-      }
-      return right.id - left.id
-    })[0]
-  }
-  return versions.find((version) => version.version !== activeVersion) ?? null
-}
-
-export function ReviewComplianceDiffPanel({ baseVersion, pendingVersion, className, concealVersionIdentifiers = false }: ReviewComplianceDiffPanelProps) {
+export function ReviewComplianceDiffPanel({ baseVersion, pendingVersion, className, concealVersionIdentifiers = false, baselineExpected = false }: ReviewComplianceDiffPanelProps) {
   const { t } = useTranslation()
-  if (!baseVersion || !pendingVersion) {
-    return null
+  const baseSnapshot = baseVersion?.complianceSnapshot
+  const pendingSnapshot = pendingVersion?.complianceSnapshot
+  const baseItems = baseSnapshot?.items?.filter((item) => item.standard || item.controlId) ?? []
+  const pendingItems = pendingSnapshot?.items?.filter((item) => item.standard || item.controlId) ?? []
+  const incompleteComparison = (baselineExpected || !!baseVersion)
+    && (!baseVersion || !pendingVersion || !baseSnapshot || !pendingSnapshot)
+  if (!baseItems.length && !pendingItems.length) {
+    return incompleteComparison && (baseSnapshot || pendingSnapshot)
+      ? <p role="status" className="text-sm text-muted-foreground">{t('reviewWorkbench.complianceIncomplete')}</p>
+      : null
   }
 
-  const diff = compareComplianceSnapshots(baseVersion.complianceSnapshot, pendingVersion.complianceSnapshot)
+  // Missing snapshots are not empty declarations. Only compare two successfully projected snapshots.
+  if (!baseVersion || !pendingVersion || !baseSnapshot || !pendingSnapshot) {
+    const incomplete = baselineExpected || !!baseVersion
+    return <section className="space-y-3" aria-label={t('compliance.title')}>
+      {incomplete && <p role="status" className="rounded-lg border border-border/60 bg-secondary/50 p-3 text-sm text-muted-foreground">{t('reviewWorkbench.complianceIncomplete')}</p>}
+      {baseItems.length > 0 && <div className="space-y-2"><h3 className="text-sm font-semibold">{t('review.complianceDiffBaseVersion')}</h3><ComplianceSnapshotPanel snapshot={baseSnapshot} /></div>}
+      {pendingItems.length > 0 && <div className="space-y-2"><h3 className="text-sm font-semibold">{t('review.complianceDiffPendingVersion')}</h3><ComplianceSnapshotPanel snapshot={pendingSnapshot} /></div>}
+    </section>
+  }
+  const diff = compareComplianceSnapshots(baseSnapshot, pendingSnapshot)
   if (diff.diffs.length === 0) {
-    return null
+    return <p className="text-sm text-muted-foreground">{t('reviewWorkbench.complianceUnchanged')}</p>
   }
 
   return (
@@ -321,4 +325,4 @@ export function ReviewComplianceDiffPanel({ baseVersion, pendingVersion, classNa
   )
 }
 
-export { compareComplianceSnapshots, pickBaseVersion }
+export { compareComplianceSnapshots }
