@@ -26,7 +26,7 @@ test.describe('Namespace Review Detail Access (Real API)', () => {
       await expect(page).toHaveURL((url) => url.pathname === `/dashboard/reviews/${seeded?.reviewTaskId}` && url.searchParams.get('namespace') === seeded?.namespace.slug)
       await expect(page.getByRole('heading', { level: 1, name: seeded.skillDisplayName, exact: true })).toBeVisible()
       await expect(page.getByTestId('review-task-header').getByText(`@${seeded.namespace.slug}/${seeded.skill.slug}`, { exact: true })).toBeVisible()
-      await page.getByRole('button', { name: 'Back to list', exact: true }).click()
+      await page.getByRole('button', { name: 'Back to List', exact: true }).click()
       await expect(page).toHaveURL((url) => url.pathname === '/dashboard/reviews' && url.searchParams.get('namespace') === seeded?.namespace.slug)
     } finally {
       await seeded?.cleanup()
