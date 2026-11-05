@@ -5,6 +5,7 @@ import com.iflytek.skillhub.domain.skill.*;
 import com.iflytek.skillhub.domain.social.*;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.listener.RecipientResolver;
+import com.iflytek.skillhub.notification.domain.NotificationCategory;
 import com.iflytek.skillhub.notification.email.delivery.NotificationEmailItem;
 import java.util.*;
 import org.springframework.stereotype.Component;
@@ -19,10 +20,11 @@ public class NotificationEmailEligibility {
     private final SkillSubscriptionRepository subscriptions;
     private final SubscriptionMetadataAccessPolicy access;
     private final RecipientResolver recipients;
+    private final NotificationEmailSuiteReviewEligibility suiteReviews;
     public NotificationEmailEligibility(SkillRepository skills, NamespaceRepository namespaces,
             UserAccountRepository accounts, NamespaceMemberRepository members,
             SkillSubscriptionRepository subscriptions, SubscriptionMetadataAccessPolicy access,
-            RecipientResolver recipients) {
+            RecipientResolver recipients, NotificationEmailSuiteReviewEligibility suiteReviews) {
         this.skills = skills;
         this.namespaces = namespaces;
         this.accounts = accounts;
@@ -30,6 +32,7 @@ public class NotificationEmailEligibility {
         this.subscriptions = subscriptions;
         this.access = access;
         this.recipients = recipients;
+        this.suiteReviews = suiteReviews;
     }
 
     public boolean eligible(NotificationEmailItem item) {
@@ -39,6 +42,10 @@ public class NotificationEmailEligibility {
         }
         if ("PROFILE_REVIEW_SUBMITTED".equals(type)) {
             return recipients.resolvePlatformUserAdmins().contains(user);
+        }
+        if ("SUITE_REVIEW_SUBMITTED".equals(type)) {
+            return item.category() == NotificationCategory.REVIEW
+                    && suiteReviews.eligible(user, item.entityId());
         }
         Skill skill = item.skillId() == null ? null : skills.findById(item.skillId()).orElse(null);
         if (skill == null) {
@@ -69,7 +76,7 @@ public class NotificationEmailEligibility {
     public String targetPath(NotificationEmailItem item) {
         return switch (item.eventType()) {
             case "PROFILE_REVIEW_SUBMITTED" -> "/dashboard/reviews?type=profile";
-            case "REVIEW_SUBMITTED" -> "/dashboard/reviews/" + item.entityId();
+            case "REVIEW_SUBMITTED", "SUITE_REVIEW_SUBMITTED" -> "/dashboard/reviews/" + item.entityId();
             case "PROMOTION_SUBMITTED" -> "/dashboard/promotions";
             case "REPORT_SUBMITTED" -> "/dashboard/reports";
             default -> skillPath(item.skillId());

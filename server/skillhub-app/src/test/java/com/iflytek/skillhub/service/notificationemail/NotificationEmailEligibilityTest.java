@@ -15,6 +15,7 @@ import com.iflytek.skillhub.notification.domain.NotificationCategory;
 import com.iflytek.skillhub.notification.email.delivery.NotificationEmailItem;
 import java.time.Instant;
 import java.util.*;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -26,14 +27,39 @@ class NotificationEmailEligibilityTest {
     UserAccountRepository accounts = mock(UserAccountRepository.class);
     UserRoleBindingRepository roles = mock(UserRoleBindingRepository.class);
     SkillSubscriptionRepository subscriptions = mock(SkillSubscriptionRepository.class);
+    NotificationEmailSuiteReviewEligibility suiteReviews = mock(NotificationEmailSuiteReviewEligibility.class);
     // The actual recipient resolver and metadata policy are used; only authoritative storage facts are mocked.
     NotificationEmailEligibility eligibility = new NotificationEmailEligibility(skills, namespaces, accounts, members,
-            subscriptions, new SubscriptionMetadataAccessPolicy(), new RecipientResolver(members, roles));
+            subscriptions, new SubscriptionMetadataAccessPolicy(), new RecipientResolver(members, roles), suiteReviews);
     NotificationEmailItem item(String type) {
         var now = Instant.parse("2026-10-22T00:00:00Z");
         return new NotificationEmailItem(
                 1, 1, "admin", "event", NotificationCategory.PROMOTION, type, 55L, 8L, now, now, "ACTIVE");
     }
+    @Test
+    void suiteReviewUsesTypedTaskEligibilityWithoutRequiringOrLookingUpASkill() {
+        when(accounts.findById("admin")).thenReturn(Optional.of(new UserAccount("admin", "Admin", null, null)));
+        var now = Instant.parse("2026-10-22T00:00:00Z");
+        var suiteItem = new NotificationEmailItem(1, 1, "admin", "suite-event", NotificationCategory.REVIEW,
+                "SUITE_REVIEW_SUBMITTED", null, 101L, now, now, "ACTIVE");
+        when(suiteReviews.eligible("admin", 101L)).thenReturn(true);
+        assertThat(eligibility.eligible(suiteItem)).isTrue();
+        assertThat(eligibility.targetPath(suiteItem)).isEqualTo("/dashboard/reviews/101");
+        when(suiteReviews.eligible("admin", 101L)).thenReturn(false);
+        assertThat(eligibility.eligible(suiteItem)).isFalse();
+        verifyNoInteractions(skills);
+    }
+
+    @Test
+    void suiteReviewCannotBeRelabeledToAnotherCategory() {
+        when(accounts.findById("admin")).thenReturn(Optional.of(new UserAccount("admin", "Admin", null, null)));
+        var now = Instant.parse("2026-10-22T00:00:00Z");
+        var mislabeled = new NotificationEmailItem(1, 1, "admin", "suite-event", NotificationCategory.PUBLISH,
+                "SUITE_REVIEW_SUBMITTED", null, 101L, now, now, "ACTIVE");
+        assertThat(eligibility.eligible(mislabeled)).isFalse();
+        verifyNoInteractions(skills, suiteReviews);
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"PROMOTION_SUBMITTED", "REPORT_SUBMITTED"})
     void administrativeRoleCannotAuthorizeAnAlreadyDeletedSkill(String eventType) {

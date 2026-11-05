@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service.notificationemail;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.notification.domain.NotificationCategory;
 import com.iflytek.skillhub.notification.email.*;
 import com.iflytek.skillhub.notification.email.delivery.*;
 import java.time.*;
@@ -39,6 +40,11 @@ public class NotificationEmailInboxService implements NotificationEmailEnqueuer 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void enqueue(NotificationEmailCommand command) {
         Instant now = clock.instant();
+        if ("SUITE_REVIEW_SUBMITTED".equals(command.eventType())
+                && (!"REVIEW".equals(command.entityType())
+                        || command.category() != NotificationCategory.REVIEW)) {
+            return;
+        }
         if (command.eventKey() == null || command.eventKey().length() > 160 || command.occurredAt() == null
                 || command.occurredAt().isBefore(now.minus(Duration.ofDays(7)))
                 || command.occurredAt().isAfter(now.plusSeconds(60))) {
@@ -88,6 +94,9 @@ public class NotificationEmailInboxService implements NotificationEmailEnqueuer 
     }
 
     private Long safeSkillId(NotificationEmailCommand command) {
+        if ("SUITE_REVIEW_SUBMITTED".equals(command.eventType())) {
+            return null;
+        }
         if ("SKILL".equals(command.entityType())) {
             return command.entityId();
         }
