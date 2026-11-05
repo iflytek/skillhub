@@ -43,6 +43,39 @@ class SkillPackagePreviewServiceTest {
     }
 
     @Test
+    void missingOverviewStaysNullSoTheClientCanResolvePackageDocumentation() throws Exception {
+        var files = new java.util.ArrayList<>(entries(""));
+        byte[] readme = "# User-facing README".getBytes(StandardCharsets.UTF_8);
+        files.add(new PackageEntry("README.md", readme, readme.length, "text/markdown"));
+
+        var response = service.preview(files);
+
+        assertThat(response.overview()).isNull();
+        assertThat(response.description()).isEqualTo("Summary");
+        assertThat(response.shortDescription()).isEqualTo("Summary");
+        assertThat(response.examplesCount()).isZero();
+        assertThat(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(response))
+                .contains("\"overview\":null");
+        assertThat(files.get(0).content()).containsExactly(entries("").get(0).content());
+        assertThat(files.get(1).content()).containsExactly(readme);
+    }
+
+    @Test
+    void explicitPackageOverviewIsReturnedWithoutUsingTheSkillBody() {
+        var response = service.preview(entries("metadata:\n  overview: '  Package overview  '\n"));
+
+        assertThat(response.overview()).isEqualTo("Package overview");
+    }
+
+    @Test
+    void blankPackageOverviewDoesNotBecomeTheSkillBody() {
+        for (String metadata : List.of("metadata: {}\n", "metadata:\n  overview: null\n",
+                "metadata:\n  overview: '   '\n")) {
+            assertThat(service.preview(entries(metadata)).overview()).isNull();
+        }
+    }
+
+    @Test
     void examplesRecognitionIsNonBlockingAndOmitsInvalidCount() throws Exception {
         assertThat(service.preview(entries("")).examplesCount()).isZero();
         for (String content : List.of("{not json", "{\"schemaVersion\":1,\"defaultLocale\":\"en\",\"examples\":{\"en\":[]}}")) {

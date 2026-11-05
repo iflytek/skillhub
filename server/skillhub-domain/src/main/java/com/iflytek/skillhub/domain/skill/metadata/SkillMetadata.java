@@ -57,8 +57,13 @@ public record SkillMetadata(
     }
 
     public String overview() {
-        String packageOverview = nestedText(frontmatter, "overview", null);
+        String packageOverview = packageOverview();
         return overviewOverride != null ? overviewOverride : (packageOverview != null ? packageOverview : body);
+    }
+
+    /** Explicit package presentation only; documentation fallback is resolved by the reader. */
+    public String packageOverview() {
+        return nestedText(frontmatter, "overview", null);
     }
 
     private static String nestedText(Map<String, Object> values, String key, String fallback) {

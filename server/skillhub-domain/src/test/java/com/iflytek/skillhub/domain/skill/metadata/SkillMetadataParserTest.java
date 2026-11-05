@@ -12,6 +12,22 @@ class SkillMetadataParserTest {
     private final SkillMetadataParser parser = new SkillMetadataParser();
 
     @Test
+    void packageOverviewDoesNotIncludeOverridesOrBodyFallback() {
+        SkillMetadata declared = parser.parse("---\nname: my-skill\ndescription: Original\nmetadata:\n  overview: '  Package overview  '\n---\nBody");
+        assertEquals("Package overview", declared.packageOverview());
+        assertEquals("Package overview", declared.withPresentation(null, "Web overview", null).packageOverview());
+        for (Map<String, Object> frontmatter : java.util.List.of(Map.<String, Object>of(),
+                Map.<String, Object>of("metadata", Map.of("overview", "   ")),
+                Map.<String, Object>of("metadata", Map.of("overview", 123)),
+                Map.<String, Object>of("metadata", "legacy"))) {
+            SkillMetadata metadata = new SkillMetadata("my-skill", "Summary", "1.0.0", "Body", frontmatter);
+            assertNull(metadata.packageOverview());
+            assertEquals("Body", metadata.overview());
+        }
+        assertNull(new SkillMetadata("my-skill", "Summary", "1.0.0", "Body", null).packageOverview());
+    }
+
+    @Test
     void presentationOverridesAndPackageDefaultsRemainDistinct() {
         SkillMetadata source = parser.parse("---\nname: my-skill\ndescription: Original\nmetadata:\n  short-description: Package short\n  overview: Package overview\n---\nBody");
         assertEquals("Package short", source.shortDescription());

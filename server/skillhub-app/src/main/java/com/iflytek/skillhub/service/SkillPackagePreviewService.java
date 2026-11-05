@@ -32,7 +32,7 @@ public class SkillPackagePreviewService {
         SkillMetadata metadata = parser.parse(new String(skillMd.content(), StandardCharsets.UTF_8));
         SkillExamplesSummary examples = SkillExamplesSummary.recognize(entries);
         return new SkillPackagePreviewResponse(metadata.name(), metadata.displayName(), metadata.description(),
-                metadata.shortDescription(), metadata.overview(), metadata.version(),
+                metadata.shortDescription(), metadata.packageOverview(), metadata.version(),
                 examples.status(), examples.count());
     }
 }
