@@ -38,6 +38,15 @@ oauth2:
     redirectUri: ""
     displayName: 钉钉
 
+# Runtime policy is seeded only if notification.email is absent in the database.
+# SMTP is shared with password reset; use server.extraEnv and Secret references.
+notificationEmail:
+  enabled: false
+  digestWindowMinutes: 60
+  publicBaseUrl: ""
+  fromAddress: ""
+  fromName: SkillHub
+
 builtinSkills:
   enabled: true
 

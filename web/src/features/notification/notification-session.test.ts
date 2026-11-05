@@ -18,6 +18,8 @@ describe('clearSessionScopedQueries', () => {
   it('clears viewer-specific skill summaries while keeping unrelated public data', () => {
     const queryClient = new QueryClient()
     queryClient.setQueryData(['notifications', 'user-a', 'unread-count'], { count: 3 })
+    queryClient.setQueryData(['notifications', 'user-a', 'email', 'contact'], { email: 'a***@example.test' })
+    queryClient.setQueryData(['notifications', 'user-a', 'email-batch', '23', 0], { items: [{ id: 1 }] })
     queryClient.setQueryData(['labels', 'visible'], [{ slug: 'official' }])
     queryClient.setQueryData(['skills', 'my', { page: 0, size: 12 }], { items: [] })
     queryClient.setQueryData(['skills', 'search', { q: '', sort: 'relevance', page: 0, size: 12, starredOnly: false }], { items: [] })
@@ -28,6 +30,8 @@ describe('clearSessionScopedQueries', () => {
     clearSessionScopedQueries(queryClient)
 
     expect(queryClient.getQueryData(['notifications', 'user-a', 'unread-count'])).toBeUndefined()
+    expect(queryClient.getQueryData(['notifications', 'user-a', 'email', 'contact'])).toBeUndefined()
+    expect(queryClient.getQueryData(['notifications', 'user-a', 'email-batch', '23', 0])).toBeUndefined()
     expect(queryClient.getQueryData(['labels', 'visible'])).toBeUndefined()
     expect(queryClient.getQueryData(['skills', 'my', { page: 0, size: 12 }])).toBeUndefined()
     expect(queryClient.getQueryData(['skills', 'search', { q: '', sort: 'relevance', page: 0, size: 12, starredOnly: false }])).toBeUndefined()

@@ -302,6 +302,33 @@ spec:
                   name: {{ include "skillhub.fullname" . }}-config
                   key: session-cookie-secure
 
+            # Optional notification email
+            - name: SKILLHUB_NOTIFICATION_EMAIL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-enabled
+            - name: SKILLHUB_NOTIFICATION_EMAIL_DIGEST_WINDOW_MINUTES
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-window
+            - name: SKILLHUB_NOTIFICATION_EMAIL_PUBLIC_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-public-url
+            - name: SKILLHUB_NOTIFICATION_EMAIL_FROM_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-from-address
+            - name: SKILLHUB_NOTIFICATION_EMAIL_FROM_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-from-name
+
             # Public URL and authentication
             - name: SKILLHUB_PUBLIC_BASE_URL
               valueFrom:

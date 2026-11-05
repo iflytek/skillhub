@@ -675,6 +675,13 @@ const dashboardSubscriptionsRoute = createRoute({
   component: MySubscriptionsPage,
 })
 
+const notificationEmailBatchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/notifications/email/$id',
+  beforeLoad: requireAuth,
+  component: createLazyRouteComponent(() => import('@/pages/notification-email-batch'), 'NotificationEmailBatchPage'),
+})
+
 const dashboardNotificationsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/notifications',
@@ -818,6 +825,7 @@ const routeTree = rootRoute.addChildren([
   dashboardStarsRoute,
   dashboardSubscriptionsRoute,
   dashboardNotificationsRoute,
+  notificationEmailBatchRoute,
   dashboardTokensRoute,
   cliAuthRoute,
   deviceAuthRoute,

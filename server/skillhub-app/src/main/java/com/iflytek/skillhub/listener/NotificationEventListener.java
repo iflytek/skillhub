@@ -66,7 +66,7 @@ public class NotificationEventListener {
             versionLabel(event.versionId(), body);
             String json = toJson(body);
             notificationService.create(event.publisherId(), NotificationCategory.PUBLISH,
-                    "SKILL_PUBLISHED", title, json, "SKILL", event.skillId());
+                    "SKILL_PUBLISHED", title, json, "SKILL", event.skillId(), event.eventId(), event.occurredAt());
         });
     }
 
@@ -89,7 +89,7 @@ public class NotificationEventListener {
                     continue; // skip the publisher
                 }
                 notificationService.create(subscriberId, NotificationCategory.PUBLISH,
-                        "SUBSCRIPTION_NEW_VERSION", title, json, "SKILL", event.skillId());
+                        "SUBSCRIPTION_NEW_VERSION", title, json, "SKILL", event.skillId(), event.eventId(), event.occurredAt());
             }
         });
     }
@@ -113,7 +113,7 @@ public class NotificationEventListener {
                     continue; // skip the actor
                 }
                 notificationService.create(subscriberId, NotificationCategory.PUBLISH,
-                        "SUBSCRIPTION_VERSION_YANKED", title, json, "SKILL", event.skillId());
+                        "SUBSCRIPTION_VERSION_YANKED", title, json, "SKILL", event.skillId(), event.eventId(), event.occurredAt());
             }
         });
     }
@@ -131,7 +131,7 @@ public class NotificationEventListener {
             List<String> admins = recipientResolver.resolveNamespaceAdmins(event.namespaceId());
             for (String admin : admins.stream().distinct().toList()) {
                 notificationService.create(admin, NotificationCategory.REVIEW,
-                        "REVIEW_SUBMITTED", title, json, "REVIEW", event.reviewId());
+                        "REVIEW_SUBMITTED", title, json, "REVIEW", event.reviewId(), event.eventId(), event.occurredAt());
             }
         });
     }
@@ -148,7 +148,7 @@ public class NotificationEventListener {
         List<String> admins = recipientResolver.resolvePlatformUserAdmins();
         for (String admin : admins.stream().distinct().toList()) {
             notificationService.create(admin, NotificationCategory.REVIEW,
-                    "PROFILE_REVIEW_SUBMITTED", title, json, "PROFILE_REVIEW", event.profileReviewId());
+                    "PROFILE_REVIEW_SUBMITTED", title, json, "PROFILE_REVIEW", event.profileReviewId(), event.eventId(), event.occurredAt());
         }
     }
 
@@ -163,7 +163,7 @@ public class NotificationEventListener {
             versionLabel(event.versionId(), body);
             String json = toJson(body);
             notificationService.create(event.submitterId(), NotificationCategory.REVIEW,
-                    "REVIEW_APPROVED", title, json, "SKILL", event.skillId());
+                    "REVIEW_APPROVED", title, json, "SKILL", event.skillId(), event.eventId(), event.occurredAt());
         });
     }
 
@@ -179,7 +179,7 @@ public class NotificationEventListener {
             versionLabel(event.versionId(), body);
             String json = toJson(body);
             notificationService.create(event.submitterId(), NotificationCategory.REVIEW,
-                    "REVIEW_REJECTED", title, json, "SKILL", event.skillId());
+                    "REVIEW_REJECTED", title, json, "SKILL", event.skillId(), event.eventId(), event.occurredAt());
         });
     }
 
@@ -196,7 +196,7 @@ public class NotificationEventListener {
             List<String> admins = recipientResolver.resolvePlatformSkillAdmins();
             for (String admin : admins.stream().distinct().toList()) {
                 notificationService.create(admin, NotificationCategory.PROMOTION,
-                        "PROMOTION_SUBMITTED", title, json, "PROMOTION", event.promotionId());
+                        "PROMOTION_SUBMITTED", title, json, "PROMOTION", event.promotionId(), event.eventId(), event.occurredAt());
             }
         });
     }
@@ -211,7 +211,7 @@ public class NotificationEventListener {
             body.put("reviewerId", event.reviewerId());
             String json = toJson(body);
             notificationService.create(event.submitterId(), NotificationCategory.PROMOTION,
-                    "PROMOTION_APPROVED", title, json, "SKILL", event.skillId());
+                    "PROMOTION_APPROVED", title, json, "SKILL", event.skillId(), event.eventId(), event.occurredAt());
         });
     }
 
@@ -226,7 +226,7 @@ public class NotificationEventListener {
             body.put("reason", event.reason());
             String json = toJson(body);
             notificationService.create(event.submitterId(), NotificationCategory.PROMOTION,
-                    "PROMOTION_REJECTED", title, json, "SKILL", event.skillId());
+                    "PROMOTION_REJECTED", title, json, "SKILL", event.skillId(), event.eventId(), event.occurredAt());
         });
     }
 
@@ -242,7 +242,7 @@ public class NotificationEventListener {
             List<String> admins = recipientResolver.resolvePlatformSkillAdmins();
             for (String admin : admins.stream().distinct().toList()) {
                 notificationService.create(admin, NotificationCategory.REPORT,
-                        "REPORT_SUBMITTED", title, json, "REPORT", event.reportId());
+                        "REPORT_SUBMITTED", title, json, "REPORT", event.reportId(), event.eventId(), event.occurredAt());
             }
         });
     }
@@ -258,7 +258,7 @@ public class NotificationEventListener {
             body.put("action", event.action());
             String json = toJson(body);
             notificationService.create(event.reporterId(), NotificationCategory.REPORT,
-                    "REPORT_RESOLVED", title, json, "SKILL", event.skillId());
+                    "REPORT_RESOLVED", title, json, "SKILL", event.skillId(), event.eventId(), event.occurredAt());
         });
     }
 
