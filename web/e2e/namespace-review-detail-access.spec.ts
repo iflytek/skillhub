@@ -16,50 +16,52 @@ test.describe('Namespace Review Detail Access (Real API)', () => {
 
       await page.goto(`/dashboard/namespaces/${seeded.namespace.slug}/reviews`)
 
-      await expect(page.getByRole('heading', { name: seeded.namespace.displayName, exact: true })).toBeVisible()
-      await expect(page.getByRole('navigation', { name: 'Space management' })
-        .getByRole('link', { name: 'Reviews', exact: true })).toHaveAttribute('aria-current', 'page')
-      await expect(page.getByRole('region', { name: 'Namespace Reviews' })).toBeVisible()
-      await expect(page.getByText(`${seeded.namespace.slug}/${seeded.skill.slug}`)).toBeVisible()
+      await expect(page).toHaveURL((url) => url.pathname === '/dashboard/reviews' && url.searchParams.get('namespace') === seeded?.namespace.slug)
+      await expect(page.getByRole('heading', { name: 'Review center', exact: true })).toBeVisible()
+      await expect(page.getByRole('combobox', { name: 'Review scope' })).toHaveText(seeded.namespace.displayName)
+      const row = page.getByRole('row').filter({ hasText: `@${seeded.namespace.slug}/${seeded.skill.slug}` })
+      await expect(row).toBeVisible()
+      await row.getByRole('button', { name: 'View', exact: true }).click()
 
-      await page.getByRole('link', { name: 'Open review' }).first().click()
-
-      await expect(page).toHaveURL(new RegExp(`/dashboard/namespaces/${seeded.namespace.slug}/reviews/\\d+$`))
+      await expect(page).toHaveURL((url) => url.pathname === `/dashboard/reviews/${seeded?.reviewTaskId}` && url.searchParams.get('namespace') === seeded?.namespace.slug)
       await expect(page.getByRole('heading', { level: 1, name: seeded.skillDisplayName, exact: true })).toBeVisible()
-      await expect(page.getByText(`${seeded.namespace.slug}/${seeded.skill.slug}`).first()).toBeVisible()
+      await expect(page.getByTestId('review-task-header').getByText(`@${seeded.namespace.slug}/${seeded.skill.slug}`, { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Back to list', exact: true }).click()
+      await expect(page).toHaveURL((url) => url.pathname === '/dashboard/reviews' && url.searchParams.get('namespace') === seeded?.namespace.slug)
     } finally {
       await seeded?.cleanup()
     }
   })
 
-  test('redirects /dashboard/reviews to a namespace review page for namespace operators', async ({ browser, page }, testInfo) => {
+  test('keeps namespace operators in the unified review center', async ({ browser, page }, testInfo) => {
     let seeded: Awaited<ReturnType<typeof createNamespaceReviewData>> | undefined
     try {
       seeded = await createNamespaceReviewData(browser, page, testInfo)
 
       await page.goto('/dashboard/reviews')
 
-      await expect(page).toHaveURL(/\/dashboard\/namespaces\/.+\/reviews$/)
-      const selectedSlug = decodeURIComponent(new URL(page.url()).pathname.split('/')[3])
-      await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
-      await expect(page.getByText(`@${selectedSlug}`, { exact: true })).toBeVisible()
-      await expect(page.getByRole('navigation', { name: 'Space management' })
-        .getByRole('link', { name: 'Reviews', exact: true })).toHaveAttribute('aria-current', 'page')
-      await expect(page.getByRole('region', { name: 'Namespace Reviews' })).toBeVisible()
+      await expect(page).toHaveURL((url) => url.pathname === '/dashboard/reviews')
+      await expect(page.getByRole('heading', { name: 'Review center', exact: true })).toBeVisible()
+      await expect(page.getByRole('combobox', { name: 'Review scope' })).toHaveText('All authorized scopes')
+      await expect(page.getByRole('table').getByText(`@${seeded.namespace.slug}/${seeded.skill.slug}`, { exact: true })).toBeVisible()
     } finally {
       await seeded?.cleanup()
     }
   })
 
-  test('redirects namespace review detail opened through the global detail route', async ({ browser, page }, testInfo) => {
+  test('opens the same bound task through global and legacy namespace detail routes', async ({ browser, page }, testInfo) => {
     let seeded: Awaited<ReturnType<typeof createNamespaceReviewData>> | undefined
     try {
       seeded = await createNamespaceReviewData(browser, page, testInfo)
 
       await page.goto(`/dashboard/reviews/${seeded.reviewTaskId}`)
 
-      await expect(page).toHaveURL(new RegExp(`/dashboard/namespaces/${seeded.namespace.slug}/reviews/${seeded.reviewTaskId}$`))
+      await expect(page).toHaveURL((url) => url.pathname === `/dashboard/reviews/${seeded?.reviewTaskId}`)
       await expect(page.getByRole('heading', { level: 1, name: seeded.skillDisplayName, exact: true })).toBeVisible()
+      await expect(page.getByTestId('review-task-header').getByText(`@${seeded.namespace.slug}/${seeded.skill.slug}`, { exact: true })).toBeVisible()
+      await page.goto(`/dashboard/namespaces/${seeded.namespace.slug}/reviews/${seeded.reviewTaskId}`)
+      await expect(page.getByRole('heading', { level: 1, name: seeded.skillDisplayName, exact: true })).toBeVisible()
+      await expect(page.getByTestId('review-task-header').getByText(`@${seeded.namespace.slug}/${seeded.skill.slug}`, { exact: true })).toBeVisible()
     } finally {
       await seeded?.cleanup()
     }
