@@ -60,9 +60,20 @@ The confirmed dual-column detail MUST put readable target content in the main co
 
 
 ### Requirement: Stable detail navigation and content boundaries
-The review detail MUST group the navigation and active content in one bounded surface without a nested page scrollbar. A user-initiated tab switch or evidence shortcut MUST align that surface below the fixed header after the new panel commits, including selecting the current evidence tab again. Query completion, initial rendering and comment edits MUST NOT trigger this navigation scroll.
+The review detail MUST group the navigation and active content in one bounded surface without a nested page scrollbar. A user-initiated tab switch or evidence shortcut MUST return to the detail page top, including its heading, after the new panel commits, including selecting the current evidence tab again. Query completion, initial rendering and comment edits MUST NOT trigger this navigation scroll.
 
 #### Scenario: A long comparison is replaced with a short history panel
 - **WHEN** the reviewer switches from a scrolled long comparison to history or opens scan evidence from the side panel
-- **THEN** the selected panel starts below the fixed header rather than at the document bottom
+- **THEN** the detail heading is visible at the page top rather than leaving the reviewer at the document bottom
 - **AND** later query completion does not reset the reviewer's reading position
+
+
+#### Scenario: Navigation respects motion preferences
+- **WHEN** the reviewer switches tabs or opens evidence
+- **THEN** normal motion preferences use smooth scrolling to the page top
+- **AND** reduced motion uses direct positioning without a queued animation
+
+#### Scenario: Presentation and files are discoverable before a long overview
+- **THEN** the summary is visually distinct from the overview
+- **AND** file browsing and package download are available before the long overview
+- **AND** comparison uses the available main width with responsive columns and explicit changed states

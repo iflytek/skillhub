@@ -51,7 +51,7 @@ Online preview limits are listed together below. Exceeding a limit does not mean
 
 These are frontend/API implementation limits, not review-page settings. Sources: [review detail page](https://github.com/iflytek/skillhub/blob/main/web/src/pages/dashboard/review-detail.tsx) and [review API](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/portal/ReviewController.java). `GET /api/v1/reviews/{id}/skill-detail?includeDocumentation=false` reads metadata, custom web/package presentation and the documentation path without fetching object-storage content; README or SKILL.md fallback content is loaded on demand; the default is `true`.
 
-Switching content tabs or opening evidence from the side panel aligns the content container below the header. Query completion and comment edits do not reset the reading position. Content uses the main page scroll rather than a nested scrolling region.
+Switching tabs or opening evidence smoothly returns to the detail page top, including its heading; reduced motion uses direct positioning. Query completion and comment edits do not reset the reading position. The summary has a distinct section, with package download and file browsing available before the overview. Comparison uses the available main width and stacks on narrow screens. Content uses the main page scroll.
 
 ### Understand Changes
 

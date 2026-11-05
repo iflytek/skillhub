@@ -6,7 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReviewSkillDetail } from '@/api/types'
 
 const navigateMock = vi.fn()
-const scrollIntoViewMock = vi.fn()
+const scrollToMock = vi.fn()
+const matchMediaMock = vi.fn()
 const route = vi.hoisted(() => ({ id: '13', search: {} as Record<string, unknown> }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -172,8 +173,10 @@ import { NamespaceReviewDetailPage, ReviewDetailPage } from './review-detail'
 
 describe('ReviewDetailPage', () => {
   beforeEach(() => {
-    scrollIntoViewMock.mockReset()
-    HTMLElement.prototype.scrollIntoView = scrollIntoViewMock
+    scrollToMock.mockReset()
+    matchMediaMock.mockReset().mockReturnValue({ matches: false })
+    vi.stubGlobal('matchMedia', matchMediaMock)
+    window.scrollTo = scrollToMock
     route.id = '13'
     route.search = {}
     navigateMock.mockReset()
@@ -259,7 +262,7 @@ describe('ReviewDetailPage', () => {
     })
   })
 
-  afterEach(cleanup)
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
   it('clears comment, reject form and confirmation when the route switches to another review', () => {
     const view = render(<ReviewDetailPage />)
@@ -557,8 +560,20 @@ describe('ReviewDetailPage', () => {
     expect(screen.getByText('Pending custom summary')).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'review.tabChanges' })).toBeTruthy()
     fireEvent.click(screen.getByRole('tab', { name: 'review.tabChanges' }))
+    expect(screen.getByTestId('review-detail-layout').className).not.toContain('268px')
+    const applicationDetails = screen.getByText('reviewWorkbench.requestSummary', { selector: 'summary' }).closest('details')
+    expect(applicationDetails?.open).toBe(false)
+    expect((applicationDetails?.compareDocumentPosition(screen.getByTestId('review-detail-workbench')) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByText('Published summary')).toBeTruthy()
     expect(screen.getByText('1.0.0')).toBeTruthy()
+    fireEvent.click(screen.getByText('reviewWorkbench.requestSummary', { selector: 'summary' }))
+    expect(applicationDetails?.open).toBe(true)
+    const scanShortcut = screen.getByRole('button', { name: /review.scanSummary/ })
+    scanShortcut.focus()
+    fireEvent.click(scanShortcut)
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'review.tabSourceSecurity' }))
+    expect(scrollToMock).toHaveBeenLastCalledWith({ top: 0, behavior: 'smooth' })
+    expect(screen.getByTestId('review-detail-layout').className).toContain('268px')
   })
 
   it('keeps approval blocked after a failed comparison when switching to history', () => {
@@ -628,14 +643,13 @@ describe('ReviewDetailPage', () => {
     expect(query.get('page')).toBe('2')
   })
 
-  it('wraps navigation and panels in a single responsive surface with a header scroll offset', () => {
+  it('wraps navigation and panels in a single responsive surface', () => {
     render(<ReviewDetailPage />)
     const navigation = screen.getByRole('tablist')
     const surface = screen.getByTestId('review-detail-workbench')
     expect(navigation.parentElement?.parentElement).toBe(surface)
     expect(surface?.contains(screen.getByRole('tabpanel'))).toBe(true)
-    expect(surface?.className).toContain('scroll-mt-24')
-    expect(surface?.className).toContain('min-h-[calc(100svh-6rem)]')
+    expect(surface?.className).toContain('min-h-[28rem]')
     expect(surface?.className).toContain('border-border/60')
     expect(surface?.className).not.toContain('overflow-auto')
     expect(screen.getByRole('tabpanel').className).toContain('motion-reduce:animate-none')
@@ -647,17 +661,17 @@ describe('ReviewDetailPage', () => {
       presentation: { displayName: 'Long pending content', summary: 'Pending summary', overview: 'Long review paragraph.\n\n'.repeat(80), overviewSource: 'WEB' },
     } })
     const view = render(<ReviewDetailPage />)
-    expect(scrollIntoViewMock).not.toHaveBeenCalled()
+    expect(scrollToMock).not.toHaveBeenCalled()
     let panelAtScroll = ''
-    scrollIntoViewMock.mockImplementation(() => { panelAtScroll = screen.getByRole('tabpanel').textContent ?? '' })
+    scrollToMock.mockImplementation(() => { panelAtScroll = screen.getByRole('tabpanel').textContent ?? '' })
     fireEvent.click(screen.getByRole('tab', { name: 'review.tabHistory' }))
     expect(panelAtScroll).toContain('review.attemptHistory')
     expect(panelAtScroll).not.toContain('Long review paragraph.')
-    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
-    expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: 'start', behavior: 'instant' })
+    expect(scrollToMock).toHaveBeenCalledTimes(1)
+    expect(scrollToMock).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' })
     view.rerender(<ReviewDetailPage />)
     fireEvent.change(screen.getByLabelText('review.commentLabel'), { target: { value: 'A review comment' } })
-    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+    expect(scrollToMock).toHaveBeenCalledTimes(1)
   })
 
   it('moves focus from a shortcut to the selected tab before one scroll, including repeated clicks', () => {
@@ -674,15 +688,15 @@ describe('ReviewDetailPage', () => {
     expect(document.activeElement).toBe(sourceTab)
     expect(focus).toHaveBeenCalledWith({ preventScroll: true })
     focus.mockRestore()
-    expect(scrollIntoViewMock).toHaveBeenCalledTimes(2)
-    const target = screen.getByRole('tablist').parentElement?.parentElement
-    expect(scrollIntoViewMock.mock.contexts).toEqual([target, target])
+    expect(scrollToMock).toHaveBeenCalledTimes(2)
+    expect(scrollToMock).toHaveBeenNthCalledWith(1, { top: 0, behavior: 'smooth' })
+    expect(scrollToMock).toHaveBeenNthCalledWith(2, { top: 0, behavior: 'smooth' })
     const comment = screen.getByLabelText('review.commentLabel')
     comment.focus()
     fireEvent.change(comment, { target: { value: 'Continue reviewing' } })
     view.rerender(<ReviewDetailPage />)
     expect(document.activeElement).toBe(comment)
-    expect(scrollIntoViewMock).toHaveBeenCalledTimes(2)
+    expect(scrollToMock).toHaveBeenCalledTimes(2)
   })
 
   it('restores the content top when keyboard navigation changes the panel', () => {
@@ -693,7 +707,7 @@ describe('ReviewDetailPage', () => {
     const history = screen.getByRole('tab', { name: 'review.tabHistory' })
     expect(history.getAttribute('aria-selected')).toBe('true')
     expect(document.activeElement).toBe(history)
-    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+    expect(scrollToMock).toHaveBeenCalledTimes(1)
   })
 
   it('moves the license shortcut focus to the source tab', () => {
@@ -704,7 +718,16 @@ describe('ReviewDetailPage', () => {
     shortcut.focus()
     fireEvent.click(shortcut)
     expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'review.tabSourceSecurity' }))
-    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+    expect(scrollToMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns directly to the detail heading when reduced motion is requested', () => {
+    matchMediaMock.mockReturnValue({ matches: true })
+    render(<ReviewDetailPage />)
+    fireEvent.click(screen.getByRole('tab', { name: 'review.tabHistory' }))
+    expect(matchMediaMock).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
+    expect(scrollToMock).toHaveBeenCalledOnce()
+    expect(scrollToMock).toHaveBeenCalledWith({ top: 0, behavior: 'instant' })
   })
 
 })

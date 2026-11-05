@@ -75,7 +75,8 @@ function ReviewDetailScreen({
       tabsRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true })
       focusTabAfterNavigation.current = false
     }
-    tabsRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.scrollTo({ top: 0, behavior: reducedMotion ? 'instant' : 'smooth' })
   }, [tabNavigation])
   const activeTab = selectedTab ?? (isGithubSyncReview && githubSource?.baseVersionId ? 'changes' : 'content')
   const {
@@ -217,6 +218,25 @@ function ReviewDetailScreen({
     )
   }
 
+  const requestSummary = (
+        <ReviewTaskSummary review={review} detail={reviewSkillDetail} hasBaseline={hasBaseline} submittedAt={formatDate(review.submittedAt)}>
+          {!isSuiteReview && !isMetadataReview && <div className="space-y-3">
+            <h3 className="text-base font-semibold">{t('reviewWorkbench.checks')}</h3>
+            <button data-analytics-id="review.security.open" type="button" onClick={() => selectTab('source', true)} className="block w-full space-y-2 text-left text-sm underline-offset-4 hover:underline">
+              <span className="block font-medium">{t('review.scanSummary')}</span>
+              {review.requestedVisibility
+                ? <span className="block text-xs text-muted-foreground">{reviewSkillDetail?.visibilityChange ? t(`skillVisibility.scan${reviewSkillDetail.visibilityChange.scanStatus}`) : t('review.scanLoadFailed')}</span>
+                : isLoadingReviewSkillDetail || (skillId && versionId && isLoadingSecurityAudits) ? <span className="block text-xs text-muted-foreground">{t('review.scanLoading')}</span>
+                  : reviewSkillDetailError || isSecurityAuditsError ? <span className="block text-xs text-destructive">{t('review.scanLoadFailed')}</span>
+                    : securityAudits?.length ? <span className="flex flex-wrap gap-2">{securityAudits.map((audit) => <VerdictBadge key={audit.id} displayState={getSecurityAuditDisplayState(audit, activeReviewVersion?.status)} compact />)}</span>
+                      : <span className="block text-xs text-muted-foreground">{t(activeReviewVersion?.status === 'SCANNING' ? 'review.scanPending' : activeReviewVersion?.status === 'SCAN_FAILED' ? 'review.scanFailed' : 'review.scanUnavailable')}</span>}
+            </button>
+            {isGithubSyncReview && <button type="button" data-analytics-id="review.source.open" onClick={() => selectTab('source', true)} className="space-y-1 text-left text-sm underline-offset-4 hover:underline"><span className="block font-medium">{t('review.githubLicenseStatus')}</span><span className="block text-xs text-muted-foreground">{githubSource ? t(`review.githubLicense${githubSource.evidence.status}`, { defaultValue: githubSource.evidence.status }) : t(isGithubSourceError ? 'review.githubSourceError' : 'review.scanLoading')}</span></button>}
+            <p className="text-xs leading-5 text-muted-foreground">{t('reviewWorkbench.scanBoundary')}</p>
+          </div>}
+        </ReviewTaskSummary>
+  )
+
   return (
     <div className="flex min-h-[calc(100dvh-5.25rem)] w-full flex-col gap-4 animate-fade-up">
       <div className="space-y-4">
@@ -232,9 +252,15 @@ function ReviewDetailScreen({
           </div>
         </div>
       </div>
-      <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_268px]">
+      {availableTab === 'changes' && (
+          <details className="rounded-xl border border-border/60 bg-card">
+            <summary className="cursor-pointer px-5 py-4 text-sm font-medium">{t('reviewWorkbench.requestSummary')} <span className="ml-3 text-xs font-normal text-muted-foreground">{reviewSkillDetail?.activeVersion ?? review.version}</span></summary>
+            <div className="max-w-sm p-4 pt-0">{requestSummary}</div>
+          </details>
+      )}
+      <div data-testid="review-detail-layout" className={`grid min-w-0 items-start gap-6 ${availableTab === 'changes' ? 'grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_268px]'}`}>
       <div className="order-2 min-w-0 xl:order-1">
-      <Tabs data-testid="review-detail-workbench" ref={tabsRef} value={availableTab} onValueChange={selectTab} className="min-h-[calc(100svh-6rem)] min-w-0 scroll-mt-24 rounded-xl border border-border/60 bg-card text-card-foreground [overflow-anchor:none]">
+      <Tabs data-testid="review-detail-workbench" ref={tabsRef} value={availableTab} onValueChange={selectTab} className="min-h-[28rem] min-w-0 rounded-xl border border-border/60 bg-card text-card-foreground [overflow-anchor:none]">
         <div className="border-b border-border/60 p-3 sm:px-5 sm:py-4">
         <TabsList className="grid w-full grid-cols-2 gap-1 rounded-2xl border-0 bg-secondary/70 p-1 sm:inline-flex sm:w-auto sm:flex-wrap sm:rounded-full" aria-label={t('reviewWorkbench.contentNavigation')}>
           <TabsTrigger data-analytics-id="review.content.tab" value="content" className="mb-0 min-h-9 rounded-xl border-0 px-4 py-2 font-normal data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:shadow-sm sm:rounded-full">{t('review.tabContent')}</TabsTrigger>
@@ -341,24 +367,7 @@ function ReviewDetailScreen({
         </div>
       </Tabs>
       </div>
-      <div className="order-1 min-w-0 xl:order-2">
-        <ReviewTaskSummary review={review} detail={reviewSkillDetail} hasBaseline={hasBaseline} submittedAt={formatDate(review.submittedAt)}>
-          {!isSuiteReview && !isMetadataReview && <div className="space-y-3">
-            <h3 className="text-base font-semibold">{t('reviewWorkbench.checks')}</h3>
-            <button data-analytics-id="review.security.open" type="button" onClick={() => selectTab('source', true)} className="block w-full space-y-2 text-left text-sm underline-offset-4 hover:underline">
-              <span className="block font-medium">{t('review.scanSummary')}</span>
-              {review.requestedVisibility
-                ? <span className="block text-xs text-muted-foreground">{reviewSkillDetail?.visibilityChange ? t(`skillVisibility.scan${reviewSkillDetail.visibilityChange.scanStatus}`) : t('review.scanLoadFailed')}</span>
-                : isLoadingReviewSkillDetail || (skillId && versionId && isLoadingSecurityAudits) ? <span className="block text-xs text-muted-foreground">{t('review.scanLoading')}</span>
-                  : reviewSkillDetailError || isSecurityAuditsError ? <span className="block text-xs text-destructive">{t('review.scanLoadFailed')}</span>
-                    : securityAudits?.length ? <span className="flex flex-wrap gap-2">{securityAudits.map((audit) => <VerdictBadge key={audit.id} displayState={getSecurityAuditDisplayState(audit, activeReviewVersion?.status)} compact />)}</span>
-                      : <span className="block text-xs text-muted-foreground">{t(activeReviewVersion?.status === 'SCANNING' ? 'review.scanPending' : activeReviewVersion?.status === 'SCAN_FAILED' ? 'review.scanFailed' : 'review.scanUnavailable')}</span>}
-            </button>
-            {isGithubSyncReview && <button type="button" data-analytics-id="review.source.open" onClick={() => selectTab('source', true)} className="space-y-1 text-left text-sm underline-offset-4 hover:underline"><span className="block font-medium">{t('review.githubLicenseStatus')}</span><span className="block text-xs text-muted-foreground">{githubSource ? t(`review.githubLicense${githubSource.evidence.status}`, { defaultValue: githubSource.evidence.status }) : t(isGithubSourceError ? 'review.githubSourceError' : 'review.scanLoading')}</span></button>}
-            <p className="text-xs leading-5 text-muted-foreground">{t('reviewWorkbench.scanBoundary')}</p>
-          </div>}
-        </ReviewTaskSummary>
-      </div>
+      {availableTab !== 'changes' && <div className="order-1 min-w-0 xl:order-2">{requestSummary}</div>}
       </div>
 
       <div className="sticky bottom-0 z-20 -mx-3 mt-auto border-t border-border bg-background px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-5px_16px_-12px_rgb(0_0_0/0.28)] sm:-mx-4 sm:px-4">

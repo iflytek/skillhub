@@ -51,7 +51,7 @@
 
 这些是前端/接口实现限制，不由审核页面配置；依据[审核详情](https://github.com/iflytek/skillhub/blob/main/web/src/pages/dashboard/review-detail.tsx)及[审核接口](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/portal/ReviewController.java)。`GET /api/v1/reviews/{id}/skill-detail?includeDocumentation=false` 读取元数据、网页或包内自定义展示内容及说明路径，不读取对象存储正文；README 或 SKILL.md 回退正文需按需读取；缺省为 `true`。
 
-切换内容页签或点击右侧核查入口时，页面定位至内容容器顶部；异步加载及填写审核意见不重复改变阅读位置。正文随主页面滚动，不另设内部滚动区域。
+切换内容页签或点击核查入口时，页面平滑回到包含标题的详情页顶部；系统开启减少动态效果时直接定位。异步加载及填写审核意见不重复改变阅读位置。简介独立展示，下载与文件浏览位于内容顶部；变更对比使用主区域全宽，窄屏上下排列。正文随主页面滚动。
 
 ### 理解变更对比
 

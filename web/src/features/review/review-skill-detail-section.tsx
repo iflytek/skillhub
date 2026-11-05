@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
+import { Download, FolderOpen, ChevronDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import type { ReviewSkillDetail } from '@/api/types'
@@ -32,6 +33,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
   const [previewNode, setPreviewNode] = useState<FileTreeNode | null>(null)
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false)
   const [filesExpanded, setFilesExpanded] = useState(false)
+  const filesRegionId = useId()
   const originalFile = useReviewFile(reviewId, detail?.documentationPath ?? null, filesExpanded && !detail?.documentationContent && !documentationTooLarge)
 
   const { data: previewContent, isLoading: isLoadingPreview, error: previewError } = useReviewFile(
@@ -64,71 +66,76 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
   return (
     <div className="space-y-8">
       <section className="space-y-6" aria-label={t('reviewWorkbench.displayContent')}>
-        <div className="space-y-2">
-          <h2 className="text-xl font-semibold">{t('reviewWorkbench.displayContent')}</h2>
-          <p className="text-xs leading-5 text-muted-foreground">{t('reviewWorkbench.boundContent', { version: detail.activeVersion })}</p>
+        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 pb-5">
+          <div className="space-y-2">
+            <h2 className="text-xl font-semibold">{t('reviewWorkbench.displayContent')}</h2>
+            <p className="text-xs leading-5 text-muted-foreground">{t('reviewWorkbench.boundContent', { version: detail.activeVersion })}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button data-analytics-id="review.files.expand" type="button" size="sm" variant="outline" aria-expanded={filesExpanded} aria-controls={filesRegionId} onClick={() => setFilesExpanded((expanded) => !expanded)}>
+              <FolderOpen className="mr-2 h-4 w-4" aria-hidden="true" />{t('reviewWorkbench.browseFiles')}
+              <ChevronDown className={`ml-2 h-3.5 w-3.5 ${filesExpanded ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </Button>
+            {downloadHref && <a data-analytics-id="review.package.download" className={buttonVariants({ variant: 'outline', size: 'sm' })} href={buildApiUrl(downloadHref)}>
+              <Download className="mr-2 h-4 w-4" aria-hidden="true" />{t('review.downloadSkillZip')}
+            </a>}
+          </div>
         </div>
-        <div className="space-y-3 border-b border-border/60 pb-6">
-          <h3 className="text-xs font-medium text-muted-foreground">{t('reviewWorkbench.summary')}</h3>
+        <section className="space-y-3 rounded-lg border border-border/60 bg-secondary/50 p-5" aria-label={t('reviewWorkbench.summary')}>
+          <h3 className="text-sm font-semibold">{t('reviewWorkbench.summary')}</h3>
           <p className="whitespace-pre-wrap break-words text-base leading-7">{summary || t('reviewWorkbench.notProvided')}</p>
+        </section>
+        <div id={filesRegionId} hidden={!filesExpanded}>
+          {filesExpanded && <section className="space-y-4 rounded-lg border border-border/60 p-4" aria-label={t('reviewWorkbench.packageFiles')}>
+            <div><h3 className="text-base font-semibold">{t('reviewWorkbench.packageFiles')}</h3><p className="mt-1 text-xs leading-5 text-muted-foreground">{t('reviewWorkbench.originalFiles')}</p></div>
+              <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(160px,200px)_minmax(0,1fr)]">
+                <Card className="min-w-0 p-3">
+                  <h3 className="mb-2 text-sm font-semibold">{t('fileTree.title')} <span className="font-normal text-muted-foreground">{detail.files.length}</span></h3>
+                  {detail.files.length > 0 ? (
+                    <div className="max-h-[620px] overflow-auto">
+                      <FileTree analyticsId="review.file.open" files={detail.files} onFileClick={(node) => { setPreviewNode(node); setPreviewDialogOpen(true) }} bare compact />
+                    </div>
+                  ) : <p className="text-sm text-muted-foreground">{t('skillDetail.noFiles')}</p>}
+                </Card>
+                <Card className="min-w-0 p-4">
+                  <h3 className="mb-3 text-sm font-semibold">{t('review.documentationTitle')}</h3>
+                  {documentationLoading || originalFile.isLoading ? (
+                    <div className="h-24 animate-shimmer rounded-lg" />
+                  ) : documentationError || originalFile.error ? (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p className="text-destructive">{t('review.documentationLoadFailed')}</p>
+                      <Button size="sm" variant="outline" onClick={() => void originalFile.refetch?.()}>{t('reviewWorkbench.retry')}</Button>
+                      {detail.documentationPath && reviewId && (
+                        <a data-analytics-id="review.file.download" className="text-primary underline" href={buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(detail.documentationPath)}`)} download>
+                          {t('filePreview.downloadFile')}
+                        </a>
+                      )}
+                    </div>
+                  ) : documentation ? (
+                    <div className="min-w-0">
+                      <p className="mb-3 break-all font-mono text-xs text-muted-foreground">{documentation.path}</p>
+                      <MarkdownRenderer content={documentation.content} />
+                    </div>
+                  ) : documentationTooLarge && detail.documentationPath && reviewId ? (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>{t('review.documentationTooLarge')}</p>
+                      <a data-analytics-id="review.file.download" className="text-primary underline" href={buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(detail.documentationPath)}`)} download>
+                        {t('filePreview.downloadFile')}
+                      </a>
+                    </div>
+                  ) : <p className="text-sm text-muted-foreground">{t('review.noDocumentation')}</p>}
+                </Card>
+              </div>
+          </section>}
         </div>
-        <div className="space-y-4">
-          <h3 className="text-xs font-medium text-muted-foreground">{t('reviewWorkbench.overview')}</h3>
+        <section className="space-y-5" aria-label={t('reviewWorkbench.overview')}>
+          <h3 className="text-lg font-semibold">{t('reviewWorkbench.overview')}</h3>
           {documentationLoading && !overview ? <div className="h-28 animate-shimmer rounded-lg" role="status" aria-label={t('review.scanLoading')} />
             : documentationError && !overview ? <div role="alert" className="space-y-3"><p className="text-sm text-destructive">{t('review.documentationLoadFailed')}</p>{onRetry && <Button size="sm" variant="outline" onClick={onRetry}>{t('reviewWorkbench.retry')}</Button>}</div>
               : overview ? <MarkdownRenderer content={overview} />
                 : <p className="text-sm text-muted-foreground">{t(documentationTooLarge ? 'review.documentationTooLarge' : 'reviewWorkbench.notProvided')}</p>}
-        </div>
+        </section>
       </section>
-      <div className="space-y-4 border-t border-border/60 pt-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-base font-semibold">{t('reviewWorkbench.packageFiles')}</h2><p className="mt-1 text-xs leading-5 text-muted-foreground">{t('reviewWorkbench.originalFiles')}</p></div>
-        {downloadHref && <a data-analytics-id="review.package.download" className={buttonVariants({ variant: 'outline', size: 'sm', className: 'px-2.5' })} href={buildApiUrl(downloadHref)}>
-          {t('review.downloadSkillZip')}
-        </a>}
-      </div>
-      <details className="group" onToggle={(event) => setFilesExpanded(event.currentTarget.open)}>
-        <summary data-analytics-id="review.files.expand" className="cursor-pointer py-2 text-sm font-medium text-foreground underline-offset-4 hover:underline">{t('reviewWorkbench.browseFiles')}</summary>
-      <div className="mt-3 grid min-w-0 gap-3 xl:grid-cols-[minmax(160px,200px)_minmax(0,1fr)]">
-        <Card className="min-w-0 p-3">
-          <h3 className="mb-2 text-sm font-semibold">{t('fileTree.title')} <span className="font-normal text-muted-foreground">{detail.files.length}</span></h3>
-          {detail.files.length > 0 ? (
-            <div className="max-h-[620px] overflow-auto">
-              <FileTree analyticsId="review.file.open" files={detail.files} onFileClick={(node) => { setPreviewNode(node); setPreviewDialogOpen(true) }} bare compact />
-            </div>
-          ) : <p className="text-sm text-muted-foreground">{t('skillDetail.noFiles')}</p>}
-        </Card>
-        <Card className="min-w-0 p-4">
-          <h3 className="mb-3 text-sm font-semibold">{t('review.documentationTitle')}</h3>
-          {documentationLoading || originalFile.isLoading ? (
-            <div className="h-24 animate-shimmer rounded-lg" />
-          ) : documentationError || originalFile.error ? (
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p className="text-destructive">{t('review.documentationLoadFailed')}</p>
-              <Button size="sm" variant="outline" onClick={() => void originalFile.refetch?.()}>{t('reviewWorkbench.retry')}</Button>
-              {detail.documentationPath && reviewId && (
-                <a data-analytics-id="review.file.download" className="text-primary underline" href={buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(detail.documentationPath)}`)} download>
-                  {t('filePreview.downloadFile')}
-                </a>
-              )}
-            </div>
-          ) : documentation ? (
-            <div className="min-w-0">
-              <p className="mb-3 break-all font-mono text-xs text-muted-foreground">{documentation.path}</p>
-              <MarkdownRenderer content={documentation.content} />
-            </div>
-          ) : documentationTooLarge && detail.documentationPath && reviewId ? (
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>{t('review.documentationTooLarge')}</p>
-              <a data-analytics-id="review.file.download" className="text-primary underline" href={buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(detail.documentationPath)}`)} download>
-                {t('filePreview.downloadFile')}
-              </a>
-            </div>
-          ) : <p className="text-sm text-muted-foreground">{t('review.noDocumentation')}</p>}
-        </Card>
-      </div>
-      </details>
-      </div>
       <FilePreviewDialog closeAnalyticsId="review.file.close" downloadAnalyticsId="review.file.download"
         open={previewDialogOpen}
         onOpenChange={setPreviewDialogOpen}
