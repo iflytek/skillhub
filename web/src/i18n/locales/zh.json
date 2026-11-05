@@ -3614,6 +3614,11 @@
       "suite": "批准套装版本",
       "sync": "批准同步更新"
     },
-    "approveContentUnavailable": "待审内容尚未完成加载或无法核对，暂不能批准。"
+    "approveContentUnavailable": "待审内容尚未完成加载或无法核对，暂不能批准。",
+    "viewScanEvidence": "查看扫描证据",
+    "complianceIncomplete": "部分版本的合规声明不可用，无法完整比较。",
+    "complianceUnchanged": "合规声明未变化",
+    "complianceAbsentBase": "基线版本中没有此声明",
+    "complianceAbsentPending": "本次版本中没有此声明"
   }
 }

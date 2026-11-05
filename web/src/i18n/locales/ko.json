@@ -3896,6 +3896,11 @@
       "suite": "스킬 모음 버전 승인",
       "sync": "동기화 업데이트 승인"
     },
-    "approveContentUnavailable": "검토할 내용을 불러오는 중이거나 확인할 수 없습니다. 현재 승인할 수 없습니다."
+    "approveContentUnavailable": "검토할 내용을 불러오는 중이거나 확인할 수 없습니다. 현재 승인할 수 없습니다.",
+    "viewScanEvidence": "검사 근거 보기",
+    "complianceIncomplete": "일부 버전의 준수 선언을 사용할 수 없어 전체 비교가 불가능합니다.",
+    "complianceUnchanged": "준수 선언이 변경되지 않았습니다",
+    "complianceAbsentBase": "기준 버전에는 이 선언이 없습니다.",
+    "complianceAbsentPending": "현재 버전에는 이 선언이 없습니다."
   }
 }

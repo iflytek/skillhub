@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ReviewSkillDetail, ReviewTask } from '@/api/types'
-import { Card } from '@/shared/ui/card'
+import { SkillAvatar } from '@/features/skill/skill-avatar'
 
 export function reviewRequestKey(review: ReviewTask, hasBaseline: boolean) {
   if (review.subjectType === 'SUITE_VERSION') return 'suite'
@@ -22,36 +22,51 @@ export function ReviewTaskStatus({ status }: { status: ReviewTask['status'] }) {
   return <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${color}`}>{t(status === 'PENDING' ? 'review.statusPending' : status === 'APPROVED' ? 'review.statusApproved' : status === 'REJECTED' ? 'review.statusRejected' : 'review.statusSuperseded')}</span>
 }
 
-export function ReviewTaskSummary({ review, detail, hasBaseline, submittedAt, children }: {
+export function ReviewTaskHeader({ review, detail, title, hasBaseline, submittedAt, resourceVisibility, children }: {
   review: ReviewTask
   detail?: ReviewSkillDetail
+  title: string
   hasBaseline: boolean
   submittedAt: string
+  resourceVisibility?: string | null
   children?: ReactNode
 }) {
   const { t } = useTranslation()
   const kind = reviewRequestKey(review, hasBaseline)
   const metadataOnly = review.subjectType === 'SKILL_METADATA' && !review.requestedVisibility
+  const version = metadataOnly ? null : detail?.activeVersion ?? review.version
+  const visibility = review.requestedVisibility
+    ? `${t(`skillVisibility.${review.previousVisibility}`)} → ${t(`skillVisibility.${review.requestedVisibility}`)}`
+    : (resourceVisibility || detail?.skill.visibility) ? t(`skillVisibility.${resourceVisibility || detail?.skill.visibility}`) : null
   const rows = [
     { label: t('reviewWorkbench.request'), value: t(`reviewWorkbench.kind.${kind}`) },
-    ...(!metadataOnly ? [{ label: t(review.requestedVisibility ? 'reviewWorkbench.boundVersion' : 'review.version'), value: detail?.activeVersion ?? review.version ?? '—' }] : []),
-    ...(review.requestedVisibility ? [{ label: t('skillVisibility.title'), value: `${t(`skillVisibility.${review.previousVisibility}`)} → ${t(`skillVisibility.${review.requestedVisibility}`)}` }]
-      : detail ? [{ label: t('skillVisibility.title'), value: t(`skillVisibility.${detail.skill.visibility}`) }] : []),
+    ...(version ? [{ label: t(review.requestedVisibility ? 'reviewWorkbench.boundVersion' : 'review.version'), value: version }] : []),
+    ...(visibility ? [{ label: t('skillVisibility.title'), value: visibility }] : []),
     { label: t('review.submitter'), value: review.submittedByName || review.submittedBy },
     { label: t('review.submitTime'), value: submittedAt },
   ]
   return (
-    <aside className="min-w-0 self-start xl:sticky xl:top-20" aria-label={t('reviewWorkbench.requestSummary')}>
-      <Card className="space-y-5 p-5">
-        <h2 className="text-lg font-semibold">{t('reviewWorkbench.requestSummary')}</h2>
-        <dl className="space-y-4">
-          {rows.map(({ label, value }) => <div key={label} className="grid grid-cols-[4rem_minmax(0,1fr)] gap-3 text-sm">
-            <dt className="text-xs leading-5 text-muted-foreground">{label}</dt>
-            <dd className="min-w-0 break-words leading-5 [overflow-wrap:anywhere]">{value}</dd>
-          </div>)}
-        </dl>
-        {children && <div className="space-y-4 border-t border-border/60 pt-5">{children}</div>}
-      </Card>
-    </aside>
+    <header data-testid="review-task-header" className="min-w-0 space-y-5 border-b border-border/60 pb-5">
+      <div className="flex min-w-0 items-start gap-4">
+        <SkillAvatar name={title} url={detail?.skill.avatarUrl} seed={`${review.namespace}/${review.subjectSlug || review.skillSlug}`} size="h-11 w-11 text-lg" />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <h1 className="min-w-0 break-words text-[27px] font-medium leading-9 tracking-[-0.8px]">{title}</h1>
+            <ReviewTaskStatus status={review.status} />
+          </div>
+          <p className="break-all text-xs leading-5 text-muted-foreground">@{review.namespace}/{review.subjectSlug || review.skillSlug}</p>
+        </div>
+      </div>
+      <dl className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-x-6 gap-y-4">
+        {rows.map(({ label, value }) => <div key={label} className="min-w-0 space-y-1.5">
+          <dt className="text-xs leading-5 text-muted-foreground">{label}</dt>
+          <dd className="break-words text-sm leading-5 [overflow-wrap:anywhere]">{value}</dd>
+        </div>)}
+      </dl>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        {children}
+        <span className="ml-auto shrink-0 text-xs text-muted-foreground">{t('review.id')} #{review.id}</span>
+      </div>
+    </header>
   )
 }

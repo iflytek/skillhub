@@ -3,8 +3,8 @@ import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { buildReviewReturnPath } from '@/features/review/review-route-search'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
-import { ArrowLeft } from 'lucide-react'
-import { ReviewTaskStatus, ReviewTaskSummary, reviewRequestKey } from '@/features/review/review-task-summary'
+import { ArrowLeft, ArrowRight, ShieldCheck } from 'lucide-react'
+import { ReviewTaskHeader, reviewRequestKey } from '@/features/review/review-task-summary'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Textarea } from '@/shared/ui/textarea'
@@ -218,24 +218,10 @@ function ReviewDetailScreen({
     )
   }
 
-  const requestSummary = (
-        <ReviewTaskSummary review={review} detail={reviewSkillDetail} hasBaseline={hasBaseline} submittedAt={formatDate(review.submittedAt)}>
-          {!isSuiteReview && !isMetadataReview && <div className="space-y-3">
-            <h3 className="text-base font-semibold">{t('reviewWorkbench.checks')}</h3>
-            <button data-analytics-id="review.security.open" type="button" onClick={() => selectTab('source', true)} className="block w-full space-y-2 text-left text-sm underline-offset-4 hover:underline">
-              <span className="block font-medium">{t('review.scanSummary')}</span>
-              {review.requestedVisibility
-                ? <span className="block text-xs text-muted-foreground">{reviewSkillDetail?.visibilityChange ? t(`skillVisibility.scan${reviewSkillDetail.visibilityChange.scanStatus}`) : t('review.scanLoadFailed')}</span>
-                : isLoadingReviewSkillDetail || (skillId && versionId && isLoadingSecurityAudits) ? <span className="block text-xs text-muted-foreground">{t('review.scanLoading')}</span>
-                  : reviewSkillDetailError || isSecurityAuditsError ? <span className="block text-xs text-destructive">{t('review.scanLoadFailed')}</span>
-                    : securityAudits?.length ? <span className="flex flex-wrap gap-2">{securityAudits.map((audit) => <VerdictBadge key={audit.id} displayState={getSecurityAuditDisplayState(audit, activeReviewVersion?.status)} compact />)}</span>
-                      : <span className="block text-xs text-muted-foreground">{t(activeReviewVersion?.status === 'SCANNING' ? 'review.scanPending' : activeReviewVersion?.status === 'SCAN_FAILED' ? 'review.scanFailed' : 'review.scanUnavailable')}</span>}
-            </button>
-            {isGithubSyncReview && <button type="button" data-analytics-id="review.source.open" onClick={() => selectTab('source', true)} className="space-y-1 text-left text-sm underline-offset-4 hover:underline"><span className="block font-medium">{t('review.githubLicenseStatus')}</span><span className="block text-xs text-muted-foreground">{githubSource ? t(`review.githubLicense${githubSource.evidence.status}`, { defaultValue: githubSource.evidence.status }) : t(isGithubSourceError ? 'review.githubSourceError' : 'review.scanLoading')}</span></button>}
-            <p className="text-xs leading-5 text-muted-foreground">{t('reviewWorkbench.scanBoundary')}</p>
-          </div>}
-        </ReviewTaskSummary>
-  )
+
+  const title = isSuiteReview
+    ? reviewSuiteDetail?.displayName || review.displayName || review.subjectSlug || t('review.detail')
+    : reviewSkillDetail?.presentation?.displayName || reviewSkillDetail?.skill.displayName || review.displayName || review.subjectSlug || review.skillSlug || t('review.detail')
 
   return (
     <div className="flex min-h-[calc(100dvh-5.25rem)] w-full flex-col gap-4 animate-fade-up">
@@ -243,23 +229,27 @@ function ReviewDetailScreen({
         <Button data-analytics-id="review.list.open" variant="link" size="sm" className="h-auto px-0 py-0 text-xs" onClick={() => navigate({ to: returnTo })}>
           <ArrowLeft className="h-3.5 w-3.5" />{t('review.backToList')}
         </Button>
-        <div className="space-y-3">
-          <h1 className="break-words text-[27px] font-medium leading-9 tracking-[-0.8px]">{reviewSkillDetail?.presentation?.displayName || reviewSkillDetail?.skill.displayName || review.subjectSlug || review.skillSlug || t('review.detail')}</h1>
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">{t(`reviewWorkbench.kind.${reviewRequestKey(review, hasBaseline)}`)}</span>
-            <ReviewTaskStatus status={review.status} />
-            <span className="min-w-0 break-all text-xs text-muted-foreground">@{review.namespace}/{review.subjectSlug || review.skillSlug}</span>
-          </div>
-        </div>
+        <ReviewTaskHeader review={review} detail={isSuiteReview ? undefined : reviewSkillDetail}
+          title={title} resourceVisibility={isSuiteReview ? reviewSuiteDetail?.visibility : undefined}
+          hasBaseline={hasBaseline} submittedAt={formatDate(review.submittedAt)}>
+          {!isSuiteReview && !isMetadataReview && <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
+            <button data-analytics-id="review.security.open" type="button" onClick={() => selectTab('source', true)} className="inline-flex min-h-9 min-w-0 flex-wrap items-center gap-x-3 gap-y-2 rounded-sm text-left text-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+              <span className="font-medium">{t('review.scanSummary')}</span>
+              {review.requestedVisibility
+                ? <span className="text-xs text-muted-foreground">{reviewSkillDetail?.visibilityChange ? t(`skillVisibility.scan${reviewSkillDetail.visibilityChange.scanStatus}`) : t('review.scanLoadFailed')}</span>
+                : isLoadingReviewSkillDetail || (skillId && versionId && isLoadingSecurityAudits) ? <span className="text-xs text-muted-foreground">{t('review.scanLoading')}</span>
+                  : reviewSkillDetailError || isSecurityAuditsError ? <span className="text-xs text-destructive">{t('review.scanLoadFailed')}</span>
+                    : securityAudits?.length ? <span className="inline-flex flex-wrap gap-2">{securityAudits.map((audit) => <VerdictBadge key={audit.id} displayState={getSecurityAuditDisplayState(audit, activeReviewVersion?.status)} compact />)}</span>
+                      : <span className="text-xs text-muted-foreground">{t(activeReviewVersion?.status === 'SCANNING' ? 'review.scanPending' : activeReviewVersion?.status === 'SCAN_FAILED' ? 'review.scanFailed' : 'review.scanUnavailable')}</span>}
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">{t('reviewWorkbench.viewScanEvidence')}<ArrowRight className="h-3 w-3" aria-hidden="true" /></span>
+            </button>
+            {isGithubSyncReview && <button type="button" data-analytics-id="review.source.open" onClick={() => selectTab('source', true)} className="inline-flex min-h-9 flex-wrap items-center gap-2 rounded-sm text-left text-sm underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><span className="font-medium">{t('review.githubLicenseStatus')}</span><span className="text-xs text-muted-foreground">{githubSource ? t(`review.githubLicense${githubSource.evidence.status}`, { defaultValue: githubSource.evidence.status }) : t(isGithubSourceError ? 'review.githubSourceError' : 'review.scanLoading')}</span><ArrowRight className="h-3 w-3" aria-hidden="true" /></button>}
+          </div>}
+        </ReviewTaskHeader>
       </div>
-      {availableTab === 'changes' && (
-          <details className="rounded-xl border border-border/60 bg-card">
-            <summary className="cursor-pointer px-5 py-4 text-sm font-medium">{t('reviewWorkbench.requestSummary')} <span className="ml-3 text-xs font-normal text-muted-foreground">{reviewSkillDetail?.activeVersion ?? review.version}</span></summary>
-            <div className="max-w-sm p-4 pt-0">{requestSummary}</div>
-          </details>
-      )}
-      <div data-testid="review-detail-layout" className={`grid min-w-0 items-start gap-6 ${availableTab === 'changes' ? 'grid-cols-1' : 'xl:grid-cols-[minmax(0,1fr)_268px]'}`}>
-      <div className="order-2 min-w-0 xl:order-1">
+      <div data-testid="review-detail-layout" className="min-w-0">
+      <div className="min-w-0">
       <Tabs data-testid="review-detail-workbench" ref={tabsRef} value={availableTab} onValueChange={selectTab} className="min-h-[28rem] min-w-0 rounded-xl border border-border/60 bg-card text-card-foreground [overflow-anchor:none]">
         <div className="border-b border-border/60 p-3 sm:px-5 sm:py-4">
         <TabsList className="grid w-full grid-cols-2 gap-1 rounded-2xl border-0 bg-secondary/70 p-1 sm:inline-flex sm:w-auto sm:flex-wrap sm:rounded-full" aria-label={t('reviewWorkbench.contentNavigation')}>
@@ -367,7 +357,6 @@ function ReviewDetailScreen({
         </div>
       </Tabs>
       </div>
-      {availableTab !== 'changes' && <div className="order-1 min-w-0 xl:order-2">{requestSummary}</div>}
       </div>
 
       <div className="sticky bottom-0 z-20 -mx-3 mt-auto border-t border-border bg-background px-3 py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-[0_-5px_16px_-12px_rgb(0_0_0/0.28)] sm:-mx-4 sm:px-4">
@@ -382,8 +371,8 @@ function ReviewDetailScreen({
                 placeholder={t('review.commentPlaceholder')}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                rows={3}
-                className="min-h-[100px] resize-y text-sm"
+                rows={2}
+                className="min-h-[64px] resize-y text-sm"
               />
             </div>
             <div className="flex shrink-0 flex-wrap gap-2">

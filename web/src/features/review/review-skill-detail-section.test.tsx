@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import type { ReviewSkillDetail } from '@/api/types'
-import { ReviewSkillDetailSection } from './review-skill-detail-section'
+import { ReviewSkillDetailSection, ReviewSkillChangesSection } from './review-skill-detail-section'
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
@@ -139,6 +139,45 @@ describe('ReviewSkillDetailSection', () => {
     fireEvent.click(screen.getByRole('button', { name: 'reviewWorkbench.retry' }))
     expect(mocks.refetch).toHaveBeenCalledOnce()
     expect(screen.getByRole('link', { name: 'filePreview.downloadFile' })).toBeTruthy()
+  })
+
+  it('shows the task-bound declaration on content even when a first publication has no changes tab', () => {
+    const detail = createDetail()
+    detail.comparison = null
+    detail.versions[0].complianceSnapshot = { items: [{ standard: 'current-standard', controlId: 'CURRENT' }] }
+    detail.versions.push({ ...detail.versions[0], id: 9, version: '1.1.0', status: 'PUBLISHED', complianceSnapshot: { items: [{ standard: 'other-standard', controlId: 'OTHER' }] } })
+    render(<ReviewSkillDetailSection detail={detail} />)
+    expect(screen.getByText(/current-standard/)).toBeTruthy()
+    expect(screen.queryByText(/other-standard/)).toBeNull()
+    expect(screen.queryByText('reviewWorkbench.baseline')).toBeNull()
+  })
+
+  it('does not display an empty declaration shell or borrow another version declaration', () => {
+    const detail = createDetail()
+    detail.versions.push({ ...detail.versions[0], id: 9, version: '1.1.0', status: 'PUBLISHED', complianceSnapshot: { items: [{ standard: 'other-standard', controlId: 'OTHER' }] } })
+    const view = render(<ReviewSkillDetailSection detail={detail} />)
+    expect(screen.queryByText('compliance.title')).toBeNull()
+    expect(screen.queryByText(/other-standard/)).toBeNull()
+    detail.versions[0].complianceSnapshot = { items: [] }
+    view.rerender(<ReviewSkillDetailSection detail={detail} />)
+    expect(screen.queryByText('compliance.title')).toBeNull()
+  })
+
+  it('does not create empty compliance or full historical-version disclosures', () => {
+    render(<ReviewSkillChangesSection detail={createDetail()} />)
+    expect(screen.queryByText('review.complianceChanges')).toBeNull()
+    expect(screen.queryByText('skillDetail.tabVersions')).toBeNull()
+    expect(screen.queryByText('review.technicalDetails')).toBeNull()
+  })
+
+  it('does not take an arbitrary published version as an unavailable comparison baseline', () => {
+    const detail = createDetail()
+    detail.versions[0].complianceSnapshot = { items: [{ standard: 'pending-declaration', controlId: 'NEW' }] }
+    detail.versions.push({ ...detail.versions[0], id: 9, version: '1.1.0', status: 'PUBLISHED', complianceSnapshot: { items: [{ standard: 'unrelated-published', controlId: 'OLD' }] } })
+    render(<ReviewSkillChangesSection detail={detail} />)
+    expect(screen.getByText(/pending-declaration/)).toBeTruthy()
+    expect(screen.queryByText(/unrelated-published/)).toBeNull()
+    expect(screen.queryByText('review.complianceDiffRemovedLabel')).toBeNull()
   })
 
   it('renders loading state while review detail is being fetched', () => {

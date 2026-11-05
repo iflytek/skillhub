@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ReviewSkillDetail } from '@/api/types'
 import { ReviewPresentationComparison } from './review-presentation-comparison'
 
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
+vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string, options?: { count?: number }) => options?.count != null ? `${key}:${options.count}` : key }) }))
 vi.mock('@/features/skill/markdown-renderer', () => ({ MarkdownRenderer: ({ content, className }: { content: string; className?: string }) => <div data-testid="comparison-markdown" className={className}>{content}</div> }))
 
 afterEach(cleanup)
@@ -22,6 +22,10 @@ function detail(): ReviewSkillDetail {
       files: [{ path: 'added.md', changeType: 'ADDED' }, { path: 'SKILL.md', changeType: 'MODIFIED' }, { path: 'README.md', changeType: 'UNCHANGED' }, { path: 'removed.txt', changeType: 'REMOVED' }],
     },
   }
+}
+
+function version(number: string, fileCount: number, totalSize: number, changelog?: string): ReviewSkillDetail['versions'][number] {
+  return { id: 1, version: number, status: 'PUBLISHED', fileCount, totalSize, changelog, publishedAt: '2026-11-05T00:00:00Z', downloadAvailable: true }
 }
 
 describe('ReviewPresentationComparison', () => {
@@ -91,6 +95,7 @@ describe('ReviewPresentationComparison', () => {
     expect(oldSummary.parentElement).toBe(newSummary.parentElement)
     expect(newSummary.parentElement?.className).toContain('grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))]')
     expect(newSummary.parentElement?.className).not.toContain('md:grid-cols-2')
+    expect(newSummary.parentElement?.className).toContain('items-start')
     expect(newSummary.className).toContain('bg-amber-500/5')
     expect(newSummary.className).toContain('dark:border-amber-400/30')
     expect(oldSummary.className).not.toContain('bg-amber-500/5')
@@ -112,6 +117,51 @@ describe('ReviewPresentationComparison', () => {
     }
     expect(screen.getByText('reviewWorkbench.fileUNCHANGED').className).toContain('text-muted-foreground')
     expect(screen.getAllByText('reviewWorkbench.modified').every((badge) => badge.className.includes('bg-amber-500/10'))).toBe(true)
+  })
+
+
+  it('matches the explicit baseline and pending version context, including genuine zero metrics', () => {
+    const value = detail()
+    value.versions = [version('9.0.0', 999, 999999), version('1.1.0', 0, 0, 'Current release notes'), version('1.0.0', 3, 2048, 'Old release notes')]
+    render(<ReviewPresentationComparison detail={value} />)
+    const baseline = screen.getByText('reviewWorkbench.baseline').parentElement!
+    const pending = screen.getByText('reviewWorkbench.pending').parentElement!
+    expect(baseline.textContent).toContain('1.0.0')
+    expect(baseline.textContent).toContain('skillDetail.fileCount:3')
+    expect(baseline.textContent).toContain('2.0 KB')
+    expect(pending.textContent).toContain('1.1.0')
+    expect(pending.textContent).toContain('skillDetail.fileCount:0')
+    expect(pending.textContent).toContain('0 B')
+    expect(screen.getByText('suite.changelog').parentElement?.textContent).toContain('Current release notes')
+    expect(screen.queryByText('Old release notes')).toBeNull()
+    expect(screen.queryByText('9.0.0')).toBeNull()
+  })
+
+  it('omits unavailable metrics and blank release notes without borrowing overview or another version', () => {
+    const value = detail()
+    value.versions = [version('1.1.0', 1, 1024, '   '), version('9.0.0', 999, 999999, 'Unrelated notes')]
+    render(<ReviewPresentationComparison detail={value} />)
+    const baseline = screen.getByText('reviewWorkbench.baseline').parentElement!
+    expect(baseline.textContent).toContain('1.0.0')
+    expect(baseline.textContent).not.toContain('skillDetail.fileCount')
+    expect(baseline.textContent).not.toContain(' B')
+    expect(screen.queryByText('suite.changelog')).toBeNull()
+    expect(screen.queryByText('Unrelated notes')).toBeNull()
+    expect(screen.getByText('New overview')).toBeTruthy()
+  })
+
+  it('keeps GitHub technical versions concealed while retaining the real before and after context', () => {
+    const value = detail()
+    value.activeVersion = '0.0.0-sync-pending'
+    value.comparison!.baseVersion = '0.0.0-sync-baseline'
+    value.versions = [version(value.activeVersion, 2, 1024), version(value.comparison!.baseVersion, 1, 512)]
+    render(<ReviewPresentationComparison detail={value} concealTechnicalVersions />)
+    expect(screen.getByText('reviewWorkbench.baseline')).toBeTruthy()
+    expect(screen.getByText('reviewWorkbench.pending')).toBeTruthy()
+    expect(screen.queryByText(value.activeVersion)).toBeNull()
+    expect(screen.queryByText(value.comparison!.baseVersion)).toBeNull()
+    expect(screen.getByText('skillDetail.fileCount:2')).toBeTruthy()
+    expect(screen.getByText('1.0 KB')).toBeTruthy()
   })
 
 })

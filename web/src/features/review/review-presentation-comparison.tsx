@@ -1,4 +1,4 @@
-import { ChevronDown } from 'lucide-react'
+import { ArrowRight, ChevronDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { ReviewSkillDetail } from '@/api/types'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
@@ -6,9 +6,10 @@ import { cn } from '@/shared/lib/utils'
 
 interface ReviewPresentationComparisonProps {
   detail: ReviewSkillDetail
+  concealTechnicalVersions?: boolean
 }
 
-const COMPARISON_GRID = 'grid min-w-0 grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] gap-3'
+const COMPARISON_GRID = 'grid min-w-0 items-start grid-cols-[repeat(auto-fit,minmax(min(100%,28rem),1fr))] gap-3'
 const COMPARISON_MARKDOWN = 'text-sm leading-6 [&_h1]:mb-4 [&_h1]:pb-2 [&_h1]:text-xl [&_h1]:leading-7 [&_h2]:mb-3 [&_h2]:mt-6 [&_h2]:pb-2 [&_h2]:text-lg [&_h2]:leading-7 [&_h3]:mb-2 [&_h3]:mt-5 [&_h3]:text-base [&_h3]:leading-6 [&_h4]:text-sm [&_p]:my-3 [&_p]:text-sm [&_p]:leading-6 [&_li]:text-sm [&_li]:leading-6 [&_pre]:text-xs [&_table]:text-sm [&>:first-child]:mt-0 [&>:last-child]:mb-0'
 const CHANGED_STATUS = 'border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200'
 const FILE_STATUS: Record<string, string> = {
@@ -17,11 +18,21 @@ const FILE_STATUS: Record<string, string> = {
   REMOVED: 'border-red-500/30 bg-red-500/10 text-red-800 dark:text-red-200',
 }
 
+// Keep the existing file-tree 1024-unit convention local to this review context.
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 /** Compares only snapshots authorized and selected by the review endpoint. */
-export function ReviewPresentationComparison({ detail }: ReviewPresentationComparisonProps) {
+export function ReviewPresentationComparison({ detail, concealTechnicalVersions = false }: ReviewPresentationComparisonProps) {
   const { t } = useTranslation()
   const comparison = detail.comparison
   if (!comparison) return <p className="text-sm text-muted-foreground">{t('reviewWorkbench.noBaseline')}</p>
+
+  const baselineVersion = detail.versions.find((version) => version.version === comparison.baseVersion)
+  const pendingVersion = detail.versions.find((version) => version.version === detail.activeVersion)
 
   const fields = [
     { key: 'displayName', title: t('publish.displayName'), markdown: false },
@@ -31,10 +42,23 @@ export function ReviewPresentationComparison({ detail }: ReviewPresentationCompa
 
   return (
     <section className="space-y-5" aria-label={t('reviewWorkbench.presentationChanges')}>
-      <div className="grid grid-cols-2 gap-4 rounded-lg bg-secondary/70 p-4 text-sm">
-        <div><p className="text-xs text-muted-foreground">{t('reviewWorkbench.baseline')}</p><p className="mt-1 break-all font-medium">{comparison.baseVersion}</p></div>
-        <div><p className="text-xs text-muted-foreground">{t('reviewWorkbench.pending')}</p><p className="mt-1 break-all font-medium">{detail.activeVersion}</p></div>
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 rounded-lg bg-secondary/70 p-4 text-sm sm:gap-5">
+        {([{ label: 'baseline', number: comparison.baseVersion, version: baselineVersion }, { label: 'pending', number: detail.activeVersion, version: pendingVersion }] as const).map(({ label, number, version }, index) => (
+          <div key={label} className={cn('min-w-0 space-y-2', index === 0 ? 'col-start-1 row-start-1' : 'col-start-3 row-start-1')}>
+            <p className="text-xs font-medium text-muted-foreground">{t(`reviewWorkbench.${label}`)}</p>
+            {!concealTechnicalVersions && <p className="break-all font-mono text-base font-semibold">{number}</p>}
+            {version && <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              {version.fileCount != null && <span>{t('skillDetail.fileCount', { count: version.fileCount })}</span>}
+              {version.totalSize != null && <span>{formatFileSize(version.totalSize)}</span>}
+            </div>}
+          </div>
+        ))}
+        <ArrowRight aria-hidden="true" className="col-start-2 row-start-1 mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
       </div>
+      {pendingVersion?.changelog?.trim() && <section className="space-y-2 rounded-lg border border-border/60 px-4 py-3">
+        <h3 className="text-xs font-medium text-muted-foreground">{t('suite.changelog')}</h3>
+        <p className="whitespace-pre-wrap break-words text-sm leading-6">{pendingVersion.changelog}</p>
+      </section>}
       {fields.map(({ key, title, markdown }) => {
         const before = comparison.baseline[key]
         const after = comparison.current[key]

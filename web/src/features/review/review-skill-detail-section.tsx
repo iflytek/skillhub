@@ -7,12 +7,12 @@ import { FileTree } from '@/features/skill/file-tree'
 import { FilePreviewDialog } from '@/features/skill/file-preview-dialog'
 import { canPreviewFile } from '@/features/skill/file-type-utils'
 import type { FileTreeNode } from '@/features/skill/file-tree-builder'
-import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { ComplianceSnapshotPanel } from '@/features/skill/compliance-snapshot-panel'
-import { ReviewComplianceDiffPanel, pickBaseVersion } from './review-compliance-diff-panel'
+import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
+import { ReviewComplianceDiffPanel } from './review-compliance-diff-panel'
 import { Button, buttonVariants } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
-import { getReviewDownloadHref, getReviewSkillDocumentation, isActiveReviewVersion } from './review-skill-detail'
+import { getReviewDownloadHref, getReviewSkillDocumentation } from './review-skill-detail'
 import { useReviewFile } from './use-review-file'
 import { ReviewPresentationComparison } from './review-presentation-comparison'
 
@@ -52,6 +52,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
   const summary = presentation?.summary ?? detail.skill.summary
   const overview = presentation?.overview ?? ((presentation?.overviewSource === 'README' || presentation?.overviewSource === 'SKILL_MD' || !presentation) ? detail.documentationContent : null)
   const downloadHref = getReviewDownloadHref(detail)
+  const currentCompliance = detail.versions.find((version) => version.version === detail.activeVersion)?.complianceSnapshot
   const handleDownloadFile = () => {
     if (!previewNode || !reviewId) return
     const url = buildApiUrl(`${WEB_API_PREFIX}/reviews/${reviewId}/file?path=${encodeURIComponent(previewNode.path)}`)
@@ -135,6 +136,7 @@ export function ReviewSkillDetailSection({ detail, isLoading, hasError, reviewId
               : overview ? <MarkdownRenderer content={overview} />
                 : <p className="text-sm text-muted-foreground">{t(documentationTooLarge ? 'review.documentationTooLarge' : 'reviewWorkbench.notProvided')}</p>}
         </section>
+        <ComplianceSnapshotPanel snapshot={currentCompliance} />
       </section>
       <FilePreviewDialog closeAnalyticsId="review.file.close" downloadAnalyticsId="review.file.download"
         open={previewDialogOpen}
@@ -157,39 +159,15 @@ export function ReviewSkillChangesSection({ detail, isLoading, hasError, onRetry
   if (!detail) return null
 
   const pendingVersion = detail.versions.find((version) => version.version === detail.activeVersion) ?? null
-  const baseVersion = detail.comparison ? detail.versions.find((version) => version.version === detail.comparison?.baseVersion) ?? null : pickBaseVersion(detail.versions, detail.activeVersion ?? '')
-  const versionHistory = (
-    <Card className="space-y-3 p-4">
-      <h3 className="text-base font-semibold">{t('skillDetail.tabVersions')}</h3>
-      {detail.versions.length > 0 ? detail.versions.map((version) => (
-        <div key={version.id} className="rounded-md border border-border p-3">
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="break-all font-mono font-semibold">{version.version}</span>
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs">{version.status}</span>
-            {isActiveReviewVersion(version, detail) && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">{t('review.activeReviewVersion')}</span>}
-            <span className="ml-auto text-muted-foreground">{t('skillDetail.fileCount', { count: version.fileCount })}</span>
-          </div>
-          {version.changelog && <p className="mt-2 text-sm text-muted-foreground">{version.changelog}</p>}
-          <ComplianceSnapshotPanel snapshot={version.complianceSnapshot} />
-        </div>
-      )) : <p className="text-sm text-muted-foreground">{t('skillDetail.noVersions')}</p>}
-    </Card>
-  )
+  const baseVersion = detail.comparison
+    ? detail.versions.find((version) => version.version === detail.comparison?.baseVersion) ?? null
+    : null
 
   return (
-    <div className="space-y-4">
-      {(!concealTechnicalVersions || detail.comparison) && <ReviewPresentationComparison detail={detail} />}
-      <details className="rounded-md border border-border/60 p-4 text-sm">
-        <summary className="cursor-pointer font-medium">{t('review.complianceChanges')}</summary>
-        <div className="mt-4"><ReviewComplianceDiffPanel baseVersion={baseVersion} pendingVersion={pendingVersion}
-          concealVersionIdentifiers={concealTechnicalVersions} /></div>
-      </details>
-      {concealTechnicalVersions ? (
-        <details className="rounded-md border border-border bg-card p-4">
-          <summary className="cursor-pointer text-sm font-medium">{t('review.technicalDetails')}</summary>
-          <div className="mt-4">{versionHistory}</div>
-        </details>
-      ) : <details className="rounded-md border border-border/60 p-4 text-sm"><summary className="cursor-pointer font-medium">{t('skillDetail.tabVersions')}</summary><div className="mt-4">{versionHistory}</div></details>}
+    <div className="space-y-6">
+      {(!concealTechnicalVersions || detail.comparison) && <ReviewPresentationComparison detail={detail} concealTechnicalVersions={concealTechnicalVersions} />}
+      <ReviewComplianceDiffPanel baseVersion={baseVersion} pendingVersion={pendingVersion}
+        baselineExpected={!!detail.comparison} concealVersionIdentifiers={concealTechnicalVersions} />
     </div>
   )
 }

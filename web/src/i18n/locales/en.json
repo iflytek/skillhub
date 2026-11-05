@@ -3616,6 +3616,11 @@
       "suite": "Approve suite version",
       "sync": "Approve sync update"
     },
-    "approveContentUnavailable": "Pending content is still loading or cannot be verified. Approval is unavailable."
+    "approveContentUnavailable": "Pending content is still loading or cannot be verified. Approval is unavailable.",
+    "viewScanEvidence": "View scan evidence",
+    "complianceIncomplete": "Some version declarations are unavailable, so a complete comparison is not possible.",
+    "complianceUnchanged": "Compliance declarations unchanged",
+    "complianceAbsentBase": "This declaration is absent from the baseline version.",
+    "complianceAbsentPending": "This declaration is absent from the current version."
   }
 }

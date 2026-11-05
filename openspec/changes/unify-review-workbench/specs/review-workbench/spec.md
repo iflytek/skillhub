@@ -51,7 +51,7 @@ A normal version update MUST compare the task-bound presentation and package fil
 - **THEN** the full pending content is reviewable without a fabricated comparison tab
 
 ### Requirement: Task-specific workbench layout
-The confirmed dual-column detail MUST put readable target content in the main column and concise task/scope/version/evidence in the side card. The neutral segmented navigation MUST show only applicable sections and wrap without internal vertical scrolling on narrow screens. Approval/rejection, permissions, required reasons and processed read-only states MUST preserve existing domain rules.
+The v7 detail MUST integrate title, task metadata and evidence into one page header. All tabs MUST share the same available main width without a review-summary side card or oversized disclosure. The neutral segmented navigation MUST show only applicable sections and wrap without internal vertical scrolling on narrow screens. Approval/rejection, permissions, required reasons and processed read-only states MUST preserve existing domain rules.
 
 #### Scenario: Inspect a visibility expansion
 - **WHEN** its task is viewed
@@ -63,7 +63,7 @@ The confirmed dual-column detail MUST put readable target content in the main co
 The review detail MUST group the navigation and active content in one bounded surface without a nested page scrollbar. A user-initiated tab switch or evidence shortcut MUST return to the detail page top, including its heading, after the new panel commits, including selecting the current evidence tab again. Query completion, initial rendering and comment edits MUST NOT trigger this navigation scroll.
 
 #### Scenario: A long comparison is replaced with a short history panel
-- **WHEN** the reviewer switches from a scrolled long comparison to history or opens scan evidence from the side panel
+- **WHEN** the reviewer switches from a scrolled long comparison to history or opens scan evidence from the page header
 - **THEN** the detail heading is visible at the page top rather than leaving the reviewer at the document bottom
 - **AND** later query completion does not reset the reviewer's reading position
 
@@ -77,3 +77,15 @@ The review detail MUST group the navigation and active content in one bounded su
 - **THEN** the summary is visually distinct from the overview
 - **AND** file browsing and package download are available before the long overview
 - **AND** comparison uses the available main width with responsive columns and explicit changed states
+
+
+### Requirement: Meaningful compliance and version sections
+The version context MUST use only the server-selected baseline and task-bound version, with their actual package counts and sizes and the pending changelog when available. It MUST NOT render a full version-history disclosure or infer an arbitrary baseline. Columns MUST align at the top without stretching short content to match long content.
+
+#### Scenario: There is no displayable compliance declaration
+- **THEN** no empty compliance section is rendered
+- **AND** a missing snapshot is not converted into an empty declaration to infer additions or removals
+
+#### Scenario: Compliance evidence is incomplete
+- **THEN** the available declaration remains inspectable with an incomplete-comparison message
+- **AND** a first publication shows only its current declaration without a fabricated historical diff

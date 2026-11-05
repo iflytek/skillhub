@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { renderToStaticMarkup } from 'react-dom/server'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReviewSkillDetail } from '@/api/types'
 
@@ -302,7 +302,7 @@ describe('ReviewDetailPage', () => {
     expect((screen.getByRole('button', { name: /^reviewWorkbench\.approve\./ }) as HTMLButtonElement).disabled).toBe(false)
   })
 
-  it('renders a compact task header, pill navigation and a right-hand request summary', () => {
+  it('renders a unified task header, pill navigation and a full-width workspace', () => {
     const html = renderToStaticMarkup(<ReviewDetailPage />)
 
     expect(html).toContain('flex min-h-[calc(100dvh-5.25rem)] w-full flex-col')
@@ -313,8 +313,8 @@ describe('ReviewDetailPage', () => {
     expect(html).toContain('sticky bottom-0')
     expect(html).toContain('review.commentLabel')
     expect(html).toContain('reviewWorkbench.approve.')
-    expect(html).toContain('<aside')
-    expect(html).toContain('reviewWorkbench.requestSummary')
+    expect(html).not.toContain('<aside')
+    expect(html).toContain('data-testid="review-task-header"')
     expect(html).not.toContain('overflow-x-auto')
   })
 
@@ -351,7 +351,7 @@ describe('ReviewDetailPage', () => {
 
     const html = renderToStaticMarkup(<NamespaceReviewDetailPage />)
 
-    expect(html).toContain('reviewWorkbench.requestSummary')
+    expect(html).toContain('data-testid="review-task-header"')
     expect(html).toContain('demo-skill')
   })
 
@@ -378,7 +378,7 @@ describe('ReviewDetailPage', () => {
 
     const html = renderToStaticMarkup(<ReviewDetailPage />)
 
-    expect(html).toContain('reviewWorkbench.requestSummary')
+    expect(html).toContain('data-testid="review-task-header"')
     expect(navigateMock).not.toHaveBeenCalled()
   })
 
@@ -561,19 +561,17 @@ describe('ReviewDetailPage', () => {
     expect(screen.getByRole('tab', { name: 'review.tabChanges' })).toBeTruthy()
     fireEvent.click(screen.getByRole('tab', { name: 'review.tabChanges' }))
     expect(screen.getByTestId('review-detail-layout').className).not.toContain('268px')
-    const applicationDetails = screen.getByText('reviewWorkbench.requestSummary', { selector: 'summary' }).closest('details')
-    expect(applicationDetails?.open).toBe(false)
-    expect((applicationDetails?.compareDocumentPosition(screen.getByTestId('review-detail-workbench')) ?? 0) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const header = screen.getByTestId('review-task-header')
+    expect(header.compareDocumentPosition(screen.getByTestId('review-detail-workbench')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByText('reviewWorkbench.requestSummary')).toBeNull()
     expect(screen.getByText('Published summary')).toBeTruthy()
     expect(screen.getByText('1.0.0')).toBeTruthy()
-    fireEvent.click(screen.getByText('reviewWorkbench.requestSummary', { selector: 'summary' }))
-    expect(applicationDetails?.open).toBe(true)
     const scanShortcut = screen.getByRole('button', { name: /review.scanSummary/ })
     scanShortcut.focus()
     fireEvent.click(scanShortcut)
     expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'review.tabSourceSecurity' }))
     expect(scrollToMock).toHaveBeenLastCalledWith({ top: 0, behavior: 'smooth' })
-    expect(screen.getByTestId('review-detail-layout').className).toContain('268px')
+    expect(screen.getByTestId('review-detail-layout').className).not.toContain('268px')
   })
 
   it('keeps approval blocked after a failed comparison when switching to history', () => {
@@ -728,6 +726,44 @@ describe('ReviewDetailPage', () => {
     expect(matchMediaMock).toHaveBeenCalledWith('(prefers-reduced-motion: reduce)')
     expect(scrollToMock).toHaveBeenCalledOnce()
     expect(scrollToMock).toHaveBeenCalledWith({ top: 0, behavior: 'instant' })
+  })
+
+  it('keeps request metadata and scan evidence in the title header across tabs', () => {
+    render(<ReviewDetailPage />)
+    const header = screen.getByTestId('review-task-header')
+    expect(within(header).getByRole('heading', { level: 1, name: 'Demo Skill' })).toBeTruthy()
+    expect(within(header).getByText('reviewWorkbench.kind.publish')).toBeTruthy()
+    expect(within(header).getByText('@global/demo-skill')).toBeTruthy()
+    expect(within(header).getByText('Local Admin')).toBeTruthy()
+    expect(within(header).getByText('2026-03-19T00:00:00Z')).toBeTruthy()
+    expect(within(header).getByRole('button', { name: /review.scanSummary/ })).toBeTruthy()
+    const layout = screen.getByTestId('review-detail-layout').className
+    fireEvent.click(screen.getByRole('tab', { name: 'review.tabHistory' }))
+    expect(screen.getByTestId('review-detail-layout').className).toBe(layout)
+    expect(screen.getByTestId('review-task-header')).toBe(header)
+    expect(document.querySelector('aside')).toBeNull()
+  })
+
+  it('omits package version and scan claims from an independent avatar header', () => {
+    metadataDetail()
+    render(<ReviewDetailPage />)
+    const header = screen.getByTestId('review-task-header')
+    expect(within(header).getByText('reviewWorkbench.kind.avatar')).toBeTruthy()
+    expect(within(header).queryByText('review.version')).toBeNull()
+    expect(within(header).queryByText('reviewWorkbench.boundVersion')).toBeNull()
+    expect(within(header).queryByRole('button', { name: /review.scanSummary/ })).toBeNull()
+  })
+
+  it('uses the suite task version and snapshot scope without a cached skill version', () => {
+    const task = useReviewDetailMock() as { data: Record<string, unknown> }
+    useReviewDetailMock.mockReturnValue({ ...task, data: { ...task.data, subjectType: 'SUITE_VERSION', subjectSlug: 'suite-demo', version: '3.0.0' } })
+    useSuiteDetailMock.mockReturnValue({ data: { displayName: 'Snapshot suite', visibility: 'NAMESPACE_ONLY', members: [] }, isLoading: false, refetch: vi.fn() })
+    render(<ReviewDetailPage />)
+    const header = screen.getByTestId('review-task-header')
+    expect(within(header).getByRole('heading', { level: 1, name: 'Snapshot suite' })).toBeTruthy()
+    expect(within(header).getByText('3.0.0')).toBeTruthy()
+    expect(within(header).getByText('skillVisibility.NAMESPACE_ONLY')).toBeTruthy()
+    expect(within(header).queryByText('1.2.0')).toBeNull()
   })
 
 })
