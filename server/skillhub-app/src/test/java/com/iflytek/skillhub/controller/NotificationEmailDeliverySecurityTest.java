@@ -66,6 +66,36 @@ class NotificationEmailDeliverySecurityTest {
                 .contentType(MediaType.APPLICATION_JSON).content("{\"confirmDuplicateRisk\":true}")).andExpect(status().isUnauthorized());
         verify(service,never()).retry(eq(2L),any(),anyBoolean());
     }
+    @Test void invalidDeliveryPaginationReturnsClientErrorsWithoutCallingTheService() throws Exception {
+        for (int size : new int[]{0, 101}) {
+            mvc.perform(get("/api/web/notification-email-deliveries/1").param("size", String.valueOf(size))
+                    .with(authentication(auth("ordinary", "USER"))))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(400));
+            mvc.perform(get("/api/web/admin/notification-email-deliveries").param("size", String.valueOf(size))
+                    .with(authentication(auth("admin", "SUPER_ADMIN"))))
+                    .andExpect(status().isBadRequest()).andExpect(jsonPath("$.code").value(400));
+        }
+        for (int page : new int[]{-1, 1000001}) {
+            mvc.perform(get("/api/web/admin/notification-email-deliveries").param("page", String.valueOf(page))
+                    .with(authentication(auth("admin", "SUPER_ADMIN"))))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/web/notification-email-deliveries/1").param("cursor", "private-invalid-cursor")
+                .with(authentication(auth("ordinary", "USER"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("private-invalid-cursor"))));
+        verifyNoInteractions(service);
+    }
+
+    @Test void validPageSizeBoundariesReachTheService() throws Exception {
+        for (int size : new int[]{1, 100}) {
+            mvc.perform(get("/api/web/notification-email-deliveries/1").param("size", String.valueOf(size))
+                    .with(authentication(auth("ordinary", "USER"))))
+                    .andExpect(status().isOk());
+            verify(service).detail(1L, "ordinary", null, size);
+        }
+    }
+
     private UsernamePasswordAuthenticationToken auth(String id,String role) {
         return new UsernamePasswordAuthenticationToken(new PlatformPrincipal(id,id,null,null,null,Set.of(role)),null,
                 List.of(new SimpleGrantedAuthority("ROLE_"+role)));

@@ -7,10 +7,8 @@ import com.iflytek.skillhub.service.notificationemail.NotificationEmailDeliveryQ
 import jakarta.validation.constraints.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 @RestController
-@Validated
 @PreAuthorize("hasRole('SUPER_ADMIN')")
 @RequestMapping({"/api/v1/admin/notification-email-deliveries", "/api/web/admin/notification-email-deliveries"})
 public class NotificationEmailDeliveryAdminController extends BaseApiController {

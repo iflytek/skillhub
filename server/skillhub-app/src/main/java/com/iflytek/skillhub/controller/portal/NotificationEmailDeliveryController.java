@@ -4,10 +4,8 @@ import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.dto.*;
 import com.iflytek.skillhub.service.notificationemail.NotificationEmailDeliveryQueryService;
 import jakarta.validation.constraints.*;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 @RestController
-@Validated
 @RequestMapping({"/api/v1/notification-email-deliveries", "/api/web/notification-email-deliveries"})
 public class NotificationEmailDeliveryController extends BaseApiController {
     private final NotificationEmailDeliveryQueryService service;

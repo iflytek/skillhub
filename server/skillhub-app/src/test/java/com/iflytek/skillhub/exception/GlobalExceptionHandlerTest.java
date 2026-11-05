@@ -233,6 +233,19 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void handleMethodValidationDistinguishesInputFromReturnValueErrors() {
+        var invalidInput = org.mockito.Mockito.mock(
+                org.springframework.web.method.annotation.HandlerMethodValidationException.class);
+        when(invalidInput.isForReturnValue()).thenReturn(false);
+        assertThat(handler.handleMethodValidation(invalidInput, request).getBody().code()).isEqualTo(400);
+
+        var invalidResult = org.mockito.Mockito.mock(
+                org.springframework.web.method.annotation.HandlerMethodValidationException.class);
+        when(invalidResult.isForReturnValue()).thenReturn(true);
+        assertThat(handler.handleMethodValidation(invalidResult, request).getBody().code()).isEqualTo(500);
+    }
+
+    @Test
     void handleMvcBadRequest_shouldReturn400WithoutUnhandledErrorLog() {
         attachAppender();
         prepareClientErrorRequest("POST", "/api/v1/skills");
