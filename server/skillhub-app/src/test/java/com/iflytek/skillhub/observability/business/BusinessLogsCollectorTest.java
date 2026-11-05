@@ -32,6 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Actual production configuration sends protobuf over HTTP to a pinned real Collector/file sink. */
 @Testcontainers
+@org.junit.jupiter.api.Tag("process-global-otel-context")
 class BusinessLogsCollectorTest {
     @Container
     static final GenericContainer<?> COLLECTOR = new GenericContainer<>("otel/opentelemetry-collector-contrib:0.111.0")

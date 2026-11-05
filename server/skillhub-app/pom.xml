@@ -175,7 +175,22 @@
                     <execution>
                         <id>default-test</id>
                         <configuration>
-                            <excludedGroups>process-global-diagnostics</excludedGroups>
+                            <excludedGroups>process-global-diagnostics,process-global-otel-context</excludedGroups>
+                        </configuration>
+                    </execution>
+                    <!-- Raw OTel contexts initialize JVM-global ContextStorage before Boot can
+                         register its MDC wrapper. Each tagged class gets a fresh process. -->
+                    <execution>
+                        <id>isolated-otel-context</id>
+                        <goals><goal>test</goal></goals>
+                        <configuration>
+                            <groups>process-global-otel-context</groups>
+                            <includes>
+                                <include>**/BusinessLogs*Test.java</include>
+                            </includes>
+                            <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+                            <forkCount>1</forkCount>
+                            <reuseForks>false</reuseForks>
                         </configuration>
                     </execution>
                     <execution>

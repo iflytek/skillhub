@@ -20,6 +20,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+@org.junit.jupiter.api.Tag("process-global-otel-context")
 class BusinessLogsPipelineTest {
     @ParameterizedTest
     @ValueSource(booleans = {true, false})

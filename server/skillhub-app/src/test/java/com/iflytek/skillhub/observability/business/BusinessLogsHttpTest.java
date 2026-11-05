@@ -21,6 +21,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+@org.junit.jupiter.api.Tag("process-global-otel-context")
 class BusinessLogsHttpTest {
     @Test
     void truncatedErrorBodyCannotPermanentlyExhaustAdmission() throws Exception {

@@ -64,6 +64,7 @@ import static org.mockito.Mockito.when;
         SkillDownloadService.class, SkillSlugResolutionService.class, ReviewService.class, PromotionService.class,
         ReviewPermissionChecker.class, BusinessLogsProducerPostgresTest.Configuration.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
+@org.junit.jupiter.api.Tag("process-global-otel-context")
 class BusinessLogsProducerPostgresTest {
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
