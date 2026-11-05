@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { buildReviewReturnPath } from '@/features/review/review-route-search'
@@ -59,6 +59,24 @@ function ReviewDetailScreen({
   const { data: githubSource, isLoading: isLoadingGithubSource, isError: isGithubSourceError } =
     useGithubSyncReviewSource(taskId, isGithubSyncReview)
   const [selectedTab, setSelectedTab] = useState<string | null>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
+  const [tabNavigation, setTabNavigation] = useState(0)
+  const focusTabAfterNavigation = useRef(false)
+  const selectTab = (tab: string, fromShortcut = false) => {
+    focusTabAfterNavigation.current = fromShortcut
+    setSelectedTab(tab)
+    setTabNavigation((request) => request + 1)
+  }
+  // Scroll after the new panel commits, before paint: a shorter panel can clamp
+  // the old document scroll position. Query completion must never repeat this.
+  useLayoutEffect(() => {
+    if (tabNavigation === 0) return
+    if (focusTabAfterNavigation.current) {
+      tabsRef.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true })
+      focusTabAfterNavigation.current = false
+    }
+    tabsRef.current?.scrollIntoView({ block: 'start', behavior: 'instant' })
+  }, [tabNavigation])
   const activeTab = selectedTab ?? (isGithubSyncReview && githubSource?.baseVersionId ? 'changes' : 'content')
   const {
     data: reviewAttempts,
@@ -216,14 +234,17 @@ function ReviewDetailScreen({
       </div>
       <div className="grid min-w-0 items-start gap-6 xl:grid-cols-[minmax(0,1fr)_268px]">
       <div className="order-2 min-w-0 xl:order-1">
-      <Tabs value={availableTab} onValueChange={setSelectedTab} className="min-w-0 space-y-4">
+      <Tabs data-testid="review-detail-workbench" ref={tabsRef} value={availableTab} onValueChange={selectTab} className="min-h-[calc(100svh-6rem)] min-w-0 scroll-mt-24 rounded-xl border border-border/60 bg-card text-card-foreground [overflow-anchor:none]">
+        <div className="border-b border-border/60 p-3 sm:px-5 sm:py-4">
         <TabsList className="grid w-full grid-cols-2 gap-1 rounded-2xl border-0 bg-secondary/70 p-1 sm:inline-flex sm:w-auto sm:flex-wrap sm:rounded-full" aria-label={t('reviewWorkbench.contentNavigation')}>
           <TabsTrigger data-analytics-id="review.content.tab" value="content" className="mb-0 min-h-9 rounded-xl border-0 px-4 py-2 font-normal data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:shadow-sm sm:rounded-full">{t('review.tabContent')}</TabsTrigger>
           {hasBaseline && <TabsTrigger data-analytics-id="review.changes.tab" value="changes" className="mb-0 min-h-9 rounded-xl border-0 px-4 py-2 font-normal data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:shadow-sm sm:rounded-full">{t('review.tabChanges')}</TabsTrigger>}
           {!isSuiteReview && !isMetadataReview && <TabsTrigger data-analytics-id="review.source.tab" value="source" className="mb-0 min-h-9 rounded-xl border-0 px-4 py-2 font-normal data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:shadow-sm sm:rounded-full">{t('review.tabSourceSecurity')}</TabsTrigger>}
           <TabsTrigger data-analytics-id="review.history.tab" value="history" className="mb-0 min-h-9 rounded-xl border-0 px-4 py-2 font-normal data-[state=active]:bg-background data-[state=active]:font-medium data-[state=active]:shadow-sm sm:rounded-full">{t('review.tabHistory')}</TabsTrigger>
         </TabsList>
-        <TabsContent value="content" className="space-y-4">
+        </div>
+        <div className="min-w-0 p-4 sm:p-6">
+        <TabsContent value="content" className="space-y-4 motion-reduce:animate-none">
           {reviewSkillDetail?.avatarChange && <ReviewAvatarChangeSection change={reviewSkillDetail.avatarChange} name={reviewSkillDetail.skill.displayName || review.skillSlug || ''} />}
 
           {isSuiteReview && (
@@ -275,7 +296,7 @@ function ReviewDetailScreen({
               onRetry={() => { void refetchReviewSkillDetail?.(); void refetchDocumentation?.() }} />
           )}
         </TabsContent>
-        <TabsContent value="changes" className="space-y-4">
+        <TabsContent value="changes" className="space-y-4 motion-reduce:animate-none">
           {isGithubSyncReview && (
             isLoadingGithubSource ? <Card className="h-32 animate-shimmer" />
               : githubSource ? <GithubSyncReviewDiff source={githubSource} reviewId={taskId} />
@@ -292,7 +313,7 @@ function ReviewDetailScreen({
               hasError={Boolean(comparisonQuery.error)} onRetry={() => void comparisonQuery.refetch?.()} />
           )}
         </TabsContent>
-        {!isSuiteReview && !isMetadataReview && <TabsContent value="source" className="space-y-4">
+        {!isSuiteReview && !isMetadataReview && <TabsContent value="source" className="space-y-4 motion-reduce:animate-none">
           {review.requestedVisibility ? <Card className="space-y-3 p-5"><h2 className="text-lg font-semibold">{t('reviewWorkbench.boundScan')}</h2><p className="text-sm">{reviewSkillDetail?.visibilityChange ? t(`skillVisibility.scan${reviewSkillDetail.visibilityChange.scanStatus}`) : t('review.scanLoadFailed')}</p><p className="text-xs text-muted-foreground">{t('reviewWorkbench.boundScanDescription')}</p></Card>
             : skillId && versionId ? <SecurityAuditSection skillId={skillId} versionId={versionId}
             versionStatus={activeReviewVersion?.status} showEmptyState compact />
@@ -301,13 +322,13 @@ function ReviewDetailScreen({
             : githubSource ? <GithubSyncReviewEvidence source={githubSource} />
               : <Card className="p-4 text-sm text-destructive">{t('review.githubSourceError')}</Card>)}
         </TabsContent>}
-        <TabsContent value="history" className="space-y-4">
-          <Card className="space-y-3 p-4">
+        <TabsContent value="history" className="space-y-4 motion-reduce:animate-none">
+          <section className="space-y-3">
             <h2 className="text-base font-semibold">{t('review.attemptHistory')}</h2>
             {isLoadingReviewAttempts ? <div className="h-20 animate-shimmer rounded-lg" />
               : isReviewAttemptsError ? <p className="text-sm text-destructive">{t('review.attemptHistoryError')}</p>
                 : <ReviewAttemptTimeline attempts={reviewAttempts ?? []} locale={i18n.language} compact />}
-          </Card>
+          </section>
           {(review.reviewedBy || review.reviewComment) && (
             <Card className="space-y-3 p-4">
               <h2 className="text-base font-semibold">{t('review.reviewResult')}</h2>
@@ -317,13 +338,14 @@ function ReviewDetailScreen({
             </Card>
           )}
         </TabsContent>
+        </div>
       </Tabs>
       </div>
       <div className="order-1 min-w-0 xl:order-2">
         <ReviewTaskSummary review={review} detail={reviewSkillDetail} hasBaseline={hasBaseline} submittedAt={formatDate(review.submittedAt)}>
           {!isSuiteReview && !isMetadataReview && <div className="space-y-3">
             <h3 className="text-base font-semibold">{t('reviewWorkbench.checks')}</h3>
-            <button data-analytics-id="review.security.open" type="button" onClick={() => setSelectedTab('source')} className="block w-full space-y-2 text-left text-sm underline-offset-4 hover:underline">
+            <button data-analytics-id="review.security.open" type="button" onClick={() => selectTab('source', true)} className="block w-full space-y-2 text-left text-sm underline-offset-4 hover:underline">
               <span className="block font-medium">{t('review.scanSummary')}</span>
               {review.requestedVisibility
                 ? <span className="block text-xs text-muted-foreground">{reviewSkillDetail?.visibilityChange ? t(`skillVisibility.scan${reviewSkillDetail.visibilityChange.scanStatus}`) : t('review.scanLoadFailed')}</span>
@@ -332,7 +354,7 @@ function ReviewDetailScreen({
                     : securityAudits?.length ? <span className="flex flex-wrap gap-2">{securityAudits.map((audit) => <VerdictBadge key={audit.id} displayState={getSecurityAuditDisplayState(audit, activeReviewVersion?.status)} compact />)}</span>
                       : <span className="block text-xs text-muted-foreground">{t(activeReviewVersion?.status === 'SCANNING' ? 'review.scanPending' : activeReviewVersion?.status === 'SCAN_FAILED' ? 'review.scanFailed' : 'review.scanUnavailable')}</span>}
             </button>
-            {isGithubSyncReview && <button type="button" data-analytics-id="review.source.open" onClick={() => setSelectedTab('source')} className="space-y-1 text-left text-sm underline-offset-4 hover:underline"><span className="block font-medium">{t('review.githubLicenseStatus')}</span><span className="block text-xs text-muted-foreground">{githubSource ? t(`review.githubLicense${githubSource.evidence.status}`, { defaultValue: githubSource.evidence.status }) : t(isGithubSourceError ? 'review.githubSourceError' : 'review.scanLoading')}</span></button>}
+            {isGithubSyncReview && <button type="button" data-analytics-id="review.source.open" onClick={() => selectTab('source', true)} className="space-y-1 text-left text-sm underline-offset-4 hover:underline"><span className="block font-medium">{t('review.githubLicenseStatus')}</span><span className="block text-xs text-muted-foreground">{githubSource ? t(`review.githubLicense${githubSource.evidence.status}`, { defaultValue: githubSource.evidence.status }) : t(isGithubSourceError ? 'review.githubSourceError' : 'review.scanLoading')}</span></button>}
             <p className="text-xs leading-5 text-muted-foreground">{t('reviewWorkbench.scanBoundary')}</p>
           </div>}
         </ReviewTaskSummary>

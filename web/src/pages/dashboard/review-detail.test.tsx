@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ReviewSkillDetail } from '@/api/types'
 
 const navigateMock = vi.fn()
+const scrollIntoViewMock = vi.fn()
 const route = vi.hoisted(() => ({ id: '13', search: {} as Record<string, unknown> }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -171,6 +172,8 @@ import { NamespaceReviewDetailPage, ReviewDetailPage } from './review-detail'
 
 describe('ReviewDetailPage', () => {
   beforeEach(() => {
+    scrollIntoViewMock.mockReset()
+    HTMLElement.prototype.scrollIntoView = scrollIntoViewMock
     route.id = '13'
     route.search = {}
     navigateMock.mockReset()
@@ -623,6 +626,85 @@ describe('ReviewDetailPage', () => {
     expect(query.get('q')).toBe('pending summary')
     expect(query.get('status')).toBe('REJECTED')
     expect(query.get('page')).toBe('2')
+  })
+
+  it('wraps navigation and panels in a single responsive surface with a header scroll offset', () => {
+    render(<ReviewDetailPage />)
+    const navigation = screen.getByRole('tablist')
+    const surface = screen.getByTestId('review-detail-workbench')
+    expect(navigation.parentElement?.parentElement).toBe(surface)
+    expect(surface?.contains(screen.getByRole('tabpanel'))).toBe(true)
+    expect(surface?.className).toContain('scroll-mt-24')
+    expect(surface?.className).toContain('min-h-[calc(100svh-6rem)]')
+    expect(surface?.className).toContain('border-border/60')
+    expect(surface?.className).not.toContain('overflow-auto')
+    expect(screen.getByRole('tabpanel').className).toContain('motion-reduce:animate-none')
+  })
+
+  it('scrolls after long content is replaced and not on data or comment updates', () => {
+    const snapshot = useReviewSkillDetailMock() as { data: ReviewSkillDetail }
+    useReviewSkillDetailMock.mockReturnValue({ ...snapshot, data: { ...snapshot.data,
+      presentation: { displayName: 'Long pending content', summary: 'Pending summary', overview: 'Long review paragraph.\n\n'.repeat(80), overviewSource: 'WEB' },
+    } })
+    const view = render(<ReviewDetailPage />)
+    expect(scrollIntoViewMock).not.toHaveBeenCalled()
+    let panelAtScroll = ''
+    scrollIntoViewMock.mockImplementation(() => { panelAtScroll = screen.getByRole('tabpanel').textContent ?? '' })
+    fireEvent.click(screen.getByRole('tab', { name: 'review.tabHistory' }))
+    expect(panelAtScroll).toContain('review.attemptHistory')
+    expect(panelAtScroll).not.toContain('Long review paragraph.')
+    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({ block: 'start', behavior: 'instant' })
+    view.rerender(<ReviewDetailPage />)
+    fireEvent.change(screen.getByLabelText('review.commentLabel'), { target: { value: 'A review comment' } })
+    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('moves focus from a shortcut to the selected tab before one scroll, including repeated clicks', () => {
+    const view = render(<ReviewDetailPage />)
+    const shortcut = screen.getByRole('button', { name: /review.scanSummary/ })
+    shortcut.focus()
+    fireEvent.click(shortcut)
+    const sourceTab = screen.getByRole('tab', { name: 'review.tabSourceSecurity' })
+    expect(sourceTab.getAttribute('aria-selected')).toBe('true')
+    expect(document.activeElement).toBe(sourceTab)
+    const focus = vi.spyOn(sourceTab, 'focus')
+    shortcut.focus()
+    fireEvent.click(shortcut)
+    expect(document.activeElement).toBe(sourceTab)
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true })
+    focus.mockRestore()
+    expect(scrollIntoViewMock).toHaveBeenCalledTimes(2)
+    const target = screen.getByRole('tablist').parentElement?.parentElement
+    expect(scrollIntoViewMock.mock.contexts).toEqual([target, target])
+    const comment = screen.getByLabelText('review.commentLabel')
+    comment.focus()
+    fireEvent.change(comment, { target: { value: 'Continue reviewing' } })
+    view.rerender(<ReviewDetailPage />)
+    expect(document.activeElement).toBe(comment)
+    expect(scrollIntoViewMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('restores the content top when keyboard navigation changes the panel', () => {
+    render(<ReviewDetailPage />)
+    const content = screen.getByRole('tab', { name: 'review.tabContent' })
+    content.focus()
+    fireEvent.keyDown(content, { key: 'End' })
+    const history = screen.getByRole('tab', { name: 'review.tabHistory' })
+    expect(history.getAttribute('aria-selected')).toBe('true')
+    expect(document.activeElement).toBe(history)
+    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('moves the license shortcut focus to the source tab', () => {
+    const task = useReviewDetailMock() as { data: Record<string, unknown> }
+    useReviewDetailMock.mockReturnValue({ ...task, data: { ...task.data, originType: 'GITHUB_SYNC' } })
+    render(<ReviewDetailPage />)
+    const shortcut = screen.getByRole('button', { name: /review.githubLicenseStatus/ })
+    shortcut.focus()
+    fireEvent.click(shortcut)
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'review.tabSourceSecurity' }))
+    expect(scrollIntoViewMock).toHaveBeenCalledTimes(1)
   })
 
 })

@@ -57,3 +57,12 @@ The confirmed dual-column detail MUST put readable target content in the main co
 - **WHEN** its task is viewed
 - **THEN** the previous and requested scopes and bound version are clear
 - **AND** its bound scan evidence is not contradicted by an unrelated generic no-scan message
+
+
+### Requirement: Stable detail navigation and content boundaries
+The review detail MUST group the navigation and active content in one bounded surface without a nested page scrollbar. A user-initiated tab switch or evidence shortcut MUST align that surface below the fixed header after the new panel commits, including selecting the current evidence tab again. Query completion, initial rendering and comment edits MUST NOT trigger this navigation scroll.
+
+#### Scenario: A long comparison is replaced with a short history panel
+- **WHEN** the reviewer switches from a scrolled long comparison to history or opens scan evidence from the side panel
+- **THEN** the selected panel starts below the fixed header rather than at the document bottom
+- **AND** later query completion does not reset the reviewer's reading position

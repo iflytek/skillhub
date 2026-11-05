@@ -51,6 +51,8 @@
 
 这些是前端/接口实现限制，不由审核页面配置；依据[审核详情](https://github.com/iflytek/skillhub/blob/main/web/src/pages/dashboard/review-detail.tsx)及[审核接口](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/portal/ReviewController.java)。`GET /api/v1/reviews/{id}/skill-detail?includeDocumentation=false` 读取元数据、网页或包内自定义展示内容及说明路径，不读取对象存储正文；README 或 SKILL.md 回退正文需按需读取；缺省为 `true`。
 
+切换内容页签或点击右侧核查入口时，页面定位至内容容器顶部；异步加载及填写审核意见不重复改变阅读位置。正文随主页面滚动，不另设内部滚动区域。
+
 ### 理解变更对比
 
 普通技能更新的“变更对比”以真实已发布基线为左侧，以本次待审版本为右侧，比较有效展示名称、简要描述、详细概述，并列出新增、修改和删除的文件。首次发布没有已发布基线，页面明确说明，不生成虚假的空版本差异。GitHub 更新保留固定来源修订及逐行文件比较；头像和可见范围申请比较各自候选或目标，不生成内容版本差异。

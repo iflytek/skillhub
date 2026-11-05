@@ -51,6 +51,8 @@ Online preview limits are listed together below. Exceeding a limit does not mean
 
 These are frontend/API implementation limits, not review-page settings. Sources: [review detail page](https://github.com/iflytek/skillhub/blob/main/web/src/pages/dashboard/review-detail.tsx) and [review API](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/portal/ReviewController.java). `GET /api/v1/reviews/{id}/skill-detail?includeDocumentation=false` reads metadata, custom web/package presentation and the documentation path without fetching object-storage content; README or SKILL.md fallback content is loaded on demand; the default is `true`.
 
+Switching content tabs or opening evidence from the side panel aligns the content container below the header. Query completion and comment edits do not reset the reading position. Content uses the main page scroll rather than a nested scrolling region.
+
 ### Understand Changes
 
 Ordinary updates compare the actual published baseline on the left with the pending version on the right: effective display name, summary and overview, plus added, modified and removed files. Initial publication has no published baseline; the page states this instead of inventing an empty-version comparison. GitHub updates retain fixed source revisions and line-by-line file comparison. Avatar and visibility requests compare their own candidate or target rather than content versions.
