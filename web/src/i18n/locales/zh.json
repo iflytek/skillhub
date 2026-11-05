@@ -1987,10 +1987,19 @@
     "saveErrorTitle": "更新命名空间失败"
   },
   "upload": {
-    "dropHint": "放开以上传文件...",
-    "dragHint": "拖拽 ZIP 文件到此处，或点击选择",
+    "dropHint": "松开以读取 ZIP 文件",
+    "dragHint": "将 ZIP 文件拖到这里",
     "formatHint": "仅支持 .zip 格式",
-    "folderHint": "或选择文件夹，自动打包上传"
+    "folderHint": "选择文件夹",
+    "selectZip": "选择 ZIP 文件",
+    "folderPackagingHint": "文件夹将打包为 ZIP，再继续处理。",
+    "packaging": "正在打包所选文件夹…",
+    "errors": {
+      "singleZip": "每次只能选择一个 ZIP 文件。",
+      "zipRequired": "请选择 .zip 格式的技能包。",
+      "folderDropUnsupported": "请使用“选择文件夹”入口，或先将文件夹压缩为 ZIP。",
+      "emptySelection": "未读取到文件，请重新选择。"
+    }
   },
   "layout": {
     "openNavigation": "打开导航菜单",
@@ -2260,6 +2269,19 @@
     "copyright": "© 2026 SkillHub. Apache-2.0."
   },
   "publish": {
+    "packageFormatHint": "ZIP 根目录需包含 SKILL.md",
+    "form": {
+      "identity": "基本信息",
+      "nameHelp": "默认读取包内名称；留空时使用技能包名称。",
+      "presentation": "展示介绍",
+      "presentationHelp": "面向使用者说明用途、输入、输出和适用限制。",
+      "customized": "本次版本已修改",
+      "packageContent": "来自当前技能包",
+      "restore": "恢复包内内容",
+      "restoreTitle": "恢复包内{{field}}？",
+      "restoreDescription": "将使用当前技能包的内容，替换本次手动编辑的内容。技能包文件本身不会改变。",
+      "confirmHelp": "提交前将再次核对版本与展示信息。"
+    },
     "retryPackagePreview": "重试",
     "packageName": "包内名称",
     "displayName": "显示名称",
@@ -2278,7 +2300,7 @@
     "subtitle": "上传技能包到 SkillHub",
     "reviewNotice": {
       "title": "发布审核说明",
-      "description": "技能包提交后需要经过管理员审核才能正式发布。"
+      "description": "提交后的处理取决于可见性和安全扫描策略。请以本次提交回执及版本状态为准。"
     },
     "resubmitNotice": {
       "title": "重新提交 {{skill}} v{{version}}",
@@ -2322,7 +2344,137 @@
     "updateSubtitle": "头像可单独保存；上传技能包将发布新版本。",
     "optionalPackage": "仅更新头像时无需上传技能包。",
     "saveAvatar": "保存头像",
-    "avatarSaved": "头像修改已提交"
+    "avatarSaved": "头像修改已提交",
+    "overviewPreview": "概述预览",
+    "editOverview": "编辑概述",
+    "emptyOverview": "暂无可预览内容",
+    "emptyOverviewHelp": "尚未读取到可用说明。可以编辑概述，补充用途、输入、输出与适用限制。",
+    "settings": "发布设置",
+    "cardPreview": "使用者卡片预览",
+    "confirmDetails": "确认提交信息",
+    "backToEdit": "返回编辑",
+    "readingOverview": "正在读取包内说明…",
+    "overviewPreviewUnavailable": "无法预览包内说明。可以编辑概述或重新选择技能包；提交仍由服务端校验。",
+    "stepsLabel": "发布步骤",
+    "stepUpload": "上传技能包",
+    "stepPresentation": "完善展示信息",
+    "stepConfirm": "确认提交",
+    "nextConfirm": "下一步：确认",
+    "packageParsed": "结构已解析",
+    "replacePackage": "替换",
+    "editor": {
+      "title": "编辑详细概述",
+      "description": "编写用途、输入、输出与适用限制。",
+      "visual": "可视化",
+      "source": "Markdown 源码",
+      "preview": "发布预览",
+      "sourceOnly": "源码",
+      "split": "分栏",
+      "unsaved": "未保存修改",
+      "unchanged": "无未保存修改",
+      "apply": "完成编辑",
+      "cancel": "取消修改",
+      "returnHint": "完成编辑后更新表单预览；不会提交审核。",
+      "discardTitle": "放弃本次修改？",
+      "discardDescription": "尚未应用的概述修改将被丢弃。",
+      "discard": "放弃修改",
+      "keepEditing": "继续编辑",
+      "sourceRecovery": "此内容暂不支持可视化编辑，原文已保留。请切换至 Markdown 源码继续编辑。",
+      "tooLong": "概述不能超过 {{max}} 字符。",
+      "loading": "正在加载编辑器…",
+      "loadFailed": "编辑器加载失败，请使用 Markdown 源码继续编辑。",
+      "insertImage": "插入图片",
+      "imageUrl": "图片 HTTPS 地址",
+      "imageAlt": "图片说明",
+      "insert": "插入",
+      "invalidImageUrl": "请输入有效的 HTTPS 图片地址。",
+      "insertMore": "插入",
+      "visualUnavailable": "此内容包含暂不支持的富文本语法，请使用 Markdown 源码编辑，原文会完整保留。",
+      "markdownLabel": "概述 Markdown 源码"
+    },
+    "source": {
+      "package": "使用技能包",
+      "custom": "自定义",
+      "view": "查看完整",
+      "shortRequired": "请提供非空且不超过200字符的简要描述，可使用技能包或自定义填写。",
+      "overviewRequired": "请提供非空且不超过20,000字符的详细概述；包内内容过长时可选择自定义整理。",
+      "requiredSummary": "还有必填信息未完成，请核对技能包、命名空间和两个描述。",
+      "historyUnavailable": "无法读取已发布版本的介绍，请重试后提交，避免覆盖已有内容。"
+    },
+    "result": {
+      "submitting": {
+        "title": "正在提交本次版本",
+        "description": "正在发送 {{skill}} {{version}}，请稍候。",
+        "button": "正在提交…"
+      },
+      "version-conflict": {
+        "title": "版本 {{version}} 已存在",
+        "description": "本次介绍已保留。请更换新版本号的技能包，重新核对后提交。"
+      },
+      "unknown": {
+        "title": "暂时无法确认提交结果",
+        "description": "请先查看我的技能核对本次版本，不要直接重复提交。"
+      },
+      "error": {
+        "forbidden": {
+          "title": "无权限提交",
+          "description": "已保留本次介绍，请核对权限或技能包后再处理。"
+        },
+        "invalid": {
+          "title": "技能包校验失败",
+          "description": "已保留本次介绍，请核对权限或技能包后再处理。"
+        },
+        "failed": {
+          "title": "提交失败",
+          "description": "已保留本次介绍，请核对权限或技能包后再处理。"
+        }
+      },
+      "accepted": {
+        "SCANNING": {
+          "title": "已提交，等待安全扫描",
+          "description": "本次版本尚未发布，扫描后将按平台配置处理。"
+        },
+        "PENDING_REVIEW": {
+          "title": "已提交，等待审核",
+          "description": "本次版本尚未发布，请在我的技能跟踪审核进度。"
+        },
+        "UPLOADED": {
+          "title": "已上传，尚未发布",
+          "description": "按现有可见范围流程确认发布或提交审核。"
+        },
+        "PUBLISHED": {
+          "title": "本次版本已发布",
+          "description": "可查看本次发布版本。"
+        },
+        "SCAN_FAILED": {
+          "title": "扫描执行失败",
+          "description": "这不表示已判定有害，请查看版本状态并按页面提示处理。"
+        },
+        "REJECTED": {
+          "title": "本次版本已被拒绝",
+          "description": "请查看审核意见后提交新版本。"
+        },
+        "YANKED": {
+          "title": "本次版本已撤下",
+          "description": "请查看版本详情核对当前状态。"
+        },
+        "DRAFT": {
+          "title": "本次版本为草稿",
+          "description": "本次版本尚未发布。"
+        },
+        "unrecognized": {
+          "title": "已收到提交响应",
+          "description": "请查看我的技能核对本次版本的实际状态。"
+        }
+      },
+      "previousPublished": "已有已发布版本继续按原权限展示旧内容。",
+      "viewVersion": "查看本次版本",
+      "mySkills": "返回我的技能",
+      "replacePackage": "返回更换版本包",
+      "checkMySkills": "查看我的技能核对",
+      "returnToForm": "返回继续编辑",
+      "receiptHint": "这是本次提交的返回结果，最新进度请进入本次版本查看。"
+    }
   },
   "toast": {
     "success": "成功",

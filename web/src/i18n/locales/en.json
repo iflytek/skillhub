@@ -1988,10 +1988,19 @@
     "saveErrorTitle": "Failed to update namespace"
   },
   "upload": {
-    "dropHint": "Drop to upload...",
-    "dragHint": "Drag a ZIP file here, or click to select",
-    "formatHint": "Only .zip format supported",
-    "folderHint": "Or select a folder to package and upload"
+    "dropHint": "Release to read the ZIP file",
+    "dragHint": "Drop a ZIP file here",
+    "formatHint": "Only .zip files are supported",
+    "folderHint": "Choose a folder",
+    "selectZip": "Choose ZIP file",
+    "folderPackagingHint": "The folder will be packaged as a ZIP before processing.",
+    "packaging": "Packaging the selected folder…",
+    "errors": {
+      "singleZip": "Choose one ZIP file at a time.",
+      "zipRequired": "Choose a skill package in .zip format.",
+      "folderDropUnsupported": "Use Choose a folder, or compress the folder as a ZIP first.",
+      "emptySelection": "No files were found. Choose again."
+    }
   },
   "layout": {
     "openNavigation": "Open navigation menu",
@@ -2262,6 +2271,19 @@
     "copyright": "© 2026 SkillHub. Apache-2.0."
   },
   "publish": {
+    "packageFormatHint": "The ZIP root must contain SKILL.md",
+    "form": {
+      "identity": "Basic information",
+      "nameHelp": "Starts with the package title. Leave empty to use the package name.",
+      "presentation": "Presentation",
+      "presentationHelp": "Explain the purpose, inputs, outputs and limitations for users.",
+      "customized": "Customized for this version",
+      "packageContent": "From the current package",
+      "restore": "Restore package content",
+      "restoreTitle": "Restore package {{field}}?",
+      "restoreDescription": "This replaces the manually edited content with content from the current package. The package file itself will not change.",
+      "confirmHelp": "Review the version and presentation before submitting."
+    },
     "retryPackagePreview": "Retry",
     "packageName": "Package name",
     "displayName": "Display name",
@@ -2280,7 +2302,7 @@
     "subtitle": "Upload skill package to SkillHub",
     "reviewNotice": {
       "title": "Review Notice",
-      "description": "Submitted skill packages require admin review before publication."
+      "description": "Processing depends on visibility and the security scanning policy. Check the submission receipt and version status for the next step."
     },
     "resubmitNotice": {
       "title": "Resubmit {{skill}} v{{version}}",
@@ -2324,7 +2346,137 @@
     "updateSubtitle": "Save avatar changes independently, or upload a package to publish a new version.",
     "optionalPackage": "A package is optional when changing only the avatar.",
     "saveAvatar": "Save avatar",
-    "avatarSaved": "Avatar changes submitted"
+    "avatarSaved": "Avatar changes submitted",
+    "overviewPreview": "Overview preview",
+    "editOverview": "Edit overview",
+    "emptyOverview": "No overview to preview",
+    "emptyOverviewHelp": "No usable introduction was found. Add the purpose, inputs, outputs and limitations in the overview editor.",
+    "settings": "Publishing settings",
+    "cardPreview": "Skill card preview",
+    "confirmDetails": "Confirm submission",
+    "backToEdit": "Back to editing",
+    "readingOverview": "Reading package introduction…",
+    "overviewPreviewUnavailable": "Package introduction cannot be previewed. Edit the overview or choose the package again; the server still validates submissions.",
+    "stepsLabel": "Publishing steps",
+    "stepUpload": "Upload package",
+    "stepPresentation": "Presentation",
+    "stepConfirm": "Confirm submission",
+    "nextConfirm": "Next: confirm",
+    "packageParsed": "Structure parsed",
+    "replacePackage": "Replace",
+    "editor": {
+      "title": "Edit detailed overview",
+      "description": "Describe the purpose, inputs, outputs and limitations.",
+      "visual": "Visual",
+      "source": "Markdown source",
+      "preview": "Publish preview",
+      "sourceOnly": "Source",
+      "split": "Split",
+      "unsaved": "Unsaved changes",
+      "unchanged": "No unsaved changes",
+      "apply": "Done editing",
+      "cancel": "Cancel changes",
+      "returnHint": "Finishing updates the form preview; it does not submit for review.",
+      "discardTitle": "Discard these changes?",
+      "discardDescription": "Overview changes that have not been applied will be discarded.",
+      "discard": "Discard changes",
+      "keepEditing": "Keep editing",
+      "sourceRecovery": "This content cannot be edited visually. The source is preserved; continue in Markdown source mode.",
+      "tooLong": "Overview cannot exceed {{max}} characters.",
+      "loading": "Loading editor…",
+      "loadFailed": "The editor failed to load. Continue in Markdown source mode.",
+      "insertImage": "Insert image",
+      "imageUrl": "Image HTTPS URL",
+      "imageAlt": "Image description",
+      "insert": "Insert",
+      "invalidImageUrl": "Enter a valid HTTPS image URL.",
+      "insertMore": "Insert",
+      "visualUnavailable": "This content cannot be edited visually. Continue in Markdown source mode; the original content is preserved.",
+      "markdownLabel": "Overview Markdown source"
+    },
+    "source": {
+      "package": "Use package",
+      "custom": "Custom",
+      "view": "Read full overview",
+      "shortRequired": "Provide a non-empty summary of up to 200 characters, from the package or custom content.",
+      "overviewRequired": "Provide a non-empty overview of up to 20,000 characters; select Custom to shorten package documentation.",
+      "requiredSummary": "Required information is incomplete. Check the package, namespace, summary and overview.",
+      "historyUnavailable": "The published introduction could not be read. Retry before submitting to avoid overwriting it."
+    },
+    "result": {
+      "submitting": {
+        "title": "Submitting this version",
+        "description": "Sending {{skill}} {{version}}. Please wait.",
+        "button": "Submitting…"
+      },
+      "version-conflict": {
+        "title": "Version {{version}} already exists",
+        "description": "Your introduction is retained. Replace the package with a new version and review before submitting."
+      },
+      "unknown": {
+        "title": "Submission result is uncertain",
+        "description": "Check My skills for this version before submitting again."
+      },
+      "error": {
+        "forbidden": {
+          "title": "Submission not permitted",
+          "description": "Your introduction is retained. Check permissions and package contents before proceeding."
+        },
+        "invalid": {
+          "title": "Submission failed",
+          "description": "Your introduction is retained. Check permissions and package contents before proceeding."
+        },
+        "failed": {
+          "title": "Submission failed",
+          "description": "Your introduction is retained. Check permissions and package contents before proceeding."
+        }
+      },
+      "accepted": {
+        "SCANNING": {
+          "title": "Submitted; awaiting security scanning",
+          "description": "This version is not published. After scanning, the configured review workflow applies."
+        },
+        "PENDING_REVIEW": {
+          "title": "Submitted; awaiting review",
+          "description": "This version is not published. Open this version to follow the review outcome."
+        },
+        "UPLOADED": {
+          "title": "Uploaded; not published",
+          "description": "Open this version and use the available publish or review action for its visibility."
+        },
+        "PUBLISHED": {
+          "title": "Version published",
+          "description": "This version has been published. Open its details to inspect the released content."
+        },
+        "SCAN_FAILED": {
+          "title": "Security scan failed to run",
+          "description": "This is an execution failure, not a harmful-content verdict. Inspect the scan report and ask the deployment operator to investigate."
+        },
+        "REJECTED": {
+          "title": "Version rejected",
+          "description": "Read the review feedback before preparing another version."
+        },
+        "YANKED": {
+          "title": "Version withdrawn",
+          "description": "Open the version details to inspect its current availability."
+        },
+        "DRAFT": {
+          "title": "Draft version",
+          "description": "The version has not been published."
+        },
+        "unrecognized": {
+          "title": "Submission response received",
+          "description": "Open My skills to confirm the current state of this version."
+        }
+      },
+      "previousPublished": "The published version remains visible under its existing permissions.",
+      "viewVersion": "View this version",
+      "mySkills": "My skills",
+      "replacePackage": "Replace package",
+      "checkMySkills": "Check My skills",
+      "returnToForm": "Return to editing",
+      "receiptHint": "This is the submission receipt. Open this version to check its latest progress."
+    }
   },
   "toast": {
     "success": "Success",

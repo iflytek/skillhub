@@ -3,11 +3,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({ publish: vi.fn(), navigate: vi.fn(), submit: vi.fn(), remove: vi.fn(), refresh: vi.fn(), ownerReadOnly: false, search: { namespace: 'team', visibility: 'PUBLIC', updateSkill: 'foo', resubmitSkill: '' } }))
 vi.mock('@tanstack/react-query', () => ({ useQueryClient: () => ({ invalidateQueries: mocks.refresh }), useQuery: ({ queryKey, enabled }: { queryKey: unknown[]; enabled?: boolean }) => queryKey[0] === 'skill-package-preview'
-  ? { data: enabled ? { name: 'foo', displayName: 'Foo', version: '1.1' } : undefined, isSuccess: !!enabled, isPending: false, isError: false }
+  ? { data: enabled ? { name: 'foo', displayName: 'Foo', version: '1.1', description:'Summary', overview:'# Overview' } : undefined, isSuccess: !!enabled, isPending: false, isError: false }
   : { data: { avatarUrl: '/owner-active' }, isLoading: false, isError: false } }))
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate, useSearch: () => mocks.search }))
 vi.mock('react-i18next', async () => ({ ...await vi.importActual<typeof import('react-i18next')>('react-i18next'), useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
+  useSkillVersionDetail: () => ({data:undefined,isLoading:false}),
   usePublishSkill: () => ({ mutateAsync: mocks.publish, isPending: false }),
   useSkillDetail: () => ({ data: { displayName: 'Foo', avatarUrl: '/active', ownerReadOnly: mocks.ownerReadOnly }, isLoading: false, isError: false }),
 }))
@@ -25,6 +26,11 @@ vi.mock('@/shared/lib/navigate-after-overlays', () => ({ navigateAfterOverlays: 
 vi.mock('@/shared/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 vi.mock('@/features/skill/skill-avatar-manager', () => ({ SkillAvatarManager: () => null }))
 vi.mock('@/api/client', async () => ({ ...await vi.importActual<typeof import('@/api/client')>('@/api/client'), skillAvatarApi: { submit: mocks.submit, delete: mocks.remove } }))
+function submitPackage() {
+  fireEvent.click(screen.getByRole('button', { name: 'publish.nextConfirm' }))
+  const confirmation = screen.queryByRole('dialog', { name: 'publish.confirmDetails' })
+  if (confirmation) fireEvent.click(Array.from(confirmation.querySelectorAll('button')).find(button => button.textContent === 'publish.confirm')!)
+}
 import { PublishPage } from './publish'
 import { ApiError } from '@/api/client'
 import { toast } from '@/shared/lib/toast'
@@ -41,10 +47,10 @@ describe('Publish avatar submission', () => {
     expect(avatar.getAttribute('data-analytics-id')).toBe('skill.avatar.save')
     expect(document.querySelector('[data-analytics-id="skill.publish.request"]')).toBeNull()
     fireEvent.click(screen.getByText('choose package'))
-    const publish = screen.getByRole('button', { name: 'publish.confirm' })
+    const publish = screen.getByRole('button', { name: 'publish.nextConfirm' })
     expect(publish.getAttribute('data-analytics-id')).toBe('skill.publish.request')
     expect(document.querySelector('[data-analytics-id="skill.avatar.save"]')).toBeNull()
-    fireEvent.click(publish)
+    submitPackage()
     await waitFor(() => expect(mocks.publish).toHaveBeenCalledTimes(1))
     const confirm = await screen.findByRole('button', { name: 'publish.warningConfirmContinue' })
     expect(confirm.getAttribute('data-analytics-id')).toBe('skill.publish.confirm')
@@ -61,7 +67,8 @@ describe('Publish avatar submission', () => {
     fireEvent.click(screen.getByText('image uploaded'))
     expect(screen.getByRole('button', { name: 'publish.saveAvatar' }).hasAttribute('disabled')).toBe(true)
     fireEvent.click(screen.getByText('choose package'))
-    expect(screen.getByRole('button', { name: 'publish.confirm' }).hasAttribute('disabled')).toBe(true)
+    fireEvent.click(screen.getByRole('button', {name:'publish.nextConfirm'}))
+    expect(mocks.publish).not.toHaveBeenCalled()
     expect(mocks.submit).not.toHaveBeenCalled()
     expect(mocks.publish).not.toHaveBeenCalled()
   })
@@ -70,7 +77,7 @@ describe('Publish avatar submission', () => {
     mocks.publish.mockRejectedValueOnce(new ApiError('Pre-publish warnings require confirmation before publishing: synthetic warning', 400))
     render(<PublishPage />)
     fireEvent.click(screen.getByText('choose package'))
-    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    submitPackage()
     const cancel = await screen.findByRole('button', { name: 'publish.warningConfirmCancel' })
     expect(cancel.getAttribute('data-analytics-id')).toBe('skill.publish.cancel')
     expect(screen.getByRole('button', { name: 'Close' }).getAttribute('data-analytics-id')).toBe('skill.publish.cancel')
@@ -99,10 +106,10 @@ describe('Publish avatar submission', () => {
     render(<PublishPage />)
     fireEvent.click(screen.getByText('choose package'))
     fireEvent.click(screen.getByText('image pending'))
-    expect(screen.getByRole('button', { name: 'publish.confirm' }).hasAttribute('disabled')).toBe(true)
+    expect(screen.getByRole('button', { name: 'publish.nextConfirm' }).hasAttribute('disabled')).toBe(true)
     expect(mocks.publish).not.toHaveBeenCalled()
     fireEvent.click(screen.getByText('image uploaded'))
-    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    submitPackage()
     await waitFor(() => expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ avatarAction: 'REPLACE', avatarUploadId: 'private-reference', expectedSlug: 'foo' })))
   })
 
@@ -110,11 +117,16 @@ describe('Publish avatar submission', () => {
     mocks.publish.mockRejectedValueOnce(new Error('package invalid')).mockResolvedValueOnce({ namespace: 'team', slug: 'foo', version: '1.1', status: 'PUBLISHED' })
     render(<PublishPage />)
     fireEvent.click(screen.getByText('choose package'))
-    fireEvent.click(screen.getByText('image uploaded'))
-    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    const avatarControl = screen.getByText('image uploaded')
+    fireEvent.click(avatarControl)
+    submitPackage()
     await waitFor(() => expect(mocks.publish).toHaveBeenCalledTimes(1))
     expect(mocks.navigate).not.toHaveBeenCalled()
-    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    await screen.findByRole('heading', {name:'publish.result.unknown.title'})
+    fireEvent.click(screen.getByRole('button', {name:'publish.result.checkMySkills'}))
+    fireEvent.click(screen.getByRole('button', {name:'publish.result.returnToForm'}))
+    expect(screen.getByText('image uploaded')).toBe(avatarControl)
+    submitPackage()
     await waitFor(() => expect(mocks.publish).toHaveBeenCalledTimes(2))
     expect(mocks.publish.mock.calls[1][0]).toEqual(mocks.publish.mock.calls[0][0])
   })
@@ -125,7 +137,7 @@ describe('Publish avatar submission', () => {
     fireEvent.click(screen.getByText('remove draft'))
     expect(mocks.publish).not.toHaveBeenCalled()
     fireEvent.click(screen.getByText('choose package'))
-    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    submitPackage()
     await waitFor(() => expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ avatarAction: 'REMOVE', expectedSlug: 'foo' })))
   })
 
@@ -133,7 +145,7 @@ describe('Publish avatar submission', () => {
     mocks.publish.mockResolvedValue({ namespace: 'team', slug: 'foo', version: '1.1', status: 'PENDING_REVIEW' })
     render(<PublishPage />)
     fireEvent.click(screen.getByText('choose package'))
-    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    submitPackage()
     await waitFor(() => expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ avatarAction: 'KEEP', avatarUploadId: undefined, expectedSlug: 'foo' })))
   })
   it('clears the avatar draft when navigating to another skill in the same namespace', async () => {
@@ -143,7 +155,8 @@ describe('Publish avatar submission', () => {
     fireEvent.click(screen.getByText('remove draft'))
     mocks.search.updateSkill = 'bar'
     view.rerender(<PublishPage />)
-    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    fireEvent.click(screen.getByText('choose package'))
+    submitPackage()
     await waitFor(() => expect(mocks.publish).toHaveBeenCalledWith(expect.objectContaining({ avatarAction: 'KEEP', avatarUploadId: undefined, expectedSlug: 'bar' })))
   })
 
@@ -205,7 +218,8 @@ describe('Publish avatar submission', () => {
     if (mode === 'resubmit') mocks.search.resubmitSkill = 'foo'
     render(<PublishPage />)
     fireEvent.click(screen.getByText('image uploaded'))
-    expect(screen.getByRole('button', { name: 'publish.confirm' }).hasAttribute('disabled')).toBe(true)
+    fireEvent.click(screen.getByRole('button', {name:'publish.nextConfirm'}))
+    expect(mocks.publish).not.toHaveBeenCalled()
     expect(mocks.submit).not.toHaveBeenCalled()
   })
 

@@ -2269,10 +2269,19 @@
     "saveErrorTitle": "네임스페이스를 업데이트하지 못했습니다"
   },
   "upload": {
-    "dropHint": "놓아서 업로드하세요...",
-    "dragHint": "ZIP 파일을 여기로 끌어 놓거나 클릭하여 선택하세요",
+    "dropHint": "놓아서 ZIP 파일 읽기",
+    "dragHint": "ZIP 파일을 여기에 놓으세요",
     "formatHint": ".zip 형식만 지원합니다",
-    "folderHint": "또는 폴더를 선택하여 패키지로 묶어 업로드하세요"
+    "folderHint": "폴더 선택",
+    "selectZip": "ZIP 파일 선택",
+    "folderPackagingHint": "폴더를 ZIP으로 묶은 다음 처리합니다.",
+    "packaging": "선택한 폴더를 압축하는 중…",
+    "errors": {
+      "singleZip": "ZIP 파일은 한 번에 하나만 선택하세요.",
+      "zipRequired": ".zip 형식의 스킬 패키지를 선택하세요.",
+      "folderDropUnsupported": "폴더 선택을 사용하거나 먼저 폴더를 ZIP으로 압축하세요.",
+      "emptySelection": "파일을 읽지 못했습니다. 다시 선택하세요."
+    }
   },
   "layout": {
     "openNavigation": "탐색 메뉴 열기",
@@ -2542,6 +2551,19 @@
     "copyright": "© 2026 SkillHub. Apache-2.0."
   },
   "publish": {
+    "packageFormatHint": "ZIP 최상위 경로에 SKILL.md가 있어야 합니다",
+    "form": {
+      "identity": "기본 정보",
+      "nameHelp": "패키지 제목을 기본으로 사용합니다. 비워 두면 패키지 이름을 사용합니다.",
+      "presentation": "소개",
+      "presentationHelp": "사용자에게 용도, 입력, 출력 및 사용 제한을 설명하세요.",
+      "customized": "이번 버전에서 수정됨",
+      "packageContent": "현재 패키지에서 가져옴",
+      "restore": "패키지 내용 복원",
+      "restoreTitle": "패키지의 {{field}} 내용을 복원할까요?",
+      "restoreDescription": "직접 편집한 내용을 현재 패키지의 내용으로 바꿉니다. 패키지 파일 자체는 변경되지 않습니다.",
+      "confirmHelp": "제출하기 전에 버전과 소개를 다시 확인합니다."
+    },
     "retryPackagePreview": "다시 시도",
     "packageName": "패키지 이름",
     "displayName": "표시 이름",
@@ -2560,7 +2582,7 @@
     "subtitle": "SkillHub에 스킬 패키지 업로드",
     "reviewNotice": {
       "title": "검토 안내",
-      "description": "제출된 스킬 패키지는 게시 전에 관리자 검토가 필요합니다."
+      "description": "제출 후 처리는 공개 범위와 보안 스캔 정책에 따라 달라집니다. 이번 제출 결과와 버전 상태에서 다음 단계를 확인하세요."
     },
     "resubmitNotice": {
       "title": "{{skill}} v{{version}} 재제출",
@@ -2604,7 +2626,137 @@
     "updateSubtitle": "아바타 변경만 저장하거나 패키지를 업로드하여 새 버전을 게시하세요.",
     "optionalPackage": "아바타만 변경할 때는 패키지가 필요하지 않습니다.",
     "saveAvatar": "아바타 저장",
-    "avatarSaved": "아바타 변경을 제출했습니다"
+    "avatarSaved": "아바타 변경을 제출했습니다",
+    "overviewPreview": "개요 미리보기",
+    "editOverview": "개요 편집",
+    "emptyOverview": "미리 볼 개요가 없습니다",
+    "emptyOverviewHelp": "사용 가능한 설명이 없습니다. 개요 편집기에서 목적, 입력, 출력 및 제한 사항을 추가하세요.",
+    "settings": "게시 설정",
+    "cardPreview": "스킬 카드 미리보기",
+    "confirmDetails": "제출 정보 확인",
+    "backToEdit": "편집으로 돌아가기",
+    "readingOverview": "패키지 설명 읽는 중…",
+    "overviewPreviewUnavailable": "패키지 설명을 미리 볼 수 없습니다. 개요를 편집하거나 패키지를 다시 선택하세요. 제출 시 서버에서 검증합니다.",
+    "stepsLabel": "게시 단계",
+    "stepUpload": "패키지 업로드",
+    "stepPresentation": "표시 정보",
+    "stepConfirm": "제출 확인",
+    "nextConfirm": "다음: 확인",
+    "packageParsed": "구조 분석 완료",
+    "replacePackage": "교체",
+    "editor": {
+      "title": "상세 개요 편집",
+      "description": "목적, 입력, 출력 및 제한 사항을 작성하세요.",
+      "visual": "시각 편집",
+      "source": "Markdown 소스",
+      "preview": "게시 미리보기",
+      "sourceOnly": "소스",
+      "split": "분할",
+      "unsaved": "저장되지 않은 변경",
+      "unchanged": "저장되지 않은 변경 없음",
+      "apply": "편집 완료",
+      "cancel": "변경 취소",
+      "returnHint": "완료하면 양식 미리보기만 업데이트되며 심사에 제출되지 않습니다.",
+      "discardTitle": "변경 사항을 버릴까요?",
+      "discardDescription": "적용하지 않은 개요 변경 사항이 삭제됩니다.",
+      "discard": "변경 버리기",
+      "keepEditing": "계속 편집",
+      "sourceRecovery": "시각 편집을 지원하지 않는 내용입니다. 원본을 보존했습니다. Markdown 소스에서 계속 편집하세요.",
+      "tooLong": "개요는 {{max}}자를 초과할 수 없습니다.",
+      "loading": "편집기 로딩 중…",
+      "loadFailed": "편집기를 불러오지 못했습니다. Markdown 소스에서 계속하세요.",
+      "insertImage": "이미지 삽입",
+      "imageUrl": "이미지 HTTPS 주소",
+      "imageAlt": "이미지 설명",
+      "insert": "삽입",
+      "invalidImageUrl": "유효한 HTTPS 이미지 주소를 입력하세요.",
+      "insertMore": "삽입",
+      "visualUnavailable": "이 내용은 시각 편집을 지원하지 않습니다. Markdown 소스로 편집하세요. 원본은 보존됩니다.",
+      "markdownLabel": "개요 Markdown 소스"
+    },
+    "source": {
+      "package": "스킬 패키지 사용",
+      "custom": "직접 작성",
+      "view": "개요 전체 보기",
+      "shortRequired": "패키지 내용 또는 직접 작성한 내용으로 200자 이내의 짧은 설명을 입력하세요. 공백만 있는 내용은 사용할 수 없습니다.",
+      "overviewRequired": "20,000자 이내의 비어 있지 않은 상세 개요를 입력하세요. 패키지 문서가 너무 길면 직접 작성으로 전환해 정리하세요.",
+      "requiredSummary": "필수 정보가 누락되었습니다. 패키지, 네임스페이스, 짧은 설명과 상세 개요를 확인하세요.",
+      "historyUnavailable": "게시 버전의 소개를 불러오지 못했습니다. 다시 불러온 후 제출하세요."
+    },
+    "result": {
+      "submitting": {
+        "title": "이 버전을 제출하는 중",
+        "description": "{{skill}} {{version}} 버전을 전송하고 있습니다. 잠시 기다려 주세요.",
+        "button": "제출 중…"
+      },
+      "version-conflict": {
+        "title": "{{version}} 버전이 이미 존재합니다",
+        "description": "작성한 소개와 내용 출처 선택은 유지됩니다. 새 버전 번호가 포함된 패키지로 교체하고 내용을 확인한 후 제출하세요."
+      },
+      "unknown": {
+        "title": "제출 결과를 확인할 수 없습니다",
+        "description": "다시 제출하기 전에 내 스킬에서 이 버전이 생성되었는지 확인하세요."
+      },
+      "error": {
+        "forbidden": {
+          "title": "제출 권한이 없습니다",
+          "description": "작성한 소개는 유지됩니다. 현재 네임스페이스 권한을 확인한 후 계속하세요."
+        },
+        "invalid": {
+          "title": "패키지를 제출할 수 없습니다",
+          "description": "작성한 소개는 유지됩니다. 패키지 구조와 입력 내용을 수정한 후 다시 확인하세요."
+        },
+        "failed": {
+          "title": "제출이 완료되지 않았습니다",
+          "description": "작성한 소개는 유지됩니다. 문제를 확인한 후 양식으로 돌아가 수정하세요."
+        }
+      },
+      "accepted": {
+        "SCANNING": {
+          "title": "제출됨 · 보안 검사 단계",
+          "description": "이 버전은 아직 게시되지 않았습니다. 검사 이후에는 플랫폼 설정에 따라 처리됩니다."
+        },
+        "PENDING_REVIEW": {
+          "title": "제출됨 · 검토 대기",
+          "description": "이 버전은 아직 게시되지 않았습니다. 내 스킬에서 검토 진행 상황을 확인하세요."
+        },
+        "UPLOADED": {
+          "title": "업로드됨 · 아직 게시되지 않음",
+          "description": "내 스킬에서 현재 공개 범위와 권한에 따라 게시 확인 또는 검토 제출을 진행하세요."
+        },
+        "PUBLISHED": {
+          "title": "이 버전이 게시되었습니다",
+          "description": "이 버전의 상세 페이지에서 게시된 내용을 확인할 수 있습니다."
+        },
+        "SCAN_FAILED": {
+          "title": "보안 검사 실행 실패",
+          "description": "검사가 완료되지 않았으며 유해한 콘텐츠로 판정되었다는 의미는 아닙니다. 버전 상세 정보에서 실패 원인을 확인하세요."
+        },
+        "REJECTED": {
+          "title": "이 버전이 거부되었습니다",
+          "description": "검토 의견을 확인하고 내용을 수정한 새 버전을 제출하세요."
+        },
+        "YANKED": {
+          "title": "이 버전이 철회되었습니다",
+          "description": "버전 상세 페이지에서 현재 상태와 사용할 수 있는 작업을 확인하세요."
+        },
+        "DRAFT": {
+          "title": "이 버전은 초안 상태입니다",
+          "description": "이 버전은 아직 게시되지 않았습니다."
+        },
+        "unrecognized": {
+          "title": "제출 응답을 받았습니다",
+          "description": "내 스킬에서 이 버전의 실제 상태를 확인하세요."
+        }
+      },
+      "previousPublished": "기존 게시 버전은 원래 접근 권한에 따라 계속 표시됩니다.",
+      "viewVersion": "이 버전 보기",
+      "mySkills": "내 스킬로 돌아가기",
+      "replacePackage": "버전 패키지 교체",
+      "checkMySkills": "내 스킬에서 확인",
+      "returnToForm": "양식으로 돌아가기",
+      "receiptHint": "이 화면은 제출 당시의 응답입니다. 최신 진행 상황은 이 버전의 상세 페이지에서 확인하세요."
+    }
   },
   "toast": {
     "success": "성공",

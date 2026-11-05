@@ -1,5 +1,21 @@
 # Publish and Update Skills
 
+## Write the public introduction
+
+After selecting a package, inspect its parsed identifier and version. Structural parsing does not complete scanning, review, or publication. The empty dropzone accepts a ZIP by dropping, clicking, or pressing Enter or Space while focused. A distinct folder picker is available in supporting browsers. A selected package replaces the empty dropzone with a file row showing reading, parsed, or failed state. Cancelling or rejecting a replacement retains the preceding file. Recheck the identifier, version, and retained edits after replacement.
+
+The main form places the package, avatar, and display name before the introduction. Desktop publishing settings appear on the right; narrow layouts place them before the introduction. Edit the summary directly. The overview remains a read-only preview with Edit overview consistently at the field header’s upper right. Its separate editor provides visual, Markdown source, and publication-preview modes, including single-pane and split source layouts.
+
+Valid package content needs no duplicate entry or source-mode switch. Unmodified fields follow the current package defaults; actual changes become custom introduction values and survive package replacement. Restoring package content requires confirmation and affects only that field. Cancelling retains its custom content; confirming restores default behavior so later packages supply their current defaults. Merely viewing or completing an unchanged editor does not create an override.
+
+Web submission of a new version requires both effective introduction values to be nonblank, within 200 and 20,000 characters respectively; document frontmatter alone is not an overview. Retry a failed read or enter the content manually rather than treating read failure as missing content. Package metadata fields remain optional for CLI/API uploads. Missing required content produces field errors and focus targets without sending a version.
+
+Complete editing returns the content to the current form without submitting a review or saving a server draft. Cancel changes discards edits made since entering the editor, with confirmation when necessary. If no custom overview exists, available package documentation supplies the preview; an empty state means no usable content could be obtained. A failed preview does not itself reject the package: registry validation and authorization still govern submission.
+
+Inspect the namespace, identifier, version, visibility, and summary in the final confirmation before submitting. This confirmation does not replace package prechecks, scanning, or review. Precheck warnings retain their own confirmation flow. Unsubmitted form content is not guaranteed to survive a page refresh.
+
+Do not send a duplicate request during submission. The result page is a receipt that distinguishes scanning, pending review, uploaded-only and published states. View this version for current progress. If the version already exists, replace the package with a new version number; introductions and their source state remain available, and the application does not rewrite the version. A timeout or interrupted network may leave the write outcome unknown. Inspect My Skills before retrying rather than immediately sending the package again.
+
 ## From Local Files to an Installable Version
 
 A single-skill upload has one root `SKILL.md`. For multiple skills, use [Suite import](./suite-bundle.html); do not place unrelated skills in one single-skill ZIP.
