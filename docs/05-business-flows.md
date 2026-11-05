@@ -251,10 +251,13 @@ Web 端与 CLI 保持同一发布语义，只是在交互上可提供更明确�
 | `SkillDownloadedEvent` | 已发布版本下载结果构建成功并完成同步计数后 | 当前未发现生产消费者；下载计数由下载服务同步完成 |
 | `SkillStarredEvent` | 收藏/取消 | 收藏计数 |
 | `SkillRatedEvent` | 评分提交 | 评分重算 |
+| `SkillSuiteReviewSubmittedEvent` | PUBLIC 或 NAMESPACE_ONLY 套件版本进入待审核 | 事务提交后异步创建 `REVIEW` 类站内通知；团队空间通知其 Owner/Admin，全局空间通知平台技能管理员，通知目标为对应审核任务 |
 | `ReviewCompletedEvent` | 审核完成 | 预留给后续通知能力（当前可不消费） |
 | `SkillPublishedEvent`（提升路径） | 首次提升或提升更新审核通过 | 重建目标全局 skill 的搜索文档；不是独立的 `SkillPromotedEvent` |
 
 一期用 Spring ApplicationEvent + `@Async` 实现，后续可替换为消息队列。
+
+套件提交审核通知沿用用户的“审核通知”偏好，关闭该类别后不创建站内通知。通知从本次提交的套件版本读取名称和版本号，点击后进入统一审核中心的对应任务；进入详情和批准权限仍由审核接口校验，收到通知不等于获得审核权限。通知为提交后的 best-effort 副作用，不保证进程终止后的补发，也不新增邮件投递。
 
 ### 审计日志写入策略
 

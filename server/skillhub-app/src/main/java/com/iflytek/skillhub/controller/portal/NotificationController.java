@@ -100,7 +100,8 @@ public class NotificationController extends BaseApiController {
         String namespace = body.get("namespace") instanceof String value ? value : null;
         String slug = body.get("slug") instanceof String value ? value : null;
 
-        if ("REVIEW_SUBMITTED".equals(eventType) && entityId != null) {
+        if (("REVIEW_SUBMITTED".equals(eventType) || "SUITE_REVIEW_SUBMITTED".equals(eventType))
+                && entityId != null) {
             return new NotificationTarget("REVIEW", entityId, "/dashboard/reviews/" + entityId);
         }
         if ("PROFILE_REVIEW_SUBMITTED".equals(eventType) && entityId != null) {

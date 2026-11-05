@@ -3723,6 +3723,10 @@
     "days": "{{count}}일 전"
   },
   "notificationEvents": {
+    "SUITE_REVIEW_SUBMITTED": {
+      "title": "스킬 모음 검토 제출",
+      "description": "{{suiteName}}{{versionSuffix}}의 검토를 요청했습니다."
+    },
     "REVIEW_SUBMITTED": {
       "title": "스킬 검토 제출",
       "description": "{{skillName}}{{versionSuffix}}의 검토를 요청했습니다."
