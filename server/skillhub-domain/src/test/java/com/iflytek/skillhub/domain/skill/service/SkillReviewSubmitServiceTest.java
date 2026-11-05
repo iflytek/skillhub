@@ -190,6 +190,12 @@ class SkillReviewSubmitServiceTest {
             assertEquals(skillId, event.skillId());
             assertEquals(versionId, event.versionId());
             assertEquals(userId, event.publisherId());
+            assertEquals(namespaceId, event.snapshot().namespaceId());
+            assertEquals(SkillVisibility.PRIVATE, event.snapshot().visibility());
+            assertEquals(userId, event.snapshot().actorId());
+            assertEquals("user", event.snapshot().actorType());
+            assertEquals("private_confirm", event.snapshot().source());
+            assertNotNull(event.snapshot().occurredAt());
         }
 
         @Test

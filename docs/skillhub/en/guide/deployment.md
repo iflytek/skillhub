@@ -38,6 +38,17 @@ Resolve validation errors before starting. Backend startup runs Flyway database 
 
 Suite review writes are enabled by default in the single-server release Compose topology; Suite Bundle confirmation is disabled by default. See [Bundle import](suite-bundle.md) for enabling it. For rolling upgrades where old and new backends coexist, follow the [Suite deployment order](https://github.com/iflytek/skillhub/blob/main/docs/25-skill-suites.md).
 
+## Optional business-event OTLP Logs
+
+Business analytics stays off by default and independent of tracing. Use `runtime.sh business-logs-enable`
+for an existing receiver, or `business-logs-up` for an optional Collector with an explicit downstream.
+For a local host Java process or container backend, use `make business-logs-demo-up`.
+For a runtime release deployment, pass `--ref <tag> --version <tag>` together: ref selects files; version selects only images.
+Metrics require the explicit `health,info,metrics,prometheus` exposure list and a server recreation.
+The [operations guide](https://github.com/iflytek/skillhub/blob/main/docs/business-event-logs.md) covers both
+paths, Helm Secrets, admin queries, troubleshooting and cleanup. Download preparation is not completion
+or installation; this lossy stream is not an audit or billing system.
+
 ## CLI device authorization URL
 
 `skillhub login --no-open --registry https://skills.example.com` first resolves `--token`, then `SKILLHUB_TOKEN`, then saved credentials for that registry. Device authorization starts only when no token is resolved; an invalid token does not automatically fall back. `--no-open` only disables automatic browser launch. Verify the resulting identity with `skillhub whoami --registry https://skills.example.com`.

@@ -1,0 +1,23 @@
+# Local trial only. JSON in the container is not production storage.
+name: ${SKILLHUB_BUSINESS_LOGS_DEMO_PROJECT:-skillhub-business-logs-demo}
+services:
+  business-logs-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    user: "0:0"
+    mem_limit: 128m
+    cpus: 0.5
+    ports:
+      - "127.0.0.1:${SKILLHUB_BUSINESS_LOGS_DEMO_PORT:-4318}:4318"
+    volumes:
+      - ./collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+      - business_logs_demo_data:/data
+    networks:
+      - business-logs
+volumes:
+  business_logs_demo_data:
+networks:
+  business-logs:
+    external: true
+    name: ${SKILLHUB_BUSINESS_LOGS_NETWORK:-skillhub-business-logs-demo}
+
