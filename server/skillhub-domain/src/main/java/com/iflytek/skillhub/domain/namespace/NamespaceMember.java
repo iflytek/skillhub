@@ -22,6 +22,9 @@ public class NamespaceMember {
     @Column(nullable = false, length = 32)
     private NamespaceRole role;
 
+    @Column(name = "review_exempt", nullable = false)
+    private boolean reviewExempt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -52,6 +55,8 @@ public class NamespaceMember {
     public void setNamespaceId(Long namespaceId) { this.namespaceId = namespaceId; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
+    public boolean isReviewExempt() { return reviewExempt; }
+    public void setReviewExempt(boolean reviewExempt) { this.reviewExempt = reviewExempt; }
     public NamespaceRole getRole() { return role; }
     public void setRole(NamespaceRole role) { this.role = role; }
     public Instant getCreatedAt() { return createdAt; }

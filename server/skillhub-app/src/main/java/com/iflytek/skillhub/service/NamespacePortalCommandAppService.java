@@ -156,6 +156,18 @@ public class NamespacePortalCommandAppService {
         return MemberResponse.from(member, user);
     }
 
+    @Transactional
+    public MemberResponse setReviewExempt(String slug, String memberId, boolean enabled, String operatorId) {
+        NamespaceMember member = namespaceMemberService.setReviewExempt(namespaceId(slug), memberId, enabled, operatorId);
+        return MemberResponse.from(member, userAccountRepository.findById(memberId).orElse(null));
+    }
+
+    @Transactional
+    public boolean setTrustedPublishEnabled(String slug, boolean enabled, String operatorId) {
+        return namespaceMemberService.setTrustedPublishEnabled(namespaceId(slug), enabled, operatorId)
+                .isTrustedPublishEnabled();
+    }
+
     // Intentionally not @Transactional: each addMember runs in its own transaction
     // so partial success is possible (some members added even if others fail).
     public BatchMemberResponse batchAddMembers(String slug, List<MemberRequest> members, String operatorUserId) {

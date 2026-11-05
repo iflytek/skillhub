@@ -28,8 +28,38 @@ class NamespaceMemberServiceTest {
     @Mock
     private UserAccountRepository userAccountRepository;
 
+    @Mock
+    private com.iflytek.skillhub.domain.audit.AuditLogService auditLogService;
+
     @InjectMocks
     private NamespaceMemberService namespaceMemberService;
+
+    @Test
+    void onlyNamespaceAdminCanGrantMemberReviewExemption() {
+        var ns = new Namespace("team-a", "Team A", "owner");
+        var member = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+        when(namespaceService.getNamespace(1L)).thenReturn(ns);
+        when(namespaceAccessPolicy.canManageMembers(ns)).thenReturn(true);
+        doThrow(new DomainForbiddenException("error.namespace.admin.required"))
+                .when(namespaceService).assertAdminOrOwner(1L, "outsider");
+        assertThrows(DomainForbiddenException.class, () ->
+                namespaceMemberService.setReviewExempt(1L, "publisher", true, "outsider"));
+        assertFalse(member.isReviewExempt());
+        verifyNoInteractions(auditLogService);
+    }
+
+    @Test
+    void grantingMemberReviewExemptionIsAudited() {
+        var ns = new Namespace("team-a", "Team A", "owner");
+        var member = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+        when(namespaceService.getNamespace(1L)).thenReturn(ns);
+        when(namespaceAccessPolicy.canManageMembers(ns)).thenReturn(true);
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "publisher")).thenReturn(Optional.of(member));
+        when(namespaceMemberRepository.save(member)).thenReturn(member);
+        assertTrue(namespaceMemberService.setReviewExempt(1L, "publisher", true, "admin").isReviewExempt());
+        verify(auditLogService).record(eq("admin"), eq("SET_REVIEW_EXEMPT"), eq("NAMESPACE_MEMBER"),
+                isNull(), isNull(), isNull(), isNull(), anyString());
+    }
 
     @Test
     void addMember_shouldAddMemberSuccessfully() {

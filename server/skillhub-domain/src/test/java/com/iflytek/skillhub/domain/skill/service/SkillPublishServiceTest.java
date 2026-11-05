@@ -119,6 +119,43 @@ class SkillPublishServiceTest {
     }
 
     @Test
+    void trustedNamespaceMemberQueuesForScanAndNotHumanReviewNotification() throws Exception {
+        String slug = "team";
+        String publisher = "publisher";
+        String content = "---\nname: sample\ndescription: Example\nversion: 1.0.0\n---\nBody";
+        List<PackageEntry> entries = List.of(new PackageEntry("SKILL.md", content.getBytes(), content.length(), "text/markdown"));
+        Namespace namespace = new Namespace(slug, "Team", "owner");
+        setId(namespace, 1L);
+        namespace.setTrustedPublishEnabled(true);
+        NamespaceMember member = new NamespaceMember(1L, publisher, NamespaceRole.MEMBER);
+        member.setReviewExempt(true);
+        when(namespaceRepository.findBySlug(slug)).thenReturn(Optional.of(namespace));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, publisher)).thenReturn(Optional.of(member));
+        when(skillPackageValidator.validate(entries)).thenReturn(ValidationResult.pass());
+        when(skillMetadataParser.parse(content)).thenReturn(new SkillMetadata("sample", "Example", "1.0.0", "Body", Map.of()));
+        when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "sample")).thenReturn(List.of());
+        when(skillRepository.save(any(Skill.class))).thenAnswer(invocation -> {
+            Skill skill = invocation.getArgument(0);
+            if (skill.getId() == null) setId(skill, 1L);
+            return skill;
+        });
+        when(skillVersionRepository.save(any())).thenAnswer(invocation -> {
+            SkillVersion version = invocation.getArgument(0);
+            if (version.getId() == null) setId(version, 10L);
+            return version;
+        });
+        SkillPublishService.PublishResult result = service.publishFromEntries(slug, entries, publisher,
+                SkillVisibility.NAMESPACE_ONLY, Set.of());
+        assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
+        ArgumentCaptor<ReviewTask> task = ArgumentCaptor.forClass(ReviewTask.class);
+        verify(reviewTaskRepository).save(task.capture());
+        assertTrue(task.getValue().isAutoApproveOnSafeScan());
+        verify(securityScanService).triggerScan(eq(10L), eq(entries), eq(publisher));
+        verify(eventPublisher, never()).publishEvent(any(ReviewSubmittedEvent.class));
+    }
+
+    @Test
     void testPublishFromEntries_Success() throws Exception {
         // Arrange
         String namespaceSlug = "test-ns";

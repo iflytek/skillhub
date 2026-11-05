@@ -51,6 +51,7 @@ public class ReviewService {
     private final SkillVersionRepository skillVersionRepository;
     private final SkillRepository skillRepository;
     private final NamespaceRepository namespaceRepository;
+    private final com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository namespaceMemberRepository;
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
@@ -71,10 +72,12 @@ public class ReviewService {
     public void setAvatarParticipant(ReviewAvatarParticipant participant) { this.avatarParticipant = participant; }
 
 
+    @Autowired
     public ReviewService(SkillOwnerAccessPolicy ownerAccess, ReviewTaskRepository reviewTaskRepository,
                          SkillVersionRepository skillVersionRepository,
                          SkillRepository skillRepository,
                          NamespaceRepository namespaceRepository,
+                         com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository namespaceMemberRepository,
                          ReviewPermissionChecker permissionChecker,
                          ApplicationEventPublisher eventPublisher,
                          ObjectMapper objectMapper,
@@ -87,6 +90,7 @@ public class ReviewService {
         this.skillVersionRepository = skillVersionRepository;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
+        this.namespaceMemberRepository = namespaceMemberRepository;
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;
@@ -94,6 +98,18 @@ public class ReviewService {
         this.governanceNotificationService = governanceNotificationService;
         this.entityManager = entityManager;
         this.clock = clock;
+    }
+
+    public ReviewService(SkillOwnerAccessPolicy ownerAccess, ReviewTaskRepository reviewTaskRepository,
+                         SkillVersionRepository skillVersionRepository, SkillRepository skillRepository,
+                         NamespaceRepository namespaceRepository, ReviewPermissionChecker permissionChecker,
+                         ApplicationEventPublisher eventPublisher, ObjectMapper objectMapper,
+                         SkillGovernanceService skillGovernanceService,
+                         GovernanceNotificationService governanceNotificationService,
+                         EntityManager entityManager, Clock clock) {
+        this(ownerAccess, reviewTaskRepository, skillVersionRepository, skillRepository,
+                namespaceRepository, null, permissionChecker, eventPublisher, objectMapper,
+                skillGovernanceService, governanceNotificationService, entityManager, clock);
     }
 
     /**
@@ -240,6 +256,31 @@ public class ReviewService {
             throw new DomainForbiddenException("review.no_permission");
         }
 
+        return approveCheckedTask(task, reviewerId, comment);
+    }
+
+    /** Called by the scanner only after the current attempt has returned SAFE. */
+    @Transactional
+    public void approveTrustedAfterSafeScan(Long skillVersionId) {
+        ReviewTask task = reviewTaskRepository.findBySkillVersionIdAndStatus(skillVersionId, ReviewTaskStatus.PENDING).orElse(null);
+        if (task == null || !task.isAutoApproveOnSafeScan() || task.getSubjectType() != ReviewSubjectType.SKILL_VERSION) return;
+        Namespace namespace = namespaceRepository.findLockedById(task.getNamespaceId()).orElse(null);
+        if (namespace == null || namespace.getType() != com.iflytek.skillhub.domain.namespace.NamespaceType.TEAM
+                || namespace.getStatus() != NamespaceStatus.ACTIVE || !namespace.isTrustedPublishEnabled()) return;
+        boolean granted = namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), task.getSubmittedBy())
+                .filter(member -> member.getRole() == NamespaceRole.MEMBER && member.isReviewExempt()).isPresent();
+        if (!granted) return;
+        SkillVersion version = skillVersionRepository.findById(skillVersionId).orElse(null);
+        if (version == null || version.getStatus() != SkillVersionStatus.PENDING_REVIEW
+                || version.getRequestedVisibility() != com.iflytek.skillhub.domain.skill.SkillVisibility.NAMESPACE_ONLY
+                || version.getGithubSyncIngestionId() != null) return;
+        if (avatarParticipant != null) { avatarParticipant.lock(task); entityManager.refresh(task); }
+        if (task.getStatus() != ReviewTaskStatus.PENDING) return;
+        approveCheckedTask(task, task.getSubmittedBy(), "System auto-approved: trusted TEAM publisher after SAFE scan");
+    }
+
+    private ReviewTask approveCheckedTask(ReviewTask task, String reviewerId, String comment) {
+        Long reviewTaskId = task.getId();
         if (task.getRequestedVisibility() != null) { visibilityService.validateApproval(task); }
         if (avatarParticipant != null) { avatarParticipant.validateApproval(task, comment); }
         if (task.getSubjectType() == ReviewSubjectType.SKILL_METADATA) {

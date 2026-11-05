@@ -362,6 +362,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/namespaces/{slug}/trusted-publish-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getPolicy"];
+        put: operations["setPolicy"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/namespaces/{slug}/members/{userId}/role": {
         parameters: {
             query?: never;
@@ -387,6 +403,22 @@ export interface paths {
         };
         get?: never;
         put: operations["updateMemberRole_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members/{memberId}/review-exemption": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["setMemberExemption"];
         post?: never;
         delete?: never;
         options?: never;
@@ -7370,6 +7402,12 @@ export interface components {
             channel?: string;
             enabled?: boolean;
         };
+        ToggleRequest: {
+            enabled: boolean;
+        };
+        PolicyResponse: {
+            enabled?: boolean;
+        };
         UpdateMemberRoleRequest: {
             /** @enum {string} */
             role: "OWNER" | "ADMIN" | "MEMBER";
@@ -7393,6 +7431,7 @@ export interface components {
             email?: string;
             /** @enum {string} */
             role?: "OWNER" | "ADMIN" | "MEMBER";
+            reviewExempt?: boolean;
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
@@ -12653,6 +12692,54 @@ export interface operations {
             };
         };
     };
+    getPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PolicyResponse"];
+                };
+            };
+        };
+    };
+    setPolicy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToggleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PolicyResponse"];
+                };
+            };
+        };
+    };
     updateMemberRole: {
         parameters: {
             query?: never;
@@ -12703,6 +12790,33 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseMemberResponse"];
+                };
+            };
+        };
+    };
+    setMemberExemption: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                memberId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToggleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["MemberResponse"];
                 };
             };
         };

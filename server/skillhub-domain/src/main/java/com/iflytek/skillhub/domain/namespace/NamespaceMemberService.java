@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.domain.namespace;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.audit.AuditDetail;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,17 +23,20 @@ public class NamespaceMemberService {
     private final NamespaceAccessPolicy namespaceAccessPolicy;
     private final NamespaceRepository namespaceRepository;
     private final UserAccountRepository userAccountRepository;
+    private final AuditLogService auditLogService;
 
     public NamespaceMemberService(NamespaceMemberRepository namespaceMemberRepository,
                                   NamespaceService namespaceService,
                                   NamespaceAccessPolicy namespaceAccessPolicy,
                                   NamespaceRepository namespaceRepository,
-                                  UserAccountRepository userAccountRepository) {
+                                  UserAccountRepository userAccountRepository,
+                                  AuditLogService auditLogService) {
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.namespaceService = namespaceService;
         this.namespaceAccessPolicy = namespaceAccessPolicy;
         this.namespaceRepository = namespaceRepository;
         this.userAccountRepository = userAccountRepository;
+        this.auditLogService = auditLogService;
     }
 
     @Transactional
@@ -50,6 +55,38 @@ public class NamespaceMemberService {
 
         NamespaceMember member = new NamespaceMember(namespaceId, userId, role);
         return namespaceMemberRepository.save(member);
+    }
+
+    /** A TEAM owner/admin grants a MEMBER a namespace-local review exemption. */
+    @Transactional
+    public NamespaceMember setReviewExempt(Long namespaceId, String userId, boolean enabled, String operatorUserId) {
+        lockUserThenNamespace(userId, namespaceId);
+        assertMemberMutationAllowed(namespaceId);
+        namespaceService.assertAdminOrOwner(namespaceId, operatorUserId);
+        NamespaceMember member = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
+                .orElseThrow(() -> new DomainBadRequestException("error.namespace.member.notFound"));
+        if (member.getRole() != NamespaceRole.MEMBER) {
+            throw new DomainBadRequestException("error.namespace.member.reviewExempt.memberOnly");
+        }
+        member.setReviewExempt(enabled);
+        NamespaceMember saved = namespaceMemberRepository.save(member);
+        auditLogService.record(operatorUserId, "SET_REVIEW_EXEMPT", "NAMESPACE_MEMBER", saved.getId(),
+                null, null, null, AuditDetail.of("enabled", enabled, "namespaceId", namespaceId));
+        return saved;
+    }
+
+    @Transactional
+    public Namespace setTrustedPublishEnabled(Long namespaceId, boolean enabled, String operatorUserId) {
+        userAccountRepository.findLockedById(operatorUserId);
+        namespaceRepository.findLockedById(namespaceId);
+        assertMemberMutationAllowed(namespaceId);
+        namespaceService.assertAdminOrOwner(namespaceId, operatorUserId);
+        Namespace namespace = namespaceService.getNamespace(namespaceId);
+        namespace.setTrustedPublishEnabled(enabled);
+        Namespace saved = namespaceRepository.save(namespace);
+        auditLogService.record(operatorUserId, "SET_TRUSTED_PUBLISH_POLICY", "NAMESPACE", namespaceId,
+                null, null, null, AuditDetail.of("enabled", enabled));
+        return saved;
     }
 
     @Transactional
@@ -81,6 +118,7 @@ public class NamespaceMemberService {
         NamespaceMember member = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.member.notFound"));
 
+        if (newRole != NamespaceRole.MEMBER) { member.setReviewExempt(false); }
         member.setRole(newRole);
         return namespaceMemberRepository.save(member);
     }

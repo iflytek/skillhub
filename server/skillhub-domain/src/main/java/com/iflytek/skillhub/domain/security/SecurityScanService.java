@@ -41,6 +41,12 @@ public class SecurityScanService {
     private final String scanMode;
     private final boolean enabled;
     private com.iflytek.skillhub.domain.skill.service.SkillDownloadService bundles;
+    private com.iflytek.skillhub.domain.review.ReviewService reviewService;
+
+    @Autowired
+    public void setReviewService(@org.springframework.context.annotation.Lazy com.iflytek.skillhub.domain.review.ReviewService service) {
+        this.reviewService = service;
+    }
 
     @Autowired
     public void setBundles(com.iflytek.skillhub.domain.skill.service.SkillDownloadService service) { this.bundles = service; }
@@ -225,6 +231,11 @@ public class SecurityScanService {
         }
         if (currentAttempt) {
             skillVersionRepository.save(version);
+            if (reviewService != null && version.getStatus() == SkillVersionStatus.PENDING_REVIEW
+                    && response.verdict() == SecurityVerdict.SAFE
+                    && version.getRequestedVisibility() == SkillVisibility.NAMESPACE_ONLY) {
+                reviewService.approveTrustedAfterSafeScan(versionId);
+            }
         }
     }
 
