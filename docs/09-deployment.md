@@ -68,6 +68,24 @@ docker compose --env-file .env.release -f compose.release.yml up -d --no-deps --
 
 `make staging` 仍用于从源码构建的容器回归验证，见[开发工作流](dev-workflow.md)，不等同于正式交付。正式单机部署使用 `compose.release.yml`，不使用 `docker-compose.prod.yml`。
 
+## 一键部署后的邮件配置
+
+邮件是已有 Registry 的可选能力，不改变 `runtime.sh up` 的部署顺序，也不要求为邮件创建第二套 Compose 项目。业务邮件要求所用发行包含[对应改动](https://github.com/iflytek/skillhub/pull/1004)；未启用邮件时无需配置 SMTP 凭据。
+
+一键安装后记录 **Runtime dir** 和 **Lifecycle commands**。邮件配置只编辑该实例原有的 `.env.release`，权限保持 `600`，不重新复制示例覆盖原文件。默认未指定 `--home` 时，脚本使用 `${TMPDIR:-/tmp}/skillhub-runtime`；正式实例固定持久目录，后续保持同一 home、文件来源和镜像选项。运行目录没有源码 Make 校验工具，不能在该目录照抄 `make validate-release-config`。
+
+| 配置 | 所属位置 | 生效方式 |
+|---|---|---|
+| SMTP、TLS、授权码、发件人 | 原运行目录 `.env.release` | 编辑后重跑输出中的同实例 up 命令，不能只 restart |
+| 平台开关、摘要周期、邮件站点地址 | 系统配置 → 业务邮件通知 | 环境仅首次初始化缺失设置；已有策略以数据库为准 |
+| 收件证明、即时／摘要类别 | 用户通知设置 | 每个账号自行验邮并订阅；站内通知不要求验邮 |
+
+已有环境先在后台关闭业务邮件，再配置 SMTP 并重跑原 up；核对后端健康和 SMTP 配置后，在协调窗口重新启用平台邮件，再用未验邮测试账号获取验证码，或用已验邮测试账号触发新业务事件，验证即时收件、窗口摘要和邮件链接。平台关闭时不能测试通知验证码或业务邮件；重新启用期间，既有合格订阅用户的新事件也可能发信，不能把受控启用当作测试账号隔离。测试失败则再次在后台关闭，按状态排查，不盲目重试 UNKNOWN；通过后恢复测试偏好并按部署安排正常开放。SMTP 更新也影响共用连接的密码重置邮件，两类发件地址分别配置。旧空 SSL_TRUST 由修复脚本清除，明确主机例外保留；不使用空值或通配信任代替 JVM 证书验证。
+
+升级使用匹配的脚本／配置来源与镜像版本；`--ref` 不等于 `--version`，`--aliyun` 的运行文件来自 OSS，不能仅凭 Git ref 推定其版本。新版模板不会覆盖现存 `.env.release`，也不会覆盖入库平台策略。关闭邮件不会撤回已授权或已被 SMTP 接受的发送，不要删除队列或数据卷作为停用步骤。
+
+完整命令、SMTP 参数、升级保留、密码轮换和故障矩阵见[一键部署邮件接入流程](notification-email.md)；仅密码重置邮件见[SMTP 配置指南](19-smtp-password-reset-email-setup.md)。
+
 ## 2 单机交付拓扑
 
 ```
@@ -591,7 +609,7 @@ env:
 
 Kubernetes 集群节点或出口网关的公网 IP 必须加入钉钉服务器出口 IP 白名单。Ingress 只负责浏览器
 回调可达性，不会替代后端出站 IP 白名单。
-- 如果要启用密码重置验证码邮件，参见：`docs/19-smtp-password-reset-email-setup.md`
+密码重置验证码使用独立发件人及安全流程，参见[SMTP 配置指南](19-smtp-password-reset-email-setup.md)；业务邮件按[邮件通知接入流程](notification-email.md)配置平台策略及用户订阅。
 
 ## 8 OIDC 登录配置
 

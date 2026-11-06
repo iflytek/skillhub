@@ -73,7 +73,7 @@ class BootstrapAdminInitializerTest {
         setField(superAdminRole, "id", 1L);
         setField(superAdminRole, "code", "SUPER_ADMIN");
 
-        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.empty());
+        when(userAccountRepository.findLockedFreshById("docker-admin")).thenReturn(Optional.empty());
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(passwordEncoder.encode("ChangeMe!2026")).thenReturn("encoded-password");
         when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
@@ -134,7 +134,7 @@ class BootstrapAdminInitializerTest {
         LocalCredential existingCredential = new LocalCredential("docker-admin", "admin", "encoded-password");
 
         when(localCredentialRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(existingCredential));
-        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.empty());
+        when(userAccountRepository.findLockedFreshById("docker-admin")).thenReturn(Optional.empty());
         when(userAccountRepository.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
         when(userRoleBindingRepository.findByUserId("docker-admin")).thenReturn(List.of());
@@ -162,7 +162,7 @@ class BootstrapAdminInitializerTest {
         UserAccount existingUser = new UserAccount("docker-admin", "Existing Admin", "existing-admin@example.com", null);
 
         when(localCredentialRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(existingCredential));
-        when(userAccountRepository.findById("docker-admin")).thenReturn(Optional.of(existingUser));
+        when(userAccountRepository.findLockedFreshById("docker-admin")).thenReturn(Optional.of(existingUser));
         when(roleRepository.findByCode("SUPER_ADMIN")).thenReturn(Optional.of(superAdminRole));
         when(userRoleBindingRepository.findByUserId("docker-admin")).thenReturn(List.of());
         when(namespaceRepository.findBySlug("global")).thenReturn(Optional.of(global));

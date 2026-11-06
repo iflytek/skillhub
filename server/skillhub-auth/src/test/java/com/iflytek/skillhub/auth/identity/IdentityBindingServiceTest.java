@@ -127,7 +127,7 @@ class IdentityBindingServiceTest {
         existing.setStatus(UserStatus.ACTIVE);
         when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1"))
                 .thenReturn(Optional.of(new IdentityBinding("usr_1", "github", "gh_1", "alice")));
-        when(userRepo.findById("usr_1")).thenReturn(Optional.of(existing));
+        when(userRepo.findLockedFreshById("usr_1")).thenReturn(Optional.of(existing));
         when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleBindingRepo.findByUserId(any())).thenReturn(List.of());
 
@@ -229,7 +229,7 @@ class IdentityBindingServiceTest {
         user.setStatus(UserStatus.DISABLED);
 
         when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1")).thenReturn(Optional.of(binding));
-        when(userRepo.findById("usr_1")).thenReturn(Optional.of(user));
+        when(userRepo.findLockedFreshById("usr_1")).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> service.bindOrCreate(claims, UserStatus.ACTIVE))
                 .isInstanceOf(AccountDisabledException.class);
@@ -245,7 +245,7 @@ class IdentityBindingServiceTest {
         user.setStatus(UserStatus.MERGED);
 
         when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1")).thenReturn(Optional.of(binding));
-        when(userRepo.findById("usr_1")).thenReturn(Optional.of(user));
+        when(userRepo.findLockedFreshById("usr_1")).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> service.bindOrCreate(claims, UserStatus.ACTIVE))
                 .isInstanceOf(AccountMergedException.class);
@@ -264,7 +264,7 @@ class IdentityBindingServiceTest {
         UserAccount user = UserAccount.systemAccount("system_1", "system", null, null);
 
         when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1")).thenReturn(Optional.of(binding));
-        when(userRepo.findById("system_1")).thenReturn(Optional.of(user));
+        when(userRepo.findLockedFreshById("system_1")).thenReturn(Optional.of(user));
 
         assertThatThrownBy(() -> service.bindOrCreate(claims, UserStatus.ACTIVE))
                 .isInstanceOf(SystemAccountLoginException.class);
@@ -299,7 +299,7 @@ class IdentityBindingServiceTest {
         UserAccount user = new UserAccount("usr_1", "alice", "verified@example.com", null);
 
         when(bindingRepo.findByProviderCodeAndSubject("github", "gh_1")).thenReturn(Optional.of(binding));
-        when(userRepo.findById("usr_1")).thenReturn(Optional.of(user));
+        when(userRepo.findLockedFreshById("usr_1")).thenReturn(Optional.of(user));
         when(userRepo.save(any(UserAccount.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(roleBindingRepo.findByUserId("usr_1")).thenReturn(List.of());
 

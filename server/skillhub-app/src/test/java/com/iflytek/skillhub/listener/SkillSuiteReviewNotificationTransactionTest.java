@@ -71,11 +71,11 @@ class SkillSuiteReviewNotificationTransactionTest {
     void committedSubmissionNotifiesOnlyAfterTheTransactionCompletes() {
         new TransactionTemplate(transactions).executeWithoutResult(status -> {
             events.publishEvent(event);
-            verify(notifications, never()).create(any(), any(), any(), any(), any(), any(), any());
+            verify(notifications, never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any());
         });
 
         verify(notifications, timeout(5000)).create(eq("suite-review-admin"), eq(NotificationCategory.REVIEW),
-                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(912350L));
+                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(912350L), eq(event.eventId()), eq(event.occurredAt()));
     }
 
     @Test
@@ -85,14 +85,14 @@ class SkillSuiteReviewNotificationTransactionTest {
             status.setRollbackOnly();
         });
 
-        verify(notifications, after(500).never()).create(any(), any(), any(), any(), any(), any(), any());
+        verify(notifications, after(500).never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
     void eventOutsideATransactionDoesNotBypassTheCommitBoundary() {
         events.publishEvent(event);
 
-        verify(notifications, after(500).never()).create(any(), any(), any(), any(), any(), any(), any());
+        verify(notifications, after(500).never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.EnumSource(value = ReviewTaskStatus.class, names = {"APPROVED", "REJECTED"})
@@ -100,10 +100,10 @@ class SkillSuiteReviewNotificationTransactionTest {
         var completed = completed(result);
         new TransactionTemplate(transactions).executeWithoutResult(status -> {
             events.publishEvent(completed);
-            verify(notifications, never()).create(any(), any(), any(), any(), any(), any(), any());
+            verify(notifications, never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any());
         });
         verify(notifications, timeout(5000)).create(eq("author"), eq(NotificationCategory.REVIEW),
-                eq("SUITE_REVIEW_" + result), anyString(), anyString(), eq("REVIEW"), eq(912350L));
+                eq("SUITE_REVIEW_" + result), anyString(), anyString(), eq("REVIEW"), eq(912350L), eq(completed.eventId()), eq(completed.occurredAt()));
     }
 
     @Test
@@ -113,7 +113,7 @@ class SkillSuiteReviewNotificationTransactionTest {
             events.publishEvent(completed);
             status.setRollbackOnly();
         });
-        verify(notifications, after(500).never()).create(any(), any(), any(), any(), any(), any(), any());
+        verify(notifications, after(500).never()).create(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     private SkillSuiteReviewCompletedEvent completed(ReviewTaskStatus result) {

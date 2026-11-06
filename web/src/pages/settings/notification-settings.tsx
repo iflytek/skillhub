@@ -1,3 +1,4 @@
+import { NotificationEmailForm } from '@/features/notification/notification-email-form'
 import { NotificationPreferenceForm } from '@/features/notification/notification-preference-form'
 import { useTranslation } from 'react-i18next'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
@@ -10,7 +11,8 @@ export function NotificationSettingsPage() {
   return (
     <div className="space-y-8 animate-fade-up">
       <DashboardPageHeader title={t('notification.preferences.title')} subtitle={t('notification.preferences.description')} />
-      <NotificationPreferenceForm showHeader={false} />
+      <section className="space-y-3"><h2 className="text-lg font-semibold">{t('notificationEmail.inAppTitle')}</h2><NotificationPreferenceForm showHeader={false} /></section>
+      <NotificationEmailForm />
     </div>
   )
 }

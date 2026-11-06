@@ -130,10 +130,28 @@ spring:
       mail:
         smtp:
           auth: ${SPRING_MAIL_SMTP_AUTH:false}
+          connectiontimeout: ${SPRING_MAIL_SMTP_CONNECTION_TIMEOUT_MS:5000}
+          timeout: ${SPRING_MAIL_SMTP_READ_TIMEOUT_MS:10000}
+          writetimeout: ${SPRING_MAIL_SMTP_WRITE_TIMEOUT_MS:10000}
           starttls:
             enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
 
 skillhub:
+  notification:
+    email:
+      # Seed only when notification.email is absent; subsequent changes use the admin UI.
+      enabled: ${SKILLHUB_NOTIFICATION_EMAIL_ENABLED:false}
+      digest-window-minutes: ${SKILLHUB_NOTIFICATION_EMAIL_DIGEST_WINDOW_MINUTES:60}
+      public-base-url: ${SKILLHUB_NOTIFICATION_EMAIL_PUBLIC_BASE_URL:${SKILLHUB_PUBLIC_BASE_URL:}}
+      from-address: ${SKILLHUB_NOTIFICATION_EMAIL_FROM_ADDRESS:${SPRING_MAIL_USERNAME:}}
+      from-name: ${SKILLHUB_NOTIFICATION_EMAIL_FROM_NAME:SkillHub}
+      delivery:
+        poll-delay-ms: ${SKILLHUB_NOTIFICATION_EMAIL_DELIVERY_POLL_DELAY_MS:10000}
+        lease-seconds: ${SKILLHUB_NOTIFICATION_EMAIL_DELIVERY_LEASE_SECONDS:120}
+        retry-window-hours: ${SKILLHUB_NOTIFICATION_EMAIL_DELIVERY_RETRY_WINDOW_HOURS:24}
+        batch-size: ${SKILLHUB_NOTIFICATION_EMAIL_DELIVERY_BATCH_SIZE:20}
+        sent-retention-days: ${SKILLHUB_NOTIFICATION_EMAIL_DELIVERY_SENT_RETENTION_DAYS:30}
+        failed-retention-days: ${SKILLHUB_NOTIFICATION_EMAIL_DELIVERY_FAILED_RETENTION_DAYS:90}
   authoring:
     # Root directory for per-run isolated validation workspaces
     workspace-root: ${SKILLHUB_AUTHORING_WORKSPACE_ROOT:${java.io.tmpdir}/skillhub-authoring}

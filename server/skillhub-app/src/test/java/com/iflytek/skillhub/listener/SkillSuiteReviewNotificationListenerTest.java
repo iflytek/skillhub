@@ -79,9 +79,9 @@ class SkillSuiteReviewNotificationListenerTest {
         ArgumentCaptor<String> json = ArgumentCaptor.forClass(String.class);
         verify(notificationService).create(eq("owner"), eq(NotificationCategory.REVIEW),
                 eq("SUITE_REVIEW_SUBMITTED"), eq("Suite review submitted"), json.capture(),
-                eq("REVIEW"), eq(100L));
+                eq("REVIEW"), eq(100L), eq(event.eventId()), eq(event.occurredAt()));
         verify(notificationService).create(eq("admin"), eq(NotificationCategory.REVIEW),
-                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(100L));
+                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(100L), eq(event.eventId()), eq(event.occurredAt()));
         var body = mapper.readTree(json.getValue());
         assertThat(body.path("suiteId").asLong()).isEqualTo(10L);
         assertThat(body.path("suiteName").asText()).isEqualTo("Writing suite");
@@ -92,7 +92,7 @@ class SkillSuiteReviewNotificationListenerTest {
         assertThat(body.path("submitterId").asText()).isEqualTo("author");
         assertThat(body.has("skillId")).isFalse();
         verify(recipientResolver, never()).resolvePlatformSkillAdmins();
-        verify(notificationService, never()).create(eq("unrelated-member"), any(), any(), any(), any(), any(), any());
+        verify(notificationService, never()).create(eq("unrelated-member"), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -104,9 +104,9 @@ class SkillSuiteReviewNotificationListenerTest {
         listener.onReviewSubmitted(event);
 
         verify(notificationService).create(eq("skill-admin"), eq(NotificationCategory.REVIEW),
-                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(100L));
+                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(100L), eq(event.eventId()), eq(event.occurredAt()));
         verify(notificationService).create(eq("super-admin"), eq(NotificationCategory.REVIEW),
-                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(100L));
+                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(100L), eq(event.eventId()), eq(event.occurredAt()));
         verify(recipientResolver, never()).resolveNamespaceAdmins(anyLong());
     }
 
@@ -144,12 +144,12 @@ class SkillSuiteReviewNotificationListenerTest {
         stubResources();
         when(recipientResolver.resolveNamespaceAdmins(5L)).thenReturn(List.of("unavailable-admin", "owner"));
         doThrow(new IllegalStateException("Controlled notification storage failure"))
-                .when(notificationService).create(eq("unavailable-admin"), any(), any(), any(), any(), any(), any());
+                .when(notificationService).create(eq("unavailable-admin"), any(), any(), any(), any(), any(), any(), any(), any());
 
         listener.onReviewSubmitted(event);
 
         verify(notificationService).create(eq("owner"), eq(NotificationCategory.REVIEW),
-                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(100L));
+                eq("SUITE_REVIEW_SUBMITTED"), anyString(), anyString(), eq("REVIEW"), eq(100L), eq(event.eventId()), eq(event.occurredAt()));
     }
 
     @Test
@@ -184,9 +184,25 @@ class SkillSuiteReviewNotificationListenerTest {
         ArgumentCaptor<String> title = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
         verify(notificationService).create(eq("owner"), any(), anyString(), title.capture(), body.capture(),
-                eq("REVIEW"), eq(100L));
+                eq("REVIEW"), eq(100L), eq(event.eventId()), eq(event.occurredAt()));
         assertThat(title.getValue()).hasSizeLessThanOrEqualTo(200);
         assertThat(mapper.readTree(body.getValue()).path("suiteName").asText()).isEqualTo(longName);
+    }
+
+    @Test
+    void replayKeepsTheSameEmailIdentityForEveryRecipient() {
+        stubResources();
+        when(recipientResolver.resolveNamespaceAdmins(5L)).thenReturn(List.of("owner", "admin"));
+
+        listener.onReviewSubmitted(event);
+        listener.onReviewSubmitted(event);
+
+        for (String recipient : List.of("owner", "admin")) {
+            verify(notificationService, org.mockito.Mockito.times(2)).create(eq(recipient),
+                    eq(NotificationCategory.REVIEW), eq("SUITE_REVIEW_SUBMITTED"),
+                    anyString(), anyString(), eq("REVIEW"), eq(100L),
+                    eq(event.eventId()), eq(event.occurredAt()));
+        }
     }
 
     private void stubResources() {

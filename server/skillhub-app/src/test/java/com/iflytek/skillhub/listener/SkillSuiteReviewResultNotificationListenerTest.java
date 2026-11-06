@@ -64,7 +64,7 @@ class SkillSuiteReviewResultNotificationListenerTest {
 
         ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
         verify(notifications).create(eq("submitter"), eq(NotificationCategory.REVIEW),
-                eq("SUITE_REVIEW_" + status), anyString(), body.capture(), eq("REVIEW"), eq(30L));
+                eq("SUITE_REVIEW_" + status), anyString(), body.capture(), eq("REVIEW"), eq(30L), eq(event.eventId()), eq(event.occurredAt()));
         var json = mapper.readTree(body.getValue());
         assertThat(json.path("suiteName").asText()).isEqualTo("Current Suite");
         assertThat(json.path("version").asText()).isEqualTo("2.0.0");
@@ -96,7 +96,7 @@ class SkillSuiteReviewResultNotificationListenerTest {
     void notificationFailureIsIsolatedFromTheAlreadyCommittedReview() {
         stub(ReviewTaskStatus.APPROVED, "submitter");
         doThrow(new IllegalStateException("Controlled notification failure"))
-                .when(notifications).create(any(), any(), any(), any(), any(), any(), any());
+                .when(notifications).create(any(), any(), any(), any(), any(), any(), any(), any(), any());
         assertThatCode(() -> listener.onReviewCompleted(event(ReviewTaskStatus.APPROVED, "submitter")))
                 .doesNotThrowAnyException();
     }
@@ -114,6 +114,32 @@ class SkillSuiteReviewResultNotificationListenerTest {
         ArgumentCaptor<Notification> saved = ArgumentCaptor.forClass(Notification.class);
         verify(stored).save(saved.capture());
         assertThat(saved.getValue().getRecipientId()).isEqualTo("submitter");
+    }
+
+    @Test
+    void replayedCompletionPreservesTheActualMailCommandIdentityAndTime() {
+        stub(ReviewTaskStatus.APPROVED, "submitter");
+        var stored = mock(NotificationRepository.class);
+        var preferences = mock(NotificationPreferenceService.class);
+        var enqueuer = mock(com.iflytek.skillhub.notification.email.delivery.NotificationEmailEnqueuer.class);
+        @SuppressWarnings("unchecked")
+        var provider = (org.springframework.beans.factory.ObjectProvider<com.iflytek.skillhub.notification.email.delivery.NotificationEmailEnqueuer>)
+                mock(org.springframework.beans.factory.ObjectProvider.class);
+        when(provider.getIfAvailable()).thenReturn(enqueuer);
+        var service = new NotificationService(stored, preferences, Clock.systemUTC());
+        ReflectionTestUtils.setField(service, "emailEnqueuers", provider);
+        var actual = new SkillSuiteReviewResultNotificationListener(reviews, suites, versions, namespaces, service, mapper);
+        var event = event(ReviewTaskStatus.APPROVED, "submitter");
+        actual.onReviewCompleted(event);
+        actual.onReviewCompleted(event);
+        var commands = ArgumentCaptor.forClass(com.iflytek.skillhub.notification.email.delivery.NotificationEmailCommand.class);
+        verify(enqueuer, times(2)).enqueue(commands.capture());
+        assertThat(commands.getAllValues()).allSatisfy(command -> {
+            assertThat(command.eventKey()).isEqualTo("SUITE_REVIEW_APPROVED:" + event.eventId());
+            assertThat(command.occurredAt()).isEqualTo(event.occurredAt());
+            assertThat(command.entityType()).isEqualTo("REVIEW");
+            assertThat(command.entityId()).isEqualTo(30L);
+        });
     }
 
     private SkillSuiteReviewCompletedEvent event(ReviewTaskStatus status, String submitter) {

@@ -180,8 +180,8 @@ class AccountMergeServiceTest {
         NamespaceMember secondaryMembership = new NamespaceMember(1L, "usr_secondary", NamespaceRole.ADMIN);
 
         given(mergeRequestRepository.findByIdAndPrimaryUserId(7L, "usr_primary")).willReturn(Optional.of(request));
-        given(userAccountRepository.findLockedById("usr_primary")).willReturn(Optional.of(primary));
-        given(userAccountRepository.findLockedById("usr_secondary")).willReturn(Optional.of(secondary));
+        given(userAccountRepository.findLockedFreshById("usr_primary")).willReturn(Optional.of(primary));
+        given(userAccountRepository.findLockedFreshById("usr_secondary")).willReturn(Optional.of(secondary));
         given(mergeRequestRepository.save(any(AccountMergeRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
         given(identityBindingRepository.findByUserId("usr_secondary")).willReturn(List.of(binding));
         given(apiTokenRepository.findByUserId("usr_secondary")).willReturn(List.of(token));

@@ -25,7 +25,7 @@
 |---|---|---|
 | `ObjectOptimisticLockingFailureException` | HTTP 409、响应 `code=409`、本地化冲突提示 | `persistenceConflictsReturn409WithoutLeakingDatabaseDetails` |
 | `StorageAccessException` | HTTP 503；日志带 requestId 和认证状态，不输出稳定 userId | `handleStorageAccess_shouldLogAuthenticationWithoutStableUserId` |
-| MVC 缺参、不可读请求体、类型不匹配 | HTTP 400、ApiResponse `code=400`；不记作未处理内部故障 | `handleMvcBadRequest_shouldReturn400WithoutUnhandledErrorLog` |
+| MVC 缺参、不可读请求体、类型不匹配、原生方法入参约束 | HTTP 400、ApiResponse `code=400`；不记作未处理内部故障 | `handleMvcBadRequest_shouldReturn400WithoutUnhandledErrorLog`、`handleMethodValidationDistinguishesInputFromReturnValueErrors` |
 | 不支持的 HTTP 方法 | HTTP 405、ApiResponse `code=405`，保留 Allow 响应头 | `handleMethodNotAllowed_shouldReturn405AndAllowHeader` |
 
 反例：用 `exception.getMessage().contains(...)` 为新业务规则分配状态码；只断言状态而遗漏协议头；

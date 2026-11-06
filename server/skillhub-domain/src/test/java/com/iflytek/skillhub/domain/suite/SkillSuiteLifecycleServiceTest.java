@@ -120,8 +120,15 @@ class SkillSuiteLifecycleServiceTest {
         assertThat(task.getSubjectId()).isEqualTo(10L);
         assertThat(task.getSubjectVersionId()).isEqualTo(20L);
         verify(publicationValidator).validateForPublication(suite, version);
-        verify(eventPublisher).publishEvent(new SkillSuiteReviewSubmittedEvent(
-                30L, 10L, 20L, "author", 1L));
+        var submitted = org.mockito.ArgumentCaptor.forClass(SkillSuiteReviewSubmittedEvent.class);
+        verify(eventPublisher).publishEvent(submitted.capture());
+        assertThat(submitted.getValue().reviewId()).isEqualTo(30L);
+        assertThat(submitted.getValue().suiteId()).isEqualTo(10L);
+        assertThat(submitted.getValue().versionId()).isEqualTo(20L);
+        assertThat(submitted.getValue().submitterId()).isEqualTo("author");
+        assertThat(submitted.getValue().namespaceId()).isEqualTo(1L);
+        assertThat(submitted.getValue().eventId()).isNotBlank();
+        assertThat(submitted.getValue().occurredAt()).isNotNull();
     }
 
     @Test

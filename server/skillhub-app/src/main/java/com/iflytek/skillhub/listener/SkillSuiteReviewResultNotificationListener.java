@@ -82,7 +82,7 @@ public class SkillSuiteReviewResultNotificationListener {
             notifications.create(event.submitterId(), NotificationCategory.REVIEW,
                     approved ? "SUITE_REVIEW_APPROVED" : "SUITE_REVIEW_REJECTED",
                     approved ? "Suite review approved" : "Suite review rejected",
-                    mapper.writeValueAsString(body), "REVIEW", event.reviewId());
+                    mapper.writeValueAsString(body), "REVIEW", event.reviewId(), event.eventId(), event.occurredAt());
         } catch (JsonProcessingException | RuntimeException failure) {
             log.warn("Failed to create Suite review result notification [reviewId={}, recipientId={}]",
                     event.reviewId(), event.submitterId());

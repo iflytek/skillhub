@@ -82,7 +82,7 @@ public class SkillSuiteReviewNotificationListener {
             try {
                 notificationService.create(recipient, NotificationCategory.REVIEW,
                         "SUITE_REVIEW_SUBMITTED", "Suite review submitted",
-                        json, "REVIEW", event.reviewId());
+                        json, "REVIEW", event.reviewId(), event.eventId(), event.occurredAt());
             } catch (RuntimeException exception) {
                 log.warn("Failed to create Suite review notification [reviewId={}, recipientId={}]",
                         event.reviewId(), recipient);
