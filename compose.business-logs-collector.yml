@@ -1,0 +1,20 @@
+# Optional production forwarder. No host port and no local file storage.
+name: ${SKILLHUB_BUSINESS_LOGS_PROJECT:-skillhub-business-logs}
+services:
+  business-logs-collector:
+    image: ${SKILLHUB_BUSINESS_LOGS_COLLECTOR_IMAGE:-otel/opentelemetry-collector-contrib:0.111.0}
+    command: ["--config=/etc/otelcol-contrib/config.yaml"]
+    restart: unless-stopped
+    mem_limit: 128m
+    cpus: 0.5
+    environment:
+      SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_ENDPOINT: ${SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_ENDPOINT:?configure business-logs/.env downstream endpoint first}
+      SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_HEADERS: ${SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_HEADERS:-{}}
+    volumes:
+      - ./business-logs-collector.yaml:/etc/otelcol-contrib/config.yaml:ro
+    networks:
+      - business-logs
+networks:
+  business-logs:
+    external: true
+    name: ${SKILLHUB_BUSINESS_LOGS_NETWORK:-skillhub-business-logs}

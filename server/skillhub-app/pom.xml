@@ -60,6 +60,10 @@
             <artifactId>opentelemetry-exporter-otlp</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-sdk-logs</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.skywalking</groupId>
             <artifactId>apm-toolkit-logback-1.x</artifactId>
             <version>9.6.0</version>
@@ -164,6 +168,46 @@
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>default-test</id>
+                        <configuration>
+                            <excludedGroups>process-global-diagnostics,process-global-otel-context</excludedGroups>
+                        </configuration>
+                    </execution>
+                    <!-- Raw OTel contexts initialize JVM-global ContextStorage before Boot can
+                         register its MDC wrapper. Each tagged class gets a fresh process. -->
+                    <execution>
+                        <id>isolated-otel-context</id>
+                        <goals><goal>test</goal></goals>
+                        <configuration>
+                            <groups>process-global-otel-context</groups>
+                            <includes>
+                                <include>**/BusinessLogs*Test.java</include>
+                            </includes>
+                            <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+                            <forkCount>1</forkCount>
+                            <reuseForks>false</reuseForks>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>isolated-diagnostics</id>
+                        <goals><goal>test</goal></goals>
+                        <configuration>
+                            <groups>process-global-diagnostics</groups>
+                            <includes>
+                                <include>**/BusinessLogsDiagnosticsTest.java</include>
+                            </includes>
+                            <failIfNoSpecifiedTests>false</failIfNoSpecifiedTests>
+                            <forkCount>1</forkCount>
+                            <reuseForks>false</reuseForks>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

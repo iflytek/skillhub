@@ -633,3 +633,25 @@ print('Helm application Secret render/rotation contracts passed')
 PY_SECRET_RENDER
 
 echo "Helm configuration contract tests passed"
+
+# Business Logs and metrics remain opt-in; credentials reference an existing Secret.
+render business-default "$CHART_DIR" --show-only templates/server-deployment.yaml >"$TMP_DIR/business-default.yaml"
+grep -A1 -F 'name: SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE' "$TMP_DIR/business-default.yaml" | grep -Fq 'value: "health,info"'
+grep -A1 -F 'name: SKILLHUB_BUSINESS_LOGS_ENABLED' "$TMP_DIR/business-default.yaml" | grep -Fq 'value: "false"'
+assert_rejected business-no-endpoint --set server.businessLogs.enabled=true
+assert_rejected actuator-wildcard --set-string 'server.actuatorExposureInclude=*'
+cat >"$TMP_DIR/business-values.yaml" <<'BUSINESS_VALUES'
+server:
+  actuatorExposureInclude: health,info,metrics,prometheus
+  businessLogs:
+    enabled: true
+    endpoint: https://receiver.example.com/v1/logs
+    headersSecretRef:
+      name: business-logs-credentials
+      key: headers
+BUSINESS_VALUES
+render business-enabled "$CHART_DIR" -f "$TMP_DIR/business-values.yaml" --show-only templates/server-deployment.yaml >"$TMP_DIR/business-enabled.yaml"
+grep -A1 -F 'name: SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE' "$TMP_DIR/business-enabled.yaml" | grep -Fq 'value: "health,info,metrics,prometheus"'
+grep -A6 -F 'name: SKILLHUB_BUSINESS_LOGS_HEADERS' "$TMP_DIR/business-enabled.yaml" | grep -Fq 'name: "business-logs-credentials"'
+grep -A6 -F 'name: SKILLHUB_BUSINESS_LOGS_HEADERS' "$TMP_DIR/business-enabled.yaml" | grep -Fq 'optional: false'
+echo 'Helm business Logs / metrics contracts passed'

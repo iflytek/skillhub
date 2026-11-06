@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.domain.review;
 
+import com.iflytek.skillhub.domain.event.BusinessEventSnapshot;
+
 import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -289,10 +291,11 @@ public class ReviewService {
 
         if (avatarParticipant != null) { avatarParticipant.decide(task, true, reviewerId, comment); }
         eventPublisher.publishEvent(new SkillPublishedEvent(
-                skill.getId(), skillVersion.getId(), reviewerId));
+                skill.getId(), skillVersion.getId(), reviewerId,
+                BusinessEventSnapshot.capture(skill, reviewerId, "review")));
         eventPublisher.publishEvent(new ReviewApprovedEvent(
                 task.getId(), skill.getId(), skillVersion.getId(),
-                reviewerId, task.getSubmittedBy()));
+                reviewerId, task.getSubmittedBy(), BusinessEventSnapshot.capture(skill, reviewerId, "review")));
         governanceNotificationService.notifyUser(
                 task.getSubmittedBy(),
                 "REVIEW",
@@ -358,7 +361,7 @@ public class ReviewService {
         if (avatarParticipant != null) { avatarParticipant.decide(task, false, reviewerId, comment); }
         eventPublisher.publishEvent(new ReviewRejectedEvent(
                 task.getId(), skill.getId(), skillVersion.getId(),
-                reviewerId, task.getSubmittedBy(), comment));
+                reviewerId, task.getSubmittedBy(), comment, BusinessEventSnapshot.capture(skill, reviewerId, "review")));
         governanceNotificationService.notifyUser(
                 task.getSubmittedBy(),
                 "REVIEW",
