@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import static com.iflytek.skillhub.support.GithubSyncWorkerCapabilities.platform;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -37,7 +38,7 @@ import static org.assertj.core.api.Assertions.*;
         "skillhub.security.scanner.enabled=true", "skillhub.security.scanner.mode=upload"})
 class GithubOfficialOwnerOutcomeIntegrationTest {
     @org.junit.jupiter.api.io.TempDir static java.nio.file.Path storageDirectory;
-    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
     @DynamicPropertySource static void postgres(DynamicPropertyRegistry registry) {
         registry.add("skillhub.storage.local.base-path", () -> storageDirectory.toString());
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);

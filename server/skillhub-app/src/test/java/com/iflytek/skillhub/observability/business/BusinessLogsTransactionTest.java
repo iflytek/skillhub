@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.observability.business;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import com.iflytek.skillhub.domain.event.*;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -50,7 +51,7 @@ import static org.mockito.Mockito.*;
 @org.junit.jupiter.api.Tag("process-global-otel-context")
 class BusinessLogsTransactionTest {
     @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name())
             .withTmpFs(java.util.Map.of("/var/lib/postgresql/data", "rw"))
             .withCreateContainerCmdModifier(cmd -> cmd.withName("skillhub-1009-business-transactions"));
 

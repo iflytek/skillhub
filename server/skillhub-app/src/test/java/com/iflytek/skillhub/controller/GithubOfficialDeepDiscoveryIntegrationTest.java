@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import static com.iflytek.skillhub.support.GithubSyncWorkerCapabilities.platform;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -47,7 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = "skillhub.builtin-skills.enabled=false")
 class GithubOfficialDeepDiscoveryIntegrationTest {
     private static final String BASE = "/api/v1/admin/github-sync/deep-discovery";
-    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
     @DynamicPropertySource static void postgres(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url",POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username",POSTGRES::getUsername);

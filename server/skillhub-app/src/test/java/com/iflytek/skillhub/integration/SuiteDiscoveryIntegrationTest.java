@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.integration;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
@@ -61,7 +62,7 @@ class SuiteDiscoveryIntegrationTest {
 
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine");
+            new PostgreSQLContainer<>(PostgresTestImage.name());
 
     @DynamicPropertySource
     static void configurePostgres(DynamicPropertyRegistry registry) {
