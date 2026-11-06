@@ -294,17 +294,9 @@ MANAGEMENT_HEALTH_MAIL_ENABLED=true
 - `SSLHandshakeException`
 - `unable to find valid certification path to requested target`
 
-处理建议（本地联调）：
-- 增加：
+先核对 SMTP 证书链及 JVM 信任库；企业自签 CA 必须通过部署方认可的证书管理流程导入信任库。不要直接关闭 TLS 或配置通配信任。
 
-```dotenv
-```
-
-- 然后重启后端，再触发一次“发送验证码”。
-
-补充：
-- 该配置用于指定信任主机，适合本地排障与联调。
-- 生产环境默认不建议长期启用该配置，更推荐使用规范 CA 证书链或将企业 CA 导入 Java truststore。
+仅经部署方确认的临时主机信任例外，才按第 1 节设置明确的 `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST` 主机名；修复证书链后必须移除该例外。修改部署配置后重建后端，再验证 SMTP 连接及实际收件。
 
 ## 6. 安全建议
 
