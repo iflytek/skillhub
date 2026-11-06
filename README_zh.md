@@ -355,7 +355,7 @@ SkillHub 采用清晰的分层架构：
 ### 后端
 - **语言**：Java 21
 - **框架**：Spring Boot 3.2.3
-- **数据库**：PostgreSQL 16 + Flyway 迁移
+- **数据库**：PostgreSQL（默认 16，已验证 17）+ Flyway 迁移
 - **缓存**：Redis 7
 - **存储**：S3/MinIO
 - **搜索**：PostgreSQL 全文搜索

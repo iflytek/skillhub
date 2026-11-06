@@ -481,7 +481,7 @@ password defaults.
 **Backend (Spring Boot 3.2.3, Java 21):**
 - Multi-module Maven project with clean architecture
 - Modules: app, domain, auth, search, storage, infra
-- PostgreSQL 16 with Flyway migrations
+- PostgreSQL with Flyway migrations (16 by default, 17 verified)
 - Redis for session management
 - S3/MinIO for skill package storage
 
