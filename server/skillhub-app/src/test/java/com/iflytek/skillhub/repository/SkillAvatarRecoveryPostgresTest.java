@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.repository;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.shared.exception.DomainConflictException;
@@ -67,7 +68,7 @@ import static org.mockito.Mockito.when;
         com.iflytek.skillhub.task.SkillAvatarCleanupTask.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class SkillAvatarRecoveryPostgresTest {
-    @Container private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
 
     @DynamicPropertySource
     static void postgres(DynamicPropertyRegistry registry) {
