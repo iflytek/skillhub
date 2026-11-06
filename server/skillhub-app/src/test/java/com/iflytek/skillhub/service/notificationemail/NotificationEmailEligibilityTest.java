@@ -91,4 +91,23 @@ class NotificationEmailEligibilityTest {
         when(skills.findById(55L)).thenReturn(Optional.empty());
         assertThat(eligibility.eligible(item(eventType))).isFalse();
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"SUITE_REVIEW_APPROVED", "SUITE_REVIEW_REJECTED"})
+    void suiteResultsUseSubmitterProgressAndTypedAuthorizationWithoutSkillLookup(String eventType) {
+        when(accounts.findById("admin")).thenReturn(Optional.of(new UserAccount("admin", "Admin", null, null)));
+        var now = Instant.parse("2026-10-22T00:00:00Z");
+        var result = new NotificationEmailItem(1, 1, "admin", "suite-result", NotificationCategory.REVIEW,
+                eventType, null, 101L, now, now, "ACTIVE");
+        when(suiteReviews.eligibleResult("admin", 101L, eventType)).thenReturn(true);
+        assertThat(eligibility.eligible(result)).isTrue();
+        assertThat(eligibility.targetPath(result)).isEqualTo("/dashboard/review-progress");
+        when(suiteReviews.eligibleResult("admin", 101L, eventType)).thenReturn(false);
+        assertThat(eligibility.eligible(result)).isFalse();
+        var mislabeled = new NotificationEmailItem(1, 1, "admin", "suite-result", NotificationCategory.PUBLISH,
+                eventType, null, 101L, now, now, "ACTIVE");
+        assertThat(eligibility.eligible(mislabeled)).isFalse();
+        verifyNoInteractions(skills);
+    }
+
 }

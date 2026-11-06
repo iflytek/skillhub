@@ -125,4 +125,27 @@ class NotificationEmailSuiteReviewEligibilityTest {
         assertThat(eligibility.eligible("reviewer", null)).isFalse();
         verifyNoInteractions(reviews, suites, versions, namespaces, members, rbac);
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"SUITE_REVIEW_APPROVED", "SUITE_REVIEW_REJECTED"})
+    void completedResultsBelongOnlyToTheSubmitterWithoutRequiringReviewerRole(String eventType) {
+        task.setStatus("SUITE_REVIEW_APPROVED".equals(eventType)
+                ? ReviewTaskStatus.APPROVED : ReviewTaskStatus.REJECTED);
+        assertThat(eligibility.eligibleResult("author", 101L, eventType)).isTrue();
+        assertThat(eligibility.eligibleResult("reviewer", 101L, eventType)).isFalse();
+        assertThat(eligibility.eligible("reviewer", 101L)).isFalse();
+    }
+
+    @Test
+    void resultEligibilityRejectsPendingOrMismatchedOutcomesAndUnavailableSubjects() {
+        assertThat(eligibility.eligibleResult("author", 101L, "SUITE_REVIEW_APPROVED")).isFalse();
+        task.setStatus(ReviewTaskStatus.APPROVED);
+        assertThat(eligibility.eligibleResult("author", 101L, "SUITE_REVIEW_REJECTED")).isFalse();
+        assertThat(eligibility.eligibleResult("author", null, "SUITE_REVIEW_APPROVED")).isFalse();
+        assertThat(eligibility.eligibleResult("author", 101L, "UNTRUSTED_EVENT")).isFalse();
+        version = new SkillSuiteVersion(88L, "1.1.0", SkillVisibility.PUBLIC, "author");
+        when(versions.findById(9L)).thenReturn(Optional.of(version));
+        assertThat(eligibility.eligibleResult("author", 101L, "SUITE_REVIEW_APPROVED")).isFalse();
+    }
+
 }

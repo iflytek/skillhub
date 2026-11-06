@@ -196,7 +196,7 @@ class NotificationEmailDeliveryPostgresTest {
         NotificationEmailSender sender = (recipient, locale, id, subject, text) -> {
             assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
             assertThat(text)
-                    .contains("Original notification records: 55", "Publishing (preview)", "Reviews (preview)",
+                    .contains("Notifications in this batch: 55", "Publishing (preview)", "Reviews (preview)",
                             "/dashboard/notifications/email/" + id)
                     .doesNotContain("PRIVATE", "reason", "skillId", "same@example.test");
             assertThat(text.lines().filter(line -> line.contains(" · ")).count()).isEqualTo(50);
@@ -474,7 +474,7 @@ class NotificationEmailDeliveryPostgresTest {
                 .isEqualTo(1000);
         assertThat(repository.itemPage(root.id(), 0, 21)).hasSize(21);
         verify(sender, times(1))
-                .send(any(), any(), eq(root.id()), any(), contains("Original notification records: 1000"));
+                .send(any(), any(), eq(root.id()), any(), contains("Notifications in this batch: 1000"));
     }
 
     @Test
@@ -546,7 +546,7 @@ class NotificationEmailDeliveryPostgresTest {
         assertThat(root.retryDeadline()).isEqualTo(failed.retryDeadline());
         worker.process(rawClaim(recovered));
         verify(sender, times(1))
-                .send(any(), any(), eq(first.id()), any(), contains("Original notification records: 4"));
+                .send(any(), any(), eq(first.id()), any(), contains("Notifications in this batch: 4"));
         assertThat(repository.count("SENT")).isEqualTo(1);
         assertThat(repository.count("MERGED")).isEqualTo(3);
     }
@@ -755,7 +755,7 @@ class NotificationEmailDeliveryPostgresTest {
         assertThat(sent)
                 .singleElement()
                 .asString()
-                .contains("发布动态（预览）", "审核进度（预览）", "原始通知记录数：2")
+                .contains("发布动态（预览）", "审核进度（预览）", "本批通知：2")
                 .doesNotContain("PUBLISH", "REVIEW", "PRIVATE", "reason", "skillId");
     }
 
@@ -905,7 +905,7 @@ class NotificationEmailDeliveryPostgresTest {
         assertThat(root.status()).isEqualTo("SENT");
         assertThat(root.itemCount()).isEqualTo(2);
         assertThat(repository.count("MERGED")).isEqualTo(1);
-        assertThat(sent).singleElement().asString().contains("Original notification records: 2");
+        assertThat(sent).singleElement().asString().contains("Notifications in this batch: 2");
         assertThat(sent.getFirst().lines().filter(line -> line.contains(" · ")).count()).isEqualTo(1);
         var items = repository.itemPage(root.id(), 0, 100);
         assertThat(items)
@@ -1041,8 +1041,8 @@ class NotificationEmailDeliveryPostgresTest {
             assertThat(mail)
                     .singleElement()
                     .asString()
-                    .contains(reopened.toString())
-                    .doesNotContain(clock.instant().toString());
+                    .contains("2026-10-22 10:15:10 UTC")
+                    .doesNotContain("2026-10-22 10:00:00 UTC");
             assertThat(mail.getFirst().lines().filter(line -> line.contains(" · ")).count()).isEqualTo(1);
             assertThat(repository.find(claimed.id()).orElseThrow().itemCount()).isEqualTo(3);
             assertThat(query(later).detail(claimed.id(), "u", null, 100).items()).hasSize(1);

@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 
 class NotificationEmailInboxServiceTest {
@@ -42,13 +44,18 @@ class NotificationEmailInboxServiceTest {
     }
 
     NotificationEmailCommand command(String targetType) {
-        return new NotificationEmailCommand("reviewer", NotificationCategory.REVIEW, "SUITE_REVIEW_SUBMITTED",
+        return command(targetType, "SUITE_REVIEW_SUBMITTED");
+    }
+
+    NotificationEmailCommand command(String targetType, String eventType) {
+        return new NotificationEmailCommand("reviewer", NotificationCategory.REVIEW, eventType,
                 "suite-event", now, "{\"suiteId\":8,\"reviewId\":101,\"skillId\":999}", targetType, 101L);
     }
 
-    @Test
-    void queuesTheReviewIdentityWithoutTrustingAnySkillIdInTheBody() {
-        var command = command("REVIEW");
+    @ParameterizedTest
+    @ValueSource(strings = {"SUITE_REVIEW_SUBMITTED", "SUITE_REVIEW_APPROVED", "SUITE_REVIEW_REJECTED"})
+    void queuesTheReviewIdentityWithoutTrustingAnySkillIdInTheBody(String eventType) {
+        var command = command("REVIEW", eventType);
         inbox.enqueue(command);
 
         var item = ArgumentCaptor.forClass(NotificationEmailItem.class);
@@ -59,15 +66,17 @@ class NotificationEmailInboxServiceTest {
         verify(repository).addItem(1, command, null, now);
     }
 
-    @Test
-    void rejectsASuiteEventWhoseEntityIsNotAReviewTask() {
-        inbox.enqueue(command("SKILL"));
+    @ParameterizedTest
+    @ValueSource(strings = {"SUITE_REVIEW_SUBMITTED", "SUITE_REVIEW_APPROVED", "SUITE_REVIEW_REJECTED"})
+    void rejectsASuiteEventWhoseEntityIsNotAReviewTask(String eventType) {
+        inbox.enqueue(command("SKILL", eventType));
         verifyNoInteractions(policy, recipients, preferences, repository, eligibility, admission);
     }
 
-    @Test
-    void rejectsASuiteEventRelabeledToBypassTheReviewPreference() {
-        var original = command("REVIEW");
+    @ParameterizedTest
+    @ValueSource(strings = {"SUITE_REVIEW_SUBMITTED", "SUITE_REVIEW_APPROVED", "SUITE_REVIEW_REJECTED"})
+    void rejectsASuiteEventRelabeledToBypassTheReviewPreference(String eventType) {
+        var original = command("REVIEW", eventType);
         inbox.enqueue(new NotificationEmailCommand(original.recipientId(), NotificationCategory.PUBLISH,
                 original.eventType(), original.eventKey(), original.occurredAt(), original.bodyJson(),
                 original.entityType(), original.entityId()));

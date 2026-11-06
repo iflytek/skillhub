@@ -40,7 +40,7 @@ public class NotificationEmailInboxService implements NotificationEmailEnqueuer 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void enqueue(NotificationEmailCommand command) {
         Instant now = clock.instant();
-        if ("SUITE_REVIEW_SUBMITTED".equals(command.eventType())
+        if (isSuiteReviewEvent(command.eventType())
                 && (!"REVIEW".equals(command.entityType())
                         || command.category() != NotificationCategory.REVIEW)) {
             return;
@@ -94,7 +94,7 @@ public class NotificationEmailInboxService implements NotificationEmailEnqueuer 
     }
 
     private Long safeSkillId(NotificationEmailCommand command) {
-        if ("SUITE_REVIEW_SUBMITTED".equals(command.eventType())) {
+        if (isSuiteReviewEvent(command.eventType())) {
             return null;
         }
         if ("SKILL".equals(command.entityType())) {
@@ -108,4 +108,11 @@ public class NotificationEmailInboxService implements NotificationEmailEnqueuer 
             return null;
         }
     }
+
+    private boolean isSuiteReviewEvent(String type) {
+        return "SUITE_REVIEW_SUBMITTED".equals(type)
+                || "SUITE_REVIEW_APPROVED".equals(type)
+                || "SUITE_REVIEW_REJECTED".equals(type);
+    }
+
 }

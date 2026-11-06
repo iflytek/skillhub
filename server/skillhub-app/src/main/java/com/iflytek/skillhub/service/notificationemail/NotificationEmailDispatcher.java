@@ -238,27 +238,9 @@ public class NotificationEmailDispatcher {
         if (!repository.authorize(batch.id(), claim.leaseToken(), clock.instant(), leaseEnd()))
             return null;
         String link = setting.publicBaseUrl().replaceAll("/+$", "") + "/dashboard/notifications/email/" + batch.id();
-        boolean zh = "zh".equals(recipient.locale());
-        String subject = zh ? "SkillHub 通知摘要" : "SkillHub notifications";
-        StringBuilder text = new StringBuilder(zh ? "原始通知记录数：" : "Original notification records: ");
-        text.append(batch.itemCount())
-                .append(zh ? "。实际可见内容以详情为准。时间为 UTC。\n"
-                           : ". Current access is checked in details. Times are UTC.\n");
-        for (var category : com.iflytek.skillhub.notification.domain.NotificationCategory.values()) {
-            var section = active.stream().filter(item -> item.category() == category).toList();
-            if (section.isEmpty())
-                continue;
-            String label = switch (category) {
-                case PUBLISH -> zh ? "发布动态" : "Publishing";
-                case REVIEW -> zh ? "审核进度" : "Reviews";
-                case PROMOTION -> zh ? "全局提升" : "Promotions";
-                case REPORT -> zh ? "举报处理" : "Reports";
-            };
-            text.append('\n').append(label).append(zh ? "（预览）\n" : " (preview)\n");
-            for (var item : section) text.append(label).append(" · ").append(item.occurredAt()).append('\n');
-        }
-        text.append('\n').append(link).append('\n');
-        return new Authorized(recipient, batch.attempts() + 1, subject, text.toString());
+        var content = NotificationEmailContent.render(
+                recipient.locale(), batch.kind(), batch.itemCount(), active, link);
+        return new Authorized(recipient, batch.attempts() + 1, content.subject(), content.text());
     }
 
     public void cleanup() {

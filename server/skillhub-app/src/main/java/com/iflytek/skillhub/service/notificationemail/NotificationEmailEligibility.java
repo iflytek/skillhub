@@ -47,6 +47,10 @@ public class NotificationEmailEligibility {
             return item.category() == NotificationCategory.REVIEW
                     && suiteReviews.eligible(user, item.entityId());
         }
+        if ("SUITE_REVIEW_APPROVED".equals(type) || "SUITE_REVIEW_REJECTED".equals(type)) {
+            return item.category() == NotificationCategory.REVIEW
+                    && suiteReviews.eligibleResult(user, item.entityId(), type);
+        }
         Skill skill = item.skillId() == null ? null : skills.findById(item.skillId()).orElse(null);
         if (skill == null) {
             return false;
@@ -77,6 +81,7 @@ public class NotificationEmailEligibility {
         return switch (item.eventType()) {
             case "PROFILE_REVIEW_SUBMITTED" -> "/dashboard/reviews?type=profile";
             case "REVIEW_SUBMITTED", "SUITE_REVIEW_SUBMITTED" -> "/dashboard/reviews/" + item.entityId();
+            case "SUITE_REVIEW_APPROVED", "SUITE_REVIEW_REJECTED" -> "/dashboard/review-progress";
             case "PROMOTION_SUBMITTED" -> "/dashboard/promotions";
             case "REPORT_SUBMITTED" -> "/dashboard/reports";
             default -> skillPath(item.skillId());
