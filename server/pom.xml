@@ -22,6 +22,9 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <byte-buddy.version>1.17.5</byte-buddy.version>
+        <!-- Flyway 10.20+ officially supports PostgreSQL 17; this is the version Spring Boot 3.4 manages.
+             flyway-core and flyway-database-postgresql must stay on the same version. -->
+        <flyway.version>10.20.1</flyway.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
