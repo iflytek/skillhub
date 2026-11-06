@@ -2,6 +2,7 @@ package com.iflytek.skillhub.domain.suite;
 
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.event.SkillSuiteReviewSubmittedEvent;
+import com.iflytek.skillhub.domain.event.SkillSuiteReviewCompletedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -186,6 +188,54 @@ class SkillSuiteLifecycleServiceTest {
         assertThat(version.getStatus()).isEqualTo(SkillSuiteVersionStatus.PUBLISHED);
         assertThat(suite.getLatestVersionId()).isEqualTo(20L);
         assertThat(task.getStatus()).isEqualTo(ReviewTaskStatus.APPROVED);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ReviewTaskStatus.class, names = {"APPROVED", "REJECTED"})
+    void completedReviewEmitsOnlyOneBoundResultForTheActualSubmitter(ReviewTaskStatus result) throws Exception {
+        version.setVisibility(SkillVisibility.PUBLIC);
+        version.setStatus(SkillSuiteVersionStatus.PENDING_REVIEW);
+        ReviewTask task = pendingReview("version-submitter");
+        stubLoaded();
+        when(reviewTaskRepository.findById(30L)).thenReturn(Optional.of(task));
+        when(reviewTaskRepository.updateStatusWithVersion(30L, result, "owner", "Decision", 1)).thenReturn(1);
+        when(versionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        if (result == ReviewTaskStatus.APPROVED) {
+            when(suiteRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+            service.approveReview(30L, "Decision", adminContext());
+        } else {
+            service.rejectReview(30L, "Decision", adminContext());
+        }
+
+        ArgumentCaptor<SkillSuiteReviewCompletedEvent> event =
+                ArgumentCaptor.forClass(SkillSuiteReviewCompletedEvent.class);
+        verify(eventPublisher).publishEvent(event.capture());
+        assertThat(event.getValue().reviewId()).isEqualTo(30L);
+        assertThat(event.getValue().suiteId()).isEqualTo(10L);
+        assertThat(event.getValue().versionId()).isEqualTo(20L);
+        assertThat(event.getValue().namespaceId()).isEqualTo(1L);
+        assertThat(event.getValue().submitterId()).isEqualTo("version-submitter");
+        assertThat(event.getValue().reviewerId()).isEqualTo("owner");
+        assertThat(event.getValue().status()).isEqualTo(result);
+        assertThat(event.getValue().occurredAt()).isEqualTo(Instant.parse("2026-09-07T08:00:00Z"));
+        assertThat(java.util.UUID.fromString(event.getValue().eventId())).isNotNull();
+        assertThatThrownBy(() -> service.approveReview(30L, "Again", adminContext()))
+                .isInstanceOf(DomainBadRequestException.class);
+        verify(eventPublisher).publishEvent(any(SkillSuiteReviewCompletedEvent.class));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ReviewTaskStatus.class, names = {"APPROVED", "REJECTED"})
+    void failedReviewCompareAndSetDoesNotEmitAResult(ReviewTaskStatus result) throws Exception {
+        version.setVisibility(SkillVisibility.PUBLIC);
+        version.setStatus(SkillSuiteVersionStatus.PENDING_REVIEW);
+        stubLoaded();
+        when(reviewTaskRepository.findById(30L)).thenReturn(Optional.of(pendingReview("author")));
+        assertThatThrownBy(() -> {
+            if (result == ReviewTaskStatus.APPROVED) service.approveReview(30L, "Decision", adminContext());
+            else service.rejectReview(30L, "Decision", adminContext());
+        }).isInstanceOf(java.util.ConcurrentModificationException.class);
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test

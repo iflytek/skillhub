@@ -3723,6 +3723,14 @@
     "days": "{{count}}일 전"
   },
   "notificationEvents": {
+    "SUITE_REVIEW_APPROVED": {
+      "title": "스킬 모음 검토 승인",
+      "description": "{{suiteName}}{{versionSuffix}} 검토가 승인되었습니다."
+    },
+    "SUITE_REVIEW_REJECTED": {
+      "title": "스킬 모음 검토 반려",
+      "description": "{{suiteName}}{{versionSuffix}} 검토가 반려되었습니다. 검토 진행 상황을 확인하세요."
+    },
     "SUITE_REVIEW_SUBMITTED": {
       "title": "스킬 모음 검토 제출",
       "description": "{{suiteName}}{{versionSuffix}}의 검토를 요청했습니다."

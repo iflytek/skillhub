@@ -3,6 +3,7 @@ package com.iflytek.skillhub.domain.suite;
 import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.event.SkillSuiteReviewSubmittedEvent;
+import com.iflytek.skillhub.domain.event.SkillSuiteReviewCompletedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -29,6 +30,7 @@ import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.UUID;
 
 /** Coordinates Suite version review and publication without changing any member lifecycle. */
 @Service
@@ -140,6 +142,10 @@ public class SkillSuiteLifecycleService {
         publish(loaded.suite(), loaded.version(), context.actorUserId());
         audit(context, "APPROVE_SKILL_SUITE_REVIEW", "REVIEW_TASK", reviewTaskId,
                 AuditDetail.of("suiteVersionId", loaded.version().getId()));
+        eventPublisher.publishEvent(new SkillSuiteReviewCompletedEvent(
+                task.getId(), loaded.suite().getId(), loaded.version().getId(), task.getSubmittedBy(),
+                context.actorUserId(), loaded.suite().getNamespaceId(), ReviewTaskStatus.APPROVED,
+                UUID.randomUUID().toString(), Instant.now(clock)));
         log.info("Suite review approved [reviewTaskId={}, suiteId={}, versionId={}, actorId={}, requestId={}]",
                 reviewTaskId, loaded.suite().getId(), loaded.version().getId(),
                 context.actorUserId(), context.requestId());
@@ -160,6 +166,10 @@ public class SkillSuiteLifecycleService {
         versionRepository.save(loaded.version());
         audit(context, "REJECT_SKILL_SUITE_REVIEW", "REVIEW_TASK", reviewTaskId,
                 AuditDetail.of("suiteVersionId", loaded.version().getId()));
+        eventPublisher.publishEvent(new SkillSuiteReviewCompletedEvent(
+                task.getId(), loaded.suite().getId(), loaded.version().getId(), task.getSubmittedBy(),
+                context.actorUserId(), loaded.suite().getNamespaceId(), ReviewTaskStatus.REJECTED,
+                UUID.randomUUID().toString(), Instant.now(clock)));
         log.info("Suite review rejected [reviewTaskId={}, suiteId={}, versionId={}, actorId={}, requestId={}]",
                 reviewTaskId, loaded.suite().getId(), loaded.version().getId(),
                 context.actorUserId(), context.requestId());

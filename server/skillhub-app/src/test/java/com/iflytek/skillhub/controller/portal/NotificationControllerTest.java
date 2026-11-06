@@ -92,6 +92,21 @@ class NotificationControllerTest {
         });
     }
 
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"SUITE_REVIEW_APPROVED", "SUITE_REVIEW_REJECTED"})
+    void completedSuiteReviewLinksToTheSubmittersProgressInsteadOfReviewerOnlyDetails(String eventType) {
+        Notification item = notification(13L, NotificationCategory.REVIEW, eventType, "{}", "REVIEW", 101L);
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"),
+                org.mockito.ArgumentMatchers.eq(NotificationCategory.REVIEW),
+                org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(item)));
+        var page = controller.list("user-1", "REVIEW", 0, 20).data();
+        assertThat(page.items()).singleElement().satisfies(result -> {
+            assertThat(result.targetId()).isEqualTo(101L);
+            assertThat(result.targetRoute()).isEqualTo("/dashboard/review-progress");
+        });
+    }
+
     @Test
     void list_shouldExposeProfileReviewTargetRouteForSubmittedProfileReviewNotifications() {
         Notification notification = notification(

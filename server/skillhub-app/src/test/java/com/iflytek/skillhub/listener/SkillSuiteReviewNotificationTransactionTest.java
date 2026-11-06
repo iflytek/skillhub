@@ -1,6 +1,10 @@
 package com.iflytek.skillhub.listener;
 
 import com.iflytek.skillhub.domain.event.SkillSuiteReviewSubmittedEvent;
+import com.iflytek.skillhub.domain.event.SkillSuiteReviewCompletedEvent;
+import com.iflytek.skillhub.domain.review.ReviewTask;
+import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
@@ -45,6 +49,7 @@ class SkillSuiteReviewNotificationTransactionTest {
     @MockBean private NamespaceRepository namespaces;
     @MockBean private RecipientResolver recipients;
     @MockBean private NotificationService notifications;
+    @MockBean private ReviewTaskRepository reviewTasks;
 
     private final SkillSuiteReviewSubmittedEvent event =
             new SkillSuiteReviewSubmittedEvent(912350L, 912351L, 912352L, "author", 912353L);
@@ -89,4 +94,34 @@ class SkillSuiteReviewNotificationTransactionTest {
 
         verify(notifications, after(500).never()).create(any(), any(), any(), any(), any(), any(), any());
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.EnumSource(value = ReviewTaskStatus.class, names = {"APPROVED", "REJECTED"})
+    void committedResultNotifiesTheSubmitterOnlyAfterCommit(ReviewTaskStatus result) {
+        var completed = completed(result);
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            events.publishEvent(completed);
+            verify(notifications, never()).create(any(), any(), any(), any(), any(), any(), any());
+        });
+        verify(notifications, timeout(5000)).create(eq("author"), eq(NotificationCategory.REVIEW),
+                eq("SUITE_REVIEW_" + result), anyString(), anyString(), eq("REVIEW"), eq(912350L));
+    }
+
+    @Test
+    void rolledBackResultDoesNotNotify() {
+        var completed = completed(ReviewTaskStatus.APPROVED);
+        new TransactionTemplate(transactions).executeWithoutResult(status -> {
+            events.publishEvent(completed);
+            status.setRollbackOnly();
+        });
+        verify(notifications, after(500).never()).create(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    private SkillSuiteReviewCompletedEvent completed(ReviewTaskStatus result) {
+        ReviewTask task = ReviewTask.forSuiteVersion(912352L, 912351L, 912353L, "1.0.0", "author");
+        task.setStatus(result);
+        when(reviewTasks.findById(912350L)).thenReturn(Optional.of(task));
+        return new SkillSuiteReviewCompletedEvent(912350L, 912351L, 912352L, "author", "suite-review-admin",
+                912353L, result, "00000000-0000-0000-0000-000000912350", java.time.Instant.now());
+    }
+
 }

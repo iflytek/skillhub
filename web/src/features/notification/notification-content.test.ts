@@ -24,6 +24,23 @@ describe('resolveNotificationDisplay', () => {
     expect(display.description).not.toContain('{{')
   })
 
+  it.each([
+    ['zh', 'SUITE_REVIEW_APPROVED', '套件审核通过'],
+    ['zh', 'SUITE_REVIEW_REJECTED', '套件审核未通过'],
+    ['en', 'SUITE_REVIEW_APPROVED', 'Suite review approved'],
+    ['ko', 'SUITE_REVIEW_REJECTED', '스킬 모음 검토 반려'],
+    ['ru', 'SUITE_REVIEW_APPROVED', 'Проверка набора одобрена'],
+  ])('renders a Suite result with its submitted version in %s', (language, eventType, title) => {
+    const display = resolveNotificationDisplay({
+      id: 2, category: 'REVIEW', eventType, title: 'Server title',
+      bodyJson: JSON.stringify({ suiteName: 'Writing suite', version: '2.0.0' }),
+      status: 'UNREAD', createdAt: '2026-11-06T00:00:00Z',
+    }, language)
+    expect(display.title).toBe(title)
+    expect(display.description).toContain('Writing suite')
+    expect(display.description).toContain('2.0.0')
+  })
+
   it('renders review submitted content in Chinese', () => {
     const display = resolveNotificationDisplay({
       category: 'REVIEW',
