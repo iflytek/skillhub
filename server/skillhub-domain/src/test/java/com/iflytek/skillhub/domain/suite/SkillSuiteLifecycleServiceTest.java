@@ -1,6 +1,8 @@
 package com.iflytek.skillhub.domain.suite;
 
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.event.SkillSuiteReviewSubmittedEvent;
+import com.iflytek.skillhub.domain.event.SkillSuiteReviewCompletedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -17,8 +19,12 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
+import org.mockito.ArgumentCaptor;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -45,6 +51,7 @@ class SkillSuiteLifecycleServiceTest {
     @Mock private NamespaceRepository namespaceRepository;
     @Mock private SkillSuitePublicationValidator publicationValidator;
     @Mock private AuditLogService auditLogService;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     private SkillSuiteLifecycleService service;
     private SkillSuite suite;
@@ -55,7 +62,7 @@ class SkillSuiteLifecycleServiceTest {
         Clock clock = Clock.fixed(Instant.parse("2026-09-07T08:00:00Z"), ZoneOffset.UTC);
         service = new SkillSuiteLifecycleService(
                 suiteRepository, versionRepository, reviewTaskRepository, new ReviewPermissionChecker(), namespaceRepository,
-                publicationValidator, auditLogService, clock, true);
+                publicationValidator, auditLogService, eventPublisher, clock, true);
         suite = new SkillSuite(1L, "writers", "Writers", "author");
         version = new SkillSuiteVersion(10L, "1.0.0", SkillVisibility.PRIVATE, "author");
         setId(suite, 10L);
@@ -75,6 +82,7 @@ class SkillSuiteLifecycleServiceTest {
         verify(auditLogService).record(
                 "author", "PUBLISH_SKILL_SUITE_VERSION", "SKILL_SUITE_VERSION", 20L,
                 "request-1", "127.0.0.1", "test", null);
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
@@ -93,12 +101,17 @@ class SkillSuiteLifecycleServiceTest {
         verify(suiteRepository, never()).save(any());
     }
 
-    @Test
-    void publicDraftCreatesTypedReviewAndBecomesPending() {
-        version.setVisibility(SkillVisibility.PUBLIC);
+    @ParameterizedTest
+    @EnumSource(value = SkillVisibility.class, names = {"PUBLIC", "NAMESPACE_ONLY"})
+    void shareableDraftCreatesTypedReviewAndBecomesPending(SkillVisibility visibility) throws Exception {
+        version.setVisibility(visibility);
         stubLoaded();
         when(versionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(reviewTaskRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reviewTaskRepository.save(any())).thenAnswer(invocation -> {
+            ReviewTask task = invocation.getArgument(0);
+            setId(task, 30L);
+            return task;
+        });
 
         ReviewTask task = service.submitForReview(10L, 20L, context());
 
@@ -107,6 +120,39 @@ class SkillSuiteLifecycleServiceTest {
         assertThat(task.getSubjectId()).isEqualTo(10L);
         assertThat(task.getSubjectVersionId()).isEqualTo(20L);
         verify(publicationValidator).validateForPublication(suite, version);
+        verify(eventPublisher).publishEvent(new SkillSuiteReviewSubmittedEvent(
+                30L, 10L, 20L, "author", 1L));
+    }
+
+    @Test
+    void repeatedSubmissionDoesNotCreateAnotherReviewOrEmitAnotherNotificationEvent() {
+        version.setVisibility(SkillVisibility.NAMESPACE_ONLY);
+        version.setStatus(SkillSuiteVersionStatus.PENDING_REVIEW);
+        stubLoaded();
+
+        assertThatThrownBy(() -> service.submitForReview(10L, 20L, context()))
+                .isInstanceOf(DomainBadRequestException.class)
+                .hasMessage("error.suite.review.notDraft");
+
+        verify(reviewTaskRepository, never()).save(any());
+        verify(versionRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
+    }
+
+    @Test
+    void failedSubmissionAuditDoesNotEmitANotificationEvent() {
+        version.setVisibility(SkillVisibility.PUBLIC);
+        stubLoaded();
+        when(versionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(reviewTaskRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        doThrow(new IllegalStateException("Controlled audit failure")).when(auditLogService).record(
+                "author", "SUBMIT_SKILL_SUITE_REVIEW", "SKILL_SUITE_VERSION", 20L,
+                "request-1", "127.0.0.1", "test", null);
+
+        assertThatThrownBy(() -> service.submitForReview(10L, 20L, context()))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
@@ -123,6 +169,7 @@ class SkillSuiteLifecycleServiceTest {
         assertThat(version.getStatus()).isEqualTo(SkillSuiteVersionStatus.DRAFT);
         verify(reviewTaskRepository, never()).save(any());
         verify(versionRepository, never()).save(any());
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
@@ -141,6 +188,54 @@ class SkillSuiteLifecycleServiceTest {
         assertThat(version.getStatus()).isEqualTo(SkillSuiteVersionStatus.PUBLISHED);
         assertThat(suite.getLatestVersionId()).isEqualTo(20L);
         assertThat(task.getStatus()).isEqualTo(ReviewTaskStatus.APPROVED);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ReviewTaskStatus.class, names = {"APPROVED", "REJECTED"})
+    void completedReviewEmitsOnlyOneBoundResultForTheActualSubmitter(ReviewTaskStatus result) throws Exception {
+        version.setVisibility(SkillVisibility.PUBLIC);
+        version.setStatus(SkillSuiteVersionStatus.PENDING_REVIEW);
+        ReviewTask task = pendingReview("version-submitter");
+        stubLoaded();
+        when(reviewTaskRepository.findById(30L)).thenReturn(Optional.of(task));
+        when(reviewTaskRepository.updateStatusWithVersion(30L, result, "owner", "Decision", 1)).thenReturn(1);
+        when(versionRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        if (result == ReviewTaskStatus.APPROVED) {
+            when(suiteRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+            service.approveReview(30L, "Decision", adminContext());
+        } else {
+            service.rejectReview(30L, "Decision", adminContext());
+        }
+
+        ArgumentCaptor<SkillSuiteReviewCompletedEvent> event =
+                ArgumentCaptor.forClass(SkillSuiteReviewCompletedEvent.class);
+        verify(eventPublisher).publishEvent(event.capture());
+        assertThat(event.getValue().reviewId()).isEqualTo(30L);
+        assertThat(event.getValue().suiteId()).isEqualTo(10L);
+        assertThat(event.getValue().versionId()).isEqualTo(20L);
+        assertThat(event.getValue().namespaceId()).isEqualTo(1L);
+        assertThat(event.getValue().submitterId()).isEqualTo("version-submitter");
+        assertThat(event.getValue().reviewerId()).isEqualTo("owner");
+        assertThat(event.getValue().status()).isEqualTo(result);
+        assertThat(event.getValue().occurredAt()).isEqualTo(Instant.parse("2026-09-07T08:00:00Z"));
+        assertThat(java.util.UUID.fromString(event.getValue().eventId())).isNotNull();
+        assertThatThrownBy(() -> service.approveReview(30L, "Again", adminContext()))
+                .isInstanceOf(DomainBadRequestException.class);
+        verify(eventPublisher).publishEvent(any(SkillSuiteReviewCompletedEvent.class));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ReviewTaskStatus.class, names = {"APPROVED", "REJECTED"})
+    void failedReviewCompareAndSetDoesNotEmitAResult(ReviewTaskStatus result) throws Exception {
+        version.setVisibility(SkillVisibility.PUBLIC);
+        version.setStatus(SkillSuiteVersionStatus.PENDING_REVIEW);
+        stubLoaded();
+        when(reviewTaskRepository.findById(30L)).thenReturn(Optional.of(pendingReview("author")));
+        assertThatThrownBy(() -> {
+            if (result == ReviewTaskStatus.APPROVED) service.approveReview(30L, "Decision", adminContext());
+            else service.rejectReview(30L, "Decision", adminContext());
+        }).isInstanceOf(java.util.ConcurrentModificationException.class);
+        verify(eventPublisher, never()).publishEvent(any(Object.class));
     }
 
     @Test
@@ -210,7 +305,7 @@ class SkillSuiteLifecycleServiceTest {
     void rolloutGateRejectsTypedReviewWritesBeforeLoadingTheSuite() {
         SkillSuiteLifecycleService disabled = new SkillSuiteLifecycleService(
                 suiteRepository, versionRepository, reviewTaskRepository, new ReviewPermissionChecker(),
-                namespaceRepository, publicationValidator, auditLogService,
+                namespaceRepository, publicationValidator, auditLogService, eventPublisher,
                 Clock.systemUTC(), false);
 
         assertThatThrownBy(() -> disabled.submitForReview(10L, 20L, context()))
@@ -224,7 +319,7 @@ class SkillSuiteLifecycleServiceTest {
         version.setVisibility(SkillVisibility.PUBLIC);
         SkillSuiteLifecycleService disabled = new SkillSuiteLifecycleService(
                 suiteRepository, versionRepository, reviewTaskRepository, new ReviewPermissionChecker(),
-                namespaceRepository, publicationValidator, auditLogService,
+                namespaceRepository, publicationValidator, auditLogService, eventPublisher,
                 Clock.systemUTC(), false);
 
         Set<SkillSuiteAllowedAction> actions = disabled.allowedActions(

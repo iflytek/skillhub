@@ -3447,6 +3447,18 @@
     "days": "{{count}} д"
   },
   "notificationEvents": {
+    "SUITE_REVIEW_APPROVED": {
+      "title": "Проверка набора одобрена",
+      "description": "Проверка {{suiteName}}{{versionSuffix}} одобрена."
+    },
+    "SUITE_REVIEW_REJECTED": {
+      "title": "Проверка набора отклонена",
+      "description": "Проверка {{suiteName}}{{versionSuffix}} отклонена. Подробности доступны в ходе проверки."
+    },
+    "SUITE_REVIEW_SUBMITTED": {
+      "title": "Набор отправлен на проверку",
+      "description": "{{suiteName}}{{versionSuffix}} отправлен на проверку."
+    },
     "REVIEW_SUBMITTED": {
       "title": "Проверка отправлена",
       "description": "{{skillName}}{{versionSuffix}} отправлен на проверку."
