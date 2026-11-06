@@ -1,10 +1,43 @@
 # Docker Compose Deployment and Upgrades
 
-You do not need to deploy a server to install skills from an existing registry. Use this guide when hosting your own registry. `make dev-all` runs source development; `make staging` is for container regression testing; `compose.release.yml` is the single-server release deployment. For clusters, see [Kubernetes](kubernetes.md).
+You do not need to deploy a server to install skills from an existing registry. Use this guide when hosting your own registry. `make dev-all` runs source development; `make staging` is for container regression testing; `compose.release.yml` is the single-server release deployment. For clusters, see [Kubernetes](kubernetes.html).
+
+## One-click script deployment
+
+The existing installer does not require SMTP configuration. Registry deployment and use remain unchanged when email is disabled. Use an explicit persistent directory for a long-lived instance:
+
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up \
+  --home /opt/skillhub \
+  --public-url https://skills.example.com
+```
+
+The directory and domain are examples. The operator must have write access to the directory and access to Docker. A public URL does not configure DNS, TLS, or a reverse proxy. Record the printed **Runtime dir** and **Lifecycle commands**. Reuse those commands for the existing instance rather than changing its directory to the example. Without `--home`, the default is `${TMPDIR:-/tmp}/skillhub-runtime`, not `~/.skillhub`.
+
+The script downloads Compose and `.env.release.example`, and creates the private `.env.release` only when it does not exist. Existing SMTP credentials remain in that file. Runtime dir does not contain the repository's Makefile or validation tools; do not run the source-checkout-only `make validate-release-config` there.
+
+| Operation | Procedure | Explanation |
+|---|---|---|
+| Change SMTP or other environment settings | Edit the existing Runtime dir's `.env.release`, then repeat that instance's up command | Changed environment values require container recreation; restart alone does not reload them |
+| Update images | Keep the same home and source options, and use the target release's up command | pull downloads images without activating new containers |
+| Pin a release | Use matching published script files, `--ref`, and `--version` | ref selects GitHub deployment files; version selects image tags; neither pins both |
+| Inspect or stop | Use the printed ps, logs, and down commands | Do not add `-v` to down or use clean as a troubleshooting step |
+
+Preserve `--aliyun`, mirror/image options, and any custom Compose configuration from the original deployment. With `--aliyun`, runtime files come from OSS; `--ref` alone does not prove those files match a Git tag. Check both deployment-file sources and image versions before upgrading.
+
+### Configure business email
+
+The target release must include the [business email changes](https://github.com/iflytek/skillhub/pull/1004). Disable business email in administration before changing SMTP. Edit the existing Runtime dir's `.env.release` with the SMTP host, account/app password, port, TLS mode, and an authorized sender address. Keep file permissions at `600`; do not commit or share it. Do not copy a fresh template over existing database, storage, or mail credentials.
+
+Repeat the original up command and check backend health and SMTP configuration. A super administrator then sets the real site URL and digest window and enables business email during a coordinated verification window in **System configuration → Business email notifications**. An unverified test account can then verify its address in **Notification settings**; an already verified test account can trigger a new event to test immediate and digest delivery. Notification verification codes and business emails cannot be tested while the platform is disabled. Enabling is not recipient isolation: new events for existing eligible subscribers can also send email during that window. Disable the platform again on failure and inspect delivery status without blindly retrying UNKNOWN; after acceptance, restore test preferences and resume normal operation. Rotating SMTP credentials alone does not require all users to verify again; changing an account's email does. SMTP credentials belong to deployment configuration; persisted platform policy is managed in administration; user verification and preferences are separate. Environment edits do not replace persisted settings.
+
+The updated installer removes empty legacy `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST` overrides while preserving explicit host exceptions and certificate validation. For an older installer, remove the empty override manually before recreating the backend. Leave the variable unset by default; do not use `*`.
+
+Acceptance includes receiving a real verification code, an immediate event, a combined digest for one window, and opening email details with the receiving SkillHub account. Configuration-present indicators and healthy containers do not prove inbox delivery. Upgrades preserve private configuration; deployment seed values do not overwrite saved platform policy. See the [email operations guide (Chinese)](https://github.com/iflytek/skillhub/blob/main/docs/notification-email.md) for parameters, initial setup, rotation, disabling, and failure diagnosis.
 
 ## Configure the instance
 
-Install Docker and Docker Compose, and obtain repository files matching your target release. From the repository root:
+The following procedure is for a source checkout; one-click installations use the Runtime dir procedure above. Install Docker and Docker Compose, and obtain repository files matching your target release. From the repository root:
 
 ```bash
 cp .env.release.example .env.release
@@ -20,7 +53,7 @@ Edit `.env.release` before starting:
 | `SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET` | Generate a random value of at least 32 characters; the placeholder prevents startup |
 | `POSTGRES_PASSWORD` | Set your own database password |
 | `BOOTSTRAP_ADMIN_ENABLED` / `BOOTSTRAP_ADMIN_PASSWORD` | Decide whether to initialize an administrator; replace the example password when enabled |
-| Storage | Follow the template and the [object storage guide](https://github.com/iflytek/skillhub/blob/main/docs/object-storage.md) for external storage |
+| Storage | Follow the template and the [object storage guide (Chinese)](https://github.com/iflytek/skillhub/blob/main/docs/object-storage.md) for external storage |
 
 Do not commit or share `.env.release`. Changing an environment variable does not rotate the password of an existing database. Do not enable the `local` profile's mock authentication in a release deployment.
 
@@ -36,7 +69,7 @@ docker compose --env-file .env.release -f compose.release.yml logs --tail=100 se
 
 Resolve validation errors before starting. Backend startup runs Flyway database migrations. Open your configured public URL, sign in with your configured administrator credentials, and verify search, download, and an authorized publishing/review flow. Healthy containers alone do not prove those workflows work.
 
-Suite review writes are enabled by default in the single-server release Compose topology; Suite Bundle confirmation is disabled by default. See [Bundle import](suite-bundle.md) for enabling it. For rolling upgrades where old and new backends coexist, follow the [Suite deployment order](https://github.com/iflytek/skillhub/blob/main/docs/25-skill-suites.md).
+Suite review writes are enabled by default in the single-server release Compose topology; Suite Bundle confirmation is disabled by default. See [Bundle import](suite-bundle.html) for enabling it. For rolling upgrades where old and new backends coexist, follow the [Suite deployment order (Chinese)](https://github.com/iflytek/skillhub/blob/main/docs/25-skill-suites.md).
 
 ## CLI device authorization URL
 
@@ -59,7 +92,7 @@ docker compose --env-file .env.release -f compose.release.yml up -d --no-deps --
 
 If the original deployment uses `-p`, `COMPOSE_PROJECT_NAME`, or additional `-f` files, retain its project name, environment file and every `-f` argument in the original order. Do not copy the base command unchanged: it could target another instance or omit override settings. This only recreates the existing backend; it does not download deployment files again.
 
-Use the full `up -d` for an initial deployment. A plain `restart` does not reload container environment variables. If other shared settings changed, recreate their affected services too. To verify the device URL, retry the login command without `--token`, `SKILLHUB_TOKEN`, or saved credentials for that registry, and check the returned public URL. Successful login with an existing token does not verify the device URL. Do not share codes or tokens. See the [operations reference](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for the full configuration contract.
+Use the full `up -d` for an initial deployment. A plain `restart` does not reload container environment variables. If other shared settings changed, recreate their affected services too. To verify the device URL, retry the login command without `--token`, `SKILLHUB_TOKEN`, or saved credentials for that registry, and check the returned public URL. Successful login with an existing token does not verify the device URL. Do not share codes or tokens. See the [operations reference (Chinese)](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for the full configuration contract.
 
 ## Upgrade, stop, and troubleshoot
 
@@ -70,7 +103,7 @@ Before upgrading, record the current image version and configuration, and back u
 docker compose --env-file .env.release -f compose.release.yml down
 ```
 
-For startup failures, inspect `ps` and service logs, then check database, Redis, storage, and public URL configuration. Include image versions, redacted logs, and request IDs when reporting a problem, never credentials or `.env.release`. See the [operations reference](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for Redis, reverse proxies, collection services, and migrations.
+For startup failures, inspect `ps` and service logs, then check database, Redis, storage, and public URL configuration. Include image versions, redacted logs, and request IDs when reporting a problem, never credentials or `.env.release`. See the [operations reference (Chinese)](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for Redis, reverse proxies, collection services, and migrations.
 
 ## Configuration and acceptance checks
 

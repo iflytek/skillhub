@@ -1,6 +1,6 @@
 # SkillHub SMTP 邮箱配置指南（验证码邮件）
 
-本文说明如何为 SkillHub 配置 SMTP，用于发送“密码重置验证码”邮件。
+本页说明如何为 SkillHub 配置 SMTP，用于发送“密码重置验证码”邮件。
 
 审核、发布、订阅更新等业务邮件及通知收件验证，请另见[邮件通知接入与使用](notification-email.md)。两类邮件复用 SMTP 连接，但发件人配置、验证码用途和用户订阅相互独立。
 
@@ -10,7 +10,7 @@
 
 补充说明：
 - SMTP 本质是邮件传输协议，不是单一厂商产品。
-- 你可以使用企业邮箱、云邮箱或本地测试 SMTP 服务（例如 MailHog）作为 SMTP 服务端。
+- 可使用企业邮箱、云邮箱或本地测试 SMTP 服务（例如 MailHog）作为 SMTP 服务端。
 
 当前密码重置页面入口说明：
 - 当前前端统一使用 `/reset-password` 页面。
@@ -37,7 +37,7 @@
 说明：
 - 当前文档统一按 `465 + SSL` 配置，不再展开 `587 + STARTTLS` 方案。
 - 使用 `465` 时配置：`STARTTLS=false`、`SSL_ENABLE=true`。
-- 若出现 `PKIX path building failed` / `SSLHandshakeException`，可尝试增加 `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=<SMTP_HOST>`（本地联调常用）。
+- 若出现 `PKIX path building failed` / `SSLHandshakeException`，先检查 SMTP 证书链与 JVM 信任库；不要直接关闭 TLS 或绕过证书校验。
 - 默认不得配置 `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST`，以使用 JVM 证书信任库。旧 `.env.release` 若包含 `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST=` 空行配置，必须删除该配置行后重建后端；空字符串会导致 `Server is not trusted`，不能用它表示“使用默认信任库”。只有经过部署方确认的证书信任例外才填写明确主机名，不得填写 `*`。
 - `SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY` 支持如 `PT5M`、`PT10M`、`PT30M`。
 
@@ -102,41 +102,32 @@ SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=mailer@example.com
 SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=your-from-name
 ```
 
-## 2. 单机交付（Compose）配置步骤
+## 2. 单机交付配置步骤
 
-1. 复制环境模板（若尚未创建）：
+### 一键安装的已有实例
 
-```bash
-cp .env.release.example .env.release
-```
+1. 从安装输出找到 **Runtime dir** 和 **Lifecycle commands**。只编辑该实例 Runtime dir 中已有的 `.env.release`；不要重新复制模板，不要改用新的 `--home`。未指定目录时脚本默认 `${TMPDIR:-/tmp}/skillhub-runtime`，不是 `~/.skillhub`。
+2. 文件权限保持 `600`，按第 1 节填写 SMTP、TLS、密码或授权码，并设置获 SMTP 许可的 `SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS`。真实秘密不得放在命令参数、日志或 Git 中；不要执行 `source .env.release`。包含特殊字符的密码按 Compose `.env` 单引号字面值语法保存。
+3. 若该 SMTP 还用于业务通知，先在后台关闭业务邮件；修改现有环境的 seed 开关不会覆盖已保存的平台设置。业务邮件与通知验邮使用 `SKILLHUB_NOTIFICATION_EMAIL_FROM_ADDRESS`，不是密码重置发件人参数。
+4. 保存后重新执行该实例输出的 **up** 命令，保留原 `--home`、文件来源及镜像参数。没有单独的 SMTP 命令；不能只执行 restart 或 pull。脚本保留现存环境文件，更新配置后由 Compose 重建受影响容器；使用 ps／logs 命令核对后端状态。
+5. 在 `/reset-password` 为受控测试账号申请验证码，实际检查收件箱及垃圾邮件并验证重置流程。SMTP 已配置或容器健康不证明实际收件。密码重置不要求先开启业务邮件，也不要求用户先完成通知邮箱验邮。
+6. 同时使用业务邮件时，按[一键部署邮件接入流程](notification-email.md)先在协调窗口重新启用平台，再用未验邮测试账号验证通知验证码，或用已验邮账号触发新业务事件验证即时／摘要；不能在平台关闭时进行这些测试。既有合格订阅用户在启用期间的新事件也可能发信；失败则后台关闭，不盲目重试 UNKNOWN，测试通过后恢复测试偏好并正常开放。
 
-2. 编辑 `.env.release`，填写 SMTP 变量：
+包含本次修复的脚本会移除旧 `.env.release` 中空的 `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST`，保留明确主机例外及其他 SMTP 行。旧脚本需先更新，或手动删除该空值行后重跑 up。不要配置 `*`；正常服务端证书使用 JVM 信任库。
 
-```dotenv
-SPRING_MAIL_HOST=smtp.mail.example
-SPRING_MAIL_PORT=465
-SPRING_MAIL_USERNAME=mailer@example.com
-SPRING_MAIL_PASSWORD=your-smtp-app-password
-SPRING_MAIL_SMTP_AUTH=true
-SPRING_MAIL_SMTP_STARTTLS_ENABLE=false
-SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_ENABLE=true
+运行目录只含部署文件，不包含 Makefile 和源码检查脚本，不在该目录运行 `make validate-release-config`。固定发行时匹配已发布的脚本、`--ref` 和镜像 `--version`；使用阿里云、镜像仓库或其他选项的原实例继续保留这些选项。详细来源与升级边界见[部署运维手册](09-deployment.md)。
 
-SKILLHUB_AUTH_PASSWORD_RESET_CODE_EXPIRY=PT10M
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS=mailer@example.com
-SKILLHUB_AUTH_PASSWORD_RESET_FROM_NAME=your-from-name
-```
+### 已有源码仓库的 Compose 实例
 
-3. 重启后端容器使配置生效：
+首次准备时才复制 `.env.release.example`；已有配置文件不覆盖。编辑 SMTP 参数后，在仓库根目录执行：
 
 ```bash
-docker compose --env-file .env.release -f compose.release.yml up -d server
+make validate-release-config
+docker compose --env-file .env.release -f compose.release.yml up -d --no-deps server
+docker compose --env-file .env.release -f compose.release.yml logs --tail=100 server
 ```
 
-4. 查看后端日志确认启动正常：
-
-```bash
-docker compose --env-file .env.release -f compose.release.yml logs -f server
-```
+以上适用于未自定义项目名或 override 的已有栈；原部署若使用 `-p`、`COMPOSE_PROJECT_NAME` 或其他 `-f` 文件，必须保留全部原参数，防止操作另一实例或丢失设置。首次部署使用完整栈启动，不照抄 `--no-deps`。`restart` 不更新容器环境。配置检查输出可能带配置值，不公开粘贴完整输出。
 
 ## 3. 本地开发配置与验证
 
@@ -164,10 +155,16 @@ make dev-server
 - 必须 `source ~/.zshrc` 或重开终端后变量才会生效
 - 需要在“同一个终端”启动 `make dev-server`
 
-可先确认变量是否在当前 shell 中：
+只确认所需变量是否存在，不输出变量值：
 
 ```bash
-env | rg '^(SPRING_MAIL_|SKILLHUB_AUTH_PASSWORD_RESET_)'
+for key in SPRING_MAIL_HOST SPRING_MAIL_USERNAME SPRING_MAIL_PASSWORD SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS; do
+  if [ -n "$(printenv "$key")" ]; then
+    printf '%s: configured\n' "$key"
+  else
+    printf '%s: missing\n' "$key"
+  fi
+done
 ```
 
 ### 3.3 推荐联调方式（MailHog）
@@ -269,7 +266,13 @@ curl -X POST http://localhost:8080/api/v1/auth/local/password-reset/request \
 lsof -nP -iTCP:8080 -sTCP:LISTEN
 
 # 查看当前 shell 是否有 SMTP 环境变量
-env | rg '^(SPRING_MAIL_|SKILLHUB_AUTH_PASSWORD_RESET_)'
+for key in SPRING_MAIL_HOST SPRING_MAIL_USERNAME SPRING_MAIL_PASSWORD SKILLHUB_AUTH_PASSWORD_RESET_FROM_ADDRESS; do
+  if [ -n "$(printenv "$key")" ]; then
+    printf '%s: configured\n' "$key"
+  else
+    printf '%s: missing\n' "$key"
+  fi
+done
 ```
 
 ### 5.4 发件人被拒绝

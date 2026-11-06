@@ -1,10 +1,43 @@
 # Docker Compose 部署与升级
 
-使用已有 Registry 安装技能不需要部署服务。只有需要自托管 Registry 时才执行本页流程。源码开发使用 `make dev-all`；容器回归使用 `make staging`；正式单机交付使用 `compose.release.yml`。集群部署见 [Kubernetes](kubernetes.md)。
+使用已有 Registry 安装技能不需要部署服务。只有需要自托管 Registry 时才执行本页流程。源码开发使用 `make dev-all`；容器回归使用 `make staging`；正式单机交付使用 `compose.release.yml`。集群部署见 [Kubernetes](kubernetes.html)。
+
+## 一键脚本部署
+
+一键安装仍使用原入口，不要求先配置 SMTP；不启用邮件时，Registry 的部署和使用流程保持不变。正式实例使用固定且可持久保存的目录：
+
+```bash
+curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- up \
+  --home /opt/skillhub \
+  --public-url https://skills.example.com
+```
+
+目录与域名为示例，执行账号必须能写入目录并访问 Docker；公开地址不会自动配置 DNS、TLS 或反向代理。记录脚本输出的 **Runtime dir** 和 **Lifecycle commands**；已有实例后续使用输出的同一实例命令，不改用示例目录。不指定 `--home` 时默认目录是 `${TMPDIR:-/tmp}/skillhub-runtime`，不是 `~/.skillhub`。
+
+脚本下载 Compose 清单和 `.env.release.example`，仅在私有 `.env.release` 不存在时创建它；已有文件及 SMTP 密钥保留。该目录不包含 Makefile 和源码校验工具，不要在 Runtime dir 执行下面源码部署专用的 `make validate-release-config`。
+
+| 操作 | 执行方式 | 说明 |
+|---|---|---|
+| 修改 SMTP 或其他环境配置 | 编辑原 Runtime dir 的 `.env.release`，重跑该实例 up 命令 | 环境变化后更新容器；不能仅 restart |
+| 更新镜像 | 保留原 home 和来源参数，使用目标发行对应的 up 命令 | pull 只下载镜像，不启用新容器 |
+| 固定发行 | 使用匹配的已发布脚本、`--ref` 和 `--version` | ref 选择 GitHub 配置来源，version 选择镜像；只指定一个不构成完整固定 |
+| 查看与停止 | 使用输出的 ps、logs、down 命令 | down 不附加 `-v`；不要用 clean 作为排障步骤 |
+
+原部署使用 `--aliyun`、镜像仓库或额外 Compose 配置时，必须保留这些选项。`--aliyun` 的运行文件来自 OSS，不能仅凭 `--ref` 推定 OSS 文件已固定到某 Git tag；升级前核对实际文件来源与镜像版本。
+
+### 配置业务邮件
+
+目标发行须包含[业务邮件通知改动](https://github.com/iflytek/skillhub/pull/1004)。在后台先关闭业务邮件，再编辑原运行目录的 `.env.release`，填入 SMTP 地址、账号／授权码、端口、TLS 模式及获准发件地址；文件权限保持 `600`，不提交或分享。不要重新复制环境模板覆盖数据库、存储或邮件凭据。
+
+重跑原 up 命令后先核对健康和 SMTP 配置，再由超级管理员在 **系统配置 → 业务邮件通知** 设置真实站点地址、摘要周期，并在协调窗口受控启用；未验邮测试账号再进入 **通知设置** 验邮，已验邮测试账号直接触发新业务事件，验证即时或摘要。平台关闭时不能测试通知验证码或业务邮件；启用期间既有合格订阅用户的新事件也可能发信，并非测试账号隔离。失败则在后台关闭且不盲目重试 UNKNOWN，通过后恢复测试偏好并正常开放。仅轮换 SMTP 凭据不要求全部用户重新验邮，账号邮箱变化后才必须重新验证。SMTP 凭据属于部署配置；平台开关、周期、地址已入库后由后台管理；用户验邮及类别偏好独立管理，不能通过改环境变量替代。
+
+旧配置中的空 `SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST` 会被包含本次修复的一键脚本移除，明确主机例外保留；不关闭证书校验。仍使用旧脚本时应手动删除空覆盖再重建。默认不设置该变量，不能填写 `*`。
+
+邮件验收至少包括：真实收到验证码、即时事件收件、同窗口摘要合并、用收件账号打开邮件明细。后台显示配置存在或容器健康，均不等于实际收件成功。升级保留私有配置；已有平台设置不被部署初值覆盖。完整参数、首次配置、轮换、关闭及失败定位见[邮件运维手册](https://github.com/iflytek/skillhub/blob/main/docs/notification-email.md)。
 
 ## 准备配置
 
-需要 Docker、Docker Compose，以及与目标版本匹配的仓库文件。在仓库根目录执行：
+以下为已有源码仓库的部署方式；一键安装实例使用上一节的 Runtime dir 流程。需要 Docker、Docker Compose，以及与目标版本匹配的仓库文件。在仓库根目录执行：
 
 ```bash
 cp .env.release.example .env.release
@@ -36,7 +69,7 @@ docker compose --env-file .env.release -f compose.release.yml logs --tail=100 se
 
 校验通过后再启动。首次启动或升级时，后端会执行 Flyway 数据库迁移。访问配置的公开地址，使用自己配置的管理员凭证登录，并验证搜索、下载以及一次符合权限的发布/审核流程；容器健康不代表这些业务路径已通过。
 
-Suite 审核写入在单机 release Compose 中默认开启；Suite Bundle 确认默认关闭。需要批量导入时，按 [Bundle 导入](suite-bundle.md#部署开关)启用对应开关。滚动升级新旧后端共存时，另按[套装部署顺序](https://github.com/iflytek/skillhub/blob/main/docs/25-skill-suites.md#部署顺序)操作。
+Suite 审核写入在单机 release Compose 中默认开启；Suite Bundle 确认默认关闭。需要批量导入时，按 [Bundle 导入](suite-bundle.html#部署开关)启用对应开关。滚动升级新旧后端共存时，另按[套装部署顺序](https://github.com/iflytek/skillhub/blob/main/docs/25-skill-suites.md#部署顺序)操作。
 
 ## 升级、停止与排障
 

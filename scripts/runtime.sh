@@ -231,6 +231,57 @@ secure_env_file() {
   fi
 }
 
+# Older examples supplied an empty JavaMail trust list, which rejects SSL SMTP
+# hosts instead of selecting the JVM trust store. Preserve every nonempty value
+# and all unrelated dotenv text; never evaluate credentials as shell code.
+migrate_empty_smtp_trust_override() {
+  case "${SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST:-}" in
+    *[![:space:]]*) ;;
+    *) unset SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST ;;
+  esac
+
+  migration_umask="$(umask)"
+  umask 077
+  if migration_tmp="$(mktemp "$ENV_FILE.smtp.XXXXXX")"; then
+    :
+  else
+    migration_status=$?
+    umask "$migration_umask"
+    return "$migration_status"
+  fi
+  if awk '
+    function empty_trust(line, value, quote, tail, closing, content, rest) {
+      if (line !~ /^[[:space:]]*(export[[:space:]]+)?SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST[[:space:]]*=/)
+        return 0
+      value = line
+      sub(/^[^=]*=/, "", value)
+      sub(/^[[:space:]]*/, "", value)
+      if (value ~ /^($|#)/) return 1
+      quote = substr(value, 1, 1)
+      if (quote != "\"" && quote != sprintf("%c", 39)) return 0
+      tail = substr(value, 2)
+      closing = index(tail, quote)
+      if (!closing) return 0
+      content = substr(tail, 1, closing - 1)
+      rest = substr(tail, closing + 1)
+      return content ~ /^[[:space:]]*$/ && rest ~ /^[[:space:]]*(#.*)?$/
+    }
+    empty_trust($0) { removed = 1; next }
+    { print }
+    END { if (!removed) exit 3 }
+  ' "$ENV_FILE" >"$migration_tmp"; then
+    umask "$migration_umask"
+    mv "$migration_tmp" "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+    echo "Removed empty SMTP SSL trust override; JVM certificate verification remains enabled."
+  else
+    migration_status=$?
+    umask "$migration_umask"
+    rm -f "$migration_tmp"
+    [ "$migration_status" -eq 3 ] || return "$migration_status"
+  fi
+}
+
 get_env_value() {
   key="$1"
   default_value="${2:-}"
@@ -362,6 +413,7 @@ prepare_runtime_files() {
     umask "$old_umask"
   fi
   secure_env_file
+  migrate_empty_smtp_trust_override
 
   if [ -n "$SKILLHUB_MIRROR_REGISTRY_VALUE" ]; then
     mirror_registry="${SKILLHUB_MIRROR_REGISTRY_VALUE%/}"
