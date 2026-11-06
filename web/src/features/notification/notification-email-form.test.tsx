@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const api = vi.hoisted(() => ({ contact: vi.fn(), preferences: vi.fn(), requestCode: vi.fn(), verify: vi.fn(), updatePreferences: vi.fn() }))
@@ -19,7 +19,7 @@ function setup() {
 }
 describe('email notification preferences', () => {
   beforeEach(() => { session.userId = 'owner-a'; api.contact.mockResolvedValue(contact()); api.preferences.mockResolvedValue([{ category: 'PUBLISH', mode: 'OFF' }]); api.requestCode.mockResolvedValue(contact()); api.verify.mockResolvedValue(contact(true)); api.updatePreferences.mockResolvedValue([{ category: 'PUBLISH', mode: 'DIGEST' }]) })
-  afterEach(() => { cleanup(); vi.resetAllMocks() })
+  afterEach(() => { cleanup(); vi.useRealTimers(); vi.resetAllMocks() })
   it('lets an unverified recipient request a code and blocks non-OFF subscriptions', async () => {
     setup()
     await screen.findByText('a***@example.test')
@@ -32,6 +32,32 @@ describe('email notification preferences', () => {
     fireEvent.change(screen.getByLabelText('notificationEmail.code'), { target: { value: '123456' } })
     fireEvent.click(screen.getByRole('button', { name: 'notificationEmail.verify' }))
     await waitFor(() => expect(api.verify.mock.calls[0]?.[0]).toBe('123456'))
+  })
+  it('refreshes the server cooldown after a failed send and permits retry when it expires', async () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    api.contact.mockResolvedValueOnce(contact()).mockResolvedValue({
+      ...contact(), resendAvailableAt: new Date(Date.now() + 60000).toISOString(),
+    })
+    api.requestCode.mockRejectedValueOnce(new Error('error.notification.email.sendFailed'))
+    setup()
+    await screen.findByText('a***@example.test')
+    fireEvent.click(screen.getByRole('button', { name: 'notificationEmail.sendCode' }))
+
+    await screen.findByRole('alert')
+    const resend = await screen.findByRole('button', { name: 'notificationEmail.resendIn' })
+    expect(api.contact).toHaveBeenCalledTimes(2)
+    expect(resend.hasAttribute('disabled')).toBe(true)
+    expect(screen.queryByText('notificationEmail.codeSent')).toBeNull()
+    fireEvent.click(resend)
+    expect(api.requestCode).toHaveBeenCalledTimes(1)
+
+    act(() => vi.advanceTimersByTime(61000))
+    const retry = screen.getByRole('button', { name: 'notificationEmail.sendCode' })
+    expect(retry.hasAttribute('disabled')).toBe(false)
+    fireEvent.click(retry)
+    await screen.findByText('notificationEmail.codeSent')
+    expect(api.requestCode).toHaveBeenCalledTimes(2)
+    expect(screen.queryByRole('alert')).toBeNull()
   })
   it('honors the server resend deadline and explains unavailable platform state', async () => {
     api.contact.mockResolvedValue({ ...contact(), reason: 'DISABLED', resendAvailableAt: new Date(Date.now() + 60000).toISOString() })

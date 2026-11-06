@@ -10,7 +10,7 @@ export function useNotificationEmail() {
   const contact = useQuery({ queryKey: [...scope, 'contact'], queryFn: notificationEmailApi.contact, enabled: !!user })
   const preferences = useQuery({ queryKey: [...scope, 'preferences'], queryFn: notificationEmailApi.preferences, enabled: !!user })
   const refresh = () => client.invalidateQueries({ queryKey: scope })
-  const requestCode = useMutation({ mutationFn: notificationEmailApi.requestCode, onSuccess: refresh })
+  const requestCode = useMutation({ mutationFn: notificationEmailApi.requestCode, onSettled: refresh })
   const verify = useMutation({ mutationFn: notificationEmailApi.verify, onSuccess: refresh })
   const update = useMutation({ mutationFn: notificationEmailApi.updatePreferences, onSuccess: refresh })
   return { contact, preferences, requestCode, verify, update }
