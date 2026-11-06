@@ -2,6 +2,45 @@ import { describe, expect, it } from 'vitest'
 import { resolveNotificationDisplay } from './notification-content'
 
 describe('resolveNotificationDisplay', () => {
+  it.each([
+    ['zh-CN', '套件审核提交'],
+    ['en', 'Suite review submitted'],
+    ['ko-KR', '스킬 모음 검토 제출'],
+    ['ru', 'Набор отправлен на проверку'],
+  ])('renders a Suite submission with its own title and bound version in %s', (language, title) => {
+    const display = resolveNotificationDisplay({
+      id: 1,
+      category: 'REVIEW',
+      eventType: 'SUITE_REVIEW_SUBMITTED',
+      title: 'Suite review submitted',
+      bodyJson: JSON.stringify({ suiteName: 'Writing suite', version: '2.0.0' }),
+      status: 'UNREAD',
+      createdAt: '2026-11-05T00:00:00Z',
+    }, language)
+
+    expect(display.title).toBe(title)
+    expect(display.description).toContain('Writing suite')
+    expect(display.description).toContain('2.0.0')
+    expect(display.description).not.toContain('{{')
+  })
+
+  it.each([
+    ['zh', 'SUITE_REVIEW_APPROVED', '套件审核通过'],
+    ['zh', 'SUITE_REVIEW_REJECTED', '套件审核未通过'],
+    ['en', 'SUITE_REVIEW_APPROVED', 'Suite review approved'],
+    ['ko', 'SUITE_REVIEW_REJECTED', '스킬 모음 검토 반려'],
+    ['ru', 'SUITE_REVIEW_APPROVED', 'Проверка набора одобрена'],
+  ])('renders a Suite result with its submitted version in %s', (language, eventType, title) => {
+    const display = resolveNotificationDisplay({
+      id: 2, category: 'REVIEW', eventType, title: 'Server title',
+      bodyJson: JSON.stringify({ suiteName: 'Writing suite', version: '2.0.0' }),
+      status: 'UNREAD', createdAt: '2026-11-06T00:00:00Z',
+    }, language)
+    expect(display.title).toBe(title)
+    expect(display.description).toContain('Writing suite')
+    expect(display.description).toContain('2.0.0')
+  })
+
   it('renders review submitted content in Chinese', () => {
     const display = resolveNotificationDisplay({
       category: 'REVIEW',

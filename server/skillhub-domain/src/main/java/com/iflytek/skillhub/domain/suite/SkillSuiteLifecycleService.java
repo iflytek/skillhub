@@ -2,6 +2,8 @@ package com.iflytek.skillhub.domain.suite;
 
 import com.iflytek.skillhub.domain.audit.AuditDetail;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.event.SkillSuiteReviewSubmittedEvent;
+import com.iflytek.skillhub.domain.event.SkillSuiteReviewCompletedEvent;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -18,6 +20,7 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,7 @@ import java.util.Comparator;
 import java.util.ConcurrentModificationException;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.UUID;
 
 /** Coordinates Suite version review and publication without changing any member lifecycle. */
 @Service
@@ -41,6 +45,7 @@ public class SkillSuiteLifecycleService {
     private final NamespaceRepository namespaceRepository;
     private final SkillSuitePublicationValidator publicationValidator;
     private final AuditLogService auditLogService;
+    private final ApplicationEventPublisher eventPublisher;
     private final Clock clock;
     private final boolean reviewWritesEnabled;
 
@@ -52,6 +57,7 @@ public class SkillSuiteLifecycleService {
             NamespaceRepository namespaceRepository,
             SkillSuitePublicationValidator publicationValidator,
             AuditLogService auditLogService,
+            ApplicationEventPublisher eventPublisher,
             Clock clock,
             @Value("${skillhub.suite.review-writes-enabled}") boolean reviewWritesEnabled
     ) {
@@ -62,6 +68,7 @@ public class SkillSuiteLifecycleService {
         this.namespaceRepository = namespaceRepository;
         this.publicationValidator = publicationValidator;
         this.auditLogService = auditLogService;
+        this.eventPublisher = eventPublisher;
         this.clock = clock;
         this.reviewWritesEnabled = reviewWritesEnabled;
         if (!reviewWritesEnabled) {
@@ -91,6 +98,8 @@ public class SkillSuiteLifecycleService {
                 versionId, suiteId, loaded.suite().getNamespaceId(),
                 loaded.version().getVersion(), context.actorUserId()));
         audit(context, "SUBMIT_SKILL_SUITE_REVIEW", "SKILL_SUITE_VERSION", versionId, null);
+        eventPublisher.publishEvent(new SkillSuiteReviewSubmittedEvent(
+                task.getId(), suiteId, versionId, context.actorUserId(), loaded.suite().getNamespaceId()));
         log.info("Suite review submitted [suiteId={}, versionId={}, actorId={}, requestId={}]",
                 suiteId, versionId, context.actorUserId(), context.requestId());
         return task;
@@ -133,6 +142,10 @@ public class SkillSuiteLifecycleService {
         publish(loaded.suite(), loaded.version(), context.actorUserId());
         audit(context, "APPROVE_SKILL_SUITE_REVIEW", "REVIEW_TASK", reviewTaskId,
                 AuditDetail.of("suiteVersionId", loaded.version().getId()));
+        eventPublisher.publishEvent(new SkillSuiteReviewCompletedEvent(
+                task.getId(), loaded.suite().getId(), loaded.version().getId(), task.getSubmittedBy(),
+                context.actorUserId(), loaded.suite().getNamespaceId(), ReviewTaskStatus.APPROVED,
+                UUID.randomUUID().toString(), Instant.now(clock)));
         log.info("Suite review approved [reviewTaskId={}, suiteId={}, versionId={}, actorId={}, requestId={}]",
                 reviewTaskId, loaded.suite().getId(), loaded.version().getId(),
                 context.actorUserId(), context.requestId());
@@ -153,6 +166,10 @@ public class SkillSuiteLifecycleService {
         versionRepository.save(loaded.version());
         audit(context, "REJECT_SKILL_SUITE_REVIEW", "REVIEW_TASK", reviewTaskId,
                 AuditDetail.of("suiteVersionId", loaded.version().getId()));
+        eventPublisher.publishEvent(new SkillSuiteReviewCompletedEvent(
+                task.getId(), loaded.suite().getId(), loaded.version().getId(), task.getSubmittedBy(),
+                context.actorUserId(), loaded.suite().getNamespaceId(), ReviewTaskStatus.REJECTED,
+                UUID.randomUUID().toString(), Instant.now(clock)));
         log.info("Suite review rejected [reviewTaskId={}, suiteId={}, versionId={}, actorId={}, requestId={}]",
                 reviewTaskId, loaded.suite().getId(), loaded.version().getId(),
                 context.actorUserId(), context.requestId());

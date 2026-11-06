@@ -3723,6 +3723,18 @@
     "days": "{{count}}天"
   },
   "notificationEvents": {
+    "SUITE_REVIEW_APPROVED": {
+      "title": "套件审核通过",
+      "description": "{{suiteName}}{{versionSuffix}} 的审核已通过。"
+    },
+    "SUITE_REVIEW_REJECTED": {
+      "title": "套件审核未通过",
+      "description": "{{suiteName}}{{versionSuffix}} 的审核未通过，请查看审核进度。"
+    },
+    "SUITE_REVIEW_SUBMITTED": {
+      "title": "套件审核提交",
+      "description": "{{suiteName}}{{versionSuffix}} 已提交审核。"
+    },
     "REVIEW_SUBMITTED": {
       "title": "技能审核提交",
       "description": "{{skillName}}{{versionSuffix}} 已提交审核。"

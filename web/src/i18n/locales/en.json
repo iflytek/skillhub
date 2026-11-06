@@ -3725,6 +3725,18 @@
     "days": "{{count}}d"
   },
   "notificationEvents": {
+    "SUITE_REVIEW_APPROVED": {
+      "title": "Suite review approved",
+      "description": "The review of {{suiteName}}{{versionSuffix}} was approved."
+    },
+    "SUITE_REVIEW_REJECTED": {
+      "title": "Suite review rejected",
+      "description": "The review of {{suiteName}}{{versionSuffix}} was rejected. Check review progress for details."
+    },
+    "SUITE_REVIEW_SUBMITTED": {
+      "title": "Suite review submitted",
+      "description": "{{suiteName}}{{versionSuffix}} was submitted for review."
+    },
     "REVIEW_SUBMITTED": {
       "title": "Review submitted",
       "description": "{{skillName}}{{versionSuffix}} was submitted for review."
