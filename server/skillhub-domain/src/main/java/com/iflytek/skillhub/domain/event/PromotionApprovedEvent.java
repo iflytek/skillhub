@@ -1,10 +1,26 @@
 package com.iflytek.skillhub.domain.event;
-public record PromotionApprovedEvent(Long promotionId, Long skillId, String reviewerId, String submitterId, String eventId, java.time.Instant occurredAt) {
+
+import java.time.Instant;
+import java.util.Objects;
+import java.util.UUID;
+
+public record PromotionApprovedEvent(Long promotionId, Long skillId, String reviewerId, String submitterId,
+        BusinessEventSnapshot snapshot, String eventId, Instant occurredAt) implements SkillBusinessEvent {
     public PromotionApprovedEvent(Long promotionId, Long skillId, String reviewerId, String submitterId) {
-        this(promotionId,skillId,reviewerId,submitterId,java.util.UUID.randomUUID().toString(),java.time.Instant.now());
+        this(promotionId, skillId, reviewerId, submitterId, (BusinessEventSnapshot) null);
     }
+
+    public PromotionApprovedEvent(Long promotionId, Long skillId, String reviewerId, String submitterId, BusinessEventSnapshot snapshot) {
+        this(promotionId, skillId, reviewerId, submitterId, snapshot, UUID.randomUUID().toString(),
+                snapshot == null ? Instant.now() : snapshot.occurredAt());
+    }
+
+    public PromotionApprovedEvent(Long promotionId, Long skillId, String reviewerId, String submitterId, String eventId, Instant occurredAt) {
+        this(promotionId, skillId, reviewerId, submitterId, null, eventId, occurredAt);
+    }
+
     public PromotionApprovedEvent {
-        java.util.Objects.requireNonNull(eventId);
-        java.util.Objects.requireNonNull(occurredAt);
+        Objects.requireNonNull(eventId);
+        Objects.requireNonNull(occurredAt);
     }
 }
