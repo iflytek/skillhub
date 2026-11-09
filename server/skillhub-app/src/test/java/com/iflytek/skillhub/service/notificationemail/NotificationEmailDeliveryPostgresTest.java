@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service.notificationemail;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -22,7 +23,7 @@ import org.testcontainers.junit.jupiter.*;
 
 @Testcontainers
 class NotificationEmailDeliveryPostgresTest {
-    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
     static JdbcTemplate jdbc;
     static DataSourceTransactionManager manager;
     static TransactionTemplate tx;

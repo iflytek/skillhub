@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.db;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GithubCatalogNamespaceMigrationTest {
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine");
+            new PostgreSQLContainer<>(PostgresTestImage.name());
 
     @Test
     void newDeploymentCreatesOwnedCatalogAndSystemActor() {

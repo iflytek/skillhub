@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.repository;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.auth.merge.AccountMergeRequest;
 import com.iflytek.skillhub.auth.merge.AccountMergeRequestRepository;
@@ -61,7 +62,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class NamespaceInvitationPostgresTest {
     @Container
-    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
 
     @DynamicPropertySource
     static void postgres(DynamicPropertyRegistry registry) {

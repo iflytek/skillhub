@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.observability.business;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.event.SkillBusinessEvent;
@@ -67,7 +68,7 @@ import static org.mockito.Mockito.when;
 @org.junit.jupiter.api.Tag("process-global-otel-context")
 class BusinessLogsProducerPostgresTest {
     @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
+    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name())
             .withTmpFs(Map.of("/var/lib/postgresql/data", "rw"))
             .withCreateContainerCmdModifier(cmd -> cmd.withName("skillhub-1009-producers-postgres"));
 

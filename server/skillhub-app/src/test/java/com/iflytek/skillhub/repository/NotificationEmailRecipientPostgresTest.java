@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.repository;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -33,7 +34,7 @@ import org.testcontainers.junit.jupiter.*;
 @Testcontainers
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class NotificationEmailRecipientPostgresTest {
-    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
