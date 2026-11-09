@@ -122,8 +122,14 @@ product 只接受小写字母开头，后接小写字母、数字或下划线，
 `--ref`（或环境变量 `SKILLHUB_REF`）固定文件来源，`--version` 单独选择 SkillHub 镜像标签；两者需匹配，不能把文件版本当作镜像版本。
 `runtime.sh` 从 GitHub raw 获取 `compose.release.yml`、`.env.release.example`，在启用时获取
 `compose.release.analytics.yml`，在部署统计平台时获取 `compose.analytics-umami.yml`。
-这些文件保存在 `--home` 指定目录。使用 `--aliyun` 时镜像 OSS 根目录须同时发布两个新增 Compose 文件；
-旧版 OSS 文件集仅可运行不含统计的 `up`，不能假定 GitHub 的 `--ref` 会固定 OSS 镜像文件版本。生产环境先锁定版本、备份数据，核对管理端访问控制。
+这些文件保存在 `--home` 指定目录。新版脚本在默认 `--aliyun` 模式下，仅三个核心文件继续来自 OSS；
+两个统计 Compose 文件改为通过 `gh-proxy.org` 按 `--ref`／`SKILLHUB_REF` 下载，默认 `main`，
+不维护额外的提交或哈希清单。每次按需重新下载；代理可能有缓存，生产环境应固定已审核 tag 或提交，
+并设置匹配的镜像 `--version`。下载失败、空响应或明显格式错误即停止，保留原目标文件，不回退其他 ref。
+基础格式检查不等于完整 YAML 校验或来源真实性校验，使用代理须信任第三方。
+显式 `SKILLHUB_RAW_BASE` 及普通 GitHub raw 模式保持原有行为。
+此行为需要部署新版安装器；已发布旧 tag 的脚本不会自动改变。不能假定 GitHub 的 `--ref`
+会固定 OSS 核心文件。生产环境先锁定版本、备份数据，核对管理端访问控制。
 
 ```sh
 export SKILLHUB_REF="<包含本功能的已审核tag或提交SHA>"

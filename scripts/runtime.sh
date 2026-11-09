@@ -9,6 +9,7 @@ if [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; then
 fi
 
 SKILLHUB_REF="${SKILLHUB_REF:-main}"
+CUSTOM_RAW_BASE="${SKILLHUB_RAW_BASE:-}"
 SKILLHUB_HOME_DEFAULT="${TMPDIR:-/tmp}/skillhub-runtime"
 SKILLHUB_HOME="${SKILLHUB_HOME:-$SKILLHUB_HOME_DEFAULT}"
 SKILLHUB_VERSION_VALUE="${SKILLHUB_VERSION:-}"
@@ -217,6 +218,46 @@ download_file() {
   curl -fsSL "$src" -o "$tmp"
   mv "$tmp" "$dest"
 }
+
+download_extension_file() (
+  # Explicit custom sources and GitHub --ref retain their existing semantics.
+  if [ "$USE_ALIYUN" != true ] || [ -n "$CUSTOM_RAW_BASE" ]; then
+    download_file "$SKILLHUB_RAW_BASE/$1" "$2"
+    exit 0
+  fi
+  name="$1"
+  dest="$2"
+  case "$name" in
+    compose.release.analytics.yml|compose.analytics-umami.yml|compose.release.business-logs.yml|compose.business-logs-collector.yml|business-logs-collector.yaml) ;;
+    *) echo "Unsupported optional runtime file" >&2; exit 1 ;;
+  esac
+  url="https://gh-proxy.org/https://raw.githubusercontent.com/iflytek/skillhub/$SKILLHUB_REF/$name"
+  tmp="$(mktemp "$dest.download.XXXXXX")"
+  trap 'rm -f "$tmp"' EXIT
+  trap 'exit 1' HUP INT TERM
+  # Do not load ~/.curlrc (which could attach credentials to the proxy).
+  curl -q -fsSL --proto '=https' --proto-redir '=https' \
+    --connect-timeout 10 --max-time 30 "$url" -o "$tmp"
+  # Reject empty/error pages; this is not full YAML or authenticity validation.
+  if ! awk -v name="$name" '
+    tolower($0) ~ /<!doctype[[:space:]]+html|<html([[:space:]>]|$)/ { bad = 1 }
+    /^services:/ { services = 1 }
+    /^receivers:/ { receivers = 1 }
+    /^exporters:/ { exporters = 1 }
+    /^service:/ { service = 1 }
+    END {
+      if (name == "business-logs-collector.yaml")
+        exit !(receivers && exporters && service && !bad)
+      exit !(services && !bad)
+    }
+  ' "$tmp"; then
+    echo "Invalid optional runtime response: $name; existing file was preserved." >&2
+    exit 1
+  fi
+  # These are public templates, including a config read by a non-root Collector.
+  chmod 644 "$tmp"
+  mv "$tmp" "$dest"
+)
 
 set_env_value() {
   key="$1"
@@ -427,9 +468,9 @@ prepare_runtime_files() {
   fi
   mkdir -p "$SKILLHUB_HOME"
   download_file "$SKILLHUB_RAW_BASE/compose.release.yml" "$COMPOSE_FILE"
-  # GitHub and OSS both publish this root-level overlay; fetch only when used.
+  # Fetch the optional overlay only when used.
   if [ "$COMMAND" = "analytics-enable" ] || [ -f "$OVERLAY_FILE" ]; then
-    download_file "$SKILLHUB_RAW_BASE/compose.release.analytics.yml" "$OVERLAY_FILE"
+    download_extension_file compose.release.analytics.yml "$OVERLAY_FILE"
   fi
   download_file "$SKILLHUB_RAW_BASE/.env.release.example" "$ENV_EXAMPLE_FILE"
 
@@ -442,7 +483,7 @@ prepare_runtime_files() {
   secure_env_file
   if [ "$COMMAND" = "business-logs-enable" ] || [ "$COMMAND" = "business-logs-up" ] ||
      [ "$(get_env_value SKILLHUB_BUSINESS_LOGS_NETWORK_ENABLED false)" = "true" ]; then
-    download_file "$SKILLHUB_RAW_BASE/compose.release.business-logs.yml" "$BUSINESS_LOGS_OVERLAY_FILE"
+    download_extension_file compose.release.business-logs.yml "$BUSINESS_LOGS_OVERLAY_FILE"
   fi
   migrate_empty_smtp_trust_override
 
@@ -526,9 +567,9 @@ ensure_business_logs_network() {
 
 prepare_business_logs_files() {
   mkdir -p "$BUSINESS_LOGS_HOME"
-  # Root-level names work unchanged on both versioned GitHub raw and flat OSS.
-  download_file "$SKILLHUB_RAW_BASE/compose.business-logs-collector.yml" "$BUSINESS_LOGS_COMPOSE_FILE"
-  download_file "$SKILLHUB_RAW_BASE/business-logs-collector.yaml" "$BUSINESS_LOGS_HOME/business-logs-collector.yaml"
+  # The default Aliyun path uses the same Git ref through the optional-file proxy.
+  download_extension_file compose.business-logs-collector.yml "$BUSINESS_LOGS_COMPOSE_FILE"
+  download_extension_file business-logs-collector.yaml "$BUSINESS_LOGS_HOME/business-logs-collector.yaml"
   if [ ! -f "$BUSINESS_LOGS_ENV_FILE" ]; then
     old_umask="$(umask)"
     umask 077
@@ -621,8 +662,8 @@ run_analytics_compose() {
 
 prepare_analytics_files() {
   mkdir -p "$ANALYTICS_HOME"
-  # GitHub raw and the OSS mirror both publish files at the repository root.
-  download_file "$SKILLHUB_RAW_BASE/compose.analytics-umami.yml" "$ANALYTICS_COMPOSE_FILE"
+  # The default Aliyun path uses the same Git ref through the optional-file proxy.
+  download_extension_file compose.analytics-umami.yml "$ANALYTICS_COMPOSE_FILE"
   if [ ! -f "$ANALYTICS_ENV_FILE" ]; then
     old_umask="$(umask)"
     umask 077

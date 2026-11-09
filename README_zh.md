@@ -262,9 +262,17 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/v0.2.25/scripts/runtime.sh | sh -s -- up --ref v0.2.25 --version v0.2.25 --home /opt/skillhub --public-url https://skillhub.your-company.com
 ```
 
-此例需要能访问 GitHub raw。`--aliyun` 会改用 OSS 根目录下载部署文件，
-此时 `--ref` 不会选择版本子目录；自定义 `SKILLHUB_RAW_BASE` 也优先于按 Git ref 生成的地址，
-不能把这两种情况称为已通过 `--ref` 固定部署文件。
+此例需要能访问 GitHub raw。新版安装器在 `--aliyun` 下只从 OSS 根目录获取三个核心文件：
+`runtime.sh`、`compose.release.yml`、`.env.release.example`；五个可选统计／Collector 配置文件
+改为按需通过 `gh-proxy.org` 获取，与普通 GitHub 来源一样使用 `--ref` 或 `SKILLHUB_REF`，默认 `main`。
+修改这些模板无需同步安装器中的提交或哈希清单，也无需逐个上传 OSS。每次使用都重新下载所选 ref，
+不会因本地已有模板而跳过更新；`main` 可变，代理可能有缓存，不承诺实时取得最新提交。
+生产环境应通过 `--ref` 指定已审核 tag 或提交，并配套设置镜像 `--version`；仅指定 `--version`
+不会改变文件来源。OSS 核心文件仍不按 `--ref` 选择版本子目录，由发布方保证与所选发行兼容。
+下载失败、空响应或明显格式错误时停止可选操作，保留原目标文件，不静默回退其他 ref。
+基础格式检查不等于完整 YAML 校验或来源真实性校验；使用此模式须信任第三方代理，其可用性也不保证。
+显式指定的 `SKILLHUB_RAW_BASE` 保持原有来源行为，不走上述内置代理路径；
+不能把 OSS 核心文件或自定义来源称为已通过 `--ref` 固定。
 脚本保留已有 `.env.release`，请另行记录其中配置及显式镜像覆盖值。
 固定应用镜像标签不等于冻结全部依赖镜像，也不能代替数据库备份。
 
