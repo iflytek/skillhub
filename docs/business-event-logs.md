@@ -126,7 +126,12 @@ sh runtime.sh business-logs-ps --home "$RUNTIME_HOME" --ref "$REF" --version "$V
 
 更新 `.env.release` 后，重跑 `business-logs-enable` 应用地址、过滤或指标配置。更新 `business-logs/.env` 后，重跑 `business-logs-up` 应用下游配置。脚本保留已有文件中的密钥，不覆盖 `.env`。需要自定义 Collector 管道时，维护部署方自己的 Compose / 配置文件；脚本会更新下载的模板。
 
-`--aliyun` 使用扁平 OSS 根目录。发布流程须将上述三个新文件与原有 `runtime.sh`、`compose.release.yml`、`.env.release.example` 一起上传，版本与镜像一致。OSS 根目录不是按 Git ref 划分的版本仓库，发布方负责匹配。
+新版安装器默认 `--aliyun` 模式下，OSS 只需同步 `runtime.sh`、`compose.release.yml`、`.env.release.example`
+三个核心文件。上述三个业务日志扩展文件改为通过 `gh-proxy.org` 按脚本内置的固定提交下载，并校验内置
+SHA-256；不跟随 `main`、`--ref` 或镜像 `--version`，因此须使用与发行配套的安装器。
+下载或校验失败即停止，不接受其他版本，也不覆盖已有有效文件。普通 GitHub raw 模式和显式
+`SKILLHUB_RAW_BASE` 保持原有来源语义。此改动须分发新版安装器才生效，不改写已发布旧 tag。
+OSS 核心文件仍是扁平目录，不是按 Git ref 划分的版本仓库，发布方负责与镜像匹配。
 
 ### Produce, query and stop / 产生、查询与停止
 

@@ -296,10 +296,20 @@ template and application image tag together, use a released Git ref and tag:
 curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/v0.2.25/scripts/runtime.sh | sh -s -- up --ref v0.2.25 --version v0.2.25 --home /opt/skillhub --public-url https://skillhub.your-company.com
 ```
 
-This example uses GitHub raw and requires access to it. `--aliyun` switches runtime
-file downloads to the OSS root, where `--ref` does not select a versioned directory.
+This example uses GitHub raw and requires access to it. With the updated installer,
+`--aliyun` keeps only the three core files (`runtime.sh`, `compose.release.yml`, and
+`.env.release.example`) on the OSS root. The five optional analytics/Collector
+configuration files are fetched on demand through `gh-proxy.org`, from the immutable
+commit and SHA-256 digests bundled in the installer. They do not follow `main`,
+`--ref`, or the image `--version`. Use the installer matching your release; update
+its bundled reference and digests when changing these optional templates.
+OSS core files are still not versioned by `--ref`. The third-party proxy is not
+an availability guarantee: an unavailable source or failed checksum stops the
+optional operation rather than accepting another version or overwriting a valid file.
 Likewise, a custom `SKILLHUB_RAW_BASE` takes precedence over the Git-ref URL.
-Neither should be described as pinning deployment files with `--ref`.
+The explicit custom source retains its existing behavior and does not use the
+bundled proxy path. Neither OSS core files nor an explicit custom source should
+be described as pinned by `--ref`.
 The script preserves an existing `.env.release`; record its settings and explicit
 image overrides separately. Pinning the application tag does not freeze every
 dependency image or replace a database backup.

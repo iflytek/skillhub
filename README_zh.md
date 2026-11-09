@@ -262,9 +262,15 @@ curl -fsSL https://imageless.oss-cn-beijing.aliyuncs.com/runtime.sh | sh -s -- u
 curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/v0.2.25/scripts/runtime.sh | sh -s -- up --ref v0.2.25 --version v0.2.25 --home /opt/skillhub --public-url https://skillhub.your-company.com
 ```
 
-此例需要能访问 GitHub raw。`--aliyun` 会改用 OSS 根目录下载部署文件，
-此时 `--ref` 不会选择版本子目录；自定义 `SKILLHUB_RAW_BASE` 也优先于按 Git ref 生成的地址，
-不能把这两种情况称为已通过 `--ref` 固定部署文件。
+此例需要能访问 GitHub raw。新版安装器在 `--aliyun` 下只从 OSS 根目录获取三个核心文件：
+`runtime.sh`、`compose.release.yml`、`.env.release.example`；五个可选统计／Collector 配置文件
+改为按需通过 `gh-proxy.org` 获取，使用安装器内置的固定提交和 SHA-256 校验值，
+不跟随 `main`、`--ref` 或镜像 `--version`。请使用与发行配套的安装器；维护者修改这些可选模板时，
+须同步更新安装器内置的提交与哈希。无需逐个向 OSS 上传这些扩展文件。
+OSS 核心文件仍不按 `--ref` 选择版本子目录。第三方代理不保证长期可用；下载或校验失败时
+停止可选操作，不接受其他版本，也不覆盖已有有效文件。
+显式指定的 `SKILLHUB_RAW_BASE` 保持原有来源行为，不走上述内置代理路径；
+不能把 OSS 核心文件或自定义来源称为已通过 `--ref` 固定。
 脚本保留已有 `.env.release`，请另行记录其中配置及显式镜像覆盖值。
 固定应用镜像标签不等于冻结全部依赖镜像，也不能代替数据库备份。
 
