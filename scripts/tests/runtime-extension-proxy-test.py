@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""Offline runtime distribution and checksum boundaries; never start services."""
-import hashlib
+"""Offline runtime distribution and failure boundaries; never start services."""
 import json
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-REF = "929f3f1b34a2ddd1739b8ba36715ae34e34173b3"
 FILES = ["compose.release.analytics.yml", "compose.analytics-umami.yml",
          "compose.release.business-logs.yml", "compose.business-logs-collector.yml",
          "business-logs-collector.yaml"]
@@ -36,9 +33,16 @@ name=url.rsplit('/',1)[-1]
 if url.startswith('https://gh-proxy.org/') and name==os.environ.get('FAIL_NAME',name):
  mode=os.environ.get('MODE','good')
  if mode in ('404','timeout'):raise SystemExit(22 if mode=='404' else 28)
- if mode in ('html','tampered'):
-  dest.write_text('<html>200 fallback</html>' if mode=='html' else 'tampered');raise SystemExit(0)
-dest.write_bytes((pathlib.Path(os.environ['FIXTURE_ROOT'])/name).read_bytes())
+ responses={'html':'<!DOCTYPE HTML><HTML>200 fallback</HTML>', 'empty':'',
+            'whitespace':'  \\n\\t\\n', 'invalid':'not a configuration',
+            'partial':'receivers: {}\\nexporters: {}\\n',
+            'html-with-keys':'<html>error\\nservices: {}\\nreceivers: {}\\nexporters: {}\\nservice: {}\\n</html>'}
+ if mode in responses:
+  dest.write_text(responses[mode]);raise SystemExit(0)
+data=(pathlib.Path(os.environ['FIXTURE_ROOT'])/name).read_bytes()
+if url.startswith('https://gh-proxy.org/'):
+ data+=('\\n# upstream revision '+os.environ.get('REVISION','original')+'\\n').encode()
+dest.write_bytes(data)
 """)
         self.env = dict(os.environ, PATH=str(self.bin) + os.pathsep + os.environ["PATH"],
                         CALLS=str(self.log), FIXTURE_ROOT=str(ROOT))
@@ -62,7 +66,8 @@ dest.write_bytes((pathlib.Path(os.environ['FIXTURE_ROOT'])/name).read_bytes())
         return [json.loads(line) for line in self.log.read_text().splitlines()]
 
     def test_all_optional_files_and_core_sources(self):
-        self.run_runtime("analytics-up", "--aliyun", "--ref", "fixture-ignored-ref")
+        self.env["SKILLHUB_REF"] = "fixture-ref"
+        self.run_runtime("analytics-up", "--aliyun")
         self.run_runtime("analytics-enable", "--aliyun", "--website-id",
                          "4398de8e-40df-4483-9eea-ed213643525f")
         directory = self.home / "business-logs"
@@ -74,7 +79,7 @@ dest.write_bytes((pathlib.Path(os.environ['FIXTURE_ROOT'])/name).read_bytes())
         self.run_runtime("business-logs-up", "--aliyun")
         urls = [c["url"] for c in self.calls() if "url" in c]
         for name in FILES:
-            self.assertIn(f"https://gh-proxy.org/https://raw.githubusercontent.com/iflytek/skillhub/{REF}/{name}", urls)
+            self.assertIn(f"https://gh-proxy.org/https://raw.githubusercontent.com/iflytek/skillhub/fixture-ref/{name}", urls)
         for name in ["compose.release.yml", ".env.release.example"]:
             self.assertIn("https://imageless.oss-cn-beijing.aliyuncs.com/" + name, urls)
         for call in self.calls():
@@ -83,6 +88,20 @@ dest.write_bytes((pathlib.Path(os.environ['FIXTURE_ROOT'])/name).read_bytes())
                 for option in ["--proto", "--proto-redir", "--connect-timeout", "--max-time"]:
                     self.assertIn(option, call["args"])
                 self.assertNotIn("-H", call["args"])
+
+    def test_proxy_ref_defaults_environment_cli_and_image_version(self):
+        for index, (args, extra, ref) in enumerate([
+                ([], {}, "main"),
+                (["--version", "v0.2.26"], {}, "main"),
+                ([], {"SKILLHUB_REF": "fixture-env-ref"}, "fixture-env-ref"),
+                (["--ref", "fixture-cli-ref", "--version", "v0.2.26"],
+                 {"SKILLHUB_REF": "fixture-env-ref"}, "fixture-cli-ref")]):
+            with self.subTest(ref=ref, args=args):
+                self.home = self.work / f"ref-{index}"
+                self.log.write_text("")
+                self.run_runtime("analytics-up", "--aliyun", *args, extra=extra)
+                self.assertIn(f"https://gh-proxy.org/https://raw.githubusercontent.com/iflytek/skillhub/{ref}/compose.analytics-umami.yml",
+                              [c.get("url") for c in self.calls()])
 
     def test_default_install_never_fetches_optional_files(self):
         self.run_runtime("up", "--aliyun")
@@ -98,7 +117,7 @@ dest.write_bytes((pathlib.Path(os.environ['FIXTURE_ROOT'])/name).read_bytes())
         self.assertFalse(any(c.get("url", "").startswith("https://gh-proxy.org/") for c in self.calls()))
 
     def test_failures_preserve_old_file_and_clean_temporary_download(self):
-        for mode in ["404", "timeout", "html", "tampered"]:
+        for mode in ["404", "timeout", "html", "empty", "whitespace", "invalid", "html-with-keys"]:
             with self.subTest(mode=mode):
                 directory = self.home / "analytics"
                 directory.mkdir(parents=True, exist_ok=True)
@@ -108,22 +127,30 @@ dest.write_bytes((pathlib.Path(os.environ['FIXTURE_ROOT'])/name).read_bytes())
                 self.run_runtime("analytics-up", "--aliyun", mode=mode, success=False)
                 self.assertEqual(dest.read_bytes(), b"original operator file\n")
                 self.assertEqual(list(directory.glob("*.download.*")), [])
-                self.assertFalse(any(c.get("docker", [""])[0] != "compose" for c in self.calls() if "docker" in c))
-                self.assertFalse(any("up" in c.get("docker", []) for c in self.calls()))
+                self.assert_no_docker_mutation()
 
-    def test_verified_cache_and_embedded_hash_drift(self):
+    def test_updated_templates_are_redownloaded_without_runtime_changes(self):
+        script_before = (ROOT / "scripts/runtime.sh").read_bytes()
         self.run_runtime("analytics-up", "--aliyun")
-        cache = self.home / "analytics/compose.analytics-umami.yml"
-        cache.chmod(0o600)
+        dest = self.home / "analytics/compose.analytics-umami.yml"
+        before = dest.read_bytes()
+        dest.chmod(0o600)
         self.log.write_text("")
-        self.run_runtime("analytics-up", "--aliyun", mode="timeout")
-        self.assertFalse(any(c.get("url", "").startswith("https://gh-proxy.org/") for c in self.calls()))
-        self.assertEqual(cache.stat().st_mode & 0o777, 0o644)
-        script = (ROOT / "scripts/runtime.sh").read_text()
-        for name in FILES:
-            digest = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-            self.assertIn(name + ") echo " + digest, script)
-        self.assertIn("extension_ref=" + REF, script)
+        self.run_runtime("analytics-up", "--aliyun", extra={"REVISION": "updated"})
+        self.assertTrue(any(c.get("url", "").startswith("https://gh-proxy.org/") for c in self.calls()))
+        self.assertNotEqual(dest.read_bytes(), before)
+        self.assertIn(b"# upstream revision updated", dest.read_bytes())
+        self.assertEqual(dest.stat().st_mode & 0o777, 0o644)
+        self.assertEqual((ROOT / "scripts/runtime.sh").read_bytes(), script_before)
+        self.log.write_text("")
+        updated = dest.read_bytes()
+        self.run_runtime("analytics-up", "--aliyun", mode="timeout", success=False)
+        self.assertEqual(dest.read_bytes(), updated)
+        self.assert_no_docker_mutation()
+
+    def assert_no_docker_mutation(self):
+        self.assertTrue(all(c["docker"] == ["compose", "version"]
+                            for c in self.calls() if "docker" in c))
 
     def test_each_optional_failure_stops_before_docker_mutation(self):
         for index, name in enumerate(FILES):
@@ -141,44 +168,11 @@ dest.write_bytes((pathlib.Path(os.environ['FIXTURE_ROOT'])/name).read_bytes())
                 dest.parent.mkdir(parents=True)
                 dest.write_bytes(b"keep previous configuration\n")
                 self.log.write_text("")
-                self.run_runtime(command, "--aliyun", mode="tampered",
+                self.run_runtime(command, "--aliyun", mode="partial",
                                  extra={"FAIL_NAME": name}, success=False)
                 self.assertEqual(dest.read_bytes(), b"keep previous configuration\n")
                 self.assertEqual(list(self.home.rglob("*.download.*")), [])
-                self.assertTrue(all(c["docker"] == ["compose", "version"]
-                                    for c in self.calls() if "docker" in c))
-
-    def test_portable_hash_and_missing_verifier(self):
-        script = (ROOT / "scripts/runtime.sh").read_text()
-        helpers = "extension_sha256()" + script.split("extension_sha256()", 1)[1].split("\nset_env_value()", 1)[0]
-        probe = self.work / "probe.sh"
-        probe.write_text("#!/bin/sh\nset -eu\n" + helpers + '\nfile_sha256 "$1"\n')
-        isolated = self.work / "hash-bin"
-        isolated.mkdir()
-        (isolated / "shasum").symlink_to(shutil.which("shasum"))
-        (isolated / "cut").symlink_to(shutil.which("cut"))
-        source = ROOT / FILES[0]
-        env = dict(self.env, PATH=str(isolated))
-        result = subprocess.run(["/bin/sh", str(probe), str(source)], env=env,
-                                capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(result.stdout.strip(), hashlib.sha256(source.read_bytes()).hexdigest())
-        (isolated / "shasum").unlink()
-        result = subprocess.run(["/bin/sh", str(probe), str(source)], env=env,
-                                capture_output=True, text=True)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("require sha256sum or shasum", result.stderr)
-        probe.write_text("#!/bin/sh\nset -eu\n" + helpers +
-                         '\nUSE_ALIYUN=true\nCUSTOM_RAW_BASE=\n'
-                         'download_extension_file compose.analytics-umami.yml "$1"\n')
-        dest = self.work / "preserved.yml"
-        dest.write_text("original\n")
-        result = subprocess.run(["/bin/sh", str(probe), str(dest)], env=env,
-                                capture_output=True, text=True)
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("require sha256sum or shasum", result.stderr)
-        self.assertEqual(dest.read_text(), "original\n")
-        self.assertFalse(self.log.exists())
+                self.assert_no_docker_mutation()
 
 
 if __name__ == "__main__":

@@ -299,16 +299,22 @@ curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/v0.2.25/scripts/ru
 This example uses GitHub raw and requires access to it. With the updated installer,
 `--aliyun` keeps only the three core files (`runtime.sh`, `compose.release.yml`, and
 `.env.release.example`) on the OSS root. The five optional analytics/Collector
-configuration files are fetched on demand through `gh-proxy.org`, from the immutable
-commit and SHA-256 digests bundled in the installer. They do not follow `main`,
-`--ref`, or the image `--version`. Use the installer matching your release; update
-its bundled reference and digests when changing these optional templates.
-OSS core files are still not versioned by `--ref`. The third-party proxy is not
-an availability guarantee: an unavailable source or failed checksum stops the
-optional operation rather than accepting another version or overwriting a valid file.
+configuration files are fetched on demand through `gh-proxy.org`, using `--ref`
+(or `SKILLHUB_REF`, default `main`), just like the ordinary GitHub source. There is
+no installer-side commit or checksum list to update when editing these templates.
+Every use downloads the selected ref again; `main` is mutable and proxy caching
+means it is not guaranteed to reflect the latest commit immediately. For production,
+select a reviewed release tag or commit with `--ref` and a matching image `--version`.
+OSS core files are still not versioned by `--ref`; the publisher must keep them
+compatible with the chosen release. `--version` alone does not select a file ref.
+Download failures, empty responses and obvious wrong-format responses stop the optional
+operation without replacing the existing destination. This basic format check is
+not full YAML validation or cryptographic source verification: using the proxy
+requires trusting that third party. Availability is not guaranteed, and there is
+no silent fallback to another ref.
 Likewise, a custom `SKILLHUB_RAW_BASE` takes precedence over the Git-ref URL.
 The explicit custom source retains its existing behavior and does not use the
-bundled proxy path. Neither OSS core files nor an explicit custom source should
+default proxy path. Neither OSS core files nor an explicit custom source should
 be described as pinned by `--ref`.
 The script preserves an existing `.env.release`; record its settings and explicit
 image overrides separately. Pinning the application tag does not freeze every

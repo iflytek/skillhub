@@ -219,30 +219,6 @@ download_file() {
   mv "$tmp" "$dest"
 }
 
-# Bundled optional configuration lock. When these files change, update the
-# immutable source revision and all five hashes together (checked by tests).
-extension_sha256() {
-  case "$1" in
-    compose.release.analytics.yml) echo 994b6b8eaa7736100a43761ad54a85588f67563b2412901f9ad3225c32760353 ;;
-    compose.analytics-umami.yml) echo 5546f9a61edbf98a3e77e810409b2dab80f9a64c4dc85fc9a4e64802c4579aee ;;
-    compose.release.business-logs.yml) echo 13c56df432e5914d1f5a0123cfc9dbdab0ffcad4ea64aa6aa3c15587c2e7759e ;;
-    compose.business-logs-collector.yml) echo 1172b03df0fcf2576e4b7f995c7f88f7fa3067baccb3ec7ffbce0f8747c084db ;;
-    business-logs-collector.yaml) echo 76e382a298539a6877ffbce79ea4ec5b545d1355818acdcbd1b9a68be09df50b ;;
-    *) echo "Unsupported optional runtime file" >&2; return 1 ;;
-  esac
-}
-
-file_sha256() {
-  if command -v sha256sum >/dev/null 2>&1; then
-    sha256sum "$1" | cut -d ' ' -f 1
-  elif command -v shasum >/dev/null 2>&1; then
-    shasum -a 256 "$1" | cut -d ' ' -f 1
-  else
-    echo "Optional runtime downloads require sha256sum or shasum." >&2
-    return 1
-  fi
-}
-
 download_extension_file() (
   # Explicit custom sources and GitHub --ref retain their existing semantics.
   if [ "$USE_ALIYUN" != true ] || [ -n "$CUSTOM_RAW_BASE" ]; then
@@ -251,27 +227,31 @@ download_extension_file() (
   fi
   name="$1"
   dest="$2"
-  expected="$(extension_sha256 "$name")"
-  if [ ! -L "$dest" ] && [ -f "$dest" ] && [ "$(file_sha256 "$dest")" = "$expected" ]; then
-    chmod 644 "$dest"
-    exit 0
-  fi
-  # Fail before contacting a third party when no local verifier is available.
-  if ! command -v sha256sum >/dev/null 2>&1 && ! command -v shasum >/dev/null 2>&1; then
-    echo "Optional runtime downloads require sha256sum or shasum." >&2
-    exit 1
-  fi
-  extension_ref=929f3f1b34a2ddd1739b8ba36715ae34e34173b3
-  url="https://gh-proxy.org/https://raw.githubusercontent.com/iflytek/skillhub/$extension_ref/$name"
+  case "$name" in
+    compose.release.analytics.yml|compose.analytics-umami.yml|compose.release.business-logs.yml|compose.business-logs-collector.yml|business-logs-collector.yaml) ;;
+    *) echo "Unsupported optional runtime file" >&2; exit 1 ;;
+  esac
+  url="https://gh-proxy.org/https://raw.githubusercontent.com/iflytek/skillhub/$SKILLHUB_REF/$name"
   tmp="$(mktemp "$dest.download.XXXXXX")"
   trap 'rm -f "$tmp"' EXIT
   trap 'exit 1' HUP INT TERM
   # Do not load ~/.curlrc (which could attach credentials to the proxy).
   curl -q -fsSL --proto '=https' --proto-redir '=https' \
     --connect-timeout 10 --max-time 30 "$url" -o "$tmp"
-  actual="$(file_sha256 "$tmp")"
-  if [ "$actual" != "$expected" ]; then
-    echo "Checksum mismatch for optional runtime file: $name; existing file was preserved." >&2
+  # Reject empty/error pages; this is not full YAML or authenticity validation.
+  if ! awk -v name="$name" '
+    tolower($0) ~ /<!doctype[[:space:]]+html|<html([[:space:]>]|$)/ { bad = 1 }
+    /^services:/ { services = 1 }
+    /^receivers:/ { receivers = 1 }
+    /^exporters:/ { exporters = 1 }
+    /^service:/ { service = 1 }
+    END {
+      if (name == "business-logs-collector.yaml")
+        exit !(receivers && exporters && service && !bad)
+      exit !(services && !bad)
+    }
+  ' "$tmp"; then
+    echo "Invalid optional runtime response: $name; existing file was preserved." >&2
     exit 1
   fi
   # These are public templates, including a config read by a non-root Collector.
@@ -587,7 +567,7 @@ ensure_business_logs_network() {
 
 prepare_business_logs_files() {
   mkdir -p "$BUSINESS_LOGS_HOME"
-  # The default Aliyun path uses the verified optional configuration lock.
+  # The default Aliyun path uses the same Git ref through the optional-file proxy.
   download_extension_file compose.business-logs-collector.yml "$BUSINESS_LOGS_COMPOSE_FILE"
   download_extension_file business-logs-collector.yaml "$BUSINESS_LOGS_HOME/business-logs-collector.yaml"
   if [ ! -f "$BUSINESS_LOGS_ENV_FILE" ]; then
@@ -682,7 +662,7 @@ run_analytics_compose() {
 
 prepare_analytics_files() {
   mkdir -p "$ANALYTICS_HOME"
-  # The default Aliyun path uses the verified optional configuration lock.
+  # The default Aliyun path uses the same Git ref through the optional-file proxy.
   download_extension_file compose.analytics-umami.yml "$ANALYTICS_COMPOSE_FILE"
   if [ ! -f "$ANALYTICS_ENV_FILE" ]; then
     old_umask="$(umask)"
