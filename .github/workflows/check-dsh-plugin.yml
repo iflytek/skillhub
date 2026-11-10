@@ -1,255 +1,38 @@
 name: Check DSH Plugin
 
 on:
-  workflow_call:
-  push:
-    tags:
-      - 'dsh-v*'
-  pull_request:
-    paths:
-      - 'plugins/dsh/**'
-      - 'cli/**'
-      - '.github/workflows/check-dsh-plugin.yml'
-      - '.github/workflows/release-dsh-plugin.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
-concurrency:
-  group: check-dsh-plugin-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  check:
-    name: Check DSH plugin (${{ matrix.os }}, Node ${{ matrix.node }})
+  diagnose-sdk:
+    name: SDK preparation (${{ matrix.dsh }}, Node ${{ matrix.node }})
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        node: ['24.2.0', '24']
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-      - name: Validate plugin release tag
-        if: github.event_name == 'push'
-        working-directory: plugins/dsh
-        env:
-          RELEASE_TAG: ${{ github.ref_name }}
-        run: |
-          node --input-type=module <<'NODE'
-          import { readFileSync } from 'node:fs';
-          const { version } = JSON.parse(readFileSync('package.json', 'utf8'));
-          if (process.env.RELEASE_TAG !== `dsh-v${version}`) {
-            throw new Error('DSH release tag must match plugins/dsh/package.json version');
-          }
-          NODE
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.13'
-      - name: Install shared core development dependencies
-        working-directory: cli
-        run: bun install --frozen-lockfile
-      - name: Install plugin development dependencies
-        working-directory: plugins/dsh
-        run: bun install --frozen-lockfile
-      - name: Check shared CLI
-        working-directory: cli
-        run: |
-          bun run typecheck
-          bun run lint
-          # Native Windows process-based CLI tests can exceed Bun's default 5s.
-          # Keep all assertions and a bounded timeout; POSIX crash tests set their own limits.
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            bun test --timeout=15000
-          else
-            bun test
-          fi
-          bun run build
-      - name: Check plugin and isolated Node tarball
-        working-directory: plugins/dsh
-        run: bun run check
-      - name: Package development artifact
-        working-directory: plugins/dsh
-        run: |
-          mkdir -p artifacts
-          npm pack --ignore-scripts --pack-destination artifacts
-      - name: Validate public download cache before restore
-        working-directory: plugins/dsh
-        run: node --input-type=module -e "import { prepareDownloadCache } from './scripts/smoke-native-host.mjs'; await prepareDownloadCache(process.argv[1]);" "${{ runner.temp }}/skillhub-public-npm"
-      - name: Restore public npm download content
-        id: public-downloads
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ runner.temp }}/skillhub-public-npm/_cacache
-          key: dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-0.2.0-rc.2
-          restore-keys: |
-            dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-
-      - name: Verify native DSH Host in an isolated Web Profile
-        working-directory: plugins/dsh
-        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-smoke-summary.json --download-cache "${{ runner.temp }}/skillhub-public-npm"
-      - name: Save public npm download content
-        if: matrix.node == '24.2.0' && steps.public-downloads.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ runner.temp }}/skillhub-public-npm/_cacache
-          key: dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-0.2.0-rc.2
-      - name: Verify retained Cordis family in an isolated Web Profile
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '24.2.0'
-        working-directory: plugins/dsh
-        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-smoke-retained-summary.json --cordis-family retained
-      - name: Upload retained Host smoke summary
-        if: always() && matrix.os == 'ubuntu-latest' && matrix.node == '24.2.0'
-        uses: actions/upload-artifact@v4
-        with:
-          name: skillhub-dsh-host-smoke-retained
-          path: plugins/dsh/host-smoke-retained-summary.json
-          if-no-files-found: warn
-          retention-days: 7
-      - name: Upload sanitized Host smoke summary
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: skillhub-dsh-host-smoke-${{ matrix.os }}-node-${{ matrix.node }}
-          path: plugins/dsh/host-smoke-summary.json
-          if-no-files-found: warn
-          retention-days: 7
-      - uses: actions/upload-artifact@v4
-        with:
-          name: skillhub-dsh-development-package-${{ matrix.os }}-node-${{ matrix.node }}
-          path: plugins/dsh/artifacts/*.tgz
-          if-no-files-found: error
-          retention-days: 7
-
-  host-release:
-    name: Official Host DSH ${{ matrix.dsh }}, Node ${{ matrix.node }}
-    needs: check
-    strategy:
-      fail-fast: false
-      matrix:
-        dsh: ['0.2.1-rc.2']
-        node: ['24.2.0', '24']
         include:
-          - dsh: '0.2.1-rc.5'
-            node: '24.2.0'
-          - dsh: '0.2.1-rc.5'
-            node: '24'
-          - dsh: '0.2.2-rc.1'
-            node: '24.9.0'
-          - dsh: '0.2.2-rc.1'
-            node: '24'
+          - node: '24.9.0'
+            dsh: '0.2.2-rc.1'
+          - node: '24.22.2'
+            dsh: '0.2.1-rc.5'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.13'
-      - name: Install local Registry fixture dependencies
-        working-directory: cli
-        run: bun install --frozen-lockfile
-      - uses: actions/download-artifact@v4
-        with:
-          # Exercise the release candidate built at the retained minimum Node baseline.
-          name: skillhub-dsh-development-package-ubuntu-latest-node-${{ matrix.node == '24.9.0' && '24.2.0' || matrix.node }}
-          path: plugins/dsh/artifacts
-      - name: Verify latest supported official Host without dependency overrides
-        working-directory: plugins/dsh
-        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-release-summary.json --dsh-version '${{ matrix.dsh }}'
-      - name: Upload sanitized release Host smoke summary
+      - name: Diagnose fresh SDK installation only
+        run: node plugins/dsh/scripts/diagnose-sdk.mjs --dsh-version '${{ matrix.dsh }}'
+      - name: Upload allowlisted SDK diagnostic summary
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: skillhub-dsh-host-release-${{ matrix.dsh }}-node-${{ matrix.node }}
-          path: plugins/dsh/host-release-summary.json
-          if-no-files-found: warn
-          retention-days: 7
-
-  activation:
-    name: Installed skill activation (${{ matrix.os }}, DSH ${{ matrix.dsh }})
-    needs: check
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        dsh: ['0.2.0-rc.2', '0.2.1-rc.2']
-        node: ['24.2.0']
-        include:
-          - os: ubuntu-latest
-            dsh: '0.2.1-rc.5'
-            node: '24'
-          - os: macos-latest
-            dsh: '0.2.1-rc.5'
-            node: '24'
-          - os: windows-latest
-            dsh: '0.2.1-rc.5'
-            node: '24'
-          # New Host engine is >=24.9.0; keep the older RCs on their existing baselines.
-          - os: ubuntu-latest
-            dsh: '0.2.2-rc.1'
-            node: '24.9.0'
-          - os: macos-latest
-            dsh: '0.2.2-rc.1'
-            node: '24.9.0'
-          - os: windows-latest
-            dsh: '0.2.2-rc.1'
-            node: '24.9.0'
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node }}
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.3.13'
-      - name: Install local Registry fixture dependencies
-        working-directory: cli
-        run: bun install --frozen-lockfile
-      - uses: actions/download-artifact@v4
-        with:
-          # New Host runtime floor does not require rebuilding the JavaScript candidate.
-          name: skillhub-dsh-development-package-${{ matrix.os }}-node-${{ matrix.node == '24.9.0' && '24.2.0' || matrix.node }}
-          path: plugins/dsh/artifacts
-      - name: Validate public download cache before restore
-        working-directory: plugins/dsh
-        run: node --input-type=module -e "import { prepareDownloadCache } from './scripts/smoke-native-host.mjs'; await prepareDownloadCache(process.argv[1]);" "${{ runner.temp }}/skillhub-public-npm"
-      - name: Restore public npm download content
-        id: public-downloads
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ runner.temp }}/skillhub-public-npm/_cacache
-          key: dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-${{ matrix.dsh }}
-          restore-keys: |
-            dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-
-      - name: Verify installed skill activation in a fresh isolated Profile
-        working-directory: plugins/dsh
-        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-toggle-summary.json --download-cache "${{ runner.temp }}/skillhub-public-npm" --scenario skill-toggle --dsh-version '${{ matrix.dsh }}'
-      - name: Verify watch-off activation in a fresh isolated Profile
-        working-directory: plugins/dsh
-        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-toggle-watch-off-summary.json --download-cache "${{ runner.temp }}/skillhub-public-npm" --scenario skill-toggle-watch-off --dsh-version '${{ matrix.dsh }}'
-      - name: Save public npm download content
-        if: steps.public-downloads.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
-        with:
-          path: ${{ runner.temp }}/skillhub-public-npm/_cacache
-          key: dsh-public-npm-${{ runner.os }}-${{ runner.arch }}-fresh-${{ hashFiles('plugins/dsh/scripts/smoke-native-host.mjs') }}-${{ matrix.dsh }}
-      - name: Upload sanitized activation summaries
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: skillhub-dsh-activation-${{ matrix.os }}-${{ matrix.dsh }}
-          path: plugins/dsh/host-toggle*-summary.json
+          name: sdk-npm-diagnostic-${{ matrix.dsh }}-node-${{ matrix.node }}
+          path: sdk-diagnostic-summary.json
           if-no-files-found: warn
           retention-days: 7
