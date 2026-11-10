@@ -39,6 +39,46 @@ export async function withRenamedAvailabilityPath(checkpoint, from, to, inspect,
   }
 }
 
+/** File commit and official watcher discovery are independent; wait only on read-only observations. */
+export async function waitForAvailabilityWinner(read, directory, signal, { timeoutMs = 15000, pollMs = 100 } = {}) {
+  signal.throwIfAborted();
+  const timeout = Object.assign(new Error('Official Host discovery did not select the installed fixture before the deadline.'), { code: 'DISCOVERY_TIMEOUT' });
+  const deadline = Date.now() + timeoutMs;
+  const bounded = new AbortController();
+  const cancel = () => bounded.abort(signal.reason);
+  signal.addEventListener('abort', cancel, { once: true });
+  const timer = setTimeout(() => bounded.abort(timeout), timeoutMs);
+  const valid = () => {
+    if (Date.now() >= deadline) bounded.abort(timeout);
+    bounded.signal.throwIfAborted();
+  };
+  let rejectAbort;
+  const cancelled = new Promise((_resolve, reject) => {
+    rejectAbort = () => reject(bounded.signal.reason);
+    bounded.signal.addEventListener('abort', rejectAbort, { once: true });
+  });
+  try {
+    await Promise.race([cancelled, (async () => {
+      for (;;) {
+        valid();
+        const { snapshot, winner } = await read(bounded.signal);
+        valid();
+        if (snapshot.complete && snapshot.skills.some(skill => skill.name === 'document-helper')
+          && winner?.name === 'document-helper' && winner.path === join(directory, 'SKILL.md')
+          && winner.resourceBase?.kind === 'directory' && winner.resourceBase.path === directory) return;
+        await delay(pollMs, undefined, { signal: bounded.signal });
+      }
+    })()]);
+  } catch (error) {
+    if (bounded.signal.aborted) throw bounded.signal.reason;
+    throw error;
+  } finally {
+    clearTimeout(timer);
+    signal.removeEventListener('abort', cancel);
+    bounded.signal.removeEventListener('abort', rejectAbort);
+  }
+}
+
 async function digest(directory) {
   const hash = createHash('sha256');
   async function visit(path, relative = '') {
@@ -135,6 +175,19 @@ async function run(ctx, root, signal, checkpoint) {
     checkpoint.operation.deadlineReached = Date.now() >= deadline;
     mark('assertion', 'completed');
     assert.equal(operation?.phase, 'completed');
+    // Do not mistake a completed file transaction for the asynchronous watcher having refreshed its catalog.
+    mark('install-poll', 'discovery');
+    try {
+      await waitForAvailabilityWinner(async boundedSignal => {
+        const options = { scope: agent, cwd: project, signal: boundedSignal };
+        const snapshot = await ctx.skills.snapshot(options);
+        boundedSignal.throwIfAborted();
+        return { snapshot, winner: await ctx.skills.get('document-helper', options) };
+      }, paths[scope], signal);
+    } catch (error) {
+      if (error.code === 'DISCOVERY_TIMEOUT') checkpoint.operation.deadlineReached = true;
+      throw error;
+    }
   }
   async function reference(scope) {
     mark('reference');
