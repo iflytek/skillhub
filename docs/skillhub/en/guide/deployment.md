@@ -116,6 +116,40 @@ docker compose --env-file .env.release -f compose.release.yml down
 
 For startup failures, inspect `ps` and service logs, then check database, Redis, storage, and public URL configuration. Include image versions, redacted logs, and request IDs when reporting a problem, never credentials or `.env.release`. See the [operations reference (Chinese)](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for Redis, reverse proxies, collection services, and migrations.
 
+## Customize branding and the homepage
+
+Use a release that includes site presentation settings. The one-command deployment entry and `.env.release` need no new branding variables. New installations retain the existing appearance. A **SUPER_ADMIN** manages instance settings in **System configuration → Site presentation**.
+
+| Group | Options | Defaults and boundaries |
+| --- | --- | --- |
+| Branding | Display name, logo and favicon | Empty overrides use SkillHub and built-in images; API names, CLI commands and skill coordinates do not change |
+| Homepage | Landing or catalog mode | Landing retains the current composition; catalog emphasizes search and existing skill sections |
+| Hero text | Localized title and description | English, Chinese, Korean and Russian; missing translations use the editor's documented fallback |
+| Sections | Popular, latest and quick start | Visibility does not grant access or disable business APIs |
+| Footer | Show or hide | Shown by default |
+
+### Edit, preview and save
+
+1. Load the current configuration and edit the required fields.
+2. Upload PNG or JPEG images, no larger than 2 MiB and 1024 pixels on either side. The server validates and re-encodes them as PNG. Favicons also use PNG; SVG, ICO and WebP are not accepted.
+3. Preview the draft without changing the public site. Restoring a group to defaults also changes only the draft.
+4. Save the configuration. The current client refreshes its presentation; other open clients receive it when configuration is fetched again or the page is refreshed. No image rebuild or container restart is required.
+5. Failed saves retain the draft. A version conflict means another administrator saved first: load the latest settings, compare them and reapply the intended changes.
+
+Navigation warns about unsaved edits. Settings support plain text and controlled brand assets, not custom HTML, CSS or scripts. Personal theme and language choices remain independent.
+
+### Upgrades, backups and troubleshooting
+
+Settings use the existing PostgreSQL `system_setting` table. Images use the instance's configured file storage. Keep the same database and storage when upgrading; startup does not overwrite administrator choices. Back up and restore both database and storage volumes/objects. A database-only restore can leave image references without their objects. Do not reset volumes to recover default branding. Reverting an application image is not a database restore.
+
+| Symptom | Check and recovery |
+| --- | --- |
+| Editor unavailable or save denied | Verify the account has SUPER_ADMIN; ordinary members can only read public presentation |
+| Upload rejected | Check actual file type, 2 MiB size and 1024-pixel dimensions, not just the extension |
+| Another browser still shows old settings | Refresh configuration and confirm both clients use the same instance |
+| Logo cannot load | Inspect the brand asset request and persistent storage; the UI falls back to the built-in image |
+| Configuration cannot load | Inspect the public settings request and backend logs, repair connectivity and reload; default fallback does not mean stored overrides were deleted |
+
 ## Configuration and acceptance checks
 
 Use the release template and Compose file from the same version. `.env.release` supplies Compose interpolation values; only declared variables reach the process. Wire additional settings explicitly through your own override. Recreate affected services after changes; `restart` does not reload container environment values.
