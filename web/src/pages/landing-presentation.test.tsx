@@ -29,6 +29,13 @@ describe('configurable original homepage and market boundary', () => {
     expect(screen.getByText('home.latestTitle')).toBeTruthy()
     expect(state.search).toHaveBeenCalledWith({ sort: 'downloads', size: 6 }, true)
   })
+  it('retains the fixed example notice when the preview caption is customized', () => {
+    state.settings = defaultSitePresentation()
+    state.settings.sections.hero.texts.previewCaption = { zh: '我们的团队工具' }
+    render(<LandingPage />)
+    expect(screen.getByText('我们的团队工具')).toBeTruthy()
+    expect(screen.getByText('landing.experience.demoSkills.caption')).toBeTruthy()
+  })
   it('renders custom text safely and disables hidden sections and requests', () => {
     const settings = defaultSitePresentation()
     settings.sections.hero.texts = { title: { zh: '<b>团队技能</b>' }, description: { en: 'Fallback description' } }

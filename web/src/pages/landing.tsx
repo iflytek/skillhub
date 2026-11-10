@@ -143,6 +143,7 @@ function HeroBrowserMockup({ onSearch }: { onSearch: (query: string) => void }) 
               {t('landing.experience.browseAll')} <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
+          {text('hero', 'previewCaption') !== t('landing.experience.demoSkills.caption') && <p className="mt-2 text-xs text-muted-foreground">{t('landing.experience.demoSkills.caption')}</p>}
         </div>
       </div>
 
