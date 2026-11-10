@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -48,7 +49,7 @@ async function run(ctx, root, signal) {
   assert(before && !['completed', 'failed', 'recovery-required', 'unknown'].includes(before.phase), 'Requests must overlap');
   const toolCallId = 'dual-' + randomUUID();
   const toolArguments = { namespace: 'demo', slug: 'document-helper', scope: 'project' };
-  const tool = await ctx.tools.execute({ callId: toolCallId, name: 'astron_skillhub_install', arguments: toolArguments, agent, signal });
+  const tool = await executeFixtureTool(ctx, root, { callId: toolCallId, name: 'astron_skillhub_install', arguments: toolArguments, agent, signal });
   assert.equal(tool.isError, false);
   const operationIds = [pageOperationId, ...(tool.value.status === 'accepted' ? [tool.value.operationId] : [])];
   let operations;

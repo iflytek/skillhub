@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { mkdir, realpath, readFile, writeFile, rename, symlink, unlink, chmod, stat } from 'node:fs/promises';
@@ -25,7 +26,7 @@ async function run(ctx,root,signal) {
  if ('error' in resolved) throw resolved.error;
  const toolCallId='history-'+randomUUID();
  const toolArguments={namespace:process.env.DSH_FIXTURE_NAMESPACE ?? 'demo',slug:'document-helper',scope:'project'};
- const toolResult=await ctx.tools.execute({callId:toolCallId,name:'astron_skillhub_install',arguments:toolArguments,agent:resolved.agent,signal});
+ const toolResult=await executeFixtureTool(ctx, root, {callId:toolCallId,name:'astron_skillhub_install',arguments:toolArguments,agent:resolved.agent,signal});
  assert.equal(toolResult.isError,false);
  assert.equal(toolResult.value.status,'accepted');
  const deadline=Date.now()+15000;
@@ -37,7 +38,7 @@ async function run(ctx,root,signal) {
  }
  assert.equal(operation?.phase,'completed');
 
- const userResult=await ctx.tools.execute({callId:randomUUID(),name:'astron_skillhub_install',
+ const userResult=await executeFixtureTool(ctx, root, {callId:randomUUID(),name:'astron_skillhub_install',
   arguments:{...toolArguments,scope:'user'},agent:resolved.agent,signal});
  assert.equal(userResult.isError,false);assert.equal(userResult.value.status,'accepted');
  const end=Date.now()+15000;

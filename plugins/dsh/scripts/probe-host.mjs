@@ -88,6 +88,8 @@ observerStatusFile = join(run, 'observer-status.json');
 dependencyStatusFile = join(run, 'dependency-status.json');
 const runtimeProbe = values.probe === 'runtime-baseline' || values.probe === 'runtime-unsupported';
 const source = await readFile(join(fixtureRoot, runtimeProbe ? 'runtime-baseline-probe.mjs' : values.probe === 'plugin-coexistence' ? 'plugin-lifecycle-fixture.mjs' : `${values.probe === 'skill-toggle-watch-off' ? 'skill-toggle' : values.probe}-fixture.mjs`), 'utf8');
+// Observers run outside the source tree; retain their relative official-tool API adapter.
+await writeFile(join(run, 'fixture-tool-execution.mjs'), await readFile(join(fixtureRoot, 'fixture-tool-execution.mjs')), { flag: 'wx', mode: 0o600 });
 await writeFile(observer, source.replaceAll(probes[values.probe], resultName), { flag: 'wx', mode: 0o600 });
 const state = join(run, 'update-state.txt');
 const downloads = join(run, 'download-state.txt');

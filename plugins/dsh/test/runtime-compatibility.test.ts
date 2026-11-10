@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { supportedDshVersions } from '../src/host/compatibility.js';
+import { cordisFamilies, supportedDshVersions } from '../src/host/compatibility.js';
 import { assertNodeRuntime, nodeRuntimeRange, assertRuntimeCompatibility, clientPackageBaseline, runtimePackageBaseline } from '../src/host/runtime-compatibility.js';
 
 function fixture() {
@@ -155,11 +155,12 @@ for (const release of supportedDshVersions) {
   test(`complete ${release} Host and Client graph matches; every mixed release is rejected`, () => {
     const { packages, clients, check } = fixture();
     for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
-    packages.get('@deepseek-ai/cordis')!.version = '4.0.5';
-    packages.get('@deepseek-ai/cordis-plugin-loader')!.version = '1.0.6';
-    packages.get('@deepseek-ai/cordis-plugin-include')!.version = '1.0.10';
-    packages.get('@deepseek-ai/cordis-plugin-timer')!.version = '1.1.7';
+    const family = cordisFamilies[release === '0.2.2-rc.1' ? 2 : 1];
+    for (const [name, version] of Object.entries(family)) packages.get(name)!.version = version;
     for (const name of clients.keys()) clients.set(name, { name, version: release });
+    if (release === '0.2.2-rc.1' && Number(process.versions.node.split('.')[1]) < 9) {
+      expect(check).toThrow('local writes are disabled'); return;
+    }
     expect(check()).toBe(release);
     for (const other of supportedDshVersions.filter(candidate => candidate !== release)) {
       for (const value of packages.values()) {
@@ -197,5 +198,35 @@ test('coherent but unvalidated intermediate RCs are not implicitly supported', (
     for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
     for (const name of clients.keys()) clients.set(name, { name, version: release });
     expect(check).toThrow('local writes are disabled');
+  }
+});
+
+
+test('DSH 0.2.2-rc.1 requires Node 24.9 while retained releases keep the Node 24.2 floor', () => {
+  for (const release of supportedDshVersions) {
+    for (const version of ['24.2.0', '24.8.9', '24.9.0', '24.17.0']) {
+      if (release === '0.2.2-rc.1' && Number(version.split('.')[1]) < 9) expect(() => assertNodeRuntime(version, release)).toThrow('local writes are disabled');
+      else expect(() => assertNodeRuntime(version, release)).not.toThrow();
+    }
+    for (const version of ['22.18.0', '25.0.0', '24.9.0-rc.1']) expect(() => assertNodeRuntime(version, release)).toThrow('local writes are disabled');
+  }
+});
+
+test('every Cordis family and member remains bound to its exact DSH release', () => {
+  for (const release of supportedDshVersions) {
+    const { packages, clients, check } = fixture();
+    for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
+    for (const name of clients.keys()) clients.set(name, { name, version: release });
+    const expected = cordisFamilies[release === '0.2.2-rc.1' ? 2 : 1];
+    for (const [name, version] of Object.entries(expected)) packages.get(name)!.version = version;
+    for (const other of cordisFamilies) {
+      if (other === expected || release === '0.2.0-rc.2' && other === cordisFamilies[0]) continue;
+      for (const [name, version] of Object.entries(other)) {
+        const original = packages.get(name)!.version;
+        packages.get(name)!.version = version;
+        expect(check).toThrow('local writes are disabled');
+        packages.get(name)!.version = original;
+      }
+    }
   }
 });

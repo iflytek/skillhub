@@ -13,7 +13,7 @@ import { SkillPrimaryActions, skillInstallationSummary } from './skill-primary-a
 import type { SkillUseServices } from './use-skill.js';
 import { CardSkeletons } from './loading-layout.js';
 import { useState, useRef, useLayoutEffect, useSyncExternalStore, type RefObject } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import type { RemoteResult, TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol';
 import type { InstalledSkillList, InstalledSkillDetail, InstalledUpdateCheck, SkillHubConfig } from '../host/types.js';
 import { UpgradeHistory, type UpgradeServices } from './upgrade-control.js';
@@ -62,6 +62,21 @@ export function upgradedInstallation(snapshot: InstalledSkillList, previous: Ite
   const matches = snapshot.items.filter(item => item.state === 'present' && item.registry === previous.registry && item.namespace === previous.namespace && item.slug === previous.slug && item.scope === previous.scope && item.version === version);
   return matches.length === 1 ? matches[0] : undefined;
 }
+/** Refresh a static detail after a mutation without following another version or location. */
+export function refreshedInstalledSelection(snapshot: InstalledSkillList, previous: Item): Item | undefined {
+  const updated = upgradedInstallation(snapshot, previous, previous.version);
+  return updated && (!previous.locationKey || updated.locationKey === previous.locationKey) ? updated : undefined;
+}
+/** The side panel stays mounted during upgrade; refresh its exact identity before returning. */
+export async function refreshUpgradedCaches(client: QueryClient, sessionId: string, revision: string, previous: Item, snapshot: InstalledSkillList, isCurrent: () => boolean): Promise<boolean> {
+  const managementKey = ['skillhub-installed', sessionId, revision, 'management-locations', previous.registry, previous.namespace, previous.slug];
+  await client.cancelQueries({ queryKey: managementKey, exact: true });
+  if (!isCurrent()) return false;
+  client.setQueryData(managementKey, snapshot);
+  const keys = new Set([previous.itemKey, ...snapshot.items.filter(item => item.registry === previous.registry && item.namespace === previous.namespace && item.slug === previous.slug).map(item => item.itemKey)]);
+  await client.invalidateQueries({ predicate: query => ['skillhub-installed-detail', 'skillhub-local-summary'].includes(String(query.queryKey[0])) && query.queryKey[1] === sessionId && query.queryKey[2] === revision && keys.has(String(query.queryKey[3])), refetchType: 'none' });
+  return isCurrent();
+}
 const noContext = { getSnapshot: () => 0, subscribe: () => () => {} };
 export function InstalledSkills({ services, sourceRevision, source, remote, modes, scrollContainer, navigation, onInstall }: {
   services: InstalledServices; sourceRevision: string; source: string; remote: TypertRemoteNamespaceMap['skillhub']; modes: SkillHubConfig['detailTabs'];
@@ -107,6 +122,11 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
       if (!response.ok) throw new Error('安装记录已变化或暂时无法读取，请返回列表刷新。');
       return response.value;
     } });
+  useLayoutEffect(() => {
+    if (!selected || changeIntent || query.isFetching || query.isError || !query.data || resultContext.current !== contextKey) return;
+    const updated = refreshedInstalledSelection(query.data, selected);
+    if (updated && (updated.itemKey !== selected.itemKey || updated.installationState !== selected.installationState)) setSelected(updated);
+  }, [query.data, query.isFetching, query.isError, selected, changeIntent, contextKey]);
   const verified = !!query.data && !query.isError && query.data.complete && !query.data.unavailable.length;
   const records = (identity: Item) => query.data?.items.filter(item => item.registry === identity.registry && item.namespace === identity.namespace && item.slug === identity.slug) ?? [identity];
   const actions = (items: Item[], label?: string) => <SkillPrimaryActions items={items} revision={sourceRevision} verified={verified}
@@ -187,7 +207,7 @@ export function InstalledSkills({ services, sourceRevision, source, remote, mode
     if (snapshot.isError || !snapshot.data) throw new Error('升级已完成，安装记录暂未刷新，请重试返回详情。');
     const updated = upgradedInstallation(snapshot.data, selected, version);
     if (!updated) throw new Error('升级已完成，尚未确认更新后的安装记录，请重试返回详情。');
-    await client.invalidateQueries({ queryKey: ['skillhub-installed-detail', services.sessionId, sourceRevision], refetchType: 'none' });
+    if (!await refreshUpgradedCaches(client, services.sessionId, sourceRevision, selected, snapshot.data, current)) return false;
     if (!current()) return false;
     setChangeIntent(undefined); setSelected(updated);
   }

@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 // Copy outside the package to a temporary directory before loading as a DSH Host observer.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -115,7 +116,7 @@ async function run(ctx, root, signal) {
     },
   }));
   try {
-    const result = await ctx.tools.execute({
+    const result = await executeFixtureTool(ctx, root, {
       callId: 'skillhub-m0-call', name: 'skillhub_m0_probe', arguments: { query: 'M0 fixture' },
       agent: options.scope, signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
     });
@@ -137,7 +138,7 @@ async function run(ctx, root, signal) {
   let installFixtureWorkspace;
   let installFailureFixtureTitle;
   if (ctx.tools.get('astron_skillhub_search')) {
-    const invoke = (args, agent = options.scope) => ctx.tools.execute({
+    const invoke = (args, agent = options.scope) => executeFixtureTool(ctx, root, {
       callId: 'skillhub-native-search-probe', name: 'astron_skillhub_search', arguments: args,
       agent, signal: AbortSignal.any([signal, AbortSignal.timeout(5000)]),
     });
@@ -257,7 +258,7 @@ async function run(ctx, root, signal) {
     const toolSession = await optionsFor(toolProject);
     const toolCallId = 'skillhub-install-probe-' + randomUUID();
     const toolArguments = { namespace: process.env.DSH_UPGRADE_FIXTURE === '1' ? 'upgrade-' + randomUUID() : 'demo', slug: 'document-helper', scope: 'project' };
-    const invokeInstall = argumentsValue => ctx.tools.execute({ callId: toolCallId, name: 'astron_skillhub_install',
+    const invokeInstall = argumentsValue => executeFixtureTool(ctx, root, { callId: toolCallId, name: 'astron_skillhub_install',
       arguments: argumentsValue, agent: toolSession.scope, signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) });
     assert.equal((await invokeInstall({ ...toolArguments, path: '/untrusted' })).isError, true);
     const toolResult = await invokeInstall(toolArguments);
@@ -286,7 +287,7 @@ async function run(ctx, root, signal) {
     assert.equal(changedToolRequest.value.code, 'REQUEST_CONFLICT');
     nativeInstallToolCompleted = true;
     if (process.env.DSH_UPGRADE_TWO_TARGETS === '1') {
-      const userResult = await ctx.tools.execute({ callId: 'skillhub-user-install-' + randomUUID(), name: 'astron_skillhub_install',
+      const userResult = await executeFixtureTool(ctx, root, { callId: 'skillhub-user-install-' + randomUUID(), name: 'astron_skillhub_install',
         arguments: { ...toolArguments, scope: 'user' }, agent: toolSession.scope,
         signal: AbortSignal.any([signal, AbortSignal.timeout(15000)]) });
       assert.equal(userResult.isError, false, JSON.stringify(userResult));
@@ -326,7 +327,7 @@ async function run(ctx, root, signal) {
     const failureHistory = failureSession.scope.session;
     const failureCallId = 'skillhub-stale-install-' + randomUUID();
     const failureArguments = { selectionRef: randomUUID(), scope: 'project' };
-    const failureResult = await ctx.tools.execute({ callId: failureCallId, name: 'astron_skillhub_install',
+    const failureResult = await executeFixtureTool(ctx, root, { callId: failureCallId, name: 'astron_skillhub_install',
       arguments: failureArguments, agent: failureSession.scope, signal });
     assert.equal(failureResult.isError, false, JSON.stringify(failureResult));
     assert.equal(failureResult.value.status, 'not-confirmed');
@@ -397,7 +398,7 @@ async function run(ctx, root, signal) {
     scopedConversationDetail = true;
     const invalid = await invoke({ q: 'document', path: '/untrusted' });
     assert.equal(invalid.isError, true);
-    const missingContext = await ctx.tools.execute({
+    const missingContext = await executeFixtureTool(ctx, root, {
       callId: 'skillhub-no-agent-probe', name: 'astron_skillhub_search', arguments: { q: '' }, signal,
     });
     assert.equal(missingContext.isError, true);

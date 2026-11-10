@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
@@ -30,7 +31,7 @@ async function run(ctx,root,signal) {
    { id: 'search-'+randomUUID(), name: 'astron_skillhub_search', args: {q:'document'} },
    { id: 'install-'+randomUUID(), name: 'astron_skillhub_install', args: {namespace:'demo',slug:'document-helper',scope:'project'} },
  ];
- const searchResult = await ctx.tools.execute({callId:calls[0].id,name:calls[0].name,arguments:calls[0].args,agent:resolved.agent,signal});
+ const searchResult = await executeFixtureTool(ctx, root, {callId:calls[0].id,name:calls[0].name,arguments:calls[0].args,agent:resolved.agent,signal});
  assert.equal(searchResult.isError,false);
  history.append('turn/start', {turn:1}); history.append('step/start', {turn:1,step:1});
  const attemptId = 'fixture-'+randomUUID();

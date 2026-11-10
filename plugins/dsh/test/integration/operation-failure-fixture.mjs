@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { access, mkdir, realpath, writeFile } from 'node:fs/promises';
@@ -25,7 +26,7 @@ async function run(ctx,root,signal) {
  if ('error' in resolved) throw resolved.error;
  const toolCallId='history-'+randomUUID();
  const toolArguments={namespace:process.env.DSH_FIXTURE_NAMESPACE ?? 'demo',slug:'document-helper',scope:'project'};
- const toolResult=await ctx.tools.execute({callId:toolCallId,name:'astron_skillhub_install',arguments:toolArguments,agent:resolved.agent,signal});
+ const toolResult=await executeFixtureTool(ctx, root, {callId:toolCallId,name:'astron_skillhub_install',arguments:toolArguments,agent:resolved.agent,signal});
  assert.equal(toolResult.isError,false);
  assert.equal(toolResult.value.status,'accepted');
  const deadline=Date.now()+15000;
@@ -39,7 +40,7 @@ async function run(ctx,root,signal) {
  assert.equal(operation.files, 'failed');
  assert.equal(operation.recovery, 'not-needed');
  await assert.rejects(access(join(project, '.dsh/skills/document-helper')), { code: 'ENOENT' });
- const retry = await ctx.tools.execute({callId:toolCallId,name:'astron_skillhub_install',arguments:toolArguments,agent:resolved.agent,signal});
+ const retry = await executeFixtureTool(ctx, root, {callId:toolCallId,name:'astron_skillhub_install',arguments:toolArguments,agent:resolved.agent,signal});
  assert.equal(retry.value.operationId, toolResult.value.operationId);
  await writeFile(join(root,'operation-failure-ready.json'),JSON.stringify({passed:true,operationId:operation.operationId,
    acceptedBeforeFailure:true,failedWithoutRecovery:true,noInstalledDirectory:true,sameCallPreservesReceipt:true,modelInvoked:false}));

@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, rename, stat, writeFile } from 'node:fs/promises';
@@ -71,7 +72,7 @@ async function run(ctx, root, signal, checkpoint) {
   const resolved = await ctx.sessionController.resolveAgent(created.sessionId);
   if ('error' in resolved) throw resolved.error;
   const agent = resolved.agent;
-  const execute = (name, args) => ctx.tools.execute({ callId: randomUUID(), name, arguments: args, agent, signal });
+  const execute = (name, args) => executeFixtureTool(ctx, root, { callId: randomUUID(), name, arguments: args, agent, signal });
   const namespace = process.env.DSH_FIXTURE_NAMESPACE;
   const paths = { project: join(project, '.dsh/skills/document-helper'), user: join(root, 'home/skills/document-helper') };
   const records = [];
