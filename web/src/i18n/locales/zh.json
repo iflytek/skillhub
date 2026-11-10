@@ -4010,7 +4010,7 @@
   },
   "sitePresentation": {
     "title": "站点展示",
-    "intro": "管理站点品牌与首页。保存并刷新后生效，不改变技能访问权限。",
+    "intro": "设置站点名称、首页介绍和需要展示的内容。保存后生效。",
     "brandTitle": "站点品牌",
     "brandHelp": "统一用于导航、首页、页脚和浏览器标题。",
     "siteName": "站点名称",
@@ -4023,14 +4023,14 @@
     "removeAsset": "使用默认图片",
     "homeTitle": "首页与页脚",
     "homeHelp": "保留现有首页布局与区域顺序。按区域展开，调整显示项和展示文案；留空使用原产品默认。",
-    "textLanguage": "文案语言",
+    "textLanguage": "内容语言",
     "language": {
       "zh": "中文",
       "en": "英语",
       "ko": "韩语",
       "ru": "俄语"
     },
-    "languageHelp": "优先展示当前语言文案，其次使用英语自定义文案，最后使用当前语言的产品默认文案。内容按纯文本展示。",
+    "languageHelp": "填写所选语言的首页介绍。未填写的语言优先使用英文内容，再使用原有文案。",
     "defaultText": "留空时使用回退文案",
     "restore": "恢复本组默认",
     "restoreTitle": "恢复本组默认设置？",
@@ -4061,14 +4061,14 @@
     "linksHelp": "用于首页与页脚的固定链接位置。支持 http://、https:// 或站内绝对路径（例如 /guide）；留空恢复产品默认。不会修改搜索、发布等业务入口。",
     "editLinks": "编辑链接地址",
     "regions": {
-      "hero": "首页主视觉",
-      "capabilities": "核心能力",
-      "quickStart": "快速开始",
+      "hero": "顶部介绍",
+      "capabilities": "功能介绍",
+      "quickStart": "使用指南",
       "popular": "热门技能",
       "latest": "最新技能",
-      "enterprise": "团队与企业",
-      "cta": "底部行动区",
-      "footer": "全站页脚"
+      "enterprise": "团队与企业介绍",
+      "cta": "底部引导",
+      "footer": "页脚"
     },
     "items": {
       "preview": "技能界面示例",
@@ -4131,8 +4131,8 @@
       "termsLabel": "服务条款"
     },
     "linkLabels": {
-      "repository": "GitHub",
-      "documentation": "文档",
+      "repository": "源码地址",
+      "documentation": "文档地址",
       "cliDocumentation": "CLI · 文档",
       "cliPackage": "CLI",
       "license": "许可证",
@@ -4140,6 +4140,20 @@
       "changelog": "更新日志",
       "codeOfConduct": "行为准则",
       "community": "社区"
-    }
+    },
+    "siteInformation": "站点信息",
+    "siteInformationHelp": "设置名称、图片和常用链接。",
+    "commonLinksHelp": "留空使用原有链接。可填写完整网址或 /guide 这样的站内路径。",
+    "introductionTitle": "首页介绍",
+    "introductionHelp": "修改首页顶部的标题和说明，留空使用原有文案。",
+    "introductionHeading": "标题",
+    "introductionDescription": "说明",
+    "homeContentTitle": "首页显示内容",
+    "homeContentHelp": "勾选需要显示的内容。页脚开关同时影响其他页面。",
+    "restorePage": "恢复本页默认",
+    "restorePageTitle": "恢复本页默认设置？",
+    "restorePageHelp": "重置站点名称和图片、首页标题与说明（所有语言）、本页的显示开关以及文档和源码链接。其他已保存的文案、卡片设置和链接不会改变。保存后才生效。",
+    "saveBeforeViewing": "保存后可在首页查看效果。",
+    "viewHomepage": "查看已保存的首页"
   }
 }

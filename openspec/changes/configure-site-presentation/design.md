@@ -50,7 +50,9 @@ Keep GET /api/v1/site-presentation, SUPER_ADMIN GET/PUT /api/v1/admin/system-con
 
 ## Management UI
 
-Use existing product components and tokens. Group brand and link settings, then show the eight regions as individually expandable editors with a display switch, language choice, meaningful text labels, element switches and per-region reset. Do not expand all 88 text fields by default or expose raw JSON/i18n keys as the editing interface. Reset changes only the draft until Save. Retain drafts on failure/conflict and preserve leave protection. A preview uses scoped draft values without modifying the public query cache or database; if schematic, label its limits explicitly. Personal theme and language are independent from administrator configuration.
+Use the existing form components and tokens. Expose three groups only: site information (name, logo, favicon, documentation and repository links), homepage introduction (one content-language selector, hero title and description), and homepage content (eight region visibility switches). Do not render per-region text editors, item switches, extra link slots, a preview dialog or a homepage mode selector.
+
+Retain the stored schema for compatibility, but every edit must preserve supported fields not exposed on this page. One reset action clears only the editable brand fields, hero title/description in all supported languages, eight enabled flags and the two exposed links. It must not clear other stored text, item switches or links. Reset changes the draft until Save. Retain failed/conflicting drafts and leave protection. After successful Save provide a normal homepage link; no simulated preview is needed. Personal theme and language remain independent.
 
 ## Deployment and acceptance
 

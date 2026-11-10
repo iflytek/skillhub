@@ -10,7 +10,7 @@ Issue #1074 describes private deployments maintaining source patches for homepag
 - REQ-02: public read returns only typed presentation fields; SUPER_ADMIN edits and uploads, with audit and optimistic concurrency.
 - REQ-03: configurable display name and separate logo/favicon; retain the existing default landing homepage with section-by-section visibility, localized presentation text, selected element switches and fixed safe link overrides. Remove the landing/catalog selector and alternative catalog composition.
 - REQ-04: safe immutable brand assets in existing object storage; PNG/JPEG upload is verified and re-encoded, public access restricted to brand assets.
-- REQ-05: management uses existing UI with local preview, unsaved changes protection, retained inputs after errors, group reset and clear save states.
+- REQ-05: management exposes site information, homepage introduction and region visibility only, with unsaved changes protection, retained inputs after errors, scoped reset and clear save states.
 - REQ-06: existing search/auth/visibility remain authoritative; disabled sections do not issue requests; theme/language personal preferences remain independent.
 - REQ-07: one-click operators use the same deployment entry; document configuration, refresh behavior, asset storage, backup and upgrades in both languages.
 - REQ-08: verify default/custom instances, permission negatives, concurrent saves, image validation, escaping, responsive UI and persistence.
@@ -20,3 +20,5 @@ Out of scope: curated recommendations (#1035), arbitrary HTML/CSS/scripts, full 
 ## Status
 
 Human preview retained the original default homepage as the visual baseline. The implementation is being revised to configure its eight existing regions instead of introducing alternative homepage modes. Not yet accepted or released.
+
+The latest human feedback rejects the detailed text-slot editor. The management page now exposes three concise groups; the stored schema remains compatible and unexposed values are preserved.

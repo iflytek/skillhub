@@ -4010,7 +4010,7 @@
   },
   "sitePresentation": {
     "title": "사이트 표시 설정",
-    "intro": "사이트 브랜드와 홈 화면을 관리합니다. 저장 후 새로고침하면 적용되며 스킬 접근 권한은 변경되지 않습니다.",
+    "intro": "사이트 이름, 홈페이지 소개 및 표시할 내용을 설정합니다. 저장 후 적용됩니다.",
     "brandTitle": "사이트 브랜드",
     "brandHelp": "탐색 메뉴, 홈 화면, 바닥글 및 브라우저 제목에 적용됩니다.",
     "siteName": "사이트 이름",
@@ -4023,14 +4023,14 @@
     "removeAsset": "기본 이미지 사용",
     "homeTitle": "홈페이지 및 바닥글",
     "homeHelp": "현재 홈페이지 레이아웃과 섹션 순서를 유지합니다. 섹션을 펼쳐 표시 항목과 문구를 변경하세요. 빈 값은 제품 기본값을 사용합니다.",
-    "textLanguage": "문구 언어",
+    "textLanguage": "콘텐츠 언어",
     "language": {
       "zh": "중국어",
       "en": "영어",
       "ko": "한국어",
       "ru": "러시아어"
     },
-    "languageHelp": "현재 언어의 문구, 영어 사용자 지정 문구, 현재 언어의 제품 기본 문구 순서로 사용합니다. 일반 텍스트로 표시됩니다.",
+    "languageHelp": "선택한 언어로 소개를 작성합니다. 작성하지 않은 언어는 영어 내용, 기존 문구 순으로 표시됩니다.",
     "defaultText": "비워 두면 대체 문구를 사용합니다",
     "restore": "이 그룹 기본값 복원",
     "restoreTitle": "이 그룹을 기본값으로 복원할까요?",
@@ -4061,14 +4061,14 @@
     "linksHelp": "홈페이지와 바닥글의 고정 링크 위치입니다. http://, https:// 또는 /guide 같은 루트 상대 경로를 사용할 수 있습니다. 비워 두면 기본값이 적용됩니다. 검색 및 게시 경로는 유지됩니다.",
     "editLinks": "링크 주소 편집",
     "regions": {
-      "hero": "메인 소개",
-      "capabilities": "핵심 기능",
-      "quickStart": "빠른 시작",
+      "hero": "상단 소개",
+      "capabilities": "기능 소개",
+      "quickStart": "사용 안내",
       "popular": "인기 스킬",
       "latest": "최신 스킬",
-      "enterprise": "팀 및 기업",
-      "cta": "하단 작업",
-      "footer": "사이트 바닥글"
+      "enterprise": "팀 및 기업 소개",
+      "cta": "하단 안내",
+      "footer": "바닥글"
     },
     "items": {
       "preview": "스킬 미리보기",
@@ -4131,8 +4131,8 @@
       "termsLabel": "이용약관"
     },
     "linkLabels": {
-      "repository": "GitHub",
-      "documentation": "문서",
+      "repository": "소스 코드 URL",
+      "documentation": "문서 URL",
       "cliDocumentation": "CLI · 문서",
       "cliPackage": "CLI",
       "license": "라이선스",
@@ -4140,6 +4140,20 @@
       "changelog": "변경 내역",
       "codeOfConduct": "행동 강령",
       "community": "커뮤니티"
-    }
+    },
+    "siteInformation": "사이트 정보",
+    "siteInformationHelp": "이름, 이미지 및 주요 링크를 설정합니다.",
+    "commonLinksHelp": "비워 두면 기존 링크를 사용합니다. 전체 URL 또는 /guide 같은 사이트 경로를 입력하세요.",
+    "introductionTitle": "홈페이지 소개",
+    "introductionHelp": "홈페이지 상단의 제목과 설명을 수정합니다. 비워 두면 기존 문구를 사용합니다.",
+    "introductionHeading": "제목",
+    "introductionDescription": "설명",
+    "homeContentTitle": "홈페이지 표시 내용",
+    "homeContentHelp": "표시할 내용을 선택하세요. 바닥글 설정은 다른 페이지에도 적용됩니다.",
+    "restorePage": "이 페이지 기본값 복원",
+    "restorePageTitle": "이 페이지의 기본값을 복원할까요?",
+    "restorePageHelp": "사이트 이름과 이미지, 모든 언어의 홈페이지 제목과 설명, 표시 설정, 문서 및 소스 링크를 초기화합니다. 다른 저장된 문구, 카드 설정 및 링크는 유지됩니다. 저장 후 적용됩니다.",
+    "saveBeforeViewing": "변경 내용을 저장한 후 홈페이지에서 확인하세요.",
+    "viewHomepage": "저장된 홈페이지 보기"
   }
 }

@@ -120,35 +120,25 @@ For startup failures, inspect `ps` and service logs, then check database, Redis,
 
 Use a release that includes site presentation settings. The one-command deployment entry and `.env.release` need no new branding variables. New installations retain the existing appearance. A **SUPER_ADMIN** manages instance settings in **System configuration → Site presentation**.
 
-The original default homepage layout, section order and interactions remain the baseline. There is no alternate homepage mode. Configure its existing regions and branding; fields without overrides keep their original values.
+The homepage keeps its existing layout. The settings page provides three groups; leave optional values empty to retain the defaults.
 
-| Region | Configuration |
+| Settings | Purpose |
 | --- | --- |
-| Branding | Site name, logo and favicon; names do not change CLI packages, API paths or skill coordinates |
-| Hero | Badge, heading, description, action and highlight labels; independently hide preview, highlights or either action |
-| Capabilities | Section text and six existing card headings/descriptions; individual card visibility |
-| Access methods | Section text and Agent/CLI/Web headings/descriptions; individual mode visibility |
-| Popular and latest | Each section's heading, description, browse label and visibility |
-| Enterprise | Section/card text and diagram captions; individual existing card visibility |
-| Closing call to action | Heading, description and action labels/visibility |
-| Footer | Description, copyright, group/link labels and whole-footer/group visibility |
-| Site links | Fixed destinations for documentation, repository, CLI documentation/package, license, contribution, releases, conduct and community |
+| Site information | Site name, logo, favicon, documentation link and source repository link |
+| Homepage introduction | Content language, homepage title and introduction |
+| Homepage content | Show or hide the hero, capabilities, access methods, popular skills, latest skills, enterprise, closing call to action and footer |
 
-Text supports English, Chinese, Korean and Russian. Resolution is current-language override → custom English text → current-language product default. Headings and other labels allow 160 characters, descriptions and footer copyright allow 1000, and the site name allows 80. Internal publish/search/dashboard/privacy/terms routes remain code-owned. Homepage switches do not affect `/skills` or grant permissions. Hidden popular/latest regions do not execute their queries.
+Card text, button labels and layout retain their existing values rather than exposing individual editors. Homepage switches do not affect the independent `/skills` marketplace or user permissions. Hidden popular/latest sections do not request their homepage lists.
 
-Link overrides accept HTTP/HTTPS or a single-slash root-relative path. Root paths respect the deployment prefix: `/help` under a `/skillhub/` deployment resolves to `/skillhub/help`. Script schemes, protocol-relative paths, credentials, backslashes and control characters are rejected. These are public presentation settings; use public destinations.
+### Edit and save
 
-Executable CLI commands, package names, registry/API endpoints and database product names are not editable display text. Fixed interface previews remain demonstrations. Hide the hero preview or individual access modes when not applicable; this does not provision example skills.
+1. Change the settings you need. Homepage copy supports Chinese, English, Korean and Russian, with defaults for empty overrides. The site name allows 80 characters, the homepage title 160, and the introduction 1000.
+2. Upload a PNG or JPEG logo/favicon, no larger than 2 MiB or 1024 pixels on either side. Valid images are re-encoded as PNG. Uploads are publicly readable before settings are saved; upload public brand assets only.
+3. Save, then use **View homepage** to inspect the actual result. Other open clients receive changes on refresh. No image rebuild or service restart is required.
 
-### Edit, preview and save
+**Reset these settings** resets only the options exposed on this page, and takes effect after Save. Other historical customizations are preserved. Failed saves retain input, and navigation warns about unsaved edits. On a version conflict, reload the latest settings before reapplying your changes.
 
-1. Load the current configuration. Edit branding and links, then expand an existing homepage region, choose a text language and edit its content. Region and individual-element switches are independent.
-2. Upload PNG or JPEG images, no larger than 2 MiB and 1024 pixels on either side. The server validates and re-encodes them as PNG. Favicons also use PNG; SVG, ICO and WebP are not accepted. Uploaded images are publicly readable through their resource URL before settings are saved; upload only public brand assets.
-3. Preview the draft without changing the public site. Restoring branding or one region changes only the draft until Save.
-4. Save the configuration. The current client refreshes its presentation; other open clients receive it when configuration is fetched again or the page is refreshed. No image rebuild or container restart is required.
-5. Failed saves retain the draft. A version conflict means another administrator saved first: load the latest settings, compare them and reapply the intended changes.
-
-Navigation warns about unsaved edits. Settings support plain text and controlled brand assets, not custom HTML, CSS or scripts. Personal theme and language choices remain independent.
+Documentation and repository links accept HTTP/HTTPS or a single-slash root-relative path, resolved under the deployment prefix. Presentation settings do not change CLI commands, package names, API addresses or personal theme/language preferences.
 
 ### Upgrades, backups and troubleshooting
 

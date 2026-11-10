@@ -4012,7 +4012,7 @@
   },
   "sitePresentation": {
     "title": "Site presentation",
-    "intro": "Manage the site brand and homepage. Changes apply after saving and reloading; skill permissions remain unchanged.",
+    "intro": "Set the site name, homepage introduction and visible content. Changes take effect after saving.",
     "brandTitle": "Site brand",
     "brandHelp": "Used in the navigation, homepage, footer and browser title.",
     "siteName": "Site name",
@@ -4025,14 +4025,14 @@
     "removeAsset": "Use default image",
     "homeTitle": "Homepage and footer",
     "homeHelp": "Keep the existing homepage layout and section order. Expand a section to change visible items and display text. Empty values use the product defaults.",
-    "textLanguage": "Text language",
+    "textLanguage": "Content language",
     "language": {
       "zh": "Chinese",
       "en": "English",
       "ko": "Korean",
       "ru": "Russian"
     },
-    "languageHelp": "Use text for the current language first, then English, then the product default for the current language. Text is displayed as plain text.",
+    "languageHelp": "Edit the introduction in the selected language. Missing languages use English content first, then the original text.",
     "defaultText": "Leave empty to use the fallback text",
     "restore": "Restore group defaults",
     "restoreTitle": "Restore this group to defaults?",
@@ -4063,14 +4063,14 @@
     "linksHelp": "Fixed link positions on the homepage and footer. Use http://, https:// or a root-relative path such as /guide. Leave blank for product defaults. Business routes such as search and publishing stay unchanged.",
     "editLinks": "Edit link addresses",
     "regions": {
-      "hero": "Hero",
-      "capabilities": "Capabilities",
-      "quickStart": "Quick start",
+      "hero": "Top introduction",
+      "capabilities": "Features",
+      "quickStart": "Getting started",
       "popular": "Popular skills",
       "latest": "Latest skills",
       "enterprise": "Teams and enterprise",
-      "cta": "Closing actions",
-      "footer": "Site footer"
+      "cta": "Closing introduction",
+      "footer": "Footer"
     },
     "items": {
       "preview": "Skill preview",
@@ -4133,8 +4133,8 @@
       "termsLabel": "Terms of Service"
     },
     "linkLabels": {
-      "repository": "GitHub",
-      "documentation": "Documentation",
+      "repository": "Source code URL",
+      "documentation": "Documentation URL",
       "cliDocumentation": "CLI · Documentation",
       "cliPackage": "CLI",
       "license": "License",
@@ -4142,6 +4142,20 @@
       "changelog": "Changelog",
       "codeOfConduct": "Code of conduct",
       "community": "Community"
-    }
+    },
+    "siteInformation": "Site information",
+    "siteInformationHelp": "Set the name, images and main links.",
+    "commonLinksHelp": "Leave blank to use the original link. Enter a full URL or a site path such as /guide.",
+    "introductionTitle": "Homepage introduction",
+    "introductionHelp": "Edit the heading and description at the top of the homepage. Leave blank to use the original text.",
+    "introductionHeading": "Heading",
+    "introductionDescription": "Description",
+    "homeContentTitle": "Homepage content",
+    "homeContentHelp": "Choose what to display. The footer setting also applies to other pages.",
+    "restorePage": "Restore page defaults",
+    "restorePageTitle": "Restore this page’s defaults?",
+    "restorePageHelp": "Reset the site name and images, homepage heading and description in all languages, these visibility settings, and documentation and source links. Other saved text, card settings and links stay unchanged. Save to apply.",
+    "saveBeforeViewing": "Save your changes to view them on the homepage.",
+    "viewHomepage": "View saved homepage"
   }
 }
