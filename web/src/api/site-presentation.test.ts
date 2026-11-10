@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { fetchJson } from './client'
 import { presentationAssetUrl, sitePresentationApi } from './site-presentation'
-vi.mock('./client', () => ({ ApiError: class extends Error { constructor(message: string, public status: number) { super(message) } }, buildApiUrl: (path: string) => `/skillhub${path}`, fetchJson: vi.fn(), getCsrfHeaders: () => ({}) }))
+vi.mock('./client', () => ({ ApiError: class extends Error { constructor(message: string, public status: number) { super(message) } }, buildApiUrl: (path: string) => `/skillhub${path}`, fetchJson: vi.fn(), getCsrfHeaders: (initial?: HeadersInit) => { const headers = new Headers(initial); headers.set('X-XSRF-TOKEN', 'local-csrf-regression'); return headers } }))
 
 describe('branding resource URLs', () => {
   it('resolves owned assets through the API base for subpath deployments', () => {
@@ -26,5 +27,21 @@ describe('bounded public presentation loading', () => {
     await expected
     expect(signal?.aborted).toBe(true)
     expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+
+describe('site presentation update authentication headers', () => {
+  it('retains the CSRF header from a Headers instance alongside JSON content type', async () => {
+    const request = { settings: { siteName: 'Team Library', logoUrl: null, faviconUrl: null, homepageMode: 'LANDING' as const, heroTitle: {}, heroDescription: {}, showPopular: true, showLatest: true, showQuickStart: true, footerVisible: true }, version: 3 }
+    await sitePresentationApi.update(request)
+    const calls = vi.mocked(fetchJson).mock.calls
+    const [url, init] = calls[calls.length - 1]
+    expect(url).toBe('/api/v1/admin/system-config/presentation')
+    expect(init?.method).toBe('PUT')
+    const headers = new Headers(init?.headers)
+    expect(headers.get('X-XSRF-TOKEN')).toBe('local-csrf-regression')
+    expect(headers.get('Content-Type')).toBe('application/json')
+    expect(JSON.parse(String(init?.body))).toEqual(request)
   })
 })

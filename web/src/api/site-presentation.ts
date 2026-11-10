@@ -33,7 +33,7 @@ export const sitePresentationApi = {
   get: loadPublicPresentation,
   getAdmin: () => fetchJson<SitePresentationResponse>('/api/v1/admin/system-config/presentation'),
   update: (value: components['schemas']['SitePresentationUpdateRequest']) => fetchJson<SitePresentationResponse>('/api/v1/admin/system-config/presentation', {
-    method: 'PUT', headers: { ...getCsrfHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify(value),
+    method: 'PUT', headers: getCsrfHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(value),
   }),
   upload: (file: File) => {
     const body = new FormData()
