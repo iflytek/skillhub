@@ -17,7 +17,7 @@ afterEach(() => { cleanup(); vi.clearAllMocks(); state.settings = defaultSitePre
 describe('homepage presentation', () => {
   it('preserves default landing content and section queries', () => {
     state.settings = defaultSitePresentation()
-    render(<HomePage />)
+    render(<HomePage applyPresentation />)
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('SkillHub')
     expect(screen.getByText('home.popularTitle')).toBeTruthy()
     expect(screen.getByText('home.latestTitle')).toBeTruthy()
@@ -27,7 +27,7 @@ describe('homepage presentation', () => {
   })
   it('hides disabled sections and disables their queries while keeping search accessible', () => {
     state.settings = { ...defaultSitePresentation(), homepageMode: 'CATALOG', showPopular: false, showLatest: false, showQuickStart: false }
-    render(<HomePage />)
+    render(<HomePage applyPresentation />)
     expect(screen.queryByText('home.popularTitle')).toBeNull()
     expect(screen.queryByText('home.latestTitle')).toBeNull()
     expect(screen.queryByText('quick-start')).toBeNull()
@@ -37,7 +37,7 @@ describe('homepage presentation', () => {
   })
   it('renders localized customization as plain text', () => {
     state.settings = { ...defaultSitePresentation(), heroTitle: { zh: '<b>团队技能</b>' }, heroDescription: { en: 'English fallback' } }
-    render(<HomePage />)
+    render(<HomePage applyPresentation />)
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('<b>团队技能</b>')
     expect(screen.getByText('English fallback')).toBeTruthy()
     expect(document.querySelector('h1 b')).toBeNull()

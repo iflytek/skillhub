@@ -23,6 +23,8 @@ import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { useInView } from '@/shared/hooks/use-in-view'
 import { Button } from '@/shared/ui/button'
+import { HomePage } from './home'
+import { useSitePresentation, localizedPresentationText } from '@/shared/hooks/use-site-presentation'
 import { APP_FRAME_CLASS_NAME } from '@/shared/lib/layout-frame'
 
 interface HeroSkillItem {
@@ -256,18 +258,26 @@ function EnterpriseSection() {
  * stay aligned with the current registry state.
  */
 export function LandingPage() {
-  const { t } = useTranslation()
+  const { settings } = useSitePresentation()
+  return settings.homepageMode === 'CATALOG'
+    ? <div className={`${APP_FRAME_CLASS_NAME} py-8 lg:py-10`}><HomePage applyPresentation /></div>
+    : <LandingIntroduction />
+}
+
+function LandingIntroduction() {
+  const { t, i18n } = useTranslation()
+  const { settings } = useSitePresentation()
   const navigate = useNavigate()
 
   const { data: popularSkills, isLoading: isLoadingPopular } = useSearchSkills({
     sort: 'downloads',
     size: 6,
-  })
+  }, settings.showPopular)
 
   const { data: latestSkills, isLoading: isLoadingLatest } = useSearchSkills({
     sort: 'newest',
     size: 6,
-  })
+  }, settings.showLatest)
 
   const handleSkillClick = (namespace: string, slug: string) => {
     navigate({ to: `/space/${namespace}/${encodeURIComponent(slug)}` })
@@ -347,12 +357,12 @@ export function LandingPage() {
               {t('landing.experience.heroBadge')}
             </div>
 
-            <h1 className="mb-5 max-w-2xl text-4xl font-medium leading-[1.12] tracking-tight text-foreground md:text-5xl">
-              {t('landing.experience.heroTitle')}
+            <h1 className="mb-5 max-w-2xl whitespace-pre-wrap break-words text-4xl font-medium leading-[1.12] tracking-tight text-foreground md:text-5xl">
+              {localizedPresentationText(settings.heroTitle, i18n.resolvedLanguage) ?? t('landing.experience.heroTitle')}
             </h1>
 
-            <p className="mb-8 max-w-xl text-lg leading-relaxed text-muted-foreground">
-              {t('landing.experience.heroDescription')}
+            <p className="mb-8 max-w-xl whitespace-pre-wrap break-words text-lg leading-relaxed text-muted-foreground">
+              {localizedPresentationText(settings.heroDescription, i18n.resolvedLanguage) ?? t('landing.experience.heroDescription')}
             </p>
 
             <div className="mb-8 flex flex-wrap gap-3">
@@ -410,11 +420,11 @@ export function LandingPage() {
         </div>
       </section>
 
-      <div ref={quickStartView.ref} className={`scroll-fade-up${quickStartView.inView ? ' in-view' : ''}`}>
+      {settings.showQuickStart && <div ref={quickStartView.ref} className={`scroll-fade-up${quickStartView.inView ? ' in-view' : ''}`}>
         <LandingQuickStartSection />
-      </div>
+      </div>}
 
-      <section ref={popularView.ref} className={`relative z-10 w-full bg-background py-16 scroll-fade-up${popularView.inView ? ' in-view' : ''} md:py-20`}>
+      {settings.showPopular && <section ref={popularView.ref} className={`relative z-10 w-full bg-background py-16 scroll-fade-up${popularView.inView ? ' in-view' : ''} md:py-20`}>
         <div className={`${APP_FRAME_CLASS_NAME} space-y-6`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -441,9 +451,9 @@ export function LandingPage() {
             </div>
           )}
         </div>
-      </section>
+      </section>}
 
-      <section ref={latestView.ref} className={`relative z-10 w-full border-y border-border/70 bg-secondary/70 py-16 scroll-fade-up${latestView.inView ? ' in-view' : ''} md:py-20`}>
+      {settings.showLatest && <section ref={latestView.ref} className={`relative z-10 w-full border-y border-border/70 bg-secondary/70 py-16 scroll-fade-up${latestView.inView ? ' in-view' : ''} md:py-20`}>
         <div className={`${APP_FRAME_CLASS_NAME} space-y-6`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -470,7 +480,7 @@ export function LandingPage() {
             </div>
           )}
         </div>
-      </section>
+      </section>}
 
       <div ref={enterpriseView.ref} className={`scroll-fade-up${enterpriseView.inView ? ' in-view' : ''}`}>
         <EnterpriseSection />

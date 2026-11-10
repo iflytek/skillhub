@@ -1,5 +1,5 @@
 import { cn } from '@/shared/lib/utils'
-import { useSitePresentation, localizedPresentationText } from '@/shared/hooks/use-site-presentation'
+import { useSitePresentation, localizedPresentationText, defaultSitePresentation } from '@/shared/hooks/use-site-presentation'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SearchBar } from '@/features/search/search-bar'
@@ -11,9 +11,10 @@ import { normalizeSearchQuery } from '@/shared/lib/search-query'
 import { BrandMark } from '@/shared/components/brand-mark'
 import { Button } from '@/shared/ui/button'
 
-export function HomePage() {
+export function HomePage({ applyPresentation = false }: { applyPresentation?: boolean }) {
   const { t, i18n } = useTranslation()
-  const { settings: presentation } = useSitePresentation()
+  const { settings } = useSitePresentation()
+  const presentation = applyPresentation ? settings : { ...defaultSitePresentation(), siteName: settings.siteName, logoUrl: settings.logoUrl, faviconUrl: settings.faviconUrl }
   const catalog = presentation.homepageMode === 'CATALOG'
   const title = localizedPresentationText(presentation.heroTitle, i18n.resolvedLanguage)
   const description = localizedPresentationText(presentation.heroDescription, i18n.resolvedLanguage)
