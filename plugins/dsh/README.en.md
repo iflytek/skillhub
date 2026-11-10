@@ -14,13 +14,21 @@ Version `0.4.0` uses the independent `dsh-v0.4.0` tag. It adds versioned example
 
 `0.6.1` includes managed enable/disable, unified read-only update checks, and compact horizontal installed cards with a More menu. Shared inventory remains v2 without a coordinated CLI upgrade. Compatibility acceptance with the actual CLI 0.2.0 package has passed. Check npm for public availability.
 
-`0.6.2` is the current patch candidate, combining source-isolated updates, release-change previews and local-file handling, single-skill ZIP transfer, local favorites, and DSH `0.2.1-rc.5` compatibility. Shared inventory remains v2 without a coordinated CLI upgrade. Candidate and public-package acceptance are separate; check npm before installation.
+`0.6.2` is publicly released and includes source-isolated updates, release-change previews and local-file handling, single-skill ZIP transfer, local favorites, and DSH `0.2.1-rc.5` compatibility. Shared inventory remains v2 without a coordinated CLI upgrade.
+
+`0.6.3` is the current patch candidate, delivering the compact workbench, bounded read-only file tree, local-change entry fixes and upgraded-detail return from [#1080](https://github.com/iflytek/skillhub/pull/1080). It retains the source, inventory and Host compatibility boundaries of `0.6.2`, with no runtime dependency changes. Candidate and public-package acceptance remain separate; npm availability is not claimed before publication.
+
+## Compact interface and file preview (0.6.3)
+
+Discovery, My skills, details and settings share compact controls and light/dark themes. The Files tab provides a collapsible directory tree and keeps its selection and folded state within the current detail reference. It uses the full content width; Manage installations returns to the existing overview management panel. Line numbers share the text scroll area, while Copy copies only the original file content. The Files tab reads a fixed-version directory, then loads only the selected body: at most 500 entries and 256 KiB per text preview. Oversized or binary files show metadata only. Text is read-only and copyable; HTML and remote resources in its body do not execute or load. Unsupported listings, anonymous denial and failures have distinct states. Switching sources invalidates old references. This reuses existing Registry GET endpoints and adds only local read-only Host RPC, without changing SaaS HTTP APIs or shared inventory.
+
+Reviews retain the existing skill-level API and distinguish loading, empty results and read failures. Both market and installed details open local changes for the selected installation. After an upgrade, “返回详情” refreshes the actual inventory and opens the upgraded detail; refresh failures can be retried without repeating the upgrade. Skill cards provide subtle hover and keyboard focus feedback. File bodies currently show plain text and line numbers, without language syntax highlighting.
 
 ## Use an installed skill
 
 Market, installed and everyday conversation lists show one card per skill. “使用技能” asks the Host to verify the unique installation actually usable in the current session. Catalog use creates a conversation in the same workspace; conversation use keeps the current session. Choose an example or custom task to insert an editable draft. This never sends a message, invokes a model or overwrites the original draft.
 
-In the installed card’s More menu, “管理安装” opens skill details, where the inline installation panel shows each location’s version, state and explicit use/update/enable/disable/removal actions. Disabled or unverified skills lead to management. Installation scope remains in advanced confirmation options, with the current-user default unchanged.
+In the installed card’s More menu, “管理安装” opens skill details, where the inline installation panel shows each location’s version, state and explicit use/update/enable/disable/removal actions. Disabled or unverified skills lead to management. Installation scope is directly visible in confirmation, with the current-user default unchanged.
 
 An active session is required. Shadowed skills, modified files, disabled user invocation or changed context are reported without modifying the draft. Historical receipts are not proof of current installation. This feature is available from `0.4.0`.
 
@@ -37,19 +45,19 @@ In the detail's installation management panel, each location's Manage menu expor
 
 | Component | Requirement or scope |
 | --- | --- |
-| DSH | `0.6.2` candidate: `0.2.0-rc.2`, `0.2.1-rc.2`, or `0.2.1-rc.5`; Host, app-boot and injected Client modules must share the exact release |
+| DSH | `0.6.3` candidate retains the `0.6.2` baseline: `0.2.0-rc.2`, `0.2.1-rc.2`, or `0.2.1-rc.5`; Host, app-boot and injected Client modules must share the exact release |
 | Cordis | Old RC: both families below; `0.2.1-rc.2` and `0.2.1-rc.5`: only `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7` |
 | Host Node | `>=24.2.0 <25`; Node 24.0.0 is unsuitable |
 | Build package manager | Bun `1.3.13`, using frozen lockfiles |
 | UI | Chinese, DSH light/dark themes and narrow layouts |
-| Verified environments | Historical dual-RC2 acceptance remains separately recorded. This Linux round passes native RC5 probes on Node 24.2.0/24.17.0 and both RC2 regressions on Node 24.2.0; task 53 records browser evidence separately |
-| Validation boundary | Historical evidence does not automatically cover RC5. Remote CI, native Windows/macOS, real models and SaaS have not run in this round; candidate tarballs and public npm packages have separate acceptance |
+| Verified environments | See existing records for `0.6.2` and earlier compatibility acceptance; final `0.6.3` candidate, platform and public-package results are recorded separately |
+| Validation boundary | Historical feature evidence does not replace final-package acceptance; CI, native Host, browser, real-model and SaaS results are recorded separately |
 
 Windows browser acceptance does not establish complete native Windows Host filesystem support. CI results do not replace desktop, model, or target-instance acceptance. See the repository's [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and [acceptance criteria](../../openspec/changes/add-dsh-native-plugin/acceptance.md).
 
 Version `0.3.1` includes the merged [Issue #981 compatibility fix](https://github.com/iflytek/skillhub/pull/988). Published plugin `0.3.0` does not include it. Unknown releases and mixed Host/Client graphs reject new writes. Optional `userQuestions` is enabled by Host service availability; it is not part of the mandatory write-version gate. Its API is identical in the three enumerated RCs, each of which the peer declaration permits. An absent service falls back to the plugin confirmation dialog.
 
-The `0.6.2` candidate adds `0.2.1-rc.5`; compatibility and acceptance are tracked in the [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and task 53 verification. This does not extend the published npm `0.6.1` support declaration. Platform, Node boundary, browser, and model evidence remain separate; release is a separate step.
+Starting with `0.6.2`, the plugin supports `0.2.1-rc.5`; compatibility and acceptance are tracked in the [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and task 53 verification. This does not extend the published npm `0.6.1` support declaration. `0.6.3` retains this baseline; platform, Node boundary, browser, model and this release acceptance remain separate.
 
 ## Build and package
 
@@ -87,11 +95,13 @@ Published `0.1.0` still requires the original Cordis `4.0.4` baseline and does n
 
 ## Install from npm
 
+This section targets `0.6.3`. First use `npm view` to confirm that the exact version is available; otherwise use a candidate tarball as described below. Use only the verified DSH RCs listed in the table above. Other versions, including `0.2.2-rc.1`, are outside the supported range.
+
 Query the exact npm version first and install only after confirming availability. Check DSH, Node and a complete Cordis combination listed above, stop the target Web Profile Host, then install the plugin. A verified local tarball can also be installed using the next section:
 
 ```sh
-npm view @astron-team/skillhub-dsh@0.6.2 version
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.2 --ignore-scripts
+npm view @astron-team/skillhub-dsh@0.6.3 version
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.3 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 
@@ -274,9 +284,9 @@ Manual update actions on conversation cards also open the change preview. Model 
 
 ## Local favorites
 
-The bookmark on market cards and details saves a local favorite. The browse view's “仅看收藏” filter reads the complete current-source list and searches it locally, independently of loaded market pages. Favorites require no login, install nothing, and do not change the website's star count. Opening an item resolves its current downloadable version; offline or missing items stay saved without automatically installing an old version.
+The heart-shaped favorite button in details adds or removes a local favorite; ordinary discovery cards do not show a favorite button. The browse view's “仅看收藏” filter reads the complete current-source list, whose cards allow direct removal from favorites. It searches this list locally, independently of loaded market pages. Favorites require no login, install nothing, and do not change the website's star count. Opening an item resolves its current downloadable version; offline or missing items stay saved without automatically installing an old version.
 
-Favorites use `$DSH_HOME/skillhub/favorites.json`, with DSH_HOME resolved by the Host's path rules. Profiles and projects sharing that home share favorites; Registry sources and different DSH_HOME values remain isolated. Removing a favorite does not uninstall a skill, and switching or removing a source does not delete its favorites. Read/write failures are reported without silently clearing the list or overwriting unknown formats. This is part of the `0.6.2` candidate, not the published npm `0.6.1` package; verify that the target version is publicly available first.
+Favorites use `$DSH_HOME/skillhub/favorites.json`, with DSH_HOME resolved by the Host's path rules. Profiles and projects sharing that home share favorites; Registry sources and different DSH_HOME values remain isolated. Removing a favorite does not uninstall a skill, and switching or removing a source does not delete its favorites. Read/write failures are reported without silently clearing the list or overwriting unknown formats. This is available starting with the published `0.6.2` package and is not included in npm `0.6.1`.
 
 After a successful removal, a dismissible top-right notice names the skill and can undo the latest removal. Failed undo retains its retry action. Leaving the page, switching sources, or manually saving that skill again clears the old notice. Empty search results offer a clear-search action. A new search cancels an unfinished open request so late results cannot override the new intent.
 

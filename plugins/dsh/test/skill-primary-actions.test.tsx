@@ -22,8 +22,8 @@ test('installed defaults to one skill card with no position filter or management
     expect(html.match(/astron-sh-installed-card"/g)).toHaveLength(1);
     expect(html).toContain('多个版本 · v1 / v2'); expect(html).toContain('暂无摘要');
     expect(html).toContain('检查更新'); expect(html).not.toContain('0 处检查失败');
-    expect(html).toContain('aria-label="writer 更多操作"'); expect(html).toContain('aria-haspopup="menu"');
-    expect(html).toContain('1 个技能'); expect(html).toContain('使用技能'); expect(html).not.toContain('>管理安装</button>'); expect(html).not.toContain('>详情</button>'); expect(html).toContain('aria-label="查看 writer @demo/writer 详情"');
+    expect(html).not.toContain('更多操作'); expect(html).not.toContain('aria-haspopup="menu"');
+    expect(html).toContain('1 个技能'); expect(html).toContain('>使用</button>'); expect(html).not.toContain('>管理安装</button>'); expect(html).not.toContain('>详情</button>'); expect(html).toContain('aria-label="查看 writer @demo/writer 详情"');
     for (const text of ['筛选安装范围', 'role="combobox"', '>停用</button>', '>启用</button>', '>卸载</button>']) expect(html).not.toContain(text);
     client.setQueryData(['skillhub-installed', 'session', 'revision'], { items: [{ ...item, displayName: '写作助手', summary: '整理草稿并校对文档。' }], complete: true, unavailable: [], issues: [] });
     const disabled = renderToStaticMarkup(<QueryClientProvider client={client}><InstalledSkills services={services} sourceRevision="revision" source="https://registry.example"

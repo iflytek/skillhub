@@ -14,7 +14,7 @@ export function safeSkillWebUrl(value: string | null | undefined): string | unde
   } catch { return undefined; }
 }
 
-export function SkillWebsiteLink({ webUrl, enabled }: { webUrl?: string | null; enabled: boolean }) {
+export function SkillWebsiteLink({ webUrl, enabled, label = '在官网查看' }: { webUrl?: string | null; enabled: boolean; label?: string }) {
   const href = enabled ? safeSkillWebUrl(webUrl) : undefined;
-  return href ? <Button asChild size="sm" variant="outline" className="astron-sh-website-link"><a href={href} target="_blank" rel="noopener noreferrer">在官网查看<Icon name="arrow" /></a></Button> : null;
+  return href ? <Button asChild size="sm" variant="outline" className="astron-sh-website-link"><a href={href} target="_blank" rel="noopener noreferrer">{label}<Icon name="arrow" /></a></Button> : null;
 }

@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent, Card, Button } from './ui.js';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type RefObject } from 'react';
+import { Tabs, TabsList, TabsTrigger, TabsContent, Button, Dialog, DialogContent, DialogTitle, DialogDescription } from './ui.js';
 import { SkillAvatar, Icon } from './skill-card.js';
 import { readableDate, validRating, validCount } from './skill-presentation.js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,32 +8,66 @@ import type { SkillDetail, SkillHubConfig } from '../host/types.js';
 import type { ReactNode } from 'react';
 import '../../lib/typert.remote-client.js';
 import { readCacheOptions } from './read-cache.js';
+import { SkillFiles } from './skill-files.js';
 
 type Remote = TypertRemoteNamespaceMap['skillhub'];
-type Tab = 'details' | 'versions' | 'securityAudit' | 'reviews';
-const names: Record<Tab, string> = { details: '详情', versions: '版本', securityAudit: '安全审核', reviews: '评论' };
-export function DetailTabs({ detail, modes, remote, children, onSelectVersion, versionActionLabel, cacheIdentity, onContextStale, localPackage = false }: {
-  localPackage?: boolean; detail: SkillDetail; modes: SkillHubConfig['detailTabs']; remote: Remote; children: ReactNode; onSelectVersion?(version: string): void; versionActionLabel?: string; cacheIdentity?: string; onContextStale?(): void;
-}) {
+type Tab = 'details' | 'files' | 'versions' | 'securityAudit' | 'reviews';
+const names: Record<Tab, string> = { details: '概览', files: '文件', versions: '版本', securityAudit: '安全审核', reviews: '评论' };
+export interface DetailTabsHandle { showManagement(): void }
+
+type DetailTabsProps = {
+  localPackage?: boolean; detail: SkillDetail; modes: SkillHubConfig['detailTabs']; remote: Remote; children: ReactNode; onSelectVersion?(version: string): void; versionActionLabel?: string; cacheIdentity?: string; onContextStale?(): void; managementTarget?: RefObject<HTMLElement>;
+};
+export const DetailTabs = forwardRef<DetailTabsHandle, DetailTabsProps>(function DetailTabs({ detail, modes, remote, children, onSelectVersion, versionActionLabel, cacheIdentity, onContextStale, localPackage = false, managementTarget }, ref) {
   const identity = cacheIdentity ?? JSON.stringify([detail.namespace, detail.slug, detail.version]);
   const client = useQueryClient();
   const uiKey = ['skillhub-detail-ui', identity];
   const saved = client.getQueryData<{ selected: Tab; pages: { versions: number; reviews: number } }>(uiKey);
   const [pages, setPages] = useState(saved?.pages ?? { versions: 0, reviews: 0 });
-  const [selected, setSelected] = useState<Tab>(saved?.selected ?? 'details');
+  const [selected, setSelected] = useState<Tab>(saved?.selected === 'securityAudit' ? 'details' : saved?.selected ?? 'details');
+  const [managementRequested, setManagementRequested] = useState(false);
+  useImperativeHandle(ref, () => ({ showManagement() { setSelected('details'); setManagementRequested(true); } }), []);
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const auditVisible = !localPackage && (modes.securityAudit === 'show' || modes.securityAudit === 'auto' && detail.tabs.securityAudit === 'available');
+  const [auditOpen, setAuditOpen] = useState(saved?.selected === 'securityAudit' && auditVisible);
   useEffect(() => { client.setQueryData(['skillhub-detail-ui', identity], { selected, pages }); }, [client, identity, selected, pages]);
-  const visible = (Object.keys(names) as Tab[]).filter(tab => tab === 'details'
-    || !localPackage && (modes[tab] === 'show' || (modes[tab] === 'auto' && detail.tabs[tab] === 'available')));
+  const visible: Tab[] = ['details'];
+  if (!localPackage) {
+    visible.push('files');
+    for (const tab of ['versions', 'reviews'] as const) {
+      if (modes[tab] === 'show' || modes[tab] === 'auto' && detail.tabs[tab] === 'available') visible.push(tab);
+    }
+  }
   const active = visible.includes(selected) ? selected : 'details';
-  return <Card className="astron-sh-reading-card"><Tabs value={active} onValueChange={value => setSelected(value as Tab)}>
-    <TabsList aria-label="技能详情">{visible.map(tab => <TabsTrigger key={tab} value={tab}>{names[tab]}</TabsTrigger>)}</TabsList>
+  useEffect(() => {
+    if (!managementRequested || active !== 'details') return;
+    const target = managementTarget?.current;
+    if (target?.isConnected) { target.focus({ preventScroll: true }); target.scrollIntoView({ block: 'nearest' }); }
+    setManagementRequested(false);
+  }, [managementRequested, active, managementTarget]);
+  return <div ref={setContainer} className="astron-sh-reading-card" data-detail-view={active}><style>{`
+    .skillhub-controls .astron-sh-detail-tabbar{display:flex;align-items:center;gap:8px;padding-right:12px;min-width:0;border-bottom:1px solid var(--astron-sh-border)}
+    .skillhub-controls .astron-sh-detail-tabbar>.astron-sh-tabs-list{flex:1;min-width:0;border-bottom:0}
+    .skillhub-controls .astron-sh-detail-tabbar>button{flex:none}
+    .skillhub-controls .astron-sh-audit-dialog-title{margin:0;font-size:18px;line-height:24px}
+    .skillhub-controls .astron-sh-audit-dialog-copy{margin:16px 0;color:var(--astron-sh-muted);font-size:13px;line-height:20px}
+  `}</style><Tabs value={active} onValueChange={value => setSelected(value as Tab)}>
+    <div className="astron-sh-detail-tabbar"><TabsList aria-label="技能详情">{visible.map(tab => <TabsTrigger key={tab} value={tab}>{names[tab]}</TabsTrigger>)}</TabsList>
+      {auditVisible && <Button variant="ghost" size="sm" onClick={() => setAuditOpen(true)}><Icon name="info" />安全审核</Button>}</div>
     {visible.map(tab => <TabsContent key={tab} value={tab}>
-      {active !== tab ? null : tab === 'details' ? <><div className="astron-sh-reading-body">{children}</div><footer className="astron-sh-panel-footer"><span>SKILL.md</span>{!localPackage && <span>当前版本 {detail.version}</span>}</footer></> : tab === 'securityAudit' ? <><div className="astron-sh-reading-body astron-sh-audit-empty"><Icon name="info" /><h3>当前来源未提供公开审核信息</h3><p>当前来源的审核信息不支持匿名读取。</p><p>请检查技能内容与来源，不能据此判断技能已通过安全审核。</p></div><footer className="astron-sh-panel-footer">审核状态取决于当前来源提供的信息</footer></>
+      {active !== tab ? null : tab === 'details' ? <><div className="astron-sh-reading-body">{children}</div><footer className="astron-sh-panel-footer"><span>SKILL.md</span>{!localPackage && <span>当前版本 {detail.version}</span>}</footer></>
+        : tab === 'files' ? <SkillFiles key={detail.detailToken} rootName={detail.slug} token={detail.detailToken} identity={identity} remote={remote} onContextStale={onContextStale} />
+          : tab === 'securityAudit' ? null
         : <>
           <ModulePage key={`${identity}/${tab}`} cacheIdentity={identity} page={pages[tab]} setPage={page => setPages(previous => ({ ...previous, [tab]: page }))} onContextStale={onContextStale} tab={tab} token={detail.detailToken} remote={remote} detail={detail} onSelectVersion={onSelectVersion} versionActionLabel={versionActionLabel} /></>}
     </TabsContent>)}
-  </Tabs></Card>;
-}
+  </Tabs>{auditVisible && <Dialog open={auditOpen} onOpenChange={setAuditOpen}><DialogContent container={container} style={{ maxWidth: 416 }}>
+    <DialogTitle className="astron-sh-audit-dialog-title">安全审核</DialogTitle>
+    <DialogDescription className="astron-sh-audit-dialog-copy">当前来源的审核信息不支持匿名读取。</DialogDescription>
+    <p className="astron-sh-audit-dialog-copy">请检查技能内容与来源，不能据此判断技能已通过安全审核。</p>
+    <Button autoFocus onClick={() => setAuditOpen(false)}>关闭</Button>
+  </DialogContent></Dialog>}</div>;
+});
 
 function ModulePage({ tab, token, remote, detail, onSelectVersion, versionActionLabel, cacheIdentity, onContextStale, page, setPage }: { page: number; setPage(page: number): void; tab: 'versions' | 'reviews'; token: string; remote: Remote; detail: SkillDetail; onSelectVersion?(version: string): void; versionActionLabel?: string; cacheIdentity?: string; onContextStale?(): void }) {
   const result = useQuery({ ...readCacheOptions, queryKey: ['skillhub-module', cacheIdentity, tab, page], retry: false,

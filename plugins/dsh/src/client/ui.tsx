@@ -69,7 +69,7 @@ export const Dialog = DialogPrimitive.Root;
 export const DialogTitle = DialogPrimitive.Title;
 export const DialogDescription = DialogPrimitive.Description;
 /** Keep modal layers outside card action stacking contexts, but inside an owning native dialog's top layer. */
-export function DialogContent({ container, children, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { container: HTMLElement | null }) {
+export function DialogContent({ container, children, className, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { container: HTMLElement | null }) {
   const [layer, setLayer] = React.useState<HTMLDivElement | null>(null);
   React.useLayoutEffect(() => {
     if (!container) return;
@@ -82,7 +82,7 @@ export function DialogContent({ container, children, ...props }: React.Component
   if (!layer) return null;
   return <DialogPrimitive.Portal container={layer}>
     <DialogPrimitive.Overlay className="astron-sh-dialog-overlay" />
-    <DialogPrimitive.Content className="astron-sh-dialog" {...props}>{children}</DialogPrimitive.Content>
+    <DialogPrimitive.Content className={classes('astron-sh-dialog', className)} {...props}>{children}</DialogPrimitive.Content>
   </DialogPrimitive.Portal>;
 }
 
@@ -99,14 +99,14 @@ export const SelectField = React.forwardRef<HTMLButtonElement, {
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal container={container}>
         <SelectPrimitive.Content position="popper" sideOffset={5} className="astron-sh-select-content">
-          <SelectPrimitive.ScrollUpButton className="astron-sh-select-scroll" aria-label="向上滚动">⌃</SelectPrimitive.ScrollUpButton>
+          <SelectPrimitive.ScrollUpButton className="astron-sh-select-scroll" aria-label="向上滚动"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 15 6-6 6 6" /></svg></SelectPrimitive.ScrollUpButton>
           <SelectPrimitive.Viewport><SelectPrimitive.Group>
             {options.map(option => <SelectPrimitive.Item key={option.value} value={option.value} disabled={option.disabled} className="astron-sh-select-item">
               <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
-              <SelectPrimitive.ItemIndicator aria-hidden="true">✓</SelectPrimitive.ItemIndicator>
+              <SelectPrimitive.ItemIndicator aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m5 12 4 4L19 6" /></svg></SelectPrimitive.ItemIndicator>
             </SelectPrimitive.Item>)}
           </SelectPrimitive.Group></SelectPrimitive.Viewport>
-          <SelectPrimitive.ScrollDownButton className="astron-sh-select-scroll" aria-label="向下滚动">⌄</SelectPrimitive.ScrollDownButton>
+          <SelectPrimitive.ScrollDownButton className="astron-sh-select-scroll" aria-label="向下滚动"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></SelectPrimitive.ScrollDownButton>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>
     </SelectPrimitive.Root>

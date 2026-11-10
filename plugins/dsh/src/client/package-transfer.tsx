@@ -3,7 +3,9 @@ import { exactInstalledSkill, UseSkillButton, type SkillUseServices } from './us
 import { useEffect, useRef, useState } from 'react';
 import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol';
 import type { InstalledSkillList, NativeOperation } from '../host/types.js';
-import { Button, Dialog, DialogContent, DialogTitle, DialogDescription, SelectField } from './ui.js';
+import { Button, Dialog, DialogContent, DialogTitle, DialogDescription } from './ui.js';
+import { Icon } from './skill-card.js';
+import { OperationSurfaceStyles } from './operation-styles.js';
 import { useInstallationOperation } from './use-installation-operation.js';
 
 export const MAX_TRANSFER_BYTES = 8 * 1024 * 1024;
@@ -107,10 +109,10 @@ export function PackageImport({ transfer, revision, contextKey, services, onComp
     } catch (failure) { if (!controller.signal.aborted) setError(failure instanceof Error ? failure.message : '导入未确认。'); }
     finally { confirming.current = false; if (!controller.signal.aborted) setBusy(false); }
   }
-  return <span ref={setContainer}>
+  return <span ref={setContainer}><OperationSurfaceStyles />
     <input ref={file} type="file" accept=".zip,application/zip" aria-label="选择技能 ZIP" hidden onChange={event => { const selected = event.target.files?.[0]; event.target.value = ''; if (selected) void choose(selected); }} />
-    <Button ref={trigger} disabled={!!accepted && !['completed', 'failed', 'recovery-required', 'unknown'].includes(operation?.phase ?? '')} onClick={() => file.current?.click()}>导入技能包</Button>
-    <Dialog open={open} onOpenChange={next => { if (!next) { request.current?.abort(); setBusy(false); } setOpen(next); }}><DialogContent container={container} className="astron-sh-dialog astron-sh-package-dialog" onCloseAutoFocus={event => {
+    <Button ref={trigger} disabled={!!accepted && !['completed', 'failed', 'recovery-required', 'unknown'].includes(operation?.phase ?? '')} onClick={() => file.current?.click()}><Icon name="upload" />导入技能包</Button>
+    <Dialog open={open} onOpenChange={next => { if (!next) { request.current?.abort(); setBusy(false); } setOpen(next); }}><DialogContent container={container} className="astron-sh-dialog astron-sh-package-dialog astron-sh-operation-dialog" onCloseAutoFocus={event => {
       event.preventDefault();
       if (trigger.current && !trigger.current.disabled) trigger.current.focus();
       else trigger.current?.closest('.skillhub-installed-toolbar')?.querySelector<HTMLInputElement>('input[type=search]')?.focus();
@@ -121,7 +123,7 @@ export function PackageImport({ transfer, revision, contextKey, services, onComp
       {busy && !preview && <p role="status">正在检查技能包…</p>}
       {(error || receipt.isError) && <p role="alert">{error || '暂时无法查询导入状态，请关闭后刷新已安装。'}</p>}
       </div>
-      {preview && <div className="astron-sh-package-scope"><SelectField label="安装范围" value={scope} onValueChange={value => setScope(value as 'user' | 'project')} disabled={busy || !!accepted} options={[{ value: 'project', label: '仅此项目' }, { value: 'user', label: '所有项目' }]} /></div>}
+      {preview && <div className="astron-sh-package-scope" role="radiogroup" aria-label="安装范围">{([['project', '仅此项目'], ['user', '所有项目']] as const).map(([value, label]) => <label key={value} className="astron-sh-scope-choice"><input type="radio" name={`package-scope-${preview.previewId}`} value={value} checked={scope === value} disabled={busy || !!accepted} onChange={() => setScope(value)} />{label}</label>)}</div>}
       {preview && <section className="astron-sh-package-result" aria-label="导入结果" data-state={progress.state}>
         <strong role={progress.state === 'stopped' ? 'alert' : 'status'}>{progress.label}</strong>
         {progress.state !== 'ready' && <div className="astron-sh-install-progress-track" data-state={progress.state} role="progressbar" aria-label="导入进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress.state === 'complete' ? 100 : undefined} aria-valuetext={progress.label}><span /></div>}
@@ -133,7 +135,7 @@ export function PackageImport({ transfer, revision, contextKey, services, onComp
           return exact.itemKey;
         }} onUsed={() => setOpen(false)} onHandoff={() => setOpen(false)} onError={setError} />}</div>
       </section>}
-      <div className="astron-sh-dialog-actions"><Button onClick={() => { request.current?.abort(); setBusy(false); setOpen(false); }}>关闭</Button>{preview && !accepted && <Button variant="default" disabled={busy} onClick={() => { void confirm(); }}>确认导入</Button>}</div>
+      <div className="astron-sh-dialog-actions"><Button onClick={() => { request.current?.abort(); setBusy(false); setOpen(false); }}>关闭</Button>{preview && !accepted && <Button variant="default" disabled={busy} onClick={() => { void confirm(); }}><Icon name="upload" />确认导入</Button>}</div>
     </DialogContent></Dialog>
   </span>;
 }

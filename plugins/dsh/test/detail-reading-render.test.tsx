@@ -36,3 +36,27 @@ test('local package details hide market version and modules explicitly, without 
   const market = renderToStaticMarkup(<QueryClientProvider client={new QueryClient()}><DetailContent detail={{ ...detail, version: 'local' }} modes={{ versions: 'hide', reviews: 'hide', securityAudit: 'hide' }} remote={remote} retry={() => {}} /></QueryClientProvider>);
   expect(market).toContain('当前版本 local');
 });
+
+test('cached file selection exposes only the file view and passes the actual package root name', () => {
+  const identity = 'session/source/team/writer/files';
+  const client = new QueryClient();
+  client.setQueryData(['skillhub-detail-ui', identity], { selected: 'files', pages: { versions: 0, reviews: 0 } });
+  client.setQueryData(['skillhub-files', identity, detail.detailToken], { state: 'ready', items: [{ path: 'SKILL.md', size: 8, contentType: 'text/markdown' }] });
+  client.setQueryData(['skillhub-file', identity, detail.detailToken, 'SKILL.md'], { state: 'text', path: 'SKILL.md', content: '# Writer' });
+  const html = renderToStaticMarkup(<QueryClientProvider client={client}><DetailContent detail={detail} modes={{ versions: 'hide', reviews: 'hide', securityAudit: 'hide' }} remote={remote} retry={() => {}} cacheIdentity={identity} /></QueryClientProvider>);
+  expect(html).toContain('data-detail-view="files"');
+  expect(html).toContain('aria-label="writer 根目录"');
+  expect(html).toContain('文件预览 SKILL.md');
+  expect(html).not.toContain('正文标题');
+});
+
+test('cached market file selection cannot reveal a file view for a local package', () => {
+  const identity = 'session/source/local/files';
+  const client = new QueryClient();
+  client.setQueryData(['skillhub-detail-ui', identity], { selected: 'files', pages: { versions: 0, reviews: 0 } });
+  const html = renderToStaticMarkup(<QueryClientProvider client={client}><DetailContent localPackage detail={detail} modes={{ versions: 'show', reviews: 'show', securityAudit: 'show' }} remote={remote} retry={() => {}} cacheIdentity={identity} /></QueryClientProvider>);
+  expect(html).toContain('data-detail-view="details"');
+  expect(html).toContain('正文标题');
+  expect(html).not.toContain('版本文件列表');
+  expect(html).not.toContain('role="tab" data-state="inactive"');
+});

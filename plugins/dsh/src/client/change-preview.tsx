@@ -18,17 +18,17 @@ export interface ChangeServices {
 function value<T>(response: RemoteResult<T>): T { if (!response.ok) throw new Error('读取或操作未确认，请重新检查安装状态。'); return response.value; }
 export function ChangePreviewStyles() { return <style>{`
 .astron-sh-changes{min-width:0;--changes-add:light-dark(#047857,#6ee7b7);--changes-add-bg:light-dark(#ecfdf5,#12352c);--changes-remove:light-dark(#be123c,#fda4af);--changes-remove-bg:light-dark(#fff1f2,#3b2029)}
-.astron-sh-changes .changes-panel{box-shadow:none;overflow:hidden}
+.astron-sh-changes .changes-panel{box-shadow:none;overflow:hidden;width:100%;max-width:640px;margin-inline:auto}
 .astron-sh-changes .changes-heading{padding:18px 18px 14px;border-bottom:1px solid var(--astron-sh-border);gap:5px}
 .astron-sh-changes .changes-heading h3{font-size:16px;line-height:24px;margin:0;font-weight:600}
 .astron-sh-changes .changes-context{color:var(--astron-sh-muted);font-size:12px;line-height:18px;overflow-wrap:anywhere;margin:0}
 .astron-sh-changes .changes-content{padding:16px 18px 18px}
 .astron-sh-changes .changes-section-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;font-size:12px;color:var(--astron-sh-muted)}
-.astron-sh-changes .changes-section-heading .astron-sh-button{margin:0;min-height:26px;height:26px;padding:2px 6px;font-size:12px}
+.astron-sh-changes .changes-section-heading .astron-sh-button{margin:0;min-height:24px;height:24px;padding:0 8px;font-size:12px}
 .astron-sh-changes .changes-list{border:1px solid var(--astron-sh-border);border-radius:8px;overflow:hidden}
 .astron-sh-changes .changes-file{position:relative;min-width:0}
 .astron-sh-changes .changes-file+.changes-file{border-top:1px solid var(--astron-sh-border)}
-.astron-sh-changes summary{display:flex;align-items:center;gap:9px;cursor:pointer;padding:11px 12px;min-width:0;list-style:none;background:var(--astron-sh-bg)}
+.astron-sh-changes summary{display:flex;align-items:center;gap:9px;cursor:pointer;padding:9px 12px;min-width:0;list-style:none;background:var(--astron-sh-bg)}
 .astron-sh-changes summary::-webkit-details-marker{display:none}
 .astron-sh-changes summary:hover{background:var(--astron-sh-soft)}
 .astron-sh-changes summary code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;font:12px/20px ui-monospace,SFMono-Regular,Consolas,monospace}
@@ -39,14 +39,14 @@ export function ChangePreviewStyles() { return <style>{`
 .astron-sh-changes .changes-undo.astron-sh-button{position:absolute;right:31px;top:7px;min-height:28px;height:28px;font-size:12px;padding:3px 7px;margin:0;color:var(--astron-sh-muted)}
 .astron-sh-changes .changes-badge-added{color:var(--changes-add);background:var(--changes-add-bg);border-color:transparent}
 .astron-sh-changes .changes-badge-deleted{color:var(--changes-remove);background:var(--changes-remove-bg);border-color:transparent}
-.astron-sh-changes .changes-code{max-height:320px;overflow:auto;background:var(--astron-sh-bg);font:12px/22px ui-monospace,SFMono-Regular,Consolas,monospace;margin:0;border-top:1px solid var(--astron-sh-border);tab-size:2}
+.astron-sh-changes .changes-code{max-height:240px;overflow:auto;background:var(--astron-sh-bg);font:12px/20px ui-monospace,SFMono-Regular,Consolas,monospace;margin:0;border-top:1px solid var(--astron-sh-border);tab-size:2}
 .astron-sh-changes .changes-line{display:flex;white-space:pre;min-width:max-content;padding-right:12px}
 .astron-sh-changes .changes-line-number{width:40px;flex:none;text-align:right;padding-right:10px;color:var(--astron-sh-muted);user-select:none;border-right:1px solid var(--astron-sh-border);font-variant-numeric:tabular-nums}
 .astron-sh-changes .changes-line-sign{width:25px;text-align:center;flex:none;user-select:none}
 .astron-sh-changes .changes-line.added{background:var(--changes-add-bg);color:var(--changes-add)}
 .astron-sh-changes .changes-line.deleted{background:var(--changes-remove-bg);color:var(--changes-remove)}
 .astron-sh-changes .changes-inline-message{padding:12px;margin:0;font-size:12px;color:var(--astron-sh-muted)}
-.astron-sh-changes .changes-footer{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:16px;border-top:1px solid var(--astron-sh-border);padding-top:14px}
+.astron-sh-changes .changes-footer{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:12px;border-top:1px solid var(--astron-sh-border);padding-top:14px}
 .astron-sh-changes .changes-footer .astron-sh-button{margin:0}
 .astron-sh-changes .changes-confirm{background:var(--astron-sh-soft);border:1px solid var(--astron-sh-border);border-radius:8px;padding:14px;margin-top:14px;font-size:13px;overflow-wrap:anywhere}
 .astron-sh-changes .changes-confirm strong{font-size:13px}
@@ -56,7 +56,7 @@ export function ChangePreviewStyles() { return <style>{`
 .astron-sh-changes .changes-release-note strong{font-size:12px;font-weight:600}.astron-sh-changes .changes-release-note p{margin:5px 0 0;color:var(--astron-sh-muted)}
 .astron-sh-changes .changes-backup{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;padding:10px 12px;margin-bottom:14px;border-radius:7px;background:var(--astron-sh-soft);font-size:12px}
 .astron-sh-changes .changes-backup code{display:block;font-size:11px;line-height:17px;color:var(--astron-sh-muted);overflow-wrap:anywhere;min-width:0}
-.astron-sh-changes .changes-backup .astron-sh-button{margin:0;min-height:26px;height:26px;padding:2px 6px;font-size:12px}
+.astron-sh-changes .changes-backup .astron-sh-button{margin:0;min-height:24px;height:24px;padding:0 8px;font-size:12px}
 @media(max-width:640px){.astron-sh-changes .changes-code{max-height:240px}.astron-sh-changes .changes-heading{padding:14px}.astron-sh-changes .changes-content{padding:12px 14px 14px}.astron-sh-changes summary{gap:7px;padding-left:10px}.astron-sh-changes .changes-line-number{width:32px}.astron-sh-changes .changes-confirm .astron-sh-button{margin:0 5px 0 0}}
 `}</style>; }
 function FileChange({ file, view, revision, itemKey, services, onUndo, disabled }: { file: ChangesView['changes'][number]; view: ChangesView; revision: string; itemKey: string; services: ChangeServices; onUndo?(trigger: HTMLButtonElement): void; disabled?: boolean }) {
@@ -71,11 +71,17 @@ function FileChange({ file, view, revision, itemKey, services, onUndo, disabled 
 }
 
 /** Sequential local handling → release differences → final explicit acceptance. */
+/** Keep the completed receipt until the refreshed detail can actually be shown. */
+export async function returnToUpgradedDetail(requests: ChangeRequests, key: string, operation: NativeOperation, onCompleted: (version: string) => void | boolean | Promise<void | boolean>): Promise<void> {
+  if (await onCompleted(operation.version) !== false) requests.closeResult(key, operation);
+}
+
 export function ChangePreview({ services, revision, itemKey, upgrade, targetVersion, installationKey, onClose, onCompleted }: {
-  services: UpgradeServices & { changes: ChangeServices }; revision: string; itemKey: string; upgrade: boolean; targetVersion?: string; installationKey?: string; onClose(): void; onCompleted?(version: string): void;
+  services: UpgradeServices & { changes: ChangeServices }; revision: string; itemKey: string; upgrade: boolean; targetVersion?: string; installationKey?: string; onClose(): void; onCompleted?(version: string): void | boolean | Promise<void | boolean>;
 }) {
   const writable = useWritableHost(services);
   const [view, setView] = useState<ChangesView>(); const [error, setError] = useState(''); const [pending, setPending] = useState(false);
+  const localStep = useRef<ChangesView>();
   const resetTrigger = useRef<HTMLButtonElement | null>(null);
   const resetCancel = useRef<HTMLButtonElement>(null);
   const [reset, setReset] = useState<FileResetPlanView>(); const [operation, setOperation] = useState<NativeOperation>();
@@ -108,7 +114,11 @@ export function ChangePreview({ services, revision, itemKey, upgrade, targetVers
   }, []);
   async function preview(local: ChangesView, backup: boolean) {
     const result = value(await services.changes.preview(revision, itemKey, local.snapshotId!, targetVersion ?? null, backup, signal()));
-    signal().throwIfAborted(); setView(result);
+    signal().throwIfAborted();
+    // Keep the same read snapshot on back/continue so the Host can reuse its backup.
+    // Preview and confirmation still revalidate files, source and snapshot expiry.
+    localStep.current = { ...local, backupSaved: result.backupSaved, backupLocation: result.backupLocation };
+    setView(result);
   }
   async function prepareReset(paths: string[]) { const result = value(await services.changes.prepareReset(revision, itemKey, view!.snapshotId!, paths, signal())); signal().throwIfAborted(); setReset(result); }
   async function execute() {
@@ -129,7 +139,7 @@ export function ChangePreview({ services, revision, itemKey, upgrade, targetVers
     <HostWriteStatus state={writable} /><Card className="changes-panel"><CardHeader className="changes-heading"><h3>{view?.kind === 'version' ? '版本变化' : upgrade ? '处理本地修改' : '本地修改'}</h3>{view?.status === 'ready' && <p className="changes-context">{view.kind === 'local' ? `v${view.version} 原始发布内容 → 当前本地文件` : `v${view.version} 原始发布内容 → v${view.candidateVersion} 发布内容`}</p>}</CardHeader><CardContent className="changes-content">
     {error && <p role="alert">{error}<Button size="sm" onClick={() => run(operation ? async () => { const current = value(await services.operation(operation.operationId, operation.context.hostInstanceId)); if (!current) throw new Error('原操作暂不可读，请重试。'); setOperation({ ...current }); } : execution.current ? execute : load)} disabled={pending}>{execution.current ? '查询原请求' : '重新检查'}</Button></p>}
     {pending && <p role="status">{execution.current ? '正在提交…' : '正在检查并准备内容…'}</p>}
-    {operation ? <><p role="status">{operation.phase === 'completed' ? '升级完成。' : operation.phase === 'failed' ? '操作未完成，请核验安装状态。' : ['unknown', 'recovery-required'].includes(operation.phase) ? '操作需要恢复核验，请勿重复提交。' : '正在执行…'}</p>{['unknown', 'recovery-required'].includes(operation.phase) && <Button disabled={pending || !writable.canWrite} onClick={() => run(async () => { const result = value(await services.recoverOperation({ operationId: operation.operationId, hostInstanceId: operation.context.hostInstanceId })); if (result) setOperation(result); })}>核验并恢复</Button>}<Button onClick={() => { if (operation.phase === 'completed' || (operation.phase === 'failed' && ['restored', 'not-needed'].includes(operation.recovery))) requests.closeResult(activeKey.current, operation); if (operation.phase === 'completed') onCompleted?.(operation.version); onClose(); }}>关闭</Button></> : <>
+    {operation ? <><p role="status">{operation.phase === 'completed' ? '升级完成。' : operation.phase === 'failed' ? '操作未完成，请核验安装状态。' : ['unknown', 'recovery-required'].includes(operation.phase) ? '操作需要恢复核验，请勿重复提交。' : '正在执行…'}</p>{['unknown', 'recovery-required'].includes(operation.phase) && <Button disabled={pending || !writable.canWrite} onClick={() => run(async () => { const result = value(await services.recoverOperation({ operationId: operation.operationId, hostInstanceId: operation.context.hostInstanceId })); if (result) setOperation(result); })}>核验并恢复</Button>}<Button disabled={pending} onClick={() => run(async () => { if (operation.phase === 'completed' && onCompleted) await returnToUpgradedDetail(requests, activeKey.current, operation, onCompleted); else { if (operation.phase === 'completed' || (operation.phase === 'failed' && ['restored', 'not-needed'].includes(operation.recovery))) requests.closeResult(activeKey.current, operation); onClose(); } })}>{operation.phase === 'completed' ? '返回详情' : '关闭'}</Button></> : <>
       {view?.status === 'blocked' && <p role="alert">当前无法比较或操作：{view.reason}</p>}
       {view?.status === 'ready' && <>
         {view.kind === 'version' && view.changelog && <div className="changes-release-note"><strong>更新说明</strong><p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{view.changelog}</p></div>}
@@ -139,7 +149,10 @@ export function ChangePreview({ services, revision, itemKey, upgrade, targetVers
             disabled={pending || !!reset} onUndo={view.kind === 'local' && writable.canWrite ? trigger => { resetTrigger.current = trigger; run(() => prepareReset([file.path])); } : undefined} />)}</div></> : <p role="status">{view.kind === 'local' ? '没有本地修改。' : '两个发布版本的文件内容相同。'}</p>}
       </>}
       {reset && <div className="changes-confirm" onKeyDown={event => { if (event.key === 'Escape' && !pending) { event.preventDefault(); closeReset(); } }}><strong>{reset.paths.length === 1 ? `撤销 ${reset.paths[0]!.path} 的修改？` : `撤销这 ${reset.paths.length} 个文件的修改？`}</strong><p>{reset.paths.length === 1 && reset.paths[0]!.kind === 'added' ? '将删除这个本地新增文件。' : `将恢复所选发布文件的原始内容${reset.paths.some(file => file.kind === 'added') ? `，并删除 ${reset.paths.filter(file => file.kind === 'added').length} 个本地新增文件` : ''}，版本保持不变。`}</p><ul>{reset.paths.slice(0, 5).map(file => <li key={file.path}>{file.kind === 'added' ? '删除本地新增文件：' : '恢复原始内容：'}<code>{file.path}</code></li>)}</ul>{reset.paths.length > 5 && <p>另有 {reset.paths.length - 5} 个文件。</p>}<Button ref={resetCancel} disabled={pending} onClick={closeReset}>取消</Button> <Button disabled={pending} onClick={() => run(async () => { if (!writable.canWrite) throw new Error('当前宿主不可写。'); activeKey.current = requestKeys.reset; execution.current = { kind: 'reset', request: { planId: reset.planId, hostInstanceId: reset.hostInstanceId, requestKey: crypto.randomUUID() } }; await execute(); })}>确认撤销</Button></div>}
-      <div className="changes-footer"><Button disabled={pending} onClick={onClose}>{upgrade && view?.kind === 'local' ? '暂不升级' : '返回详情'}</Button>
+      <div className="changes-footer">{upgrade && view?.status === 'ready' && view.kind === 'version' && !reset && <Button disabled={pending} onClick={() => run(async () => {
+        if (!localStep.current) throw new Error('本地快照已失效，请重新检查。');
+        setReset(undefined); setView(localStep.current);
+      })}>上一步</Button>}<Button disabled={pending} onClick={onClose}>{upgrade && view?.kind === 'local' ? '暂不升级' : '返回详情'}</Button>
         {upgrade && view?.status === 'ready' && !reset && <Button variant="default" disabled={pending || !writable.canWrite} onClick={() => run(async () => {
           if (!writable.canWrite) throw new Error('当前宿主不可写。');
           if (view.kind === 'local') { await preview(view, view.changes.length > 0); return; }
