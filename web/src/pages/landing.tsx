@@ -341,6 +341,11 @@ function LandingIntroduction() {
     },
   ]
 
+  const visibleFeatures = features.filter(feature => presentationItemVisible(settings, 'capabilities', feature.id))
+  const featureColumns = visibleFeatures.length === 1
+    ? 'md:grid-cols-1 lg:grid-cols-1'
+    : [2, 4].includes(visibleFeatures.length) ? 'md:grid-cols-2 lg:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'
+
   const heroHighlights = [
     { icon: <PackageOpen className="h-4 w-4" strokeWidth={1.5} />, label: text('hero', 'highlightSelfHosted') },
     { icon: <Shield className="h-4 w-4" strokeWidth={1.5} />, label: text('hero', 'highlightGovernance') },
@@ -415,9 +420,9 @@ function LandingIntroduction() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-2 lg:grid-cols-3">
-            {features.filter(feature => presentationItemVisible(settings, 'capabilities', feature.id)).map((feature) => (
-              <div key={feature.title} className="bg-card p-7 transition-colors hover:bg-secondary/50">
+          {visibleFeatures.length > 0 && <div className={`grid grid-cols-1 overflow-hidden rounded-2xl border border-border/70 bg-border/70 ${featureColumns}`}>
+            {visibleFeatures.map((feature, index) => (
+              <div key={feature.id} className={`bg-card p-7 transition-colors hover:bg-secondary/50${index === visibleFeatures.length - 1 && visibleFeatures.length === 3 ? ' md:col-span-2 lg:col-span-1' : index === visibleFeatures.length - 1 && visibleFeatures.length === 5 ? ' md:col-span-2 lg:col-span-2' : ''}`}>
                 <div className="mb-5 flex h-10 w-10 items-center justify-center rounded-lg bg-secondary text-foreground">
                   {feature.icon}
                 </div>
@@ -425,7 +430,7 @@ function LandingIntroduction() {
                 <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
               </div>
             ))}
-          </div>
+          </div>}
         </div>
       </section>}
 

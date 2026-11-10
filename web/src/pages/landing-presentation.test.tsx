@@ -29,6 +29,32 @@ describe('configurable original homepage and market boundary', () => {
     expect(screen.getByText('home.latestTitle')).toBeTruthy()
     expect(state.search).toHaveBeenCalledWith({ sort: 'downloads', size: 6 }, true)
   })
+  it.each([
+    [0, '', '', ''],
+    [1, 'md:grid-cols-1', 'lg:grid-cols-1', ''],
+    [2, 'md:grid-cols-2', 'lg:grid-cols-2', ''],
+    [3, 'md:grid-cols-2', 'lg:grid-cols-3', 'lg:col-span-1'],
+    [4, 'md:grid-cols-2', 'lg:grid-cols-2', ''],
+    [5, 'md:grid-cols-2', 'lg:grid-cols-3', 'lg:col-span-2'],
+    [6, 'md:grid-cols-2', 'lg:grid-cols-3', ''],
+  ] as const)('fills the capability grid without vacant cells when %i cards are visible', (count, mediumColumns, largeColumns, lastSpan) => {
+    state.settings = defaultSitePresentation()
+    state.settings.sections.capabilities.items = Object.fromEntries(PRESENTATION_ITEMS.capabilities.map((item, index) => [item, index < count]))
+    render(<LandingPage />)
+    const section = screen.getByText('landing.experience.capabilities.title').closest('section')!
+    const grid = section.querySelector('.grid')
+    if (count === 0) {
+      expect(grid).toBeNull()
+      return
+    }
+    expect(grid?.children).toHaveLength(count)
+    expect(grid?.classList.contains(mediumColumns)).toBe(true)
+    expect(grid?.classList.contains(largeColumns)).toBe(true)
+    const last = grid?.lastElementChild
+    expect(last?.classList.contains('md:col-span-2')).toBe(count === 3 || count === 5)
+    if (lastSpan) expect(last?.classList.contains(lastSpan)).toBe(true)
+    if (count === 6) expect(grid?.className).toBe('grid grid-cols-1 overflow-hidden rounded-2xl border border-border/70 bg-border/70 md:grid-cols-2 lg:grid-cols-3')
+  })
   it('retains the fixed example notice when the preview caption is customized', () => {
     state.settings = defaultSitePresentation()
     state.settings.sections.hero.texts.previewCaption = { zh: '我们的团队工具' }
