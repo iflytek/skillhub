@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from './ui.js';
+import { Icon } from './skill-card.js';
+import { OperationSurfaceStyles } from './operation-styles.js';
 
 interface Notice { title: string; content: ReactNode; success?: boolean }
 const NoticeContext = createContext<((notice: Notice | undefined) => void) | undefined>(undefined);
@@ -13,9 +15,9 @@ export function ManagementNoticeBoundary({ children, container }: { children: Re
     const timer = setTimeout(() => setNotice(undefined), 5000);
     return () => clearTimeout(timer);
   }, [notice]);
-  return <NoticeContext.Provider value={setNotice}>{children}{notice && createPortal(
+  return <NoticeContext.Provider value={setNotice}><OperationSurfaceStyles />{children}{notice && createPortal(
     <aside className="skillhub-controls astron-sh-management-notice" aria-label="安装检查通知">
       <div role={notice.success ? 'status' : 'alert'}><strong>{notice.title}</strong>{notice.content}</div>
-      <Button size="icon" variant="ghost" aria-label="关闭安装检查通知" onClick={() => setNotice(undefined)}>×</Button>
+      <Button size="icon" variant="ghost" aria-label="关闭安装检查通知" onClick={() => setNotice(undefined)}><Icon name="close" /></Button>
     </aside>, container?.closest('dialog') ?? document.body)}</NoticeContext.Provider>;
 }

@@ -341,7 +341,9 @@ export async function apply(ctx: Context): Promise<() => Promise<void>> {
             return withSessionRemote(scope, remote => remote.skillhub.checkUpdate(revision, itemKey, signal));
           } } satisfies InstalledServices : undefined }),
       }, ({ installation, installed, inputActions, sessionId }) => <SkillUseBinding controller={useSkills} sessionId={sessionId} actions={inputActions}><CatalogPage remote={ctx.remote.skillhub} navigation={navigation} client={client}
-        installation={installation} installed={installed} availability={availability} onReturn={() => ctx.layout.selectPanel(null)} /></SkillUseBinding>));
+        installation={installation} installed={installed} availability={availability}
+        onSettings={ctx.get('pluginNavigation') ? () => ctx.get('pluginNavigation')?.openBundle('@astron-team/skillhub-dsh') : undefined}
+        onReturn={() => ctx.layout.selectPanel(null)} /></SkillUseBinding>));
       ctx.slots.inject('sidebar.panellist', () => ctx.slots.register({ name: 'sidebar.panellist', id: panelId, label: '技能中心', order: 10 }, () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.6" /><rect x="3" y="14" width="7" height="7" rx="1.6" /><rect x="14" y="14" width="7" height="7" rx="1.6" /><path d="M17.5 2.5v8M13.5 6.5h8" /></svg>));
     });
   });

@@ -1,6 +1,7 @@
 import { editSavedRegistry, registryChoices, preserveCurrentRegistry, RegistryConfigError, type SavedRegistry, sameRegistry, validateRegistryConfig } from './registry-config.js';
 import { catalogErrorMessage } from './catalog-error.js';
 import { Button, Card, CardHeader, CardContent, Input, SelectField, Skeleton, Tabs, TabsList, TabsTrigger, TabsContent } from './ui.js';
+import { Icon } from './skill-card.js';
 import { ConfigStyles } from './config-styles.js';
 import { NativeControlStyles } from './native-control-styles.js';
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
@@ -138,7 +139,7 @@ export function ConfigPage({ form, testConnection }: { form: ConfigForm<SkillHub
             const next = preserveCurrentRegistry(value);
             const index = next.savedRegistries?.length ?? 0;
             change({ ...next, savedRegistries: [...(next.savedRegistries ?? []), { name: '', url: '' }] }); setEditingSource(index);
-          }}>添加来源</Button></div></CardHeader>
+          }}><Icon name="plus" />添加来源</Button></div></CardHeader>
         <CardContent><div className="astron-sh-source-list" role="radiogroup" aria-label="技能来源">
           {sources.length === 0 && <p className="astron-sh-config-empty">尚未添加来源。</p>}
           {sources.map((entry, rowIndex) => {
@@ -158,11 +159,11 @@ export function ConfigPage({ form, testConnection }: { form: ConfigForm<SkillHub
                   if (index === null) { const next = preserveCurrentRegistry(value); const nextIndex = (next.savedRegistries?.length ?? 1) - 1; change(next); setEditingSource(nextIndex); setActiveEditor(nextIndex); }
                   else { setEditingSource(editing ? null : index); if (selected) setActiveEditor(index); }
                 }}>{editing ? '收起' : '编辑'}</Button>
-                <Button size="sm" variant="ghost" aria-label={`移除来源 ${rowIndex + 1}`} onClick={() => {
+                {editing && <Button size="sm" variant="ghost" aria-label={`移除来源 ${rowIndex + 1}`} onClick={() => {
                   change(index === null ? { ...value, registryUrl: '' } : editSavedRegistry(value, index));
                   setEditingSource(previous => index === null || previous === null ? previous : previous === index ? null : previous > index ? previous - 1 : previous);
                   setActiveEditor(previous => index === null || previous === null ? previous : previous === index ? null : previous > index ? previous - 1 : previous);
-                }}>移除</Button>
+                }}>移除</Button>}
               </div></div>
               {editing && <div className="astron-sh-source-editor" role="group" aria-label={`编辑来源 ${rowIndex + 1} 表单`}>
                 <label>名称<Input aria-label={`来源 ${rowIndex + 1} 名称`} value={entry.name} onChange={event => editSource(index, { name: event.target.value, url: entry.url })} /></label>
@@ -176,7 +177,7 @@ export function ConfigPage({ form, testConnection }: { form: ConfigForm<SkillHub
           </label>
         </div>
         <div className="astron-sh-source-footer"><p className="astron-sh-config-help">切换或移除来源不会删除已安装技能。</p>
-          {registryUrl && <Button size="sm" variant="outline" disabled={visibleConnection?.pending} onClick={() => void test()}>{visibleConnection?.pending ? '测试中…' : '测试连接'}</Button>}
+          {registryUrl && <Button size="sm" variant="outline" disabled={visibleConnection?.pending} onClick={() => void test()}><Icon name="refresh" />{visibleConnection?.pending ? '测试中…' : '测试连接'}</Button>}
         </div>
         {visibleConnection && <p className="astron-sh-config-connection-result" role="status" aria-live="polite" data-passed={visibleConnection.passed}>{visibleConnection.message}</p>}
         </CardContent></Card></TabsContent>
@@ -187,7 +188,7 @@ export function ConfigPage({ form, testConnection }: { form: ConfigForm<SkillHub
           })} options={[{ value: 'auto', label: '自动检测' }, { value: 'show', label: '显示' }, { value: 'hide', label: '隐藏' }]} />
         </div>)}</div></CardContent></Card>
       </TabsContent>
-      <div className="astron-sh-config-actions"><Button size="sm" type="submit" variant="default" disabled={!draft}>{pending ? '保存中…' : '保存配置'}</Button>
+      <div className="astron-sh-config-actions"><Button size="sm" type="submit" variant="default" disabled={!draft}><Icon name="check" />{pending ? '保存中…' : '保存配置'}</Button>
         <Button size="sm" variant="ghost" disabled={!draft} onClick={() => { request.current?.abort(); request.current = undefined; setConnection(undefined); setDraft(undefined); setEditingSource(null); setActiveEditor(null); setMessageTone('info'); setMessage('已重置为当前配置，未保存的修改已清除。'); }}>重置修改</Button>
         <span>{draft ? '有未保存的修改' : '修改后保存生效'}</span>
       </div>

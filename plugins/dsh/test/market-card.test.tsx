@@ -66,7 +66,7 @@ describe('market presentation and action boundaries', () => {
   });
 });
 
-test.each(['single', 'mixed', 'disabled', 'abnormal'] as const)('market %s exposes use/management, never position controls', state => {
+test.each(['single', 'mixed', 'disabled', 'abnormal'] as const)('market %s exposes one daily action, never position controls', state => {
   const client = new QueryClient();
   const unexpected = async () => { throw new Error('Rendering must not transport'); };
   const services = { skillUse: { useSkill: unexpected }, management: { selectSkillUse: unexpected } } as unknown as import('../src/client/installed-skills.js').InstalledServices;
@@ -74,10 +74,12 @@ test.each(['single', 'mixed', 'disabled', 'abnormal'] as const)('market %s expos
   const records = state === 'mixed' ? [record, { ...record, itemKey: 'user', scope: 'user' as const, installationState: 'disabled' as const }] : [record];
   try {
     const html = renderToStaticMarkup(<QueryClientProvider client={client}><MarketCardActions records={records} sourceRevision="r" verified services={services} onManage={() => {}} onInstall={() => {}} /></QueryClientProvider>);
-    expect(html).toContain('管理安装');
-    expect(html.includes('使用技能')).toBe(state === 'single' || state === 'mixed');
+    expect(html).not.toContain('管理安装');
+    expect(html.includes('>使用</button>')).toBe(state === 'single' || state === 'mixed');
+    expect(html.includes('查看详情')).toBe(state === 'disabled' || state === 'abnormal');
+    expect(html.match(/<button/g)?.length).toBe(1);
     for (const text of ['role="combobox"', '更多操作', '>启用</button>', '>停用</button>', '>卸载</button>', '检查更新']) expect(html).not.toContain(text);
-    expect(html.match(/astron-sh-button-default/g)?.length).toBe(1);
+
   } finally { client.clear(); }
 });
 
