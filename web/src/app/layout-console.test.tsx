@@ -1,8 +1,12 @@
 /** @vitest-environment jsdom */
 import type { ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import type { SitePresentationSettings } from '@/api/site-presentation'
+import { defaultSitePresentation } from '@/shared/hooks/use-site-presentation'
+import { PRESENTATION_CONTENT } from '@/shared/lib/presentation-content'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+let presentationSettings: SitePresentationSettings | undefined
 let pathname = '/dashboard'
 let resolvedPathname = '/dashboard'
 let roles: string[] = []
@@ -18,6 +22,10 @@ vi.mock('react-i18next', async () => ({
   ...await vi.importActual<typeof import('react-i18next')>('react-i18next'),
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }))
+vi.mock('@/shared/hooks/use-site-presentation', async (original) => {
+  const actual = await original<typeof import('@/shared/hooks/use-site-presentation')>()
+  return { ...actual, useSitePresentation: () => ({ settings: presentationSettings ?? actual.defaultSitePresentation() }) }
+})
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({ useMyNamespaces: () => ({ data: namespaceRole ? [{ type: 'TEAM', currentUserRole: namespaceRole, status: 'ACTIVE', slug: 'design' }] : [] }) }))
 vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ user: { userId: 'test-reader', displayName: 'Reader', platformRoles: roles, canChangePassword }, isLoading: false }) }))
 vi.mock('@/shared/components/language-switcher', () => ({ LanguageSwitcher: () => null }))
@@ -28,10 +36,27 @@ vi.mock('@/features/notification/notification-bell', () => ({ NotificationBell: 
 import { APP_FRAME_CLASS_NAME } from '@/shared/lib/layout-frame'
 import { Layout } from './layout'
 
-beforeEach(() => { pathname = '/dashboard'; resolvedPathname = pathname; roles = []; canChangePassword = false; namespaceRole = undefined })
+beforeEach(() => { presentationSettings = undefined; pathname = '/dashboard'; resolvedPathname = pathname; roles = []; canChangePassword = false; namespaceRole = undefined })
 afterEach(cleanup)
 
 describe('shared console layout composition', () => {
+  it('binds footer copy and hides groups without empty desktop columns', () => {
+    presentationSettings = defaultSitePresentation()
+    for (const slot of Object.keys(PRESENTATION_CONTENT.footer)) presentationSettings.sections.footer.texts[slot] = { en: `footer-${slot}` }
+    presentationSettings.links.repository = 'https://team.example/source'
+    const view = render(<Layout />)
+    const footer = screen.getByRole('contentinfo')
+    for (const slot of Object.keys(PRESENTATION_CONTENT.footer)) expect(footer.textContent).toContain(`footer-${slot}`)
+    expect(within(footer).getByRole('link', { name: 'footer-repositoryLabel' }).getAttribute('href')).toBe('https://team.example/source')
+    presentationSettings = { ...presentationSettings, sections: { ...presentationSettings.sections, footer: { ...presentationSettings.sections.footer, items: { developers: false, project: false, resources: false } } } }
+    view.rerender(<Layout />)
+    expect(within(footer).queryByText('footer-developersTitle')).toBeNull()
+    expect(footer.querySelector('.md\\:grid-cols-2')).toBeTruthy()
+    presentationSettings.sections.footer.enabled = false
+    view.rerender(<Layout />)
+    expect(screen.queryByRole('contentinfo')).toBeNull()
+  })
+
   it.each(['/dashboard', '/dashboard/skills', '/dashboard/tokens', '/settings/profile'])('renders exactly one sidebar beside the content on %s', (path) => {
     pathname = path
     resolvedPathname = path

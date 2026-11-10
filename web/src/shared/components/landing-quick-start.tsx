@@ -5,6 +5,8 @@ import { buildApiUrl, WEB_API_PREFIX } from '@/api/client'
 import { copyToClipboard, useCopyToClipboard } from '@/shared/lib/clipboard'
 import { resolvePublicRegistryUrl } from '@/shared/lib/registry-url'
 import { toast } from '@/shared/lib/toast'
+import { useSitePresentation, presentationText } from '@/shared/hooks/use-site-presentation'
+import { presentationItemVisible, presentationLinkUrl } from '@/shared/lib/presentation-content'
 import { APP_FRAME_CLASS_NAME } from '@/shared/lib/layout-frame'
 
 type AccessMode = 'agent' | 'cli' | 'web'
@@ -130,6 +132,7 @@ function AgentAccessPanel() {
 }
 
 function CliAccessPanel() {
+  const { settings } = useSitePresentation()
   const { t } = useTranslation()
   const [copiedIdx, setCopiedIdx] = useState(-1)
   const registryUrl = useMemo(getRegistryUrl, [])
@@ -155,7 +158,7 @@ function CliAccessPanel() {
             <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
             <span className="h-3 w-3 rounded-full bg-[#28c840]" />
           </div>
-          <span className="ml-2 font-mono text-xs text-muted-foreground">Terminal — skillhub</span>
+          <span className="ml-2 font-mono text-xs text-muted-foreground">Terminal — {settings.siteName ?? 'skillhub'}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="font-mono text-[10px] text-muted-foreground">zsh</span>
@@ -271,7 +274,7 @@ function CliAccessPanel() {
           <span className="text-border">·</span>
           <span className="break-all font-mono">registry: {registryUrl}</span>
         </div>
-        <a data-analytics-id="navigation.cli.open" href="https://github.com/iflytek/skillhub/tree/main/cli" target="_blank" rel="noreferrer" className="group flex items-center gap-1 font-medium text-blue-600 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400 dark:hover:text-blue-300">
+        <a data-analytics-id="navigation.cli.open" href={presentationLinkUrl(settings, 'cliDocumentation')} target="_blank" rel="noreferrer" className="group flex items-center gap-1 font-medium text-blue-600 transition-colors hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-blue-400 dark:hover:text-blue-300">
           {t('landing.experience.quickStart.cli.docs')}
           <ChevronRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
         </a>
@@ -351,8 +354,13 @@ function WebAccessPanel() {
 }
 
 export function LandingQuickStartSection() {
-  const { t } = useTranslation()
-  const [activeMode, setActiveMode] = useState<AccessMode>('agent')
+  const { t, i18n } = useTranslation()
+  const { settings } = useSitePresentation()
+  const text = (slot: string) => presentationText(settings, 'quickStart', slot, i18n.resolvedLanguage, t)
+  const [selectedMode, setActiveMode] = useState<AccessMode>('agent')
+  const modes = ACCESS_MODES.filter(mode => presentationItemVisible(settings, 'quickStart', mode.id))
+  const activeMode = modes.some(mode => mode.id === selectedMode) ? selectedMode : modes[0]?.id
+  if (!activeMode) return null
 
   return (
     <section id="quickstart" className="relative z-10 w-full overflow-hidden bg-secondary/70 py-16 md:py-20">
@@ -360,13 +368,13 @@ export function LandingQuickStartSection() {
       <div className={`relative ${APP_FRAME_CLASS_NAME}`}>
         <div className="mb-12 max-w-3xl">
           <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{t('landing.quickStart.title')}</p>
-          <h2 className="mb-4 text-3xl font-medium tracking-tight text-foreground md:text-4xl">{t('landing.experience.quickStart.title')}</h2>
-          <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">{t('landing.experience.quickStart.description')}</p>
+          <h2 className="mb-4 text-3xl font-medium tracking-tight text-foreground md:text-4xl">{text('title')}</h2>
+          <p className="max-w-2xl text-lg leading-relaxed text-muted-foreground">{text('description')}</p>
         </div>
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[18rem_minmax(0,1fr)] lg:gap-12">
           <div className="border-t border-border/70">
-            {ACCESS_MODES.map((mode) => {
+            {modes.map((mode) => {
               const active = activeMode === mode.id
               return (
                 <button data-analytics-id="guide.mode.select"
@@ -379,8 +387,8 @@ export function LandingQuickStartSection() {
                   <span className={`absolute inset-y-3 left-0 w-0.5 origin-center bg-foreground transition-transform duration-200 ${active ? 'scale-y-100' : 'scale-y-0'}`} aria-hidden />
                   <span className={`font-mono text-[11px] font-semibold transition-colors duration-200 ${active ? 'text-foreground' : 'text-muted-foreground'}`}>{mode.number}</span>
                   <span className="min-w-0 flex-1">
-                    <strong className={`block text-sm font-semibold transition-colors ${active ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>{t(`landing.experience.quickStart.modes.${mode.titleKey}`)}</strong>
-                    <span className="mt-1 block text-[11px] text-muted-foreground">{t(`landing.experience.quickStart.modes.${mode.descriptionKey}`)}</span>
+                    <strong className={`block text-sm font-semibold transition-colors ${active ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>{text(`${mode.id}Title`)}</strong>
+                    <span className="mt-1 block text-[11px] text-muted-foreground">{text(`${mode.id}Description`)}</span>
                   </span>
                   <span className={`h-1.5 w-1.5 rounded-full transition-colors ${active ? 'bg-foreground' : 'bg-border'}`} />
                 </button>

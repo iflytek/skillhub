@@ -18,6 +18,11 @@ public class SkillAvatarImageProcessor {
     public static final int MAX_SIDE = 1024;
 
     public byte[] normalize(byte[] input) {
+        return normalize(input, true);
+    }
+
+    /** Shared safe raster normalization; branding logos may be rectangular. */
+    public byte[] normalize(byte[] input, boolean requireSquare) {
         if (input == null || input.length == 0 || input.length > MAX_BYTES) {
             throw invalidImage();
         }
@@ -46,7 +51,7 @@ public class SkillAvatarImageProcessor {
                 reader.setInput(stream, true, true);
                 int width = reader.getWidth(0);
                 int height = reader.getHeight(0);
-                if (width < 1 || height < 1 || width != height || width > MAX_SIDE) {
+                if (width < 1 || height < 1 || (requireSquare && width != height) || width > MAX_SIDE || height > MAX_SIDE) {
                     throw invalidImage();
                 }
                 BufferedImage decoded = reader.read(0);

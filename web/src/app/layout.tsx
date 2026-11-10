@@ -3,6 +3,9 @@ import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '@/features/auth/use-auth'
+import { useSitePresentation } from '@/shared/hooks/use-site-presentation'
+import { presentationItemVisible, presentationLinkUrl } from '@/shared/lib/presentation-content'
+import { presentationText } from '@/shared/hooks/use-site-presentation'
 import { BrandMark } from '@/shared/components/brand-mark'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { ThemeToggle } from '@/shared/components/theme-toggle'
@@ -27,6 +30,7 @@ const FOOTER_LINK_CLASS_NAME = 'group relative inline-flex py-0.5 transition-col
  * fallback used while lazy route modules are loading.
  */
 export function Layout() {
+  const { settings: presentation } = useSitePresentation()
   const { t, i18n } = useTranslation()
   const { pathname, resolvedPathname } = useRouterState({
     select: (s) => ({
@@ -129,8 +133,9 @@ export function Layout() {
       >
         <div className={isSplitAuthRoute ? 'flex items-center' : APP_HEADER_CONTENT_CLASS_NAME}>
         {!isSplitAuthRoute ? (
-          <Link data-analytics-id="navigation.home.open" to="/" className="text-xl font-semibold tracking-tight flex-shrink-0" style={{ color: 'hsl(var(--foreground))' }}>
-            SkillHub
+          <Link data-analytics-id="navigation.home.open" to="/" className="flex min-w-0 max-w-[min(40vw,18rem)] items-center gap-2 text-xl font-semibold tracking-tight" style={{ color: 'hsl(var(--foreground))' }}>
+            {presentation.logoUrl ? <BrandMark className="h-8 w-8 shrink-0" /> : null}
+            <span className="truncate" title={presentation.siteName ?? 'SkillHub'}>{presentation.siteName ?? 'SkillHub'}</span>
           </Link>
         ) : null}
 
@@ -240,58 +245,58 @@ export function Layout() {
       </main>
 
       {/* Footer */}
-      {!isAuthEntryRoute ? (
-      <footer className="relative z-10 mt-auto border-t bg-secondary/70" style={{ borderColor: 'hsl(var(--border))' }}>
+      {!isAuthEntryRoute && presentation.sections.footer.enabled ? (
+      <footer className="relative z-10 mt-auto border-t bg-secondary/70 [overflow-wrap:anywhere]" style={{ borderColor: 'hsl(var(--border))' }}>
         <div className={`${APP_FRAME_CLASS_NAME} py-12 md:py-16`}>
-          <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
+          <div className={`grid grid-cols-2 gap-8 ${['md:grid-cols-1', 'md:grid-cols-2', 'md:grid-cols-3', 'md:grid-cols-4', 'md:grid-cols-5'][['product', 'developers', 'project', 'resources'].filter(item => presentationItemVisible(presentation, 'footer', item)).length]}`}>
             <div className="col-span-2 md:col-span-1">
               <div className="mb-4 flex items-center gap-2.5">
                 <BrandMark className="h-8 w-8 rounded-lg bg-background ring-1 ring-border/70" />
-                <span className="font-semibold text-foreground">SkillHub</span>
+                <span className="min-w-0 font-semibold text-foreground [overflow-wrap:anywhere]">{presentation.siteName ?? 'SkillHub'}</span>
               </div>
-              <p className="text-sm text-muted-foreground">{t('layout.footerDescription')}</p>
+              <p className="text-sm text-muted-foreground">{presentationText(presentation, 'footer', 'description', i18n.resolvedLanguage, t)}</p>
             </div>
 
-            <div>
-              <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.product')}</h4>
+            {presentationItemVisible(presentation, 'footer', 'product') && <div>
+              <h4 className="mb-4 text-sm font-semibold text-foreground">{presentationText(presentation, 'footer', 'productTitle', i18n.resolvedLanguage, t)}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><Link data-analytics-id="navigation.skills.open" to="/search" search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }} className={FOOTER_LINK_CLASS_NAME}>{t('footer.marketplace')}</Link></li>
-                <li><Link data-analytics-id="skill.publish.open" to="/dashboard/publish" className={FOOTER_LINK_CLASS_NAME}>{t('footer.publish')}</Link></li>
-                <li><Link data-analytics-id="navigation.dashboard.open" to="/dashboard" className={FOOTER_LINK_CLASS_NAME}>{t('nav.dashboard')}</Link></li>
+                <li><Link data-analytics-id="navigation.skills.open" to="/search" search={{ q: '', sort: 'relevance', page: 0, starredOnly: false }} className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'marketLabel', i18n.resolvedLanguage, t)}</Link></li>
+                <li><Link data-analytics-id="skill.publish.open" to="/dashboard/publish" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'publishLabel', i18n.resolvedLanguage, t)}</Link></li>
+                <li><Link data-analytics-id="navigation.dashboard.open" to="/dashboard" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'consoleLabel', i18n.resolvedLanguage, t)}</Link></li>
               </ul>
-            </div>
+            </div>}
 
-            <div>
-              <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.developers')}</h4>
+            {presentationItemVisible(presentation, 'footer', 'developers') && <div>
+              <h4 className="mb-4 text-sm font-semibold text-foreground">{presentationText(presentation, 'footer', 'developersTitle', i18n.resolvedLanguage, t)}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><a data-analytics-id="navigation.documentation.open" href="https://github.com/iflytek/skillhub/tree/main/docs/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.docs')}</a></li>
-                <li><a data-analytics-id="navigation.cli.open" href="https://www.npmjs.com/package/@astron-team/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>CLI</a></li>
-                <li><a data-analytics-id="navigation.repository.open" href="https://github.com/iflytek/skillhub" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>GitHub</a></li>
+                <li><a data-analytics-id="navigation.documentation.open" href={presentationLinkUrl(presentation, 'documentation', 'https://github.com/iflytek/skillhub/tree/main/docs/skillhub')} target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'documentationLabel', i18n.resolvedLanguage, t)}</a></li>
+                <li><a data-analytics-id="navigation.cli.open" href={presentationLinkUrl(presentation, 'cliPackage')} target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'cliPackageLabel', i18n.resolvedLanguage, t)}</a></li>
+                <li><a data-analytics-id="navigation.repository.open" href={presentationLinkUrl(presentation, 'repository')} target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'repositoryLabel', i18n.resolvedLanguage, t)}</a></li>
               </ul>
-            </div>
+            </div>}
 
-            <div>
-              <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.project')}</h4>
+            {presentationItemVisible(presentation, 'footer', 'project') && <div>
+              <h4 className="mb-4 text-sm font-semibold text-foreground">{presentationText(presentation, 'footer', 'projectTitle', i18n.resolvedLanguage, t)}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><a data-analytics-id="navigation.license.open" href="https://github.com/iflytek/skillhub/blob/main/LICENSE" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.license')}</a></li>
-                <li><a data-analytics-id="navigation.contributing.open" href="https://github.com/iflytek/skillhub/blob/main/CONTRIBUTING.md" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.contributing')}</a></li>
-                <li><a data-analytics-id="navigation.changelog.open" href="https://github.com/iflytek/skillhub/releases" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.changelog')}</a></li>
-                <li><a data-analytics-id="navigation.conduct.open" href="https://github.com/iflytek/skillhub/blob/main/CODE_OF_CONDUCT.md" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.codeOfConduct')}</a></li>
+                <li><a data-analytics-id="navigation.license.open" href={presentationLinkUrl(presentation, 'license')} target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'licenseLabel', i18n.resolvedLanguage, t)}</a></li>
+                <li><a data-analytics-id="navigation.contributing.open" href={presentationLinkUrl(presentation, 'contributing')} target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'contributingLabel', i18n.resolvedLanguage, t)}</a></li>
+                <li><a data-analytics-id="navigation.changelog.open" href={presentationLinkUrl(presentation, 'changelog')} target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'changelogLabel', i18n.resolvedLanguage, t)}</a></li>
+                <li><a data-analytics-id="navigation.conduct.open" href={presentationLinkUrl(presentation, 'codeOfConduct')} target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'codeOfConductLabel', i18n.resolvedLanguage, t)}</a></li>
               </ul>
-            </div>
+            </div>}
 
-            <div>
-              <h4 className="mb-4 text-sm font-semibold text-foreground">{t('footer.resources')}</h4>
+            {presentationItemVisible(presentation, 'footer', 'resources') && <div>
+              <h4 className="mb-4 text-sm font-semibold text-foreground">{presentationText(presentation, 'footer', 'resourcesTitle', i18n.resolvedLanguage, t)}</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
-                <li><a data-analytics-id="navigation.community.open" href="https://github.com/iflytek/skillhub/discussions" target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{t('footer.community')}</a></li>
-                <li><Link data-analytics-id="navigation.privacy.open" to="/privacy" className={FOOTER_LINK_CLASS_NAME}>{t('footer.privacy')}</Link></li>
-                <li><Link data-analytics-id="navigation.terms.open" to="/terms" className={FOOTER_LINK_CLASS_NAME}>{t('footer.terms')}</Link></li>
+                <li><a data-analytics-id="navigation.community.open" href={presentationLinkUrl(presentation, 'community')} target="_blank" rel="noreferrer" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'communityLabel', i18n.resolvedLanguage, t)}</a></li>
+                <li><Link data-analytics-id="navigation.privacy.open" to="/privacy" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'privacyLabel', i18n.resolvedLanguage, t)}</Link></li>
+                <li><Link data-analytics-id="navigation.terms.open" to="/terms" className={FOOTER_LINK_CLASS_NAME}>{presentationText(presentation, 'footer', 'termsLabel', i18n.resolvedLanguage, t)}</Link></li>
               </ul>
-            </div>
+            </div>}
           </div>
 
           <div className="mt-10 border-t border-border/70 pt-7 text-xs text-muted-foreground">
-            <span>{t('footer.copyright')}</span>
+            <span>{presentationText(presentation, 'footer', 'copyright', i18n.resolvedLanguage, t)}</span>
           </div>
         </div>
       </footer>

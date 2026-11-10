@@ -116,6 +116,42 @@ docker compose --env-file .env.release -f compose.release.yml down
 
 For startup failures, inspect `ps` and service logs, then check database, Redis, storage, and public URL configuration. Include image versions, redacted logs, and request IDs when reporting a problem, never credentials or `.env.release`. See the [operations reference (Chinese)](https://github.com/iflytek/skillhub/blob/main/docs/09-deployment.md) for Redis, reverse proxies, collection services, and migrations.
 
+## Customize branding and the homepage
+
+Use a release that includes site presentation settings. The one-command deployment entry and `.env.release` need no new branding variables. New installations retain the existing appearance. A **SUPER_ADMIN** manages instance settings in **System configuration → Site presentation**.
+
+The homepage keeps its existing layout. The settings page provides three groups; leave optional values empty to retain the defaults.
+
+| Settings | Purpose |
+| --- | --- |
+| Site information | Site name, logo, favicon, documentation link and source repository link |
+| Homepage introduction | Content language, homepage title and introduction |
+| Homepage content | Show or hide the hero, capabilities, access methods, popular skills, latest skills, enterprise, closing call to action and footer |
+
+Card text, button labels and layout retain their existing values rather than exposing individual editors. Homepage switches do not affect the independent `/skills` marketplace or user permissions. Hidden popular/latest sections do not request their homepage lists.
+
+### Edit and save
+
+1. Change the settings you need. Homepage copy supports Chinese, English, Korean and Russian, with defaults for empty overrides. The site name allows 80 characters, the homepage title 160, and the introduction 1000.
+2. Upload a PNG or JPEG logo/favicon, no larger than 2 MiB or 1024 pixels on either side. Valid images are re-encoded as PNG. Uploads are publicly readable before settings are saved; upload public brand assets only.
+3. Save, then use **View homepage** to inspect the actual result. Other open clients receive changes on refresh. No image rebuild or service restart is required.
+
+**Reset these settings** resets only the options exposed on this page, and takes effect after Save. Other historical customizations are preserved. Failed saves retain input, and navigation warns about unsaved edits. On a version conflict, reload the latest settings before reapplying your changes.
+
+Documentation and repository links accept HTTP/HTTPS or a single-slash root-relative path, resolved under the deployment prefix. Presentation settings do not change CLI commands, package names, API addresses or personal theme/language preferences.
+
+### Upgrades, backups and troubleshooting
+
+Settings use the existing PostgreSQL `system_setting` table. Images use the instance's configured file storage. Keep the same database and storage when upgrading; startup does not overwrite administrator choices. Legacy draft-era hero text and popular/latest/access/footer flags are read into the new region structure without writes or version increments. Old catalog mode no longer selects an alternate page. The next save stores the new structure; explicitly clearing new text restores product defaults without resurrecting legacy overrides. Back up and restore both database and storage volumes/objects. Replacing an image or restoring defaults does not immediately delete historical uploads, preserving existing references and caches; historical-object cleanup is outside this feature. A database-only restore can leave image references without their objects. Do not reset volumes to recover default branding. Reverting an application image is not a database restore.
+
+| Symptom | Check and recovery |
+| --- | --- |
+| Editor unavailable or save denied | Verify the account has SUPER_ADMIN; ordinary members can only read public presentation |
+| Upload rejected | Check actual file type, 2 MiB size and 1024-pixel dimensions, not just the extension |
+| Another browser still shows old settings | Refresh configuration and confirm both clients use the same instance |
+| Logo cannot load | Inspect the brand asset request and persistent storage; the UI falls back to the built-in image |
+| Configuration cannot load | Inspect the public settings request and backend logs, repair connectivity and reload; default fallback does not mean stored overrides were deleted |
+
 ## Configuration and acceptance checks
 
 Use the release template and Compose file from the same version. `.env.release` supplies Compose interpolation values; only declared variables reach the process. Wire additional settings explicitly through your own override. Recreate affected services after changes; `restart` does not reload container environment values.

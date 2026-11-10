@@ -53,7 +53,7 @@ export function SearchBar({ defaultValue = '', value, placeholder, isSearching =
 
   return (
     <form data-analytics-id={onSearch ? analyticsId : undefined} onSubmit={handleSubmit} className="flex gap-2 rounded-lg border border-border/60 bg-card p-1.5 shadow-[var(--shadow-card)]">
-      <div className="relative flex-1">
+      <div className="relative min-w-0 flex-1">
         <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <Input
           type="text"
