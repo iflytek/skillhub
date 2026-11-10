@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 
-export const supportedDshVersions = ['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5'] as const;
+export const supportedDshVersions = ['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5', '0.2.2-rc.1'] as const;
 export type SupportedDshVersion = typeof supportedDshVersions[number];
 
 /** Retained Host dependency baseline; a match is necessary, not full product acceptance. */
@@ -23,7 +23,16 @@ export const cordisFamilies = [
     '@deepseek-ai/cordis-plugin-include': '1.0.9', '@deepseek-ai/cordis-plugin-timer': '1.1.6' },
   { '@deepseek-ai/cordis': '4.0.5', '@deepseek-ai/cordis-plugin-loader': '1.0.6',
     '@deepseek-ai/cordis-plugin-include': '1.0.10', '@deepseek-ai/cordis-plugin-timer': '1.1.7' },
+  { '@deepseek-ai/cordis': '4.1.0', '@deepseek-ai/cordis-plugin-loader': '1.1.0',
+    '@deepseek-ai/cordis-plugin-include': '1.1.0', '@deepseek-ai/cordis-plugin-timer': '1.2.0' },
 ] as const;
+
+/** A complete dependency family is accepted only for the release that owns it. */
+export function supportsCordis(release: string, version: string): boolean {
+  if (release === '0.2.2-rc.1') return version === '4.1.0';
+  if (release === '0.2.0-rc.2') return version === '4.0.4' || version === '4.0.5';
+  return (release === '0.2.1-rc.2' || release === '0.2.1-rc.5') && version === '4.0.5';
+}
 
 const require = createRequire(import.meta.url);
 export function assertHostDependencies(readManifest: (name: string) => unknown = name => require(`${name}/package.json`)): SupportedDshVersion {
@@ -42,7 +51,7 @@ export function assertHostDependencies(readManifest: (name: string) => unknown =
     if (name === '@deepseek-ai/cordis') cordis = manifest.version;
     else release = manifest.version;
   }
-  if (release !== '0.2.0-rc.2' && cordis !== '4.0.5') {
+  if (typeof release !== 'string' || typeof cordis !== 'string' || !supportsCordis(release, cordis)) {
     throw new Error('Host dependency baseline does not match; local writes are disabled.');
   }
   return release as SupportedDshVersion;

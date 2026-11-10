@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { mkdir, realpath, writeFile } from 'node:fs/promises';
@@ -26,7 +27,7 @@ async function run(ctx,root,signal) {
  const toolSession={scope:resolved.agent};
  const toolCallId='history-'+randomUUID();
  const toolArguments={namespace:process.env.DSH_FIXTURE_NAMESPACE ?? 'demo',slug:'document-helper',scope:'project'};
- const toolResult=await ctx.tools.execute({callId:toolCallId,name:'astron_skillhub_install',arguments:toolArguments,agent:resolved.agent,signal});
+ const toolResult=await executeFixtureTool(ctx, root, {callId:toolCallId,name:'astron_skillhub_install',arguments:toolArguments,agent:resolved.agent,signal});
  assert.equal(toolResult.isError,false);
  assert.equal(toolResult.value.status,'accepted');
  const deadline=Date.now()+15000;

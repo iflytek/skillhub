@@ -49,7 +49,7 @@ describe('native M0 package', () => {
     expect(ctx.skillhub.getStatus()).toBe('SkillHub: connected');
     expect(ctx.skillhub.getCompatibility()).toEqual({
       dependencyBaseline: 'unverified',
-      candidateDshVersion: '0.2.0-rc.2 / 0.2.1-rc.2 / 0.2.1-rc.5',
+      candidateDshVersion: '0.2.0-rc.2 / 0.2.1-rc.2 / 0.2.1-rc.5 / 0.2.2-rc.1',
       localWritesAllowed: false,
     });
     expect(ctx.skillhub.typertRemote.namespace).toBe('skillhub');

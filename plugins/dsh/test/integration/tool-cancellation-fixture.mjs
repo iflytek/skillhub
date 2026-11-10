@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, readdir, realpath, writeFile } from 'node:fs/promises';
@@ -42,7 +43,7 @@ async function run(ctx, root, signal) {
   const records = async () => (await readdir(join(root, 'home/skillhub/operations'))).filter(name => name.endsWith('.json') && name !== 'host.json');
   assert.equal((await records()).length, 0);
   const cancelled = new AbortController();
-  const early = ctx.tools.execute({ callId: randomUUID(), name: 'astron_skillhub_install', arguments: args, agent, signal: cancelled.signal })
+  const early = executeFixtureTool(ctx, root, { callId: randomUUID(), name: 'astron_skillhub_install', arguments: args, agent, signal: cancelled.signal })
     .then(value => value, () => null);
   await until(async () => (await requests()).some(item => item.path.endsWith('/resolve')), signal);
   cancelled.abort();
@@ -52,7 +53,7 @@ async function run(ctx, root, signal) {
   assert.equal((await requests()).filter(item => item.path === '/download').length, 0);
   const acceptedSignal = new AbortController();
   const callId = randomUUID();
-  const receipt = await ctx.tools.execute({ callId, name: 'astron_skillhub_install', arguments: args, agent, signal: acceptedSignal.signal });
+  const receipt = await executeFixtureTool(ctx, root, { callId, name: 'astron_skillhub_install', arguments: args, agent, signal: acceptedSignal.signal });
   assert.equal(receipt.isError, false); assert.equal(receipt.value.status, 'accepted');
   await until(async () => (await requests()).some(item => item.path === '/download'), signal);
   const pending = await ctx.skillhub.getInstallationOperation(session.sessionId, receipt.value.operationId);
@@ -64,7 +65,7 @@ async function run(ctx, root, signal) {
   }, signal);
   assert.equal(operation.phase, 'completed');
   assert.equal(await readFile(join(project, '.dsh/skills/document-helper/references/note.md'), 'utf8'), 'Native installation resource');
-  const replay = await ctx.tools.execute({ callId, name: 'astron_skillhub_install', arguments: args, agent, signal });
+  const replay = await executeFixtureTool(ctx, root, { callId, name: 'astron_skillhub_install', arguments: args, agent, signal });
   assert.equal(replay.value.operationId, receipt.value.operationId);
   assert.equal((await records()).length, 1);
   assert.equal((await requests()).filter(item => item.path === '/download').length, 1);

@@ -687,3 +687,22 @@ The plugin SHALL reuse existing Registry file GET endpoints through bounded Host
 #### Scenario: Unsupported or invalid content
 - **WHEN** the source lacks the endpoint, access is denied, content is binary/too large/unreadable, or the source reference becomes stale
 - **THEN** the UI distinguishes that state from an empty directory and does not claim successful inspection or substitute another source/version
+
+
+### Requirement: Explicit DSH 0.2.2 RC1 compatibility with retained hosts
+The 0.6.3 candidate SHALL add exact DSH `0.2.2-rc.1` while retaining the three previously supported RC targets. The new release SHALL require Node `>=24.9.0 <25` and its complete verified Cordis 4.1 family. Retained hosts SHALL keep their existing Node floor and separate Cordis families. Unknown releases, mixed Host/Client owners, unreadable manifests and cross-family combinations SHALL continue to reject new writes without discarding historical queries or inventory v2 data.
+
+#### Scenario: New host runtime and artifact
+- **WHEN** the final candidate is installed normally on coherent DSH `0.2.2-rc.1` with Node 24.9 or current Node 24
+- **THEN** generated Remote calls, Client registration, managed lifecycle and native skill discovery use supported interfaces without peer or version-risk overrides
+- **AND** the existing Node24.2-built JavaScript release artifact is exercised on the new runtime rather than assuming build success proves compatibility
+
+#### Scenario: Release-specific lower bound and family
+- **WHEN** DSH `0.2.2-rc.1` is encountered below Node24.9 or with an older Cordis family, or a retained release is paired with the new family
+- **THEN** the candidate rejects new mutations
+- **AND** a coherent retained release at its existing Node24.2 lower bound remains eligible after all other protections pass
+
+#### Scenario: New client input phase
+- **WHEN** the new Client reports a non-plain input phase such as sending
+- **THEN** the plugin does not take over or overwrite that conversation draft
+- **AND** plain-draft handoff, version isolation, lifecycle and browser behavior are verified separately from type declaration comparison
