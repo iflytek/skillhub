@@ -3,7 +3,7 @@
 
 ## 0.6.3 补丁候选：新版DSH兼容、紧凑工作台与只读文件树
 
-本轮仅准备 `@astron-team/skillhub-dsh@0.6.3`，使用独立标签 `dsh-v0.6.3`，增量来自 [#1080](https://github.com/iflytek/skillhub/pull/1080)。当前仍为候选；发布工作流、最终 tarball、公开字节与干净安装通过前不宣称已发布。不重复发布 CLI，不创建 SkillHub 服务端 Release、不发布镜像或部署 SaaS。
+本轮仅准备 `@astron-team/skillhub-dsh@0.6.3`，使用独立标签 `dsh-v0.6.3`，增量来自 [#1080](https://github.com/iflytek/skillhub/pull/1080) 和 [#1082](https://github.com/iflytek/skillhub/pull/1082)。当前仍为候选；发布工作流、最终 tarball、公开字节与干净安装通过前不宣称已发布。不重复发布 CLI，不创建 SkillHub 服务端 Release、不发布镜像或部署 SaaS。
 
 - **紧凑全页面**：统一发现、我的技能、详情、设置及操作面板的控件、间距和明暗主题；详情保留官网、只读评论、安全审核与全部安装管理入口，去除冗余来源卡片。技能卡片增加轻量悬停及键盘焦点反馈。
 - **受限只读文件树**：详情文件页使用完整阅读宽度，展示真实目录层级、路径、行号、复制和独立滚动；在当前详情引用内保留文件选择与目录折叠。仅新增插件本机 `listSkillFiles` / `readSkillFile` RPC，复用 Registry 既有文件 GET，不新增 SaaS HTTP API。清单最多 500 项、文本最多 256 KiB，验证路径和 UTF-8，区分二进制、过大、无权限、失败和失效；不执行文件内容、不提供语言语法高亮。
