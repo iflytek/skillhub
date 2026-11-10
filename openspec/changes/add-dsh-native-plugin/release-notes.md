@@ -1,9 +1,21 @@
 # SkillHub DSH 原生插件发布说明
 
 
-## 0.6.2 补丁候选：来源、变更预览、技能包与收藏
+## 0.6.3 补丁候选：紧凑工作台与只读文件树
 
-本轮仅发布 `@astron-team/skillhub-dsh@0.6.2`，使用独立标签 `dsh-v0.6.2`。不重复发布 CLI，不创建 SkillHub 服务端 Release、不发布服务镜像或部署 SaaS。当前仍为候选；发布工作流、公开字节与干净安装通过前不宣称已发布。
+本轮仅准备 `@astron-team/skillhub-dsh@0.6.3`，使用独立标签 `dsh-v0.6.3`，增量来自 [#1080](https://github.com/iflytek/skillhub/pull/1080)。当前仍为候选；发布工作流、最终 tarball、公开字节与干净安装通过前不宣称已发布。不重复发布 CLI，不创建 SkillHub 服务端 Release、不发布镜像或部署 SaaS。
+
+- **紧凑全页面**：统一发现、我的技能、详情、设置及操作面板的控件、间距和明暗主题；详情保留官网、只读评论、安全审核与全部安装管理入口，去除冗余来源卡片。技能卡片增加轻量悬停及键盘焦点反馈。
+- **受限只读文件树**：详情文件页使用完整阅读宽度，展示真实目录层级、路径、行号、复制和独立滚动；在当前详情引用内保留文件选择与目录折叠。仅新增插件本机 `listSkillFiles` / `readSkillFile` RPC，复用 Registry 既有文件 GET，不新增 SaaS HTTP API。清单最多 500 项、文本最多 256 KiB，验证路径和 UTF-8，区分二进制、过大、无权限、失败和失效；不执行文件内容、不提供语言语法高亮。
+- **评论与修改入口**：保留按技能读取评论的加载、空、错误和分页状态；市场详情管理菜单、修改徽标与更新入口同步实际页面导航，进入精确安装位置，避免点击后停留原页。预览夹具的评论 ID 路由修复不宣称为 SaaS API 变更。
+- **升级完成返回详情**：按原来源、技能身份、范围和完成版本刷新并定位真实新安装记录，再展示新版本详情；失败可重试返回，完成回执保留至成功，不重复升级。等待期间离开页面不被迟到回调拉回。
+- **兼容边界不变**：沿用 `0.6.2` 的来源隔离、共享 inventory v2、DSH 三个精确 RC 及 Node/Cordis 组合；本轮不改变运行依赖，不要求同步升级 CLI，不迁移技能或收藏数据。`0.6.2` 已发布的来源、ZIP、收藏等能力不重复计为本轮新增。
+
+**插件增量**：[dsh-v0.6.2...dsh-v0.6.3](https://github.com/iflytek/skillhub/compare/dsh-v0.6.2...dsh-v0.6.3)。标签与公开包存在性以实际发布结果为准。
+
+## 0.6.2：来源、变更预览、技能包与收藏（已发布）
+
+`@astron-team/skillhub-dsh@0.6.2` 已公开发布，使用独立标签 `dsh-v0.6.2`。以下保留该版本的历史功能范围，不重复计入 `0.6.3` 增量。
 
 - **多来源与更新隔离**：[#1047](https://github.com/iflytek/skillhub/pull/1047) 保留不同来源的安装记录，切换来源后仅检查当前来源技能的更新，不认领其他来源同名技能。[#1052](https://github.com/iflytek/skillhub/pull/1052) 将来源选择与编辑集中于设置卡片，简化日常入口并明确管理引用。
 - **升级前查看变化**：[#1055](https://github.com/iflytek/skillhub/pull/1055) 先核对本地修改，支持确认后还原当前安装版本的文件修改，或备份后继续查看新版本变化；只有再次确认才执行升级。按文件懒加载、有高度限制；不提供技能版本降级或升级后回滚。
@@ -35,7 +47,7 @@
 
 ## 版本与交付状态
 
-当前准备版本为 DSH `0.6.2`；公开 npm 最新版本为 `0.6.1`。CLI `0.3.0` 已发布，本轮不重复发布。保留既有 `dsh-v0.6.0`、`dsh-v0.6.1` 标签，不移动历史引用；新候选使用 `dsh-v0.6.2`。实际公开状态以对应 npm 版本和专用发布工作流为准。
+当前准备版本为 DSH `0.6.3`；公开 npm 最新版本为 `0.6.2`。CLI `0.3.0` 已发布，本轮不重复发布。保留既有 `dsh-v0.6.0`、`dsh-v0.6.1`、`dsh-v0.6.2` 标签，不移动历史引用；新候选使用 `dsh-v0.6.3`。实际公开状态以对应 npm 版本和专用发布工作流为准。
 
 `@astron-team/skillhub-dsh@0.3.1` 已发布，独立标签为 `dsh-v0.3.1`。[发布准备 PR #995](https://github.com/iflytek/skillhub/pull/995) 已合并，[专用发布工作流](https://github.com/iflytek/skillhub/actions/runs/39556075587) 成功；[公开 npm 包](https://www.npmjs.com/package/@astron-team/skillhub-dsh/v/0.3.1) 与工作流产物逐字节一致，发布时 `latest` 指向 `0.3.1`。两版 Linux 的严格安装、原生探针及浏览器操作复验通过，测试工件与公开包字节一致，结果见 [验证摘要](verification.md)。历史已发布版本保持不变。
 
@@ -125,7 +137,7 @@ Node 保持 `>=24.2.0 <25`。精确兼容与验证边界见 [兼容设计](compa
 
 ## 安装、更新与维护
 
-`0.6.2` 公开可用后，可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.2 --ignore-scripts` 安装到已有 Web Profile；发布前使用本地候选 tarball。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
+当前公开 `0.6.2` 可通过 `dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.2 --ignore-scripts` 安装到已有 Web Profile；`0.6.3` 发布前使用本地候选 tarball，公开后核对精确版本再升级。发布前从源码执行 `bun run check` 后生成 `.tgz`，使用固定版本 DSH 的 `plugin ... add` 安装。具体准备、命令、配置和测试流程见 [中文指南](../../../plugins/dsh/README.md)、[英文指南](../../../plugins/dsh/README.en.md) 及 [发布指南](release-guide.md)。
 
 更新或回退前保留原包和校验值、停止新操作并处理待恢复事务，然后停止 Host、安装兼容包并重新启动。浏览器旧资源可强制刷新；这不能代替 Host 依赖重载。禁用或移除包不会卸载技能，不应删除技能目录、inventory 或操作日志。
 
