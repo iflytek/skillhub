@@ -41,8 +41,10 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles("test")
 class SitePresentationControllerTest {
     private static final String SETTINGS = """
-            {"settings":{"siteName":"Team Skills","homepageMode":"CATALOG","heroTitle":{"zh":"团队技能"},
-              "heroDescription":{},"showPopular":false,"showLatest":true,"showQuickStart":false,"footerVisible":false},"version":0}
+            {"settings":{"siteName":"Team Skills","sections":{
+              "hero":{"enabled":true,"texts":{"title":{"zh":"团队技能"}},"items":{"preview":false}},
+              "popular":{"enabled":false,"texts":{}},"footer":{"enabled":false,"texts":{}}},
+              "links":{"repository":"https://code.example.test"}},"version":0}
             """;
     private static final String ADMIN = "/api/v1/admin/system-config/presentation";
     @Autowired private MockMvc mvc;
@@ -56,8 +58,12 @@ class SitePresentationControllerTest {
         mvc.perform(get("/api/v1/site-presentation"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", "no-store"))
-                .andExpect(jsonPath("$.data.settings.homepageMode").value("LANDING"))
-                .andExpect(jsonPath("$.data.settings.showPopular").value(true))
+                .andExpect(jsonPath("$.data.settings.sections.hero.enabled").value(true))
+                .andExpect(jsonPath("$.data.settings.sections.popular.enabled").value(true))
+                .andExpect(jsonPath("$.data.settings.sections.footer.enabled").value(true))
+                .andExpect(jsonPath("$.data.settings.homepageMode").doesNotExist())
+                .andExpect(jsonPath("$.data.settings.heroTitle").doesNotExist())
+                .andExpect(jsonPath("$.data.settings.showPopular").doesNotExist())
                 .andExpect(jsonPath("$.data.version").value(0))
                 .andExpect(jsonPath("$.data.updatedBy").doesNotExist())
                 .andExpect(jsonPath("$.data.settingKey").doesNotExist());
@@ -123,12 +129,26 @@ class SitePresentationControllerTest {
     }
 
     @Test
-    void malformedModeLocaleOrMissingSettingsDoNotReachService() throws Exception {
-        for (String body : List.of(SETTINGS.replace("CATALOG", "CUSTOM"), SETTINGS.replace("\"zh\"", "\"xx\""),
-                "{\"settings\":{},\"version\":0}", "{\"version\":0}")) {
+    void malformedSectionsLocalesLinksAndMissingSettingsDoNotReachService() throws Exception {
+        for (String body : List.of(SETTINGS.replace("\"hero\"", "\"custom\""), SETTINGS.replace("\"zh\"", "\"xx\""),
+                SETTINGS.replace("\"repository\"", "\"unknown\""), SETTINGS.replace("\"enabled\":true", "\"enabled\":null"),
+                "{\"settings\":{},\"version\":0}", "{\"version\":0}",
+                "{\"settings\":{\"sections\":{},\"links\":{}},\"version\":0}")) {
             mvc.perform(put(ADMIN).with(authentication(auth("SUPER_ADMIN"))).with(csrf())
                             .contentType("application/json").content(body)).andExpect(status().isBadRequest());
         }
+        verify(service, never()).update(any(), any(), any());
+    }
+
+    @Test
+    void oldPutBodyIsRejectedRatherThanSilentlyResettingSections() throws Exception {
+        mvc.perform(put(ADMIN).with(authentication(auth("SUPER_ADMIN"))).with(csrf())
+                        .contentType("application/json").content("""
+                            {"settings":{"siteName":"Old","homepageMode":"CATALOG","heroTitle":{},
+                              "heroDescription":{},"showPopular":false,"showLatest":false,
+                              "showQuickStart":false,"footerVisible":false},"version":0}
+                            """))
+                .andExpect(status().isBadRequest());
         verify(service, never()).update(any(), any(), any());
     }
 

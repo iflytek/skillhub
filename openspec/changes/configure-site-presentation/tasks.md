@@ -1,18 +1,13 @@
 # Implementation tasks
 
-- [x] Confirm #1074 scope, existing settings/storage and current UI consumers.
-- [x] Record requirements, contract, alternatives and compatibility boundaries.
-- [x] Implement typed settings, migration, public/admin API, image processing and tests.
-- [x] Implement shared query, brand/home consumers, settings editor and tests.
-- [x] Generate API types from actual backend schema.
-- [x] Document bilingual operator workflow and backup/upgrade behavior.
-- [x] Open Draft PR at the first meaningful scoped code commit.
-- [x] Consolidated independent review; resolve blockers and freeze base/head.
-- [x] Run targeted/source checks plus isolated image/API/browser/persistence validation.
-- [x] Provide one preview and honest remaining acceptance boundaries.
-
-## Human-preview follow-up
-
-- [ ] Redesign CATALOG as a complete discovery homepage using existing tokens and live data.
-- [ ] Verify empty/error/disabled sections, category/search navigation, responsive themes and market independence.
-- [ ] Update the same Draft PR and replace only the existing preview web service.
+- [x] Confirm the original homepage as the user-selected baseline and inventory all eight regions.
+- [x] Freeze the section/text/item/link contract and legacy persisted-settings behavior.
+- [ ] Replace the old mode-based DTO with typed region settings, validation and compatibility reads.
+- [ ] Retain the original landing layout and bind every supported region, text, element and link.
+- [ ] Remove alternate catalog product code and mode-specific UI/tests.
+- [ ] Update the scoped settings editor, draft preview and four locales.
+- [ ] Generate types from the actual backend OpenAPI and remove temporary frontend types.
+- [ ] Update bilingual deployment instructions and operator acceptance steps.
+- [ ] Complete independent review and focused source checks at the final head.
+- [ ] Build and replace the single local preview; verify default/custom/legacy/persistence and real UI saves.
+- [ ] Update the existing Draft PR with honest validation boundaries and retain the preview for human acceptance.

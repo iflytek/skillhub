@@ -120,21 +120,31 @@ For startup failures, inspect `ps` and service logs, then check database, Redis,
 
 Use a release that includes site presentation settings. The one-command deployment entry and `.env.release` need no new branding variables. New installations retain the existing appearance. A **SUPER_ADMIN** manages instance settings in **System configuration → Site presentation**.
 
-| Group | Options | Defaults and boundaries |
-| --- | --- | --- |
-| Branding | Display name, logo and favicon | Empty overrides use SkillHub and built-in images; API names, CLI commands and skill coordinates do not change |
-| Homepage | Landing or catalog mode | Landing retains the current composition; catalog emphasizes search and existing skill sections |
-| Hero text | Localized title and description | English, Chinese, Korean and Russian; fallback is current language → custom English text → product defaults |
-| Sections | Popular, latest and quick start | Visibility does not grant access or disable business APIs |
-| Footer | Show or hide | Shown by default |
+The original default homepage layout, section order and interactions remain the baseline. There is no alternate homepage mode. Configure its existing regions and branding; fields without overrides keep their original values.
 
-Catalog mode provides a branded search introduction, navigation using existing visible labels, and enabled popular/latest sections. Additional labels can be expanded; quick start is collapsed initially. Empty results and request failures have distinct messages, with retry for failures. Search and the full-directory entry remain available when every optional section is disabled. The independent `/skills` marketplace is unaffected by homepage section switches.
+| Region | Configuration |
+| --- | --- |
+| Branding | Site name, logo and favicon; names do not change CLI packages, API paths or skill coordinates |
+| Hero | Badge, heading, description, action and highlight labels; independently hide preview, highlights or either action |
+| Capabilities | Section text and six existing card headings/descriptions; individual card visibility |
+| Access methods | Section text and Agent/CLI/Web headings/descriptions; individual mode visibility |
+| Popular and latest | Each section's heading, description, browse label and visibility |
+| Enterprise | Section/card text and diagram captions; individual existing card visibility |
+| Closing call to action | Heading, description and action labels/visibility |
+| Footer | Description, copyright, group/link labels and whole-footer/group visibility |
+| Site links | Fixed destinations for documentation, repository, CLI documentation/package, license, contribution, releases, conduct and community |
+
+Text supports English, Chinese, Korean and Russian. Resolution is current-language override → custom English text → current-language product default. Headings and other labels allow 160 characters, descriptions and footer copyright allow 1000, and the site name allows 80. Internal publish/search/dashboard/privacy/terms routes remain code-owned. Homepage switches do not affect `/skills` or grant permissions. Hidden popular/latest regions do not execute their queries.
+
+Link overrides accept HTTP/HTTPS or a single-slash root-relative path. Root paths respect the deployment prefix: `/help` under a `/skillhub/` deployment resolves to `/skillhub/help`. Script schemes, protocol-relative paths, credentials, backslashes and control characters are rejected. These are public presentation settings; use public destinations.
+
+Executable CLI commands, package names, registry/API endpoints and database product names are not editable display text. Fixed interface previews remain demonstrations. Hide the hero preview or individual access modes when not applicable; this does not provision example skills.
 
 ### Edit, preview and save
 
-1. Load the current configuration and edit the required fields.
+1. Load the current configuration. Edit branding and links, then expand an existing homepage region, choose a text language and edit its content. Region and individual-element switches are independent.
 2. Upload PNG or JPEG images, no larger than 2 MiB and 1024 pixels on either side. The server validates and re-encodes them as PNG. Favicons also use PNG; SVG, ICO and WebP are not accepted. Uploaded images are publicly readable through their resource URL before settings are saved; upload only public brand assets.
-3. Preview the draft without changing the public site. Restoring a group to defaults also changes only the draft.
+3. Preview the draft without changing the public site. Restoring branding or one region changes only the draft until Save.
 4. Save the configuration. The current client refreshes its presentation; other open clients receive it when configuration is fetched again or the page is refreshed. No image rebuild or container restart is required.
 5. Failed saves retain the draft. A version conflict means another administrator saved first: load the latest settings, compare them and reapply the intended changes.
 
@@ -142,7 +152,7 @@ Navigation warns about unsaved edits. Settings support plain text and controlled
 
 ### Upgrades, backups and troubleshooting
 
-Settings use the existing PostgreSQL `system_setting` table. Images use the instance's configured file storage. Keep the same database and storage when upgrading; startup does not overwrite administrator choices. Back up and restore both database and storage volumes/objects. Replacing an image or restoring defaults does not immediately delete historical uploads, preserving existing references and caches; historical-object cleanup is outside this feature. A database-only restore can leave image references without their objects. Do not reset volumes to recover default branding. Reverting an application image is not a database restore.
+Settings use the existing PostgreSQL `system_setting` table. Images use the instance's configured file storage. Keep the same database and storage when upgrading; startup does not overwrite administrator choices. Legacy draft-era hero text and popular/latest/access/footer flags are read into the new region structure without writes or version increments. Old catalog mode no longer selects an alternate page. The next save stores the new structure; explicitly clearing new text restores product defaults without resurrecting legacy overrides. Back up and restore both database and storage volumes/objects. Replacing an image or restoring defaults does not immediately delete historical uploads, preserving existing references and caches; historical-object cleanup is outside this feature. A database-only restore can leave image references without their objects. Do not reset volumes to recover default branding. Reverting an application image is not a database restore.
 
 | Symptom | Check and recovery |
 | --- | --- |

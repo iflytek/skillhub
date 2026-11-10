@@ -8,7 +8,7 @@ Issue #1074 describes private deployments maintaining source patches for homepag
 
 - REQ-01: store versioned presentation settings in the existing system_setting table; database values survive restarts/upgrades, missing fields use code defaults.
 - REQ-02: public read returns only typed presentation fields; SUPER_ADMIN edits and uploads, with audit and optimistic concurrency.
-- REQ-03: configurable display name, separate logo/favicon, existing landing or catalog-focused home, localized hero text, popular/latest/quick-start and footer visibility.
+- REQ-03: configurable display name and separate logo/favicon; retain the existing default landing homepage with section-by-section visibility, localized presentation text, selected element switches and fixed safe link overrides. Remove the landing/catalog selector and alternative catalog composition.
 - REQ-04: safe immutable brand assets in existing object storage; PNG/JPEG upload is verified and re-encoded, public access restricted to brand assets.
 - REQ-05: management uses existing UI with local preview, unsaved changes protection, retained inputs after errors, group reset and clear save states.
 - REQ-06: existing search/auth/visibility remain authoritative; disabled sections do not issue requests; theme/language personal preferences remain independent.
@@ -19,4 +19,4 @@ Out of scope: curated recommendations (#1035), arbitrary HTML/CSS/scripts, full 
 
 ## Status
 
-Implementation in progress. Not yet runtime-accepted or released.
+Human preview retained the original default homepage as the visual baseline. The implementation is being revised to configure its eight existing regions instead of introducing alternative homepage modes. Not yet accepted or released.

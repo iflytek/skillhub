@@ -1,15 +1,20 @@
 // @vitest-environment jsdom
 
 import { createElement } from 'react'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defaultSitePresentation } from '@/shared/hooks/use-site-presentation'
+import type { SitePresentationSettings } from '@/api/site-presentation'
 import * as mod from './landing-quick-start'
 
+const state = vi.hoisted((): { settings: SitePresentationSettings | null } => ({ settings: null }))
+vi.mock('@/shared/hooks/use-site-presentation', async (original) => ({ ...await original<typeof import('@/shared/hooks/use-site-presentation')>(), useSitePresentation: () => ({ settings: state.settings ?? defaultSitePresentation() }) }))
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   return {
     ...actual,
     useTranslation: () => ({
+      i18n: { resolvedLanguage: 'en' },
       t: (key: string, values?: Record<string, string>) => values?.url
         ? `${key} ${values.url}`
         : key,
@@ -30,12 +35,26 @@ describe('landing-quick-start module exports', () => {
   const originalRuntimeConfig = window.__SKILLHUB_RUNTIME_CONFIG__
 
   afterEach(() => {
+    cleanup()
+    state.settings = null
     vi.restoreAllMocks()
     window.__SKILLHUB_RUNTIME_CONFIG__ = originalRuntimeConfig
   })
 
   it('exports the LandingQuickStartSection component', () => {
     expect(mod.LandingQuickStartSection).toBeTypeOf('function')
+  })
+
+  it('uses available modes and custom presentation copy without changing functional commands', () => {
+    state.settings = defaultSitePresentation()
+    state.settings.sections.quickStart.items = { agent: false, web: false }
+    state.settings.sections.quickStart.texts = { title: { en: 'Team access' }, cliTitle: { en: 'Use our CLI' } }
+    render(createElement(mod.LandingQuickStartSection))
+    expect(screen.getByRole('heading', { name: 'Team access' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Use our CLI/ }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.queryByText('landing.experience.quickStart.modes.agent.title')).toBeNull()
+    expect(screen.queryByText('landing.experience.quickStart.modes.web.title')).toBeNull()
+    expect(screen.getByText('npx -y @astron-team/skillhub@0.1.12 --version')).toBeTruthy()
   })
 
   it('uses the self-hosted Registry URL in displayed and copied CLI commands', async () => {

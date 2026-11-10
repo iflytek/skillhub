@@ -29,6 +29,7 @@ describe('site presentation settings', () => {
     fireEvent.click(screen.getByRole('button', { name: 'sitePresentation.preview' }))
     expect(await screen.findByRole('dialog')).toBeTruthy()
     expect(sitePresentationApi.update).not.toHaveBeenCalled()
+    expect(client.getQueryData(SITE_PRESENTATION_QUERY_KEY)).toBeUndefined()
     // The local preview has no save action; close it using the existing Dialog keyboard behavior.
     fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' })
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
@@ -37,6 +38,25 @@ describe('site presentation settings', () => {
     await waitFor(() => expect(client.getQueryData(SITE_PRESENTATION_QUERY_KEY)).toEqual(saved))
     expect(screen.getByText('sitePresentation.saved')).toBeTruthy()
   })
+  it('edits a collapsed region and restores only that region in the draft', async () => {
+    const { response } = await setup()
+    expect(screen.queryByRole('textbox', { name: 'sitePresentation.fields.title' })).toBeNull()
+    const details = document.querySelector('details')!
+    details.open = true
+    fireEvent(details, new Event('toggle'))
+    const title = await screen.findByRole('textbox', { name: 'sitePresentation.fields.title' })
+    fireEvent.change(title, { target: { value: 'Team expertise' } })
+    fireEvent.click(screen.getByRole('checkbox', { name: 'sitePresentation.regions.popular' }))
+    fireEvent.click(screen.getByRole('button', { name: 'sitePresentation.restore · sitePresentation.regions.hero' }))
+    fireEvent.click(screen.getByRole('button', { name: 'dialog.confirm' }))
+    await waitFor(() => expect((title as HTMLInputElement).value).toBe(''))
+    expect((screen.getByRole('checkbox', { name: 'sitePresentation.regions.popular' }) as HTMLInputElement).checked).toBe(false)
+    expect(sitePresentationApi.update).not.toHaveBeenCalled()
+    vi.mocked(sitePresentationApi.update).mockImplementation(async request => ({ ...request, version: 8 }))
+    fireEvent.click(screen.getByRole('button', { name: 'sitePresentation.save' }))
+    await waitFor(() => expect(sitePresentationApi.update).toHaveBeenCalledWith({ settings: { ...response.settings, sections: { ...response.settings.sections, popular: { enabled: false, texts: {}, items: {} } } }, version: 7 }))
+  })
+
   it('retains entered content on a failed save', async () => {
     const { input } = await setup()
     vi.mocked(sitePresentationApi.update).mockRejectedValue(new Error('Storage unavailable'))

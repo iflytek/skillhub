@@ -7989,22 +7989,27 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        SitePresentationSection: {
+            enabled: boolean;
+            texts: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            items?: {
+                [key: string]: boolean | null;
+            } | null;
+        };
         SitePresentationSettings: {
             siteName?: string | null;
             logoUrl?: string | null;
             faviconUrl?: string | null;
-            /** @enum {string} */
-            homepageMode: "LANDING" | "CATALOG";
-            heroTitle: {
+            sections: {
+                [key: string]: components["schemas"]["SitePresentationSection"];
+            };
+            links: {
                 [key: string]: string;
             };
-            heroDescription: {
-                [key: string]: string;
-            };
-            showPopular: boolean;
-            showLatest: boolean;
-            showQuickStart: boolean;
-            footerVisible: boolean;
         };
         SitePresentationUpdateRequest: {
             settings: components["schemas"]["SitePresentationSettings"];

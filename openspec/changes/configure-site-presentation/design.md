@@ -1,30 +1,57 @@
 # Design
 
+## Product and visual baseline
+
+Retain the current default LandingPage structure, section order, typography, spacing, graphics and interactions. There is one homepage. Remove the LANDING/CATALOG selector and the alternative CatalogHomePage implementation. The independent /skills marketplace retains its existing behavior. The rejected A/B/C comparison prototypes are private research, not product routes or features.
+
 ## Authority and storage
 
-Reuse existing PostgreSQL system_setting and SystemSettingRepository with a dedicated site.presentation key. Keep presentation orchestration in the application layer. Seed defaults idempotently via a new migration; never overwrite existing settings during startup or upgrade. Use existing version and audit patterns. No new database, Redis cache or external dependencies.
+Reuse PostgreSQL system_setting / SystemSettingRepository and the site.presentation key. Keep orchestration in the application layer. V122 seeds the key idempotently; do not alter previously applied migrations or add a second store. Settings contain siteName, logoUrl, faviconUrl, sections and links. Preserve optimistic version checks, audit, existing SUPER_ADMIN authorization, session/CSRF protection and the public presentation whitelist.
 
-Settings contain siteName, logoUrl, faviconUrl, homepageMode (LANDING/CATALOG), heroTitle and heroDescription locale maps, showPopular, showLatest, showQuickStart and footerVisible. Nullable text/asset overrides fall back to existing UI. Locale maps support the existing en/zh/ko/ru UI languages. Public read exposes settings and version only, not actors, auth settings or secret configuration.
+## Region contract
 
-## API
+sections is a fixed map of eight regions, rendered in the existing order. Each region has enabled, texts and optional items. texts maps a supported slot to a locale map (en/zh/ko/ru). items maps a supported sub-element to a boolean; absent items are visible. A missing text override uses existing i18n defaults; locale fallback is current language, custom English, existing product text. Treat text as plain content, never HTML/CSS or executable templates. Render line breaks and unbroken long text without overflowing.
 
-- GET /api/v1/site-presentation: public typed settings and version.
-- GET and PUT /api/v1/admin/system-config/presentation: SUPER_ADMIN management; PUT includes expected version and complete typed settings.
-- POST /api/v1/admin/system-config/presentation/assets: SUPER_ADMIN multipart file upload; returns controlled URL.
-- GET /api/v1/site-presentation/assets/{assetId}: controlled immutable brand image resource.
+| Region | Configurable presentation | Optional elements |
+| --- | --- | --- |
+| hero | Badge, heading, description, action labels, search label, preview labels and highlights | Preview, highlights, two actions |
+| capabilities | Section heading/description and six capability card headings/descriptions | Each existing capability card |
+| quickStart | Section heading/description and three access-mode headings/descriptions | Agent, CLI and Web modes |
+| popular | Eyebrow, heading, description and browse label | Whole region |
+| latest | Eyebrow, heading, description and browse label | Whole region |
+| enterprise | Section and existing card headings/descriptions, diagram captions | Deployment, security, RBAC, access, audit and open-source cards |
+| cta | Heading, description and two action labels | Each action |
+| footer | Brand description, copyright, group headings and link labels | Four existing link groups |
 
-All JSON uses existing response envelopes. Modify requests retain normal session/CSRF protection. Public permit rules are limited to reads. Asset references only address controlled branding UUIDs; no arbitrary URLs, file paths or public exposure of skill storage. Uploads accept PNG/JPEG <=2MiB and <=1024 pixels per dimension; reuse image processor to verify bytes and re-encode PNG. Favicon uses PNG. Binary assets remain in existing configured storage; DB stores references, not expiring signatures or binary blobs.
+### Supported text slots
 
-## UI
+- hero: `badge`, `title`, `description`, `primaryActionLabel`, `secondaryActionLabel`, `searchPlaceholder`, `previewTitle`, `previewCaption`, `previewPublishTitle`, `previewPublishDescription`, `highlightSelfHosted`, `highlightGovernance`, `highlightMultiClient`, `highlightTraceable`.
+- capabilities: `eyebrow`, `title`, `description`, `secureTitle`, `secureDescription`, `communityTitle`, `communityDescription`, `integrationTitle`, `integrationDescription`, `versionControlTitle`, `versionControlDescription`, `cliTitle`, `cliDescription`, `governanceTitle`, `governanceDescription`.
+- quickStart: `title`, `description`, `agentTitle`, `agentDescription`, `cliTitle`, `cliDescription`, `webTitle`, `webDescription`.
+- popular: `eyebrow`, `title`, `description`, `viewAllLabel`.
+- latest: `eyebrow`, `title`, `description`, `viewAllLabel`.
+- enterprise: `eyebrow`, `title`, `description`, `deploymentTitle`, `deploymentDescription`, `securityTitle`, `securityDescription`, `rbacTitle`, `rbacDescription`, `accessTitle`, `accessDescription`, `auditTitle`, `auditDescription`, `openSourceTitle`, `openSourceDescription`, `clientLayer`, `serviceLayer`, `storageLayer`, `registryLabel`, `networkBoundary`.
+- cta: `title`, `description`, `primaryActionLabel`, `secondaryActionLabel`.
+- footer: `description`, `copyright`, `productTitle`, `developersTitle`, `projectTitle`, `resourcesTitle`, `marketLabel`, `publishLabel`, `consoleLabel`, `documentationLabel`, `cliPackageLabel`, `repositoryLabel`, `licenseLabel`, `contributingLabel`, `changelogLabel`, `codeOfConductLabel`, `communityLabel`, `privacyLabel`, `termsLabel`.
 
-Use existing product components, typography and tokens. Add site presentation panel under current system configuration. Group brand, homepage and footer. Preview is local unsaved draft and must not affect public settings. Reset modifies draft until Save. Protect dirty edits from background refetch and navigation. Error/conflict preserves draft and explains recovery. User-selected language/theme are untouched.
+Headings (title and *Title) allow 160 characters, descriptions (*Description and description) and footer copyright allow 1000, other labels allow 160. The site name allows 80. Each text map supports at most four known locales. Reject unknown regions, text slots, element keys or link slots rather than persisting arbitrary presentation configuration. Defaults are all eight regions enabled with empty text/item maps and no link overrides.
 
-A central TanStack Query resource feeds navbar, BrandMark, homepage, footer, title and favicon. Perform bounded initial loading before page display to avoid custom-to-default brand flash; configuration-read failure must preserve a usable default interface and expose a retry path. No request loop. The configured homepage is the actual `/` route (LandingPage), not the separately routed `/skills` market (HomePage). LANDING preserves the existing LandingPage composition by default. CATALOG uses a complete discovery homepage at `/`: a restrained brand/hero and primary search, navigation from existing live category data when available, clear popular/latest skill sections, and optional quick-start guidance. It is not merely the market page with a smaller heading. Preserve useful browse/search entry points when all optional sections are disabled. Render distinct loading, empty and error/retry states; never substitute fictional skills, categories or counts for missing data. Keep current tokens and shared frame bounds, responsive dark/light layouts, and existing search permission filtering. The `/skills` route retains its existing market sections independently of homepage switches. Disable hidden homepage section queries, and avoid mounting the unused layout or issuing duplicate queries. Resolve image URLs against actual runtime API/base path. Failed images use built-in default.
+links has nine fixed positions: repository, documentation, cliDocumentation, cliPackage, license, contributing, changelog, codeOfConduct and community. Missing overrides retain the exact default URL at each consumer. Overrides accept valid HTTP/HTTPS destinations or a single-slash root-relative path resolved with the deployment base path. Reject protocol-relative URLs, credentials, backslashes, control characters including encoded forms, dangerous schemes, missing hosts and invalid ports. No URL fetch or DNS lookup is performed. Internal publish/search/dashboard/privacy/terms destinations remain code-owned.
 
-## Deployment and compatibility
+CLI executable commands, package names, registry/API endpoints, database/storage product names, and live skill coordinates are functional contracts, not rebrandable display text. Use the site name for appropriate nonfunctional brand labels. Keep fixed demo content identified as demonstration; operators may hide the hero preview or individual access modes. Configuration must not turn a demonstration into a claim that a skill exists or that an operation succeeded. Existing business authentication/visibility remains authoritative, and disabled popular/latest regions do not issue their queries.
 
-No new environment settings, image mounts or one-click flags. Manage through UI after login. Saving does not require container restart; current client invalidates shared configuration and other clients pick changes up on refresh/refetch. Existing DB and configured object storage must both be persisted and backed up. New fields use defaults; ordinary upgrades do not reset administrator choices. Reverting an application image is not a database restore.
+## Legacy persisted settings
 
-## Alternatives
+The draft previously stored homepageMode, heroTitle, heroDescription, showPopular, showLatest, showQuickStart and footerVisible. Only when the persisted root has no sections key, map heroTitle/heroDescription into hero texts and old visibility booleans into the corresponding regions. Ignore homepageMode and always render the original LandingPage. A new sections key takes precedence even when its maps are empty; explicitly clearing overrides restores defaults instead of reviving old fields. Compatibility reads never write the database or increment version. A successful save writes only the new shape. The unreleased old PUT body is not a long-term public contract: require nonempty sections on writes to avoid accidentally resetting configuration.
 
-Frontend-only env/config files would require mounting and restart semantics across deployment types and duplicate the existing DB settings facility. A generic settings builder or full CMS adds unnecessary dependencies and scope. Database-backed typed settings reuse the current platform and permit clear edit authorization and concurrency control. Rich white-label themes and arbitrary custom navigation remain separate work.
+## API and assets
+
+Keep GET /api/v1/site-presentation, SUPER_ADMIN GET/PUT /api/v1/admin/system-config/presentation, POST /api/v1/admin/system-config/presentation/assets and controlled public GET /api/v1/site-presentation/assets/{assetId}. JSON envelopes remain unchanged. PUT carries settings and expected version. Assets remain PNG/JPEG <=2MiB and <=1024px per dimension, verified and normalized to PNG in existing object storage. Asset references remain controlled brand UUID routes, separate from configurable navigation links. Uploaded brand images are publicly readable before settings Save; historical uploads are retained.
+
+## Management UI
+
+Use existing product components and tokens. Group brand and link settings, then show the eight regions as individually expandable editors with a display switch, language choice, meaningful text labels, element switches and per-region reset. Do not expand all 88 text fields by default or expose raw JSON/i18n keys as the editing interface. Reset changes only the draft until Save. Retain drafts on failure/conflict and preserve leave protection. A preview uses scoped draft values without modifying the public query cache or database; if schematic, label its limits explicitly. Personal theme and language are independent from administrator configuration.
+
+## Deployment and acceptance
+
+No new one-click flags, environment variables, image mounts, database tables or dependencies. Save takes effect on refresh/refetch without restarting containers. Back up both the existing database and object storage. Verify the original unconfigured homepage against the baseline, all region/element switches, representative text slots across all eight regions, safe links and deployment subpaths, locale/default fallback, legacy JSON compatibility, explicit clearing, permissions/CSRF/conflicts, responsive themes, persistence and unchanged marketplace behavior. Keep one local preview for human acceptance; distinguish browser fixtures from real backend writes.

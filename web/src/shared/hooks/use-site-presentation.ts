@@ -1,10 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
+import { PRESENTATION_CONTENT, type PresentationSection } from '@/shared/lib/presentation-content'
 import { sitePresentationApi, type SitePresentationSettings } from '@/api/site-presentation'
 
 export const SITE_PRESENTATION_QUERY_KEY = ['site-presentation'] as const
 
 export function defaultSitePresentation(): SitePresentationSettings {
-  return { siteName: null, logoUrl: null, faviconUrl: null, homepageMode: 'LANDING', heroTitle: {}, heroDescription: {}, showPopular: true, showLatest: true, showQuickStart: true, footerVisible: true }
+  return { siteName: null, logoUrl: null, faviconUrl: null, sections: {
+    hero: { enabled: true, texts: {}, items: {} }, capabilities: { enabled: true, texts: {}, items: {} },
+    quickStart: { enabled: true, texts: {}, items: {} }, popular: { enabled: true, texts: {}, items: {} },
+    latest: { enabled: true, texts: {}, items: {} }, enterprise: { enabled: true, texts: {}, items: {} },
+    cta: { enabled: true, texts: {}, items: {} }, footer: { enabled: true, texts: {}, items: {} },
+  }, links: {} }
 }
 
 export function localizedPresentationText(values: Record<string, string>, language: string | undefined): string | undefined {
@@ -15,4 +21,15 @@ export function localizedPresentationText(values: Record<string, string>, langua
 export function useSitePresentation() {
   const query = useQuery({ queryKey: SITE_PRESENTATION_QUERY_KEY, queryFn: sitePresentationApi.get, staleTime: 30_000, retry: false, refetchOnMount: false, meta: { skipGlobalErrorHandler: true } })
   return { ...query, settings: query.data?.settings ?? defaultSitePresentation() }
+}
+
+/** The allowlist has one authoritative fallback for both the homepage and its settings editor. */
+export function presentationText(settings: SitePresentationSettings, section: PresentationSection, slot: string, language: string | undefined, translate: (key: string) => string): string {
+  const override = localizedPresentationText(settings.sections[section].texts[slot] ?? {}, language)
+  if (override) return override
+  const defaults: Record<string, string> = PRESENTATION_CONTENT[section]
+  const fallback = defaults[slot]
+  if (!fallback) return ''
+  if (section === 'enterprise' && slot === 'registryLabel') return `${settings.siteName ?? 'SkillHub'}\nRegistry`
+  return fallback.startsWith('=') ? fallback.slice(1) : translate(fallback)
 }

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { defaultSitePresentation } from '@/shared/hooks/use-site-presentation'
 import { fetchJson } from './client'
 import { presentationAssetUrl, sitePresentationApi } from './site-presentation'
 vi.mock('./client', () => ({ ApiError: class extends Error { constructor(message: string, public status: number) { super(message) } }, buildApiUrl: (path: string) => `/skillhub${path}`, fetchJson: vi.fn(), getCsrfHeaders: (initial?: HeadersInit) => { const headers = new Headers(initial); headers.set('X-XSRF-TOKEN', 'local-csrf-regression'); return headers } }))
@@ -33,7 +34,7 @@ describe('bounded public presentation loading', () => {
 
 describe('site presentation update authentication headers', () => {
   it('retains the CSRF header from a Headers instance alongside JSON content type', async () => {
-    const request = { settings: { siteName: 'Team Library', logoUrl: null, faviconUrl: null, homepageMode: 'LANDING' as const, heroTitle: {}, heroDescription: {}, showPopular: true, showLatest: true, showQuickStart: true, footerVisible: true }, version: 3 }
+    const request = { settings: { ...defaultSitePresentation(), siteName: 'Team Library' }, version: 3 }
     await sitePresentationApi.update(request)
     const calls = vi.mocked(fetchJson).mock.calls
     const [url, init] = calls[calls.length - 1]

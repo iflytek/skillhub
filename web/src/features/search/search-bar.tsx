@@ -10,7 +10,6 @@ interface SearchBarProps {
   defaultValue?: string
   value?: string
   placeholder?: string
-  inputLabel?: string
   isSearching?: boolean
   onChange?: (query: string) => void
   onSearch?: (query: string) => void
@@ -22,7 +21,7 @@ interface SearchBarProps {
  * It supports both controlled and uncontrolled usage so page-level containers can decide whether
  * query text should be driven from URL state or local form state.
  */
-export function SearchBar({ defaultValue = '', value, placeholder, isSearching = false, onChange, onSearch, analyticsId, inputLabel }: SearchBarProps) {
+export function SearchBar({ defaultValue = '', value, placeholder, isSearching = false, onChange, onSearch, analyticsId }: SearchBarProps) {
   const { t } = useTranslation()
   const [query, setQuery] = useState(defaultValue)
   const isControlled = value !== undefined
@@ -58,7 +57,6 @@ export function SearchBar({ defaultValue = '', value, placeholder, isSearching =
         <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <Input
           type="text"
-          aria-label={inputLabel}
           value={currentQuery}
           onChange={(e) => handleChange(e.target.value)}
           maxLength={MAX_SEARCH_INPUT_LENGTH}
