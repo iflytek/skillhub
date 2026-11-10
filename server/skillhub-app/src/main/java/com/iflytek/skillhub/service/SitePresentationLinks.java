@@ -5,29 +5,28 @@ import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** Validates browser navigation targets without fetching or resolving any external resource. */
 final class SitePresentationLinks {
+    private static final Pattern ENCODED_BYTES = Pattern.compile("(?:%[0-9a-fA-F]{2})+");
+
     private SitePresentationLinks() {}
 
     static String safeUrl(String raw) {
         if (raw == null || raw.length() > 2048) return null;
         String value = raw.strip();
         if (value.isEmpty()) return null;
-        if (unsafeCharacters(raw) || value.startsWith("/") && hasDotSegment(value)) return null;
+        if (unsafeCharacters(raw) || value.startsWith("/") && unsafeRootPath(value)) return null;
         // Decode repeatedly only for rejection checks, never for the returned navigation target.
         // This also rejects double-encoded controls and leading slashes/backslashes.
         String decoded = value;
         try {
             while (decoded.indexOf('%') >= 0) {
-                String next;
-                try {
-                    next = URLDecoder.decode(decoded.replace("+", "%2B"), StandardCharsets.UTF_8);
-                } catch (IllegalArgumentException literalPercentAfterDecoding) {
-                    break;
-                }
+                String next = decodeForChecks(decoded);
                 if (next.codePoints().anyMatch(character -> character == '\\' || Character.isISOControl(character))
-                        || (value.startsWith("/") && (next.startsWith("//") || hasDotSegment(next)))) return null;
+                        || (value.startsWith("/") && next.startsWith("//"))) return null;
                 if (next.equals(decoded)) break;
                 decoded = next;
             }
@@ -47,16 +46,31 @@ final class SitePresentationLinks {
         }
     }
 
-    private static boolean hasDotSegment(String value) {
+    private static boolean unsafeRootPath(String value) {
+        // Delimit the original path once. An encoded ? or # is path data, not a
+        // delimiter after decoding, and must not conceal following dot segments.
         int end = value.length();
         int query = value.indexOf('?');
         int fragment = value.indexOf('#');
         if (query >= 0) end = Math.min(end, query);
         if (fragment >= 0) end = Math.min(end, fragment);
-        for (String segment : value.substring(0, end).split("/", -1)) {
-            if (segment.equals(".") || segment.equals("..")) return true;
+        String path = value.substring(0, end);
+        while (true) {
+            if (path.startsWith("//")) return true;
+            for (String segment : path.split("/", -1)) {
+                if (segment.equals(".") || segment.equals("..")) return true;
+            }
+            String decoded = decodeForChecks(path);
+            if (decoded.equals(path)) return false;
+            path = decoded;
         }
-        return false;
+    }
+
+    private static String decodeForChecks(String value) {
+        // Decode valid byte sequences while retaining literal percent signs that
+        // appear after a prior pass, so unrelated %25 cannot hide nested escapes.
+        return ENCODED_BYTES.matcher(value).replaceAll(match -> Matcher.quoteReplacement(
+                URLDecoder.decode(match.group(), StandardCharsets.UTF_8)));
     }
 
     private static boolean unsafeCharacters(String value) {

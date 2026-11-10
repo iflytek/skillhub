@@ -15,6 +15,14 @@ class SitePresentationLinksTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = {"/x%3f/%2e%2e/%2e%2e/docs", "/x%23/%2e%2e/%2e%2e/docs",
+            "/x%253f/%252e%252e/%252e%252e/docs", "/x%2523/%252e%252e/%252e%252e/docs",
+            "/x%25/%252e%252e/%252e%252e/docs"})
+    void encodedQueryAndFragmentCharactersCannotConcealRootPathTraversal(String url) {
+        assertThat(SitePresentationLinks.safeUrl(url)).isNull();
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = {"/docs/.hidden", "/docs/file..name", "/docs?return=/../dashboard", "/docs#../anchor",
             "https://docs.example.test/../guide", "http://docs.example.test/a/./guide", "/docs/file%20name", "/docs/100%25"})
     void keepsNonDotNamesQueryDataAndAbsoluteHttpNavigationValid(String url) {
