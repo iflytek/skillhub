@@ -61,6 +61,23 @@ Token 调用的有效权限 SHALL 为账号／空间权限、Token 有效能力�
 - **WHEN** Bundle 操作的发起 Token 有效能力不含 `skill:publish-private`，成员为 PRIVATE
 - **THEN** 成员标记为 `BLOCKED_RETRYABLE` 并说明缺少的能力，不调用 `confirmPublish`，不创建部分 Suite 草稿
 
+#### Scenario: Bundle 新操作缺失能力快照
+- **WHEN** Token 发起 Bundle 确认，但操作记录未能持久化发起方式和有效能力快照
+- **THEN** 在创建操作和成员副作用前拒绝，不把空快照按旧版全能力处理
+
+#### Scenario: Bundle 历史空快照来源不明
+- **WHEN** 迁移前的 Bundle 操作快照为空，且无法由关联原操作 ID 的记录证明当时的发起方式及授权
+- **THEN** 恢复执行保持 `BLOCKED_RETRYABLE` 并标明授权来源不明，不调用 `confirmPublish`，不创建 Suite 草稿
+- **AND** 不能仅凭迁移前创建时间、当前 actor 的管理员身份或当前 Token 推断全能力；需以明确授权另建操作
+
+#### Scenario: Bundle 可证历史操作的恢复
+- **WHEN** 空快照操作能由原操作 ID 关联记录证实当时使用带旧 `skill:publish` 的 Token 或会话及其授权
+- **THEN** 恢复时分别按旧 scope 展开能力或沿用会话权限，不能由恢复 worker 的权限扩张
+
+#### Scenario: Bundle 失败重试不能提权
+- **WHEN** 缺少 `skill:publish-private` 的 Bundle 操作在失败后由更高权限的账号或 Token 请求重试
+- **THEN** 重试仍按操作记录的原快照拒绝 PRIVATE 发布，不补写新能力、不调用 `confirmPublish`，不创建 Suite 草稿
+
 ### Requirement: REQ-ATC-04 Token 签发、轮换与续期 SHALL 不超过调用 Token 的能力上限
 
 经 Token 调用创建、同名轮换或续期 Token 时，新 Token 的有效能力 SHALL 是调用 Token 有效能力的子集，
@@ -99,13 +116,27 @@ SHALL 不返回其他凭据或其哈希、前缀以外的标识。
 
 ### Requirement: REQ-ATC-06 存量 Token 与旧 CLI SHALL 保持兼容
 
-存量 Token 的存储 SHALL 不被改写，升级后行为 SHALL 与升级前一致并标注旧版兼容。新建入口的宽默认值 SHALL 标注弃用并有退出计划。
+存量 Token 的存储 SHALL 不被改写，原 scope 的路由授权 SHALL 保持一致并标注旧版兼容；例外是
+SUPER_ADMIN 的 Token 调用不再因管理员身份在上传 PRIVATE 时自动发布，须显式 `confirm-publish`，而会话调用
+SHALL 保持原有直发行为。新建入口的宽默认值 SHALL 标注弃用并有退出计划。
 CLI 登录 SHALL 签发 `skill:read + skill:submit`；旧 CLI 的 publish、预检与送审 SHALL 继续可用；删除 SHALL 需要显式授权，
 系统 SHALL 不通过自动换发更宽 Token 恢复删除能力。
 
-#### Scenario: 升级后的存量 Token
-- **WHEN** 升级前签发的 `skill:read + skill:publish` Token 调用 `confirm-publish`
-- **THEN** 结果与升级前一致
+#### Scenario: 升级后的存量普通 Token
+- **WHEN** 升级前签发的非 SUPER_ADMIN `skill:read + skill:publish` Token 调用 `confirm-publish`
+- **THEN** 按旧 scope 展开后的 `skill:publish-private` 授权，结果与升级前一致，存储 scope 不变
+
+#### Scenario: SUPER_ADMIN 存量 Token 的直发例外
+- **WHEN** SUPER_ADMIN 账号使用升级前带 `skill:publish` 的 Token 上传 PRIVATE 技能
+- **THEN** 上传后版本为 `UPLOADED`，不再自动发布；显式 `confirm-publish` 可按展开后的能力使其成为 `PUBLISHED`
+
+#### Scenario: SUPER_ADMIN 会话调用保持原行为
+- **WHEN** 同一 SUPER_ADMIN 账号使用会话上传 PRIVATE 技能
+- **THEN** 保持升级前的直发流程，不要求 Token 能力
+
+#### Scenario: SUPER_ADMIN 新候选 Token 无法直发
+- **WHEN** SUPER_ADMIN 账号使用新 `skill:read + skill:submit` Token 上传 PRIVATE 技能并尝试 `confirm-publish`
+- **THEN** 上传后版本为 `UPLOADED`，确认请求返回 403 `error.apiToken.scope.missing`（参数 `skill:publish-private`），状态不变
 
 #### Scenario: 旧 CLI 使用新登录 Token
 - **WHEN** 旧版 CLI 重新登录后执行 `publish` 与送审

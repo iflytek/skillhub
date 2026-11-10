@@ -10,8 +10,13 @@
 - [ ] 2.1 `[REQ-ATC-03]` 认证过滤器把 Token 有效能力写入 `PlatformPrincipal`（会话为空表示不受限），AppService 层传入领域服务。
 - [ ] 2.2 `[REQ-ATC-03]` `SkillPublishService`：Token 调用且已有技能可见性变化时要求 `skill:manage`，在创建版本与修改技能之前拒绝；Token 调用时 SUPER_ADMIN 不触发 `autoPublish`。
 - [ ] 2.3 `[REQ-ATC-03]` `SkillReviewSubmitService#confirmPublish` 在 Token 调用时要求 `skill:publish-private`；`rerelease` 验证 PRIVATE 落在 `UPLOADED`。
-- [ ] 2.4 `[REQ-ATC-03]` Bundle 操作记录保存发起 Token 能力快照（Flyway 新增可空列），执行与恢复对 PRIVATE 成员校验，缺少时 `BLOCKED_RETRYABLE`；存量空快照按旧版兼容。
-- [ ] 2.5 `[REQ-ATC-03]` 集成测试：spec 中 REQ-ATC-03 的全部场景，含失败时数据库状态不变的断言。
+- [ ] 2.4 `[REQ-ATC-03]` 先盘点迁移前 Bundle 操作可按 operation ID 关联的发起方式及旧授权证据；
+  操作记录持久化发起方式与 Token 能力快照（Flyway 新增字段）。新 Token 操作缺快照在落库前拒绝；
+  恢复／失败重试只沿用原授权，可证历史记录按原授权处理，来源不明的空快照保持 `BLOCKED_RETRYABLE`，
+  不按创建时间、当前 actor 角色或重试者权限推断旧版全能力。
+- [ ] 2.5 `[REQ-ATC-03]` 集成测试覆盖 spec 中全部场景及无副作用拒绝，尤其是 Bundle 新操作缺快照、
+  历史空快照来源不明、可证历史恢复、提权重试；分别覆盖普通存量 Token、SUPER_ADMIN 存量 Token、
+  SUPER_ADMIN 会话和新 read + submit Token 的 PRIVATE 上传／显式确认行为。
 
 ## 3. Token 签发与查询
 
@@ -25,9 +30,11 @@
 - [ ] 4.1 `[REQ-ATC-06]` Token 创建对话框提供只读下载、候选提交、私有发布、自定义预设，删除与 Token 管理仅在自定义中勾选；列表展示能力与旧版兼容标记。
 - [ ] 4.2 `[REQ-ATC-06]` `cli-auth` 与设备码签发 `skill:read + skill:submit`。
 - [ ] 4.3 `[REQ-ATC-06]` CLI `whoami` 展示能力；`remove` 识别 `scope.missing`（`skill:delete`）并提示显式授权，不自动换发。
-- [ ] 4.4 `[REQ-ATC-06]` 兼容测试：旧版 CLI 使用新登录 Token 的 publish、validate、送审、remove；存量 Token 升级前后同一请求结果一致。
+- [ ] 4.4 `[REQ-ATC-06]` 兼容测试：旧版 CLI 使用新登录 Token 的 publish、validate、送审、remove；
+  普通存量 Token 的原路由授权不变，并对 SUPER_ADMIN Token 直发例外与会话行为分别断言。
 
 ## 5. 文档与发布
 
 - [ ] 5.1 更新 `docs/03-authentication-design.md` 作用域与默认权限、`docs/06-api-design.md` 中各接口的 Token 要求、OpenClaw 集成说明。
-- [ ] 5.2 发布说明写明能力拆分、存量兼容、CLI 重新登录后的删除授权，以及省略 scopes 默认值将在下一个次版本收紧。
+- [ ] 5.2 发布说明写明能力拆分、存量 Token 的路由兼容及 SUPER_ADMIN Token 上传直发例外、
+  Bundle 无法证明来源的空快照需重新授权、CLI 重新登录后的删除授权，以及省略 scopes 默认值将在下一个次版本收紧。
