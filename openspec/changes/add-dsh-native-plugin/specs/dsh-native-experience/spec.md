@@ -664,3 +664,26 @@ The plugin MUST let users save and remove local skill favorites without login, i
 - **GIVEN** two sources contain the same coordinates or multiple local Hosts save different favorites
 - **WHEN** the source changes or concurrent writes finish
 - **THEN** old responses do not enter the new source view, each source retains its own favorites, atomic locked read-modify-write preserves both records, and damaged or unknown storage is not overwritten
+
+
+### Requirement: Compact interface with complete existing functionality
+The plugin SHALL apply the approved compact design to its scoped UI while preserving existing source, context, confirmation, recovery and compatibility behavior. Conditional operations SHALL remain reachable and prototype omissions SHALL be corrected before being treated as implementation scope cuts.
+
+#### Scenario: Secondary actions remain reachable
+- **WHEN** a skill, location, favorite or operation is disabled, missing, unavailable, pending, stale or unknown
+- **THEN** appropriate inspect, export, local-change, clean-record, retry, cancel, query or recovery actions remain available according to existing Host contracts, without silently replaying writes
+
+#### Scenario: Compact responsive controls
+- **WHEN** the user views narrow or wide layouts in either theme
+- **THEN** controls size to content, metrics group closely, text may wrap or reveal full values, and file/diff scrolling stays inside bounded regions without page overflow or mutation-state height jumps
+
+### Requirement: Lazy fixed-version read-only files
+The plugin SHALL reuse existing Registry file GET endpoints through bounded Host reads tied to the current detail reference, and SHALL NOT introduce arbitrary local path, URL or write authority.
+
+#### Scenario: Inspect selected text
+- **WHEN** the user activates Files for a current Registry detail and selects a listed text file
+- **THEN** only the fixed-version list and selected bounded text are read, with source/context checks and escaped rendering; catalog cards do not trigger per-skill file requests
+
+#### Scenario: Unsupported or invalid content
+- **WHEN** the source lacks the endpoint, access is denied, content is binary/too large/unreadable, or the source reference becomes stale
+- **THEN** the UI distinguishes that state from an empty directory and does not claim successful inspection or substitute another source/version

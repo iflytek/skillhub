@@ -16,11 +16,15 @@ Version `0.4.0` uses the independent `dsh-v0.4.0` tag. It adds versioned example
 
 `0.6.2` is the current patch candidate, combining source-isolated updates, release-change previews and local-file handling, single-skill ZIP transfer, local favorites, and DSH `0.2.1-rc.5` compatibility. Shared inventory remains v2 without a coordinated CLI upgrade. Candidate and public-package acceptance are separate; check npm before installation.
 
+## Compact interface and file preview (in development)
+
+Discovery, My skills, details and settings share compact controls and light/dark themes. The Files tab provides a collapsible directory tree and keeps its selection and folded state within the current detail reference. It uses the full content width; Manage installations returns to the existing overview management panel. Line numbers share the text scroll area, while Copy copies only the original file content. The Files tab reads a fixed-version directory, then loads only the selected body: at most 500 entries and 256 KiB per text preview. Oversized or binary files show metadata only. Text is read-only and copyable; HTML and remote resources in its body do not execute or load. Unsupported listings, anonymous denial and failures have distinct states. Switching sources invalidates old references. This reuses existing Registry GET endpoints and adds only local read-only Host RPC, without changing SaaS HTTP APIs or shared inventory.
+
 ## Use an installed skill
 
 Market, installed and everyday conversation lists show one card per skill. “使用技能” asks the Host to verify the unique installation actually usable in the current session. Catalog use creates a conversation in the same workspace; conversation use keeps the current session. Choose an example or custom task to insert an editable draft. This never sends a message, invokes a model or overwrites the original draft.
 
-In the installed card’s More menu, “管理安装” opens skill details, where the inline installation panel shows each location’s version, state and explicit use/update/enable/disable/removal actions. Disabled or unverified skills lead to management. Installation scope remains in advanced confirmation options, with the current-user default unchanged.
+In the installed card’s More menu, “管理安装” opens skill details, where the inline installation panel shows each location’s version, state and explicit use/update/enable/disable/removal actions. Disabled or unverified skills lead to management. Installation scope is directly visible in confirmation, with the current-user default unchanged.
 
 An active session is required. Shadowed skills, modified files, disabled user invocation or changed context are reported without modifying the draft. Historical receipts are not proof of current installation. This feature is available from `0.4.0`.
 

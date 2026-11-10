@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import type { SkillFileEntry, SkillFileList, SkillFilePreview } from './types.js';
+import { isPreviewableText, isRegistryFilePath, MAX_SKILL_PREVIEW_BYTES, MAX_SKILL_PREVIEW_FILES } from './skill-files.js';
 import { retryAfterDeadline } from './retry-after.js';
 import type { CatalogLabels, CatalogPageResult, CatalogSort } from './types.js';
 
@@ -46,6 +48,11 @@ const reviewSchema = z.object({
   id: z.number().int().positive(), displayName: z.string().nullish(),
   score: z.number().int().min(1).max(5), reviewText: z.string().nullish(), createdAt: z.string(),
 });
+const filesSchema = z.array(z.object({
+  filePath: z.string().refine(isRegistryFilePath),
+  fileSize: z.number().int().nonnegative().safe(),
+  contentType: z.string().max(256).nullish(),
+})).max(MAX_SKILL_PREVIEW_FILES).refine(items => new Set(items.map(item => item.filePath)).size === items.length);
 function pageSchema<T>(item: z.ZodType<T>) {
   return z.object({ items: z.array(item).max(20), total: z.number().int().nonnegative(),
     page: z.number().int().nonnegative(), size: z.number().int().positive().max(20) })
@@ -160,6 +167,32 @@ export class RegistryAdapter {
     );
   }
 
+  async files(namespace: string, slug: string, version: string, signal?: AbortSignal): Promise<SkillFileList> {
+    try {
+      const items = await this.json(`/api/v1/skills/${segment(namespace)}/${segment(slug)}/versions/${segment(version)}/files`, filesSchema, signal);
+      return { state: 'ready', items: items.map(item => ({ path: item.filePath, size: item.fileSize,
+        contentType: item.contentType ?? null })) };
+    } catch (error) {
+      if (error instanceof RegistryError && [404, 405].includes(error.status ?? 0)) return { state: 'unsupported', items: [] };
+      throw error;
+    }
+  }
+
+  async file(namespace: string, slug: string, version: string, file: SkillFileEntry, signal?: AbortSignal): Promise<SkillFilePreview> {
+    if (!isRegistryFilePath(file.path)) throw new RegistryError('INVALID_INPUT', false);
+    if (file.size > MAX_SKILL_PREVIEW_BYTES) return { state: 'too-large', path: file.path, limitBytes: MAX_SKILL_PREVIEW_BYTES };
+    if (!isPreviewableText(file)) return { state: 'binary', path: file.path };
+    try {
+      const content = await this.read(`/api/v1/skills/${segment(namespace)}/${segment(slug)}/versions/${segment(version)}/file?${new URLSearchParams({ path: file.path })}`,
+        'text/plain', signal, MAX_SKILL_PREVIEW_BYTES);
+      return content.includes('\0') ? { state: 'binary', path: file.path } : { state: 'text', path: file.path, content };
+    } catch (error) {
+      if (error instanceof RegistryError && error.code === 'RESPONSE_TOO_LARGE') return { state: 'too-large', path: file.path, limitBytes: MAX_SKILL_PREVIEW_BYTES };
+      if (error instanceof RegistryError && error.code === 'INVALID_RESPONSE') return { state: 'unreadable', path: file.path };
+      throw error;
+    }
+  }
+
   async metadata(namespace: string, slug: string, signal?: AbortSignal) {
     const result = await this.json(`/api/v1/skills/${segment(namespace)}/${segment(slug)}`, metadataSchema, signal);
     if (result.namespace !== namespace || result.slug !== slug) throw new RegistryError('INVALID_RESPONSE', false);
@@ -207,9 +240,8 @@ export class RegistryAdapter {
     }
   }
 
-  private async read(path: string, accept: string, signal?: AbortSignal): Promise<string> {
+  private async read(path: string, accept: string, signal?: AbortSignal, maxBytes = 1024 * 1024): Promise<string> {
     // Both JSON and SKILL.md are bounded; archive downloads use the install core.
-    const maxBytes = 1024 * 1024;
     const deadline = new AbortController();
     const requestSignal = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
     const timer = setTimeout(() => deadline.abort(), this.timeoutMs);
