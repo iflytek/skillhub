@@ -95,13 +95,13 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 ## 从 npm 安装
 
-当前公开版本为 `0.6.2`；`0.6.3` 发布前使用下节的候选 tarball，公开后再核对精确版本并替换命令中的版本号。
+本节以 `0.6.3` 为安装目标，先用 `npm view` 确认精确版本可用；尚未公开时使用下节的候选 tarball。仅使用上表列出的已验证 DSH RC，其他版本（包括 `0.2.2-rc.1`）不在支持范围内。
 
 先查询 npm 上的精确版本，确认可用后安装。核对 DSH、Node 和上表完整 Cordis 组合，停止目标 Web Profile 的 Host，再执行插件安装；也可按下一节安装已验证的本地 tarball：
 
 ```sh
-npm view @astron-team/skillhub-dsh@0.6.2 version
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.2 --ignore-scripts
+npm view @astron-team/skillhub-dsh@0.6.3 version
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.3 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 

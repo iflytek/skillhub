@@ -95,13 +95,13 @@ Published `0.1.0` still requires the original Cordis `4.0.4` baseline and does n
 
 ## Install from npm
 
-The current public version is `0.6.2`. Before `0.6.3` is published, use a candidate tarball as described below; after publication, verify the exact version before replacing the version in these commands.
+This section targets `0.6.3`. First use `npm view` to confirm that the exact version is available; otherwise use a candidate tarball as described below. Use only the verified DSH RCs listed in the table above. Other versions, including `0.2.2-rc.1`, are outside the supported range.
 
 Query the exact npm version first and install only after confirming availability. Check DSH, Node and a complete Cordis combination listed above, stop the target Web Profile Host, then install the plugin. A verified local tarball can also be installed using the next section:
 
 ```sh
-npm view @astron-team/skillhub-dsh@0.6.2 version
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.2 --ignore-scripts
+npm view @astron-team/skillhub-dsh@0.6.3 version
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.3 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 
