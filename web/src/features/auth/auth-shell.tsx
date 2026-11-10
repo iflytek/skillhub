@@ -1,6 +1,7 @@
 import type React from 'react'
 import { ArrowLeft } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useSitePresentation } from '@/shared/hooks/use-site-presentation'
 import { BrandMark } from '@/shared/components/brand-mark'
 import { withBasePath } from '@/shared/lib/base-path'
 import { cn } from '@/shared/lib/utils'
@@ -13,6 +14,8 @@ interface AuthShellProps {
 /** Shared theme-aware product introduction and form layout for login and registration. */
 export function AuthShell({ children, className }: AuthShellProps) {
   const { t } = useTranslation()
+  const { settings } = useSitePresentation()
+  const siteName = settings.siteName ?? 'SkillHub'
 
   return (
     <section className={cn('relative w-full', className)}>
@@ -36,9 +39,9 @@ export function AuthShell({ children, className }: AuthShellProps) {
           <div className="relative z-10 px-12 pt-28 2xl:px-16">
             <div className="flex items-center gap-3">
               <BrandMark className="h-8 w-8" alt="" />
-              <span className="text-lg font-semibold tracking-tight">SkillHub</span>
+              <span className="min-w-0 break-words text-lg font-semibold tracking-tight">{siteName}</span>
             </div>
-            <h2 className="mt-7 text-[clamp(4.5rem,6.5vw,6rem)] font-black leading-none tracking-[-0.04em]">SkillHub</h2>
+            <h2 className="mt-7 break-words text-[clamp(4.5rem,6.5vw,6rem)] font-black leading-none tracking-[-0.04em]">{siteName}</h2>
             <p className="mt-5 max-w-[420px] whitespace-pre-line text-2xl font-semibold leading-snug tracking-tight">{t('authShell.heroTitle')}</p>
             <p className="mt-4 max-w-[350px] whitespace-pre-line text-sm leading-6 text-zinc-600 dark:text-zinc-400">{t('authShell.heroSubtitle')}</p>
           </div>

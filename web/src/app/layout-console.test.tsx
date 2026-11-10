@@ -18,6 +18,10 @@ vi.mock('react-i18next', async () => ({
   ...await vi.importActual<typeof import('react-i18next')>('react-i18next'),
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
 }))
+vi.mock('@/shared/hooks/use-site-presentation', async (original) => {
+  const actual = await original<typeof import('@/shared/hooks/use-site-presentation')>()
+  return { ...actual, useSitePresentation: () => ({ settings: actual.defaultSitePresentation() }) }
+})
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({ useMyNamespaces: () => ({ data: namespaceRole ? [{ type: 'TEAM', currentUserRole: namespaceRole, status: 'ACTIVE', slug: 'design' }] : [] }) }))
 vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ user: { userId: 'test-reader', displayName: 'Reader', platformRoles: roles, canChangePassword }, isLoading: false }) }))
 vi.mock('@/shared/components/language-switcher', () => ({ LanguageSwitcher: () => null }))

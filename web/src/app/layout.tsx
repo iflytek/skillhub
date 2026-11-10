@@ -3,6 +3,7 @@ import { Outlet, Link, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '@/features/auth/use-auth'
+import { useSitePresentation } from '@/shared/hooks/use-site-presentation'
 import { BrandMark } from '@/shared/components/brand-mark'
 import { LanguageSwitcher } from '@/shared/components/language-switcher'
 import { ThemeToggle } from '@/shared/components/theme-toggle'
@@ -27,6 +28,7 @@ const FOOTER_LINK_CLASS_NAME = 'group relative inline-flex py-0.5 transition-col
  * fallback used while lazy route modules are loading.
  */
 export function Layout() {
+  const { settings: presentation } = useSitePresentation()
   const { t, i18n } = useTranslation()
   const { pathname, resolvedPathname } = useRouterState({
     select: (s) => ({
@@ -129,8 +131,9 @@ export function Layout() {
       >
         <div className={isSplitAuthRoute ? 'flex items-center' : APP_HEADER_CONTENT_CLASS_NAME}>
         {!isSplitAuthRoute ? (
-          <Link data-analytics-id="navigation.home.open" to="/" className="text-xl font-semibold tracking-tight flex-shrink-0" style={{ color: 'hsl(var(--foreground))' }}>
-            SkillHub
+          <Link data-analytics-id="navigation.home.open" to="/" className="flex min-w-0 max-w-[min(40vw,18rem)] items-center gap-2 text-xl font-semibold tracking-tight" style={{ color: 'hsl(var(--foreground))' }}>
+            {presentation.logoUrl ? <BrandMark className="h-8 w-8 shrink-0" /> : null}
+            <span className="truncate" title={presentation.siteName ?? 'SkillHub'}>{presentation.siteName ?? 'SkillHub'}</span>
           </Link>
         ) : null}
 
@@ -240,14 +243,14 @@ export function Layout() {
       </main>
 
       {/* Footer */}
-      {!isAuthEntryRoute ? (
+      {!isAuthEntryRoute && presentation.footerVisible ? (
       <footer className="relative z-10 mt-auto border-t bg-secondary/70" style={{ borderColor: 'hsl(var(--border))' }}>
         <div className={`${APP_FRAME_CLASS_NAME} py-12 md:py-16`}>
           <div className="grid grid-cols-2 gap-8 md:grid-cols-5">
             <div className="col-span-2 md:col-span-1">
               <div className="mb-4 flex items-center gap-2.5">
                 <BrandMark className="h-8 w-8 rounded-lg bg-background ring-1 ring-border/70" />
-                <span className="font-semibold text-foreground">SkillHub</span>
+                <span className="break-words font-semibold text-foreground">{presentation.siteName ?? 'SkillHub'}</span>
               </div>
               <p className="text-sm text-muted-foreground">{t('layout.footerDescription')}</p>
             </div>

@@ -1,3 +1,5 @@
+import { cn } from '@/shared/lib/utils'
+import { useSitePresentation, localizedPresentationText } from '@/shared/hooks/use-site-presentation'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { SearchBar } from '@/features/search/search-bar'
@@ -10,18 +12,22 @@ import { BrandMark } from '@/shared/components/brand-mark'
 import { Button } from '@/shared/ui/button'
 
 export function HomePage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const { settings: presentation } = useSitePresentation()
+  const catalog = presentation.homepageMode === 'CATALOG'
+  const title = localizedPresentationText(presentation.heroTitle, i18n.resolvedLanguage)
+  const description = localizedPresentationText(presentation.heroDescription, i18n.resolvedLanguage)
   const navigate = useNavigate()
 
   const { data: popularSkills, isLoading: isLoadingPopular } = useSearchSkills({
     sort: 'downloads',
     size: 6,
-  })
+  }, presentation.showPopular)
 
   const { data: latestSkills, isLoading: isLoadingLatest } = useSearchSkills({
     sort: 'newest',
     size: 6,
-  })
+  }, presentation.showLatest)
 
   const handleSearch = (query: string) => {
     navigate({ to: '/search', search: { q: normalizeSearchQuery(query), sort: 'relevance', page: 0, starredOnly: false } })
@@ -32,18 +38,18 @@ export function HomePage() {
   }
 
   return (
-    <div className="space-y-20">
+    <div className={catalog ? 'space-y-10' : 'space-y-20'}>
       {/* Hero Section */}
-      <div className="text-center space-y-8 py-16 animate-fade-up">
+      <div className={cn('text-center space-y-8 animate-fade-up', catalog ? 'py-6' : 'py-16')}>
         <div className="space-y-4">
-          <BrandMark className="mx-auto h-16 w-16 rounded-2xl bg-background shadow-sm ring-1 ring-border/70 md:h-20 md:w-20" />
-          <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold leading-tight" style={{ color: 'hsl(var(--foreground))' }}>
-            SkillHub
+          {!catalog && <BrandMark className="mx-auto h-16 w-16 rounded-2xl bg-background shadow-sm ring-1 ring-border/70 md:h-20 md:w-20" />}
+          <h1 className={cn('break-words font-bold leading-tight', catalog ? 'text-3xl md:text-4xl' : 'text-6xl md:text-7xl lg:text-8xl')} style={{ color: 'hsl(var(--foreground))' }}>
+            {title ?? presentation.siteName ?? 'SkillHub'}
           </h1>
-          <p className="text-xl md:text-2xl max-w-2xl mx-auto" style={{ color: 'hsl(var(--text-secondary))' }}>
-            {t('home.subtitle')}
+          <p className="whitespace-pre-wrap break-words text-xl md:text-2xl max-w-2xl mx-auto" style={{ color: 'hsl(var(--text-secondary))' }}>
+            {description ?? t('home.subtitle')}
           </p>
-          <p className="text-base max-w-xl mx-auto" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          <p hidden={catalog || Boolean(description)} className="text-base max-w-xl mx-auto" style={{ color: 'hsl(var(--muted-foreground))' }}>
             {t('home.description')}
           </p>
         </div>
@@ -52,7 +58,7 @@ export function HomePage() {
           <SearchBar analyticsId="search.query.submit" onSearch={handleSearch} />
         </div>
 
-        <div className="flex items-center justify-center gap-4 animate-fade-up delay-2">
+        <div className={cn('flex flex-wrap items-center justify-center gap-4 animate-fade-up delay-2', catalog && 'hidden')}>
           <button data-analytics-id="navigation.skills.open"
             className="px-8 py-3.5 rounded-xl text-base font-medium text-white bg-[#202020] shadow-sm hover:bg-[#111] transition-colors"
             onClick={() => navigate({ to: '/search', search: { q: '', sort: 'relevance', page: 0, starredOnly: false } })}
@@ -70,7 +76,7 @@ export function HomePage() {
       </div>
 
       {/* Popular Downloads Section */}
-      <section className="space-y-6 animate-fade-up">
+      {presentation.showPopular && <section className="space-y-6 animate-fade-up">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'hsl(var(--foreground))' }}>
@@ -99,10 +105,10 @@ export function HomePage() {
             ))}
           </div>
         )}
-      </section>
+      </section>}
 
       {/* Latest Releases Section */}
-      <section className="space-y-6 animate-fade-up">
+      {presentation.showLatest && <section className="space-y-6 animate-fade-up">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'hsl(var(--foreground))' }}>
@@ -131,10 +137,10 @@ export function HomePage() {
             ))}
           </div>
         )}
-      </section>
+      </section>}
 
       {/* Quick Start Section */}
-      <QuickStartSection ns="home" />
+      {presentation.showQuickStart && <QuickStartSection ns="home" />}
     </div>
   )
 }

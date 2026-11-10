@@ -664,6 +664,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/system-config/presentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read managed site presentation settings */
+        get: operations["current_3"];
+        /** Update site presentation settings */
+        put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/system-config/notification/email": {
         parameters: {
             query?: never;
@@ -671,8 +689,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["current_2"];
-        put: operations["update"];
+        get: operations["current_4"];
+        put: operations["update_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -687,8 +705,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["current_3"];
-        put: operations["update_1"];
+        get: operations["current_5"];
+        put: operations["update_2"];
         post?: never;
         delete?: never;
         options?: never;
@@ -806,7 +824,7 @@ export interface paths {
         /** 读取平台技能采集控制状态 */
         get: operations["get_2"];
         /** 暂停或恢复平台技能采集 */
-        put: operations["update_2"];
+        put: operations["update_3"];
         post?: never;
         delete?: never;
         options?: never;
@@ -861,7 +879,7 @@ export interface paths {
          */
         get: operations["get_3"];
         /** 按配置版本更新官方 GitHub 深度探索设置 */
-        put: operations["update_3"];
+        put: operations["update_4"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3417,6 +3435,23 @@ export interface paths {
         get: operations["listRoleGrants"];
         put?: never;
         post: operations["createRoleGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-config/presentation/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a public branding image (PNG or JPEG, up to 2 MiB and 1024 pixels per side) */
+        post: operations["upload_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6489,6 +6524,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/site-presentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read public site presentation settings */
+        get: operations["current_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/site-presentation/assets/{assetId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a normalized public branding image */
+        get: operations["asset"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/search": {
         parameters: {
             query?: never;
@@ -7920,6 +7989,42 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        SitePresentationSettings: {
+            siteName?: string | null;
+            logoUrl?: string | null;
+            faviconUrl?: string | null;
+            /** @enum {string} */
+            homepageMode: "LANDING" | "CATALOG";
+            heroTitle: {
+                [key: string]: string;
+            };
+            heroDescription: {
+                [key: string]: string;
+            };
+            showPopular: boolean;
+            showLatest: boolean;
+            showQuickStart: boolean;
+            footerVisible: boolean;
+        };
+        SitePresentationUpdateRequest: {
+            settings: components["schemas"]["SitePresentationSettings"];
+            /** Format: int64 */
+            version: number;
+        };
+        ApiResponseSitePresentationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SitePresentationResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SitePresentationResponse: {
+            settings: components["schemas"]["SitePresentationSettings"];
+            /** Format: int64 */
+            version: number;
+        };
         NotificationEmailSettingsUpdateRequest: {
             enabled?: boolean;
             /** Format: int32 */
@@ -9040,6 +9145,18 @@ export interface components {
             providerCode: string;
             email: string;
             roleCode: string;
+        };
+        ApiResponseSitePresentationAssetResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SitePresentationAssetResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SitePresentationAssetResponse: {
+            url: string;
         };
         AdminSkillMutationResponse: {
             /** Format: int64 */
@@ -13873,7 +13990,51 @@ export interface operations {
             };
         };
     };
-    current_2: {
+    current_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSitePresentationResponse"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SitePresentationUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSitePresentationResponse"];
+                };
+            };
+        };
+    };
+    current_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -13893,7 +14054,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -13917,7 +14078,7 @@ export interface operations {
             };
         };
     };
-    current_3: {
+    current_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -13937,7 +14098,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -14216,7 +14377,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -14312,7 +14473,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -18896,6 +19057,33 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseExternalRoleGrantRuleResponse"];
+                };
+            };
+        };
+    };
+    upload_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSitePresentationAssetResponse"];
                 };
             };
         };
@@ -23631,6 +23819,48 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ClawHubDeleteResponse"];
+                };
+            };
+        };
+    };
+    current_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSitePresentationResponse"];
+                };
+            };
+        };
+    };
+    asset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
                 };
             };
         };

@@ -124,14 +124,14 @@ Use a release that includes site presentation settings. The one-command deployme
 | --- | --- | --- |
 | Branding | Display name, logo and favicon | Empty overrides use SkillHub and built-in images; API names, CLI commands and skill coordinates do not change |
 | Homepage | Landing or catalog mode | Landing retains the current composition; catalog emphasizes search and existing skill sections |
-| Hero text | Localized title and description | English, Chinese, Korean and Russian; missing translations use the editor's documented fallback |
+| Hero text | Localized title and description | English, Chinese, Korean and Russian; fallback is current language → custom English text → product defaults |
 | Sections | Popular, latest and quick start | Visibility does not grant access or disable business APIs |
 | Footer | Show or hide | Shown by default |
 
 ### Edit, preview and save
 
 1. Load the current configuration and edit the required fields.
-2. Upload PNG or JPEG images, no larger than 2 MiB and 1024 pixels on either side. The server validates and re-encodes them as PNG. Favicons also use PNG; SVG, ICO and WebP are not accepted.
+2. Upload PNG or JPEG images, no larger than 2 MiB and 1024 pixels on either side. The server validates and re-encodes them as PNG. Favicons also use PNG; SVG, ICO and WebP are not accepted. Uploaded images are publicly readable through their resource URL before settings are saved; upload only public brand assets.
 3. Preview the draft without changing the public site. Restoring a group to defaults also changes only the draft.
 4. Save the configuration. The current client refreshes its presentation; other open clients receive it when configuration is fetched again or the page is refreshed. No image rebuild or container restart is required.
 5. Failed saves retain the draft. A version conflict means another administrator saved first: load the latest settings, compare them and reapply the intended changes.
@@ -140,7 +140,7 @@ Navigation warns about unsaved edits. Settings support plain text and controlled
 
 ### Upgrades, backups and troubleshooting
 
-Settings use the existing PostgreSQL `system_setting` table. Images use the instance's configured file storage. Keep the same database and storage when upgrading; startup does not overwrite administrator choices. Back up and restore both database and storage volumes/objects. A database-only restore can leave image references without their objects. Do not reset volumes to recover default branding. Reverting an application image is not a database restore.
+Settings use the existing PostgreSQL `system_setting` table. Images use the instance's configured file storage. Keep the same database and storage when upgrading; startup does not overwrite administrator choices. Back up and restore both database and storage volumes/objects. Replacing an image or restoring defaults does not immediately delete historical uploads, preserving existing references and caches; historical-object cleanup is outside this feature. A database-only restore can leave image references without their objects. Do not reset volumes to recover default branding. Reverting an application image is not a database restore.
 
 | Symptom | Check and recovery |
 | --- | --- |
