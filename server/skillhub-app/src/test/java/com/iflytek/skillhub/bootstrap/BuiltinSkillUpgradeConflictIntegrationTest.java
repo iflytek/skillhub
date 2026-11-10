@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.bootstrap;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -70,7 +71,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 class BuiltinSkillUpgradeConflictIntegrationTest {
 
     @Container
-    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {

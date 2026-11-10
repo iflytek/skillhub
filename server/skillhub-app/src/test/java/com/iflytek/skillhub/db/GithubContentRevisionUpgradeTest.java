@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.db;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
@@ -13,7 +14,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 class GithubContentRevisionUpgradeTest {
-    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
 
     @Test void v106HistoryAABABackfillsConsecutiveContentRevisionsWithoutChangingTechnicalVersions() {
         var source = new DriverManagerDataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword());

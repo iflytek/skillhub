@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.repository;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import com.iflytek.skillhub.domain.event.ReviewApprovedEvent;
 import com.iflytek.skillhub.domain.event.ReviewRejectedEvent;
 import com.iflytek.skillhub.githubsync.GithubSyncPublicationRepository;
@@ -44,7 +45,7 @@ class GithubSyncPathMoveReviewTransactionTest {
     enum Move { AUTO, MANUAL }
     private static final String COMMIT = "a".repeat(40);
     private static final String DIGEST = "b".repeat(64);
-    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);

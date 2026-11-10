@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import com.iflytek.skillhub.githubsync.*;
 import com.iflytek.skillhub.infra.jpa.JdbcGithubOfficialDiscoveryBudgetRepository;
 import com.iflytek.skillhub.service.GithubCredentialLeaseAppService;
@@ -35,7 +36,7 @@ import static org.assertj.core.api.Assertions.*;
 @TestPropertySource(properties = {"skillhub.builtin-skills.enabled=false",
         "skillhub.github-sync.service-tokens=platform-control-test-only-service-token-32"})
 class GithubPlatformControlIntegrationTest {
-    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
     @DynamicPropertySource static void postgres(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url",POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username",POSTGRES::getUsername);

@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import static com.iflytek.skillhub.support.GithubSyncWorkerCapabilities.platform;
 
 import com.iflytek.skillhub.githubsync.*;
@@ -37,7 +38,7 @@ import static org.assertj.core.api.Assertions.*;
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 @TestPropertySource(properties = "skillhub.builtin-skills.enabled=false")
 class GithubOfficialPresenceQuotaIntegrationTest {
-    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(PostgresTestImage.name());
     private static final String TEST_KEY = java.util.Base64.getEncoder().encodeToString(new java.security.SecureRandom().generateSeed(32));
     @DynamicPropertySource static void postgres(DynamicPropertyRegistry registry) {
         registry.add("skillhub.github-sync.credential-keys", () -> "test=" + TEST_KEY);

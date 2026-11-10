@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.dto.NotificationEmailDeliveryAdminPageResponse;
 import com.iflytek.skillhub.service.notificationemail.NotificationEmailDeliveryQueryService;
@@ -33,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Testcontainers
 @DirtiesContext(classMode=DirtiesContext.ClassMode.AFTER_CLASS)
 class NotificationEmailDeliverySecurityTest {
-    @Container static final PostgreSQLContainer<?> POSTGRES=new PostgreSQLContainer<>("postgres:16-alpine");
+    @Container static final PostgreSQLContainer<?> POSTGRES=new PostgreSQLContainer<>(PostgresTestImage.name());
     @DynamicPropertySource static void postgres(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url",POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username",POSTGRES::getUsername);
