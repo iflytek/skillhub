@@ -128,6 +128,8 @@ Use a release that includes site presentation settings. The one-command deployme
 | Sections | Popular, latest and quick start | Visibility does not grant access or disable business APIs |
 | Footer | Show or hide | Shown by default |
 
+Catalog mode provides a branded search introduction, navigation using existing visible labels, and enabled popular/latest sections. Additional labels can be expanded; quick start is collapsed initially. Empty results and request failures have distinct messages, with retry for failures. Search and the full-directory entry remain available when every optional section is disabled. The independent `/skills` marketplace is unaffected by homepage section switches.
+
 ### Edit, preview and save
 
 1. Load the current configuration and edit the required fields.

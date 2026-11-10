@@ -123,9 +123,11 @@ interface QuickStartProps {
   variant?: 'landing' | 'page'
   /** i18n namespace prefix, e.g. 'landing' or 'home' */
   ns?: string
+  /** Hide the heading when an enclosing disclosure already provides it. */
+  hideHeading?: boolean
 }
 
-export function QuickStartSection({ variant = 'page', ns = 'landing' }: QuickStartProps) {
+export function QuickStartSection({ variant = 'page', ns = 'landing', hideHeading = false }: QuickStartProps) {
   const { t } = useTranslation()
   const baseUrl = useMemo(() => getAppBaseUrl(), [])
 
@@ -176,7 +178,7 @@ $env:CLAWHUB_REGISTRY = '${baseUrl}'`
     return (
       <section className="relative z-10 w-full py-20 md:py-24 px-6" style={{ background: 'var(--bg-page, hsl(var(--background)))' }}>
         <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-10">
+          {!hideHeading && <div className="text-center mb-10">
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-3" style={{ color: 'hsl(var(--foreground))' }}>
               {t(`${ns}.quickStart.title`)}
             </h2>
@@ -186,7 +188,7 @@ $env:CLAWHUB_REGISTRY = '${baseUrl}'`
             <p className="text-base md:text-lg max-w-2xl mx-auto leading-relaxed" style={{ color: 'hsl(var(--text-secondary))' }}>
               {t(`${ns}.quickStart.description`, { defaultValue: t(`${ns}.quickStart.subtitle`) })}
             </p>
-          </div>
+          </div>}
           <div className="space-y-6">
             {steps.map((step, idx) => (
               <CodeBlock key={idx} {...step} />
@@ -199,14 +201,14 @@ $env:CLAWHUB_REGISTRY = '${baseUrl}'`
 
   return (
     <section className="space-y-6 animate-fade-up">
-      <div>
+      {!hideHeading && <div>
         <h2 className="text-3xl font-bold tracking-tight mb-2" style={{ color: 'hsl(var(--foreground))' }}>
           {t(`${ns}.quickStart.title`)}
         </h2>
         <p style={{ color: 'hsl(var(--text-secondary))' }}>
           {t(`${ns}.quickStart.description`, { defaultValue: t(`${ns}.quickStart.subtitle`) })}
         </p>
-      </div>
+      </div>}
       <div className="space-y-6">
         {steps.map((step, idx) => (
           <CodeBlock key={idx} {...step} />

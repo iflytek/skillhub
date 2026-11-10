@@ -4071,5 +4071,27 @@
     "leave": "Leave page",
     "keepEditing": "Continue editing",
     "defaultsUnavailable": "Site presentation could not be loaded. The default appearance is shown temporarily."
+  },
+  "catalog": {
+    "kicker": "Skill catalog",
+    "description": "Discover skills published by your team. Search by task, review the instructions and start using the right skill.",
+    "searchLabel": "Search skills",
+    "searchPlaceholder": "Search by skill name or purpose",
+    "browseAll": "Browse all skills",
+    "viewAll": "View all",
+    "labelsTitle": "Browse by label",
+    "expandLabels": "Show more labels",
+    "collapseLabels": "Show fewer labels",
+    "popularDescription": "Explore commonly used skills, ordered by downloads.",
+    "latestDescription": "Discover recently published skills.",
+    "popularEmpty": "No popular skills to display",
+    "latestEmpty": "No recent skills to display",
+    "emptyHelp": "Only skills you can access appear here. You can continue searching in the full catalog.",
+    "loadFailed": "Skills could not be loaded",
+    "loadFailedHelp": "Try again, or use Browse all skills to open the full catalog.",
+    "retry": "Reload",
+    "searchStartTitle": "Start with a search",
+    "searchStartHelp": "Popular and latest lists are not displayed on this homepage. Use search, labels or the full catalog to find skills you can access.",
+    "quickStartHelp": "Connect to this site, find and install skills, and publish your own. Expand to view commands."
   }
 }

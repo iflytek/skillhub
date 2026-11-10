@@ -1,3 +1,4 @@
+import { CatalogHomePage } from './catalog-home'
 import { cn } from '@/shared/lib/utils'
 import { useSitePresentation, localizedPresentationText, defaultSitePresentation } from '@/shared/hooks/use-site-presentation'
 import { useNavigate } from '@tanstack/react-router'
@@ -12,6 +13,11 @@ import { BrandMark } from '@/shared/components/brand-mark'
 import { Button } from '@/shared/ui/button'
 
 export function HomePage({ applyPresentation = false }: { applyPresentation?: boolean }) {
+  const { settings } = useSitePresentation()
+  return applyPresentation && settings.homepageMode === 'CATALOG' ? <CatalogHomePage /> : <SkillsHomePage applyPresentation={applyPresentation} />
+}
+
+function SkillsHomePage({ applyPresentation }: { applyPresentation: boolean }) {
   const { t, i18n } = useTranslation()
   const { settings } = useSitePresentation()
   const presentation = applyPresentation ? settings : { ...defaultSitePresentation(), siteName: settings.siteName, logoUrl: settings.logoUrl, faviconUrl: settings.faviconUrl }

@@ -8,6 +8,15 @@ vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => k
 describe('SearchBar explicit submission', () => {
   afterEach(cleanup)
 
+  it('accepts an explicit accessible label without changing submission behavior', () => {
+    const onSearch = vi.fn()
+    render(<SearchBar inputLabel="Find a team skill" onSearch={onSearch} />)
+    const input = screen.getByRole('textbox', { name: 'Find a team skill' })
+    fireEvent.change(input, { target: { value: 'team notes' } })
+    fireEvent.submit(input.closest('form')!)
+    expect(onSearch).toHaveBeenCalledWith('team notes')
+  })
+
   it('does not search when typing or clearing, but submits on confirmation', () => {
     const onSearch = vi.fn()
     render(<SearchBar onSearch={onSearch} />)

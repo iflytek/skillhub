@@ -23,7 +23,7 @@ import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { useInView } from '@/shared/hooks/use-in-view'
 import { Button } from '@/shared/ui/button'
-import { HomePage } from './home'
+import { CatalogHomePage } from './catalog-home'
 import { useSitePresentation, localizedPresentationText } from '@/shared/hooks/use-site-presentation'
 import { APP_FRAME_CLASS_NAME } from '@/shared/lib/layout-frame'
 
@@ -260,7 +260,7 @@ function EnterpriseSection() {
 export function LandingPage() {
   const { settings } = useSitePresentation()
   return settings.homepageMode === 'CATALOG'
-    ? <div className={`${APP_FRAME_CLASS_NAME} py-8 lg:py-10`}><HomePage applyPresentation /></div>
+    ? <div className={`${APP_FRAME_CLASS_NAME} py-8 lg:py-10`}><CatalogHomePage /></div>
     : <LandingIntroduction />
 }
 

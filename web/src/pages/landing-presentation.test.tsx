@@ -11,6 +11,7 @@ vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn(), Link: ({ 
 vi.mock('react-i18next', async (original) => ({ ...await original<typeof import('react-i18next')>(), useTranslation: () => ({ t: (key: string) => key, i18n: { resolvedLanguage: 'zh' } }) }))
 vi.mock('@/shared/hooks/use-site-presentation', async (original) => ({ ...await original<typeof import('@/shared/hooks/use-site-presentation')>(), useSitePresentation: () => ({ settings: state.settings }) }))
 vi.mock('@/shared/hooks/use-skill-queries', () => ({ useSearchSkills: (params: unknown, enabled: boolean) => { state.search(params, enabled); return { data: { items: [] }, isLoading: false } } }))
+vi.mock('@/shared/hooks/use-label-queries', () => ({ useVisibleLabels: () => ({ data: [] }) }))
 vi.mock('@/shared/hooks/use-in-view', () => ({ useInView: () => ({ ref: null, inView: true }) }))
 vi.mock('@/features/search/search-bar', () => ({ SearchBar: () => <input aria-label="catalog-search" /> }))
 vi.mock('@/shared/components/brand-mark', () => ({ BrandMark: () => <div /> }))

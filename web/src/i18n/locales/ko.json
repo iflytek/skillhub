@@ -4069,5 +4069,27 @@
     "leave": "페이지 나가기",
     "keepEditing": "계속 편집",
     "defaultsUnavailable": "사이트 표시 설정을 불러오지 못해 임시로 기본 화면을 표시합니다."
+  },
+  "catalog": {
+    "kicker": "스킬 목록",
+    "description": "팀에서 게시한 스킬을 찾아보세요. 작업에 맞게 검색하고 설명을 확인한 뒤 사용하세요.",
+    "searchLabel": "스킬 검색",
+    "searchPlaceholder": "스킬 이름 또는 용도 검색",
+    "browseAll": "모든 스킬 보기",
+    "viewAll": "전체 보기",
+    "labelsTitle": "라벨로 찾아보기",
+    "expandLabels": "라벨 더 보기",
+    "collapseLabels": "라벨 접기",
+    "popularDescription": "다운로드 순으로 자주 사용하는 스킬을 살펴보세요.",
+    "latestDescription": "최근 게시된 스킬을 찾아보세요.",
+    "popularEmpty": "표시할 인기 스킬이 없습니다",
+    "latestEmpty": "표시할 최신 스킬이 없습니다",
+    "emptyHelp": "접근할 수 있는 스킬만 표시됩니다. 전체 목록에서 계속 검색할 수 있습니다.",
+    "loadFailed": "스킬을 불러오지 못했습니다",
+    "loadFailedHelp": "다시 시도하거나 모든 스킬 보기로 전체 목록을 여세요.",
+    "retry": "다시 불러오기",
+    "searchStartTitle": "검색으로 스킬 찾기",
+    "searchStartHelp": "이 홈 화면에는 인기 및 최신 목록이 표시되지 않습니다. 검색, 라벨 또는 전체 목록으로 접근 가능한 스킬을 찾으세요.",
+    "quickStartHelp": "이 사이트에 연결하고 스킬을 검색·설치하거나 직접 게시하세요. 펼치면 명령어를 볼 수 있습니다."
   }
 }

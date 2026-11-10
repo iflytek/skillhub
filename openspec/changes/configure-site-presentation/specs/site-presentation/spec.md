@@ -45,3 +45,14 @@ The UI SHALL distinguish local preview from saved settings, warn about unsaved c
 #### Scenario: Save failure
 - WHEN the save request fails
 - THEN draft values remain editable and the UI offers an explicit retry/recovery action.
+
+#### Scenario: Catalog homepage supports discovery
+- GIVEN CATALOG is selected
+- WHEN a visitor opens the actual root route
+- THEN a branded search introduction, existing available category navigation and enabled popular/latest sections form a complete discovery homepage.
+- AND category navigation retains existing search/filter semantics and skill visibility.
+
+#### Scenario: Empty or unavailable catalog sections
+- WHEN a configured skill section has no results or its request fails
+- THEN the UI distinguishes empty results from failure, offers a useful browse or retry action, and never displays fictional skill data.
+- AND disabling every optional section still leaves a usable search and browse entry without mounting the disabled queries.
