@@ -67,7 +67,9 @@ v1／web 成对路由一并处理。
 | `skill:manage` | `POST /api/{v1,web}/skills/*/*/visibility`、`/archive`、`/unarchive`、`/versions/*/yank`、`/versions/*/withdraw-review`；`PUT／DELETE /api/{v1,web}/skills/*/*/labels/*`；`POST /api/v1/skills/*/versions/*/security-audit/retry` |
 | `skill:delete` | 现有 4 组删除路由，不变 |
 | `skill:read` | 现有 GET 放行规则不变；新增 `GET /api/{v1,web}/me/namespaces`、`/me/namespaces/page` |
-| `suite:legacy-write` | 现有全部 Suite 与 suite-bundles 写路由 |
+| `suite:legacy-write` | 现有要求 `skill:publish` 的 Suite 与 suite-bundles 路由 |
+
+Suite 删除路由 `DELETE /api/{v1,web}/suites/*` 保持要求 `skill:delete`。
 
 订阅路由显式列出，排在删除通配规则之前：`PUT／DELETE /api/{v1,web}/skills/*/subscription` 要求 `skill:read`。
 理由：订阅只影响调用者自己的通知，与删除技能无关；现在 DELETE 被 `/api/v1/skills/*/*` 删除规则误命中。

@@ -1,9 +1,13 @@
 ## 1. 能力模型与路由
 
-- [ ] 1.1 `[REQ-ATC-01, REQ-ATC-06]` 在 `ApiTokenScopeService` 增加能力常量、别名展开（`skill:publish` → submit + publish-private + manage + `suite:legacy-write`）与已知 scope 校验；单元测试覆盖展开、去重、未知值与空列表。
-- [ ] 1.2 `[REQ-ATC-02]` 按 design D2 改写 `RouteSecurityPolicyRegistry` 的 Token 策略，订阅路由排在删除通配之前；更新 `RouteSecurityPolicyRegistryTest` 现有用例的预期 scope。
-- [ ] 1.3 `[REQ-ATC-02]` 新增目录完整性测试：枚举所有 Token 策略，技能写入路由必须属于 D2 的某一能力，v1／web 成对路由能力相同；改动前后的放行集合差异只允许 D2 列出的变化。
-- [ ] 1.4 `[REQ-ATC-07]` 新增 `error.apiToken.scope.escalation`、`error.apiToken.scope.unknown` 多语言文案，保持现有两类错误码与参数格式。
+- [x] 1.1 `[REQ-ATC-01, REQ-ATC-06]` 在 `ApiTokenScopeService` 增加能力常量、别名展开
+  （`skill:publish` → submit + publish-private + manage + `suite:legacy-write`）与已知 scope 校验；
+  单元测试覆盖展开、去重、未知值与空列表。
+- [x] 1.2 `[REQ-ATC-02]` 按 design D2 改写 `RouteSecurityPolicyRegistry` 的 Token 策略，订阅路由排在删除通配之前；
+  更新 `RouteSecurityPolicyRegistryTest` 现有用例的预期 scope。
+- [x] 1.3 `[REQ-ATC-02]` 新增目录完整性测试：枚举所有 Token 策略，技能写入路由必须属于 D2 的某一能力，
+  v1／web 成对路由能力相同；改动前后的放行集合差异只允许 D2 列出的变化。
+- [x] 1.4 `[REQ-ATC-07]` 新增 `error.apiToken.scope.escalation`、`error.apiToken.scope.unknown` 多语言文案，保持现有两类错误码与参数格式。
 
 ## 2. 组合操作上限
 
