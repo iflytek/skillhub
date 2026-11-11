@@ -393,8 +393,9 @@ Admin API 按最小权限拆分，不再统一要求 SUPER_ADMIN：
 | GET | `/api/v1/namespaces/{slug}/members` | 成员列表 |
 | POST | `/api/v1/namespaces/{slug}/members` | 添加成员 |
 | PUT | `/api/v1/namespaces/{slug}/members/{userId}/role` | 修改成员角色 |
+| PUT | `/api/v1/namespaces/{slug}/members/{userId}/team-auto-publication` | 授予或撤销普通成员的团队内自动发布，`{"granted":true\|false}`；仅网页会话 + CSRF，任何 API Token 均拒绝 |
 | DELETE | `/api/v1/namespaces/{slug}/members/{userId}` | 移除成员 |
-| GET | `/api/v1/reviews?namespaceId={id}` | 该空间待审核列表 |
+| GET | `/api/v1/reviews?namespaceId={id}` | 该空间待审核列表；条目含 `decisionMethod`（`HUMAN` / `SYSTEM_AUTOMATIC`）、`decisionScanTaskId`、`autoPublicationGrantId` |
 | POST | `/api/v1/reviews/{id}/approve` | 空间管理员审核通过 |
 | POST | `/api/v1/reviews/{id}/reject` | 空间管理员审核拒绝 |
 | POST | `/api/v1/promotions` | 首次提升或再次提交已发布团队版本；后者自动关联原全局技能，均需平台审核 |

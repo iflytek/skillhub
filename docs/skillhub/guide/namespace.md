@@ -58,6 +58,8 @@ Content-Type: application/json
 
 邀请历史显示创建人、时间、到期时间、状态和实际加入账号。改名或成员离开不改写当时加入事实；历史不代表当前成员资格。仅命名空间所有者及空间管理员可查看，冻结或归档时为只读。升级仅迁入可确认的当前邀请并标注旧记录，不推测更早历史。
 
+`TEAM` 命名空间的成员表还显示“团队内自动发布”授权状态；所有者或空间管理员可在网页会话中为普通成员授权或撤销，API Token 不能操作。范围、撤销效果和排障见[团队内自动发布](./team-auto-publication.html)。
+
 角色调整时，在成员行选择修改角色，再使用操作栏保存；保存后重新核对角色。移除成员和转让命名空间所有权须分别确认，后者不转让其技能。邀请实现见[邀请服务](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceInvitationService.java)及[历史展示](https://github.com/iflytek/skillhub/blob/main/web/src/features/namespace/invitation-history.tsx)。
 
 ## 生命周期治理
@@ -102,10 +104,11 @@ Content-Type: application/json
 
 移除成员不会删除、迁移或转让其技能，已发布内容继续按原可见范围提供。账号正常的当前技能所有者仍可在“我的技能”查看和下载自己的内容，包括私有内容、未发布版本和历史版本；页面显示只读提示。仅凭该所有者身份不能上传、重新发布、改头像或可见范围、撤回、归档或删除；其他成员的受限内容不因该例外开放。
 
-重新加入且仍为所有者时，按原规则恢复维护；停用账号不可操作，重新启用不恢复已移除的成员关系。已提交申请继续正常审核，不自动批准或撤回。空间及平台治理权限保持原规则，本版不提供技能转让、自助退出或永久注销功能；[所有者访问策略](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillOwnerAccessPolicy.java)不替代其他管理权限。
+重新加入且仍为所有者时，按原规则恢复维护；停用账号不可操作，重新启用不恢复已移除的成员关系。已提交申请继续正常审核，不自动批准或撤回；移除成员会撤销其团队内自动发布授权，待自动批准的任务转入普通审核。空间及平台治理权限保持原规则，本版不提供技能转让、自助退出或永久注销功能；[所有者访问策略](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillOwnerAccessPolicy.java)不替代其他管理权限。
 
 ## 延伸阅读
 
 - [发布与更新技能](./skill-publish.html)：按目标可见范围提交版本。
 - [审核技能与套装](./review.html)：判断待审对象与处理结果。
+- [团队内自动发布](./team-auto-publication.html)：为普通成员授予扫描安全后的系统自动批准。
 - [账号与访问令牌](./account-access.html)：区分登录身份与接口凭据。
