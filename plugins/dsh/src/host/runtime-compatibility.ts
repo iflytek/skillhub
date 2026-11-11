@@ -1,14 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { assertHostDependencies, cordisFamilies, hostDependencyBaseline, supportedDshVersions, type SupportedDshVersion } from './compatibility.js';
+import { assertHostDependencies, cordisFamilies, hostDependencyBaseline, supportedDshVersions, supportsCordis, type SupportedDshVersion } from './compatibility.js';
 
-/** Candidate runtime range, validated at its lower bound and current Node 24 release. */
+/** Package-wide floor for retained RCs; DSH 0.2.2-rc.1 additionally requires Node 24.9. */
 export const nodeRuntimeRange = '>=24.2.0 <25';
 
-export function assertNodeRuntime(version = process.versions.node): void {
+export function assertNodeRuntime(version = process.versions.node, release?: SupportedDshVersion): void {
   const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(version);
-  if (!match || Number(match[1]) !== 24 || Number(match[2]) < 2) {
+  if (!match || Number(match[1]) !== 24 || Number(match[2]) < (release === '0.2.2-rc.1' ? 9 : 2)) {
     throw new Error('Node runtime baseline does not match; local writes are disabled.');
   }
 }
@@ -78,8 +78,9 @@ export function assertRuntimeCompatibility(
     const packages = new Map(Object.keys(runtimePackageBaseline).map(name => [name, readPackage(name, parentURL)]));
     const family = cordisFamilies.find(candidate => Object.entries(candidate).every(([name, version]) => packages.get(name)?.version === version));
     const release = packages.get('@deepseek-ai/dsh')?.version;
-    if (!supportedDshVersions.some(version => version === release)) throw new Error('Unsupported DSH release');
-    if (!family || (release !== '0.2.0-rc.2' && family['@deepseek-ai/cordis'] !== '4.0.5')) throw new Error('Runtime Cordis family mismatch');
+    if (typeof release !== 'string' || !supportedDshVersions.some(version => version === release)) throw new Error('Unsupported DSH release');
+    assertNodeRuntime(process.versions.node, release as SupportedDshVersion);
+    if (!family || !supportsCordis(release, family['@deepseek-ai/cordis'])) throw new Error('Runtime Cordis family mismatch');
     for (const [name, version] of Object.entries({ ...runtimePackageBaseline, ...family })) {
       const expected = name.startsWith('@deepseek-ai/dsh') ? release : version;
       if (packages.get(name)?.version !== expected) throw new Error('Runtime package mismatch');

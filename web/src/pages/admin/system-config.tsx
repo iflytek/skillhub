@@ -10,6 +10,7 @@ import { Label } from '@/shared/ui/label'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { NotificationEmailSettingsPanel } from '@/features/notification/notification-email-settings'
 import { AvatarReviewSettingsPanel } from '@/features/skill/avatar-review-settings'
+import { SitePresentationSettingsPanel } from '@/features/site-presentation/site-presentation-settings'
 import { SearchIndexMaintenance } from '@/features/governance/search-index-maintenance'
 
 export function SystemConfigPage() {
@@ -108,6 +109,7 @@ export function SystemConfigPage() {
       </div>
       {error ? <p role="alert" className="rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p> : null}
       {message ? <p role="status" className="rounded-lg bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700">{message}</p> : null}
+      <SitePresentationSettingsPanel />
       <AvatarReviewSettingsPanel />
       <SearchIndexMaintenance />
       <NotificationEmailSettingsPanel />

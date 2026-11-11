@@ -1,0 +1,44 @@
+/* SkillHub Design System — compact density theme (opt-in variant).
+   Scope: [data-density="compact"]. Default theme is untouched.
+   1.2.0 默认档为表头 40 / 单行 40 / 双行 52（13/18 + 8px 纵向呼吸）；
+   本主题整体下移：表头 36 / 行 32 / 双行 44（4px 纵向），控件 24 / 24 / 28 / 32。
+   紧凑档默认控件保持 28px（可靠点击下限），行内仍用 24px。 */
+
+[data-density="compact"] {
+  --sh-space-card-padding: 16px;
+  --sh-space-gap-column: 24px;
+  --sh-size-card-padding-compact: 12px;
+  --sh-size-card-padding-default: 16px;
+  --sh-size-card-padding-comfortable: 20px;
+  --sh-size-row-header: 36px;
+  --sh-size-row-compact: 24px;
+  --sh-size-row-default: 32px;
+  --sh-size-row-comfortable: 40px;
+  --sh-size-table-pad-y: 4px;
+  --sh-size-table-pad-x: 8px;
+  --sh-size-control-xs: 24px;
+  --sh-size-control-sm: 24px;
+  --sh-size-control-md: 28px;
+  --sh-size-control-lg: 32px;
+  --sh-size-control-icon: 24px;
+  --sh-control-xs-height: 24px;
+  --sh-control-sm-height: 24px;
+  --sh-control-sm-pad-x: 8px;
+  --sh-control-sm-font: 12px;
+  --sh-control-sm-line: 16px;
+  --sh-control-sm-icon: 14px;
+  --sh-control-md-height: 28px;
+  --sh-control-md-pad-x: 10px;
+  --sh-control-lg-height: 32px;
+  --sh-icon-16: 14px;
+  --sh-icon-20: 18px;
+}
+
+[data-density="compact"] .sh-density-row {
+  height: var(--sh-size-row-default);
+  padding-block: var(--sh-space-2);
+}
+
+[data-density="compact"] .sh-density-card {
+  padding: var(--sh-space-card-padding);
+}

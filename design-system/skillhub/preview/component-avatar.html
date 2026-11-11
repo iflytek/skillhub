@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Avatar 头像 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    .preview-shell { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-xl); font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .row { display: flex; flex-wrap: wrap; gap: var(--sh-space-4) var(--sh-space-8); align-items: flex-start; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); align-items: flex-start; }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); color: var(--sh-text-placeholder); }
+    .note { margin: 0; font-size: var(--sh-text-xs); line-height: var(--sh-text-xs-lh); color: var(--sh-text-secondary); }
+
+    .avatar { display: inline-flex; align-items: center; justify-content: center; flex: none; overflow: hidden; border-radius: var(--sh-radius-full); background: var(--sh-bg-muted); color: var(--sh-text-primary); font-weight: var(--sh-weight-semibold); line-height: 1; }
+    .avatar-24 { width: var(--sh-space-6); height: var(--sh-space-6); font-size: var(--sh-text-xs); }
+    .avatar-32 { width: var(--sh-space-8); height: var(--sh-space-8); font-size: var(--sh-text-caption); }
+    .avatar-40 { width: calc(var(--sh-space-8) + var(--sh-space-2)); height: calc(var(--sh-space-8) + var(--sh-space-2)); font-size: var(--sh-text-sm); }
+    .avatar-media { background: var(--sh-accent-base); color: var(--sh-text-secondary); }
+    .avatar-media svg { width: 100%; height: 100%; }
+    .avatar-fallback { color: var(--sh-text-tertiary); }
+    .avatar-fallback svg { width: 62%; height: 62%; }
+    .avatar-loading { color: var(--sh-text-placeholder); }
+
+    .avatar-wrap { position: relative; display: inline-flex; }
+    .status-dot { position: absolute; right: 0; bottom: 0; width: var(--sh-space-2); height: var(--sh-space-2); border: var(--sh-size-border-width-strong) solid var(--sh-bg-page); border-radius: var(--sh-radius-full); background: var(--sh-status-published); }
+    .avatar-stack { display: inline-flex; align-items: center; }
+    .avatar-stack .avatar { border: var(--sh-size-border-width-strong) solid var(--sh-bg-page); box-sizing: border-box; }
+    .avatar-stack .avatar + .avatar { margin-left: calc(var(--sh-space-1) * -1.5); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body class="preview-shell" data-component="avatar">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Avatar 头像</h1>
+    <p class="lede">圆形身份标识，无图片时回退首字母或占位图标，同级头像尺寸保持一致。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">尺寸 <em>size · 24 / 32 / 40</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="avatar avatar-24" data-component="avatar"><span>陈</span></div>
+        <span class="state-label">size 24 · 评论列表紧凑位</span>
+      </div>
+      <div class="state">
+        <div class="avatar avatar-32" data-component="avatar"><span>陈</span></div>
+        <span class="state-label">size 32 · 评价作者默认尺寸</span>
+      </div>
+      <div class="state">
+        <div class="avatar avatar-40" data-component="avatar"><span>陈</span></div>
+        <span class="state-label">size 40 · 官方作者与详情页</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">内容形式 <em>content · image / initials / fallback icon</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="avatar avatar-40 avatar-media" data-component="avatar">
+          <svg viewBox="0 0 40 40" role="img" aria-label="林舟的头像">
+            <circle cx="20" cy="15" r="7" fill="currentColor"/>
+            <path d="M5 40c0-8.4 6.5-13.5 15-13.5S35 31.6 35 40z" fill="currentColor"/>
+          </svg>
+        </div>
+        <span class="state-label">image · 作者头像，object-fit cover，alt 写作姓名</span>
+      </div>
+      <div class="state">
+        <div class="avatar avatar-32" data-component="avatar"><span>林</span></div>
+        <span class="state-label">initials · 中文取首字，13px / 600</span>
+      </div>
+      <div class="state">
+        <div class="avatar avatar-32 avatar-fallback" data-component="avatar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" role="img" aria-label="默认头像">
+            <circle cx="12" cy="8.5" r="3.2"/>
+            <path d="M5.5 19.5c.9-3.6 3.3-5.5 6.5-5.5s5.6 1.9 6.5 5.5"/>
+          </svg>
+        </div>
+        <span class="state-label">fallback / icon · 无姓名时的中性占位</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">状态 <em>state · idle / loading / with-status-dot</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="avatar avatar-32" data-component="avatar"><span>王</span></div>
+        <span class="state-label">idle · 有首字母可直接渲染</span>
+      </div>
+      <div class="state">
+        <div class="avatar avatar-32 avatar-loading" data-component="avatar" aria-busy="true"><span aria-hidden="true">…</span></div>
+        <span class="state-label">loading · 图片未就绪时显示底色占位</span>
+      </div>
+      <div class="state">
+        <div class="avatar-wrap">
+          <div class="avatar avatar-32 avatar-media" data-component="avatar">
+            <svg viewBox="0 0 40 40" role="img" aria-label="林舟的头像">
+              <circle cx="20" cy="15" r="7" fill="currentColor"/>
+              <path d="M5 40c0-8.4 6.5-13.5 15-13.5S35 31.6 35 40z" fill="currentColor"/>
+            </svg>
+          </div>
+          <span class="status-dot" aria-label="在线"></span>
+        </div>
+        <span class="state-label">with-status-dot · 右下角在线状态点</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">堆叠组 <em>stacked · 贡献者与协作者列表</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="avatar-stack">
+          <div class="avatar avatar-32 avatar-media" data-component="avatar">
+            <svg viewBox="0 0 40 40" role="img" aria-label="林舟的头像">
+              <circle cx="20" cy="15" r="7" fill="currentColor"/>
+              <path d="M5 40c0-8.4 6.5-13.5 15-13.5S35 31.6 35 40z" fill="currentColor"/>
+            </svg>
+          </div>
+          <div class="avatar avatar-32" data-component="avatar"><span>林</span></div>
+          <div class="avatar avatar-32 avatar-fallback" data-component="avatar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" role="img" aria-label="默认头像">
+              <circle cx="12" cy="8.5" r="3.2"/>
+              <path d="M5.5 19.5c.9-3.6 3.3-5.5 6.5-5.5s5.6 1.9 6.5 5.5"/>
+            </svg>
+          </div>
+        </div>
+        <span class="state-label">stacked · 32px 叠压，2px 背景描边分隔</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">无图必须回退首字母，不能出现空白占位；同一页头像尺寸保持一致；禁止随机彩色头像与带品牌 logo 的默认头像。</p>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

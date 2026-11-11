@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>TextLink 正文链接 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-xl); font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .prose { max-width: 720px; margin: 0; font-size: var(--sh-text-sm); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .link-card { max-width: 520px; padding: var(--sh-space-4); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-md); background: var(--sh-bg-raised); }
+    .link-card p { margin: 0 0 var(--sh-space-2); font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .notes { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--sh-space-2); }
+    .notes li { display: flex; gap: var(--sh-space-3); font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .notes b { flex: none; font-family: var(--sh-font-mono); font-size: var(--sh-text-caption-xs); color: var(--sh-text-placeholder); }
+
+    /* 正文链接：保留下划线用于识别；按钮/操作链接由 .btn 的 text-decoration:none 复位 */
+    .text-link { appearance: none; border: 0; background: transparent; box-sizing: border-box; margin: 0; padding: 0; font: inherit; text-align: start; color: var(--sh-text-link); text-decoration: underline; text-decoration-thickness: var(--sh-size-border-width); text-underline-offset: 0.15em; cursor: pointer; transition: color var(--sh-duration-fast) var(--sh-ease-standard); }
+    .text-link:hover { color: var(--sh-text-primary); }
+    .text-link:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: 2px; border-radius: var(--sh-radius-xs); }
+    /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+  </style>
+</head>
+<body>
+  <header>
+    <h1 class="title">TextLink 正文链接</h1>
+    <p class="lede">段落与说明文字内的导航链接。按钮、行内操作、卡片操作必须使用 <code>.btn</code> / <code>.btn-link</code> / <code>.action</code>，不要用正文链接承担操作语义。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">基本用法 <em>段落内 / 说明内</em></h2>
+    <p class="prose">发布前请先阅读 <a class="text-link" href="#publish-guide">发布规范</a>，版本撤回与下架流程见 <a class="text-link" href="#governance">治理说明</a>。正文链接保留下划线，确保在中文长段落中仍可被识别。</p>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">与操作语义的分界 <em>正文链接 ≠ 按钮</em></h2>
+    <p class="prose">正文链接只做导航，不改变当前页面的业务状态；<b>复制命令、安装、提交审核、撤回版本</b>属于操作，应使用 <code>.btn</code> 或 <code>.btn-link</code>，并由 <code>.btn</code> 统一复位下划线。</p>
+    <div class="link-card">
+      <p>卡片内的说明文字可以带正文链接，例如 <a class="text-link" href="#security">查看安全扫描报告</a>。</p>
+      <p>卡片内的操作入口不用下划线链接，请使用按钮或 <code>.btn-link</code>，见 <code>component-button.html</code>。</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">禁忌 <em>三条红线</em></h2>
+    <ul class="notes">
+      <li><b>01</b><span>不要用全局 <code>a { text-decoration: none }</code> 复位正文链接；只对 <code>.btn</code> / <code>.action</code> 定向复位。</span></li>
+      <li><b>02</b><span>正文链接不要改成实心按钮或胶囊按钮，避免与主操作争夺视觉层级。</span></li>
+      <li><b>03</b><span>正文链接不要依赖颜色单独传达可点击性，下划线必须保留。</span></li>
+    </ul>
+  </section>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

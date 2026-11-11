@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Steps 步骤条 · SkillHub 设计系统</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="../assets/icons.css">
+<link rel="stylesheet" href="../assets/theme-toggle.css">
+<style>
+  /* @component-css-start */
+  .steps { display: flex; width: 100%; min-width: 0; }
+  .step { position: relative; flex: 1 1 0; min-width: 0; padding-right: var(--sh-space-5); }
+  .step:last-child { flex: 0 0 auto; padding-right: 0; }
+  .step:not(:last-child)::after { content: ""; position: absolute; top: calc(var(--sh-control-xs-height) / 2); left: calc(var(--sh-control-xs-height) + var(--sh-space-3)); right: var(--sh-space-3); height: var(--sh-size-border-width); background: var(--sh-border-default); }
+  .step-head { position: relative; z-index: 1; display: flex; align-items: center; gap: var(--sh-space-2); min-width: 0; }
+  .step-index { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-full); background: var(--sh-bg-page); color: var(--sh-text-secondary); font-size: var(--sh-control-xs-font); line-height: 1; font-weight: var(--sh-weight-medium); font-variant-numeric: tabular-nums; }
+  .step-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); color: var(--sh-text-secondary); }
+  .step-desc { display: block; margin-top: var(--sh-space-1); padding-left: calc(var(--sh-control-xs-height) + var(--sh-space-2)); font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-tertiary); }
+  .step.is-active .step-index { border-color: var(--sh-primary-base); background: var(--sh-primary-base); color: var(--sh-text-inverse); }
+  .step.is-active .step-title { color: var(--sh-text-primary); }
+  .step.is-done .step-index { border-color: var(--sh-tone-success-fg); background: var(--sh-tone-success-weak); color: var(--sh-tone-success-fg); }
+  .step.is-done .step-title { color: var(--sh-text-primary); }
+  .step.is-error .step-index { border-color: var(--sh-tone-danger-fg); background: var(--sh-tone-danger-weak); color: var(--sh-tone-danger-fg); }
+  .step.is-error .step-title { color: var(--sh-tone-danger-fg); }
+  .step.is-disabled .step-index { background: var(--sh-bg-muted); color: var(--sh-text-disabled); }
+  .step.is-disabled .step-title { color: var(--sh-text-disabled); }
+  .steps--vertical { flex-direction: column; gap: var(--sh-space-6); }
+  .steps--vertical .step { flex: none; padding-right: 0; padding-bottom: var(--sh-space-2); }
+  .steps--vertical .step:not(:last-child)::after { top: calc(var(--sh-control-xs-height) + var(--sh-space-1)); bottom: 0; left: calc(var(--sh-control-xs-height) / 2); right: auto; width: var(--sh-size-border-width); height: auto; }
+  /* 窄屏（≤640）自动转纵向，避免 4 步标题被压成省略号 */
+  @media (max-width: 640px) {
+    .steps:not(.steps--keep-horizontal) { flex-direction: column; gap: var(--sh-space-4); }
+    .steps:not(.steps--keep-horizontal) .step { flex: none; padding-right: 0; padding-bottom: var(--sh-space-2); }
+    .steps:not(.steps--keep-horizontal) .step:not(:last-child)::after { top: calc(var(--sh-control-xs-height) + var(--sh-space-1)); bottom: 0; left: calc(var(--sh-control-xs-height) / 2); right: auto; width: var(--sh-size-border-width); height: auto; }
+  }
+  /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+  /* preview-only scaffolding */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); -webkit-font-smoothing: antialiased; }
+  .pv-page { max-width: 1120px; margin: 0 auto; padding: var(--sh-space-10) var(--sh-space-8) var(--sh-space-16); }
+  .pv-head { padding-bottom: var(--sh-space-6); border-bottom: var(--sh-size-border-width) solid var(--sh-border-default); }
+  .pv-eyebrow { margin: 0 0 var(--sh-space-2); font-size: var(--sh-text-xs); letter-spacing: .08em; color: var(--sh-text-secondary); }
+  .pv-head h1 { margin: 0; font-size: var(--sh-text-3xl); line-height: var(--sh-text-3xl-lh); font-weight: var(--sh-weight-semibold); }
+  .pv-lede { margin: var(--sh-space-2) 0 0; max-width: var(--sh-size-container-reading); font-size: var(--sh-text-base); line-height: 1.7; color: var(--sh-text-secondary); }
+  .pv-block { margin-top: var(--sh-space-10); }
+  .pv-block h2 { margin: 0 0 var(--sh-space-1); font-size: var(--sh-text-lg); line-height: var(--sh-text-lg-lh); font-weight: var(--sh-weight-medium); }
+  .pv-block p { margin: 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+  .pv-row { display: flex; flex-wrap: wrap; gap: var(--sh-space-8); margin-top: var(--sh-space-5); }
+  .pv-state { display: flex; flex-direction: column; gap: var(--sh-space-2); width: 420px; max-width: 100%; }
+  .pv-label { font-size: var(--sh-text-xs); color: var(--sh-text-tertiary); }
+  .pv-card { padding: var(--sh-space-4); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); background: var(--sh-bg-raised); }
+  .pv-note { margin-top: var(--sh-space-6); font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+  .pv-foot { margin-top: var(--sh-space-12); padding-top: var(--sh-space-4); border-top: var(--sh-size-border-width) solid var(--sh-border-subtle); font-size: var(--sh-text-xs); color: var(--sh-text-tertiary); }
+</style>
+</head>
+<body>
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+<main class="pv-page">
+  <header class="pv-head">
+    <p class="pv-eyebrow">SkillHub Design Library · 组件预览 · Navigation</p>
+    <h1>Steps 步骤条</h1>
+    <p class="pv-lede">用 24px 序号圆点 + 1px 连接线表达流程进度。完成态用 success 弱底 + 勾；当前态用主色实心；错误态用 danger 弱底。序号不换成无意义的装饰图标。</p>
+  </header>
+
+  <section class="pv-block">
+    <h2>横向步骤 <em>done / active / todo / error</em></h2>
+    <p>用于上传、审批、授权等多步流程；标题单行省略，说明放第二行。</p>
+    <div class="pv-row">
+      <div class="pv-state">
+        <div class="pv-card">
+          <div class="steps" aria-label="上传步骤">
+            <div class="step is-done">
+              <div class="step-head"><span class="step-index"><span class="sh-i i16-check" aria-hidden="true"></span></span><span class="step-title">选择数据源</span></div>
+              <span class="step-desc">已完成</span>
+            </div>
+            <div class="step is-active" aria-current="step">
+              <div class="step-head"><span class="step-index">2</span><span class="step-title">配置字段映射</span></div>
+              <span class="step-desc">当前步骤</span>
+            </div>
+            <div class="step">
+              <div class="step-head"><span class="step-index">3</span><span class="step-title">预览并提交</span></div>
+              <span class="step-desc">待开始</span>
+            </div>
+          </div>
+        </div>
+        <span class="pv-label">horizontal · done / active / todo</span>
+      </div>
+      <div class="pv-state">
+        <div class="pv-card">
+          <div class="steps" aria-label="审批步骤">
+            <div class="step is-done">
+              <div class="step-head"><span class="step-index"><span class="sh-i i16-check" aria-hidden="true"></span></span><span class="step-title">提交申请</span></div>
+              <span class="step-desc">2026-11-06 09:12</span>
+            </div>
+            <div class="step is-error" aria-current="step">
+              <div class="step-head"><span class="step-index">2</span><span class="step-title">安全审核</span></div>
+              <span class="step-desc">扫描未通过</span>
+            </div>
+            <div class="step is-disabled">
+              <div class="step-head"><span class="step-index">3</span><span class="step-title">发布</span></div>
+              <span class="step-desc">等待修复</span>
+            </div>
+          </div>
+        </div>
+        <span class="pv-label">error · 当前步骤失败，后续置灰</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="pv-block">
+    <h2>纵向步骤 <em>vertical</em></h2>
+    <p>窄栏、抽屉或详情页里横向放不下时使用；连接线改为竖线。</p>
+    <div class="pv-row">
+      <div class="pv-state" style="width: 320px;">
+        <div class="pv-card">
+          <div class="steps steps--vertical" aria-label="事件处置步骤">
+            <div class="step is-done">
+              <div class="step-head"><span class="step-index"><span class="sh-i i16-check" aria-hidden="true"></span></span><span class="step-title">确认告警</span></div>
+              <span class="step-desc">09:02 · 值班工程师</span>
+            </div>
+            <div class="step is-done">
+              <div class="step-head"><span class="step-index"><span class="sh-i i16-check" aria-hidden="true"></span></span><span class="step-title">隔离受影响资产</span></div>
+              <span class="step-desc">09:18 · 自动处置</span>
+            </div>
+            <div class="step is-active" aria-current="step">
+              <div class="step-head"><span class="step-index">3</span><span class="step-title">根因分析</span></div>
+              <span class="step-desc">进行中</span>
+            </div>
+          </div>
+        </div>
+        <span class="pv-label">vertical · 抽屉与详情页</span>
+      </div>
+    </div>
+    <p class="pv-note">序号 24px（<code>--sh-control-xs-height</code>）；步骤少于 3 个或不表达顺序时不要用步骤条，改用普通列表。</p>
+  </section>
+
+  <footer class="pv-foot">连接线 1px <code>--sh-border-default</code>；步骤标题 13/500，说明 12px 三级色；不允许彩色序号。</footer>
+</main>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+<script src="../assets/icon-check.js" defer></script>
+<script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

@@ -1,5 +1,7 @@
 # CLI 工程规范
 
+正文读取与换会话接续遵循[有界读取规则](../workflow/context-reading.md)，按本页触发条件选资料，不批量加载整个目录。
+
 修改 `cli/` 的命令、安装、配置或凭证时读取。CLI 使用自己的 Bun 工具链和 Node 运行产物，
 不套用 Web 的 pnpm、React 规则。命令说明见 [CLI README](../../../cli/README.md)，
 工具和构建入口见 [package.json](../../../cli/package.json)与[Makefile](../../../Makefile)。

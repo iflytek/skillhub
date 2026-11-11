@@ -1,3 +1,4 @@
+import { OperationSurfaceStyles } from './operation-styles.js';
 import { ChangePreview, type ChangeServices } from './change-preview.js';
 import { canCollapseHistory } from './operation-presentation.js';
 import { OperationDetails } from './operation-details.js';
@@ -122,8 +123,8 @@ function LegacyUpgradeControl({ services, sourceRevision, source, item, eligible
     }
     setDialogOpen(false); plan.reset(); onClosed?.();
   }
-  if (presentation === 'dialog') return <div ref={setContainer} className="skillhub-controls"><NativeControlStyles />{container && <Dialog open={dialogOpen} onOpenChange={open => { if (!open) closeDialog(); }}>
-    <DialogContent className="astron-sh-dialog astron-sh-upgrade-dialog" container={container} onOpenAutoFocus={event => { event.preventDefault(); cancel.current?.focus(); }}
+  if (presentation === 'dialog') return <div ref={setContainer} className="skillhub-controls"><NativeControlStyles /><OperationSurfaceStyles />{container && <Dialog open={dialogOpen} onOpenChange={open => { if (!open) closeDialog(); }}>
+    <DialogContent className="astron-sh-dialog astron-sh-upgrade-dialog astron-sh-operation-confirm" container={container} onOpenAutoFocus={event => { event.preventDefault(); cancel.current?.focus(); }}
       onCloseAutoFocus={event => { event.preventDefault(); if (opener.current instanceof HTMLElement && opener.current.isConnected) opener.current.focus(); }}>
       <DialogTitle>升级技能</DialogTitle><DialogDescription>确认版本及更新范围后再执行</DialogDescription>
       <UpgradeConfirmationSummary item={item} plan={plan.data} targetVersion={attempt ? result?.version : targetVersion} />

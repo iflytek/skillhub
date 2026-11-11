@@ -22,6 +22,7 @@ vi.mock('@/api/client', () => ({
     constructor(message: string, public status: number) { super(message) }
   },
 }))
+vi.mock('@/features/site-presentation/site-presentation-settings', () => ({ SitePresentationSettingsPanel: () => null }))
 vi.mock('@/features/notification/notification-email-settings', () => ({ NotificationEmailSettingsPanel: () => null }))
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 

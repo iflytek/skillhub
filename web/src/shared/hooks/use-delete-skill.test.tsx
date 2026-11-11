@@ -8,6 +8,11 @@ import { ApiError } from '@/shared/lib/api-error'
 import { toast } from '@/shared/lib/toast'
 import { useDeleteSkill } from './use-skill-queries'
 
+vi.mock('@/shared/hooks/use-site-presentation', async (original) => {
+  const actual = await original<typeof import('@/shared/hooks/use-site-presentation')>()
+  return { ...actual, useSitePresentation: () => ({ settings: actual.defaultSitePresentation(), isPending: false, isFetched: true, isError: false, refetch: vi.fn() }) }
+})
+
 vi.mock('@/app/router', () => ({ router: {} }))
 vi.mock('@tanstack/react-router', () => ({ RouterProvider: () => <DeleteHarness /> }))
 vi.mock('@/shared/components/toaster', () => ({ Toaster: () => null }))

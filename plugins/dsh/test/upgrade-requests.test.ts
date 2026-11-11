@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { returnToUpgradedDetail } from '../src/client/change-preview.js';
 import { randomUUID } from 'node:crypto';
 import { ChangeRequests, UpgradeRequests, upgradeRequestKey } from '../src/client/upgrade-requests.js';
 import type { HostExecutePlanRequest, NativeOperation } from '../src/host/types.js';
@@ -122,4 +123,33 @@ test('file reset receipts survive response loss and remain separate from upgrade
  expect(new UpgradeRequests(()=>f.storage).get('reset')).toBeUndefined();
  reload.closeResult('reset',{...reset,phase:'completed',files:'files-reset'});
  expect(reload.get('reset')).toBeUndefined();
+});
+
+
+test('completed receipt survives a failed detail refresh and is cleared only after a successful retry', async () => {
+  const f = fixture();
+  const requests = new ChangeRequests(() => f.storage);
+  const operation = { ...f.operation, phase: 'completed' as const, files: 'upgraded' as const };
+  let executes = 0, refreshes = 0;
+  await requests.submit('upgrade', randomUUID(), f.host, async () => { executes++; return operation; });
+  const complete = async () => { if (++refreshes === 1) throw new Error('detail refresh failed'); };
+  await expect(returnToUpgradedDetail(requests, 'upgrade', operation, complete)).rejects.toThrow('detail refresh failed');
+  expect(requests.get('upgrade')?.operationId).toBe(operation.operationId);
+  await returnToUpgradedDetail(requests, 'upgrade', operation, complete);
+  expect(requests.get('upgrade')).toBeUndefined();
+  expect(executes).toBe(1); expect(refreshes).toBe(2);
+});
+
+test('leaving before refreshed detail is shown preserves the completed receipt', async () => {
+  const f = fixture();
+  const requests = new ChangeRequests(() => f.storage);
+  const operation = { ...f.operation, phase: 'completed' as const, files: 'upgraded' as const };
+  await requests.submit('upgrade', randomUUID(), f.host, async () => operation);
+  await returnToUpgradedDetail(requests, 'upgrade', operation, async () => false);
+  expect(requests.get('upgrade')?.operationId).toBe(operation.operationId);
+  const pending = Promise.withResolvers<void>();
+  const returning = returnToUpgradedDetail(requests, 'upgrade', operation, () => pending.promise);
+  expect(requests.get('upgrade')?.operationId).toBe(operation.operationId);
+  pending.resolve(); await returning;
+  expect(requests.get('upgrade')).toBeUndefined();
 });

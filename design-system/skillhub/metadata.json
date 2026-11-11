@@ -1,0 +1,21 @@
+{
+  "id": "dl_skillhub",
+  "name": "SkillHub",
+  "type": "repository",
+  "version": "1.3.1",
+  "releasedAt": "2026-11-08",
+  "description": "SkillHub 核心设计资源：主题、44份组件契约、设计规范与组件示例。个人原型、任务记录和编辑器插件不包含在内。",
+  "entry": {
+    "tokens": "colors_and_type.css",
+    "projection": "tokens.full.json",
+    "components": "components.runtime.css",
+    "contracts": "components/index.json",
+    "specs": "specs/",
+    "previews": "preview/"
+  },
+  "theme": {
+    "default": "light",
+    "dark": ".dark"
+  },
+  "license": "Apache-2.0"
+}

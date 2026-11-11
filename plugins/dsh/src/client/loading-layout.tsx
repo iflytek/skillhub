@@ -1,9 +1,9 @@
-import { Button, Card, Input, SelectField, Skeleton, Tabs, TabsContent, TabsList, TabsTrigger } from './ui.js';
+import { Button, Card, Input, SelectField, Skeleton } from './ui.js';
 
 export function CardSkeletons({ message = '正在加载技能…' }: { message?: string }) {
   return <div><p role="status" className="astron-sh-loading-status">{message}</p>
     <div className="astron-sh-card-grid" aria-busy="true" aria-label="正在加载技能目录">
-      {Array.from({ length: 6 }, (_, index) => <Card className="astron-sh-skeleton-card" aria-hidden="true" key={index}>
+      {Array.from({ length: 12 }, (_, index) => <Card className="astron-sh-skeleton-card" aria-hidden="true" key={index}>
         <div className="astron-sh-skeleton-identity"><Skeleton className="astron-sh-skeleton-avatar" /><div><Skeleton className="astron-sh-skeleton-title" /><Skeleton className="astron-sh-skeleton-coordinate" /></div></div>
         <div className="astron-sh-skeleton-copy"><Skeleton /><Skeleton className="astron-sh-skeleton-short" /></div>
         <div className="astron-sh-skeleton-bottom"><Skeleton /><Skeleton /></div>
@@ -12,13 +12,13 @@ export function CardSkeletons({ message = '正在加载技能…' }: { message?:
 }
 
 export function CatalogSkeleton({ tab, draft }: { tab: 'browse' | 'installed'; draft: string }) {
-  return <Tabs value={tab}><TabsList className="astron-sh-directory-tabs" aria-label="技能目录">
-    <TabsTrigger disabled value="browse">浏览技能</TabsTrigger><TabsTrigger disabled value="installed">已安装</TabsTrigger>
-  </TabsList><TabsContent value={tab}>
-    <div className="astron-sh-search-form"><div className="astron-sh-search-field"><Input disabled aria-label="搜索技能" placeholder="搜索技能名称或用途" value={draft} /></div><Button disabled>搜索</Button><Button disabled>清空</Button></div>
-    <div className="astron-sh-result-bar"><span>技能目录</span><label>排序<SelectField label="技能排序" value="newest" disabled onValueChange={() => {}} options={[{ value: 'newest', label: '最新发布' }]} /></label></div>
+  return <div aria-busy="true" aria-label={tab === 'browse' ? '正在加载发现技能' : '正在加载我的技能'}>
+    <div className="astron-sh-workbench-heading"><div><h1>{tab === 'browse' ? '发现技能' : '我的技能'}</h1><p>正在读取来源与本地安装状态…</p></div></div>
+    <div className="astron-sh-search-form"><div className="astron-sh-search-field"><Input disabled aria-label="搜索技能" placeholder="搜索技能名称或用途" value={draft} /></div><label><SelectField label="技能排序" value="newest" disabled onValueChange={() => {}} options={[{ value: 'newest', label: '最新' }]} /></label></div>
+    <div className="astron-sh-catalog-filter-row"><Button disabled size="sm">全部</Button><Button disabled size="sm" variant="ghost">仅看收藏</Button></div>
+    <div className="astron-sh-result-bar"><span>技能目录</span></div>
     <CardSkeletons message="正在读取来源…" />
-  </TabsContent></Tabs>;
+  </div>;
 }
 
 export function DetailSkeleton({ message = '正在读取技能详情…' }: { message?: string }) {

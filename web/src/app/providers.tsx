@@ -4,6 +4,9 @@ import { Toaster } from '@/shared/components/toaster'
 import { handleApiError } from '@/shared/lib/api-error'
 import { refreshSkillPermissionsAfterForbidden } from '@/features/skill/refresh-skill-permissions'
 import { router } from './router'
+import { useSitePresentation } from '@/shared/hooks/use-site-presentation'
+import { PresentationDocument } from '@/features/site-presentation/presentation-document'
+import { useTranslation } from 'react-i18next'
 
 /**
  * Front-end application root.
@@ -47,11 +50,17 @@ const queryClient = new QueryClient({
   }),
 })
 
+function ConfiguredApplication() {
+  const { isPending, isFetched, isError, refetch } = useSitePresentation()
+  const { t } = useTranslation()
+  if (isPending && !isFetched) return <div role="status" className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">{t('common.loading')}</div>
+  return <>{isError && <div role="alert" className="border-b bg-secondary px-4 py-3 text-center text-sm text-foreground">{t('sitePresentation.defaultsUnavailable')} <button type="button" className="ml-2 underline underline-offset-4" onClick={() => void refetch()}>{t('sitePresentation.retry')}</button></div>}<PresentationDocument /><RouterProvider router={router} /><Toaster /></>
+}
+
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-      <Toaster />
+      <ConfiguredApplication />
     </QueryClientProvider>
   )
 }

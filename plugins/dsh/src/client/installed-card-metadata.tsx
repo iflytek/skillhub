@@ -11,11 +11,11 @@ export function installedCardVersions(items: Item[]) {
   return { label: versions.length === 1 ? `v${versions[0]}` : `多个版本 · ${versions.map(version => `v${version}`).join(' / ')}`,
     title: items.map(item => `${item.scope === 'user' ? '所有项目' : '仅此项目'} · v${item.version}`).join('；') };
 }
-export function InstalledCardMetadata({ items }: { items: Item[] }) {
+export function InstalledCardMetadata({ items, compact = false }: { items: Item[]; compact?: boolean }) {
   const identity = items[0];
   if (!identity) return null;
   const versions = installedCardVersions(items);
   return <CardDescription className="skillhub-installed-version" title={identity.sourceKind === 'local-import' ? versions.title : `@${identity.namespace}/${identity.slug} · ${versions.title}`}>
-    {identity.sourceKind === 'local-import' ? versions.label : `${versions.label} · @${identity.namespace}/${identity.slug}`}
+    {compact ? identity.sourceKind === 'local-import' ? '本地技能' : versions.label : identity.sourceKind === 'local-import' ? versions.label : `${versions.label} · @${identity.namespace}/${identity.slug}`}
   </CardDescription>;
 }

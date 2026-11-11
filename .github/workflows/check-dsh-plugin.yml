@@ -141,6 +141,10 @@ jobs:
             node: '24.2.0'
           - dsh: '0.2.1-rc.5'
             node: '24'
+          - dsh: '0.2.2-rc.1'
+            node: '24.9.0'
+          - dsh: '0.2.2-rc.1'
+            node: '24'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -156,7 +160,8 @@ jobs:
         run: bun install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
-          name: skillhub-dsh-development-package-ubuntu-latest-node-${{ matrix.node }}
+          # Exercise the release candidate built at the retained minimum Node baseline.
+          name: skillhub-dsh-development-package-ubuntu-latest-node-${{ matrix.node == '24.9.0' && '24.2.0' || matrix.node }}
           path: plugins/dsh/artifacts
       - name: Verify latest supported official Host without dependency overrides
         working-directory: plugins/dsh
@@ -189,6 +194,16 @@ jobs:
           - os: windows-latest
             dsh: '0.2.1-rc.5'
             node: '24'
+          # New Host engine is >=24.9.0; keep the older RCs on their existing baselines.
+          - os: ubuntu-latest
+            dsh: '0.2.2-rc.1'
+            node: '24.9.0'
+          - os: macos-latest
+            dsh: '0.2.2-rc.1'
+            node: '24.9.0'
+          - os: windows-latest
+            dsh: '0.2.2-rc.1'
+            node: '24.9.0'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -204,7 +219,8 @@ jobs:
         run: bun install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
-          name: skillhub-dsh-development-package-${{ matrix.os }}-node-${{ matrix.node }}
+          # New Host runtime floor does not require rebuilding the JavaScript candidate.
+          name: skillhub-dsh-development-package-${{ matrix.os }}-node-${{ matrix.node == '24.9.0' && '24.2.0' || matrix.node }}
           path: plugins/dsh/artifacts
       - name: Validate public download cache before restore
         working-directory: plugins/dsh

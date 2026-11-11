@@ -1,3 +1,4 @@
+import { OperationSurfaceStyles } from './operation-styles.js';
 import { canCollapseHistory } from './operation-presentation.js';
 import { OperationDetails } from './operation-details.js';
 import { HostWriteStatus, useWritableHost, type CompatibilityServices } from './host-compatibility.js';
@@ -103,7 +104,7 @@ export function RemovalControl({ services, sourceRevision, source, item, eligibl
     else trigger.current?.focus();
   };
   const confirmation = <Dialog open={dialogOpen} onOpenChange={open => { if (!open) cancelPlan(); }}>
-    <DialogContent className="astron-sh-dialog astron-sh-removal-dialog" container={container} onOpenAutoFocus={event => {
+    <DialogContent className="astron-sh-dialog astron-sh-removal-dialog astron-sh-operation-confirm" container={container} onOpenAutoFocus={event => {
       event.preventDefault(); container?.querySelector<HTMLButtonElement>('[data-removal-cancel]')?.focus();
     }} onCloseAutoFocus={event => { event.preventDefault(); if (opener.current instanceof HTMLElement && opener.current.isConnected) opener.current.focus(); }}>
       <DialogTitle>{stale ? '清理安装记录' : '卸载技能'}</DialogTitle>
@@ -136,7 +137,7 @@ export function RemovalControl({ services, sourceRevision, source, item, eligibl
       </div>
     </DialogContent>
   </Dialog>;
-  if (presentation === 'dialog') return <div ref={setContainer} className="skillhub-controls"><NativeControlStyles />{container && confirmation}</div>;
+  if (presentation === 'dialog') return <div ref={setContainer} className="skillhub-controls"><NativeControlStyles /><OperationSurfaceStyles />{container && confirmation}</div>;
   const content = <section aria-label={`卸载操作 ${item.slug}`} style={{ border: '1px solid #8885', borderRadius: 12, padding: 16, marginBlock: 16 }}>
     <h3>{stale ? '清理失效记录' : '卸载'} @{item.namespace}/{item.slug}</h3>
     <HostWriteStatus state={writableHost} />

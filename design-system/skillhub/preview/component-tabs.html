@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Tabs 选项卡 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); text-transform: none; letter-spacing: var(--sh-tracking-body); color: var(--sh-text-placeholder); }
+    .row { display: flex; flex-wrap: wrap; gap: var(--sh-space-8); align-items: flex-start; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); align-items: flex-start; }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-placeholder); }
+
+    .tabs-list { display: inline-flex; align-items: stretch; gap: var(--sh-space-6); padding: 0; margin: 0; list-style: none; border-bottom: var(--sh-size-border-width) solid var(--sh-border-default); }
+    .tabs > .tabs-list { border-bottom: 0; }
+    .tab { display: inline-flex; appearance: none; box-sizing: border-box; text-align: start; text-decoration: none; align-items: center; gap: var(--sh-space-2); padding: var(--sh-space-3) 0; margin: 0 0 calc(-1 * var(--sh-size-border-width-strong)); border: 0; border-bottom: var(--sh-size-border-width-strong) solid transparent; background: transparent; font-family: var(--sh-font-sans); font-size: var(--sh-text-body-sm); line-height: var(--sh-text-body-sm-lh); font-weight: var(--sh-weight-medium); color: var(--sh-text-tertiary); white-space: nowrap; cursor: default; transition: color var(--sh-duration-fast) var(--sh-ease-standard), border-color var(--sh-duration-fast) var(--sh-ease-standard); }
+    .tab.is-active { color: var(--sh-primary-base); border-bottom-color: var(--sh-primary-base); }
+    .tab:hover { color: var(--sh-text-primary); }
+    .tab:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+
+    .note { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-secondary); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body data-component="tabs">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Tabs 选项卡</h1>
+    <p class="lede">切换详情页主结构：下划线式实现，激活项用 2px 近黑下边线压住容器线，不加底色、不做滑块。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">三 Tab · 交互状态 <em>inactive / active / hover / focus</em></h2>
+    <div class="row">
+      <div class="state">
+        <ul class="tabs-list" role="tablist">
+          <li><button type="button" class="tab" role="tab" aria-selected="false">概览</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">文件</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">版本</button></li>
+        </ul>
+        <span class="state-label">inactive · 默认态，辅助色文字</span>
+      </div>
+
+      <div class="state">
+        <ul class="tabs-list" role="tablist">
+          <li><button type="button" class="tab is-active" role="tab" aria-selected="true">概览</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">文件</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">版本</button></li>
+        </ul>
+        <span class="state-label">active · 近黑文字 + 2px 下边线</span>
+      </div>
+
+      <div class="state">
+        <ul class="tabs-list" role="tablist">
+          <li><button type="button" class="tab" role="tab" aria-selected="false">概览</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">文件</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">版本</button></li>
+        </ul>
+        <span class="state-label">hover · 文字加深至前景色 80%</span>
+      </div>
+
+      <div class="state">
+        <ul class="tabs-list" role="tablist">
+          <li><button type="button" class="tab" role="tab" aria-selected="false">概览</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">文件</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">版本</button></li>
+        </ul>
+        <span class="state-label">focus · 键盘聚焦，2px 近黑外描边</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">Tab 数量 · 极端情况 <em>2 Tab 为下限 / 4 Tab 为上限</em></h2>
+    <div class="row">
+      <div class="state">
+        <ul class="tabs-list" role="tablist">
+          <li><button type="button" class="tab is-active" role="tab" aria-selected="true">概览</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">文件</button></li>
+        </ul>
+        <span class="state-label">2 Tab · 少于 2 个应改用并列按钮</span>
+      </div>
+
+      <div class="state">
+        <ul class="tabs-list" role="tablist">
+          <li><button type="button" class="tab is-active" role="tab" aria-selected="true">概览</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">文件</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">版本</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">评价</button></li>
+        </ul>
+        <span class="state-label">4 Tab · 超出需容器横向滚动</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">宿主标签解耦 <em>button / a / div</em></h2>
+    <div class="row">
+      <div class="state">
+        <ul class="tabs-list" role="tablist">
+          <li><button type="button" class="tab is-active" role="tab" aria-selected="true">button · 概览</button></li>
+          <li><button type="button" class="tab" role="tab" aria-selected="false">文件</button></li>
+        </ul>
+        <span class="state-label">button 宿主</span>
+      </div>
+      <div class="state">
+        <ul class="tabs-list" role="tablist">
+          <li><a class="tab is-active" href="#tab-a" role="tab" aria-selected="true">a · 概览</a></li>
+          <li><a class="tab" href="#tab-files" role="tab" aria-selected="false">文件</a></li>
+        </ul>
+        <span class="state-label">a 宿主</span>
+      </div>
+      <div class="state">
+        <ul class="tabs-list" role="tablist">
+          <li><div class="tab is-active" role="tab" aria-selected="true">div · 概览</div></li>
+          <li><div class="tab" role="tab" aria-selected="false">文件</div></li>
+        </ul>
+        <span class="state-label">div 宿主</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">Tab 间距固定 24px；激活项以 -1px 负边距压住 1px 容器线，避免出现双线。</p>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

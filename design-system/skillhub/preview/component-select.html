@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Select 下拉选择 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); }
+    .row { display: flex; flex-wrap: wrap; gap: var(--sh-space-4) var(--sh-space-8); align-items: flex-start; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); align-items: flex-start; min-width: 220px; }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-placeholder); }
+    .note { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-secondary); }
+
+    .select-trigger { display: flex; appearance: none; box-sizing: border-box; margin: 0; text-decoration: none; width: 100%; height: var(--sh-control-md-height); align-items: center; justify-content: space-between; gap: var(--sh-space-2); padding: 0 var(--sh-control-md-pad-x); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-control-md-radius); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); text-align: left; cursor: pointer; transition: border-color var(--sh-duration-fast) var(--sh-ease-standard), background var(--sh-duration-fast) var(--sh-ease-standard); }
+    .select-trigger:hover { border-color: var(--sh-border-strong); }
+    .select-trigger:focus-visible { outline: 2px solid var(--sh-border-focus); outline-offset: 2px; }
+    .select-trigger[data-placeholder] { color: var(--sh-text-placeholder); }
+    .select-trigger:disabled { cursor: not-allowed; background: var(--sh-bg-muted); color: var(--sh-text-disabled); border-color: var(--sh-border-subtle); }
+    .select-trigger[aria-expanded="true"] { border-color: var(--sh-border-focus); }
+    .select-trigger[aria-expanded="true"] .select-icon { transform: rotate(180deg); }
+    .select-icon { width: var(--sh-icon-16); height: var(--sh-icon-16); flex: none; color: var(--sh-text-tertiary); transition: transform var(--sh-duration-fast) var(--sh-ease-standard); }
+
+    /* 面板最小宽度 = 触发器宽度：定位宿主在打开时把触发器实测宽度写进 --sh-select-min-width；未写时取 token 默认 180px */
+    .select-content { box-sizing: border-box; display: flex; flex-direction: column; gap: var(--sh-space-0_5); min-width: var(--sh-select-min-width); max-width: 360px; max-height: 320px; overflow-y: auto; padding: var(--sh-space-1_5); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-md); background: var(--sh-bg-overlay); box-shadow: var(--sh-shadow-popover); }
+    .select-item { position: relative; appearance: none; border: 0; background: transparent; box-sizing: border-box;
+    margin: 0; font-family: var(--sh-font-sans); text-align: start; text-decoration: none; display: flex; align-items: center; min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-primary); cursor: pointer; transition: background var(--sh-duration-fast) var(--sh-ease-standard), color var(--sh-duration-fast) var(--sh-ease-standard); }
+    .select-item:hover { background: var(--sh-interaction-hover-bg); }
+    .select-item:active { background: var(--sh-interaction-pressed-bg); }
+    .select-item[aria-selected="true"] { background: var(--sh-interaction-selected-bg); color: var(--sh-primary-base); font-weight: var(--sh-weight-medium); }
+    /* 勾靠右 12px 定位；右侧 36px padding 已为它预留空间，不会压到文字 */
+    .select-item .check { position: absolute; right: var(--sh-control-md-pad-x); top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: var(--sh-icon-16); height: var(--sh-icon-16); flex: none; color: var(--sh-primary-base); opacity: 0; }
+    .select-item[aria-selected="true"] .check { opacity: 1; }
+    .select-item[aria-disabled="true"], .select-item[aria-disabled="true"]:hover { background: transparent; color: var(--sh-text-disabled); cursor: not-allowed; }
+    .select-item:focus-visible { outline: 2px solid var(--sh-border-focus); outline-offset: -2px; }
+    .select-item--multi { padding-left: var(--sh-control-md-pad-x); gap: var(--sh-space-2); }
+    .select-check { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: var(--sh-icon-16); height: var(--sh-icon-16); flex: none; border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-2xs); background: var(--sh-bg-page); color: var(--sh-text-primary); }
+    .select-item--multi[aria-selected="true"] .select-check { border-color: var(--sh-border-contrast); background: var(--sh-bg-inverse); color: var(--sh-text-inverse); }
+    .select-label { padding: var(--sh-space-2) var(--sh-control-md-pad-x) var(--sh-space-1); font-size: var(--sh-text-caption-xs); line-height: 20px; font-weight: var(--sh-weight-semibold); letter-spacing: .04em; color: var(--sh-text-secondary); }
+    .select-sep { height: 1px; margin: var(--sh-space-1) 0; background: var(--sh-border-subtle); }
+    .select-empty { box-sizing: border-box; display: flex; align-items: center; justify-content: center; min-height: var(--sh-size-empty-compact); padding: var(--sh-space-3); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+
+    /* 参考实现壳：裸 .select-content 仍是预览用的静态面板；只有 .select 宿主内的面板才锚定定位。
+       定位所需类全部由库提供；宿主只写数据与 --sh-select-min-width（参考 JS 自动写）。 */
+    .select { position: relative; display: inline-flex; flex-direction: column; min-width: var(--sh-select-min-width); max-width: 100%; }
+    /* 满宽：表单字段自动对齐；栅格 / 表格筛选格用 .select--block。默认 inline-flex 仍服务筛选条。
+       满宽时最小宽交给容器（min-width: 0），格子可以窄于 180，不再被 min-width 顶回去。 */
+    .field > .select,
+    .select--block { width: 100%; min-width: 0; }
+    .select > .select-trigger { width: 100%; }
+    .select > .select-trigger > .select-value { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .select > .select-content { position: absolute; top: calc(100% + var(--sh-space-1)); left: 0; z-index: var(--sh-z-dropdown); width: max-content; min-width: 100%; max-width: min(360px, calc(100vw - var(--sh-space-8))); max-height: min(320px, 60vh); }
+    .select.is-up > .select-content { top: auto; bottom: calc(100% + var(--sh-space-1)); }
+    .select.is-end > .select-content { left: auto; right: 0; }
+    .select > .select-content[hidden] { display: none; }
+    .select-item.is-active:not([aria-selected="true"]) { background: var(--sh-interaction-hover-bg); }
+
+    /* 原生 select 主题化：外观兼容系统控件，视觉跟库一致 */
+    .select-native { position: relative; display: inline-flex; width: 100%; }
+    /* 筛选栏里的原生 select 不占满整行，按触发器最小宽度参与 flex 排布 */
+    .filter-bar .select-native { width: auto; flex: 0 0 auto; min-width: var(--sh-select-min-width); }
+    .select-native select { appearance: none; -webkit-appearance: none; width: 100%; height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-control-md-radius); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); cursor: pointer; }
+    .select-native select:hover { border-color: var(--sh-border-strong); }
+    .select-native select:focus-visible { outline: 2px solid var(--sh-border-focus); outline-offset: 2px; }
+    .select-native select:disabled { cursor: not-allowed; background: var(--sh-bg-muted); color: var(--sh-text-disabled); border-color: var(--sh-border-subtle); }
+    .select-native .select-icon { position: absolute; right: var(--sh-control-md-pad-x); top: 50%; transform: translateY(-50%); pointer-events: none; }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+  </style>
+</head>
+<body data-component="select">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Select 下拉选择</h1>
+    <p class="lede">选择控件规格：触发器 32px / 13px / 横向 12px；展开面板 padding 6、圆角 10、min-width = 触发器实测宽（token 默认 180）、max 360、最高 320 可滚动；选项行 32px，选中右侧勾选。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">触发器状态 <em>trigger · default / placeholder / open / disabled</em></h2>
+    <div class="row">
+      <div class="state">
+        <button class="select-trigger" type="button"><span>最近 30 天</span><span class="select-icon sh-i i16-chevron-down"></span></button>
+        <span class="state-label">default · 已有选中值</span>
+      </div>
+      <div class="state">
+        <button class="select-trigger" type="button" data-placeholder><span>选择命名空间</span><span class="select-icon sh-i i16-chevron-down"></span></button>
+        <span class="state-label">placeholder · 未选择</span>
+      </div>
+      <div class="state">
+        <button class="select-trigger" type="button" aria-expanded="true"><span>最近 30 天</span><span class="select-icon sh-i i16-chevron-down"></span></button>
+        <span class="state-label">open · 边框 focus + 箭头翻转</span>
+      </div>
+      <div class="state">
+        <button class="select-trigger" type="button" disabled><span>不可选择</span><span class="select-icon sh-i i16-chevron-down"></span></button>
+        <span class="state-label">disabled · muted 底 + disabled 文字</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">展开内容 <em>content · 分组 / 选中 / 悬停 / 禁用 / 分隔线</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="select-content" role="listbox" tabindex="0">
+          <span class="select-label">命名空间</span>
+          <div class="select-item" role="option" aria-selected="true"><span>@global</span><span class="check sh-i i16-check"></span></div>
+          <div class="select-item" role="option" aria-selected="false" style="background: var(--sh-interaction-hover-bg);"><span>@my-team</span><span class="check sh-i i16-check"></span></div>
+          <div class="select-item" role="option" aria-disabled="true"><span>@archived-team</span><span class="check sh-i i16-check"></span></div>
+          <div class="select-sep"></div>
+          <div class="select-item" role="option" aria-selected="false"><span>管理命名空间…</span><span class="check sh-i i16-check"></span></div>
+        </div>
+        <span class="state-label">content · hover 第二行 / selected 第一行；勾在右侧</span>
+      </div>
+      <div class="state">
+        <div class="select-content" role="listbox" aria-multiselectable="true">
+          <span class="select-label">安全标签</span>
+          <div class="select-item select-item--multi" role="option" aria-selected="true"><span class="select-check sh-i i16-check"></span><span>PII</span></div>
+          <div class="select-item select-item--multi" role="option" aria-selected="false"><span class="select-check"></span><span>财务数据</span></div>
+          <div class="select-item select-item--multi" role="option" aria-selected="true"><span class="select-check sh-i i16-check"></span><span>对外公开</span></div>
+          <div class="select-item select-item--multi" role="option" aria-disabled="true"><span class="select-check"></span><span>已归档标签</span></div>
+        </div>
+        <span class="state-label">multi · 左侧 16px 复选 + 8px 间距</span>
+      </div>
+      <div class="state">
+        <div class="select-content" role="listbox">
+          <div class="select-empty">没有匹配的命名空间</div>
+        </div>
+        <span class="state-label">empty · 64px，超高时面板内部滚动</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">参考实现 <em>live · single / multiple · assets/select.js</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="select" data-select data-placeholder="选择命名空间">
+          <button class="select-trigger" type="button" aria-label="命名空间">
+            <span class="select-value">选择命名空间</span>
+            <span class="select-icon sh-i i16-chevron-down" aria-hidden="true"></span>
+          </button>
+          <div class="select-content" hidden>
+            <span class="select-label">命名空间</span>
+            <div class="select-item" role="option" data-value="global" aria-selected="true"><span>@global</span><span class="check sh-i i16-check"></span></div>
+            <div class="select-item" role="option" data-value="my-team" aria-selected="false"><span>@my-team</span><span class="check sh-i i16-check"></span></div>
+            <div class="select-item" role="option" data-value="archived-team" aria-disabled="true"><span>@archived-team</span><span class="check sh-i i16-check"></span></div>
+            <div class="select-sep"></div>
+            <div class="select-item" role="option" data-value="manage" aria-selected="false"><span>管理命名空间…</span><span class="check sh-i i16-check"></span></div>
+          </div>
+        </div>
+        <span class="state-label">single · ↑↓ / Home-End / Enter / Esc / Tab / 首字母</span>
+      </div>
+      <div class="state">
+        <div class="select" data-select data-multiple data-placeholder="选择安全标签">
+          <button class="select-trigger" type="button" aria-label="安全标签">
+            <span class="select-value">选择安全标签</span>
+            <span class="select-icon sh-i i16-chevron-down" aria-hidden="true"></span>
+          </button>
+          <div class="select-content" hidden>
+            <span class="select-label">安全标签</span>
+            <div class="select-item select-item--multi" role="option" data-value="pii" aria-selected="true"><span class="select-check sh-i i16-check"></span><span>PII</span></div>
+            <div class="select-item select-item--multi" role="option" data-value="finance" aria-selected="false"><span class="select-check"></span><span>财务数据</span></div>
+            <div class="select-item select-item--multi" role="option" data-value="public" aria-selected="true"><span class="select-check sh-i i16-check"></span><span>对外公开</span></div>
+            <div class="select-item select-item--multi" role="option" data-value="archived" aria-disabled="true"><span class="select-check"></span><span>已归档标签</span></div>
+          </div>
+        </div>
+        <span class="state-label">multiple · 选中不关闭，整行可点</span>
+      </div>
+    </div>
+    <p class="note">库给：定位（offset 4 / 向上翻 / 贴边回退）、`--sh-z-dropdown`、键盘、`aria-*`、关闭。宿主给：选项数据（静态或异步）、业务格式化；异步选项在 `.select-content` 内替换 `.select-item` 后无需重绑。</p>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">原生 select 主题化 <em>native select · appearance none + chevron</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="select-native">
+          <select aria-label="周期">
+            <option>最近 7 天</option>
+            <option selected>最近 30 天</option>
+            <option>最近 90 天</option>
+          </select>
+          <span class="select-icon sh-i i16-chevron-down" aria-hidden="true"></span>
+        </div>
+        <span class="state-label">native · 保留系统交互，外观与库一致</span>
+      </div>
+      <div class="state">
+        <div class="select-native">
+          <select disabled aria-label="周期（禁用）">
+            <option>最近 30 天</option>
+          </select>
+          <span class="select-icon sh-i i16-chevron-down" aria-hidden="true"></span>
+        </div>
+        <span class="state-label">native disabled · 同一套 token</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">触发器 32px、面板 padding 6、选项行 32px；选中态 = <code>selected-bg</code> + 500 + 右侧 16px 勾。禁止把 <code>absolute left:12</code> 的勾选标记压到文字起点上；长选项 ellipsis，面板不超过 360px。</p>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/select.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Dialog 弹窗 · SkillHub 设计系统</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+  <link rel="stylesheet" href="../assets/icons.css">
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+<style>
+    /* @component-css-start */
+    .icon, .icon-16 { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-icon-16); height: var(--sh-icon-16); stroke-width: var(--sh-icon-stroke-16); vertical-align: middle; color: inherit; }
+    .icon-12 { width: var(--sh-icon-12); height: var(--sh-icon-12); stroke-width: var(--sh-icon-stroke-12); }
+    .icon-14 { width: var(--sh-icon-14); height: var(--sh-icon-14); stroke-width: var(--sh-icon-stroke-14); }
+    .icon-18 { width: var(--sh-icon-18); height: var(--sh-icon-18); stroke-width: var(--sh-icon-stroke-18); }
+    .icon-20 { width: var(--sh-icon-20); height: var(--sh-icon-20); stroke-width: var(--sh-icon-stroke-20); }
+    .icon-24 { width: var(--sh-icon-24); height: var(--sh-icon-24); stroke-width: var(--sh-icon-stroke-24); }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--sh-bg-page);
+    color: var(--sh-text-primary);
+    font-family: var(--sh-font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--sh-space-12) var(--sh-space-8) var(--sh-space-16);
+  }
+
+  /* ---------- 页头 ---------- */
+  .page-head {
+    padding-bottom: var(--sh-space-8);
+    border-bottom: var(--sh-size-border-width) solid var(--sh-border-default);
+  }
+
+  .eyebrow {
+    margin: 0 0 var(--sh-space-3);
+    font-size: var(--sh-text-xs);
+    letter-spacing: 0.08em;
+    color: var(--sh-text-secondary);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: var(--sh-text-3xl);
+    line-height: var(--sh-text-3xl-lh);
+    font-weight: var(--sh-weight-semibold);
+    letter-spacing: var(--sh-tracking-heading);
+  }
+
+  .lead {
+    margin: var(--sh-space-3) 0 0;
+    max-width: var(--sh-size-container-reading);
+    font-size: var(--sh-text-base);
+    line-height: 1.7;
+    color: var(--sh-text-secondary);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sh-space-2);
+    margin-top: var(--sh-space-5);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sh-space-1_5);
+    padding: 3px var(--sh-space-2_5);
+    border: var(--sh-size-border-width) solid var(--sh-border-default);
+    border-radius: var(--sh-radius-full);
+    background: var(--sh-bg-muted);
+    font-size: var(--sh-text-xs);
+    color: var(--sh-text-secondary);
+    white-space: nowrap;
+  }
+
+  /* ---------- 分节 ---------- */
+  .section { margin-top: var(--sh-space-12); }
+
+  .section-title {
+    margin: 0;
+    font-size: var(--sh-text-lg);
+    line-height: var(--sh-text-lg-lh);
+    font-weight: var(--sh-weight-medium);
+    letter-spacing: var(--sh-tracking-heading);
+  }
+
+  .section-desc {
+    margin: var(--sh-space-1_5) 0 0;
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .demo-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sh-space-6);
+    align-items: flex-start;
+    margin-top: var(--sh-space-6);
+  }
+
+  .frame-col { flex: none; }
+
+  /* ---------- 320 × 420 演示框 ---------- */
+  .frame {
+    position: relative;
+    width: 320px;
+    height: 420px;
+    border: var(--sh-size-border-width) solid var(--sh-border-default);
+    border-radius: var(--sh-radius-xl);
+    overflow: hidden;
+    background: var(--sh-bg-raised);
+    box-shadow: var(--sh-shadow-card);
+  }
+
+  .mock {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--sh-space-2_5);
+    padding: var(--sh-space-3_5);
+  }
+
+  .crumb {
+    margin: 0;
+    font-family: var(--sh-font-mono);
+    font-size: var(--sh-text-mono-sm);
+    line-height: var(--sh-text-mono-sm-lh);
+    letter-spacing: var(--sh-tracking-code);
+    color: var(--sh-text-secondary);
+  }
+
+  .mock-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sh-space-2);
+  }
+
+  .mock-title {
+    margin: 0;
+    font-size: var(--sh-text-body);
+    line-height: var(--sh-text-body-lh);
+    font-weight: var(--sh-weight-semibold);
+    letter-spacing: var(--sh-tracking-heading);
+  }
+
+  .badge-green {
+    appearance: none; border: 0; box-sizing: border-box; margin: 0;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    height: 18px;
+    padding: 0 var(--sh-space-1_5);
+    border-radius: var(--sh-radius-sm);
+    background: var(--sh-success-weak);
+    color: var(--sh-success-on-weak);
+    font-size: var(--sh-text-caption-xs);
+    line-height: var(--sh-text-caption-xs-lh);
+  }
+
+  .mock-meta {
+    margin: 0;
+    font-size: var(--sh-text-caption-xs);
+    line-height: var(--sh-text-caption-xs-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .tabs {
+    display: inline-flex;
+    align-items: stretch;
+    gap: var(--sh-space-6);
+    padding: 0;
+    margin: 0;
+    list-style: none;
+    border-bottom: var(--sh-size-border-width) solid var(--sh-border-default);
+  }
+
+  .tab {
+    font-size: var(--sh-text-caption-xs);
+    line-height: var(--sh-text-caption-xs-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .tab.is-active {
+    color: var(--sh-text-primary);
+    font-weight: var(--sh-weight-medium);
+  }
+
+  .bar {
+    height: 6px;
+    border-radius: var(--sh-radius-full);
+    background: var(--sh-bg-muted);
+  }
+
+  .scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: var(--sh-bg-scrim);
+    opacity: var(--sh-overlay-scrim-alpha);
+  }
+
+  .dialog-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--sh-space-3);
+  }
+
+  /* ---------- 弹窗本体 ---------- */
+  .dialog {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    max-height: calc(100% - 24px);
+    overflow: auto;
+    padding: var(--sh-space-5);
+    background: var(--sh-bg-overlay);
+    border: var(--sh-size-border-width) solid var(--sh-border-default);
+    border-radius: var(--sh-radius-xl);
+    box-shadow: var(--sh-shadow-dialog);
+  }
+
+  .dialog-title {
+    margin: 0;
+    padding-right: 22px;
+    font-size: var(--sh-text-lg);
+    line-height: var(--sh-text-lg-lh);
+    font-weight: var(--sh-weight-semibold);
+    letter-spacing: var(--sh-tracking-heading);
+  }
+
+  .dialog-desc {
+    margin: var(--sh-space-2) 0 0;
+    font-size: var(--sh-text-sm);
+    line-height: var(--sh-text-sm-lh);
+    color: var(--sh-text-tertiary);
+  }
+
+  .dialog-close {
+    appearance: none; box-sizing: border-box; margin: 0;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none;
+    position: absolute;
+    top: var(--sh-space-3);
+    right: var(--sh-space-3);
+    width: 26px;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: var(--sh-size-border-width) solid transparent;
+    border-radius: var(--sh-radius-md);
+    background: transparent;
+    color: var(--sh-text-secondary);
+    cursor: pointer;
+    transition: background var(--sh-duration-fast) var(--sh-ease-standard), color var(--sh-duration-fast) var(--sh-ease-standard);
+  }
+
+  .dialog-close:hover {
+    background: var(--sh-interaction-hover-bg);
+    color: var(--sh-text-primary);
+  }
+
+  .dialog-close .icon { width: 12px; height: 12px; }
+
+  .danger-note {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sh-space-2);
+    margin: var(--sh-space-3) 0 0;
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    color: var(--sh-danger-base);
+  }
+
+  .danger-note .icon {
+    flex: none;
+    width: 12px;
+    height: 12px;
+    margin-top: var(--sh-space-0_5);
+  }
+
+  /* ---------- 表单 ---------- */
+  .field { margin-top: var(--sh-space-4); }
+
+  .field-label {
+    display: block;
+    margin-bottom: var(--sh-space-1);
+    font-size: var(--sh-control-sm-font);
+    line-height: var(--sh-control-sm-line);
+    font-weight: var(--sh-weight-medium);
+    color: var(--sh-text-primary);
+  }
+
+  .field-label .req {
+    margin-left: var(--sh-space-0_5);
+    color: var(--sh-danger-base);
+  }
+
+  .textarea {
+    display: block;
+    width: 100%;
+    min-height: 100px;
+    padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x);
+    border: var(--sh-size-border-width) solid var(--sh-border-default);
+    border-radius: var(--sh-control-md-radius);
+    background: var(--sh-bg-page);
+    color: var(--sh-text-primary);
+    font-family: inherit;
+    font-size: var(--sh-control-md-font);
+    line-height: var(--sh-control-md-line);
+    resize: vertical;
+  }
+
+  .textarea:focus {
+    outline: none;
+    border-color: var(--sh-border-focus);
+  }
+
+  .field-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sh-space-2);
+    margin-top: var(--sh-space-1_5);
+  }
+
+  .field-help,
+  .field-count {
+    font-size: var(--sh-text-caption-xs);
+    line-height: var(--sh-text-caption-xs-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .field-count { font-variant-numeric: tabular-nums; }
+
+  /* ---------- 按钮 ---------- */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sh-space-2);
+    height: 36px;
+    padding: 0 var(--sh-space-4);
+    border: var(--sh-size-border-width) solid transparent;
+    border-radius: var(--sh-radius-md);
+    font-family: inherit;
+    font-size: var(--sh-text-sm);
+    font-weight: var(--sh-weight-medium);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--sh-duration-fast) var(--sh-ease-standard), border-color var(--sh-duration-fast) var(--sh-ease-standard), transform var(--sh-duration-fast) var(--sh-ease-standard);
+  }
+
+  .btn-primary {
+    background: var(--sh-primary-base);
+    color: var(--sh-primary-foreground);
+    box-shadow: var(--sh-shadow-btn);
+  }
+
+  .btn-primary:hover {
+    background: var(--sh-primary-hover);
+  }
+
+  .btn-primary:active { transform: scale(0.97); }
+
+  .btn-destructive {
+    background: var(--sh-danger-base);
+    color: var(--sh-danger-foreground);
+    box-shadow: var(--sh-shadow-btn);
+  }
+
+  .btn-destructive:hover {
+    background: var(--sh-danger-hover);
+  }
+
+  .btn-outline {
+    background: var(--sh-bg-page);
+    border-color: var(--sh-border-default);
+    color: var(--sh-text-primary);
+  }
+
+  .btn-outline:hover {
+    background: var(--sh-interaction-hover-bg);
+    border-color: var(--sh-interaction-hover-border);
+  }
+
+  .btn:disabled {
+    background: var(--sh-bg-muted);
+    color: var(--sh-text-disabled);
+    border-color: var(--sh-border-default);
+    cursor: not-allowed;
+  }
+
+  .dialog-foot {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--sh-space-2);
+    margin-top: var(--sh-space-5);
+  }
+
+  /* ---------- 说明 ---------- */
+  .caption {
+    margin: var(--sh-space-3) 0 0;
+    font-size: var(--sh-text-xs);
+    line-height: 1.7;
+    color: var(--sh-text-secondary);
+  }
+
+  .caption strong {
+    color: var(--sh-text-primary);
+    font-weight: var(--sh-weight-medium);
+  }
+
+  .state-strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sh-space-3);
+    margin-top: var(--sh-space-4);
+    padding: var(--sh-space-5);
+    border: var(--sh-size-border-width) solid var(--sh-border-default);
+    border-radius: var(--sh-radius-lg);
+    background: var(--sh-bg-muted);
+  }
+
+  .state-note {
+    flex: 1 1 320px;
+    min-width: 240px;
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .foot-note {
+    margin: var(--sh-space-3_5) 0 0;
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .page-foot {
+    margin-top: var(--sh-space-16);
+    padding-top: var(--sh-space-5);
+    border-top: var(--sh-size-border-width) solid var(--sh-border-subtle);
+    font-size: var(--sh-text-xs);
+    color: var(--sh-text-secondary);
+  }
+    /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* Unreleased content-fit rules. */
+.dialog--content-fit { height: auto; min-height: 0; }
+.dialog--content-fit .dialog-desc { margin-bottom: 0; }
+.dialog--content-fit .dialog-foot { margin-top: var(--sh-space-4); }
+.dialog-layer--viewport { position: fixed; z-index: var(--sh-z-dialog); }
+.dialog-layer--viewport::before { content: ''; position: absolute; inset: 0; background: var(--sh-bg-scrim); opacity: var(--sh-overlay-scrim-alpha); }
+.dialog-layer--viewport > .dialog { position: relative; z-index: 1; }
+/* @component-css-end */
+
+
+    .icon-12 { width: 12px; height: 12px; }
+    .icon-18 { width: 18px; height: 18px; }
+    .icon-20 { width: 20px; height: 20px; }
+    .icon-24 { width: 24px; height: 24px; }
+
+
+
+  </style>
+</head>
+<body data-component="dialog">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+<main class="page">
+
+  <header class="page-head">
+    <p class="eyebrow">SkillHub Design Library · 组件预览 · Overlay</p>
+    <h1>Dialog 弹窗</h1>
+    <p class="lead">
+      居中模态：12px 圆角、24px 内边距、深色遮罩，标题一句话说明动作，正文补充后果。
+      危险操作必须二次确认，确认按钮使用 destructive 样式；底部按钮右对齐，取消在左、确认在右。
+    </p>
+    <div class="chips">
+      <span class="chip">variant · confirm / form</span>
+      <span class="chip">tone · default / danger</span>
+      <span class="chip">max-width 480px</span>
+      <span class="chip">padding 24px</span>
+      <span class="chip">radius 10px</span>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2 class="section-title">三个弹窗 · 打开态并排</h2>
+    <p class="section-desc">
+      每个弹窗各自在 320×420 演示框内居中，遮罩只覆盖框内区域。演示框宽度内按容器收敛，组件实际最大宽度为 480px。
+    </p>
+
+    <div class="demo-grid">
+
+      <!-- ① 默认确认 -->
+      <div class="frame-col">
+        <div class="frame">
+          <div class="mock">
+            <p class="crumb">@global / pdf-toolkit</p>
+            <div class="mock-title-row">
+              <h3 class="mock-title">版本 v1.3.2</h3>
+              <span class="badge-green">已发布</span>
+            </div>
+            <p class="mock-meta">发布于 2026-03-18 · 安装量 1,284</p>
+            <div class="tabs">
+              <span class="tab is-active">概览</span>
+              <span class="tab">文件</span>
+              <span class="tab">评价</span>
+            </div>
+            <div class="bar" style="width: 88%"></div>
+            <div class="bar" style="width: 72%"></div>
+            <div class="bar" style="width: 80%"></div>
+            <div class="bar" style="width: 54%"></div>
+          </div>
+
+          <div class="scrim"></div>
+
+          <div class="dialog-layer">
+            <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-undo-title" aria-describedby="dlg-undo-desc">
+              <button class="dialog-close" type="button" aria-label="关闭弹窗">
+                <span class="sh-i i12-x" aria-hidden="true"></span>
+              </button>
+              <h3 class="dialog-title" id="dlg-undo-title">撤回审核</h3>
+              <p class="dialog-desc" id="dlg-undo-desc">
+                撤回后，版本 v1.3.2 将退回「已上传」状态，对应的评审任务会被删除。你可以修改文件后重新提交审核。
+              </p>
+              <div class="dialog-foot">
+                <button class="btn btn-outline" type="button">取消</button>
+                <button class="btn btn-primary" type="button">撤回审核</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption"><strong>confirm / default</strong> · 撤回审核，主按钮保持近黑</p>
+      </div>
+
+      <!-- ② 危险确认 -->
+      <div class="frame-col">
+        <div class="frame">
+          <div class="mock">
+            <p class="crumb">@global / pdf-toolkit</p>
+            <div class="mock-title-row">
+              <h3 class="mock-title">版本 v1.3.2</h3>
+              <span class="badge-green">已发布</span>
+            </div>
+            <p class="mock-meta">发布于 2026-03-18 · 安装量 1,284</p>
+            <div class="tabs">
+              <span class="tab is-active">概览</span>
+              <span class="tab">文件</span>
+              <span class="tab">评价</span>
+            </div>
+            <div class="bar" style="width: 88%"></div>
+            <div class="bar" style="width: 72%"></div>
+            <div class="bar" style="width: 80%"></div>
+            <div class="bar" style="width: 54%"></div>
+          </div>
+
+          <div class="scrim"></div>
+
+          <div class="dialog-layer">
+            <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-delete-title" aria-describedby="dlg-delete-desc">
+              <button class="dialog-close" type="button" aria-label="关闭弹窗">
+                <span class="sh-i i12-x" aria-hidden="true"></span>
+              </button>
+              <h3 class="dialog-title" id="dlg-delete-title">删除版本 v1.3.2</h3>
+              <p class="dialog-desc" id="dlg-delete-desc">
+                该版本的安装包、扫描报告与下载记录会一并移除，已安装的用户将无法再次下载。
+              </p>
+              <p class="danger-note">
+                <span class="sh-i i12-alert-triangle" aria-hidden="true"></span>
+                此操作不可逆，删除后无法恢复。
+              </p>
+              <div class="dialog-foot">
+                <button class="btn btn-outline" type="button">取消</button>
+                <button class="btn btn-destructive" type="button">删除版本</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption"><strong>confirm / danger</strong> · 删除版本，正文说明不可逆</p>
+      </div>
+
+      <!-- ③ 表单 -->
+      <div class="frame-col">
+        <div class="frame">
+          <div class="mock">
+            <p class="crumb">@global / pdf-toolkit</p>
+            <div class="mock-title-row">
+              <h3 class="mock-title">版本 v1.3.2</h3>
+              <span class="badge-green">已发布</span>
+            </div>
+            <p class="mock-meta">发布于 2026-03-18 · 安装量 1,284</p>
+            <div class="tabs">
+              <span class="tab is-active">概览</span>
+              <span class="tab">文件</span>
+              <span class="tab">评价</span>
+            </div>
+            <div class="bar" style="width: 88%"></div>
+            <div class="bar" style="width: 72%"></div>
+            <div class="bar" style="width: 80%"></div>
+            <div class="bar" style="width: 54%"></div>
+          </div>
+
+          <div class="scrim"></div>
+
+          <div class="dialog-layer">
+            <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-report-title" aria-describedby="dlg-report-desc">
+              <button class="dialog-close" type="button" aria-label="关闭弹窗">
+                <span class="sh-i i12-x" aria-hidden="true"></span>
+              </button>
+              <h3 class="dialog-title" id="dlg-report-title">举报技能</h3>
+              <p class="dialog-desc" id="dlg-report-desc">
+                描述你遇到的问题，治理团队会在 1 个工作日内核查。
+              </p>
+
+              <div class="field">
+                <label class="field-label" for="report-reason">详细说明<span class="req">*</span></label>
+                <textarea class="textarea" id="report-reason" rows="4" maxlength="200" readonly aria-describedby="report-count">该技能的安装脚本会在未经确认的情况下写入用户目录，建议核查。</textarea>
+                <div class="field-foot">
+                  <span class="field-help">请补充复现步骤，便于定位问题。</span>
+                  <span class="field-count" id="report-count">30 / 200</span>
+                </div>
+              </div>
+
+              <div class="dialog-foot">
+                <button class="btn btn-outline" type="button">取消</button>
+                <button class="btn btn-primary" type="button">提交举报</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p class="caption"><strong>form</strong> · 举报技能，含 textarea 与字数提示</p>
+      </div>
+
+    </div>
+
+    <p class="foot-note">
+      标题 18px / 600；正文 14px <code>--sh-text-tertiary</code>；底部按钮右对齐、间距 8px；关闭入口为右上角图标或「取消」。
+    </p>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">状态补充</h2>
+    <p class="section-desc">打开态已在上方展示，其余状态按下表实现。</p>
+    <div class="state-strip">
+      <span class="chip">open · 当前展示</span>
+      <span class="chip">closing · 遮罩 150ms 淡出</span>
+      <span class="chip">loading-confirm · 确认按钮禁用</span>
+      <span class="state-note">确认请求进行中时，主按钮降为 50% 不透明度并改为「处理中…」，遮罩与取消按钮同时锁定。</span>
+      <button class="btn btn-primary" type="button" disabled>处理中…</button>
+    </div>
+  </section>
+
+  <footer class="page-foot">
+    演示框内的遮罩仅覆盖 320×420 区域，用于呈现弹窗与背景的层级关系；实际使用时为全屏遮罩。
+  </footer>
+</main>
+<footer style="margin-top:var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

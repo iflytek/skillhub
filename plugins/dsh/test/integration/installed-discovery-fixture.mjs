@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 // Host observer: install through the plugin and verify same-session native discovery. No model invocation.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -25,7 +26,7 @@ async function run(ctx,root,signal){
  const resolved=await ctx.sessionController.resolveAgent(created.sessionId);if('error' in resolved)throw resolved.error;
  const options={scope:resolved.agent,cwd:project,signal};
  const initial=await ctx.skills.snapshot(options);assert(initial.complete);assert(!initial.skills.some(s=>s.name==='document-helper'));
- const found=await ctx.tools.execute({callId:randomUUID(),name:'astron_skillhub_search',arguments:{q:'document'},agent:resolved.agent,signal});assert.equal(found.isError,false);
+ const found=await executeFixtureTool(ctx, root, {callId:randomUUID(),name:'astron_skillhub_search',arguments:{q:'document'},agent:resolved.agent,signal});assert.equal(found.isError,false);
  const invoke=(method,args)=>ctx.typertGateway.invoke({ peer: ctx.get('connection')?.browserPeer ?? ctx.get('connection')?.operator,namespace:'skillhub',method,args:{agentId:created.sessionId,...args},signal});
  const detail=await invoke('openConversationDetail',{selectionRef:found.value.items[0].selectionRef});
  const targets=await invoke('listInstallTargets',{detailToken:detail.detailToken});

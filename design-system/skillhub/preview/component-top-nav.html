@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TopNav 顶栏导航 · SkillHub 设计系统</title>
+<link rel="icon" href="data:," />
+<link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+<link rel="stylesheet" href="../components.runtime.css" />
+<style>
+  /* @component-css-start */
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+  .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+  .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+  .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+  .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); }
+  .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); text-transform: none; letter-spacing: var(--sh-tracking-body); color: var(--sh-text-placeholder); }
+  .state { display: flex; flex-direction: column; gap: var(--sh-space-2); }
+  .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-placeholder); }
+
+  /* TopNav：48px 单行骨架；不内置 logo 图片与业务导航 */
+  .top-nav { display: flex; align-items: center; gap: var(--sh-space-4); min-height: var(--sh-space-12); padding: 0 var(--sh-space-6); border-bottom: var(--sh-size-border-width) solid var(--sh-border-default); background: var(--sh-bg-raised); color: var(--sh-text-primary); }
+  .top-nav-brand { display: flex; align-items: center; gap: var(--sh-space-2); min-width: 0; font-size: var(--sh-text-body-sm); line-height: var(--sh-text-body-sm-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+  .top-nav-mark { display: grid; place-items: center; width: var(--sh-space-8); height: var(--sh-space-8); flex: none; border-radius: var(--sh-radius-sm); background: var(--sh-bg-sunken); color: var(--sh-text-secondary); font-family: var(--sh-font-mono); font-size: var(--sh-text-caption-xs); font-weight: var(--sh-weight-regular); }
+  .top-nav-links { display: flex; align-items: center; gap: var(--sh-space-4); min-width: 0; }
+  .top-nav-link { display: inline-flex; appearance: none; border: 0; background: transparent; box-sizing: border-box;
+    margin: 0; font-family: var(--sh-font-sans); text-align: start; align-items: center; height: var(--sh-space-8); padding: 0 var(--sh-space-2); border-radius: var(--sh-radius-sm); color: var(--sh-text-secondary); font-size: var(--sh-text-body-sm); line-height: var(--sh-text-body-sm-lh); text-decoration: none; white-space: nowrap; }
+  .top-nav-link:hover { background: var(--sh-bg-sunken); color: var(--sh-text-primary); }
+  .top-nav-link.is-active { color: var(--sh-text-primary); font-weight: var(--sh-weight-medium); }
+  .top-nav-link:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+  .top-nav-spacer { flex: 1 1 auto; }
+  .top-nav-actions { display: flex; align-items: center; gap: var(--sh-space-2); }
+  @media (max-width: 768px) {
+    .top-nav { padding: 0 var(--sh-space-4); gap: var(--sh-space-2); }
+    .top-nav-links { display: none; }
+  }
+
+  .stage { padding: var(--sh-space-3); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); background: var(--sh-bg-sunken); }
+  .stage .top-nav { border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-md); }
+  .note { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-secondary); }
+  /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+</style>
+</head>
+<body data-component="top-nav">
+  <header>
+    <h1 class="title">TopNav 顶栏导航</h1>
+    <p class="lede">全站顶栏：品牌位、主导航、右侧动作三槽。48px 高，单行，不换行。</p>
+  </header>
+
+  <div class="block">
+    <h2 class="block-title">默认 <em>品牌 + 导航 + 动作</em></h2>
+    <div class="state">
+      <span class="state-label">default</span>
+      <div class="stage">
+        <nav class="top-nav" aria-label="全局导航">
+          <div class="top-nav-brand"><span class="top-nav-mark">SH</span><span>SkillHub</span></div>
+          <div class="top-nav-links">
+            <a class="top-nav-link is-active" href="#">技能</a>
+            <a class="top-nav-link" href="#">命名空间</a>
+            <a class="top-nav-link" href="#">审核</a>
+          </div>
+          <span class="top-nav-spacer"></span>
+          <div class="top-nav-actions">
+            <button class="btn btn-sm btn-outline" type="button">发布</button>
+            <span class="avatar avatar-24 avatar-media" aria-hidden="true">A</span>
+          </div>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div class="block">
+    <h2 class="block-title">管理员 <em>更多主导航项 + 搜索</em></h2>
+    <div class="state">
+      <span class="state-label">admin</span>
+      <div class="stage">
+        <nav class="top-nav" aria-label="管理导航">
+          <div class="top-nav-brand"><span class="top-nav-mark">SH</span><span>SkillHub</span></div>
+          <div class="top-nav-links">
+            <a class="top-nav-link" href="#">技能</a>
+            <a class="top-nav-link" href="#">命名空间</a>
+            <a class="top-nav-link is-active" href="#">管理</a>
+            <a class="top-nav-link" href="#">审计</a>
+          </div>
+          <span class="top-nav-spacer"></span>
+          <input class="input" style="width:200px" placeholder="搜索技能" aria-label="搜索">
+          <div class="top-nav-actions"><span class="badge badge-soft">管理员</span></div>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <p class="note">≤768px 隐藏 <code>.top-nav-links</code>，主导航交给产品层菜单；顶栏本身不创建抽屉。</p>
+<footer style="margin-top:var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+</body>
+</html>

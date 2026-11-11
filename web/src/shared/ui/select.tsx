@@ -5,10 +5,10 @@ import { getPortalContainer } from '@/shared/lib/portal-container'
 import { cn } from '@/shared/lib/utils'
 
 export const SELECT_TRIGGER_CLASS_NAME = cn(
-  'flex h-[var(--control-height)] w-full items-center justify-between gap-2 rounded-md border border-border/60 bg-background/40 px-[var(--control-padding-x)] py-1.5 text-sm text-foreground',
-  'ring-offset-background transition-[border-color,box-shadow,background-color] duration-150 ease-out',
-  'hover:border-border focus-visible:outline-none focus-visible:border-ring focus-visible:bg-card focus-visible:ring-4 focus-visible:ring-ring/15',
-  'aria-[invalid=true]:border-destructive aria-[invalid=true]:focus-visible:ring-destructive/20 disabled:cursor-not-allowed disabled:opacity-50',
+  'flex h-[var(--control-height)] w-full items-center justify-between gap-2 rounded-[var(--control-radius)] border border-border bg-background px-[var(--control-padding-x)] py-[var(--control-padding-y)] text-[length:var(--control-font-size)] leading-[var(--control-line-height)] text-foreground',
+  'transition-[border-color,background-color] duration-150 ease-out',
+  'hover:border-border focus:[outline:none] focus:border-ring focus:bg-card',
+  'aria-[invalid=true]:border-destructive aria-[invalid=true]:focus:border-destructive disabled:cursor-not-allowed disabled:opacity-50',
   'data-[placeholder]:text-muted-foreground [&>span]:line-clamp-1'
 )
 
@@ -136,7 +136,7 @@ const SelectLabel = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SelectPrimitive.Label
     ref={ref}
-    className={cn('px-2 py-1.5 text-sm font-semibold text-foreground', className)}
+    className={cn('px-2 py-[var(--control-padding-y)] text-sm font-semibold text-foreground', className)}
     {...props}
   />
 ))

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>CopyButton 复制按钮 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-xl); font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-heading); } .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); } .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sh-space-4) var(--sh-space-6); }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sh-space-4); }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-1_5); } .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); color: var(--sh-text-placeholder); }
+    .line { display: flex; align-items: center; gap: var(--sh-space-3); min-height: var(--sh-size-control-md); }
+
+    .copy-btn { display: inline-flex; appearance: none; box-sizing: border-box; margin: 0;
+    text-align: center; text-decoration: none; align-items: center; justify-content: center; gap: var(--sh-space-1_5); padding: 0 var(--sh-size-badge-padding-inline); border: 0; border-radius: var(--sh-radius-sm); background: transparent; color: var(--sh-text-tertiary); font-family: var(--sh-font-sans); font-size: var(--sh-text-caption-xs); font-weight: var(--sh-weight-medium); cursor: pointer; transition: background-color var(--sh-duration-fast) var(--sh-ease-standard), color var(--sh-duration-fast) var(--sh-ease-standard); }
+    .copy-btn--sm { height: var(--sh-size-control-sm); min-width: var(--sh-size-control-sm); }
+    .copy-btn--md { height: var(--sh-size-control-md); min-width: var(--sh-size-control-md); }
+    .copy-btn:hover { background: var(--sh-accent-base); color: var(--sh-text-primary); }
+    .copy-btn:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+    .copy-btn.is-pressed { background: var(--sh-bg-muted); color: var(--sh-text-primary); transform: scale(.96); }
+    .copy-btn.is-copied { color: var(--sh-text-primary); }
+    .copy-btn.is-error { color: var(--sh-danger-base); }
+    .copy-btn.is-disabled { color: var(--sh-text-disabled); background: var(--sh-bg-muted); border: var(--sh-size-border-width) solid var(--sh-border-default); cursor: not-allowed; }
+    .copy-btn--labeled { padding: 0 var(--sh-space-3) 0 var(--sh-space-2); }
+
+    .copy-glyph { position: relative; display: inline-block; width: var(--sh-icon-14); height: var(--sh-icon-14); flex: none; }
+    .copy-btn--md .copy-glyph { width: var(--sh-icon-16); height: var(--sh-icon-16); }
+    .icon-copy::before, .icon-copy::after { content: ""; position: absolute; width: 70%; height: 78%; border: var(--sh-size-border-width) solid currentColor; border-radius: var(--sh-radius-2xs); }
+    .icon-copy::before { left: 0; bottom: 0; }
+    .icon-copy::after { right: 0; top: 0; }
+    .copy-btn .glyph { font-size: var(--sh-text-sm); line-height: 1; color: currentColor; }
+    .copy-btn--md .glyph { font-size: var(--sh-text-body); }
+    .spinner { box-sizing: border-box; width: var(--sh-icon-14); height: var(--sh-icon-14); border: 2px solid var(--sh-border-default); border-top-color: var(--sh-text-primary); border-radius: var(--sh-radius-full); animation: sh-spin 900ms linear infinite; }
+    .copy-btn--md .spinner { width: var(--sh-icon-16); height: var(--sh-icon-16); }
+    @keyframes sh-spin { to { transform: rotate(360deg); } }
+
+    .loading-chip, .toast { box-sizing: border-box; display: inline-flex; align-items: center; gap: var(--sh-space-1); height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-full); background: var(--sh-bg-raised); color: var(--sh-text-primary); font-size: var(--sh-text-caption-xs); line-height: 1; white-space: nowrap; }
+    /* [hidden] 必须能覆盖 .toast 的 inline-flex，否则页面要写补丁 */
+    .loading-chip[hidden], .toast[hidden] { display: none; }
+    .loading-chip .glyph, .toast .glyph { font-size: var(--sh-text-xs); }
+    .loading-chip--error, .toast--error { color: var(--sh-danger-base); border-color: var(--sh-danger-base); }
+    .loading-chip--success, .toast--success { background: var(--sh-success-weak); border-color: var(--sh-success-border); color: var(--sh-success-on-weak); }
+    .loading-chip--warning, .toast--warning { background: var(--sh-warning-weak); border-color: var(--sh-warning-border); color: var(--sh-warning-on-weak); }
+    .loading-chip--error .glyph, .toast--error .glyph { font-size: var(--sh-text-xs); }
+
+    .code-block { position: relative; padding: var(--sh-space-2_5) calc(var(--sh-space-8) + var(--sh-space-2)) var(--sh-space-2_5) var(--sh-space-3); background: var(--sh-bg-muted); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-sm); }
+    .code-block pre { margin: 0; overflow-x: auto; }
+    .code-block code { font-family: var(--sh-font-mono); font-size: var(--sh-text-caption); line-height: var(--sh-text-mono-lh); color: var(--sh-text-primary); white-space: pre; }
+    .code-block .copy-btn { position: absolute; top: var(--sh-space-2); right: var(--sh-space-2); }
+    .hint { font-size: var(--sh-text-xs); line-height: var(--sh-text-xs-lh); color: var(--sh-text-secondary); }
+
+    .notes { margin: 0; padding: var(--sh-space-4); list-style: none; display: flex; flex-direction: column; gap: var(--sh-space-2); border: 1px dashed var(--sh-border-default); border-radius: var(--sh-radius-md); background: var(--sh-bg-muted); font-size: var(--sh-text-xs); line-height: 1.7; color: var(--sh-text-secondary); }
+    .notes li { display: flex; gap: var(--sh-space-2); }
+    .notes b { font-family: var(--sh-font-mono); font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+
+    @media (prefers-reduced-motion: reduce) { .copy-btn { transition: none; } .spinner { animation: none; } }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body data-component="copy-button">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">CopyButton 复制按钮</h1>
+    <p class="lede">28/32px 幽灵图标按钮，复制成功后切换为对勾并提示「已复制」，失败时明确报错。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">状态 · 七种 <em>idle / hover / pressed / copied / error / disabled / loading</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">idle · 待复制</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm" type="button" title="复制命令" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">hover · 悬停</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm" type="button" title="复制命令" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">pressed · 按下</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm is-pressed" type="button" title="复制命令" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">loading · 复制中</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm is-disabled" type="button" disabled aria-label="正在复制" data-component="copy-button">
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+          <span class="loading-chip" aria-live="polite"><span class="spinner" aria-hidden="true"></span>复制中</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">copied · 已复制</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm is-copied" type="button" title="已复制" aria-label="已复制" data-component="copy-button">
+            <span class="glyph" aria-hidden="true">✓</span>
+          </button>
+          <span class="loading-chip" aria-live="polite"><span class="glyph" aria-hidden="true">✓</span>已复制</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">error · 复制失败</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm is-error" type="button" title="复制失败，重试" aria-label="复制失败，重试" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+          </button>
+          <span class="loading-chip loading-chip--error" aria-live="polite"><span class="glyph" aria-hidden="true">!</span>复制失败</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">success · 安装成功</span>
+        <div class="line">
+          <span class="loading-chip loading-chip--success" aria-live="polite"><span class="glyph" aria-hidden="true">✓</span>已安装到 Agent</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">warning · 需要审核</span>
+        <div class="line">
+          <span class="loading-chip loading-chip--warning" aria-live="polite"><span class="glyph" aria-hidden="true">!</span>已提交，等待 OWNER 审核</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">disabled · 不可用</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm is-disabled" type="button" disabled aria-label="暂时无法复制" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">loading · 写入中</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm is-disabled" type="button" disabled aria-label="正在复制" data-component="copy-button">
+            <span class="spinner" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">尺寸与形态 <em>sm 28px / md 32px · 仅图标 / 图标 + 文字</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">sm · 28px · 仅图标</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm" type="button" title="复制命令" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+          </button>
+          <button class="copy-btn copy-btn--sm" type="button" title="复制命令" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">md · 32px · 仅图标</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--md" type="button" title="复制命令" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+          </button>
+          <button class="copy-btn copy-btn--md" type="button" title="复制命令" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">sm · 28px · 图标 + 文字</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--sm copy-btn--labeled" type="button" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+            <span>复制</span>
+          </button>
+          <button class="copy-btn copy-btn--sm copy-btn--labeled" type="button" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+            <span>复制</span>
+          </button>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">md · 32px · 图标 + 文字</span>
+        <div class="line">
+          <button class="copy-btn copy-btn--md copy-btn--labeled" type="button" aria-label="复制命令" data-component="copy-button">
+            <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+            <span>复制命令</span>
+          </button>
+          <button class="copy-btn copy-btn--md copy-btn--labeled is-copied" type="button" aria-label="已复制" data-component="copy-button">
+            <span class="glyph" aria-hidden="true">✓</span>
+            <span>已复制</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">代码块组合 <em>右对齐 · 紧邻复制目标</em></h2>
+    <div class="state">
+      <span class="state-label">composition · 代码块右上角</span>
+      <div class="code-block">
+        <pre><code>clawhub install @global/chinese-office-assistant</code></pre>
+        <button class="copy-btn copy-btn--sm" type="button" title="复制命令" aria-label="复制命令" data-component="copy-button">
+          <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
+    <div class="row">
+      <span class="state-label">toolbar · 图标 + 文字</span>
+      <button class="copy-btn copy-btn--sm copy-btn--labeled" type="button" aria-label="复制安装命令" data-component="copy-button">
+        <span class="copy-glyph icon-copy" aria-hidden="true"></span>
+        <span>复制安装命令</span>
+      </button>
+      <span class="hint">按钮固定在代码块右上角，距边 8px；工具栏场景可用图标 + 文字形态。</span>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">禁忌 <em>静态预览的三条红线</em></h2>
+    <ul class="notes">
+      <li><b>01</b><span>不要做成带文字的大号实心按钮，复制入口保持 28/32px ghost 图标形态，避免抢夺主操作。</span></li>
+      <li><b>02</b><span>复制成功后不要给图标上彩色，只把图标切换为对勾并保持前景色，1.5s 后恢复。</span></li>
+      <li><b>03</b><span>复制失败不要静默，必须显示「复制失败」提示；图标不能无反馈地停留在 idle 状态。</span></li>
+    </ul>
+  </section>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

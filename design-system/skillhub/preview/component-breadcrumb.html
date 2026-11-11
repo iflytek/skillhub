@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Breadcrumb 面包屑 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    .preview-shell { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-xl); font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .row { display: flex; flex-wrap: wrap; gap: var(--sh-space-4) var(--sh-space-8); align-items: flex-start; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); align-items: flex-start; }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); color: var(--sh-text-placeholder); }
+    .note { margin: 0; font-size: var(--sh-text-xs); line-height: var(--sh-text-xs-lh); color: var(--sh-text-secondary); }
+
+    .crumb-nav { display: block; }
+    .crumb-list { display: flex; flex-wrap: wrap; align-items: center; gap: calc(var(--sh-space-2) * 0.75); margin: 0; padding: 0; list-style: none; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); }
+    .crumb-link { appearance: none; border: 0; background: transparent; box-sizing: border-box; margin: 0; padding: 0; font: inherit; text-align: start; color: var(--sh-text-secondary); text-decoration: none; border-radius: var(--sh-radius-xs); transition: color var(--sh-duration-fast) var(--sh-ease-standard); }
+    .crumb-link:hover { color: var(--sh-text-primary); }
+    .crumb-link:focus-visible { color: var(--sh-text-primary); outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+    .crumb-current { color: var(--sh-text-primary); font-weight: var(--sh-weight-semibold); }
+    .crumb-collapse { color: var(--sh-text-placeholder); letter-spacing: .06em; }
+    .crumb-sep { color: var(--sh-text-placeholder); font-size: var(--sh-text-sm); line-height: 1; }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body class="preview-shell" data-component="breadcrumb">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Breadcrumb 面包屑</h1>
+    <p class="lede">文字层级导航，13px 辅助色 + 文字分隔符，末级加重；用于详情页与设置子页，不占用首屏动作空间。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">层级深度 <em>depth · 2 级 / 3 级 / 4 级</em></h2>
+    <div class="row">
+      <div class="state">
+        <nav class="crumb-nav" aria-label="面包屑" data-component="breadcrumb">
+          <ol class="crumb-list">
+            <li><a class="crumb-link" href="#">技能市场</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">/</span></li>
+            <li><span class="crumb-current" aria-current="page">中文办公助手</span></li>
+          </ol>
+        </nav>
+        <span class="state-label">2 级 · 技能市场 / 当前技能</span>
+      </div>
+      <div class="state">
+        <nav class="crumb-nav" aria-label="面包屑" data-component="breadcrumb">
+          <ol class="crumb-list">
+            <li><a class="crumb-link" href="#">技能市场</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">›</span></li>
+            <li><a class="crumb-link" href="#">@global</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">›</span></li>
+            <li><span class="crumb-current" aria-current="page">中文办公助手</span></li>
+          </ol>
+        </nav>
+        <span class="state-label">3 级 · 技能市场 › @global › 当前技能</span>
+      </div>
+      <div class="state">
+        <nav class="crumb-nav" aria-label="面包屑" data-component="breadcrumb">
+          <ol class="crumb-list">
+            <li><a class="crumb-link" href="#">技能市场</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">›</span></li>
+            <li><a class="crumb-link" href="#">团队空间</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">›</span></li>
+            <li><a class="crumb-link" href="#">数据处理</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">›</span></li>
+            <li><span class="crumb-current" aria-current="page">中文办公助手</span></li>
+          </ol>
+        </nav>
+        <span class="state-label">4 级 · 最深层级，末级不可点击</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">状态 <em>state · idle / hover / current / focus-visible</em></h2>
+    <div class="row">
+      <div class="state">
+        <nav class="crumb-nav" aria-label="面包屑" data-component="breadcrumb">
+          <ol class="crumb-list">
+            <li><a class="crumb-link" href="#">技能市场</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">/</span></li>
+            <li><a class="crumb-link" href="#">@global</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">/</span></li>
+            <li><span class="crumb-current" aria-current="page">中文办公助手</span></li>
+          </ol>
+        </nav>
+        <span class="state-label">idle · 历史级使用辅助色文字</span>
+      </div>
+      <div class="state">
+        <nav class="crumb-nav" aria-label="面包屑" data-component="breadcrumb">
+          <ol class="crumb-list">
+            <li><a class="crumb-link" href="#">技能市场</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">/</span></li>
+            <li><a class="crumb-link" href="#">@global</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">/</span></li>
+            <li><span class="crumb-current" aria-current="page">中文办公助手</span></li>
+          </ol>
+        </nav>
+        <span class="state-label">hover · 历史级文字转为前景色</span>
+      </div>
+      <div class="state">
+        <nav class="crumb-nav" aria-label="面包屑" data-component="breadcrumb">
+          <ol class="crumb-list">
+            <li><a class="crumb-link" href="#">技能市场</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">/</span></li>
+            <li><a class="crumb-link" href="#">@global</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">/</span></li>
+            <li><span class="crumb-current" aria-current="page">中文办公助手</span></li>
+          </ol>
+        </nav>
+        <span class="state-label">current · aria-current="page"，600 字重</span>
+      </div>
+      <div class="state">
+        <nav class="crumb-nav" aria-label="面包屑" data-component="breadcrumb">
+          <ol class="crumb-list">
+            <li><a class="crumb-link" href="#">技能市场</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">/</span></li>
+            <li><a class="crumb-link" href="#">@global</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">/</span></li>
+            <li><span class="crumb-current" aria-current="page">中文办公助手</span></li>
+          </ol>
+        </nav>
+        <span class="state-label">focus-visible · 2px 焦点环，偏移 2px</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">折叠中间项 <em>collapsed-middle · 层级过深，首尾保留</em></h2>
+    <div class="row">
+      <div class="state">
+        <nav class="crumb-nav" aria-label="面包屑" data-component="breadcrumb">
+          <ol class="crumb-list">
+            <li><a class="crumb-link" href="#">技能市场</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">›</span></li>
+            <li><span class="crumb-collapse" aria-label="省略的中间层级">…</span></li>
+            <li><span class="crumb-sep" aria-hidden="true">›</span></li>
+            <li><a class="crumb-link" href="#">@global</a></li>
+            <li><span class="crumb-sep" aria-hidden="true">›</span></li>
+            <li><span class="crumb-current" aria-current="page">中文办公助手</span></li>
+          </ol>
+        </nav>
+        <span class="state-label">collapsed-middle · 中间项折叠为「…」，不可点击</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">仅当前级 <em>current-only · 移动端最小形态</em></h2>
+    <div class="row">
+      <div class="state">
+        <nav class="crumb-nav" aria-label="面包屑" data-component="breadcrumb">
+          <ol class="crumb-list">
+            <li><span class="crumb-current" aria-current="page">中文办公助手</span></li>
+          </ol>
+        </nav>
+        <span class="state-label">current-only · 窄屏仅保留当前页</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">面包屑不得做成胶囊按钮；不得给整条导航加背景色条；超过 4 级必须折叠中间项，末级不可点击。</p>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

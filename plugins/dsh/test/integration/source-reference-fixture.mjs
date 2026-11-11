@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 import { randomUUID } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -22,7 +23,7 @@ async function run(ctx,root,signal) {
  const toolSession={scope:resolved.agent};
  const toolCallId='history-'+randomUUID();
  const toolArguments={q:'document'};
- const toolResult=await ctx.tools.execute({callId:toolCallId,name:'astron_skillhub_search',arguments:toolArguments,agent:resolved.agent,signal});
+ const toolResult=await executeFixtureTool(ctx, root, {callId:toolCallId,name:'astron_skillhub_search',arguments:toolArguments,agent:resolved.agent,signal});
  assert.equal(toolResult.isError,false);
  assert.equal(toolResult.value.items.length,1);
  let searchFixtureTitle;

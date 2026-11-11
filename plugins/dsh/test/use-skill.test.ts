@@ -62,6 +62,23 @@ for (const reason of ['installation-unverified', 'operation-pending', 'shared-in
 for (const phase of ['claimed', 'adjudicating', 'submitting'] as const) {
   test(`busy ${phase} refuses before remote verification`, async () => { const f = fixture(); f.phase(phase); f.prepare(() => { throw new Error('must not call'); }); await expect(f.use()).rejects.toThrow('命令'); expect(f.counts().inserted).toBe(0); });
 }
+test('DSH 0.2.2 sending input refuses in-conversation skill use before preparation and keeps the entire draft', async () => {
+  let preparations = 0, creations = 0;
+  const f = fixture({ newConversation: async () => { creations++; throw new Error('must not create'); } });
+  // Official 0.2.2 wire state; the retained development SDK predates this union member.
+  f.phase('sending' as InputState['phase']);
+  const sending = f.state();
+  f.prepare(async () => { preparations++; throw new Error('must not prepare'); });
+  try {
+    await expect(f.use()).rejects.toThrow('命令');
+    expect(preparations).toBe(0); expect(creations).toBe(0);
+    expect(f.state()).toBe(sending); expect(f.state().draft).toBe(f.original.draft);
+    expect(f.state().draftRev).toBe(f.original.draftRev);
+    expect(f.state().occurrences).toBe(f.original.occurrences);
+    expect(f.state().attachmentIds).toBe(f.original.attachmentIds);
+    expect(f.spans).toEqual([]); expect(f.counts()).toEqual({ inserted: 0, revealed: 0, focused: 0 });
+  } finally { f.controller.dispose(); }
+});
 for (const change of ['session/cwd/binding', 'source-ABA', 'unmount', 'dispose'] as const) {
   test(`${change} while preparing never writes a draft`, async () => {
     const f = fixture(); const gate = deferred<void>();

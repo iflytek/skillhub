@@ -1,0 +1,667 @@
+/* Source: structured-spec */
+/* Source paths: web/src/index.css, web/tailwind.config.ts */
+/* Token groups follow the builtin-library naming convention (bg / text / border / primary / accent / status / semantic scales), brand-isolated by the --sh- prefix. */
+
+/* @group-priority: bg, text, border, primary, accent, interaction, tone, status, lifecycle, verdict, success, warning, danger, info, chart, code */
+/* @max-group-size: 16 */
+
+:root {
+  /* bg */
+  --sh-bg-page: #ffffff;
+  --sh-bg-raised: #ffffff;
+  --sh-bg-overlay: #ffffff;
+  --sh-bg-sunken: #f6f6f7;
+  --sh-bg-muted: #efeff0;
+  --sh-bg-inverse: #17191d;
+  --sh-bg-scrim: #000000;
+  --sh-bg-glass: #ffffff;
+  /* switch off-state track：非文本 3:1 对比，值别名到 border-contrast（亮暗均一致） */
+  --sh-switch-track: var(--sh-border-contrast);
+
+  /* text */
+  --sh-text-primary: #171717;
+  --sh-text-secondary: #575757;
+  --sh-text-tertiary: #737373;
+  --sh-text-placeholder: #767676;
+  --sh-text-disabled: #949494;
+  --sh-text-inverse: #ffffff;
+  --sh-text-link: #156f99;
+
+  /* border */
+  --sh-border-subtle: #f0f0f0;
+  --sh-border-default: #e5e5e5;
+  --sh-border-strong: #d4d4d4;
+  --sh-border-contrast: #8f8f8f;
+  --sh-border-focus: #171717;
+  --sh-border-inverse: #ffffff;
+
+  /* primary */
+  --sh-primary-base: #212121;
+  --sh-primary-hover: #3a3a3a;
+  --sh-primary-active: #151515;
+  --sh-primary-soft: #f2f2f2;
+  --sh-primary-foreground: #ffffff;
+  --sh-primary-disabled: var(--sh-border-strong);
+
+  /* accent */
+  --sh-accent-soft: #f4f8fd;
+  --sh-accent-base: #eef4fc;
+  --sh-accent-hover: #e2edfa;
+  --sh-accent-border: #d1def0;
+  --sh-accent-foreground: #171717;
+
+  /* interaction — 统一的 hover / pressed / selected 反馈（别名，跟随亮暗自动解析） */
+  --sh-interaction-hover-bg: var(--sh-accent-base);
+  --sh-interaction-hover-border: var(--sh-accent-border);
+  --sh-interaction-pressed-bg: var(--sh-accent-hover);
+  --sh-interaction-selected-bg: var(--sh-primary-soft);
+
+  /* tone — 徽标的 5 个色调（weak / fg / hover，全部别名到既有语义色；8 状态与 6 结论收敛到 5 档） */
+  --sh-tone-neutral-weak: var(--sh-bg-muted);
+  --sh-tone-neutral-fg: var(--sh-text-secondary);
+  --sh-tone-neutral-hover: var(--sh-border-default);
+  --sh-tone-success-weak: var(--sh-success-weak);
+  --sh-tone-success-fg: var(--sh-success-on-weak);
+  --sh-tone-success-hover: var(--sh-success-border);
+  --sh-tone-warning-weak: var(--sh-warning-weak);
+  --sh-tone-warning-fg: var(--sh-warning-on-weak);
+  --sh-tone-warning-hover: var(--sh-warning-border);
+  --sh-tone-danger-weak: var(--sh-danger-weak);
+  --sh-tone-danger-fg: var(--sh-danger-on-weak);
+  --sh-tone-danger-hover: var(--sh-danger-border);
+  --sh-tone-info-weak: var(--sh-info-weak);
+  --sh-tone-info-fg: var(--sh-info-on-weak);
+  --sh-tone-info-hover: var(--sh-info-border);
+
+  /* status — 唯一的状态调色板（4 组 base / weak；值绑定 success / warning / danger） */
+  --sh-status-published: var(--sh-success-base);
+  --sh-status-published-weak: var(--sh-success-weak);
+  --sh-status-review: var(--sh-warning-base);
+  --sh-status-review-weak: var(--sh-warning-weak);
+  --sh-status-archived: #656d79;
+  --sh-status-archived-weak: #f1f2f4;
+  --sh-status-rejected: var(--sh-danger-base);
+  --sh-status-rejected-weak: var(--sh-danger-weak);
+
+  /* lifecycle — 版本生命周期 8 状态的域词汇别名；不再持有独立颜色，全部映射到 status / info / text */
+  --sh-lifecycle-draft: var(--sh-status-archived);
+  --sh-lifecycle-draft-weak: var(--sh-status-archived-weak);
+  --sh-lifecycle-scanning: var(--sh-info-base);
+  --sh-lifecycle-scanning-weak: var(--sh-info-weak);
+  --sh-lifecycle-scan-failed: var(--sh-status-rejected);
+  --sh-lifecycle-scan-failed-weak: var(--sh-status-rejected-weak);
+  --sh-lifecycle-uploaded: var(--sh-text-secondary);
+  --sh-lifecycle-uploaded-weak: var(--sh-status-archived-weak);
+  --sh-lifecycle-pending-review: var(--sh-status-review);
+  --sh-lifecycle-pending-review-weak: var(--sh-status-review-weak);
+  --sh-lifecycle-published: var(--sh-status-published);
+  --sh-lifecycle-published-weak: var(--sh-status-published-weak);
+  --sh-lifecycle-rejected: var(--sh-status-rejected);
+  --sh-lifecycle-rejected-weak: var(--sh-status-rejected-weak);
+  --sh-lifecycle-yanked: var(--sh-text-primary);
+  --sh-lifecycle-yanked-weak: var(--sh-bg-muted);
+
+  /* verdict — 安全扫描 6 结论的域词汇别名；映射到 status / warning / info / text */
+  --sh-verdict-scanning: var(--sh-info-base);
+  --sh-verdict-scanning-weak: var(--sh-info-weak);
+  --sh-verdict-scan-failed: var(--sh-status-archived);
+  --sh-verdict-scan-failed-weak: var(--sh-status-archived-weak);
+  --sh-verdict-safe: var(--sh-status-published);
+  --sh-verdict-safe-weak: var(--sh-status-published-weak);
+  --sh-verdict-suspicious: var(--sh-warning-base);
+  --sh-verdict-suspicious-weak: var(--sh-warning-weak);
+  --sh-verdict-dangerous: var(--sh-status-rejected);
+  --sh-verdict-dangerous-weak: var(--sh-status-rejected-weak);
+  --sh-verdict-blocked: var(--sh-text-primary);
+  --sh-verdict-blocked-weak: var(--sh-bg-muted);
+
+  /* success */
+  --sh-success-weak: #e8f5ee;
+  --sh-success-base: #1f7a4d;
+  --sh-success-hover: #186a42;
+  --sh-success-on-weak: #135c3a;
+  --sh-success-border: #a7d9bf;
+
+  /* warning */
+  --sh-warning-weak: #fdf3e0;
+  --sh-warning-base: #9a6a00;
+  --sh-warning-hover: #855a00;
+  --sh-warning-on-weak: #7a4f00;
+  --sh-warning-border: #e8c98f;
+
+  /* danger */
+  --sh-danger-weak: #fdeceb;
+  --sh-danger-base: #b42318;
+  --sh-danger-hover: #97190f;
+  --sh-danger-on-weak: #8f1c12;
+  --sh-danger-border: #eeb4ae;
+  --sh-danger-foreground: #ffffff;
+
+  /* info */
+  --sh-info-weak: #e8f2fb;
+  --sh-info-base: #14618f;
+  --sh-info-hover: #0f5279;
+  --sh-info-on-weak: #104d72;
+  --sh-info-border: #a9cfe4;
+
+  /* chart — 数据可视化预留（库内暂无图表组件，保留供产品图表接入；值绑定 core scale） */
+  --sh-chart-1: var(--sh-primary-base);
+  --sh-chart-2: var(--sh-text-tertiary);
+  --sh-chart-3: #a3a3a3;
+  --sh-chart-4: var(--sh-border-strong);
+
+  /* viz — 图表辅助线（同上，保留理由：产品图表接入承诺） */
+  --sh-viz-accent: var(--sh-text-link);
+  --sh-viz-grid: var(--sh-border-default);
+  --sh-viz-axis: var(--sh-text-tertiary);
+
+  /* code */
+  --sh-code-bg: #1a202c;
+  --sh-code-fg: #e5e7eb;
+  --sh-code-keyword: #9cdcfe;
+  --sh-code-string: #ce9178;
+  --sh-code-number: #b5cea8;
+  --sh-code-comment: #6a9955;
+  --sh-code-tag: #d7ba7d;
+
+  /* typography */
+  --sh-font-sans: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sh-font-heading: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --sh-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Monaco, Menlo, Consolas, monospace;
+  --sh-text-xs: 0.75rem;
+  --sh-text-xs-lh: 1rem;
+  --sh-text-sm: 0.875rem;
+  --sh-text-sm-lh: 1.25rem;
+  --sh-text-base: 1rem;
+  --sh-text-base-lh: 1.5rem;
+  --sh-text-lg: 1.125rem;
+  --sh-text-lg-lh: 1.75rem;
+  --sh-text-xl: 1.25rem;
+  --sh-text-xl-lh: 1.75rem;
+  --sh-text-2xl: 1.5rem;
+  --sh-text-2xl-lh: 2rem;
+  --sh-text-3xl: 1.875rem;
+  --sh-text-3xl-lh: 2.25rem;
+  --sh-text-4xl: 2.25rem;
+  --sh-text-4xl-lh: 2.5rem;
+
+  /* typography — 扩展字阶（display / h1–h6 / body / caption / mono 的完整阶梯） */
+  --sh-text-display-lg: 3.5rem;
+  --sh-text-display-lg-lh: 3.625rem;
+  --sh-text-display: 2.75rem;
+  --sh-text-display-lh: 2.875rem;
+  --sh-text-h1: 2.125rem;
+  --sh-text-h1-lh: 2.375rem;
+  --sh-text-h2: 1.75rem;
+  --sh-text-h2-lh: 2.125rem;
+  --sh-text-h3: 1.5rem;
+  --sh-text-h3-lh: 1.875rem;
+  --sh-text-h4: 1.25rem;
+  --sh-text-h4-lh: 1.625rem;
+  --sh-text-h5: 1.125rem;
+  --sh-text-h5-lh: 1.5rem;
+  --sh-text-h6: 1rem;
+  --sh-text-h6-lh: 1.4375rem;
+  --sh-text-body-lg: 1.0625rem;
+  --sh-text-body-lg-lh: 1.75rem;
+  --sh-text-body: 0.9375rem;
+  --sh-text-body-lh: 1.5rem;
+  --sh-text-body-sm: 0.875rem;
+  --sh-text-body-sm-lh: 1.3125rem;
+  --sh-text-caption: 0.8125rem;
+  --sh-text-caption-lh: 1.1875rem;
+  --sh-text-caption-xs: 0.75rem;
+  --sh-text-caption-xs-lh: 1rem;
+  --sh-text-mono: 0.875rem;
+  --sh-text-mono-lh: 1.3125rem;
+  --sh-text-mono-sm: 0.8125rem;
+  --sh-text-mono-sm-lh: 1.1875rem;
+
+  --sh-weight-regular: 400;
+  --sh-weight-medium: 500;
+  --sh-weight-semibold: 600;
+  --sh-weight-bold: 700;
+  --sh-tracking-display: -0.04em;
+  --sh-tracking-heading: -0.02em;
+  --sh-tracking-h6: -0.005em;
+  --sh-tracking-body: 0;
+  --sh-tracking-caption: 0.01em;
+  --sh-tracking-code: 0;
+
+  /* spacing */
+  --sh-space-0_5: 2px;
+  --sh-space-1: 4px;
+  --sh-space-1_5: 6px;
+  --sh-space-2: 8px;
+  --sh-space-2_5: 10px;
+  --sh-space-3: 12px;
+  --sh-space-3_5: 14px;
+  --sh-space-4: 16px;
+  --sh-space-5: 20px;
+  --sh-space-6: 24px;
+  --sh-space-8: 32px;
+  --sh-space-10: 40px;
+  --sh-space-12: 48px;
+  --sh-space-16: 64px;
+  --sh-space-card-padding: 20px;
+  --sh-space-gap-column: 32px;
+
+  /* radius */
+  --sh-radius-2xs: 4px;
+  --sh-radius-xs: 6px;
+  --sh-radius-sm: 8px;
+  --sh-radius-md: 10px;
+  --sh-radius-lg: 12px;
+  --sh-radius-xl: 16px;
+  --sh-radius-2xl: 20px;
+  --sh-radius-full: 9999px;
+
+  /* shadow：亮暗共用一套结构，暗色由 .dark 覆盖 plain --shadow-* */
+  --shadow-card: 0 0 0 1px rgb(0 0 0 / 0.03), 0 1px 3px 0 rgb(0 0 0 / 0.04);
+  --shadow-card-hover: 0 0 0 1px rgb(0 0 0 / 0.04), 0 4px 12px 0 rgb(0 0 0 / 0.08);
+  --shadow-btn: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+  --shadow-dialog: 0 0 0 1px rgb(0 0 0 / 0.04), 0 20px 40px -12px rgb(0 0 0 / 0.18), 0 8px 16px -8px rgb(0 0 0 / 0.12);
+  --shadow-popover: 0 0 0 1px rgb(0 0 0 / 0.04), 0 12px 24px -8px rgb(0 0 0 / 0.14), 0 4px 8px -4px rgb(0 0 0 / 0.08);
+  --sh-shadow-card: var(--shadow-card);
+  --sh-shadow-card-hover: var(--shadow-card-hover);
+  --sh-shadow-btn: var(--shadow-btn);
+  --sh-shadow-dialog: var(--shadow-dialog);
+  --sh-shadow-popover: var(--shadow-popover);
+
+  /* size */
+  --sh-size-border-width: 1px;
+  --sh-size-border-width-strong: 2px;
+  --sh-size-container-page: 1152px;
+  --sh-size-container-reading: 760px;
+  --sh-size-container-form: 640px;
+  --sh-size-container-dialog: 480px;
+  --sh-size-sidebar: 320px;
+  --sh-size-sheet-sm: 360px;
+  --sh-size-sheet-md: 480px;
+  --sh-size-sheet-lg: 640px;
+  --sh-size-progress-sm: 4px;
+  --sh-size-progress-md: 8px;
+  --sh-size-progress-lg: 12px;
+  --sh-size-breakpoint-sm: 640px;
+  --sh-size-breakpoint-md: 768px;
+  --sh-size-breakpoint-lg: 1024px;
+  --sh-size-breakpoint-xl: 1280px;
+  --sh-size-breakpoint-2xl: 1536px;
+  --sh-size-control-xs: 24px;
+  --sh-size-control-sm: 28px;
+  --sh-size-control-md: 32px;
+  --sh-size-control-lg: 36px;
+  --sh-size-control-icon: 28px;
+  /* control proportions — height / pad-y / pad-x / font / line / icon / radius
+     1.2.0 起四档 24 / 28 / 32 / 36，默认 md = 32（对齐 Volcengine）。
+     档位按容器职责选，不按页面内容量选：
+       xs 24 → 表格/列表行内图标按钮（禁止出现在页头）
+       sm 28 → 表格工具栏、筛选栏、分页、次级操作
+       md 32 → 页头操作、表单控件、Select、Tabs、抽屉按钮（默认；禁止放进表格行内）
+       lg 36 → 引导页、空态主 CTA
+     xl 档（48px）在 1.1.0 删除：库内既无实现也无引用，不再保留空档 token。 */
+  --sh-control-xs-height: 24px;
+  --sh-control-xs-pad-y: 3px;
+  --sh-control-xs-pad-x: 8px;
+  --sh-control-xs-font: 12px;
+  --sh-control-xs-line: 16px;
+  --sh-control-xs-icon: 14px;
+  --sh-control-xs-radius: 6px;
+  --sh-control-sm-height: 28px;
+  --sh-control-sm-pad-y: 4px;
+  --sh-control-sm-pad-x: 10px;
+  --sh-control-sm-font: 13px;
+  --sh-control-sm-line: 18px;
+  --sh-control-sm-icon: 16px;
+  --sh-control-sm-radius: 6px;
+  --sh-control-md-height: 32px;
+  --sh-control-md-pad-y: 5px;
+  --sh-control-md-pad-x: 12px;
+  --sh-control-md-font: 13px;
+  --sh-control-md-line: 18px;
+  --sh-control-md-icon: 16px;
+  --sh-control-md-radius: 6px;
+  --sh-control-lg-height: 36px;
+  --sh-control-lg-pad-y: 6px;
+  --sh-control-lg-pad-x: 12px;
+  --sh-control-lg-font: 14px;
+  --sh-control-lg-line: 22px;
+  --sh-control-lg-icon: 16px;
+  --sh-control-lg-radius: 8px;
+  --sh-size-badge-height: 24px;
+  --sh-size-badge-font: 12px;
+  --sh-size-badge-padding-inline: 6px;
+  --sh-size-row-header: 40px;
+  --sh-size-row-header-compact: 36px;
+  --sh-size-row-header-comfortable: 44px;
+  --sh-size-row-compact: 32px;
+  --sh-size-row-default: 40px;
+  --sh-size-row-comfortable: 48px;
+  --sh-size-table-pad-y: 8px;
+  --sh-size-table-pad-x: 12px;
+  --sh-size-card-padding-compact: 16px;
+  --sh-size-card-padding-default: 20px;
+  --sh-size-card-padding-comfortable: 24px;
+  --sh-size-empty-page: 240px;
+  --sh-size-empty-inline: 96px;
+  --sh-size-empty-compact: 64px;
+  /* Select 面板最小宽度：宿主打开时把触发器实测宽度写进该变量；未写时回退 180px。 */
+  --sh-select-min-width: 180px;
+  --sh-icon-12: 12px;
+  --sh-icon-14: 14px;
+  --sh-icon-16: 16px;
+  --sh-icon-18: 18px;
+  --sh-icon-20: 20px;
+  --sh-icon-24: 24px;
+  /* 图标线宽阶梯：24 viewBox 下的无单位用户单位，随尺寸补偿，保持光学等重。
+     构建时墨迹统一缩放 0.955（21/22 光学边界），故取值已按 1/0.955 补偿。 */
+  --sh-icon-stroke-12: 3.14;
+  --sh-icon-stroke-14: 2.72;
+  --sh-icon-stroke-16: 2.36;
+  --sh-icon-stroke-18: 2.44;
+  --sh-icon-stroke-20: 2.2;
+  --sh-icon-stroke-24: 2.09;
+
+  /* motion */
+  --sh-duration-fast: 150ms;
+  --sh-duration-base: 200ms;
+  --sh-duration-slow: 600ms;
+  --sh-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --sh-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --sh-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --sh-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --sh-ease-standard: ease-out;
+
+  /* z-index */
+  --sh-z-base: 0;
+  --sh-z-content: 10;
+  --sh-z-sticky: 20;
+  --sh-z-dropdown: 40;
+  --sh-z-tooltip: 45;
+  --sh-z-overlay: 50;
+  --sh-z-dialog: 50;
+  --sh-z-toast: 60;
+
+  /* opacity */
+  --sh-overlay-scrim-alpha: 0.40;
+  --sh-overlay-glass-alpha: 0.72;
+  --sh-focus-ring-width: 2px;
+  --sh-focus-ring-offset: 2px;
+
+  /* font aliases：供 css-to-json 归类，数值与 --sh-* 相同 */
+  --font-sans: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Monaco, Menlo, Consolas, monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.875rem;
+  --font-size-4xl: 2.25rem;
+  --font-size-display-lg: 3.5rem;
+  --font-size-display: 2.75rem;
+  --font-size-h1: 2.125rem;
+  --font-size-h2: 1.75rem;
+  --font-size-h3: 1.5rem;
+  --font-size-h4: 1.25rem;
+  --font-size-h5: 1.125rem;
+  --font-size-h6: 1rem;
+  --font-size-body-lg: 1.0625rem;
+  --font-size-body: 0.9375rem;
+  --font-size-body-sm: 0.875rem;
+  --font-size-caption: 0.8125rem;
+  --font-size-caption-xs: 0.75rem;
+  --font-size-mono: 0.875rem;
+  --font-size-mono-sm: 0.8125rem;
+  --font-line-height-xs: 1rem;
+  --font-line-height-sm: 1.25rem;
+  --font-line-height-base: 1.5rem;
+  --font-line-height-lg: 1.75rem;
+  --font-line-height-xl: 1.75rem;
+  --font-line-height-2xl: 2rem;
+  --font-line-height-3xl: 2.25rem;
+  --font-line-height-4xl: 2.5rem;
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  /* line-height aliases：css-to-json 以 --line-height-* 归类到 font.lineHeight */
+  --line-height-xs: 1rem;
+  --line-height-sm: 1.25rem;
+  --line-height-base: 1.5rem;
+  --line-height-lg: 1.75rem;
+  --line-height-xl: 1.75rem;
+  --line-height-2xl: 2rem;
+  --line-height-3xl: 2.25rem;
+  --line-height-4xl: 2.5rem;
+  --line-height-display-lg: 3.625rem;
+  --line-height-display: 2.875rem;
+  --line-height-h1: 2.375rem;
+  --line-height-h2: 2.125rem;
+  --line-height-h3: 1.875rem;
+  --line-height-h4: 1.625rem;
+  --line-height-h5: 1.5rem;
+  --line-height-h6: 1.4375rem;
+  --line-height-body-lg: 1.75rem;
+  --line-height-body: 1.5rem;
+  --line-height-body-sm: 1.3125rem;
+  --line-height-caption: 1.1875rem;
+  --line-height-caption-xs: 1rem;
+  --line-height-mono: 1.3125rem;
+  --line-height-mono-sm: 1.1875rem;
+
+  /* spacing / size aliases */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --size-icon-12: 12px;
+  --size-icon-14: 14px;
+  --size-icon-16: 16px;
+  --size-icon-18: 18px;
+  --size-icon-20: 20px;
+  --size-icon-24: 24px;
+  --size-focus-ring-width: 2px;
+  --size-focus-ring-offset: 2px;
+  --size-container-page: 1152px;
+  --size-container-reading: 760px;
+  --size-container-form: 640px;
+  --size-container-dialog: 480px;
+  --size-sidebar: 320px;
+  --size-breakpoint-sm: 640px;
+  --size-breakpoint-md: 768px;
+  --size-breakpoint-lg: 1024px;
+  --size-breakpoint-xl: 1280px;
+  --size-breakpoint-2xl: 1536px;
+  --size-border-width: 1px;
+  --size-border-width-strong: 2px;
+  --size-row-compact: 40px;
+  --size-row-default: 48px;
+  --size-row-comfortable: 56px;
+  --size-card-padding-compact: 16px;
+  --size-card-padding-default: 20px;
+  --size-card-padding-comfortable: 24px;
+}
+
+/* 暗色中性面：纯灰阶（HSL 饱和度 0%），对齐 Vercel Geist / Radix grayDark / Apple
+   层级：sunken 3.5% → page 6.3% → raised 9.4% → overlay 13.3% → muted 16.5%（L 百分点）。
+   raised→overlay、overlay→muted 差 ≥3；sunken 是内凹面，不参与叠层。
+   语义色保留色相、降低饱和度并提高明度；装饰性文字/描边不再带蓝。 */
+.dark {
+  /* bg */
+  --sh-bg-page: #101010;
+  --sh-bg-raised: #181818;
+  --sh-bg-overlay: #222222;
+  --sh-bg-sunken: #090909;
+  --sh-bg-muted: #2a2a2a;
+  --sh-bg-inverse: #ededed;
+  --sh-bg-scrim: #000000;
+  --sh-bg-glass: #181818;
+
+  /* text */
+  --sh-text-primary: #f4f4f4;
+  --sh-text-secondary: #b9b9b9;
+  --sh-text-tertiary: #909090;
+  --sh-text-placeholder: #8a8a8a;
+  --sh-text-disabled: #6e6e6e;
+  --sh-text-inverse: #101010;
+  --sh-text-link: #9bc1d4;
+
+  /* border */
+  --sh-border-subtle: #242424;
+  --sh-border-default: #303030;
+  --sh-border-strong: #3e3e3e;
+  --sh-border-contrast: #787878;
+  --sh-border-focus: #e6e6e6;
+  --sh-border-inverse: #ffffff;
+
+  /* primary */
+  --sh-primary-base: #ededed;
+  --sh-primary-hover: #ffffff;
+  --sh-primary-active: #d4d4d4;
+  --sh-primary-soft: #262626;
+  --sh-primary-foreground: #101010;
+  --sh-primary-disabled: #3d3d3d;
+
+  /* accent：极低彩度（≤3%），只是“比表面再深一点”的中性 hover 底 */
+  --sh-accent-soft: #19191a;
+  --sh-accent-base: #232324;
+  --sh-accent-hover: #2d2e2f;
+  --sh-accent-border: #404244;
+  --sh-accent-foreground: #e5e5e6;
+
+  /* status */
+  --sh-status-published: #83c3a5;
+  --sh-status-published-weak: #161d1a;
+  --sh-status-review: #cdb17a;
+  --sh-status-review-weak: #1e1b15;
+  --sh-status-archived: #a1a1a1;
+  --sh-status-archived-weak: #232324;
+  --sh-status-rejected: #e3a6a0;
+  --sh-status-rejected-weak: #1e1615;
+
+  /* lifecycle */
+  --sh-lifecycle-draft: #9aa0a6;
+  --sh-lifecycle-draft-weak: #1f2022;
+  --sh-lifecycle-scanning: #89b6cd;
+  --sh-lifecycle-scanning-weak: #141b1f;
+  --sh-lifecycle-scan-failed: #e3a6a0;
+  --sh-lifecycle-scan-failed-weak: #1e1615;
+  --sh-lifecycle-uploaded: #b9b9b9;
+  --sh-lifecycle-uploaded-weak: #232324;
+  --sh-lifecycle-pending-review: #cdb17a;
+  --sh-lifecycle-pending-review-weak: #1e1b15;
+  --sh-lifecycle-published: #83c3a5;
+  --sh-lifecycle-published-weak: #161d1a;
+  --sh-lifecycle-rejected: #e3a6a0;
+  --sh-lifecycle-rejected-weak: #1e1615;
+  --sh-lifecycle-yanked: #f4f4f4;
+  --sh-lifecycle-yanked-weak: #262626;
+
+  /* verdict */
+  --sh-verdict-scanning: #89b6cd;
+  --sh-verdict-scanning-weak: #141b1f;
+  --sh-verdict-scan-failed: #a1a1a1;
+  --sh-verdict-scan-failed-weak: #232324;
+  --sh-verdict-safe: #83c3a5;
+  --sh-verdict-safe-weak: #161d1a;
+  --sh-verdict-suspicious: #cdb17a;
+  --sh-verdict-suspicious-weak: #1e1b15;
+  --sh-verdict-dangerous: #e3a6a0;
+  --sh-verdict-dangerous-weak: #1e1615;
+  --sh-verdict-blocked: #f4f4f4;
+  --sh-verdict-blocked-weak: #262626;
+
+  /* success */
+  --sh-success-weak: #161d1a;
+  --sh-success-base: #83c3a5;
+  --sh-success-hover: #9bcfb7;
+  --sh-success-on-weak: #b6d8c8;
+  --sh-success-border: #34463f;
+
+  /* warning */
+  --sh-warning-weak: #1e1b15;
+  --sh-warning-base: #cdb17a;
+  --sh-warning-hover: #d6c094;
+  --sh-warning-on-weak: #ddceb0;
+  --sh-warning-border: #484132;
+
+  /* danger */
+  --sh-danger-weak: #1e1615;
+  --sh-danger-base: #e3a6a0;
+  --sh-danger-hover: #ebc0bc;
+  --sh-danger-on-weak: #f0c4c0;
+  --sh-danger-border: #483432;
+  --sh-danger-foreground: #1e1615;
+
+  /* info */
+  --sh-info-weak: #141b1f;
+  --sh-info-base: #89b6cd;
+  --sh-info-hover: #a6c8d9;
+  --sh-info-on-weak: #c1d6e1;
+  --sh-info-border: #314149;
+
+  /* chart */
+  --sh-chart-1: #ededed;
+  --sh-chart-2: #a8a8a8;
+  --sh-chart-3: #7a7a7a;
+  --sh-chart-4: #4d4d4d;
+
+  /* viz */
+  --sh-viz-accent: #98bbcd;
+  --sh-viz-grid: #303030;
+  --sh-viz-axis: #909090;
+
+  /* code */
+  --sh-code-bg: #0c0c0c;
+  --sh-code-fg: #e5e7eb;
+  --sh-code-keyword: #9cdcfe;
+  --sh-code-string: #ce9178;
+  --sh-code-number: #b5cea8;
+  --sh-code-comment: #7f8c74;
+  --sh-code-tag: #d7ba7d;
+
+  /* shadow：1px 描边承担层级，底影极低透明度 */
+  --shadow-card: 0 0 0 1px rgb(255 255 255 / 0.06), 0 1px 2px 0 rgb(0 0 0 / 0.50);
+  --shadow-card-hover: 0 0 0 1px rgb(255 255 255 / 0.10), 0 4px 12px 0 rgb(0 0 0 / 0.55);
+  --shadow-btn: 0 1px 2px 0 rgb(0 0 0 / 0.45);
+  --shadow-dialog: 0 0 0 1px rgb(255 255 255 / 0.10), 0 20px 40px -12px rgb(0 0 0 / 0.65), 0 8px 16px -8px rgb(0 0 0 / 0.45);
+  --shadow-popover: 0 0 0 1px rgb(255 255 255 / 0.08), 0 12px 24px -8px rgb(0 0 0 / 0.60), 0 4px 8px -4px rgb(0 0 0 / 0.40);
+}
+
+body {
+  font-family: var(--sh-font-sans);
+  background: var(--sh-bg-page);
+  color: var(--sh-text-primary);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--sh-font-heading);
+  font-weight: var(--sh-weight-medium);
+  letter-spacing: var(--sh-tracking-heading);
+}
+
+code,
+pre,
+kbd {
+  font-family: var(--sh-font-mono);
+}
+
+.sh-focus-ring:focus-visible {
+  outline: var(--sh-focus-ring-width) solid var(--sh-border-focus);
+  outline-offset: var(--sh-focus-ring-offset);
+}
