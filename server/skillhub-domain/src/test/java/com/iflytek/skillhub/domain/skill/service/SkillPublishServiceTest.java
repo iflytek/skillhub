@@ -13,6 +13,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.review.TeamAutoPublicationPolicy;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.*;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
@@ -46,6 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -109,6 +111,7 @@ class SkillPublishServiceTest {
         lenient().when(skillVersionRepository.findBySkillIdAndStatus(anyLong(), eq(SkillVersionStatus.PENDING_REVIEW)))
                 .thenReturn(List.of());
         lenient().when(reviewTaskRepository.save(any(ReviewTask.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        service.setTeamAutoPublicationPolicy(new TeamAutoPublicationPolicy(namespaceMemberRepository));
     }
 
     @AfterEach
@@ -116,6 +119,193 @@ class SkillPublishServiceTest {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.clearSynchronization();
         }
+    }
+
+    @Test
+    void grantedMemberFirstTeamOnlyPublicationCapturesGrantAndDefersReviewerNotification() throws Exception {
+        NamespaceMember member = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+        UUID grantId = member.grantTeamAutoPublication();
+        stubTeamPublish(member, null, "1.0.0");
+
+        SkillPublishService.PublishResult result = service.publishFromEntries(
+                "team", teamEntries("1.0.0"), "publisher", SkillVisibility.NAMESPACE_ONLY, Set.of());
+
+        assertEquals(SkillVersionStatus.PENDING_REVIEW, result.version().getStatus());
+        ReviewTask task = savedReviewTask();
+        assertEquals(grantId, task.getAutoPublicationGrantId());
+        assertTrue(task.isSubmissionMaySubmit());
+        assertFalse(task.isManualReviewNotified());
+        verify(securityScanService).triggerScan(eq(10L), anyList(), eq("publisher"));
+        verify(eventPublisher, never()).publishEvent(any(ReviewSubmittedEvent.class));
+        verify(eventPublisher, never()).publishEvent(any(SkillPublishedEvent.class));
+    }
+
+    @Test
+    void grantedMemberSameVisibilityTeamOnlyUpdateCapturesGrant() throws Exception {
+        NamespaceMember member = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+        UUID grantId = member.grantTeamAutoPublication();
+        Skill existing = new Skill(1L, "sample", "publisher", SkillVisibility.NAMESPACE_ONLY);
+        setId(existing, 7L);
+        existing.setLatestVersionId(70L);
+        stubTeamPublish(member, existing, "2.0.0");
+
+        SkillPublishService.PublishResult result = service.publishFromEntries(
+                "team", teamEntries("2.0.0"), "publisher", SkillVisibility.NAMESPACE_ONLY, Set.of());
+
+        assertFalse(result.newSkill());
+        assertEquals(grantId, savedReviewTask().getAutoPublicationGrantId());
+        assertEquals(70L, existing.getLatestVersionId(), "pending update must not move the published pointer");
+    }
+
+    @Test
+    void uploadThatChangesExistingSkillVisibilityToTeamOnlyNeverCapturesGrant() throws Exception {
+        for (SkillVisibility current : List.of(SkillVisibility.PRIVATE, SkillVisibility.PUBLIC)) {
+            reset(reviewTaskRepository, eventPublisher);
+            when(reviewTaskRepository.save(any(ReviewTask.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            NamespaceMember member = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+            member.grantTeamAutoPublication();
+            Skill existing = new Skill(1L, "sample", "publisher", current);
+            setId(existing, 7L);
+            stubTeamPublish(member, existing, "3.0.0");
+
+            service.publishFromEntries(
+                    "team", teamEntries("3.0.0"), "publisher", SkillVisibility.NAMESPACE_ONLY, Set.of());
+
+            ReviewTask task = savedReviewTask();
+            assertNull(task.getAutoPublicationGrantId(), "visibility expansion from " + current);
+            assertTrue(task.isManualReviewNotified());
+            assertEquals(current, existing.getVisibility());
+            verify(eventPublisher).publishEvent(any(ReviewSubmittedEvent.class));
+        }
+    }
+
+    @Test
+    void publicPrivateUngrantedAndNonMemberRolesNeverCaptureGrant() throws Exception {
+        NamespaceMember granted = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+        granted.grantTeamAutoPublication();
+        stubTeamPublish(granted, null, "1.0.0");
+        service.publishFromEntries("team", teamEntries("1.0.0"), "publisher", SkillVisibility.PUBLIC, Set.of());
+        assertNull(savedReviewTask().getAutoPublicationGrantId());
+
+        reset(reviewTaskRepository);
+        when(reviewTaskRepository.save(any(ReviewTask.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        service.publishFromEntries("team", teamEntries("1.0.0"), "publisher", SkillVisibility.PRIVATE, Set.of());
+        verify(reviewTaskRepository, never()).save(any(ReviewTask.class));
+
+        NamespaceMember ungranted = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "publisher")).thenReturn(Optional.of(ungranted));
+        service.publishFromEntries("team", teamEntries("1.0.0"), "publisher", SkillVisibility.NAMESPACE_ONLY, Set.of());
+        assertNull(savedReviewTask().getAutoPublicationGrantId());
+
+        NamespaceMember admin = new NamespaceMember(1L, "publisher", NamespaceRole.ADMIN);
+        admin.grantTeamAutoPublication();
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "publisher")).thenReturn(Optional.of(admin));
+        service.publishFromEntries("team", teamEntries("1.0.0"), "publisher", SkillVisibility.NAMESPACE_ONLY, Set.of());
+        assertNull(savedReviewTask().getAutoPublicationGrantId());
+    }
+
+    @Test
+    void grantedMemberInGlobalNamespaceNeverCapturesGrant() throws Exception {
+        NamespaceMember member = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+        member.grantTeamAutoPublication();
+        stubTeamPublish(member, null, "1.0.0");
+        Namespace global = namespaceRepository.findBySlug("team").orElseThrow();
+        global.setType(com.iflytek.skillhub.domain.namespace.NamespaceType.GLOBAL);
+
+        service.publishFromEntries("team", teamEntries("1.0.0"), "publisher", SkillVisibility.NAMESPACE_ONLY, Set.of());
+
+        assertNull(savedReviewTask().getAutoPublicationGrantId());
+    }
+
+    @Test
+    void grantedMemberPublishDeniedByScannerLeavesNoTaskOrVersion() throws Exception {
+        NamespaceMember member = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+        member.grantTeamAutoPublication();
+        stubTeamPublish(member, null, "1.0.0");
+        when(securityScanService.isEnabled()).thenReturn(false);
+
+        assertThrows(DomainBadRequestException.class, () -> service.publishFromEntries(
+                "team", teamEntries("1.0.0"), "publisher", SkillVisibility.NAMESPACE_ONLY, Set.of()));
+
+        verify(skillVersionRepository, never()).save(any());
+        verify(reviewTaskRepository, never()).save(any());
+        verifyNoInteractions(eventPublisher);
+    }
+
+    @Test
+    void rereleaseOfTeamOnlySkillReappliesPolicyAndPublicRereleaseDoesNot() throws Exception {
+        for (SkillVisibility visibility : List.of(SkillVisibility.NAMESPACE_ONLY, SkillVisibility.PUBLIC)) {
+            reset(reviewTaskRepository);
+            when(reviewTaskRepository.save(any(ReviewTask.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            NamespaceMember member = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
+            UUID grantId = member.grantTeamAutoPublication();
+            Skill skill = new Skill(1L, "sample", "publisher", visibility);
+            setId(skill, 7L);
+            skill.setLatestVersionId(70L);
+            stubTeamPublish(member, skill, "1.0.1");
+            SkillVersion source = new SkillVersion(7L, "1.0.0", "publisher");
+            setId(source, 70L);
+            source.setStatus(SkillVersionStatus.PUBLISHED);
+            String sourceMd = "---\nname: sample\ndescription: Example\nversion: 1.0.0\n---\nBody";
+            SkillFile file = new SkillFile(70L, "SKILL.md", (long) sourceMd.length(), "text/markdown", "h", "k");
+            when(skillRepository.findById(7L)).thenReturn(Optional.of(skill));
+            Namespace team = namespaceRepository.findBySlug("team").orElseThrow();
+            when(namespaceRepository.findById(1L)).thenReturn(Optional.of(team));
+            when(skillVersionRepository.findBySkillIdAndVersion(7L, "1.0.0")).thenReturn(Optional.of(source));
+            when(skillFileRepository.findByVersionId(70L)).thenReturn(List.of(file));
+            when(objectStorageService.getObject("k"))
+                    .thenReturn(new java.io.ByteArrayInputStream(sourceMd.getBytes(StandardCharsets.UTF_8)));
+            when(skillMetadataParser.parse(anyString())).thenReturn(new SkillMetadata(
+                    "sample", "Example", "1.0.1", "Body", Map.of("name", "sample", "version", "1.0.1")));
+
+            service.rereleasePublishedVersion(7L, "1.0.0", "1.0.1", "publisher",
+                    Map.of(1L, NamespaceRole.MEMBER), true);
+
+            UUID captured = savedReviewTask().getAutoPublicationGrantId();
+            assertEquals(visibility == SkillVisibility.NAMESPACE_ONLY ? grantId : null, captured);
+        }
+    }
+
+    private void stubTeamPublish(NamespaceMember member, Skill existing, String version) throws Exception {
+        Namespace namespace = new Namespace("team", "Team", "owner");
+        setId(namespace, 1L);
+        lenient().when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
+        lenient().when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "publisher"))
+                .thenReturn(Optional.of(member));
+        lenient().when(skillPackageValidator.validate(anyList())).thenReturn(ValidationResult.pass());
+        lenient().when(skillMetadataParser.parse(anyString()))
+                .thenReturn(new SkillMetadata("sample", "Example", version, "Body", Map.of()));
+        lenient().when(prePublishValidator.validate(any())).thenReturn(ValidationResult.pass());
+        lenient().when(skillRepository.findByNamespaceIdAndSlug(1L, "sample"))
+                .thenReturn(existing == null ? List.of() : List.of(existing));
+        lenient().when(skillRepository.findByNamespaceIdAndSlugAndOwnerId(1L, "sample", "publisher"))
+                .thenReturn(Optional.ofNullable(existing));
+        lenient().when(skillRepository.save(any(Skill.class))).thenAnswer(invocation -> {
+            Skill skill = invocation.getArgument(0);
+            if (skill.getId() == null) {
+                setId(skill, 7L);
+            }
+            return skill;
+        });
+        lenient().when(skillVersionRepository.save(any(SkillVersion.class))).thenAnswer(invocation -> {
+            SkillVersion saved = invocation.getArgument(0);
+            if (saved.getId() == null) {
+                setId(saved, 10L);
+            }
+            return saved;
+        });
+    }
+
+    private List<PackageEntry> teamEntries(String version) {
+        String content = "---\nname: sample\ndescription: Example\nversion: " + version + "\n---\nBody";
+        return List.of(new PackageEntry("SKILL.md", content.getBytes(StandardCharsets.UTF_8),
+                content.length(), "text/markdown"));
+    }
+
+    private ReviewTask savedReviewTask() {
+        ArgumentCaptor<ReviewTask> task = ArgumentCaptor.forClass(ReviewTask.class);
+        verify(reviewTaskRepository, atLeastOnce()).save(task.capture());
+        return task.getValue();
     }
 
     @Test
