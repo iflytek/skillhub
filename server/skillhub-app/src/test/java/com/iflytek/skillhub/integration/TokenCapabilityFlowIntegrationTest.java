@@ -48,6 +48,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.autoconfigure.web.servlet.MockMvcPrint;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
@@ -132,6 +133,8 @@ class TokenCapabilityFlowIntegrationTest {
     @MockBean ObjectStorageService storage;
     @MockBean SecurityScanService scanner;
     @MockBean UserRoleBindingRepository roleBindings;
+    @SpyBean com.iflytek.skillhub.domain.skill.service.SkillVisibilityService probeVisibility;
+    @Autowired org.springframework.transaction.PlatformTransactionManager probeTransactions;
 
     private String actor;
     private Namespace namespace;
@@ -214,22 +217,91 @@ class TokenCapabilityFlowIntegrationTest {
                 writeScope.equals("skill:publish") ? SkillVersionStatus.PUBLISHED : SkillVersionStatus.UPLOADED);
     }
 
-    @Test
-    void ordinaryLegacyTokenConfirmsAndPrivateRereleaseRemainsUploaded() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/v1", "/api/web"})
+    void ordinaryLegacyTokenConfirmsAndPrivateRereleaseRemainsUploaded(String prefix) throws Exception {
         String legacy = token("skill:read", "skill:publish");
-        SkillVersion uploaded = upload("/api/v1", legacy, "1.0.0");
-        http.perform(post(route("/api/v1", "/confirm-publish")).header("Authorization", bearer(legacy))
+        SkillVersion uploaded = upload(prefix, legacy, "1.0.0");
+        http.perform(post(route(prefix, "/confirm-publish")).header("Authorization", bearer(legacy))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"version\":\"1.0.0\"}"))
                 .andExpect(status().isOk());
         assertThat(versions.findById(uploaded.getId()).orElseThrow().getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
         when(storage.getObject(anyString())).thenReturn(new ByteArrayInputStream(markdown("1.0.0")));
         String candidate = token("skill:read", "skill:submit");
-        http.perform(post(route("/api/v1", "/versions/1.0.0/rerelease"))
+        http.perform(post(route(prefix, "/versions/1.0.0/rerelease"))
                         .header("Authorization", bearer(candidate)).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"targetVersion\":\"2.0.0\",\"confirmWarnings\":true}"))
                 .andExpect(status().isOk());
         assertThat(versions.findBySkillIdAndVersion(uploaded.getSkillId(), "2.0.0").orElseThrow().getStatus())
                 .isEqualTo(SkillVersionStatus.UPLOADED);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"/api/v1,SUBMIT", "/api/web,SUBMIT", "/api/v1,MANAGE", "/api/web,MANAGE",
+            "/api/v1,SESSION", "/api/web,SESSION"})
+    void rereleaseMustNotNarrowVisibilityWithoutManageAfterConcurrentExpansion(String prefix, String authority) throws Exception {
+        String candidate = authority.equals("MANAGE")
+                ? token("skill:read", "skill:submit", "skill:manage") : token("skill:read", "skill:submit");
+        SkillVersion source = upload(prefix, candidate, "1.0.0");
+        http.perform(post(route(prefix, "/confirm-publish"))
+                        .header("Authorization", bearer(token("skill:publish-private")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":\"1.0.0\"}"))
+                .andExpect(status().isOk());
+        when(storage.getObject(anyString())).thenAnswer(invocation ->
+                new ByteArrayInputStream(markdown("1.0.0")));
+        var fired = new java.util.concurrent.atomic.AtomicBoolean();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            if (fired.compareAndSet(false, true)) {
+                var concurrent = new org.springframework.transaction.support.TransactionTemplate(probeTransactions);
+                concurrent.setPropagationBehavior(
+                        org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                concurrent.executeWithoutResult(transaction -> database.update(
+                        "UPDATE skill SET visibility = 'NAMESPACE_ONLY' WHERE id = ?", source.getSkillId()));
+            }
+            return invocation.callRealMethod();
+        }).when(probeVisibility).lockedSkill(source.getSkillId());
+        when(scanner.isEnabled()).thenReturn(true);
+        clearInvocations(storage, scanner);
+        Long latest = skills.findById(source.getSkillId()).orElseThrow().getLatestVersionId();
+        var request = post(route(prefix, "/versions/1.0.0/rerelease"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"targetVersion\":\"2.0.0\",\"confirmWarnings\":true}");
+        if (authority.equals("SESSION")) {
+            var principal = new PlatformPrincipal(actor, "Owner", actor + "@example.test", "", "local", Set.of());
+            request.with(authentication(new UsernamePasswordAuthenticationToken(principal, null, List.of()))).with(csrf());
+        } else {
+            request.header("Authorization", bearer(candidate));
+        }
+        var response = http.perform(request).andReturn().getResponse();
+        System.out.println("PROBE rerelease route=" + prefix + "; HTTP=" + response.getStatus()
+                + "; concurrent expansion committed=" + fired.get()
+                + "; final visibility=" + skills.findById(source.getSkillId()).orElseThrow().getVisibility()
+                + "; target version exists="
+                + versions.findBySkillIdAndVersion(source.getSkillId(), "2.0.0").isPresent());
+        assertThat(fired).isTrue();
+        assertThat(skills.findById(source.getSkillId()).orElseThrow().getVisibility())
+                .isEqualTo(SkillVisibility.NAMESPACE_ONLY);
+        assertThat(skills.findById(source.getSkillId()).orElseThrow().getLatestVersionId()).isEqualTo(latest);
+        if (authority.equals("SUBMIT")) {
+            assertThat(response.getStatus()).isEqualTo(403);
+            assertThat(json.readTree(response.getContentAsString()).path("errorCode").asText())
+                    .isEqualTo("error.apiToken.scope.missing");
+            assertThat(json.readTree(response.getContentAsString()).path("errorArgs").get(0).asText())
+                    .isEqualTo("skill:manage");
+            assertThat(versions.findBySkillIdAndVersion(source.getSkillId(), "2.0.0")).isEmpty();
+            assertThat(org.mockito.Mockito.mockingDetails(storage).getInvocations())
+                    .noneMatch(invocation -> invocation.getMethod().getName().startsWith("put")
+                            || invocation.getMethod().getName().startsWith("delete"));
+            verifyNoInteractions(scanner);
+        } else {
+            assertThat(response.getStatus()).isEqualTo(200);
+            assertThat(versions.findBySkillIdAndVersion(source.getSkillId(), "2.0.0").orElseThrow())
+                    .satisfies(version -> {
+                        assertThat(version.getRequestedVisibility()).isEqualTo(SkillVisibility.NAMESPACE_ONLY);
+                        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PENDING_REVIEW);
+                    });
+        }
     }
 
     @Test
@@ -309,6 +381,34 @@ class TokenCapabilityFlowIntegrationTest {
         }
         assertThat(versions.findById(uploaded.getId()).orElseThrow().getStatus())
                 .isEqualTo(blocked ? SkillVersionStatus.UPLOADED : SkillVersionStatus.PUBLISHED);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"UNKNOWN", "CANDIDATE"})
+    void unknownBundleAuthorizationMustExplainRecoveryInTheRequestedLocale(String source) throws Exception {
+        bundleRecoveryUsesOnlyPersistedAuthorityAndPrivilegedRetryCannotRepairIt(source);
+        String operationId = database.queryForObject(
+                "SELECT operation_id FROM skill_suite_bundle_operation WHERE actor_id = ?", String.class, actor);
+        String expectedKey = source.equals("UNKNOWN") ? "error.suite.bundle.authorization.provenanceUnknown"
+                : "error.suite.bundle.authorization.capabilityMissing: skill:publish-private";
+        assertThat(members.findByOperationIdOrderByPosition(operationId).getFirst().getErrors()).containsExactly(expectedKey);
+        var localized = new org.assertj.core.api.SoftAssertions();
+        for (String language : List.of("zh", "ru")) {
+            String body = http.perform(get("/api/v1/suite-bundles/operations/" + operationId)
+                            .header("Authorization", bearer(token("skill:publish")))
+                            .header("Accept-Language", language))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+            String error = json.readTree(body).path("data").path("members").get(0).path("errors").get(0).asText();
+            System.out.println("PROBE Bundle source=" + source + "; locale=" + language + "; visible member error=" + error);
+            localized.assertThat(error).as(language).doesNotContain(
+                    "Authorization provenance unknown; create a new explicitly authorized operation",
+                    "The original", "error.suite.bundle.authorization.");
+            localized.assertThat(error).as(language).contains(language.equals("zh") ? "取消" : "Отмените");
+            if (source.equals("CANDIDATE")) {
+                localized.assertThat(error).contains("skill:publish-private");
+            }
+        }
+        localized.assertAll();
     }
 
     @ParameterizedTest

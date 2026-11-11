@@ -159,7 +159,7 @@ public class SkillSuiteBundleExecutionOperation {
 
     public String privatePublishBlockDetail() {
         return "TOKEN_CAPABILITY_MISSING".equals(privatePublishBlockCode())
-                ? "skill:publish-private" : "Authorization provenance unknown; create a new explicitly authorized operation";
+                ? "skill:publish-private" : "error.suite.bundle.authorization.provenanceUnknown";
     }
 
     public Set<String> executionTokenCapabilities() {
@@ -173,7 +173,8 @@ public class SkillSuiteBundleExecutionOperation {
             return false;
         }
         String detail = privatePublishBlockDetail();
-        member.markBlockedRetryable(code + ": " + detail, now);
+        member.markBlockedRetryable("TOKEN_CAPABILITY_MISSING".equals(code)
+                ? "error.suite.bundle.authorization.capabilityMissing: " + detail : detail, now);
         markBlockedRetryable(code, detail, now);
         return true;
     }

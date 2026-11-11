@@ -19,6 +19,7 @@ import com.iflytek.skillhub.dto.AdminSkillActionRequest;
 import com.iflytek.skillhub.dto.SkillLifecycleMutationResponse;
 import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -175,7 +176,8 @@ public class SkillLifecycleAppService {
                                                            SkillVersionRereleaseRequest request,
                                                            String userId,
                                                            Map<Long, NamespaceRole> userNamespaceRoles,
-                                                           AuditRequestContext auditContext) {
+                                                           AuditRequestContext auditContext,
+                                                           Set<String> tokenCapabilities) {
         Skill skill = findSkill(namespace, slug, userId);
         SkillVersion skillVersion = findVersion(skill.getId(), version);
         String targetVersion = request.targetVersion().trim();
@@ -186,7 +188,7 @@ public class SkillLifecycleAppService {
                 userId,
                 normalizeRoles(userNamespaceRoles),
                 request.confirmWarnings(),
-                ownerPlatformRoles(skill, userId)
+                ownerPlatformRoles(skill, userId), tokenCapabilities
         );
         auditLogService.record(
                 userId,

@@ -25,9 +25,14 @@ import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
 import com.iflytek.skillhub.repository.SkillSuiteBundleOperationQueryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.support.ResourceBundleMessageSource;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -60,9 +65,14 @@ class SkillSuiteBundleOperationQueryServiceTest {
         skillRepository = mock(SkillRepository.class);
         suiteVersionRepository = mock(SkillSuiteVersionRepository.class);
         operationQueryRepository = mock(SkillSuiteBundleOperationQueryRepository.class);
+        var messages = new ResourceBundleMessageSource();
+        messages.setBasename("messages");
+        messages.setDefaultEncoding("UTF-8");
+        messages.setFallbackToSystemLocale(false);
         service = new SkillSuiteBundleOperationQueryService(
                 operationRepository, memberRepository, namespaceRepository,
-                skillRepository, suiteVersionRepository, new VisibilityChecker(), operationQueryRepository);
+                skillRepository, suiteVersionRepository, new VisibilityChecker(), operationQueryRepository,
+                messages);
     }
 
     @Test
@@ -142,6 +152,42 @@ class SkillSuiteBundleOperationQueryServiceTest {
             assertThat(member.errors()).isEmpty();
             assertThat(member.warnings()).isEmpty();
         });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "error.suite.bundle.authorization.provenanceUnknown",
+            "error.suite.bundle.authorization.capabilityMissing: skill:publish-private",
+            "AUTHORIZATION_PROVENANCE_UNKNOWN: Authorization provenance unknown; create a new explicitly authorized operation",
+            "TOKEN_CAPABILITY_MISSING: skill:publish-private"
+    })
+    void localizesNewAndPreviouslyPersistedAuthorizationErrorsWithoutRewritingThem(String persistedError) {
+        var member = member();
+        member.markBlockedRetryable(persistedError, NOW);
+        Namespace namespace = mock(Namespace.class);
+        when(namespace.getSlug()).thenReturn("global");
+        when(operationRepository.findById("operation-1")).thenReturn(Optional.of(operation()));
+        when(namespaceRepository.findById(1L)).thenReturn(Optional.of(namespace));
+        when(memberRepository.findByOperationIdOrderByPosition("operation-1")).thenReturn(List.of(member));
+        Skill visibleSkill = skill(10L, 1L, "actor", SkillVisibility.PUBLIC);
+        when(skillRepository.findByIdIn(List.of(10L))).thenReturn(List.of(visibleSkill));
+        var previousLocale = LocaleContextHolder.getLocaleContext();
+        try {
+            for (String language : List.of("en", "zh", "ru")) {
+                LocaleContextHolder.setLocale(Locale.forLanguageTag(language));
+                String error = service.get("operation-1", "actor", Map.of(), Set.of()).members().getFirst().errors().getFirst();
+                assertThat(error).doesNotContain("error.suite.bundle.authorization.", "AUTHORIZATION_PROVENANCE_UNKNOWN:");
+                assertThat(error).contains(switch (language) {
+                    case "zh" -> "取消";
+                    case "ru" -> "Отмените";
+                    default -> "Cancel";
+                });
+                if (persistedError.contains("skill:publish-private")) assertThat(error).contains("skill:publish-private");
+            }
+        } finally {
+            LocaleContextHolder.setLocaleContext(previousLocale);
+        }
+        assertThat(member.getErrors()).containsExactly(persistedError);
     }
 
     @Test

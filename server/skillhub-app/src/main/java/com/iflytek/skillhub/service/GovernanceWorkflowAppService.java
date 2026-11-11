@@ -15,6 +15,7 @@ import com.iflytek.skillhub.dto.SkillVersionRereleaseRequest;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 /**
@@ -318,16 +319,10 @@ public class GovernanceWorkflowAppService {
                                                            SkillVersionRereleaseRequest request,
                                                            String userId,
                                                            Map<Long, NamespaceRole> userNsRoles,
-                                                           AuditRequestContext auditContext) {
-        return skillLifecycleAppService.rereleaseVersion(
-                namespace,
-                slug,
-                version,
-                request,
-                userId,
-                userNsRoles,
-                auditContext
-        );
+                                                           AuditRequestContext auditContext,
+                                                           Set<String> tokenCapabilities) {
+        return skillLifecycleAppService.rereleaseVersion(namespace, slug, version, request,
+                userId, userNsRoles, auditContext, tokenCapabilities);
     }
 
     public NamespaceResponse freezeNamespace(String slug,

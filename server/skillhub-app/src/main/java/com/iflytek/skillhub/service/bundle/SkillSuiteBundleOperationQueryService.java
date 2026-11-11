@@ -18,6 +18,8 @@ import com.iflytek.skillhub.dto.SkillSuiteBundleOperationDetailResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationPageResponse;
 import com.iflytek.skillhub.dto.SkillSuiteBundleOperationSummaryResponse;
 import com.iflytek.skillhub.repository.SkillSuiteBundleOperationQueryRepository;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,6 +41,7 @@ public class SkillSuiteBundleOperationQueryService {
     private final SkillSuiteVersionRepository suiteVersionRepository;
     private final VisibilityChecker visibilityChecker;
     private final SkillSuiteBundleOperationQueryRepository operationQueryRepository;
+    private final MessageSource messageSource;
 
     public SkillSuiteBundleOperationQueryService(
             SkillSuiteBundleExecutionOperationRepository operationRepository,
@@ -47,7 +50,8 @@ public class SkillSuiteBundleOperationQueryService {
             SkillRepository skillRepository,
             SkillSuiteVersionRepository suiteVersionRepository,
             VisibilityChecker visibilityChecker,
-            SkillSuiteBundleOperationQueryRepository operationQueryRepository
+            SkillSuiteBundleOperationQueryRepository operationQueryRepository,
+            MessageSource messageSource
     ) {
         this.operationRepository = operationRepository;
         this.memberRepository = memberRepository;
@@ -56,6 +60,7 @@ public class SkillSuiteBundleOperationQueryService {
         this.suiteVersionRepository = suiteVersionRepository;
         this.visibilityChecker = visibilityChecker;
         this.operationQueryRepository = operationQueryRepository;
+        this.messageSource = messageSource;
     }
 
     @Transactional(readOnly = true)
@@ -166,7 +171,24 @@ public class SkillSuiteBundleOperationQueryService {
                 member.getPosition(), false, "@" + member.getNamespaceSlug() + "/" + member.getSkillSlug(),
                 member.getSourceType(), member.getPackagePath(), member.getRelationshipChange(), member.getPublishAction(),
                 member.getStatus(), member.getRequestedVisibility(), member.getRequestedVersion(),
-                member.getSkillId(), member.getSkillVersionId(), member.getErrors(), member.getWarnings());
+                member.getSkillId(), member.getSkillVersionId(),
+                member.getErrors().stream().map(this::localizeMemberError).toList(), member.getWarnings());
+    }
+
+    private String localizeMemberError(String error) {
+        String[] parts = error.split(": ", 2);
+        String key = switch (parts[0]) {
+            case "AUTHORIZATION_PROVENANCE_UNKNOWN" -> "error.suite.bundle.authorization.provenanceUnknown";
+            case "TOKEN_CAPABILITY_MISSING" -> "error.suite.bundle.authorization.capabilityMissing";
+            default -> parts[0];
+        };
+        if (!key.equals("error.suite.bundle.authorization.provenanceUnknown")
+                && !key.equals("error.suite.bundle.authorization.capabilityMissing")) {
+            return error;
+        }
+        Object[] args = key.endsWith("capabilityMissing") && parts.length == 2
+                ? new Object[]{parts[1]} : new Object[0];
+        return messageSource.getMessage(key, args, key, LocaleContextHolder.getLocale());
     }
 
     private SkillSuiteBundleOperationDetailResponse.OperationMember redactedMember(

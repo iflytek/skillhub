@@ -3,6 +3,7 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { SuiteBundleOperationDetail } from './suite-bundle-operation-detail'
+import en from '@/i18n/locales/en.json'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -18,7 +19,18 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => mocks.navigate }))
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'zh-CN' } }),
+  useTranslation: () => ({
+    t: (key: string, args?: { capability?: string }) => {
+      const prefix = 'suite.bundle.problem.authorization.'
+      if (key.startsWith(prefix)) {
+        const messages = en.suite.bundle.problem.authorization
+        return messages[key.slice(prefix.length) as keyof typeof messages]
+          .replace('{{capability}}', args?.capability ?? '')
+      }
+      return key
+    },
+    i18n: { language: 'en' },
+  }),
 }))
 vi.mock('@/shared/hooks/use-suite-queries', () => ({
   useSuiteBundleOperation: () => mocks.operation,
@@ -27,6 +39,29 @@ vi.mock('@/shared/hooks/use-suite-queries', () => ({
 }))
 
 describe('SuiteBundleOperationDetail', () => {
+  it.each(['TOKEN_CAPABILITY_MISSING', 'AUTHORIZATION_PROVENANCE_UNKNOWN'] as const)(
+    'explains permanent authorization failure %s without offering Continue', (failureCode) => {
+      mocks.operation.data = {
+        operationId: 'operation-auth', status: 'BLOCKED_RETRYABLE', mode: 'CREATE',
+        targetCoordinate: '@global/care-suite', targetVersion: '1.0.0', failureCode, members: [],
+      }
+      render(<SuiteBundleOperationDetail operationId="operation-auth" />)
+      const explanation = en.suite.bundle.problem.authorization[failureCode]
+        .replace('{{capability}}', 'skill:publish-private')
+      expect(screen.getByText(explanation)).not.toBeNull()
+      expect(explanation).toContain('Cancel')
+      expect(explanation).toMatch(/creat/)
+      if (failureCode === 'TOKEN_CAPABILITY_MISSING') expect(explanation).toContain('skill:publish-private')
+      expect(screen.queryByRole('button', { name: 'suite.bundle.retryMemberPublish' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'suite.bundle.retryScan' })).toBeNull()
+      expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.cancelOperation' }))
+      fireEvent.click(screen.getByRole('button', { name: 'suite.bundle.cancelConfirmAction' }))
+      expect(mocks.cancel.mutate).toHaveBeenCalled()
+      expect(mocks.retry.mutate).not.toHaveBeenCalled()
+    },
+  )
+
   afterEach(() => {
     cleanup()
     vi.clearAllMocks()

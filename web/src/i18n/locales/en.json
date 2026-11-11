@@ -3378,6 +3378,11 @@
           "title": "A member failed to publish",
           "description": "Completed members will not run again. Resolve the unfinished member below, then continue."
         },
+        "authorization": {
+          "title": "This operation cannot verify sufficient authorization",
+          "TOKEN_CAPABILITY_MISSING": "Token lacks {{capability}}. Cancel and create a new operation with a token granting it.",
+          "AUTHORIZATION_PROVENANCE_UNKNOWN": "Cannot verify original authorization. Cancel and recreate with explicit authorization."
+        },
         "authorizationBlocked": {
           "title": "Permissions or namespace access changed",
           "description": "The current account may no longer be allowed to publish a member Skill or manage the Suite, or a related namespace may be frozen. Restore access or unfreeze it, then retry."

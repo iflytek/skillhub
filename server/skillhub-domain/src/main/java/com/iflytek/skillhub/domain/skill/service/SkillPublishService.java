@@ -449,6 +449,15 @@ public class SkillPublishService {
             String publisherId,
             Map<Long, NamespaceRole> userNamespaceRoles,
             boolean confirmWarnings, java.util.Set<String> platformRoles) {
+        return rereleasePublishedVersion(skillId, sourceVersion, targetVersion, publisherId,
+                userNamespaceRoles, confirmWarnings, platformRoles, null);
+    }
+
+    @Transactional
+    public PublishResult rereleasePublishedVersion(
+            Long skillId, String sourceVersion, String targetVersion, String publisherId,
+            Map<Long, NamespaceRole> userNamespaceRoles, boolean confirmWarnings,
+            Set<String> platformRoles, Set<String> tokenCapabilities) {
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillId));
         if (skill.isGithubSyncManaged()) {
@@ -488,7 +497,8 @@ public class SkillPublishService {
                 presentationOverrideForRerelease(publishedVersion, "shortDescriptionOverride"),
                 presentationOverrideForRerelease(publishedVersion, "overviewOverride"),
                 presentationOverrideForRerelease(publishedVersion, "shortDescriptionOverride") == null
-                        && presentationOverrideForRerelease(publishedVersion, "overviewOverride") == null
+                        && presentationOverrideForRerelease(publishedVersion, "overviewOverride") == null,
+                tokenCapabilities, true
         );
     }
 
@@ -576,6 +586,18 @@ public class SkillPublishService {
             boolean forceAutoPublish, boolean bypassMembershipCheck,
             BundlePublicationTarget bundleTarget, GithubSyncPublicationTarget syncTarget, String displayName,
             String shortDescription, String overview, boolean resetPresentation, Set<String> tokenCapabilities) {
+        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles,
+                confirmWarnings, forceAutoPublish, bypassMembershipCheck, bundleTarget, syncTarget,
+                displayName, shortDescription, overview, resetPresentation, tokenCapabilities, false);
+    }
+
+    private PublishResult publishFromEntriesInternal(
+            String namespaceSlug, List<PackageEntry> entries, String publisherId,
+            SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
+            boolean forceAutoPublish, boolean bypassMembershipCheck,
+            BundlePublicationTarget bundleTarget, GithubSyncPublicationTarget syncTarget, String displayName,
+            String shortDescription, String overview, boolean resetPresentation,
+            Set<String> tokenCapabilities, boolean rerelease) {
 
         // 1. Find namespace by slug
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
@@ -659,7 +681,7 @@ public class SkillPublishService {
                     "error.skill.publish.precheck.confirmRequired",
                     formatValidationMessages(publishWarnings));
         }
-        if (requiresSecurityScanner(visibility) && !securityScanService.isEnabled()) {
+        if (!rerelease && requiresSecurityScanner(visibility) && !securityScanService.isEnabled()) {
             throw new DomainBadRequestException("error.security.scanner.required");
         }
 
@@ -762,6 +784,13 @@ public class SkillPublishService {
             Skill locked = visibilityService.lockedSkill(skill.getId());
             if (tokenCapabilities != null && !newSkill && locked != null && locked.getVisibility() != visibility) {
                 SkillTokenCapabilityPolicy.require(tokenCapabilities, SkillTokenCapabilityPolicy.MANAGE);
+            }
+            if (rerelease && locked != null) {
+                // Rerelease carries current visibility; it never requests a visibility change.
+                visibility = locked.getVisibility();
+                if (requiresSecurityScanner(visibility) && !securityScanService.isEnabled()) {
+                    throw new DomainBadRequestException("error.security.scanner.required");
+                }
             }
             visibilityService.assertNoPendingVisibility(skill.getId());
         }

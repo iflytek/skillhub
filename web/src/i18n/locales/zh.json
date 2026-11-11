@@ -3376,6 +3376,11 @@
           "title": "有成员发布失败",
           "description": "已完成成员不会重复处理。请处理下方未完成成员后继续。"
         },
+        "authorization": {
+          "title": "此操作无法确认足够的授权",
+          "TOKEN_CAPABILITY_MISSING": "原 Token 缺少 {{capability}} 能力。请取消此操作，并使用具备该能力的 Token 创建新操作。重试无法更改原始授权。",
+          "AUTHORIZATION_PROVENANCE_UNKNOWN": "无法验证原始授权。请取消此操作，并以明确授权重新创建；重试无法修复此问题。"
+        },
         "authorizationBlocked": {
           "title": "权限或命名空间状态已变化",
           "description": "当前账号可能已失去成员技能发布或套件管理权限，也可能是相关命名空间被冻结。恢复权限或解冻后可继续重试。"

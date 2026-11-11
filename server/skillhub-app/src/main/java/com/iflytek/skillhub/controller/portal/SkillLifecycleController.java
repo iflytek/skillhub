@@ -130,6 +130,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                         @Valid @RequestBody SkillVersionRereleaseRequest request,
                                                                         @RequestAttribute("userId") String userId,
                                                                         @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                        @AuthenticationPrincipal PlatformPrincipal principal,
                                                                         HttpServletRequest httpRequest) {
         return ok("response.success.updated",
                 governanceWorkflowAppService.rereleaseVersion(
@@ -139,7 +140,7 @@ public class SkillLifecycleController extends BaseApiController {
                         request,
                         userId,
                         userNsRoles,
-                        AuditRequestContext.from(httpRequest)));
+                        AuditRequestContext.from(httpRequest), principal == null ? null : principal.tokenCapabilities()));
     }
 
     @PostMapping("/{namespace}/{slug}/submit-review")
