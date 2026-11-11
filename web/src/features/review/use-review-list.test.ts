@@ -114,3 +114,31 @@ describe('review list cache behavior', () => {
     client.clear()
   })
 })
+
+describe('unified review filters', () => {
+  it('sends keyword, request type and source to the server and isolates their cache entries', async () => {
+    const list = vi.spyOn(reviewApi, 'list').mockResolvedValue({ items: [], total: 0, page: 0, size: 20 })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const initial = { q: 'notes', reviewKind: 'VERSION_UPDATE', originType: 'USER' }
+    const hook = renderHook((filters) => useReviewList('ALL', undefined, 0, 20, 'DESC', true, filters), { initialProps: initial, wrapper: queryWrapper(client) })
+    await waitFor(() => expect(hook.result.current.isSuccess).toBe(true))
+    expect(list).toHaveBeenLastCalledWith({ status: 'ALL', namespaceId: undefined, page: 0, size: 20, sortDirection: 'DESC', ...initial })
+    hook.rerender({ ...initial, originType: 'GITHUB_SYNC' })
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(2))
+    expect(client.getQueryCache().getAll()).toHaveLength(2)
+    hook.unmount()
+    client.clear()
+  })
+})
+
+it('encodes server-side filters without losing spaces, Unicode or namespace scope', async () => {
+  const request = vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 0, msg: 'ok', data: { items: [], total: 0, page: 0, size: 20 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+  vi.stubGlobal('fetch', request)
+  await reviewApi.list({ status: 'ALL', namespaceId: 4, q: '  中文 / A&B  ', reviewKind: 'VISIBILITY_CHANGE', originType: 'GITHUB_SYNC' })
+  const url = new URL(String(request.mock.calls[0][0]), 'http://localhost')
+  expect(url.searchParams.get('q')).toBe('中文 / A&B')
+  expect(url.searchParams.get('status')).toBe('ALL')
+  expect(url.searchParams.get('namespaceId')).toBe('4')
+  expect(url.searchParams.get('reviewKind')).toBe('VISIBILITY_CHANGE')
+  expect(url.searchParams.get('originType')).toBe('GITHUB_SYNC')
+})

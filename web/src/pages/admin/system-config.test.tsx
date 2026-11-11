@@ -15,12 +15,15 @@ const api = vi.hoisted(() => ({
   updateAvatarReview: vi.fn(),
 }))
 
+vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ hasRole: () => false }) }))
 vi.mock('@/api/client', () => ({
   systemConfigApi: api,
   ApiError: class ApiError extends Error {
     constructor(message: string, public status: number) { super(message) }
   },
 }))
+vi.mock('@/features/site-presentation/site-presentation-settings', () => ({ SitePresentationSettingsPanel: () => null }))
+vi.mock('@/features/notification/notification-email-settings', () => ({ NotificationEmailSettingsPanel: () => null }))
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 
 import { ApiError } from '@/api/client'

@@ -69,6 +69,45 @@ class NotificationControllerTest {
     }
 
     @Test
+    void list_shouldExposeReviewTargetRouteForSubmittedSuiteReviewNotifications() {
+        Notification notification = notification(
+                12L,
+                NotificationCategory.REVIEW,
+                "SUITE_REVIEW_SUBMITTED",
+                "{\"namespace\":\"demo\",\"slug\":\"writers\",\"suiteName\":\"Writing suite\"}",
+                "REVIEW",
+                101L
+        );
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("admin-1"),
+                org.mockito.ArgumentMatchers.eq(NotificationCategory.REVIEW),
+                org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(notification)));
+
+        PageResponse<NotificationResponse> page = controller.list("admin-1", "REVIEW", 0, 20).data();
+
+        assertThat(page.items()).singleElement().satisfies(item -> {
+            assertThat(item.targetType()).isEqualTo("REVIEW");
+            assertThat(item.targetId()).isEqualTo(101L);
+            assertThat(item.targetRoute()).isEqualTo("/dashboard/reviews/101");
+        });
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"SUITE_REVIEW_APPROVED", "SUITE_REVIEW_REJECTED"})
+    void completedSuiteReviewLinksToTheSubmittersProgressInsteadOfReviewerOnlyDetails(String eventType) {
+        Notification item = notification(13L, NotificationCategory.REVIEW, eventType, "{}", "REVIEW", 101L);
+        when(notificationService.list(org.mockito.ArgumentMatchers.eq("user-1"),
+                org.mockito.ArgumentMatchers.eq(NotificationCategory.REVIEW),
+                org.mockito.ArgumentMatchers.any(Pageable.class)))
+                .thenReturn(new PageImpl<>(java.util.List.of(item)));
+        var page = controller.list("user-1", "REVIEW", 0, 20).data();
+        assertThat(page.items()).singleElement().satisfies(result -> {
+            assertThat(result.targetId()).isEqualTo(101L);
+            assertThat(result.targetRoute()).isEqualTo("/dashboard/review-progress");
+        });
+    }
+
+    @Test
     void list_shouldExposeProfileReviewTargetRouteForSubmittedProfileReviewNotifications() {
         Notification notification = notification(
                 15L,

@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.iflytek.skillhub.domain.event.BusinessEventSnapshot;
+
 import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.review.ReviewAvatarParticipant;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -336,8 +338,17 @@ public class SkillPublishService {
             String namespaceSlug, List<PackageEntry> entries, String publisherId,
             SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
             String displayName) {
+        return publishFromEntries(namespaceSlug, entries, publisherId, visibility, platformRoles, confirmWarnings,
+                displayName, null, null, false);
+    }
+
+    @Transactional
+    public PublishResult publishFromEntries(
+            String namespaceSlug, List<PackageEntry> entries, String publisherId,
+            SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
+            String displayName, String shortDescription, String overview, boolean resetPresentation) {
         return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles,
-                confirmWarnings, false, false, null, null, displayName);
+                confirmWarnings, false, false, null, null, displayName, shortDescription, overview, resetPresentation);
     }
 
     /** Publishes a validated GitHub package into the dedicated sync review queue. */
@@ -450,8 +461,29 @@ public class SkillPublishService {
                 true,
                 null,
                 null,
-                displayNameOverrideForRerelease(publishedVersion)
+                displayNameOverrideForRerelease(publishedVersion),
+                presentationOverrideForRerelease(publishedVersion, "shortDescriptionOverride"),
+                presentationOverrideForRerelease(publishedVersion, "overviewOverride"),
+                presentationOverrideForRerelease(publishedVersion, "shortDescriptionOverride") == null
+                        && presentationOverrideForRerelease(publishedVersion, "overviewOverride") == null
         );
+    }
+
+    private boolean hasPackagePresentation(SkillMetadata metadata) {
+        if (metadata.frontmatter() == null || !(metadata.frontmatter().get("metadata") instanceof Map<?, ?> values)) {
+            return false;
+        }
+        return values.get("short-description") instanceof String shortText && !shortText.isBlank()
+                || values.get("overview") instanceof String overviewText && !overviewText.isBlank();
+    }
+
+    private String presentationOverrideForRerelease(SkillVersion source, String field) {
+        if (source.getParsedMetadataJson() == null) return null;
+        try {
+            return objectMapper.readTree(source.getParsedMetadataJson()).path(field).textValue();
+        } catch (java.io.IOException ignored) {
+            return null;
+        }
     }
 
     private String displayNameOverrideForRerelease(SkillVersion source) {
@@ -499,6 +531,17 @@ public class SkillPublishService {
             SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
             boolean forceAutoPublish, boolean bypassMembershipCheck,
             BundlePublicationTarget bundleTarget, GithubSyncPublicationTarget syncTarget, String displayName) {
+        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles,
+                confirmWarnings, forceAutoPublish, bypassMembershipCheck, bundleTarget, syncTarget, displayName,
+                null, null, false);
+    }
+
+    private PublishResult publishFromEntriesInternal(
+            String namespaceSlug, List<PackageEntry> entries, String publisherId,
+            SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
+            boolean forceAutoPublish, boolean bypassMembershipCheck,
+            BundlePublicationTarget bundleTarget, GithubSyncPublicationTarget syncTarget, String displayName,
+            String shortDescription, String overview, boolean resetPresentation) {
 
         // 1. Find namespace by slug
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
@@ -538,6 +581,8 @@ public class SkillPublishService {
 
         String skillMdContent = new String(skillMd.content());
         SkillMetadata metadata = skillMetadataParser.parse(skillMdContent).withDisplayNameOverride(displayName);
+        metadata = metadata.withPresentation(resetPresentation ? null : shortDescription,
+                resetPresentation ? null : overview, null);
         String upstreamVersion = syncTarget == null ? null : metadata.version();
         if (syncTarget != null) {
             // A reverted upstream package is a new review target after an intervening update.
@@ -545,10 +590,13 @@ public class SkillPublishService {
             String syncVersion = "0.0.0-g" + syncTarget.contentSha256().substring(0, 40)
                     + "-" + syncTarget.ingestionId().toString().replace("-", "").substring(0, 16);
             metadata = new SkillMetadata(metadata.name(), metadata.description(), syncVersion,
-                    metadata.body(), metadata.frontmatter());
+                    metadata.body(), metadata.frontmatter(), metadata.displayNameOverride(),
+                    metadata.shortDescriptionOverride(), metadata.overviewOverride(), null);
         } else if (metadata.version() == null || metadata.version().isBlank()) {
             String autoVersion = AUTO_VERSION_FORMATTER.format(currentTime());
-            metadata = new SkillMetadata(metadata.name(), metadata.description(), autoVersion, metadata.body(), metadata.frontmatter(), metadata.displayNameOverride());
+            metadata = new SkillMetadata(metadata.name(), metadata.description(), autoVersion,
+                    metadata.body(), metadata.frontmatter(), metadata.displayNameOverride(),
+                    metadata.shortDescriptionOverride(), metadata.overviewOverride(), null);
         }
         String skillSlug = SlugValidator.slugify(metadata.name());
         if (bundleTarget != null
@@ -644,6 +692,32 @@ public class SkillPublishService {
             skill = resolveBundleTargetSkill(namespace, existingSkills, publisherId, visibility,
                     platformRoles, bundleTarget);
             newSkill = bundleTarget.expectedSkillId() == null;
+        }
+
+        if (!newSkill && skill.getLatestVersionId() != null && !resetPresentation
+                && shortDescription == null && overview == null && !hasPackagePresentation(metadata)) {
+            SkillVersion published = skillVersionRepository.findBySkillIdAndStatus(
+                            skill.getId(), SkillVersionStatus.PUBLISHED).stream()
+                    .max(java.util.Comparator.comparing(SkillVersion::getPublishedAt,
+                                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                            .thenComparing(SkillVersion::getCreatedAt,
+                                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                            .thenComparing(SkillVersion::getId,
+                                    java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                    .orElse(null);
+            if (published != null && published.getParsedMetadataJson() != null) {
+                try {
+                    SkillMetadata previous = objectMapper.readerFor(SkillMetadata.class)
+                            .without(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+                            .readValue(published.getParsedMetadataJson());
+                    if (previous.shortDescriptionOverride() != null || previous.overviewOverride() != null) {
+                        metadata = metadata.withPresentation(previous.shortDescriptionOverride(),
+                                previous.overviewOverride(), published.getVersion());
+                    }
+                } catch (java.io.IOException e) {
+                    throw new IllegalStateException("Failed to deserialize published skill metadata", e);
+                }
+            }
         }
 
         if (visibilityService != null) {
@@ -893,7 +967,7 @@ public class SkillPublishService {
         // A pending update must not replace the currently published title or summary.
         if (autoPublish || visibility == SkillVisibility.PRIVATE || skill.getLatestVersionId() == null) {
             skill.setDisplayName(metadata.displayName());
-            skill.setSummary(metadata.description());
+            skill.setSummary(metadata.shortDescription());
         }
         if (syncTarget != null) {
             skill.assignGithubSyncOwnership(publisherId);
@@ -907,7 +981,9 @@ public class SkillPublishService {
         skillRepository.save(skill);
 
         if (autoPublish) {
-            eventPublisher.publishEvent(new SkillPublishedEvent(skill.getId(), version.getId(), publisherId));
+            eventPublisher.publishEvent(new SkillPublishedEvent(skill.getId(), version.getId(), publisherId,
+                    BusinessEventSnapshot.capture(skill, publisherId,
+                            forceAutoPublish ? "system" : "user", "auto_publish")));
         }
 
         // 13. Return identifiers for the created version
@@ -1157,6 +1233,9 @@ public class SkillPublishService {
         parsedMetadata.put("body", metadata.body());
         parsedMetadata.put("frontmatter", metadata.frontmatter());
         parsedMetadata.put("displayNameOverride", metadata.displayNameOverride());
+        parsedMetadata.put("shortDescriptionOverride", metadata.shortDescriptionOverride());
+        parsedMetadata.put("overviewOverride", metadata.overviewOverride());
+        parsedMetadata.put("presentationInheritedFrom", metadata.presentationInheritedFrom());
         if (syncTarget != null) {
             parsedMetadata.put("upstreamVersion", upstreamVersion);
             parsedMetadata.put("githubContentSha256", syncTarget.contentSha256());

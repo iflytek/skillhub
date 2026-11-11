@@ -9,6 +9,7 @@ import { createRedirectAuthenticated, createRequireAuth, isSafeAuthReturnTo } fr
 import { clearDynamicImportReloadGuard, recoverFromDynamicImportError } from '@/shared/lib/dynamic-import-recovery'
 import { normalizeSearchQuery } from '@/shared/lib/search-query'
 import { captureInvitationFragment } from '@/shared/lib/namespace-invitation'
+import { validateReviewSearch } from '@/features/review/review-route-search'
 
 /**
  * Central route registry for the SkillHub web app.
@@ -598,9 +599,7 @@ const dashboardReviewsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/reviews',
   beforeLoad: requireAuth,
-  validateSearch: (search: Record<string, unknown>): { type?: 'skill' | 'profile' | 'sync' } => ({
-    type: search.type === 'skill' || search.type === 'profile' || search.type === 'sync' ? search.type : undefined,
-  }),
+  validateSearch: validateReviewSearch,
   component: ReviewsPage,
 })
 
@@ -637,6 +636,7 @@ const dashboardReviewDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/reviews/$id',
   beforeLoad: requireAuth,
+  validateSearch: validateReviewSearch,
   component: ReviewDetailPage,
 })
 
@@ -644,6 +644,7 @@ const dashboardNamespaceReviewDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/namespaces/$slug/reviews/$id',
   beforeLoad: requireAuth,
+  validateSearch: validateReviewSearch,
   component: NamespaceReviewDetailPage,
 })
 
@@ -672,6 +673,13 @@ const dashboardSubscriptionsRoute = createRoute({
     page: typeof search.page === 'number' && search.page > 0 ? search.page : undefined,
   }),
   component: MySubscriptionsPage,
+})
+
+const notificationEmailBatchRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/notifications/email/$id',
+  beforeLoad: requireAuth,
+  component: createLazyRouteComponent(() => import('@/pages/notification-email-batch'), 'NotificationEmailBatchPage'),
 })
 
 const dashboardNotificationsRoute = createRoute({
@@ -817,6 +825,7 @@ const routeTree = rootRoute.addChildren([
   dashboardStarsRoute,
   dashboardSubscriptionsRoute,
   dashboardNotificationsRoute,
+  notificationEmailBatchRoute,
   dashboardTokensRoute,
   cliAuthRoute,
   deviceAuthRoute,

@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.repository;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.githubsync.GithubPackageAdmissionResult;
 import com.iflytek.skillhub.githubsync.GithubSyncTaskKind;
@@ -37,7 +38,7 @@ class GithubSyncAdmissionConcurrencyTest {
 
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine");
+            new PostgreSQLContainer<>(PostgresTestImage.name());
 
     @Test
     void concurrentReservationsRespectNamespaceAndGlobalHighWatermarks() throws Exception {

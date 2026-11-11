@@ -22,6 +22,7 @@ interface SidebarItem {
   label: string
   to: string
   analyticsId?: string
+  review?: boolean
   admin?: boolean
   superAdmin?: boolean
   passwordCapability?: boolean
@@ -57,8 +58,8 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
   {
     label: 'sidebar.admin',
     items: [
-      { key: 'governance', icon: Shield, label: 'sidebar.governance', to: '/dashboard/governance', analyticsId: 'governance.center.open', admin: true },
-      { key: 'reports', icon: Flag, label: 'sidebar.reports', to: '/dashboard/reports', analyticsId: 'report.queue.open', admin: true },
+      { key: 'reviewCenter', icon: Shield, label: 'reviewCenter.title', to: '/dashboard/reviews', analyticsId: 'review.queue.open', review: true },
+      { key: 'governance', icon: Flag, label: 'sidebar.governance', to: '/dashboard/governance', analyticsId: 'governance.center.open', admin: true },
       { key: 'githubSync', icon: Github, label: 'sidebar.githubSync', to: '/dashboard/github-sync', analyticsId: 'github.sync.open', superAdmin: true },
     ],
   },
@@ -67,11 +68,12 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
 // Flatten for backward compatibility with layout.tsx
 const SIDEBAR_NAV_ITEMS = SIDEBAR_GROUPS.flatMap((g) => g.items)
 
-export const SIDEBAR_NAV = SIDEBAR_NAV_ITEMS.map(({ key, icon, label, to, admin, superAdmin, passwordCapability }) => ({
+export const SIDEBAR_NAV = SIDEBAR_NAV_ITEMS.map(({ key, icon, label, to, review, admin, superAdmin, passwordCapability }) => ({
   key,
   icon,
   label,
   to,
+  review,
   admin,
   superAdmin,
   passwordCapability,

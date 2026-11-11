@@ -24,8 +24,40 @@ public record ReviewTaskResponse(
         boolean avatarRemoval,
         String previousVisibility,
         String requestedVisibility,
-        String originType
+        String originType,
+        String displayName,
+        String summary,
+        String reviewKind,
+        boolean canReview
 ) {
+    public ReviewTaskResponse(Long id, Long skillVersionId, String namespace, String skillSlug,
+            String version, String status, String submittedBy, String submittedByName,
+            String reviewedBy, String reviewedByName, String reviewComment, Instant submittedAt,
+            Instant reviewedAt, String subjectType, Long subjectId, Long subjectVersionId,
+            String subjectSlug, Long avatarCandidateId, boolean avatarRemoval,
+            String previousVisibility, String requestedVisibility, String originType) {
+        this(id, skillVersionId, namespace, skillSlug, version, status, submittedBy, submittedByName,
+                reviewedBy, reviewedByName, reviewComment, submittedAt, reviewedAt, subjectType,
+                subjectId, subjectVersionId, subjectSlug, avatarCandidateId, avatarRemoval,
+                previousVisibility, requestedVisibility, originType, null, null, null, false);
+    }
+
+    public ReviewTaskResponse withReviewPermission(boolean allowed) {
+        return new ReviewTaskResponse(id, skillVersionId, namespace, skillSlug, version, status,
+                submittedBy, submittedByName, reviewedBy, reviewedByName, reviewComment,
+                submittedAt, reviewedAt, subjectType, subjectId, subjectVersionId, subjectSlug,
+                avatarCandidateId, avatarRemoval, previousVisibility, requestedVisibility,
+                originType, displayName, summary, reviewKind, allowed);
+    }
+
+    public ReviewTaskResponse withPresentation(String displayName, String summary, String reviewKind) {
+        return new ReviewTaskResponse(id, skillVersionId, namespace, skillSlug, version, status,
+                submittedBy, submittedByName, reviewedBy, reviewedByName, reviewComment,
+                submittedAt, reviewedAt, subjectType, subjectId, subjectVersionId, subjectSlug,
+                avatarCandidateId, avatarRemoval, previousVisibility, requestedVisibility,
+                originType, displayName, summary, reviewKind, canReview);
+    }
+
     public ReviewTaskResponse(Long id, Long skillVersionId, String namespace, String skillSlug, String version, String status, String submittedBy, String submittedByName, String reviewedBy, String reviewedByName, String reviewComment, Instant submittedAt, Instant reviewedAt, String subjectType, Long subjectId, Long subjectVersionId, String subjectSlug, String originType) {
         this(id, skillVersionId, namespace, skillSlug, version, status, submittedBy, submittedByName, reviewedBy, reviewedByName, reviewComment, submittedAt, reviewedAt, subjectType, subjectId, subjectVersionId, subjectSlug, null, false, null, null, originType);
     }

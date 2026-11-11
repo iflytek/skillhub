@@ -296,10 +296,26 @@ template and application image tag together, use a released Git ref and tag:
 curl -fsSL https://raw.githubusercontent.com/iflytek/skillhub/v0.2.25/scripts/runtime.sh | sh -s -- up --ref v0.2.25 --version v0.2.25 --home /opt/skillhub --public-url https://skillhub.your-company.com
 ```
 
-This example uses GitHub raw and requires access to it. `--aliyun` switches runtime
-file downloads to the OSS root, where `--ref` does not select a versioned directory.
+This example uses GitHub raw and requires access to it. With the updated installer,
+`--aliyun` keeps only the three core files (`runtime.sh`, `compose.release.yml`, and
+`.env.release.example`) on the OSS root. The five optional analytics/Collector
+configuration files are fetched on demand through `gh-proxy.org`, using `--ref`
+(or `SKILLHUB_REF`, default `main`), just like the ordinary GitHub source. There is
+no installer-side commit or checksum list to update when editing these templates.
+Every use downloads the selected ref again; `main` is mutable and proxy caching
+means it is not guaranteed to reflect the latest commit immediately. For production,
+select a reviewed release tag or commit with `--ref` and a matching image `--version`.
+OSS core files are still not versioned by `--ref`; the publisher must keep them
+compatible with the chosen release. `--version` alone does not select a file ref.
+Download failures, empty responses and obvious wrong-format responses stop the optional
+operation without replacing the existing destination. This basic format check is
+not full YAML validation or cryptographic source verification: using the proxy
+requires trusting that third party. Availability is not guaranteed, and there is
+no silent fallback to another ref.
 Likewise, a custom `SKILLHUB_RAW_BASE` takes precedence over the Git-ref URL.
-Neither should be described as pinning deployment files with `--ref`.
+The explicit custom source retains its existing behavior and does not use the
+default proxy path. Neither OSS core files nor an explicit custom source should
+be described as pinned by `--ref`.
 The script preserves an existing `.env.release`; record its settings and explicit
 image overrides separately. Pinning the application tag does not freeze every
 dependency image or replace a database backup.
@@ -481,7 +497,7 @@ password defaults.
 **Backend (Spring Boot 3.2.3, Java 21):**
 - Multi-module Maven project with clean architecture
 - Modules: app, domain, auth, search, storage, infra
-- PostgreSQL 16 with Flyway migrations
+- PostgreSQL with Flyway migrations (16 by default, 17 verified)
 - Redis for session management
 - S3/MinIO for skill package storage
 

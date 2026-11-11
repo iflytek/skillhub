@@ -1,0 +1,10 @@
+# Optional attachment: retain the backend's ordinary dependency network.
+services:
+  server:
+    networks:
+      - default
+      - business-logs
+networks:
+  business-logs:
+    external: true
+    name: ${SKILLHUB_BUSINESS_LOGS_NETWORK:-skillhub-business-logs}

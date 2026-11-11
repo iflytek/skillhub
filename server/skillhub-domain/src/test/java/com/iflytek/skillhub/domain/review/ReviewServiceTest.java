@@ -350,7 +350,8 @@ class ReviewServiceTest {
             assertDoesNotThrow(() -> sv.setParsedMetadataJson(objectMapper.writeValueAsString(
                     new SkillMetadata("Approved Name", "Approved Summary", "1.0.0", "Body",
                             hasDisplayName ? Map.of("metadata", Map.of("display-name", "包内标题")) : Map.of(),
-                            hasDisplayName ? "已审核的中文标题" : null)
+                            hasDisplayName ? "已审核的中文标题" : null,
+                            "Approved custom summary", "# Approved overview", null)
             )));
 
             when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
@@ -379,7 +380,9 @@ class ReviewServiceTest {
             assertEquals(SKILL_VERSION_ID, skill.getLatestVersionId());
             assertEquals(hasDisplayName ? "已审核的中文标题" : "Approved Name", skill.getDisplayName());
             assertEquals("my-skill", skill.getSlug());
-            assertEquals("Approved Summary", skill.getSummary());
+            assertEquals("Approved custom summary", skill.getSummary());
+            assertEquals("# Approved overview", assertDoesNotThrow(() ->
+                    objectMapper.readTree(sv.getParsedMetadataJson())).path("overviewOverride").asText());
             assertEquals(REVIEWER_ID, skill.getUpdatedBy());
             verify(eventPublisher).publishEvent(any(SkillPublishedEvent.class));
             verify(governanceNotificationService).notifyUser(eq(USER_ID), eq("REVIEW"), eq("REVIEW_TASK"), eq(REVIEW_TASK_ID), eq("Review approved"), any());
@@ -438,6 +441,14 @@ class ReviewServiceTest {
             assertEquals(SKILL_ID, event.skillId());
             assertEquals(SKILL_VERSION_ID, event.versionId());
             assertEquals(REVIEWER_ID, event.publisherId());
+            assertEquals(NAMESPACE_ID, event.snapshot().namespaceId());
+            assertEquals(REVIEWER_ID, event.snapshot().actorId());
+            assertEquals("review", event.snapshot().source());
+            ArgumentCaptor<com.iflytek.skillhub.domain.event.ReviewApprovedEvent> approved =
+                    ArgumentCaptor.forClass(com.iflytek.skillhub.domain.event.ReviewApprovedEvent.class);
+            verify(eventPublisher).publishEvent(approved.capture());
+            assertEquals(REVIEWER_ID, approved.getValue().snapshot().actorId());
+            assertNotNull(approved.getValue().snapshot().occurredAt());
         }
 
         @Test

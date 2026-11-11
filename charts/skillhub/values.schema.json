@@ -73,6 +73,18 @@
         }
       }
     },
+    "notificationEmail": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "digestWindowMinutes", "publicBaseUrl", "fromAddress", "fromName"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "digestWindowMinutes": { "type": "integer", "minimum": 5, "maximum": 1440 },
+        "publicBaseUrl": { "type": "string", "pattern": "^$|^https?://[^/?#]+([/][^?#]*)?$" },
+        "fromAddress": { "type": "string" },
+        "fromName": { "type": "string" }
+      }
+    },
     "builtinSkills": {
       "type": "object",
       "additionalProperties": false,
@@ -452,6 +464,27 @@
             "enabled": { "type": "boolean" },
             "replicaCount": { "type": "integer", "minimum": 1 },
             "suiteReviewWritesEnabled": { "type": "boolean" },
+            "actuatorExposureInclude": { "enum": ["health,info", "health,info,metrics,prometheus"] },
+            "businessLogs": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["enabled", "endpoint", "headersSecretRef"],
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "endpoint": { "type": "string", "pattern": "^$|^https?://[^@?#]+/[^?#]+$" },
+                "headersSecretRef": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["name", "key"],
+                  "properties": {
+                    "name": { "$ref": "#/definitions/optionalDnsLabel" },
+                    "key": { "type": "string", "minLength": 1 }
+                  }
+                }
+              },
+              "if": { "properties": { "enabled": { "const": true } } },
+              "then": { "properties": { "endpoint": { "minLength": 1 } } }
+            },
             "image": { "$ref": "#/definitions/image" },
             "dependencyWait": {
               "type": "object",

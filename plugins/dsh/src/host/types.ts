@@ -93,6 +93,13 @@ export interface SkillDetail {
 
 export interface ConversationDetail extends SkillDetail { selectionRef: string }
 
+export interface SkillFileEntry { path: string; size: number; contentType: string | null }
+export type SkillFileList = { state: 'ready'; items: SkillFileEntry[] }
+  | { state: 'unsupported'; items: [] };
+export type SkillFilePreview = { state: 'text'; path: string; content: string }
+  | { state: 'too-large'; path: string; limitBytes: number }
+  | { state: 'binary' | 'unreadable'; path: string };
+
 export interface InstallationTargetList {
   hostInstanceId: string;
   targets: { targetToken: string; scope: 'user' | 'project' }[];

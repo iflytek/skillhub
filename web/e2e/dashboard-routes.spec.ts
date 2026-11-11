@@ -43,8 +43,10 @@ test.describe('Dashboard Routes (Real API)', () => {
     await expect(page.getByRole('heading', { name: 'Namespace not found' })).toBeVisible()
 
     await page.goto('/dashboard/namespaces/e2e-missing-namespace/reviews')
-    const reviewSection = page.getByRole('region', { name: 'Namespace Reviews' })
-    await expect(reviewSection).toBeVisible()
-    await expect(reviewSection.getByText('No review records', { exact: true })).toBeVisible()
+    await expect(page).toHaveURL((url) => url.pathname === '/dashboard/reviews' && url.searchParams.get('namespace') === 'e2e-missing-namespace')
+    await expect(page.getByRole('heading', { name: 'Review center', exact: true })).toBeVisible()
+    await expect(page.getByRole('alert')).toContainText(/This account does not have review permission\.|Unable to load the review scope\. Try again\./)
+    await expect(page.getByRole('table')).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'View', exact: true })).toHaveCount(0)
   })
 })

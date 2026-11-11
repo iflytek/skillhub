@@ -11,7 +11,7 @@ vi.mock('@/api/client', async () => ({
 }))
 vi.mock('@/shared/hooks/use-skill-queries', async () => ({
   ...await vi.importActual<typeof import('@/shared/hooks/use-skill-queries')>('@/shared/hooks/use-skill-queries'),
-  previewSkillPackage: vi.fn().mockResolvedValue({ name: 'foo', displayName: 'Foo', version: '1.1' }),
+  useSkillVersionDetail: () => ({ data: undefined, isLoading: false }), previewSkillPackage: vi.fn().mockResolvedValue({ name: 'foo', displayName: 'Foo', version: '1.1', description:'Summary', overview:'# Overview' }),
   usePublishSkill: () => ({ mutateAsync: api.publish, isPending: false }),
 }))
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => api.navigate, useSearch: () => api.search }))
@@ -36,13 +36,15 @@ describe.each(['update', 'resubmit'])('%s package rejection refreshes current pe
     render(<QueryClientProvider client={client}><PublishPage /></QueryClientProvider>)
     await waitFor(() => expect(api.detail).toHaveBeenCalledTimes(1))
     fireEvent.click(screen.getByText('choose package'))
-    const submit = screen.getByRole('button', { name: 'publish.confirm' })
+    const submit = screen.getByRole('button', { name: 'publish.nextConfirm' })
     await waitFor(() => expect(submit.hasAttribute('disabled')).toBe(false))
     fireEvent.click(submit)
-    await waitFor(() => expect(toast.error).toHaveBeenCalled())
+    fireEvent.click(screen.getByRole('button', { name: 'publish.confirm' }))
+    await screen.findByRole('heading', {name:'publish.result.error.invalid.title'})
+    fireEvent.click(screen.getByRole('button', {name:'publish.result.returnToForm'}))
     expect(api.detail).toHaveBeenCalledTimes(2)
     expect(api.publish).toHaveBeenCalledTimes(1)
-    expect(submit.hasAttribute('disabled')).toBe(ownerReadOnly)
+    expect(screen.getByRole('button', {name:'publish.nextConfirm'}).hasAttribute('disabled')).toBe(ownerReadOnly)
     expect(Boolean(screen.queryByText('mySkills.ownerReadOnly'))).toBe(ownerReadOnly)
     expect(toast.success).not.toHaveBeenCalled()
     expect(api.navigate).not.toHaveBeenCalled()

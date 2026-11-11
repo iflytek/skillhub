@@ -1,3 +1,4 @@
+import { executeFixtureTool } from './fixture-tool-execution.mjs';
 // Load a temporary copy as an observer in a fresh isolated DSH Web Profile.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -93,7 +94,7 @@ async function run(ctx, root, config, signal) {
   async function search(label) {
     const callId = 'search-state-' + randomUUID();
     const args = { q: query };
-    const result = await ctx.tools.execute({ callId, name: 'astron_skillhub_search', arguments: args,
+    const result = await executeFixtureTool(ctx, root, { callId, name: 'astron_skillhub_search', arguments: args,
       agent, signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]) });
     assert.equal(result.isError, false, JSON.stringify(result));
     assert.equal(result.value.kind, 'skillhub-search');
@@ -127,7 +128,7 @@ async function run(ctx, root, config, signal) {
     return { value: result.value, item };
   }
   async function install(selectionRef, scope) {
-    const result = await ctx.tools.execute({ callId: 'install-state-' + randomUUID(), name: 'astron_skillhub_install',
+    const result = await executeFixtureTool(ctx, root, { callId: 'install-state-' + randomUUID(), name: 'astron_skillhub_install',
       arguments: { selectionRef, scope }, agent, signal: AbortSignal.any([signal, AbortSignal.timeout(20000)]) });
     assert.equal(result.isError, false, JSON.stringify(result));
     assert.equal(result.value.status, 'accepted', JSON.stringify(result.value));

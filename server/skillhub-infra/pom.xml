@@ -12,6 +12,10 @@
     <artifactId>skillhub-infra</artifactId>
     <dependencies>
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.iflytek.skillhub</groupId>
             <artifactId>skillhub-domain</artifactId>
         </dependency>

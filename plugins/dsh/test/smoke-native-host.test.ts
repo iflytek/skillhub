@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // Node-only CI entry; keep its helpers importable without starting a Host or downloading dependencies.
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
-import { safeAvailabilityCheckpoint, summarizeNpmPreparation, prepareDownloadCache, scenarioProbes, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
+import { safeAvailabilityCheckpoint, summarizeNpmPreparation, prepareDownloadCache, scenarioProbes, assertHostNodeVersion, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
 
 const roots: string[] = [];
 async function root() {
@@ -168,11 +168,11 @@ test('native smoke accepts only explicit DSH releases and rejects incompatible r
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   expect(manifest.peerDependencies['@deepseek-ai/dsh-fs']).toBe(supportedDshVersions.join(' || '));
   for (const version of supportedDshVersions) expect(selectDshVersion(version)).toBe(version);
-  for (const version of ['latest', 'next', 'alpha', '0.2.1', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.2-rc.1', '0.2.1-rc.2 --ignore-scripts', '0.2.1-rc.5 --ignore-scripts']) {
+  for (const version of ['latest', 'next', 'alpha', '0.2.1', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.2-rc.2', '0.2.1-rc.2 --ignore-scripts', '0.2.1-rc.5 --ignore-scripts']) {
     expect(() => selectDshVersion(version)).toThrow('Unsupported DSH release');
   }
   expect(selectDshVersion('0.2.0-rc.2', 'retained')).toBe('0.2.0-rc.2');
-  for (const version of ['0.2.1-rc.2', '0.2.1-rc.5']) {
+  for (const version of ['0.2.1-rc.2', '0.2.1-rc.5', '0.2.2-rc.1']) {
     expect(() => selectDshVersion(version, 'retained')).toThrow('requires the current Cordis family');
   }
 });
@@ -323,4 +323,19 @@ test('availability summary allows only fixed context reasons without messages or
     expect(safeAvailabilityCheckpoint({ ...checkpoint, install: { ...checkpoint.install, reason } }).install.reason).toBeUndefined();
   }
   expect(safeAvailabilityCheckpoint({ ...checkpoint, install: { ...checkpoint.install, code: 'UNCONFIRMED' } }).install.reason).toBeUndefined();
+});
+
+
+test('official release Node floors fail before Host preparation without excluding old RCs', () => {
+  for (const release of supportedDshVersions) {
+    for (const node of ['24.9.0', '24.10.0', '24.20.1']) expect(() => assertHostNodeVersion(release, node)).not.toThrow();
+    for (const node of ['22.20.0', '24.1.9', '25.0.0', '24.9.0-rc.1', '24.invalid.0']) {
+      expect(() => assertHostNodeVersion(release, node)).toThrow('smoke requires Node');
+    }
+    for (const node of ['24.2.0', '24.8.9']) {
+      if (release === '0.2.2-rc.1') expect(() => assertHostNodeVersion(release, node)).toThrow('>=24.9.0');
+      else expect(() => assertHostNodeVersion(release, node)).not.toThrow();
+    }
+  }
+  expect(() => assertHostNodeVersion('0.2.2-rc.2', '24.9.0')).toThrow('Unsupported DSH release');
 });

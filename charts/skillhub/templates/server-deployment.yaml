@@ -79,6 +79,23 @@ spec:
               value: {{ $profiles | quote }}
             - name: SKILLHUB_SUITE_REVIEW_WRITES_ENABLED
               value: {{ .Values.server.suiteReviewWritesEnabled | quote }}
+            - name: SKILLHUB_ACTUATOR_EXPOSURE_INCLUDE
+              value: {{ .Values.server.actuatorExposureInclude | default "health,info" | quote }}
+            {{- $businessLogs := .Values.server.businessLogs | default dict }}
+            - name: SKILLHUB_BUSINESS_LOGS_ENABLED
+              value: {{ $businessLogs.enabled | default false | quote }}
+            - name: SKILLHUB_BUSINESS_LOGS_ENDPOINT
+              value: {{ $businessLogs.endpoint | default "" | quote }}
+            {{- with $businessLogs.headersSecretRef }}
+            {{- if .name }}
+            - name: SKILLHUB_BUSINESS_LOGS_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .name | quote }}
+                  key: {{ .key | quote }}
+                  optional: false
+            {{- end }}
+            {{- end }}
             - name: SKILLHUB_GITHUB_SYNC_STAGING_CAPACITY_LIMIT_BYTES
               value: {{ .Values.githubSync.stagingCapacityLimitBytes | quote }}
             {{- if .Values.githubSync.enabled }}
@@ -301,6 +318,33 @@ spec:
                 configMapKeyRef:
                   name: {{ include "skillhub.fullname" . }}-config
                   key: session-cookie-secure
+
+            # Optional notification email
+            - name: SKILLHUB_NOTIFICATION_EMAIL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-enabled
+            - name: SKILLHUB_NOTIFICATION_EMAIL_DIGEST_WINDOW_MINUTES
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-window
+            - name: SKILLHUB_NOTIFICATION_EMAIL_PUBLIC_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-public-url
+            - name: SKILLHUB_NOTIFICATION_EMAIL_FROM_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-from-address
+            - name: SKILLHUB_NOTIFICATION_EMAIL_FROM_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "skillhub.fullname" . }}-config
+                  key: notification-email-from-name
 
             # Public URL and authentication
             - name: SKILLHUB_PUBLIC_BASE_URL

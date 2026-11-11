@@ -6,7 +6,7 @@ This page covers pending-content inspection, decision submission and result veri
 
 | Operation | Identity and conditions | Entry |
 | --- | --- | --- |
-| Review within a team namespace | Namespace Owner or Admin | Review tab in namespace details |
+| Review within a team namespace | Namespace Owner or Admin | Review entry in namespace details; opens the shared center with this scope selected |
 | Review across namespaces | Platform Skill administrator (`SKILL_ADMIN`) or super administrator (`SUPER_ADMIN`) | `/dashboard/reviews` |
 | Track an own submission | Submitter | My Review Progress; read access does not grant approval |
 | Global promotion and revocation | Submitter and authorized platform reviewer | `/dashboard/promotions`, separate from ordinary version reviews |
@@ -15,6 +15,14 @@ Owners and Admins of a team namespace can review their own submissions; super ad
 
 Ordinary public (`PUBLIC`) or namespace-member-visible (`NAMESPACE_ONLY`) uploads enter scanning and review. Private (`PRIVATE`) uploads are retained first and still require publication confirmation or a separate review submission. A previously published version may remain available while an update is pending.
 
+## Find Review Requests
+
+The review center lists authorized Skill, Suite, avatar and visibility requests. Namespace entries open the same queue. The governance center retains reports, global promotions, activity and governance notifications without duplicating ordinary review tasks. User profile reviews remain a separate queue governed by user-management permissions.
+
+The filter region includes keywords, status, scope, request type and source. Keywords match names, coordinates or submitters. Type and source are independent: a GitHub-synchronized request may be either an initial publication or an update. Platform reviewers can select authorized namespaces they have not joined; namespace Owners and Admins are limited to namespaces they manage.
+
+Editing filters does not change results until Search is submitted, which returns to page one. Reset restores Pending, all scopes, all types, all sources and empty keywords. Applied filters, sorting and pagination remain in the URL and are restored when returning from details. Retry a failed scope request instead of interpreting it as an empty authorization scope.
+
 ## Inspect Content and Submit a Decision
 
 ![Review flow: identify the request, inspect evidence, submit a decision and re-read the outcome](/diagrams/review-decision-flow-en.svg)
@@ -22,7 +30,7 @@ Ordinary public (`PUBLIC`) or namespace-member-visible (`NAMESPACE_ONLY`) upload
 Figure: A decision requires a pending request and current permission. Reading the old version does not verify the current submission.
 
 1. Open a pending request and verify its submitter, subject, target version, visibility and namespace. GitHub-synchronized items also provide a content revision, source repository and fixed commit. The technical version used for installation appears in technical information.
-2. Inspect the submitted documentation and file tree in Skill Content. Documentation is fetched when the tab is opened; individual file content is fetched on selection. GitHub updates initially open Changes; initial imports and ordinary Skills open Skill Content. An empty preview caused by an object-storage read failure is not evidence of acceptable content.
+2. Inspect the effective display name, summary and overview bound to this request, then expand the original package to inspect its files. Neither the old published version nor the original SKILL.md substitutes for custom public-facing content. The page header groups request type, scope, version, submitter and evidence. Avatar and visibility requests show their own objects; visibility is not a content version number. An empty preview caused by an object-storage read failure is not evidence of acceptable content.
 3. Check license evidence, the scanning report and findings in Source & Security. Distinguish execution errors, risk findings and unconfigured analyzers. Ordinary version approval is unavailable while scanning is running. Unrecognized licenses or missing evidence require inspection of the specific status and supporting material; they do not confirm permission to use the content.
 4. For avatar or visibility changes, verify the candidate and requested target. For a Skill Suite, inspect the pending snapshot, Entry Skill and fixed member versions. Approval is unavailable before the snapshot loads. Member approval does not approve the Suite. A Suite definition and a Suite Bundle import operation are separate objects; see [Skill Suites](./skill-suites.html).
 5. Read previous decisions in Review History, then approve or reject after evidence checks. A rejection must identify the file, problem and correction conditions; approval comments are optional. Switching tabs preserves comments; switching requests clears comments and unconfirmed dialogs. This version has no conditional-approval state.
@@ -41,7 +49,17 @@ Online preview limits are listed together below. Exceeding a limit does not mean
 | Current content loaded online | File exceeds 256KiB | Content is not loaded online |
 | Baseline download of a removed old file | File exceeds 1MiB | The old file cannot be downloaded from the review page |
 
-These are frontend/API implementation limits, not review-page settings. Sources: [review detail page](https://github.com/iflytek/skillhub/blob/main/web/src/pages/dashboard/review-detail.tsx) and [review API](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/portal/ReviewController.java). `GET /api/v1/reviews/{id}/skill-detail?includeDocumentation=false` reads metadata and the documentation path without fetching object-storage content; the default is `true`.
+These are frontend/API implementation limits, not review-page settings. Sources: [review detail page](https://github.com/iflytek/skillhub/blob/main/web/src/pages/dashboard/review-detail.tsx) and [review API](https://github.com/iflytek/skillhub/blob/main/server/skillhub-app/src/main/java/com/iflytek/skillhub/controller/portal/ReviewController.java). `GET /api/v1/reviews/{id}/skill-detail?includeDocumentation=false` reads metadata, custom web/package presentation and the documentation path without fetching object-storage content; README or SKILL.md fallback content is loaded on demand; the default is `true`.
+
+Switching tabs or opening evidence smoothly returns to the detail page top, including its heading; reduced motion uses direct positioning. Query completion and comment edits do not reset the reading position. The summary has a distinct section, with package download and file browsing available before the overview. All tabs share the same main width; comparison stacks on narrow screens. Content uses the main page scroll.
+
+### Understand Changes
+
+The version context directly shows the published baseline, pending version and available package metadata. An absent changelog does not create an empty section. Missing displayable declarations do not create empty disclosures; an unavailable snapshot does not establish that no declaration was submitted.
+
+Ordinary updates compare the actual published baseline on the left with the pending version on the right: effective display name, summary and overview, plus added, modified and removed files. Initial publication has no published baseline; the page states this instead of inventing an empty-version comparison. GitHub updates retain fixed source revisions and line-by-line file comparison. Avatar and visibility requests compare their own candidate or target rather than content versions.
+
+Switching to history cannot bypass inspection: approval stays unavailable when required content, comparison or Suite snapshots cannot be read. Processed requests are read-only. A listed request does not itself grant decision permission. Search index maintenance is in system settings, outside review tasks.
 
 ### Inspect Compliance Declarations
 

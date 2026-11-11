@@ -15,11 +15,10 @@ test.describe('Namespace Reviews Data (Real API)', () => {
       seeded = await createNamespaceReviewData(browser, page, testInfo)
       await page.goto(`/dashboard/namespaces/${seeded.namespace.slug}/reviews`)
 
-      await expect(page.getByRole('heading', { name: seeded.namespace.displayName, exact: true })).toBeVisible()
-      await expect(page.getByRole('navigation', { name: 'Space management' })
-        .getByRole('link', { name: 'Reviews', exact: true })).toHaveAttribute('aria-current', 'page')
-      await expect(page.getByRole('region', { name: 'Namespace Reviews' })).toBeVisible()
-      await expect(page.getByText(`${seeded.namespace.slug}/${seeded.skill.slug}`, { exact: true })).toBeVisible()
+      await expect(page).toHaveURL((url) => url.pathname === '/dashboard/reviews' && url.searchParams.get('namespace') === seeded?.namespace.slug)
+      await expect(page.getByRole('heading', { name: 'Review center', exact: true })).toBeVisible()
+      await expect(page.getByRole('combobox', { name: 'Review scope' })).toHaveText(seeded.namespace.displayName)
+      await expect(page.getByRole('table').getByText(`@${seeded.namespace.slug}/${seeded.skill.slug}`, { exact: true })).toBeVisible()
       await expect(page.getByRole('combobox', { name: 'Review status' })).toHaveText('Pending')
     } finally {
       await seeded?.cleanup()

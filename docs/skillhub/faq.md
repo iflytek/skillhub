@@ -184,6 +184,15 @@ SKILLHUB_PUBLISH_MAX_FILE_COUNT=500
 
 A: 兼容性取决于具体命令。旧版本支持基础 CLI 不代表支持 Device Flow、Suite 或同步；请核对 CLI 版本与目标服务端发行说明。Suite 要求服务端声明 `skill-suite-v1`。见 [CLI 指南](./guide/cli.html)。
 
+## Q: SkillHub 支持哪些 PostgreSQL 版本？
+
+A: Compose、一键部署和 Kustomize 清单（`deploy/k8s/`）默认使用 PostgreSQL 16（`postgres:16-alpine`）。Helm Chart 内置的 Bitnami PostgreSQL 镜像按 digest 固定，当前该 digest 对应 PostgreSQL 18.4，不在下面的已验证范围内；需要已验证版本时请改用外部 PostgreSQL 16/17，或把 `postgresql.image` 覆盖为对应版本。
+
+- 已验证：PostgreSQL 16 和 17。后端测试在两个版本上分别运行全量 Flyway 迁移、`validate`、旧版 Flyway 9.22.3 写入的迁移历史与 checksum 兼容、带数据的旧 schema 升级、应用启动和数据库相关业务测试。
+- 未验证：PostgreSQL 15 及更早版本、PostgreSQL 18 及更新版本。
+
+改用 PostgreSQL 17 时设置 `POSTGRES_IMAGE`（例如 `postgres:17-alpine`）或连接外部 PostgreSQL 17 实例。已有 PostgreSQL 16 数据目录不能直接给 17 使用，跨大版本迁移需要 `pg_dump`/`pg_restore` 或 `pg_upgrade`，请先在副本上验证。
+
 ## Q: SkillHub 支持 MySQL 数据库吗？
 
 A: 目前仅支持 PostgreSQL，暂不支持 MySQL。

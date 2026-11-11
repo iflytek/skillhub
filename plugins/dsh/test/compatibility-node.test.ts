@@ -75,3 +75,44 @@ console.log('verified');
     await rm(root, { recursive: true, force: true });
   }
 }, 30_000);
+
+test('real Node validates the new complete runtime graph and rejects cross-release or partial families', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-runtime-compatibility-'));
+  try {
+    const built = await Bun.build({ entrypoints: [fileURLToPath(new URL('../src/host/runtime-compatibility.ts', import.meta.url))], target: 'node', format: 'esm', packages: 'external' });
+    expect(built.success).toBe(true);
+    await writeFile(join(root, 'runtime.mjs'), await built.outputs[0]!.text());
+    await writeFile(join(root, 'probe.mjs'), `
+import assert from 'node:assert/strict';
+import { assertRuntimeCompatibility, runtimePackageBaseline, clientPackageBaseline } from './runtime.mjs';
+const versions = ['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5', '0.2.2-rc.1'];
+const family = { '@deepseek-ai/cordis': '4.1.0', '@deepseek-ai/cordis-plugin-loader': '1.1.0', '@deepseek-ai/cordis-plugin-include': '1.1.0', '@deepseek-ai/cordis-plugin-timer': '1.2.0' };
+const packages = new Map(Object.entries(runtimePackageBaseline).map(([name, value]) => [name, { name, version: name.startsWith('@deepseek-ai/dsh') ? '0.2.2-rc.1' : family[name] ?? value, manifestPath: name }]));
+const clients = new Map(clientPackageBaseline.map(name => [name, { name, version: '0.2.2-rc.1' }]));
+const check = () => assertRuntimeCompatibility({ packageOf: name => packages.get(name), clientPath: name => clients.has(name) ? name : undefined }, 'file:///plugin/index.js', (_file, name) => clients.get(name), file => packages.get(file));
+if (Number(process.versions.node.split('.')[1]) < 9) {
+  assert.throws(check, /local writes are disabled/);
+} else {
+  assert.equal(check(), '0.2.2-rc.1');
+  for (const value of packages.values()) {
+    const original = value.version;
+    for (const version of value.name.startsWith('@deepseek-ai/dsh') ? versions.slice(0, 3) : ['0.0.0-mixed']) {
+      value.version = version; assert.throws(check, /local writes are disabled/); value.version = original;
+      assert.equal(check(), '0.2.2-rc.1');
+    }
+  }
+  for (const name of clients.keys()) {
+    for (const version of versions.slice(0, 3)) {
+      clients.set(name, { name, version }); assert.throws(check, /local writes are disabled/);
+      clients.set(name, { name, version: '0.2.2-rc.1' });
+    }
+  }
+}
+console.log('verified on Node ' + process.versions.node);
+`);
+    const child = Bun.spawn(['node', 'probe.mjs'], { cwd: root, stdout: 'pipe', stderr: 'pipe' });
+    const [stdout, stderr, code] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+    expect(code, stderr).toBe(0);
+    expect(stdout).toContain('verified on Node ');
+  } finally { await rm(root, { recursive: true, force: true }); }
+});

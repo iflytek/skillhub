@@ -1,5 +1,5 @@
 import { sameRegistry } from './registry-config.js';
-import { SkillWebsiteLink } from './skill-website-link.js';
+import { DetailMeta, sourceHost } from './detail-presentation.js';
 import { UpgradeControl } from './upgrade-control.js';
 import { RemovalControl } from './removal-control.js';
 import { SkillInstallDialog } from './install-dialog.js';
@@ -9,25 +9,25 @@ import { InstallationManagement } from './management-tool-view.js';
 import { MarketCardActions } from './market-card-actions.js';
 import { CardSkeletons, CatalogSkeleton, DetailSkeleton } from './loading-layout.js';
 import { UiAvailabilityNotice, type UiAvailability } from './ui-availability.js';
+import { WorkbenchStyles } from './installed-styles.js';
 import { NativeControlStyles } from './native-control-styles.js';
 import { catalogErrorMessage } from './catalog-error.js';
 import { FavoriteButton } from './favorite-button.js';
 import { favoriteIdentity, favoriteSnapshot, filterFavorites, resolvedFavoriteItem } from './favorites.js';
 import { useFavorites } from './use-favorites.js';
 import { QueryClient, QueryClientProvider, useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useLayoutEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol';
 import { installedNavigationFor, type InstalledNavigation } from './installed-navigation.js';
 import { InstalledSkills } from './installed-skills.js';
 import type { InstalledServices } from './installed-skills.js';
-import { DetailContent } from './detail-content.js';
+import { DetailContent, type DetailContentHandle } from './detail-content.js';
 import type { InstallationServices } from './install-control.js';
 import { SelectField, Button, Input, Tabs, TabsContent, TabsList, TabsTrigger } from './ui.js';
-import { Icon, SkillAvatar, SkillCard, SkillMetrics } from './skill-card.js';
+import { Icon, SkillAvatar, SkillCard } from './skill-card.js';
 import type { InfiniteData } from '@tanstack/react-query';
 import type { CatalogPageResult, SkillList, InstalledSkillList, FavoriteSkill } from '../host/types.js';
-import { skillInstallationSummary } from './skill-primary-actions.js';
 import '../../lib/typert.remote-client.js';
 
 type Item = SkillList['items'][number];
@@ -48,13 +48,13 @@ function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { code: 
   if (result.ok) return result.value;
   throw new Error(catalogErrorMessage(result.error));
 }
-export function CatalogPage({ remote, navigation, client, onReturn, installation, installed, availability }: {
-  remote: Remote; navigation: CatalogNavigation; client: QueryClient; onReturn: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability;
+export function CatalogPage({ remote, navigation, client, onReturn, onSettings, installation, installed, availability }: {
+  remote: Remote; navigation: CatalogNavigation; client: QueryClient; onReturn: () => void; onSettings?: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability;
 }) {
-  return <QueryClientProvider client={client}><Catalog remote={remote} navigation={navigation} onReturn={onReturn} installation={installation} installed={installed} availability={availability} /></QueryClientProvider>;
+  return <QueryClientProvider client={client}><Catalog remote={remote} navigation={navigation} onReturn={onReturn} onSettings={onSettings} installation={installation} installed={installed} availability={availability} /></QueryClientProvider>;
 }
-function Catalog({ remote, navigation, onReturn, installation, installed, availability }: {
-  remote: Remote; navigation: CatalogNavigation; onReturn: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability;
+function Catalog({ remote, navigation, onReturn, onSettings, installation, installed, availability }: {
+  remote: Remote; navigation: CatalogNavigation; onReturn: () => void; onSettings?: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability;
 }) {
   const queryClient = useQueryClient();
   const entries = useSyncExternalStore(availability.subscribe, availability.getSnapshot);
@@ -63,6 +63,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   const [removalCandidate, setRemovalCandidate] = useState<{ item: InstalledSkillList['items'][number]; revision: string; source: string } | null>(null);
   const [installCandidate, setInstallCandidate] = useState<{ item: Item; revision: string } | null>(null);
   const [tab, setTab] = useState(navigation.tab);
+  const [installedView, setInstalledView] = useState(0);
   const [installedOrigin, setInstalledOrigin] = useState(navigation.installedOrigin);
   const [draft, setDraft] = useState(navigation.draft);
   const [query, setQuery] = useState(navigation.query);
@@ -79,6 +80,8 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
   const [selected, setSelected] = useState(navigation.selected);
   const scroller = useRef<HTMLElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
+  const detailContent = useRef<DetailContentHandle>(null);
+  const managementTarget = useRef<HTMLElement>(null);
   const lastCard = useRef<HTMLButtonElement | null>(null);
   const lastSelected = useRef(selected);
   const favoriteFilter = useRef<HTMLButtonElement>(null);
@@ -139,16 +142,25 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
     enabled: !!selected && !!context.data?.configured && sourceMatches,
     queryFn: async ({ signal }) => unwrap(await remote.getSkillDetail(revision!, selected!.namespace, selected!.slug, selected!.latestVersion, signal)), retry: false,
   });
-  useLayoutEffect(() => {
-    if (tab !== 'browse') return;
-    const filterChanged = previousFavoriteOnly.current !== favoriteOnly; previousFavoriteOnly.current = favoriteOnly;
-    if (scroller.current) scroller.current.scrollTop = selected ? 0 : favoriteOnly ? navigation.favoriteScrollTop ?? 0 : navigation.scrollTop;
-    if (selected) heading.current?.focus();
-    else if (!filterChanged) {
+  const browseReady = favoriteOnly ? favorites.ready && !favorites.loading : !!pages;
+  // Radix Presence mounts the tab body in a later commit than the route change.
+  // Restore after that body exists, not against a short, empty scroll container.
+  const restoreBrowse = useCallback((node: HTMLDivElement | null) => {
+    if (!node || tab !== 'browse' || selected || !browseReady) return;
+    const filterChanged = previousFavoriteOnly.current !== favoriteOnly;
+    previousFavoriteOnly.current = favoriteOnly;
+    if (scroller.current) scroller.current.scrollTop = favoriteOnly ? navigation.favoriteScrollTop ?? 0 : navigation.scrollTop;
+    if (!filterChanged) {
       if (lastCard.current?.isConnected) lastCard.current.focus({ preventScroll: true });
       else if (favoriteOnly) favoriteFilter.current?.focus({ preventScroll: true });
     }
-  }, [selected, navigation, tab, favoriteOnly]);
+  }, [tab, selected, favoriteOnly, navigation, browseReady]);
+  useLayoutEffect(() => {
+    if (tab === 'browse' && selected) {
+      if (scroller.current) scroller.current.scrollTop = 0;
+      heading.current?.focus();
+    }
+  }, [selected, tab]);
   function back() { navigation.selected = null; setSelected(null); }
   function rememberScroll() {
     const top = scroller.current?.scrollTop ?? 0;
@@ -187,9 +199,9 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
       if (favoriteRequest.current === controller) { favoriteRequest.current = null; setFavoriteOpening(null); }
     }
   }
-  function favoriteAction(item: FavoriteSkill) {
+  function favoriteAction(item: FavoriteSkill, showLabel = false) {
     const pressed = favorites.items.some(saved => favoriteIdentity(saved) === favoriteIdentity(item));
-    return <FavoriteButton item={item} pressed={pressed} disabled={!favorites.ready} busy={favorites.loading || favorites.saving}
+    return <FavoriteButton item={item} showLabel={showLabel} pressed={pressed} disabled={!favorites.ready} busy={favorites.loading || favorites.saving}
       onToggle={() => {
         if (!revision) return;
         const captured = revision, generation = favoriteFeedbackGeneration.current;
@@ -237,13 +249,24 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
     if (intent === 'remove') { if (revision && context.data) setRemovalCandidate({ item, revision, source: item.registry ?? context.data.registryUrl }); return; }
     if (revision && context.data) setUpgradeCandidate({ item, revision, source: item.registry ?? context.data.registryUrl });
   }
+  function openInstalledChanges(item: InstalledSkillList['items'][number], upgrade: boolean, version?: string, requestedRevision = revision) {
+    if (!installed || !installedNavigation || !revision || requestedRevision !== revision || requestedRevision !== latestRevision.current) return;
+    installed.management?.assertCurrent();
+    Object.assign(installedNavigation, { selected: item, intent: upgrade ? 'upgrade' : 'local-changes', changeVersion: version });
+    const origin = { sessionId: installed.sessionId, sourceRevision: revision };
+    navigation.installedOrigin = origin; setInstalledOrigin(origin);
+    navigation.selected = null; setSelected(null);
+    navigation.tab = 'installed'; setTab('installed');
+    setInstalledView(value => value + 1);
+  }
   function error(message: string, retry: () => void) {
     return <div role="alert" className="astron-sh-error"><p>{message}</p><Button onClick={retry}>重试</Button></div>;
   }
   function changeTab(value: string) {
     cancelFavoriteOpen();
-    if (tab === 'browse') rememberScroll();
+    if (!selected && tab === 'browse') rememberScroll();
     navigation.installedOrigin = undefined; setInstalledOrigin(undefined);
+    navigation.selected = null; setSelected(null);
     navigation.tab = value as typeof tab; setTab(value as typeof tab);
   }
   function resetListing(next: string, nextSort: Sort, nextLabel = label) {
@@ -272,7 +295,7 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
     navigation.favoriteOnly = !favoriteOnly; setFavoriteOnly(!favoriteOnly);
   }
   return <section ref={scroller} className="skillhub-controls astron-sh-catalog" aria-label="SkillHub 技能广场">
-    <NativeControlStyles /><UiAvailabilityNotice availability={availability} />
+    <NativeControlStyles /><WorkbenchStyles /><UiAvailabilityNotice availability={availability} />
     {favoriteUndo && favoriteUndo.revision === revision && tab === 'browse' && createPortal(<aside className="skillhub-controls astron-sh-management-notice" aria-label={`收藏通知：${favoriteUndo.item.displayName || favoriteUndo.item.slug}`}>
       <div role="status"><strong>已取消收藏</strong> <Button size="sm" variant="ghost" disabled={!favorites.ready} aria-disabled={favorites.saving || undefined} aria-busy={favorites.saving || undefined} onClick={() => { void undoFavorite(); }}>撤销</Button>
         <p className="astron-sh-favorite-undo-name" title={`@${favoriteUndo.item.namespace}/${favoriteUndo.item.slug}`}>{favoriteUndo.item.displayName || favoriteUndo.item.slug}</p></div>
@@ -291,69 +314,78 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
         return { detail, sourceRevision: source.sourceRevision };
       }} />}
 
-    <header className="astron-sh-catalog-header"><div className="astron-sh-location"><Icon name="grid" /><strong>SkillHub</strong><span>/</span><span>{selected ? '技能详情' : '技能广场'}</span></div>
-      <div className="astron-sh-toolbar-actions"><Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
+    <Tabs value={tab} onValueChange={changeTab}>
+    <header className="astron-sh-catalog-header"><div className="astron-sh-location"><Icon name="library" /><strong>SkillHub</strong><span>技能工作台</span></div>
+      <TabsList className="astron-sh-directory-tabs" aria-label="技能目录"><TabsTrigger value="browse" onClick={() => { if (selected) back(); }}>发现技能</TabsTrigger><TabsTrigger value="installed" onClick={() => {
+        navigation.installedOrigin = undefined; setInstalledOrigin(undefined);
+        if (installedNavigation?.selected) {
+          installedNavigation.selected = null; installedNavigation.intent = 'detail'; installedNavigation.changeVersion = undefined;
+          setInstalledView(value => value + 1);
+        }
+      }}>我的技能</TabsTrigger></TabsList>
+      <div className="astron-sh-toolbar-actions">{onSettings && <Button variant="ghost" size="sm" aria-label="SkillHub 设置" title="SkillHub 设置" onClick={() => { favoriteFeedbackGeneration.current++; setFavoriteUndo(null); cancelFavoriteOpen(); if (!selected && tab === 'browse') rememberScroll(); onSettings(); }}><Icon name="settings" />设置</Button>}<Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
       {(installation || installed) && <Button variant="ghost" className="astron-sh-icon-button" aria-label="返回会话" title="关闭 SkillHub，返回会话" onClick={leaveCatalog}><Icon name="close" /></Button>}</div>
     </header>
+    <div className="astron-sh-workbench-frame">
     {sourceOpen && <p className="astron-sh-source-info" role="status">当前来源：{context.data?.registryUrl || '尚未配置来源'}</p>}
     {(compatibility.isError || compatibility.data?.dependencyBaseline === 'unverified') && <div role="alert" className="astron-sh-error">
       <p>{compatibility.isError ? '无法读取 DSH 依赖版本核验结果。' : `当前 DSH 依赖组合未通过核验，安装、升级、卸载和恢复写入已禁用。请使用 ${compatibility.data?.candidateDshVersion} 对应的完整发行依赖。`}</p>
       <Button onClick={() => { void compatibility.refetch(); }}>重新核验版本</Button></div>}
     {context.isPending ? <CatalogSkeleton tab={tab} draft={draft} /> : context.isError ? error(context.error.message, () => { void context.refetch(); })
-      : selected && context.data.configured ? <>
-          <Button variant="ghost" onClick={back}>← 返回技能广场</Button>
+      : selected && context.data.configured ? <div className="astron-sh-detail-surface">
+          <Button className="astron-sh-detail-back" variant="ghost" onClick={back}><Icon name="arrow-left" />返回技能广场</Button>
           <div className="astron-sh-detail-heading"><SkillAvatar name={sourceMatches ? detail.data?.title || selected.displayName : selected.displayName} slug={selected.slug} namespace={selected.namespace} />
-            <div><h2 ref={heading} tabIndex={-1}>{sourceMatches ? detail.data?.title || selected.displayName || selected.slug : selected.displayName || selected.slug}</h2>
+            <div className="astron-sh-detail-identity"><h2 ref={heading} tabIndex={-1}>{sourceMatches ? detail.data?.title || selected.displayName || selected.slug : selected.displayName || selected.slug}</h2>
               <p>@{selected.namespace}/{selected.slug} · {selected.latestVersion}</p></div>
-            <div className="astron-sh-detail-actions">{sourceMatches && favoriteAction({ ...selected, displayName: detail.data?.title || selected.displayName, summary: detail.data?.summary ?? selected.summary })}
-            <SkillWebsiteLink webUrl={detail.data?.webUrl}
-              enabled={sourceMatches && !detail.isError && !!detail.data && detail.data.namespace === selected.namespace && detail.data.slug === selected.slug} /></div></div>
+            <div className="astron-sh-detail-actions">{sourceMatches && detail.data && !detail.isError && <Button size="sm" variant="ghost" className="astron-sh-manage-installations" onClick={() => detailContent.current?.showManagement()}><Icon name="folder-open" />管理安装</Button>}{sourceMatches && favoriteAction({ ...selected, displayName: detail.data?.title || selected.displayName, summary: detail.data?.summary ?? selected.summary }, true)}{sourceMatches && installation && <MarketCardActions label="使用技能" records={inventory.data?.items.filter(item => sameRegistry(item.registry, context.data.registryUrl) && item.namespace === selected.namespace && item.slug === selected.slug) ?? []}
+              sourceRevision={revision!} services={installed} verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
+              onInstall={() => setInstallCandidate({ item: selected, revision: revision! })} />}</div></div>
           {favorites.error && <div role="alert" className="astron-sh-favorite-feedback"><p>{favorites.error}</p><Button size="sm" variant="ghost" disabled={favorites.fetching || favorites.saving} onClick={favorites.retry}>重新读取收藏</Button></div>}
           <p className="astron-sh-detail-summary">{sourceMatches ? detail.data?.summary ?? selected.summary : selected.summary}</p>
           {!sourceMatches ? error('来源已变化，请返回技能广场重新选择。', back)
             : detail.isPending ? <DetailSkeleton />
               : detail.isError ? error(detail.error.message, () => { void detail.refetch(); })
-                 : <><SkillMetrics item={detail.data} labeled />
+                 : <><DetailMeta detail={detail.data} websiteEnabled={sourceMatches && !detail.isError} />
                   <div className="astron-sh-detail-layout"><article className="astron-sh-detail-main astron-sh-documentation" aria-label="技能说明">
-                  <DetailContent detail={detail.data} modes={context.data.detailTabs} remote={remote} retry={() => { void detail.refetch(); }}
+                  <DetailContent ref={detailContent} managementTarget={managementTarget} detail={detail.data} modes={context.data.detailTabs} remote={remote} retry={() => { void detail.refetch(); }}
                     cacheIdentity={JSON.stringify([installation?.sessionId ?? installed?.sessionId, revision, selected.namespace, selected.slug, selected.latestVersion])}
                     onContextStale={() => { void detail.refetch(); }}
                     onSelectVersion={version => { const next = { ...selected, latestVersion: version }; navigation.selected = next; setSelected(next); }} />
-                </article><aside className="astron-sh-detail-aside">
-                  {installed?.management ? <InstallationManagement identity={{ ...selected, registry: context.data.registryUrl }} revision={revision!} services={installed.management} useSkill={installed.skillUse}
-                    primaryAction={installation && <MarketCardActions label="使用技能" records={inventory.data?.items.filter(item => sameRegistry(item.registry, context.data.registryUrl) && item.namespace === selected.namespace && item.slug === selected.slug) ?? []}
-                      sourceRevision={revision!} services={installed} verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
-                      onInstall={() => setInstallCandidate({ item: selected, revision: revision! })} />}
+                </article><aside ref={managementTarget} tabIndex={-1} aria-label="安装位置管理" className="astron-sh-detail-aside">
+                  {installed?.management ? <InstallationManagement identity={{ ...selected, registry: context.data.registryUrl }} revision={revision!} services={{ ...installed.management, openChanges: openInstalledChanges }} useSkill={installed.skillUse}
                     onInstall={inventory.data?.items.some(item => sameRegistry(item.registry, context.data.registryUrl) && item.namespace === selected.namespace && item.slug === selected.slug) ? () => setInstallCandidate({ item: selected, revision: revision! }) : undefined} />
                     : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话。</p><Button onClick={onReturn}>前往会话</Button></div>}
+
                 </aside></div></>}
-        </> : <>
-          <Tabs value={tab} onValueChange={changeTab}><TabsList className="astron-sh-directory-tabs" aria-label="技能目录"><TabsTrigger value="browse">浏览技能</TabsTrigger><TabsTrigger value="installed" onClick={() => { navigation.installedOrigin = undefined; setInstalledOrigin(undefined); }}>已安装</TabsTrigger></TabsList>
+        </div> : <>
           <TabsContent value="installed">{installedOrigin && (installedOrigin.sessionId !== installed?.sessionId || installedOrigin.sourceRevision !== revision)
-            ? <p role="alert">会话或来源已变化，请点击“已安装”查看当前上下文的记录。</p>
-            : installed ? <InstalledSkills key={`${installed.sessionId}:${revision}`} services={installed} onInstall={item => setInstallCandidate({ item: { namespace: item.namespace, slug: item.slug, latestVersion: item.version, summary: '' }, revision: revision! })} onRemove={item => manageSkill(item, 'remove')} onUpgrade={item => manageSkill(item, 'upgrade')} navigation={installedNavigation!} source={context.data.registryUrl} sourceRevision={revision!} remote={remote} modes={context.data.detailTabs} scrollContainer={scroller} />
+            ? <p role="alert">会话或来源已变化，请点击“我的技能”查看当前上下文的记录。</p>
+            : installed ? <InstalledSkills key={`${installed.sessionId}:${revision}:${installedView}`} services={installed} onInstall={item => setInstallCandidate({ item: { namespace: item.namespace, slug: item.slug, latestVersion: item.version, summary: '' }, revision: revision! })} onRemove={item => manageSkill(item, 'remove')} onUpgrade={item => manageSkill(item, 'upgrade')} navigation={installedNavigation!} source={context.data.registryUrl} sourceRevision={revision!} remote={remote} modes={context.data.detailTabs} scrollContainer={scroller} />
               : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话，再查看该用户和项目的安装记录。</p><Button onClick={onReturn}>前往会话</Button></div>
-            }</TabsContent><TabsContent value="browse">
+            }</TabsContent><TabsContent value="browse"><div ref={restoreBrowse} className="astron-sh-browse-view">
+              <div className="astron-sh-workbench-heading"><div><h1>发现技能</h1><p>从日常办公到专业开发，找到适合当前工作的技能。</p></div>{context.data.configured && <span className="astron-sh-catalog-source-label" title={context.data.registryUrl}><Icon name="library" />{sourceHost(context.data.registryUrl)}</span>}</div>
               {!context.data.configured ? <div className="astron-sh-empty"><h2>连接 SkillHub</h2><p>{entries.configuration ? '在 DSH 插件页面的 SkillHub 设置中配置技能来源。' : '来源配置暂不可用，已安装技能仍可管理。'}</p><Button onClick={() => { void context.refetch(); }}>刷新连接</Button></div> : <>
               <form className="astron-sh-search-form" onSubmit={event => { event.preventDefault(); if (favoriteOnly) searchFavorites(favoriteDraft.trim()); else search(draft.trim()); }}>
-                <div className="astron-sh-search-field"><Icon name="search" /><Input aria-label={favoriteOnly ? '搜索本机收藏' : '搜索技能'} placeholder={favoriteOnly ? '搜索收藏的技能' : '搜索技能名称或用途'} value={favoriteOnly ? favoriteDraft : draft} onChange={event => {
+                <div className="astron-sh-search-field"><Button type="submit" variant="ghost" size="icon" className="astron-sh-search-submit" aria-label="搜索"><Icon name="search" /></Button><Input aria-label={favoriteOnly ? '搜索本机收藏' : '搜索技能'} placeholder={favoriteOnly ? '搜索收藏的技能' : '搜索技能名称或用途'} value={favoriteOnly ? favoriteDraft : draft} onChange={event => {
                   if (favoriteOnly) { navigation.favoriteDraft = event.target.value; setFavoriteDraft(event.target.value); }
                   else { navigation.draft = event.target.value; setDraft(event.target.value); }
                 }} /></div>
-                <Button type="submit">搜索</Button><Button onClick={() => {
+                {(favoriteOnly ? favoriteDraft || favoriteQuery : draft || query) && <Button variant="ghost" onClick={() => {
                   if (favoriteOnly) { navigation.favoriteDraft = ''; setFavoriteDraft(''); searchFavorites(''); }
                   else { navigation.draft = ''; setDraft(''); search(''); }
-                }}>清空</Button>
+                }}>清空</Button>}
+                {!favoriteOnly && !limited && <label><SelectField label="技能排序" value={sort} onValueChange={next => { const value = next as Sort; resetListing(query, value); navigation.sort = value; setSort(value); }} options={[{ value: 'newest', label: '最新' }, { value: 'downloads', label: '下载量' }, { value: 'rating', label: '评分' }]} /></label>}
               </form>
-              {!favoriteOnly && (label || !!labels.data?.items.length) && <div className="astron-sh-label-filter" role="group" aria-label="技能标签">
-                <span>标签</span><Button size="sm" variant="ghost" aria-pressed={!label} onClick={() => changeLabel('')}>全部</Button>
+              <div className="astron-sh-catalog-filter-row">{!favoriteOnly && (label || !!labels.data?.items.length) && <div className="astron-sh-label-filter" role="group" aria-label="技能标签">
+                <Button size="sm" variant="ghost" aria-pressed={!label} onClick={() => changeLabel('')}>全部</Button>
                 {labels.data?.items.map(item => <Button key={item.slug} size="sm" variant="ghost" aria-pressed={label === item.slug} onClick={() => changeLabel(item.slug)}>{catalogLabel(item)}</Button>)}
                 {label && !labels.data?.items.some(item => item.slug === label) && <Button size="sm" variant="ghost" aria-pressed="true" onClick={() => changeLabel('')}>{label} · 清除</Button>}
               </div>}
+              <Button ref={favoriteFilter} size="sm" variant={favoriteOnly ? 'outline' : 'ghost'} className="astron-sh-favorite-filter" aria-pressed={favoriteOnly} onClick={toggleFavorites}><Icon name="heart" />仅看收藏</Button></div>
               {!favoriteOnly && labels.isError && <p className="astron-sh-label-note" role="status">标签暂时无法读取。<Button size="sm" variant="ghost" disabled={labels.isFetching} onClick={() => { void labels.refetch(); }}>重试标签</Button>{label && <Button size="sm" variant="ghost" onClick={() => changeLabel('')}>清除标签筛选</Button>}</p>}
-              <div className="astron-sh-result-bar"><div className="astron-sh-result-summary"><Button ref={favoriteFilter} size="sm" variant={favoriteOnly ? 'outline' : 'ghost'} className="astron-sh-favorite-filter" aria-pressed={favoriteOnly} onClick={toggleFavorites}><Icon name="bookmark" />仅看收藏</Button>
-                <p role="status">{favoriteOnly ? favorites.ready ? `${visibleFavorites.length} 项收藏` : favorites.loading ? '正在读取收藏…' : '本机收藏' : pages ? `共匹配 ${pages[0]!.total} 项，当前显示 ${items.length} 项。` : '技能目录'}</p></div>
-                {!favoriteOnly && !limited && <label>排序<SelectField label="技能排序" value={sort} onValueChange={next => { const value = next as Sort; resetListing(query, value); navigation.sort = value; setSort(value); }} options={[{ value: 'newest', label: '最新发布' }, { value: 'downloads', label: '下载量' }, { value: 'rating', label: '评分' }]} /></label>}
+              <div className="astron-sh-result-bar"><div className="astron-sh-result-summary">
+                <p role="status">{favoriteOnly ? favorites.ready ? `${visibleFavorites.length} 项收藏` : favorites.loading ? '正在读取收藏…' : '本机收藏' : pages ? <><strong>全部技能</strong><span>{pages[0]!.total} 项</span></> : '技能目录'}</p></div>
+
               </div>
               {favorites.error && <div role="alert" className="astron-sh-favorite-feedback"><p>{favorites.error}</p><Button size="sm" variant="ghost" disabled={favorites.fetching || favorites.saving} onClick={favorites.retry}>重新读取收藏</Button></div>}
               {favoriteOpening?.revision === revision && <p role="status" className="astron-sh-label-note">正在读取所选技能…</p>}
@@ -364,20 +396,17 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
               {favoriteOnly ? favorites.loading ? <CardSkeletons /> : !favorites.ready ? null : visibleFavorites.length === 0
                 ? <div className="astron-sh-empty"><p>{favorites.items.length ? '没有匹配的收藏。' : '当前来源还没有收藏。'}</p>{favorites.items.length ? <Button variant="outline" onClick={() => { navigation.favoriteDraft = ''; setFavoriteDraft(''); searchFavorites(''); }}>清空搜索</Button> : <Button variant="outline" onClick={toggleFavorites}>浏览技能</Button>}</div>
                 : <div className="astron-sh-card-grid">{visibleFavorites.map(item => <SkillCard key={favoriteIdentity(item)} item={item} favoriteAction={favoriteAction(item)}
-                  status={inventory.data && !inventory.isError && inventory.data.items.some(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug)
-                    ? <span>{skillInstallationSummary(inventory.data.items.filter(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug))}</span> : undefined}
-                  actions={<MarketCardActions records={inventory.data?.items.filter(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug) ?? []}
+
+                  actions={<MarketCardActions presentation="status" records={inventory.data?.items.filter(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug) ?? []}
                     services={installed} sourceRevision={revision!} verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
                     onInstall={() => { void openFavorite(item, 'install'); }} onManage={() => { void openFavorite(item, 'detail'); }} />}
                   ref={node => { if (lastSelected.current?.namespace === item.namespace && lastSelected.current?.slug === item.slug) lastCard.current = node; }}
                   onOpen={event => { void openFavorite(item, 'detail', event.currentTarget); }} />)}</div>
               : listing.isPending ? <CardSkeletons /> : listing.isError && !pages ? error(listing.error.message, () => { void listing.refetch(); }) : <>
                 {items.length === 0 ? <p className="astron-sh-empty">{listing.hasNextPage ? '此批没有可展示的已发布技能，可继续加载。' : '没有找到匹配的技能，请尝试其他关键词。'}</p>
-                  : <div className="astron-sh-card-grid">{items.map(item => <SkillCard key={`${item.namespace}/${item.slug}`} item={item} version={item.latestVersion} favoriteAction={favoriteAction(item)}
-                    status={inventory.data && !inventory.isError
-                      && inventory.data.items.some(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug)
-                      ? <span>{skillInstallationSummary(inventory.data.items.filter(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug))}</span> : undefined}
-                    actions={<MarketCardActions records={inventory.data?.items.filter(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug) ?? []}
+                  : <div className="astron-sh-card-grid">{items.map(item => <SkillCard key={`${item.namespace}/${item.slug}`} item={item} version={item.latestVersion}
+
+                    actions={<MarketCardActions presentation="status" records={inventory.data?.items.filter(record => sameRegistry(record.registry, context.data.registryUrl) && record.namespace === item.namespace && record.slug === item.slug) ?? []}
                       services={installed} sourceRevision={revision!}
                       verified={!!inventory.data && !inventory.isError && inventory.data.complete && !inventory.data.unavailable.length}
                       onInstall={() => revision && setInstallCandidate({ item, revision })} onManage={() => openSkill(item)} />}
@@ -385,9 +414,10 @@ function Catalog({ remote, navigation, onReturn, installation, installed, availa
                     onOpen={event => openSkill(item, event.currentTarget)} />)}</div>}
                 {listing.isRefetchError && <div role="alert" className="astron-sh-error"><p>刷新失败，当前保留上次加载的结果，尚未确认是否为最新内容。{listing.error.message}</p><Button disabled={listing.isFetching} onClick={() => { void listing.refetch(); }}>重新刷新</Button></div>}
                 {listing.isFetchNextPageError && <p role="alert">下一批暂时无法读取，已加载的技能保留。请重试。</p>}
-                {listing.hasNextPage && <div className="astron-sh-load-more"><span>已显示 {items.length} 项</span><Button disabled={listing.isFetching} onClick={() => { void listing.fetchNextPage(); }}>{listing.isFetchingNextPage ? '正在加载…' : listing.isFetchNextPageError ? '重新加载下一批' : '加载更多'}</Button></div>}
+                {pages && <div className="astron-sh-load-more"><span>已显示 {items.length} / {pages[0]!.total} 项</span>{listing.hasNextPage && <Button variant="ghost" disabled={listing.isFetching} onClick={() => { void listing.fetchNextPage(); }}><Icon name="arrow-right" />{listing.isFetchingNextPage ? '正在加载…' : listing.isFetchNextPageError ? '重新加载下一批' : '加载更多'}</Button>}</div>}
               </>}
-            </>}</TabsContent></Tabs>
+            </>}</div></TabsContent>
         </>}
+    </div></Tabs>
   </section>;
 }

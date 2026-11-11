@@ -7,12 +7,22 @@ import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'no
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
-export const supportedDshVersions = ['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5'];
+export const supportedDshVersions = ['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5', '0.2.2-rc.1'];
 export function selectDshVersion(version, family = 'fresh') {
   if (!supportedDshVersions.includes(version)) throw new Error('Unsupported DSH release.');
-  if (version !== '0.2.0-rc.2' && family === 'retained') throw new Error('DSH 0.2.1 requires the current Cordis family.');
+  if (version !== '0.2.0-rc.2' && family === 'retained') throw new Error(`DSH ${version} requires the current Cordis family.`);
   return version;
 }
+/** Match the official release engine without dropping older RC minimum-Node coverage. */
+export function assertHostNodeVersion(dshVersion, nodeVersion = process.versions.node) {
+  selectDshVersion(dshVersion);
+  const version = /^(\d+)\.(\d+)\.(\d+)$/.exec(nodeVersion);
+  const minimumMinor = dshVersion === '0.2.2-rc.1' ? 9 : 2;
+  if (!version || Number(version[1]) !== 24 || Number(version[2]) < minimumMinor) {
+    throw new Error(`DSH ${dshVersion} smoke requires Node >=24.${minimumMinor}.0 <25.`);
+  }
+}
+
 export function scenarioProbes(scenario = 'smoke') {
   if (scenario === 'smoke') return ['runtime-baseline', 'plugin-lifecycle', 'skill-availability'];
   if (scenario === 'skill-toggle' || scenario === 'skill-toggle-watch-off') return ['runtime-baseline', scenario];
@@ -328,14 +338,13 @@ async function findNpm() {
 async function main() {
   const { values } = parseArgs({ options: { 'download-cache': { type: 'string' }, 'dsh-version': { type: 'string', default: '0.2.0-rc.2' }, artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' }, 'cordis-family': { type: 'string', default: 'fresh' }, scenario: { type: 'string', default: 'smoke' } } });
   if (values.help) {
-    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--download-cache <temporary-directory>] [--scenario smoke|skill-toggle|skill-toggle-watch-off] [--cordis-family fresh|retained] [--dsh-version 0.2.0-rc.2|0.2.1-rc.2|0.2.1-rc.5]');
+    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--download-cache <temporary-directory>] [--scenario smoke|skill-toggle|skill-toggle-watch-off] [--cordis-family fresh|retained] [--dsh-version 0.2.0-rc.2|0.2.1-rc.2|0.2.1-rc.5|0.2.2-rc.1]');
     return;
   }
   if (!values.artifact || !values.report) throw new Error('Specify --artifact and --report; see --help.');
-  const [major, minor] = process.versions.node.split('.').map(Number);
-  if (major !== 24 || minor < 2) throw new Error('Use the fixed Node >=24.2.0 <25 baseline.');
   const probes = scenarioProbes(values.scenario);
   const dshVersion = selectDshVersion(values['dsh-version'], values['cordis-family']);
+  assertHostNodeVersion(dshVersion);
   const installManifest = hostInstallManifest(values['cordis-family']);
   const artifact = await selectTarball(values.artifact);
   const npm = await findNpm();

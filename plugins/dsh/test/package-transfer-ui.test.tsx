@@ -59,3 +59,12 @@ test('import result only reports success for completed observations and preserve
   expect(importProgressView({ ...completed, warningCount: 1 }, false, false).label).toBe('导入完成，需核验告警');
   expect(importProgressView({ ...completed, phase: 'staging' }, false, false)).toEqual({ label: '正在校验技能包', state: 'running' });
 });
+
+test('compact imported metadata keeps location in its title without repeating the provenance label', () => {
+  const html = renderToStaticMarkup(<InstalledCardMetadata items={[item]} compact />);
+  expect(html).toContain('title="仅此项目"');
+  expect(html).toContain('>本地技能</p>');
+  expect(html).not.toContain('本地导入');
+  expect(html).not.toContain('@local');
+  expect(html).not.toContain('vlocal');
+});

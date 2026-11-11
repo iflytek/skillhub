@@ -9,6 +9,10 @@
 - **数据层**：使用 Bitnami PostgreSQL/Redis，支持主从复制、哨兵模式
 - **安全**：TLS 证书管理、Secret 密码保护；Bitnami 数据组件默认提供 NetworkPolicy
 - **可观测性**：内置 Prometheus metrics exporter
+- **业务事件 Logs（默认关闭）**：`server.businessLogs.enabled`、`endpoint` 与 `headersSecretRef`（引用现有 Secret）；
+  其他预算/过滤配置使用 `server.extraEnv`，复用现有接收器，不增加 Collector 子 Chart。
+  指标默认只暴露 health/info；`server.actuatorExposureInclude: health,info,metrics,prometheus` 可打开受保护的查询入口。
+  Secret 创建、upgrade、产生事件、管理员查询与停用见[完整运行手册](../../docs/business-event-logs.md)。
 
 ## 快速开始
 
@@ -576,6 +580,17 @@ helm -n skillhub upgrade -i skillhub ./charts/skillhub \
 
 每个 HPA 至少需要一个非零 CPU 或内存利用率目标。本地存储的 Server HPA 同样
 要求 RWX；也可以启用 S3 来避免共享 PVC。
+
+## 业务邮件通知
+
+业务邮件默认关闭，按用户和摘要窗口聚合，不是每个技能一封。Chart 的 `notificationEmail`
+提供 `enabled`、`digestWindowMinutes`、`publicBaseUrl`、`fromAddress`、`fromName` 五个字段。
+前三项仅初始化缺失的数据库设置，之后由超级管理员在“系统配置”维护；发件人仍由部署管理。
+SMTP 连接与密码重置共用，通过 `server.extraEnv` 配置，用户名/密码使用
+`valueFrom.secretKeyRef`，不要写入普通 values 或 ConfigMap。用户还需要独立验邮并选择通知类别。
+
+完整字段、Secret 引用示例、用户流程、摘要数量、UNKNOWN 重试和故障排查见
+[邮件通知接入与使用](../../docs/notification-email.md)。
 
 ## 发布
 

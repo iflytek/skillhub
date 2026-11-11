@@ -9,8 +9,14 @@ on:
 
 jobs:
   test:
+    name: test (PostgreSQL ${{ matrix.postgres }})
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        # 16 is the deployment default; 17 is verified. See docs/skillhub/faq.md.
+        postgres: ["16", "17"]
     steps:
       - uses: actions/checkout@v4
 
@@ -31,4 +37,4 @@ jobs:
         run: go test ./internal/worker -run '^$'
 
       - name: Backend tests
-        run: cd server && ./mvnw -B test
+        run: cd server && ./mvnw -B test -Dskillhub.test.postgres.image=postgres:${{ matrix.postgres }}-alpine

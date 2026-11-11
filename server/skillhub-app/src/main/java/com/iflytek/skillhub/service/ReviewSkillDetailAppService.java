@@ -101,7 +101,7 @@ public class ReviewSkillDetailAppService {
         }
         SkillQueryService.ReviewSkillSnapshotDTO snapshot =
                 skillQueryService.getReviewSkillSnapshot(reviewVersionId(context.task()));
-        return toResponse(reviewId, context, snapshot);
+        return toResponse(reviewId, context, snapshot, true);
     }
 
     public ReviewSkillDetailResponse getReviewSkillDetail(Long reviewId,
@@ -118,11 +118,11 @@ public class ReviewSkillDetailAppService {
         SkillQueryService.ReviewSkillSnapshotDTO snapshot =
                 skillQueryService.getReviewSkillSnapshot(reviewVersionId(context.task()), false);
 
-        return toResponse(reviewId, context, snapshot);
+        return toResponse(reviewId, context, snapshot, false);
     }
 
     private ReviewSkillDetailResponse toResponse(Long reviewId, ReviewAccessContext context,
-                                                 SkillQueryService.ReviewSkillSnapshotDTO snapshot) {
+                                                 SkillQueryService.ReviewSkillSnapshotDTO snapshot, boolean includeDocumentation) {
         SkillLifecycleVersionResponse activeVersion = toLifecycleVersion(snapshot.activeVersion());
 
         SkillDetailResponse skill = new SkillDetailResponse(
@@ -184,8 +184,66 @@ public class ReviewSkillDetailAppService {
                 snapshot.documentationContent(),
                 "/api/v1/reviews/" + reviewId + "/download",
                 snapshot.activeVersion().getVersion(),
-                avatarChange(context), visibilityChange(context.task())
+                avatarChange(context), visibilityChange(context.task()),
+                presentation(snapshot), comparison(context, snapshot, includeDocumentation)
         );
+    }
+
+    private SkillMetadata metadata(SkillVersion version) {
+        if (version.getParsedMetadataJson() == null) return null;
+        try { return metadataReader.readValue(version.getParsedMetadataJson()); }
+        catch (java.io.IOException ignored) { return null; }
+    }
+
+    private ReviewSkillDetailResponse.Presentation presentation(SkillQueryService.ReviewSkillSnapshotDTO snapshot) {
+        SkillMetadata metadata = metadata(snapshot.activeVersion());
+        String name = metadata != null ? metadata.displayName() : snapshot.skill().getDisplayName();
+        String summary = metadata != null ? metadata.shortDescription() : snapshot.skill().getSummary();
+        if (metadata != null && metadata.overviewOverride() != null) {
+            return new ReviewSkillDetailResponse.Presentation(name, summary, metadata.overviewOverride(), "WEB");
+        }
+        if (metadata != null && metadata.packageOverview() != null) {
+            return new ReviewSkillDetailResponse.Presentation(name, summary, metadata.packageOverview(), "PACKAGE");
+        }
+        String source = "README.md".equals(snapshot.documentationPath()) ? "README"
+                : "SKILL.md".equals(snapshot.documentationPath()) ? "SKILL_MD" : "NONE";
+        return new ReviewSkillDetailResponse.Presentation(name, summary, snapshot.documentationContent(), source);
+    }
+
+    private ReviewSkillDetailResponse.Comparison comparison(ReviewAccessContext context,
+            SkillQueryService.ReviewSkillSnapshotDTO snapshot, boolean includeDocumentation) {
+        if (context.task().getSubjectType() != null
+                && context.task().getSubjectType() != ReviewSubjectType.SKILL_VERSION) return null;
+        // Being the submitter permits reading the bound task, not unrelated private history.
+        if (!context.reviewer() && !snapshot.skill().getOwnerId().equals(context.userId())) return null;
+        // A later publication must never become the alleged baseline of an older review task.
+        SkillVersion baseline = snapshot.versions().stream()
+                .filter(version -> version.getStatus() == com.iflytek.skillhub.domain.skill.SkillVersionStatus.PUBLISHED)
+                .filter(version -> !version.getId().equals(snapshot.activeVersion().getId()))
+                .filter(version -> version.getPublishedAt() != null && context.task().getSubmittedAt() != null
+                        && !version.getPublishedAt().isAfter(context.task().getSubmittedAt()))
+                .max(java.util.Comparator.comparing(SkillVersion::getPublishedAt).thenComparing(SkillVersion::getId))
+                .orElse(null);
+        if (baseline == null) return null;
+        SkillQueryService.ReviewSkillSnapshotDTO previous =
+                skillQueryService.getReviewSkillSnapshot(baseline.getId(), includeDocumentation);
+        Map<String, SkillFile> oldFiles = previous.files().stream()
+                .collect(java.util.stream.Collectors.toMap(SkillFile::getFilePath, file -> file));
+        Map<String, SkillFile> newFiles = snapshot.files().stream()
+                .collect(java.util.stream.Collectors.toMap(SkillFile::getFilePath, file -> file));
+        java.util.SortedSet<String> paths = new java.util.TreeSet<>(oldFiles.keySet());
+        paths.addAll(newFiles.keySet());
+        List<ReviewSkillDetailResponse.FileChange> changes = paths.stream().map(path -> {
+            SkillFile oldFile = oldFiles.get(path);
+            SkillFile newFile = newFiles.get(path);
+            String type = oldFile == null ? "ADDED" : newFile == null ? "REMOVED"
+                    : oldFile.getSha256() != null && oldFile.getSha256().equals(newFile.getSha256())
+                            && java.util.Objects.equals(oldFile.getFileSize(), newFile.getFileSize())
+                            ? "UNCHANGED" : "MODIFIED";
+            return new ReviewSkillDetailResponse.FileChange(path, type);
+        }).toList();
+        return new ReviewSkillDetailResponse.Comparison(baseline.getVersion(), presentation(previous),
+                presentation(snapshot), changes);
     }
 
     public SkillDownloadService.DownloadResult downloadReviewPackage(Long reviewId,
@@ -287,7 +345,8 @@ public class ReviewSkillDetailAppService {
         if (!reviewService.canViewReview(task, userId, namespace.getType(), namespaceRoles, platformRoles)) {
             throw new DomainForbiddenException("review.no_permission");
         }
-        return new ReviewAccessContext(task, namespace);
+        return new ReviewAccessContext(task, namespace, userId,
+                reviewService.canReviewNamespace(task, userId, namespace.getType(), namespaceRoles, platformRoles));
     }
 
     private SkillFileResponse toFileResponse(SkillFile file) {
@@ -310,8 +369,8 @@ public class ReviewSkillDetailAppService {
             }
         }
         return new SkillLifecycleVersionResponse(version.getId(), version.getVersion(), version.getStatus().name(),
-                metadata == null ? null : metadata.displayName(), metadata == null ? null : metadata.description(), version.getGithubSyncRevision());
+                metadata == null ? null : metadata.displayName(), metadata == null ? null : metadata.shortDescription(), version.getGithubSyncRevision());
     }
 
-    private record ReviewAccessContext(ReviewTask task, Namespace namespace) {}
+    private record ReviewAccessContext(ReviewTask task, Namespace namespace, String userId, boolean reviewer) {}
 }

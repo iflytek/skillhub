@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.repository;
 
+import com.iflytek.skillhub.support.PostgresTestImage;
 import static com.iflytek.skillhub.support.GithubSyncWorkerCapabilities.platform;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,7 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 class GithubSyncLeaseConcurrencyTest {
     @Container
     private static final PostgreSQLContainer<?> POSTGRES =
-            new PostgreSQLContainer<>("postgres:16-alpine");
+            new PostgreSQLContainer<>(PostgresTestImage.name());
 
     @Test
     void concurrentWorkersClaimOnlyOneLeaseAndDiscoveryReplayDoesNotDuplicateRows() throws Exception {

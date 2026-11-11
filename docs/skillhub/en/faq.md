@@ -181,6 +181,15 @@ Recreate the containers for the change to take effect; `restart` alone does not 
 
 A: Compatibility depends on the command. Basic CLI support does not imply support for Device Flow, Suites or sync. Check CLI version and target-server release notes. Suites require the server to advertise `skill-suite-v1`. See [CLI](./guide/cli.html).
 
+## Q: Which PostgreSQL versions does SkillHub support?
+
+A: Compose, the one-click installer and the Kustomize manifests (`deploy/k8s/`) default to PostgreSQL 16 (`postgres:16-alpine`). The Helm chart pins its bundled Bitnami PostgreSQL image by digest; that digest is currently PostgreSQL 18.4, which is outside the verified range below. For a verified version, use an external PostgreSQL 16/17 instance or override `postgresql.image` accordingly.
+
+- Verified: PostgreSQL 16 and 17. The backend tests run on each version: fresh Flyway migrations, `validate`, compatibility with migration history and checksums written by Flyway 9.22.3 in earlier releases, an upgrade of a populated older schema, application startup and the database-backed workflow tests.
+- Not verified: PostgreSQL 15 and earlier, and PostgreSQL 18 and later.
+
+To use PostgreSQL 17, set `POSTGRES_IMAGE` (for example `postgres:17-alpine`) or connect to an external PostgreSQL 17 instance. An existing PostgreSQL 16 data directory cannot be reused by 17; a major-version move needs `pg_dump`/`pg_restore` or `pg_upgrade`, rehearsed on a copy first.
+
 ## Q: Does SkillHub support MySQL?
 
 A: Currently only PostgreSQL is supported; MySQL is not supported.

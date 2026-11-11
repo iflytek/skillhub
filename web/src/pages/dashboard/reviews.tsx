@@ -1,310 +1,136 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
-import { FileCheck2 } from 'lucide-react'
+import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
-import {
-  buildNamespaceReviewsPath,
-  canAccessGlobalReviewCenter,
-  getPreferredNamespaceReviewEntry,
-} from '@/features/review/review-paths'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/shared/ui/table'
+import { canManageNamespaceReviews } from '@/features/review/review-paths'
+import { ReviewCenterFilterForm } from '@/features/review/review-center-filter-form'
+import { DEFAULT_REVIEW_FILTERS, parseReviewCenterFilters, reviewCenterSearch, type ReviewCenterFilters } from '@/features/review/review-center-filters'
+import { useReviewScopes } from '@/features/review/use-review-scopes'
 import { useReviewList } from '@/features/review/use-review-list'
-import { GithubSyncReviewQueue } from '@/features/review/github-sync-review-queue'
+import { SkillAvatar } from '@/features/skill/skill-avatar'
+import type { ReviewTask } from '@/api/types'
 import { useAuth } from '@/features/auth/use-auth'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
+import { Button } from '@/shared/ui/button'
+import { Card } from '@/shared/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { ProfileReviewTable } from './profile-review-table'
 
-type ReviewStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
-type TimeSortDirection = 'ASC' | 'DESC'
 const PAGE_SIZE = 20
 
-/**
- * Dashboard review queue page. Each tab materializes one review status because
- * the moderation workflow treats pending, approved, and rejected queues as
- * distinct operator views rather than one filterable table.
- */
+export function reviewTaskKind(review: ReviewTask): string {
+  if (review.reviewKind) return review.reviewKind
+  if (review.subjectType === 'SUITE_VERSION') return 'SUITE_PUBLISH'
+  if (review.subjectType === 'SKILL_METADATA') return review.requestedVisibility ? 'VISIBILITY_CHANGE' : 'AVATAR_CHANGE'
+  return 'SKILL_VERSION'
+}
+
+/** One authorized queue, regardless of submission source or namespace entry point. */
 export function ReviewsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const search = useSearch({ from: '/dashboard/reviews' })
-  const { hasRole, user } = useAuth()
-  const { data: myNamespaces, isLoading: isLoadingNamespaces } = useMyNamespaces()
-  const [pages, setPages] = useState<Record<ReviewStatus, number>>({
-    PENDING: 0,
-    APPROVED: 0,
-    REJECTED: 0,
-  })
-  const [activeStatus, setActiveStatus] = useState<ReviewStatus>('PENDING')
-  const [sortDirection, setSortDirection] = useState<TimeSortDirection>('DESC')
+  const { hasRole } = useAuth()
+  const namespacesQuery = useMyNamespaces()
+  const namespaces = namespacesQuery.data ?? []
+  const routeFilters = parseReviewCenterFilters(search)
+  const [draft, setDraft] = useState<ReviewCenterFilters>(routeFilters)
+  const [applied, setApplied] = useState<ReviewCenterFilters>(routeFilters)
+  const [page, setPage] = useState(search.page ?? 0)
+  const { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, sortDirection: routeSort } = routeFilters
+  const routePage = search.page ?? 0
+
+  useEffect(() => {
+    const next = { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, sortDirection: routeSort }
+    setApplied(next)
+    setDraft(next)
+    setPage(routePage)
+  }, [routeQ, routeStatus, routeNamespace, routeKind, routeOrigin, routeSort, routePage])
 
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
-  const hasGlobalReviewAccess = canAccessGlobalReviewCenter(user?.platformRoles)
-  const namespaceReviewEntry = getPreferredNamespaceReviewEntry(myNamespaces)
-  const showTypeTabs = isSkillAdmin
+  const managedNamespaces = namespaces.filter((namespace) => namespace.type === 'TEAM' && canManageNamespaceReviews(namespace.currentUserRole))
+  const canReviewSkills = isSkillAdmin || managedNamespaces.length > 0
+  const profileMode = isUserAdmin && (search.type === 'profile' || (!canReviewSkills && !namespacesQuery.isLoading))
+  const scopes = useReviewScopes(canReviewSkills && !profileMode)
+  const scope = scopes.data?.find((item) => item.slug === applied.namespace)
+  const scopePending = !scopes.data || (applied.namespace !== 'ALL' && !scope)
+  const query = useReviewList(applied.status, applied.namespace === 'ALL' ? undefined : scope?.id,
+    page, PAGE_SIZE, applied.sortDirection, canReviewSkills && !profileMode && !scopePending,
+    { q: applied.q.trim(), reviewKind: applied.reviewKind, originType: applied.originType })
+  const options = (scopes.data ?? []).map((item) => ({ value: item.slug, label: item.displayName || item.slug }))
 
-  // Determine default top-level tab
-  const defaultType = isSkillAdmin ? 'skill' : 'profile'
-  const requestedType = search.type === 'skill' || search.type === 'sync'
-    || (search.type === 'profile' && isUserAdmin) ? search.type : undefined
-  const activeType = showTypeTabs ? requestedType ?? defaultType : defaultType
-  const skillReviewEnabled = hasGlobalReviewAccess && isSkillAdmin && activeType === 'skill'
-
-  useEffect(() => {
-    if (hasGlobalReviewAccess || isLoadingNamespaces) {
-      return
-    }
-
-    if (namespaceReviewEntry) {
-      void navigate({ to: buildNamespaceReviewsPath(namespaceReviewEntry.slug), replace: true })
-      return
-    }
-
-    void navigate({ to: '/dashboard', replace: true })
-  }, [hasGlobalReviewAccess, isLoadingNamespaces, namespaceReviewEntry, navigate])
-
-  const pendingQuery = useReviewList('PENDING', undefined, pages.PENDING, PAGE_SIZE, sortDirection, skillReviewEnabled && activeStatus === 'PENDING')
-  const approvedQuery = useReviewList('APPROVED', undefined, pages.APPROVED, PAGE_SIZE, sortDirection, skillReviewEnabled && activeStatus === 'APPROVED')
-  const rejectedQuery = useReviewList('REJECTED', undefined, pages.REJECTED, PAGE_SIZE, sortDirection, skillReviewEnabled && activeStatus === 'REJECTED')
-
-  const formatDate = (dateString: string) => formatLocalDateTime(dateString, i18n.language)
-
-  const handleRowClick = (reviewId: number) => {
-    navigate({ to: `/dashboard/reviews/${reviewId}` })
+  const apply = (filters: ReviewCenterFilters, nextPage = 0) => {
+    const normalized = { ...filters, q: filters.q.trim() }
+    setApplied(normalized)
+    setDraft(normalized)
+    setPage(nextPage)
+    void navigate({ to: '/dashboard/reviews', search: reviewCenterSearch(normalized, nextPage) })
+    // A repeated query or reset must refresh the same key rather than silently reuse a stale result.
+    if (!scopePending && JSON.stringify(normalized) === JSON.stringify(applied) && nextPage === page) void query.refetch()
   }
-
-  function changePage(status: ReviewStatus, nextPage: number) {
-    setPages((current) => ({ ...current, [status]: nextPage }))
+  const openReview = (review: ReviewTask) => {
+    void navigate({ to: '/dashboard/reviews/$id', params: { id: String(review.id) }, search: reviewCenterSearch(applied, page) })
   }
-
-  function handleSortChange(value: string) {
-    setSortDirection(value as TimeSortDirection)
-    setPages({
-      PENDING: 0,
-      APPROVED: 0,
-      REJECTED: 0,
-    })
-  }
-
-  function handleTypeChange(value: string) {
-    void navigate({
-      to: '/dashboard/reviews',
-      search: { type: value === 'profile' ? 'profile' : value === 'sync' ? 'sync' : 'skill' },
-      replace: true,
-    })
-  }
-
-  function renderPagination(status: ReviewStatus, totalElements: number, totalPages: number) {
-    const currentPage = pages[status]
-    return (
-      <div className="flex flex-col gap-3 border-t border-border/60 px-6 py-4 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
-        <p>{t('reviews.pageSummary', { total: totalElements, page: currentPage + 1 })}</p>
-        <Pagination analyticsId="review.list.paginate" page={currentPage} totalPages={Math.max(totalPages, 1)} onPageChange={(nextPage) => changePage(status, nextPage)} />
+  const formatDate = (value: string) => formatLocalDateTime(value, i18n.language)
+  const renderObject = (review: ReviewTask) => {
+    const slug = review.subjectSlug || review.skillSlug || ''
+    const name = review.displayName || slug
+    return <div className="flex min-w-0 gap-3">
+      <SkillAvatar name={name} seed={`${review.namespace}/${slug}`} size="h-8 w-8 text-xs" />
+      <div className="min-w-0">
+        <p className="break-words text-sm font-semibold">{name || t('reviewCenter.unknownObject')}</p>
+        <p className="mt-1 break-all text-xs text-muted-foreground">@{review.namespace}/{slug}</p>
+        <p className="mt-1 break-words text-xs text-muted-foreground">{t(review.subjectType === 'SUITE_VERSION' ? 'suite.resourceTypeSuite' : 'suite.resourceTypeSkill')}{review.version ? ` · ${review.version}` : ''}</p>
       </div>
-    )
-  }
-
-  /**
-   * Keeps the table rendering logic in one local helper so the per-status tabs
-   * stay declarative while still allowing columns to differ by workflow state.
-   */
-  const renderReviewTable = (query: typeof pendingQuery, status: ReviewStatus) => {
-    if (query.isLoading) {
-      return (
-        <div className="space-y-3">
-          {Array.from({ length: 4 }).map((_, index) => (
-            <div key={index} className="h-16 animate-shimmer rounded-xl" />
-          ))}
-        </div>
-      )
-    }
-    const reviews = query.data?.items
-    if (!reviews || reviews.length === 0) {
-      return <div className="rounded-xl border border-dashed border-border/70 p-10 text-center text-muted-foreground">{t('reviews.empty')}</div>
-    }
-    return (
-      <div className="overflow-hidden rounded-xl border border-border/60">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/35">
-              <TableHead className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('reviews.colSkill')}</TableHead>
-              <TableHead className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('reviews.colVersion')}</TableHead>
-              <TableHead className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('reviews.colSubmitter')}</TableHead>
-              {status === 'PENDING' ? (
-                <TableHead className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('reviews.colSubmitTime')}</TableHead>
-              ) : (
-                <>
-                  <TableHead className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('reviews.colReviewer')}</TableHead>
-                  <TableHead className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{t('reviews.colReviewTime')}</TableHead>
-                </>
-              )}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {reviews.map((review) => (
-              <TableRow data-analytics-id="review.detail.open"
-                key={review.id}
-                className="cursor-pointer transition-colors hover:bg-muted/30"
-                onClick={() => handleRowClick(review.id)}
-              >
-                <TableCell className="font-medium">
-                  <span className="mr-2 rounded-full bg-secondary px-2 py-0.5 text-xs">
-                    {t(review.subjectType === 'SUITE_VERSION' ? 'suite.resourceTypeSuite' : 'suite.resourceTypeSkill')}
-                  </span>
-                  {review.namespace}/{review.subjectSlug || review.skillSlug}
-                </TableCell>
-                <TableCell>{review.subjectType === 'SKILL_METADATA' ? t(review.requestedVisibility ? 'skillVisibility.title' : review.avatarRemoval ? 'review.avatarRemoval' : 'review.avatarUpdate') : review.version}</TableCell>
-                <TableCell>{review.submittedByName || review.submittedBy}</TableCell>
-                {status === 'PENDING' ? (
-                  <TableCell>{formatDate(review.submittedAt)}</TableCell>
-                ) : (
-                  <>
-                    <TableCell>{review.reviewedByName || review.reviewedBy || '-'}</TableCell>
-                    <TableCell>{review.reviewedAt ? formatDate(review.reviewedAt) : '-'}</TableCell>
-                  </>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-        {query.data && renderPagination(status, query.data.totalElements, query.data.totalPages)}
-      </div>
-    )
-  }
-
-  function renderSkillReviewContent() {
-    return (
-      <Card className="glass-strong overflow-hidden border-border/60 shadow-sm hover:shadow-sm">
-        <div className="h-1 bg-gradient-to-r from-slate-900 via-blue-700 to-sky-500" />
-        <CardHeader className="pb-4">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full bg-secondary/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-secondary-foreground">
-                <FileCheck2 className="h-3.5 w-3.5" />
-                {t('reviews.typeSkill')}
-              </div>
-              <CardTitle>{t('reviews.typeSkill')}</CardTitle>
-              <CardDescription>{t('reviews.subtitle')}</CardDescription>
-            </div>
-            <div className="w-full max-w-48">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {t('reviews.sortLabel')}
-              </p>
-              <Select value={sortDirection} onValueChange={handleSortChange}>
-                <SelectTrigger data-analytics-id="review.list.sort.interact">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem data-analytics-id="review.list.sort" value="DESC">{t('reviews.sortNewest')}</SelectItem>
-                  <SelectItem data-analytics-id="review.list.sort" value="ASC">{t('reviews.sortOldest')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <Tabs value={activeStatus} onValueChange={(v) => setActiveStatus(v as ReviewStatus)}>
-            <TabsList className="gap-4 rounded-xl border-b-0 bg-muted/70 p-1 shadow-none">
-              <TabsTrigger data-analytics-id="review.pending.tab"
-                value="PENDING"
-                className="mb-0 rounded-lg border-b-0 px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
-              >
-                {t('reviews.tabPending')}
-              </TabsTrigger>
-              <TabsTrigger data-analytics-id="review.approved.tab"
-                value="APPROVED"
-                className="mb-0 rounded-lg border-b-0 px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
-              >
-                {t('reviews.tabApproved')}
-              </TabsTrigger>
-              <TabsTrigger data-analytics-id="review.rejected.tab"
-                value="REJECTED"
-                className="mb-0 rounded-lg border-b-0 px-4 py-2.5 data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
-              >
-                {t('reviews.tabRejected')}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="PENDING" className="mt-6">
-              {renderReviewTable(pendingQuery, 'PENDING')}
-            </TabsContent>
-            <TabsContent value="APPROVED" className="mt-6">
-              {renderReviewTable(approvedQuery, 'APPROVED')}
-            </TabsContent>
-            <TabsContent value="REJECTED" className="mt-6">
-              {renderReviewTable(rejectedQuery, 'REJECTED')}
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
-    )
-  }
-
-  if (!hasGlobalReviewAccess) {
-    return (
-      <div className="space-y-8 animate-fade-up">
-        <DashboardPageHeader title={t('reviews.title')} subtitle={t('reviews.subtitle')} />
-        <Card className="p-8 text-center text-muted-foreground">
-          Loading...
-        </Card>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-8 animate-fade-up">
-      <DashboardPageHeader title={t('reviews.title')} subtitle={t('reviews.subtitle')} />
-
-
-      {showTypeTabs ? (
-        <Tabs value={activeType} onValueChange={handleTypeChange}>
-          <TabsList className="gap-2 rounded-2xl border-b-0 bg-muted/80 p-1 shadow-sm">
-            <TabsTrigger data-analytics-id="review.skill.tab"
-              value="skill"
-              className="mb-0 rounded-xl border-b-0 px-5 py-3 text-base font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
-            >
-              {t('reviews.typeSkill')}
-            </TabsTrigger>
-            <TabsTrigger data-analytics-id="review.sync.tab"
-              value="sync"
-              className="mb-0 rounded-xl border-b-0 px-5 py-3 text-base font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
-            >
-              {t('reviews.typeSync')}
-            </TabsTrigger>
-            {isUserAdmin && <TabsTrigger data-analytics-id="review.profile.tab"
-              value="profile"
-              className="mb-0 rounded-xl border-b-0 px-5 py-3 text-base font-semibold data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm data-[state=inactive]:text-muted-foreground"
-            >
-              {t('reviews.typeProfile')}
-            </TabsTrigger>}
-          </TabsList>
-          <TabsContent value="skill" className="mt-6">
-            {renderSkillReviewContent()}
-          </TabsContent>
-          <TabsContent value="sync" className="mt-6">
-            <GithubSyncReviewQueue enabled={activeType === 'sync'} />
-          </TabsContent>
-          {isUserAdmin && <TabsContent value="profile" className="mt-6">
-            <ProfileReviewTable />
-          </TabsContent>}
-        </Tabs>
-      ) : isSkillAdmin ? (
-        renderSkillReviewContent()
-      ) : isUserAdmin ? (
-        <ProfileReviewTable />
-      ) : null}
     </div>
-  )
+  }
+  const renderMetadata = (review: ReviewTask) => {
+    const kind = reviewTaskKind(review)
+    return <>
+      <span className="inline-flex rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">{t(kind === 'AVATAR_CHANGE' && review.avatarRemoval ? 'reviewCenter.kind.AVATAR_REMOVAL' : `reviewCenter.kind.${kind}`)}</span>
+      {applied.status !== 'PENDING' && <span className="mt-1 block text-xs text-muted-foreground">{t(`reviewCenter.status.${review.status}`)}</span>}
+    </>
+  }
+
+  if (namespacesQuery.isLoading && !isSkillAdmin) {
+    return <div className="space-y-6"><DashboardPageHeader title={t('reviewCenter.title')} /><div className="h-40 animate-shimmer rounded-lg" aria-label={t('reviewCenter.loading')} /></div>
+  }
+  if (!canReviewSkills && !isUserAdmin) {
+    return <div className="space-y-6"><DashboardPageHeader title={t('reviewCenter.title')} /><Card className="p-6" role="alert"><p>{t(namespacesQuery.isError ? 'reviewCenter.scopeFailed' : 'reviewCenter.noPermission')}</p>{namespacesQuery.isError && <Button type="button" variant="outline" className="mt-3" onClick={() => void namespacesQuery.refetch()}>{t('reviewCenter.retry')}</Button>}</Card></div>
+  }
+
+  return <div className="space-y-7">
+    <DashboardPageHeader title={t('reviewCenter.title')} subtitle={t(profileMode ? 'reviewCenter.profileDescription' : 'reviewCenter.description')}
+      actions={isUserAdmin && canReviewSkills ? <Link to="/dashboard/reviews" search={profileMode ? {} : { type: 'profile' }} className="inline-flex min-h-9 items-center rounded-lg border border-border/60 px-3 text-sm hover:bg-secondary">{t(profileMode ? 'reviewCenter.skillQueue' : 'reviewCenter.profileQueue')}</Link> : undefined} />
+    {profileMode ? <ProfileReviewTable /> : <>
+      <ReviewCenterFilterForm value={draft} namespaces={options} namespaceLoading={scopes.isLoading || scopes.isError} onChange={setDraft} onApply={() => apply(draft)} onReset={() => apply({ ...DEFAULT_REVIEW_FILTERS })} />
+      {scopes.isError && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm"><p className="text-destructive">{t('reviewCenter.scopeFailed')}</p><Button type="button" size="sm" variant="outline" onClick={() => void scopes.refetch()}>{t('reviewCenter.retry')}</Button></div>}
+      <div className="space-y-4" aria-busy={query.isFetching}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="text-sm font-medium">{query.isLoading || scopePending ? t('reviewCenter.loading') : query.isError ? t('reviewCenter.results') : t('reviewCenter.resultsCount', { count: query.data?.totalElements ?? 0 })}</h2>
+          <Select value={applied.sortDirection} onValueChange={(sortDirection) => apply({ ...applied, sortDirection: sortDirection === 'ASC' ? 'ASC' : 'DESC' })}>
+            <SelectTrigger aria-label={t('reviewCenter.sortLabel')} className="h-9 w-36 border-0 bg-transparent text-xs shadow-none"><SelectValue /></SelectTrigger>
+            <SelectContent className="min-w-0 w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)]"><SelectItem value="DESC">{t('reviewCenter.newest')}</SelectItem><SelectItem value="ASC">{t('reviewCenter.oldest')}</SelectItem></SelectContent>
+          </Select>
+        </div>
+        {!scopes.isLoading && !scopes.isError && applied.namespace !== 'ALL' && !scope ? <Card className="space-y-3 p-6" role="alert"><p>{t('reviewCenter.scopeFailed')}</p><Button type="button" variant="outline" onClick={() => void scopes.refetch()}>{t('reviewCenter.retry')}</Button></Card>
+          : scopes.isError ? null : query.isError ? <Card className="space-y-3 p-6" role="alert"><p>{t('reviewCenter.loadFailed')}</p><Button type="button" variant="outline" onClick={() => void query.refetch()}>{t('reviewCenter.retry')}</Button></Card>
+            : query.isLoading || scopePending ? <div className="space-y-3" aria-label={t('reviewCenter.loading')}>{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-20 animate-shimmer rounded-lg" />)}</div>
+              : !query.data?.items.length ? <Card className="space-y-3 p-8 text-center"><p className="font-medium">{t(query.data?.totalElements && page > 0 ? 'reviewCenter.pageEmpty' : 'reviewCenter.empty')}</p><p className="text-sm text-muted-foreground">{t('reviewCenter.emptyDescription')}</p><Button type="button" variant="outline" onClick={() => query.data?.totalElements && page > 0 ? apply(applied, 0) : apply({ ...DEFAULT_REVIEW_FILTERS })}>{t(query.data?.totalElements && page > 0 ? 'reviewCenter.firstPage' : 'reviewCenter.filters.reset')}</Button></Card>
+                : <>
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full min-w-[700px] table-fixed text-left">
+                      <thead className="bg-secondary text-xs font-medium text-muted-foreground"><tr><th className="w-[41%] rounded-l-lg px-4 py-3">{t('reviewCenter.columns.object')}</th><th className="w-[16%] px-4 py-3">{t('reviewCenter.columns.kind')}</th><th className="w-[20%] px-4 py-3">{t('reviewCenter.columns.source')}</th><th className="w-[17%] px-4 py-3">{t('reviewCenter.columns.submitter')}</th><th className="w-[6%] rounded-r-lg px-2 py-3"><span className="sr-only">{t('reviewCenter.columns.action')}</span></th></tr></thead>
+                      <tbody className="divide-y divide-border/70">{query.data.items.map((review) => <tr key={review.id} className="hover:bg-secondary/70"><td className="px-4 py-5 align-top">{renderObject(review)}</td><td className="px-4 py-5 align-top">{renderMetadata(review)}</td><td className="px-4 py-5 align-top"><p className="text-sm">{t(`reviewCenter.origin.${review.originType || 'USER'}`)}</p><p className="mt-1 break-all text-xs text-muted-foreground">{review.namespace}</p></td><td className="px-4 py-5 align-top"><p className="break-words text-sm">{review.submittedByName || review.submittedBy}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(review.submittedAt)}</p></td><td className="px-2 py-5 align-top"><Button data-analytics-id="review.detail.open" variant="link" className="h-8 px-0 text-xs" onClick={() => openReview(review)}>{t('reviewCenter.open')}</Button></td></tr>)}</tbody>
+                    </table>
+                  </div>
+                  <div className="divide-y divide-border md:hidden">{query.data.items.map((review) => <article key={review.id} className="space-y-4 py-5">{renderObject(review)}<div>{renderMetadata(review)}</div><div className="flex items-end justify-between gap-4"><p className="min-w-0 break-words text-xs text-muted-foreground">{review.submittedByName || review.submittedBy} · {t(`reviewCenter.origin.${review.originType || 'USER'}`)}<span className="mt-1 block">{formatDate(review.submittedAt)}</span></p><Button data-analytics-id="review.detail.open" variant="link" className="shrink-0" onClick={() => openReview(review)}>{t('reviewCenter.open')}</Button></div></article>)}</div>
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 text-xs text-muted-foreground"><p>{t('reviewCenter.pageSummary', { total: query.data.totalElements, page: page + 1 })}</p><Pagination analyticsId="review.list.paginate" page={page} totalPages={Math.max(query.data.totalPages, 1)} onPageChange={(nextPage) => apply(applied, nextPage)} /></div>
+                </>}
+      </div>
+    </>}
+  </div>
 }

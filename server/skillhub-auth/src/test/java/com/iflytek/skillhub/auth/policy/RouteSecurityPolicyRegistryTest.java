@@ -27,6 +27,18 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void sitePresentationIsPublicReadOnlyAndManagementIsNeverAnApiTokenCapability() {
+        for (String route : List.of("/api/v1/site-presentation", "/api/v1/site-presentation/assets/asset-id")) {
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL, registry.accessLevel("GET", route));
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED, registry.accessLevel("PUT", route));
+            assertTrue(registry.authorizeApiToken("GET", route, Set.of()).allowed());
+            assertFalse(registry.authorizeApiToken("PUT", route, ALL_SCOPES).allowed());
+        }
+        assertFalse(registry.authorizeApiToken("PUT", "/api/v1/admin/system-config/presentation", ALL_SCOPES).allowed());
+        assertFalse(registry.authorizeApiToken("POST", "/api/v1/admin/system-config/presentation/assets", ALL_SCOPES).allowed());
+    }
+
+    @Test
     void visibilityWritesRequirePublishScopeAndAuthenticatedReads() {
         for (String prefix : List.of("/api/v1", "/api/web")) {
             String route = prefix + "/skills/team/foo/visibility";

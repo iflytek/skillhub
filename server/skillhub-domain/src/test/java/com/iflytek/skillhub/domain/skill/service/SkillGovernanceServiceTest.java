@@ -149,7 +149,10 @@ class SkillGovernanceServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(SkillStatus.ARCHIVED);
         verify(auditLogService).record("owner", "ARCHIVE_SKILL", "SKILL", 10L, null, "127.0.0.1", "JUnit", "{\"reason\":\"cleanup\"}");
-        verify(eventPublisher).publishEvent(any(SkillStatusChangedEvent.class));
+        var archived = org.mockito.ArgumentCaptor.forClass(SkillStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(archived.capture());
+        assertThat(archived.getValue().snapshot().actorId()).isEqualTo("owner");
+        assertThat(archived.getValue().snapshot().namespaceId()).isEqualTo(1L);
     }
 
     @Test
@@ -164,7 +167,10 @@ class SkillGovernanceServiceTest {
 
         assertThat(result.getStatus()).isEqualTo(SkillStatus.ACTIVE);
         verify(auditLogService).record("owner", "UNARCHIVE_SKILL", "SKILL", 10L, null, "127.0.0.1", "JUnit", null);
-        verify(eventPublisher).publishEvent(any(SkillStatusChangedEvent.class));
+        var restored = org.mockito.ArgumentCaptor.forClass(SkillStatusChangedEvent.class);
+        verify(eventPublisher).publishEvent(restored.capture());
+        assertThat(restored.getValue().snapshot().actorId()).isEqualTo("owner");
+        assertThat(restored.getValue().newStatus()).isEqualTo(SkillStatus.ACTIVE);
     }
 
     @Test
@@ -211,7 +217,10 @@ class SkillGovernanceServiceTest {
         assertThat(result.getYankedBy()).isEqualTo("owner");
         assertThat(result.isDownloadReady()).isFalse();
         verify(auditLogService).record("owner", "YANK_SKILL_VERSION", "SKILL_VERSION", 22L, null, "127.0.0.1", "JUnit", "{\"reason\":\"broken\"}");
-        verify(eventPublisher).publishEvent(any(com.iflytek.skillhub.domain.event.SkillVersionYankedEvent.class));
+        var yanked = org.mockito.ArgumentCaptor.forClass(com.iflytek.skillhub.domain.event.SkillVersionYankedEvent.class);
+        verify(eventPublisher).publishEvent(yanked.capture());
+        assertThat(yanked.getValue().snapshot().actorId()).isEqualTo("owner");
+        assertThat(yanked.getValue().snapshot().namespaceId()).isEqualTo(1L);
     }
 
     @Test
@@ -297,6 +306,8 @@ class SkillGovernanceServiceTest {
         fallback.setParsedMetadataJson(new ObjectMapper().writeValueAsString(Map.of(
                 "name", "example-skill",
                 "description", "Published summary from v1",
+                "shortDescriptionOverride", "Restored custom summary",
+                "overviewOverride", "# Restored overview",
                 "displayNameOverride", displayNameCase.equals("override") ? "网页旧版标题" : "",
                 "frontmatter", switch (displayNameCase) {
                     case "custom" -> Map.of("metadata", Map.of("display-name", "示例技能一"));
@@ -321,7 +332,9 @@ class SkillGovernanceServiceTest {
 
         assertThat(skill.getLatestVersionId()).isEqualTo(11L);
         assertThat(skill.getDisplayName()).isEqualTo(displayNameCase.equals("override") ? "网页旧版标题" : displayNameCase.equals("custom") ? "示例技能一" : "example-skill");
-        assertThat(skill.getSummary()).isEqualTo("Published summary from v1");
+        assertThat(skill.getSummary()).isEqualTo("Restored custom summary");
+        assertThat(new ObjectMapper().readTree(fallback.getParsedMetadataJson()).path("overviewOverride").asText())
+                .isEqualTo("# Restored overview");
         verify(skillRepository).save(skill);
     }
 

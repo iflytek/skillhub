@@ -1,0 +1,38 @@
+.presentation-rich.vditor {
+  border: 0;
+  border-radius: 0;
+  color: hsl(var(--foreground));
+  background: hsl(var(--background));
+  --panel-background-color: hsl(var(--background));
+  --toolbar-background-color: hsl(var(--background));
+  --toolbar-icon-color: hsl(var(--foreground));
+  --textarea-background-color: hsl(var(--background));
+  --textarea-text-color: hsl(var(--foreground));
+  --border-color: hsl(var(--border));
+  --second-color: hsl(var(--muted-foreground));
+}
+.presentation-rich .vditor-toolbar { padding: 10px 16px !important; border-bottom: 1px solid hsl(var(--border) / .6); background: transparent; }
+.presentation-rich .vditor-toolbar__item { padding: 0 3px; }
+.presentation-rich .vditor-toolbar__item button { border-radius: 6px; height: 32px; min-width: 32px; }
+.presentation-rich .vditor-toolbar__item button:hover { background: hsl(var(--muted)); }
+.presentation-rich .vditor-toolbar__item button:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+.presentation-rich .vditor-reset { padding: 32px 40px !important; min-height: 480px; font-family: inherit; font-size: 16px; line-height: 1.8; color: hsl(var(--foreground)); }
+.presentation-rich .vditor-reset h1, .presentation-rich .vditor-reset h2, .presentation-rich .vditor-reset h3 { border: 0; margin: 1.5em 0 .6em; font-weight: 600; }
+.presentation-rich .vditor-reset h1 { font-size: 1.75em; }
+.presentation-rich .vditor-reset h2 { font-size: 1.3em; }
+.presentation-rich .vditor-reset h3 { font-size: 1.1em; }
+.presentation-rich .vditor-reset p { margin: .5em 0 1em; }
+.presentation-rich .vditor-reset ul { list-style: disc; }
+.presentation-rich .vditor-reset ol { list-style: decimal; }
+.presentation-rich .vditor-reset img { max-width: 100%; height: auto; }
+.presentation-rich .vditor-reset pre { overflow-x: auto; padding: 16px; background: hsl(var(--muted)); border-radius: 8px; }
+.presentation-rich .vditor-wysiwyg__pre code { color: hsl(var(--foreground)); background: hsl(var(--muted)); }
+.presentation-rich .vditor-panel, .presentation-rich .vditor-hint { color: hsl(var(--foreground)); background: hsl(var(--popover)); }
+.presentation-rich .vditor-counter, .presentation-rich .vditor-toolbar__divider { color: hsl(var(--muted-foreground)); }
+@media (max-width: 640px) {
+  .presentation-rich .vditor-toolbar { padding: 8px !important; }
+  .presentation-rich .vditor-reset { padding: 24px 20px !important; font-size: 15px; }
+}
+
+/* Vditor ships filled-icon defaults; our toolbar uses Lucide stroke icons. */
+.presentation-rich .vditor-toolbar__item svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }

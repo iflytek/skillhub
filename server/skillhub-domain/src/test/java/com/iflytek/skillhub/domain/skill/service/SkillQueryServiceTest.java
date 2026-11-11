@@ -562,6 +562,29 @@ class SkillQueryServiceTest {
     }
 
     @Test
+    void reviewDocumentationPreviewRejectsOversizedStreamEvenWhenRecordedSizeIsSmall() throws Exception {
+        Skill skill = new Skill(1L, "sample", "owner", SkillVisibility.PUBLIC);
+        setId(skill, 1L);
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner");
+        setId(version, 2L);
+        SkillFile documentation = new SkillFile(2L, "README.md", 1L, "text/markdown", "hash", "readme-key");
+        when(skillVersionRepository.findById(2L)).thenReturn(Optional.of(version));
+        when(skillRepository.findById(1L)).thenReturn(Optional.of(skill));
+        when(userAccountRepository.findById("owner")).thenReturn(Optional.empty());
+        when(skillVersionRepository.findBySkillId(1L)).thenReturn(List.of(version));
+        when(skillFileRepository.findByVersionId(2L)).thenReturn(List.of(documentation));
+        when(objectStorageService.exists("readme-key")).thenReturn(true);
+        when(objectStorageService.getObject("readme-key"))
+                .thenReturn(new ByteArrayInputStream(new byte[256 * 1024 + 1]));
+
+        var snapshot = service.getReviewSkillSnapshot(2L, true);
+
+        assertEquals("README.md", snapshot.documentationPath());
+        assertNull(snapshot.documentationContent());
+        assertEquals(1, snapshot.files().size());
+    }
+
+    @Test
     void testListFiles_ShouldHideEntriesWhoseStorageObjectIsMissing() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";

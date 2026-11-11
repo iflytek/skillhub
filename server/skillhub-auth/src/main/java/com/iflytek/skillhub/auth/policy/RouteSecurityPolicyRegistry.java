@@ -18,6 +18,8 @@ public class RouteSecurityPolicyRegistry {
 
     private static final List<RouteAuthorizationPolicy> AUTHORIZATION_POLICIES = List.of(
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/health"),
+            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/site-presentation"),
+            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/v1/site-presentation/assets/*"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/search"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/resolve/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/download/**"),
@@ -36,6 +38,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/swagger-ui/**"),
             RouteAuthorizationPolicy.permitAll(null, "/.well-known/**"),
             RouteAuthorizationPolicy.roles(null, "/actuator/prometheus", "SUPER_ADMIN", "AUDITOR"),
+            RouteAuthorizationPolicy.roles(null, "/actuator/metrics", "SUPER_ADMIN"),
+            RouteAuthorizationPolicy.roles(null, "/actuator/metrics/**", "SUPER_ADMIN"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/v1/skills/*/star"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/v1/skills/*/star"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/v1/skills/*/star"),
@@ -170,6 +174,8 @@ public class RouteSecurityPolicyRegistry {
 
     private static final List<ApiTokenPolicy> API_TOKEN_POLICIES = List.of(
             ApiTokenPolicy.allow(null, "/api/v1/health"),
+            ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/site-presentation"),
+            ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/site-presentation/assets/*"),
             ApiTokenPolicy.allow(null, "/api/v1/auth/providers"),
             ApiTokenPolicy.allow(null, "/api/v1/auth/methods"),
             ApiTokenPolicy.allow(null, "/api/v1/auth/me"),

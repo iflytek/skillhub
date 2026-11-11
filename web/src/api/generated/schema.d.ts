@@ -362,15 +362,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/web/namespaces/{slug}/trusted-publish-policy": {
+    "/api/web/notification-email-preferences": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["getPolicy"];
-        put: operations["setPolicy"];
+        get: operations["preferences_2"];
+        put: operations["preferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-email-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["preferences_3"];
+        put: operations["preferences_1"];
         post?: never;
         delete?: never;
         options?: never;
@@ -403,22 +419,6 @@ export interface paths {
         };
         get?: never;
         put: operations["updateMemberRole_1"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/web/namespaces/{slug}/members/{memberId}/review-exemption": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put: operations["setMemberExemption"];
         post?: never;
         delete?: never;
         options?: never;
@@ -664,6 +664,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/system-config/presentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read managed site presentation settings */
+        get: operations["current_3"];
+        /** Update site presentation settings */
+        put: operations["update"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-config/notification/email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["current_4"];
+        put: operations["update_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/system-config/avatar-review": {
         parameters: {
             query?: never;
@@ -671,8 +705,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["current_2"];
-        put: operations["update"];
+        get: operations["current_5"];
+        put: operations["update_2"];
         post?: never;
         delete?: never;
         options?: never;
@@ -790,7 +824,7 @@ export interface paths {
         /** 读取平台技能采集控制状态 */
         get: operations["get_2"];
         /** 暂停或恢复平台技能采集 */
-        put: operations["update_1"];
+        put: operations["update_3"];
         post?: never;
         delete?: never;
         options?: never;
@@ -845,7 +879,7 @@ export interface paths {
          */
         get: operations["get_3"];
         /** 按配置版本更新官方 GitHub 深度探索设置 */
-        put: operations["update_2"];
+        put: operations["update_4"];
         post?: never;
         delete?: never;
         options?: never;
@@ -2347,6 +2381,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/notification-email-contact/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verify"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notification-email-contact/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["verify_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-email-contact/verification-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestCode"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notification-email-contact/verification-code": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["requestCode_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/namespaces/{slug}/unfreeze": {
         parameters: {
             query?: never;
@@ -2975,6 +3073,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/notification-email-deliveries/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retry_2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/admin/notification-email-deliveries/{id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["retry_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tokens": {
         parameters: {
             query?: never;
@@ -2982,7 +3112,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_8"];
+        get: operations["list_10"];
         put?: never;
         post: operations["create_4"];
         delete?: never;
@@ -3305,6 +3435,23 @@ export interface paths {
         get: operations["listRoleGrants"];
         put?: never;
         post: operations["createRoleGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-config/presentation/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a public branding image (PNG or JPEG, up to 2 MiB and 1024 pixels per side) */
+        post: operations["upload_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3726,7 +3873,7 @@ export interface paths {
             cookie?: never;
         };
         /** 查看系统级公开 GitHub 凭证的脱敏状态 */
-        get: operations["list_11"];
+        get: operations["list_13"];
         put?: never;
         /** 加密保存系统级公开 GitHub 凭证 */
         post: operations["create_5"];
@@ -3762,7 +3909,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["verify"];
+        post: operations["verify_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4989,6 +5136,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reviews/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List namespace scopes the caller is authorized to review */
+        get: operations["listScopes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List namespace scopes the caller is authorized to review */
+        get: operations["listScopes_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/reviews/pending": {
         parameters: {
             query?: never;
@@ -5431,6 +5612,70 @@ export interface paths {
             cookie?: never;
         };
         get: operations["list_5"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-email-deliveries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notification-email-deliveries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["detail_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/notification-email-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["contact"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/notification-email-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["contact_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6199,6 +6444,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/admin/notification-email-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_8"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/notification-email-deliveries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_9"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/whoami": {
         parameters: {
             query?: never;
@@ -6242,6 +6519,40 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["deleteSkill_2"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/site-presentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read public site presentation settings */
+        get: operations["current_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/site-presentation/assets/{assetId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a normalized public branding image */
+        get: operations["asset"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6510,7 +6821,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_9"];
+        get: operations["list_11"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6762,7 +7073,7 @@ export interface paths {
             cookie?: never;
         };
         /** 查看 GitHub 发现规则与精选入口 */
-        get: operations["list_10"];
+        get: operations["list_12"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7402,11 +7713,21 @@ export interface components {
             channel?: string;
             enabled?: boolean;
         };
-        ToggleRequest: {
-            enabled: boolean;
+        NotificationEmailPreferenceResponse: {
+            category?: string;
+            mode?: string;
         };
-        PolicyResponse: {
-            enabled?: boolean;
+        NotificationEmailPreferenceUpdateRequest: {
+            preferences?: components["schemas"]["NotificationEmailPreferenceResponse"][];
+        };
+        ApiResponseListNotificationEmailPreferenceResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailPreferenceResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
         UpdateMemberRoleRequest: {
             /** @enum {string} */
@@ -7431,7 +7752,6 @@ export interface components {
             email?: string;
             /** @enum {string} */
             role?: "OWNER" | "ADMIN" | "MEMBER";
-            reviewExempt?: boolean;
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
@@ -7668,6 +7988,73 @@ export interface components {
             version?: number;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        SitePresentationSection: {
+            enabled: boolean;
+            texts: {
+                [key: string]: {
+                    [key: string]: string;
+                };
+            };
+            items?: {
+                [key: string]: boolean | null;
+            } | null;
+        };
+        SitePresentationSettings: {
+            siteName?: string | null;
+            logoUrl?: string | null;
+            faviconUrl?: string | null;
+            sections: {
+                [key: string]: components["schemas"]["SitePresentationSection"];
+            };
+            links: {
+                [key: string]: string;
+            };
+        };
+        SitePresentationUpdateRequest: {
+            settings: components["schemas"]["SitePresentationSettings"];
+            /** Format: int64 */
+            version: number;
+        };
+        ApiResponseSitePresentationResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SitePresentationResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SitePresentationResponse: {
+            settings: components["schemas"]["SitePresentationSettings"];
+            /** Format: int64 */
+            version: number;
+        };
+        NotificationEmailSettingsUpdateRequest: {
+            enabled?: boolean;
+            /** Format: int32 */
+            digestWindowMinutes?: number;
+            publicBaseUrl?: string;
+            /** Format: int64 */
+            version?: number;
+        };
+        ApiResponseNotificationEmailSettingsResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailSettingsResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        NotificationEmailSettingsResponse: {
+            enabled?: boolean;
+            /** Format: int32 */
+            digestWindowMinutes?: number;
+            publicBaseUrl?: string;
+            /** Format: int64 */
+            version?: number;
+            smtpConfigured?: boolean;
         };
         AvatarReviewSettingsUpdateRequest: {
             machineEnabled?: boolean;
@@ -8226,6 +8613,8 @@ export interface components {
             name?: string;
             displayName?: string;
             description?: string;
+            shortDescription?: string;
+            overview?: string;
             version?: string;
             /** @enum {string} */
             examplesStatus?: "ready" | "none" | "invalid";
@@ -8289,6 +8678,10 @@ export interface components {
             previousVisibility?: string;
             requestedVisibility?: string;
             originType?: string;
+            displayName?: string;
+            summary?: string;
+            reviewKind?: string;
+            canReview?: boolean;
         };
         ReviewTaskRequest: {
             /** Format: int64 */
@@ -8390,6 +8783,30 @@ export interface components {
             /** Format: int64 */
             sourceSkillId?: number;
             reason?: string;
+        };
+        VerifyRequest: {
+            code?: string;
+        };
+        ApiResponseNotificationEmailContactResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailContactResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        NotificationEmailContactResponse: {
+            email?: string | null;
+            verified?: boolean;
+            available?: boolean;
+            locale?: string;
+            /** Format: date-time */
+            resendAvailableAt?: string | null;
+            reason?: string | null;
+        };
+        CodeRequest: {
+            locale?: string;
         };
         TransferOwnershipRequest: {
             newOwnerId: string;
@@ -8605,6 +9022,9 @@ export interface components {
             timestamp?: string;
             requestId?: string;
         };
+        NotificationEmailRetryRequest: {
+            confirmDuplicateRisk?: boolean;
+        };
         TokenCreateRequest: {
             name: string;
             scopes?: string[];
@@ -8730,6 +9150,18 @@ export interface components {
             providerCode: string;
             email: string;
             roleCode: string;
+        };
+        ApiResponseSitePresentationAssetResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["SitePresentationAssetResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        SitePresentationAssetResponse: {
+            url: string;
         };
         AdminSkillMutationResponse: {
             /** Format: int64 */
@@ -9564,6 +9996,22 @@ export interface components {
             readyForApproval?: boolean;
             removal?: boolean;
         };
+        ReviewComparison: {
+            baseVersion?: string;
+            baseline?: components["schemas"]["ReviewPresentation"];
+            current?: components["schemas"]["ReviewPresentation"];
+            files?: components["schemas"]["ReviewFileChange"][];
+        };
+        ReviewFileChange: {
+            path?: string;
+            changeType?: string;
+        };
+        ReviewPresentation: {
+            displayName?: string;
+            summary?: string;
+            overview?: string;
+            overviewSource?: string;
+        };
         ReviewSkillDetailResponse: {
             skill?: components["schemas"]["SkillDetailResponse"];
             versions?: components["schemas"]["SkillVersionResponse"][];
@@ -9574,6 +10022,8 @@ export interface components {
             activeVersion?: string;
             avatarChange?: components["schemas"]["AvatarChange"];
             visibilityChange?: components["schemas"]["VisibilityChange"];
+            presentation?: components["schemas"]["ReviewPresentation"];
+            comparison?: components["schemas"]["ReviewComparison"];
         };
         VisibilityChange: {
             previousVisibility?: string;
@@ -9677,6 +10127,21 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        ApiResponseListReviewScopeResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["ReviewScopeResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ReviewScopeResponse: {
+            /** Format: int64 */
+            id?: number;
+            slug?: string;
+            displayName?: string;
         };
         ApiResponsePageResponseReviewTaskResponse: {
             /** Format: int32 */
@@ -9890,6 +10355,44 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        ApiResponseNotificationEmailDeliveryDetailResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailDeliveryDetailResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        NotificationEmailDeliveryDetailResponse: {
+            /** Format: int64 */
+            id?: number;
+            status?: string;
+            kind?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            items?: components["schemas"]["NotificationEmailDeliveryItemResponse"][];
+            /** Format: int64 */
+            totalItems?: number;
+            /** Format: int64 */
+            unavailableCount?: number;
+            /** Format: int32 */
+            size?: number;
+            nextCursor?: string | null;
+            /** Format: int64 */
+            mergedIntoDeliveryId?: number | null;
+        };
+        NotificationEmailDeliveryItemResponse: {
+            /** Format: int64 */
+            id?: number;
+            category?: string;
+            eventType?: string;
+            /** Format: date-time */
+            occurredAt?: string;
+            targetPath?: string;
         };
         Pageable: {
             /** Format: int32 */
@@ -10504,6 +11007,42 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+        };
+        ApiResponseNotificationEmailDeliveryAdminPageResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["NotificationEmailDeliveryAdminPageResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        NotificationEmailDeliveryAdminPageResponse: {
+            items?: components["schemas"]["NotificationEmailDeliveryAdminResponse"][];
+            /** Format: int64 */
+            totalItems?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+            /** Format: int32 */
+            totalPages?: number;
+        };
+        NotificationEmailDeliveryAdminResponse: {
+            /** Format: int64 */
+            id?: number;
+            recipientId?: string;
+            kind?: string;
+            status?: string;
+            /** Format: int32 */
+            attempts?: number;
+            resultCode?: string | null;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            acceptedAt?: string | null;
+            /** Format: int64 */
+            mergedIntoDeliveryId?: number | null;
         };
         ClawHubWhoamiResponse: {
             user?: components["schemas"]["User"];
@@ -12692,13 +13231,11 @@ export interface operations {
             };
         };
     };
-    getPolicy: {
+    preferences_2: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -12709,23 +13246,21 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PolicyResponse"];
+                    "*/*": components["schemas"]["ApiResponseListNotificationEmailPreferenceResponse"];
                 };
             };
         };
     };
-    setPolicy: {
+    preferences: {
         parameters: {
             query?: never;
             header?: never;
-            path: {
-                slug: string;
-            };
+            path?: never;
             cookie?: never;
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ToggleRequest"];
+                "application/json": components["schemas"]["NotificationEmailPreferenceUpdateRequest"];
             };
         };
         responses: {
@@ -12735,7 +13270,51 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["PolicyResponse"];
+                    "*/*": components["schemas"]["ApiResponseListNotificationEmailPreferenceResponse"];
+                };
+            };
+        };
+    };
+    preferences_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListNotificationEmailPreferenceResponse"];
+                };
+            };
+        };
+    };
+    preferences_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationEmailPreferenceUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListNotificationEmailPreferenceResponse"];
                 };
             };
         };
@@ -12790,33 +13369,6 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseMemberResponse"];
-                };
-            };
-        };
-    };
-    setMemberExemption: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                slug: string;
-                memberId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ToggleRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["MemberResponse"];
                 };
             };
         };
@@ -13443,7 +13995,95 @@ export interface operations {
             };
         };
     };
-    current_2: {
+    current_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSitePresentationResponse"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SitePresentationUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSitePresentationResponse"];
+                };
+            };
+        };
+    };
+    current_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailSettingsResponse"];
+                };
+            };
+        };
+    };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationEmailSettingsUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailSettingsResponse"];
+                };
+            };
+        };
+    };
+    current_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -13463,7 +14103,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -13742,7 +14382,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -13838,7 +14478,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -15617,6 +16257,9 @@ export interface operations {
                 avatarUploadId?: string;
                 expectedSlug?: string;
                 displayName?: string;
+                shortDescription?: string;
+                overview?: string;
+                resetPresentation?: boolean;
             };
             header?: never;
             path: {
@@ -15653,6 +16296,9 @@ export interface operations {
                 avatarUploadId?: string;
                 expectedSlug?: string;
                 displayName?: string;
+                shortDescription?: string;
+                overview?: string;
+                resetPresentation?: boolean;
             };
             header?: never;
             path: {
@@ -15938,9 +16584,12 @@ export interface operations {
     };
     listReviews: {
         parameters: {
-            query: {
-                status: string;
+            query?: {
+                status?: string;
                 namespaceId?: number;
+                q?: string;
+                reviewKind?: string;
+                originType?: string;
                 page?: number;
                 size?: number;
                 sortDirection?: string;
@@ -15988,9 +16637,12 @@ export interface operations {
     };
     listReviews_1: {
         parameters: {
-            query: {
-                status: string;
+            query?: {
+                status?: string;
                 namespaceId?: number;
+                q?: string;
+                reviewKind?: string;
+                originType?: string;
                 page?: number;
                 size?: number;
                 sortDirection?: string;
@@ -16440,6 +17092,102 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePromotionRevocationResponse"];
+                };
+            };
+        };
+    };
+    verify: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
+    verify_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
+    requestCode: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
+    requestCode_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CodeRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
                 };
             };
         };
@@ -17682,7 +18430,59 @@ export interface operations {
             };
         };
     };
-    list_8: {
+    retry_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationEmailRetryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    retry_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationEmailRetryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    list_10: {
         parameters: {
             query?: {
                 page?: number;
@@ -18262,6 +19062,33 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseExternalRoleGrantRuleResponse"];
+                };
+            };
+        };
+    };
+    upload_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSitePresentationAssetResponse"];
                 };
             };
         };
@@ -18919,7 +19746,7 @@ export interface operations {
             };
         };
     };
-    list_11: {
+    list_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -18989,7 +19816,7 @@ export interface operations {
             };
         };
     };
-    verify: {
+    verify_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -20970,6 +21797,46 @@ export interface operations {
             };
         };
     };
+    listScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListReviewScopeResponse"];
+                };
+            };
+        };
+    };
+    listScopes_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListReviewScopeResponse"];
+                };
+            };
+        };
+    };
     listPendingReviews: {
         parameters: {
             query: {
@@ -21608,6 +22475,96 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePageResponseNotificationResponse"];
+                };
+            };
+        };
+    };
+    detail: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailDeliveryDetailResponse"];
+                };
+            };
+        };
+    };
+    detail_1: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailDeliveryDetailResponse"];
+                };
+            };
+        };
+    };
+    contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
+                };
+            };
+        };
+    };
+    contact_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailContactResponse"];
                 };
             };
         };
@@ -22734,6 +23691,54 @@ export interface operations {
             };
         };
     };
+    list_8: {
+        parameters: {
+            query?: {
+                status?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailDeliveryAdminPageResponse"];
+                };
+            };
+        };
+    };
+    list_9: {
+        parameters: {
+            query?: {
+                status?: string;
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseNotificationEmailDeliveryAdminPageResponse"];
+                };
+            };
+        };
+    };
     whoami: {
         parameters: {
             query?: never;
@@ -22819,6 +23824,48 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ClawHubDeleteResponse"];
+                };
+            };
+        };
+    };
+    current_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseSitePresentationResponse"];
+                };
+            };
+        };
+    };
+    asset: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                assetId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": string;
                 };
             };
         };
@@ -23181,7 +24228,7 @@ export interface operations {
             };
         };
     };
-    list_9: {
+    list_11: {
         parameters: {
             query?: {
                 status?: string;
@@ -23546,7 +24593,7 @@ export interface operations {
             };
         };
     };
-    list_10: {
+    list_12: {
         parameters: {
             query?: never;
             header?: never;

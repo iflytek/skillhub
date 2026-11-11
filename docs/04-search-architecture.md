@@ -69,7 +69,7 @@ WHERE (visibility = 'PUBLIC')
 | title | varchar(256) | |
 | summary | varchar(512) | |
 | keywords | varchar(512) | |
-| search_text | text | `displayName`、`slug`、`summary`，以及 frontmatter 中除 `name` / `description` / `version` 外的字段展开结果 |
+| search_text | text | `displayName`、`slug`、有效简短描述、原始包 `description`，以及 frontmatter 中除 `name` / `description` / `version` 与仅用于详情的 `metadata.overview` 外的字段展开结果 |
 | visibility | enum | 冗余，避免搜索时 join |
 | status | enum | |
 | updated_at | datetime | |

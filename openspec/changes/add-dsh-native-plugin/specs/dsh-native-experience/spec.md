@@ -664,3 +664,45 @@ The plugin MUST let users save and remove local skill favorites without login, i
 - **GIVEN** two sources contain the same coordinates or multiple local Hosts save different favorites
 - **WHEN** the source changes or concurrent writes finish
 - **THEN** old responses do not enter the new source view, each source retains its own favorites, atomic locked read-modify-write preserves both records, and damaged or unknown storage is not overwritten
+
+
+### Requirement: Compact interface with complete existing functionality
+The plugin SHALL apply the approved compact design to its scoped UI while preserving existing source, context, confirmation, recovery and compatibility behavior. Conditional operations SHALL remain reachable and prototype omissions SHALL be corrected before being treated as implementation scope cuts.
+
+#### Scenario: Secondary actions remain reachable
+- **WHEN** a skill, location, favorite or operation is disabled, missing, unavailable, pending, stale or unknown
+- **THEN** appropriate inspect, export, local-change, clean-record, retry, cancel, query or recovery actions remain available according to existing Host contracts, without silently replaying writes
+
+#### Scenario: Compact responsive controls
+- **WHEN** the user views narrow or wide layouts in either theme
+- **THEN** controls size to content, metrics group closely, text may wrap or reveal full values, and file/diff scrolling stays inside bounded regions without page overflow or mutation-state height jumps
+
+### Requirement: Lazy fixed-version read-only files
+The plugin SHALL reuse existing Registry file GET endpoints through bounded Host reads tied to the current detail reference, and SHALL NOT introduce arbitrary local path, URL or write authority.
+
+#### Scenario: Inspect selected text
+- **WHEN** the user activates Files for a current Registry detail and selects a listed text file
+- **THEN** only the fixed-version list and selected bounded text are read, with source/context checks and escaped rendering; catalog cards do not trigger per-skill file requests
+
+#### Scenario: Unsupported or invalid content
+- **WHEN** the source lacks the endpoint, access is denied, content is binary/too large/unreadable, or the source reference becomes stale
+- **THEN** the UI distinguishes that state from an empty directory and does not claim successful inspection or substitute another source/version
+
+
+### Requirement: Explicit DSH 0.2.2 RC1 compatibility with retained hosts
+The 0.6.3 candidate SHALL add exact DSH `0.2.2-rc.1` while retaining the three previously supported RC targets. The new release SHALL require Node `>=24.9.0 <25` and its complete verified Cordis 4.1 family. Retained hosts SHALL keep their existing Node floor and separate Cordis families. Unknown releases, mixed Host/Client owners, unreadable manifests and cross-family combinations SHALL continue to reject new writes without discarding historical queries or inventory v2 data.
+
+#### Scenario: New host runtime and artifact
+- **WHEN** the final candidate is installed normally on coherent DSH `0.2.2-rc.1` with Node 24.9 or current Node 24
+- **THEN** generated Remote calls, Client registration, managed lifecycle and native skill discovery use supported interfaces without peer or version-risk overrides
+- **AND** the existing Node24.2-built JavaScript release artifact is exercised on the new runtime rather than assuming build success proves compatibility
+
+#### Scenario: Release-specific lower bound and family
+- **WHEN** DSH `0.2.2-rc.1` is encountered below Node24.9 or with an older Cordis family, or a retained release is paired with the new family
+- **THEN** the candidate rejects new mutations
+- **AND** a coherent retained release at its existing Node24.2 lower bound remains eligible after all other protections pass
+
+#### Scenario: New client input phase
+- **WHEN** the new Client reports a non-plain input phase such as sending
+- **THEN** the plugin does not take over or overwrite that conversation draft
+- **AND** plain-draft handoff, version isolation, lifecycle and browser behavior are verified separately from type declaration comparison

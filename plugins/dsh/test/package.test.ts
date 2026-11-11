@@ -49,7 +49,7 @@ describe('native M0 package', () => {
     expect(ctx.skillhub.getStatus()).toBe('SkillHub: connected');
     expect(ctx.skillhub.getCompatibility()).toEqual({
       dependencyBaseline: 'unverified',
-      candidateDshVersion: '0.2.0-rc.2 / 0.2.1-rc.2 / 0.2.1-rc.5',
+      candidateDshVersion: '0.2.0-rc.2 / 0.2.1-rc.2 / 0.2.1-rc.5 / 0.2.2-rc.1',
       localWritesAllowed: false,
     });
     expect(ctx.skillhub.typertRemote.namespace).toBe('skillhub');
@@ -60,7 +60,7 @@ describe('native M0 package', () => {
   });
 
   test('official generator publishes the declared endpoints with scoped writes and strict codec', () => {
-    expect(TYPERT_REMOTE.descriptors.map(item => item.method).sort()).toEqual(['listFavorites', 'setFavorite', 'resolveFavoriteVersion', 'acknowledgeConversationDetail', 'beginConversationManagement', 'beginInstalledUpdateScan', 'checkAvailability', 'checkInstalledUpdateScan', 'checkUpdate', 'checkVersionUpdate', 'confirmConversationManagement', 'endInstalledUpdateScan', 'executePlan', 'getCompatibility', 'getContext', 'getInstalledDetail', 'getOperation', 'getSkillDetail', 'getStatus', 'listCatalog', 'listCatalogByLabel', 'listInstallTargets', 'listInstalled', 'listLabels', 'listReviews', 'listSkills', 'listVersions', 'openConversationDetail', 'prepareSkillUse', 'prepareToggle', 'prepareUninstall', 'prepareUpgrade', 'prepareVersionUpgrade', 'recoverOperation', 'reopenConversationDetail', 'selectSkillUse', 'startInstall', 'testRegistryConnection', 'inspectLocalChanges', 'readFileChange', 'previewUpgradeChanges', 'confirmUpgradeChanges', 'prepareFileReset', 'executeFileReset', 'previewPackageImport', 'confirmPackageImport', 'exportInstalledPackage'].sort());
+    expect(TYPERT_REMOTE.descriptors.map(item => item.method).sort()).toEqual(['listSkillFiles', 'readSkillFile', 'listFavorites', 'setFavorite', 'resolveFavoriteVersion', 'acknowledgeConversationDetail', 'beginConversationManagement', 'beginInstalledUpdateScan', 'checkAvailability', 'checkInstalledUpdateScan', 'checkUpdate', 'checkVersionUpdate', 'confirmConversationManagement', 'endInstalledUpdateScan', 'executePlan', 'getCompatibility', 'getContext', 'getInstalledDetail', 'getOperation', 'getSkillDetail', 'getStatus', 'listCatalog', 'listCatalogByLabel', 'listInstallTargets', 'listInstalled', 'listLabels', 'listReviews', 'listSkills', 'listVersions', 'openConversationDetail', 'prepareSkillUse', 'prepareToggle', 'prepareUninstall', 'prepareUpgrade', 'prepareVersionUpgrade', 'recoverOperation', 'reopenConversationDetail', 'selectSkillUse', 'startInstall', 'testRegistryConnection', 'inspectLocalChanges', 'readFileChange', 'previewUpgradeChanges', 'confirmUpgradeChanges', 'prepareFileReset', 'executeFileReset', 'previewPackageImport', 'confirmPackageImport', 'exportInstalledPackage'].sort());
     for (const method of ['inspectLocalChanges', 'readFileChange', 'previewUpgradeChanges', 'confirmUpgradeChanges', 'prepareFileReset', 'executeFileReset', 'previewPackageImport', 'confirmPackageImport', 'exportInstalledPackage', 'beginInstalledUpdateScan', 'checkInstalledUpdateScan', 'endInstalledUpdateScan', 'checkAvailability', 'beginConversationManagement', 'confirmConversationManagement', 'openConversationDetail', 'reopenConversationDetail', 'acknowledgeConversationDetail', 'listInstallTargets', 'listInstalled', 'getInstalledDetail', 'checkUpdate', 'checkVersionUpdate', 'prepareSkillUse', 'prepareToggle', 'prepareUninstall', 'prepareUpgrade', 'prepareVersionUpgrade', 'executePlan', 'startInstall', 'getOperation', 'recoverOperation']) {
       const scoped = TYPERT_REMOTE.descriptors.find(item => item.method === method)!;
       expect(scoped.invocation).toMatchObject({ kind: 'context', context: 'agent', wire: 'agentId' });
@@ -70,7 +70,7 @@ describe('native M0 package', () => {
       expect(endpoint.cancellation).toEqual({ parameter: 'signal' });
       expect(endpoint.result?.mode).toBe('strict');
     }
-    for (const method of ['listFavorites', 'setFavorite', 'resolveFavoriteVersion']) {
+    for (const method of ['listSkillFiles', 'readSkillFile', 'listFavorites', 'setFavorite', 'resolveFavoriteVersion']) {
       const endpoint = TYPERT_REMOTE.descriptors.find(item => item.method === method)!;
       expect(endpoint.cancellation).toEqual({ parameter: 'signal' });
       expect(endpoint.result?.mode).toBe('strict');

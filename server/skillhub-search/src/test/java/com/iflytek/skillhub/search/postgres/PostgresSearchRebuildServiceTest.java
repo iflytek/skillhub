@@ -32,6 +32,31 @@ import static org.mockito.Mockito.when;
 class PostgresSearchRebuildServiceTest {
 
     @Test
+    void rebuildBySkill_indexesEffectiveSummaryAndOriginalDescriptionButNotOverview() {
+        SkillRepository skills = mock(SkillRepository.class);
+        NamespaceRepository namespaces = mock(NamespaceRepository.class);
+        SkillVersionRepository versions = mock(SkillVersionRepository.class);
+        SearchIndexService index = mock(SearchIndexService.class);
+        Skill skill = new Skill(7L, "slug", "owner", SkillVisibility.PUBLIC);
+        skill.setDisplayName("Custom title");
+        skill.setSummary("Custom short");
+        skill.setLatestVersionId(99L);
+        SkillVersion version = new SkillVersion(1L, "1.0.0", "owner");
+        version.setParsedMetadataJson("""
+                {"description":"Original package description","frontmatter":
+                  {"metadata":{"overview":"Private detail-only text"}}}
+                """);
+        when(skills.findById(7L)).thenReturn(Optional.of(skill));
+        when(namespaces.findById(7L)).thenReturn(Optional.of(new Namespace("team", "Team", "owner")));
+        when(versions.findById(99L)).thenReturn(Optional.of(version));
+        newService(skills, namespaces, versions, index).rebuildBySkill(7L);
+        ArgumentCaptor<SkillSearchDocument> captor = ArgumentCaptor.forClass(SkillSearchDocument.class);
+        verify(index).index(captor.capture());
+        assertThat(captor.getValue().searchText()).contains("Custom title", "Custom short", "Original package description")
+                .doesNotContain("Private detail-only text");
+    }
+
+    @Test
     void rebuildBySkill_shouldIndexFrontmatterFieldsAndKeywordsWithoutBody() {
         SkillRepository skillRepository = mock(SkillRepository.class);
         NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);

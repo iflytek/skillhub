@@ -31,6 +31,14 @@ class PrometheusSecurityTest {
     private DeviceAuthService deviceAuthService;
 
     @Test
+    void metricsRemainUnexposedByDefaultEvenForAdmin() throws Exception {
+        for (String path : java.util.List.of("/actuator/metrics", "/actuator/prometheus")) {
+            mockMvc.perform(get(path).with(BusinessMetricsSecurityTest.session("SUPER_ADMIN")))
+                    .andExpect(status().isNotFound());
+        }
+    }
+
+    @Test
     void prometheusEndpointShouldNotBeAnonymous() throws Exception {
         mockMvc.perform(get("/actuator/prometheus"))
                 .andExpect(status().isUnauthorized());

@@ -58,6 +58,7 @@ import { installationFailureCode } from './installation-failure.js';
 import type { LocalChangesSnapshot, VersionChangesSnapshot, VerifiedBackupReceipt } from './generated/native-contract.js';
 import type { ChangesView, ChangeDiffView, FileResetPlanView } from './types.js';
 import type { InstalledProjectionItem } from './generated/native-contract.js';
+import type { SkillFileEntry, SkillFileList, SkillFilePreview } from './types.js';
 
 declare module '@deepseek-ai/cordis' {
   interface Context { skillhub: SkillHubService }
@@ -96,6 +97,7 @@ export class SkillHubService extends TypertRemoteService {
   private readonly details = new Map<string, {
     sourceRevision: string; namespace: string; slug: string; version: string;
     skillId: number; versionId: number; fingerprint: string;
+    files?: SkillFileEntry[];
   }>();
 
   constructor(ctx: Context, configuration: ReturnType<typeof Config> = Config({})) {
@@ -336,6 +338,27 @@ export class SkillHubService extends TypertRemoteService {
     const detail = this.readDetail(detailToken, 'versions');
     return this.readSource(detail.sourceRevision, signal,
       (registry, signal) => registry.browseVersions(detail.namespace, detail.slug, page, 20, signal));
+  }
+
+  @Remote
+  async listSkillFiles(detailToken: string, signal: AbortSignal): Promise<SkillFileList> {
+    const detail = this.readFixedDetail(detailToken);
+    return this.readSource(detail.sourceRevision, signal, async (registry, signal) => {
+      const result = await registry.files(detail.namespace, detail.slug, detail.version, signal);
+      this.assertSource(detail.sourceRevision);
+      // File reads only accept names from this bounded, fixed-version list.
+      detail.files = result.state === 'ready' ? result.items.map(file => ({ ...file })) : undefined;
+      return result;
+    });
+  }
+
+  @Remote
+  async readSkillFile(detailToken: string, path: string, signal: AbortSignal): Promise<SkillFilePreview> {
+    const detail = this.readFixedDetail(detailToken);
+    const file = detail.files?.find(file => file.path === path);
+    if (!file) throw new RemoteError('skillhub/registry-error', 'Select a listed skill file first.', { reason: 'INVALID_INPUT', retryable: false });
+    return this.readSource(detail.sourceRevision, signal,
+      (registry, signal) => registry.file(detail.namespace, detail.slug, detail.version, file, signal));
   }
 
   @Remote
@@ -1928,11 +1951,17 @@ export class SkillHubService extends TypertRemoteService {
   }
 
   private readDetail(token: string, module: 'versions' | 'reviews') {
-    this.refreshSource();
-    const detail = this.details.get(token);
-    if (!detail || this.configuration.get().detailTabs[module] === 'hide') {
+    const detail = this.readFixedDetail(token);
+    if (this.configuration.get().detailTabs[module] === 'hide') {
       throw new RemoteError('skillhub/context-stale', 'Reopen the skill detail.', { retryable: false });
     }
+    return detail;
+  }
+
+  private readFixedDetail(token: string) {
+    this.refreshSource();
+    const detail = this.details.get(token);
+    if (!detail) throw new RemoteError('skillhub/context-stale', 'Reopen the skill detail.', { retryable: false });
     this.assertSource(detail.sourceRevision);
     return detail;
   }

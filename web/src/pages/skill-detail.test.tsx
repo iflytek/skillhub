@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MouseEvent, ReactNode } from 'react'
+import { ApiError } from '@/api/client'
 import type { SkillFile } from '@/api/types'
 
 const toastMocks = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ const useSkillVersionsMock = vi.fn()
 const useSkillFilesMock = vi.fn()
 const useSkillReadmeMock = vi.fn()
 const useSkillFileMock = vi.fn()
+const useSkillVersionDetailMock = vi.fn()
 const usePromotionSourceStateMock = vi.fn()
 const submitPromotionMock = vi.fn()
 const submitRevocationMock = vi.fn()
@@ -208,7 +210,7 @@ vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useAttachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useDetachSkillLabel: () => ({ mutate: vi.fn(), isPending: false }),
   useSkillVersions: (...args: unknown[]) => useSkillVersionsMock(...args),
-  useSkillVersionDetail: () => ({ data: undefined }),
+  useSkillVersionDetail: (...args: unknown[]) => useSkillVersionDetailMock(...args),
   useSkillFiles: (...args: unknown[]) => useSkillFilesMock(...args),
   useSkillReadme: (...args: unknown[]) => useSkillReadmeMock(...args),
   useSkillFile: (...args: unknown[]) => useSkillFileMock(...args),
@@ -301,6 +303,8 @@ describe('SkillDetailPage', () => {
     useSkillFilesMock.mockReset()
     useSkillReadmeMock.mockReset()
     useSkillFileMock.mockReset()
+    useSkillVersionDetailMock.mockReset()
+    useSkillVersionDetailMock.mockReturnValue({ data: undefined })
     toastMocks.success.mockReset()
     toastMocks.error.mockReset()
     hasRoleMock.mockImplementation((role: string) => role === 'USER')
@@ -1011,6 +1015,102 @@ describe('SkillDetailPage', () => {
 
     expect(html).toContain('break-all')
     expect(html).toContain('leading-snug')
+  })
+
+  it('renders the selected snapshot overview and opens the packaged SKILL.md separately', () => {
+    useSkillVersionDetailMock.mockReturnValue({ data: { parsedMetadataJson: JSON.stringify({
+      name: 'demo-skill', description: 'Original description', shortDescriptionOverride: 'Selected summary',
+      overviewOverride: '# Selected overview',
+    }) } })
+    useSkillFilesMock.mockReturnValue({ data: [createSkillFile('README.md'), createSkillFile('SKILL.md')] })
+    render(<SkillDetailPage />)
+    expect(screen.getByText('markdown:# Selected overview')).toBeTruthy()
+    expect(screen.queryByText('markdown:# Demo')).toBeNull()
+    fireEvent.click(screen.getByRole('tab', { name: 'skillDetail.tabInstructions' }))
+    expect(screen.getByText(/SKILL.md ·/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'skillDetail.viewSkillMd' })).toBeNull()
+  })
+
+  it('selects a version from its tab without publishing and preserves return context', () => {
+    useSkillVersionsMock.mockReturnValue({ data: [
+      { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+      { id: 11, version: '0.9.0', status: 'PUBLISHED' },
+    ] })
+    render(<SkillDetailPage />)
+    fireEvent.click(screen.getByRole('tab', { name: 'skillDetail.tabVersions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'skillDetail.viewThisVersion' }))
+    expect(navigateMock).toHaveBeenCalledWith({ to: '/space/$namespace/$slug', params: routeParams, search: { returnTo: '/dashboard/skills', version: '0.9.0' } })
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'skillDetail.tabOverview' }))
+    expect(screen.getByRole('tab', { name: 'skillDetail.tabOverview' }).getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('shows a historical context and returns to the latest published version', () => {
+    searchMock.value.version = '0.9.0'
+    useSkillVersionsMock.mockReturnValue({ data: [
+      { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+      { id: 11, version: '0.9.0', status: 'PUBLISHED' },
+    ] })
+    render(<SkillDetailPage />)
+    expect(screen.getByText('skillDetail.viewingHistoricalVersion')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'skillDetail.returnLatestPublished' }))
+    expect(navigateMock).toHaveBeenCalledWith(expect.objectContaining({ search: { returnTo: '/dashboard/skills', version: undefined } }))
+  })
+
+  it('does not display another version when the requested version is unavailable', () => {
+    searchMock.value.version = '99.0.0'
+    useSkillVersionDetailMock.mockReturnValue({ error: Object.assign(new ApiError('not found', 404), { status: 404 }) })
+    render(<SkillDetailPage />)
+    expect(screen.getByRole('alert').textContent).toContain('skillDetail.versionUnavailable')
+    expect(screen.queryByText('markdown:# Demo')).toBeNull()
+    expect(screen.queryByRole('tab')).toBeNull()
+  })
+
+  it('can read an older version absent from the first page of versions', () => {
+    searchMock.value.version = '0.1.0'
+    useSkillVersionDetailMock.mockReturnValue({ data: { id: 1, version: '0.1.0', status: 'PUBLISHED', parsedMetadataJson: JSON.stringify({ overviewOverride: '# Old readable introduction' }) } })
+    render(<SkillDetailPage />)
+    expect(screen.getByText('markdown:# Old readable introduction')).toBeTruthy()
+    expect(screen.queryByText('skillDetail.versionUnavailable')).toBeNull()
+  })
+
+  it('distinguishes transient version errors from unavailable versions and offers retry', () => {
+    searchMock.value.version = '0.1.0'
+    const refetch = vi.fn()
+    useSkillVersionDetailMock.mockReturnValue({ error: Object.assign(new ApiError('temporary', 500), { status: 500 }), refetch })
+    render(<SkillDetailPage />)
+    expect(screen.queryByText('skillDetail.versionUnavailable')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'skillDetail.instructionsRetry' }))
+    expect(refetch).toHaveBeenCalledOnce()
+  })
+
+  it('restores overview focus after the selected version finishes loading', () => {
+    useSkillVersionsMock.mockReturnValue({ data: [
+      { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+      { id: 11, version: '0.9.0', status: 'PUBLISHED' },
+    ] })
+    const { rerender } = render(<SkillDetailPage />)
+    fireEvent.click(screen.getByRole('tab', { name: 'skillDetail.tabVersions' }))
+    fireEvent.click(screen.getByRole('button', { name: 'skillDetail.viewThisVersion' }))
+    searchMock.value.version = '0.9.0'
+    useSkillVersionDetailMock.mockReturnValue({ isLoading: true })
+    rerender(<SkillDetailPage />)
+    expect(screen.getByRole('status').textContent).toBe('skillDetail.versionLoading')
+    useSkillVersionDetailMock.mockReturnValue({ isLoading: false, data: { id: 11, version: '0.9.0', status: 'PUBLISHED' } })
+    rerender(<SkillDetailPage />)
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'skillDetail.tabOverview' }))
+  })
+
+  it('returns to overview when route history changes the selected version', () => {
+    useSkillVersionsMock.mockReturnValue({ data: [
+      { id: 10, version: '1.0.0', status: 'PUBLISHED' },
+      { id: 11, version: '0.9.0', status: 'PUBLISHED' },
+    ] })
+    const { rerender } = render(<SkillDetailPage />)
+    fireEvent.click(screen.getByRole('tab', { name: 'skillDetail.tabFiles' }))
+    searchMock.value.version = '0.9.0'
+    rerender(<SkillDetailPage />)
+    expect(screen.getByRole('tab', { name: 'skillDetail.tabOverview' }).getAttribute('aria-selected')).toBe('true')
+    expect(screen.getByText('skillDetail.viewingHistoricalVersion')).toBeTruthy()
   })
 
   it('opens a file preview when overview markdown relative link matches a package file', () => {

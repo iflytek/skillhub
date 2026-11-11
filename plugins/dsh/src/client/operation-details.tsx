@@ -1,3 +1,4 @@
+import { OperationSurfaceStyles } from './operation-styles.js';
 import type { NativeOperation } from '../host/types.js';
 
 const outcomes = { enabled: '已启用', disabled: '已停用', installed: '安装完成', upgraded: '升级完成', removed: '已移除',
@@ -9,7 +10,7 @@ const warnings = { 'backup-cleanup': '备份清理需要核验。', 'removal-cle
 export function OperationDetails({ operation }: { operation: NativeOperation }) {
   const details = operation.resultDetails;
   if (!details) return null;
-  return <details style={{ overflowWrap: 'anywhere' }}><summary>原操作结果详情</summary>
+  return <><OperationSurfaceStyles /><details className="astron-sh-operation-details"><summary>原操作结果详情</summary>
     <p>操作前版本：{details.beforeVersion ?? '未记录或不适用'}</p>
     <p>操作后版本：{details.afterVersion ?? '未确认或不适用'}</p>
     {details.targets.length ? <ul>{details.targets.map((target, index) =>
@@ -17,5 +18,5 @@ export function OperationDetails({ operation }: { operation: NativeOperation }) 
     {details.warnings.length > 0 && <ul aria-label="操作告警">{details.warnings.map((warning, index) =>
       <li key={index}>{warnings[warning]}</li>)}</ul>}
     <p>以上为原操作记录，当前安装状态请查看已安装列表。</p>
-  </details>;
+  </details></>;
 }

@@ -24,11 +24,11 @@ describe('passive, caller-scoped analytics attributes', () => {
   it('omits disabled dropzone intents without changing dropzone or native folder guards', () => {
     const select = vi.fn()
     const view = render(<UploadZone analyticsId="skill.package.select" folderAnalyticsId="skill.package.folder.select" onFileSelect={select} onFolderSelect={vi.fn()} />)
-    const drop = view.container.querySelector('.upload-zone')!
+    const drop = view.container.querySelector('[data-analytics-event="click+keydown+drop"]')!
     expect(attr(drop)).toBe('skill.package.select')
     view.rerender(<UploadZone analyticsId="skill.package.select" folderAnalyticsId="skill.package.folder.select" onFileSelect={select} onFolderSelect={vi.fn()} disabled />)
     expect(attr(drop)).toBeNull()
-    const file = view.container.querySelector('.upload-zone input')!
+    const file = drop.querySelector('input')!
     expect(attr(file)).toBeNull()
     expect(view.container.querySelector('[data-analytics-id="skill.package.folder.select"]')?.hasAttribute('disabled')).toBe(true)
     fireEvent.change(file, { target: { files: [new File(['synthetic'], 'synthetic.zip', { type: 'application/zip' })] } })

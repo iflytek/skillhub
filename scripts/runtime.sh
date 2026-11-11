@@ -9,6 +9,7 @@ if [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; then
 fi
 
 SKILLHUB_REF="${SKILLHUB_REF:-main}"
+CUSTOM_RAW_BASE="${SKILLHUB_RAW_BASE:-}"
 SKILLHUB_HOME_DEFAULT="${TMPDIR:-/tmp}/skillhub-runtime"
 SKILLHUB_HOME="${SKILLHUB_HOME:-$SKILLHUB_HOME_DEFAULT}"
 SKILLHUB_VERSION_VALUE="${SKILLHUB_VERSION:-}"
@@ -28,6 +29,8 @@ WEBSITE_ID=""
 ANALYTICS_UPSTREAM=""
 ANALYTICS_ADAPTER="umami"
 ANALYTICS_APP_ID=""
+BUSINESS_LOGS_ENDPOINT=""
+BUSINESS_LOGS_NETWORK=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -115,6 +118,16 @@ while [ "$#" -gt 0 ]; do
       ANALYTICS_APP_ID="$2"
       shift 2
       ;;
+    --logs-endpoint)
+      [ "$#" -ge 2 ] || { echo "Missing value for --logs-endpoint" >&2; exit 1; }
+      BUSINESS_LOGS_ENDPOINT="$2"
+      shift 2
+      ;;
+    --logs-network)
+      [ "$#" -ge 2 ] || { echo "Missing value for --logs-network" >&2; exit 1; }
+      BUSINESS_LOGS_NETWORK="$2"
+      shift 2
+      ;;
     --help|-h)
       cat <<EOF
 Usage: sh runtime.sh [up|down|clean|ps|logs|pull|analytics-up|analytics-enable|analytics-disable|analytics-down|analytics-ps|analytics-logs|analytics-pull] [options]
@@ -127,6 +140,17 @@ Analytics:
   analytics-ps/logs/pull  Operate only the independent analytics project
   --adapter <name>      umami (default) or datafinder (with --app-id)
   --app-id <integer>    Existing DataFinder application ID
+
+Business Logs (default off):
+  business-logs-up       Prepare/start optional forwarder and enable server collection
+                        First run creates business-logs/.env; configure downstream and retry
+  business-logs-enable   Apply .env.release to server; --logs-endpoint overrides receiver
+  business-logs-disable  Disable collection and recreate server; keep receiver and data
+  business-logs-down     Stop only the optional Collector; keep files and network
+  business-logs-ps       Show collection state and optional Collector status
+  business-logs-logs     Follow optional Collector logs
+  --logs-endpoint <url>  Full OTLP/HTTP Logs URL (no credentials/query/fragment)
+  --logs-network <name>  Attach server to this external private network
 
 Options:
   --version <tag>       Use a specific image tag, for example v0.1.0
@@ -167,6 +191,10 @@ ANALYTICS_COMPOSE_FILE="$ANALYTICS_HOME/compose.analytics-umami.yml"
 ANALYTICS_ENV_FILE="$ANALYTICS_HOME/.env"
 ENV_EXAMPLE_FILE="$SKILLHUB_HOME/.env.release.example"
 ENV_FILE="$SKILLHUB_HOME/.env.release"
+BUSINESS_LOGS_HOME="$SKILLHUB_HOME/business-logs"
+BUSINESS_LOGS_ENV_FILE="$BUSINESS_LOGS_HOME/.env"
+BUSINESS_LOGS_COMPOSE_FILE="$BUSINESS_LOGS_HOME/compose.business-logs-collector.yml"
+BUSINESS_LOGS_OVERLAY_FILE="$SKILLHUB_HOME/compose.release.business-logs.yml"
 
 find_compose() {
   if docker compose version >/dev/null 2>&1; then
@@ -190,6 +218,46 @@ download_file() {
   curl -fsSL "$src" -o "$tmp"
   mv "$tmp" "$dest"
 }
+
+download_extension_file() (
+  # Explicit custom sources and GitHub --ref retain their existing semantics.
+  if [ "$USE_ALIYUN" != true ] || [ -n "$CUSTOM_RAW_BASE" ]; then
+    download_file "$SKILLHUB_RAW_BASE/$1" "$2"
+    exit 0
+  fi
+  name="$1"
+  dest="$2"
+  case "$name" in
+    compose.release.analytics.yml|compose.analytics-umami.yml|compose.release.business-logs.yml|compose.business-logs-collector.yml|business-logs-collector.yaml) ;;
+    *) echo "Unsupported optional runtime file" >&2; exit 1 ;;
+  esac
+  url="https://gh-proxy.org/https://raw.githubusercontent.com/iflytek/skillhub/$SKILLHUB_REF/$name"
+  tmp="$(mktemp "$dest.download.XXXXXX")"
+  trap 'rm -f "$tmp"' EXIT
+  trap 'exit 1' HUP INT TERM
+  # Do not load ~/.curlrc (which could attach credentials to the proxy).
+  curl -q -fsSL --proto '=https' --proto-redir '=https' \
+    --connect-timeout 10 --max-time 30 "$url" -o "$tmp"
+  # Reject empty/error pages; this is not full YAML or authenticity validation.
+  if ! awk -v name="$name" '
+    tolower($0) ~ /<!doctype[[:space:]]+html|<html([[:space:]>]|$)/ { bad = 1 }
+    /^services:/ { services = 1 }
+    /^receivers:/ { receivers = 1 }
+    /^exporters:/ { exporters = 1 }
+    /^service:/ { service = 1 }
+    END {
+      if (name == "business-logs-collector.yaml")
+        exit !(receivers && exporters && service && !bad)
+      exit !(services && !bad)
+    }
+  ' "$tmp"; then
+    echo "Invalid optional runtime response: $name; existing file was preserved." >&2
+    exit 1
+  fi
+  # These are public templates, including a config read by a non-root Collector.
+  chmod 644 "$tmp"
+  mv "$tmp" "$dest"
+)
 
 set_env_value() {
   key="$1"
@@ -228,6 +296,57 @@ set_env_value() {
 secure_env_file() {
   if [ -f "$ENV_FILE" ]; then
     chmod 600 "$ENV_FILE"
+  fi
+}
+
+# Older examples supplied an empty JavaMail trust list, which rejects SSL SMTP
+# hosts instead of selecting the JVM trust store. Preserve every nonempty value
+# and all unrelated dotenv text; never evaluate credentials as shell code.
+migrate_empty_smtp_trust_override() {
+  case "${SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST:-}" in
+    *[![:space:]]*) ;;
+    *) unset SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST ;;
+  esac
+
+  migration_umask="$(umask)"
+  umask 077
+  if migration_tmp="$(mktemp "$ENV_FILE.smtp.XXXXXX")"; then
+    :
+  else
+    migration_status=$?
+    umask "$migration_umask"
+    return "$migration_status"
+  fi
+  if awk '
+    function empty_trust(line, value, quote, tail, closing, content, rest) {
+      if (line !~ /^[[:space:]]*(export[[:space:]]+)?SPRING_MAIL_PROPERTIES_MAIL_SMTP_SSL_TRUST[[:space:]]*=/)
+        return 0
+      value = line
+      sub(/^[^=]*=/, "", value)
+      sub(/^[[:space:]]*/, "", value)
+      if (value ~ /^($|#)/) return 1
+      quote = substr(value, 1, 1)
+      if (quote != "\"" && quote != sprintf("%c", 39)) return 0
+      tail = substr(value, 2)
+      closing = index(tail, quote)
+      if (!closing) return 0
+      content = substr(tail, 1, closing - 1)
+      rest = substr(tail, closing + 1)
+      return content ~ /^[[:space:]]*$/ && rest ~ /^[[:space:]]*(#.*)?$/
+    }
+    empty_trust($0) { removed = 1; next }
+    { print }
+    END { if (!removed) exit 3 }
+  ' "$ENV_FILE" >"$migration_tmp"; then
+    umask "$migration_umask"
+    mv "$migration_tmp" "$ENV_FILE"
+    chmod 600 "$ENV_FILE"
+    echo "Removed empty SMTP SSL trust override; JVM certificate verification remains enabled."
+  else
+    migration_status=$?
+    umask "$migration_umask"
+    rm -f "$migration_tmp"
+    [ "$migration_status" -eq 3 ] || return "$migration_status"
   fi
 }
 
@@ -349,9 +468,9 @@ prepare_runtime_files() {
   fi
   mkdir -p "$SKILLHUB_HOME"
   download_file "$SKILLHUB_RAW_BASE/compose.release.yml" "$COMPOSE_FILE"
-  # GitHub and OSS both publish this root-level overlay; fetch only when used.
+  # Fetch the optional overlay only when used.
   if [ "$COMMAND" = "analytics-enable" ] || [ -f "$OVERLAY_FILE" ]; then
-    download_file "$SKILLHUB_RAW_BASE/compose.release.analytics.yml" "$OVERLAY_FILE"
+    download_extension_file compose.release.analytics.yml "$OVERLAY_FILE"
   fi
   download_file "$SKILLHUB_RAW_BASE/.env.release.example" "$ENV_EXAMPLE_FILE"
 
@@ -362,6 +481,11 @@ prepare_runtime_files() {
     umask "$old_umask"
   fi
   secure_env_file
+  if [ "$COMMAND" = "business-logs-enable" ] || [ "$COMMAND" = "business-logs-up" ] ||
+     [ "$(get_env_value SKILLHUB_BUSINESS_LOGS_NETWORK_ENABLED false)" = "true" ]; then
+    download_extension_file compose.release.business-logs.yml "$BUSINESS_LOGS_OVERLAY_FILE"
+  fi
+  migrate_empty_smtp_trust_override
 
   if [ -n "$SKILLHUB_MIRROR_REGISTRY_VALUE" ]; then
     mirror_registry="${SKILLHUB_MIRROR_REGISTRY_VALUE%/}"
@@ -425,8 +549,76 @@ run_compose() {
     # Preserve the normal default network and attach only Web to analytics.
     set -- -f "$OVERLAY_FILE" "$@"
   fi
+  if [ "$(get_env_value SKILLHUB_BUSINESS_LOGS_NETWORK_ENABLED false)" = "true" ]; then
+    ensure_business_logs_network
+    set -- -f "$BUSINESS_LOGS_OVERLAY_FILE" "$@"
+  fi
   # shellcheck disable=SC2086
   $compose_cmd --env-file "$ENV_FILE" -f "$COMPOSE_FILE" "$@"
+}
+
+ensure_business_logs_network() {
+  SKILLHUB_BUSINESS_LOGS_NETWORK="$(get_env_value SKILLHUB_BUSINESS_LOGS_NETWORK skillhub-business-logs)"
+  export SKILLHUB_BUSINESS_LOGS_NETWORK
+  if ! docker network inspect "$SKILLHUB_BUSINESS_LOGS_NETWORK" >/dev/null 2>&1; then
+    docker network create "$SKILLHUB_BUSINESS_LOGS_NETWORK" >/dev/null
+  fi
+}
+
+prepare_business_logs_files() {
+  mkdir -p "$BUSINESS_LOGS_HOME"
+  # The default Aliyun path uses the same Git ref through the optional-file proxy.
+  download_extension_file compose.business-logs-collector.yml "$BUSINESS_LOGS_COMPOSE_FILE"
+  download_extension_file business-logs-collector.yaml "$BUSINESS_LOGS_HOME/business-logs-collector.yaml"
+  if [ ! -f "$BUSINESS_LOGS_ENV_FILE" ]; then
+    old_umask="$(umask)"
+    umask 077
+    {
+      printf 'SKILLHUB_BUSINESS_LOGS_PROJECT=%s\n' "$(get_env_value SKILLHUB_BUSINESS_LOGS_PROJECT skillhub-business-logs)"
+      printf 'SKILLHUB_BUSINESS_LOGS_NETWORK=%s\n' "${BUSINESS_LOGS_NETWORK:-$(get_env_value SKILLHUB_BUSINESS_LOGS_NETWORK skillhub-business-logs)}"
+      printf 'SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_ENDPOINT=\n'
+      printf "SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_HEADERS='{}'\n"
+    } >"$BUSINESS_LOGS_ENV_FILE"
+    umask "$old_umask"
+  fi
+  chmod 600 "$BUSINESS_LOGS_ENV_FILE"
+}
+
+run_business_logs_compose() {
+  # The independent file owns its identity. Inherited Compose variables cannot redirect it.
+  SKILLHUB_BUSINESS_LOGS_PROJECT="$(get_env_value SKILLHUB_BUSINESS_LOGS_PROJECT skillhub-business-logs "$BUSINESS_LOGS_ENV_FILE")"
+  SKILLHUB_BUSINESS_LOGS_NETWORK="$(get_env_value SKILLHUB_BUSINESS_LOGS_NETWORK skillhub-business-logs "$BUSINESS_LOGS_ENV_FILE")"
+  export SKILLHUB_BUSINESS_LOGS_NETWORK
+  compose_cmd="$(find_compose)"
+  # shellcheck disable=SC2086
+  $compose_cmd -p "$SKILLHUB_BUSINESS_LOGS_PROJECT" --env-file "$BUSINESS_LOGS_ENV_FILE" -f "$BUSINESS_LOGS_COMPOSE_FILE" "$@"
+}
+
+validate_business_logs_endpoint() {
+  case "$1" in
+    http://*/*|https://*/*) ;;
+    *) echo "Business Logs requires a full HTTP(S) Logs URL" >&2; exit 1 ;;
+  esac
+  case "$1" in
+    *'@'*|*'?'*|*'#'*|*[[:space:]]*|*'\'*)
+      echo "Business Logs URL must not contain credentials, query, fragment or whitespace" >&2; exit 1 ;;
+  esac
+}
+
+enable_business_logs() {
+  receiver_endpoint="${BUSINESS_LOGS_ENDPOINT:-$(get_env_value SKILLHUB_BUSINESS_LOGS_ENDPOINT)}"
+  validate_business_logs_endpoint "$receiver_endpoint"
+  if [ -n "$BUSINESS_LOGS_NETWORK" ]; then
+    case "$BUSINESS_LOGS_NETWORK" in
+      *[!A-Za-z0-9_.-]*|[-.]* ) echo "Invalid Business Logs network name" >&2; exit 1 ;;
+    esac
+    set_env_value SKILLHUB_BUSINESS_LOGS_NETWORK "$BUSINESS_LOGS_NETWORK"
+    set_env_value SKILLHUB_BUSINESS_LOGS_NETWORK_ENABLED true
+  fi
+  set_env_value SKILLHUB_BUSINESS_LOGS_ENDPOINT "$receiver_endpoint"
+  set_env_value SKILLHUB_BUSINESS_LOGS_ENABLED true
+  run_compose up -d --no-deps --force-recreate server
+  echo "Business Logs enabled; produce a new event and query the receiver."
 }
 
 ensure_analytics_identity() {
@@ -470,8 +662,8 @@ run_analytics_compose() {
 
 prepare_analytics_files() {
   mkdir -p "$ANALYTICS_HOME"
-  # GitHub raw and the OSS mirror both publish files at the repository root.
-  download_file "$SKILLHUB_RAW_BASE/compose.analytics-umami.yml" "$ANALYTICS_COMPOSE_FILE"
+  # The default Aliyun path uses the same Git ref through the optional-file proxy.
+  download_extension_file compose.analytics-umami.yml "$ANALYTICS_COMPOSE_FILE"
   if [ ! -f "$ANALYTICS_ENV_FILE" ]; then
     old_umask="$(umask)"
     umask 077
@@ -625,7 +817,11 @@ EOF
     ;;
   clean)
     run_compose down
-    if [ -d "$ANALYTICS_HOME" ]; then
+    if [ -d "$BUSINESS_LOGS_HOME" ] || [ -n "$(get_env_value SKILLHUB_BUSINESS_LOGS_ENDPOINT)" ]; then
+      # Retain operator credentials, Collector config and identities for safe restart.
+      rm -f "$COMPOSE_FILE" "$BUSINESS_LOGS_OVERLAY_FILE" "$ENV_EXAMPLE_FILE"
+      echo "Downloaded release files removed; operator environment and business-logs files retained."
+    elif [ -d "$ANALYTICS_HOME" ]; then
       # Keep independent platform credentials and files; never strand its database.
       rm -f "$COMPOSE_FILE" "$OVERLAY_FILE" "$ENV_EXAMPLE_FILE" "$ENV_FILE"
       echo "SkillHub files removed; independent analytics files retained in $ANALYTICS_HOME"
@@ -641,6 +837,47 @@ EOF
     ;;
   pull)
     run_compose pull
+    ;;
+  business-logs-up)
+    prepare_business_logs_files
+    downstream_endpoint="$(get_env_value SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_ENDPOINT "" "$BUSINESS_LOGS_ENV_FILE")"
+    if [ -z "$downstream_endpoint" ]; then
+      echo "Configure SKILLHUB_BUSINESS_LOGS_DOWNSTREAM_ENDPOINT (OTLP base URL) and optional JSON headers in $BUSINESS_LOGS_ENV_FILE, then retry." >&2
+      exit 1
+    fi
+    validate_business_logs_endpoint "${downstream_endpoint%/}/v1/logs"
+    # Read the independent project's stored network; do not overwrite operator secrets.
+    BUSINESS_LOGS_NETWORK="$(get_env_value SKILLHUB_BUSINESS_LOGS_NETWORK skillhub-business-logs "$BUSINESS_LOGS_ENV_FILE")"
+    set_env_value SKILLHUB_BUSINESS_LOGS_NETWORK "$BUSINESS_LOGS_NETWORK"
+    ensure_business_logs_network
+    run_business_logs_compose config --quiet
+    run_business_logs_compose up -d --force-recreate
+    BUSINESS_LOGS_ENDPOINT=http://business-logs-collector:4318/v1/logs
+    enable_business_logs
+    ;;
+  business-logs-enable)
+    enable_business_logs
+    ;;
+  business-logs-disable)
+    set_env_value SKILLHUB_BUSINESS_LOGS_ENABLED false
+    # Attachment intent survives collection being disabled, so enable can reuse it.
+    run_compose up -d --no-deps --force-recreate server
+    echo "Business Logs disabled; receiver data and network retained."
+    ;;
+  business-logs-ps)
+    printf 'Business Logs enabled: %s\n' "$(get_env_value SKILLHUB_BUSINESS_LOGS_ENABLED false)"
+    if [ -f "$BUSINESS_LOGS_ENV_FILE" ]; then
+      run_business_logs_compose ps
+    else
+      echo "No optional Collector; the receiver is managed externally."
+    fi
+    ;;
+  business-logs-down|business-logs-logs)
+    [ -f "$BUSINESS_LOGS_ENV_FILE" ] || { echo "No optional Collector; run business-logs-up first" >&2; exit 1; }
+    case "$COMMAND" in
+      business-logs-down) run_business_logs_compose stop ;;
+      business-logs-logs) run_business_logs_compose logs -f ;;
+    esac
     ;;
   analytics-up)
     prepare_analytics_files
