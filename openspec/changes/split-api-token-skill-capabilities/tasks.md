@@ -26,10 +26,13 @@
 
 ## 3. Token 签发与查询
 
-- [ ] 3.1 `[REQ-ATC-04]` `TokenController`／`ApiTokenService`：未知 scope 400；Token 调用时创建、同名轮换、续期执行子集与到期时间检查，失败不吊销同名旧 Token。
-- [ ] 3.2 `[REQ-ATC-04]` 设备码兑换只签发 D7 固定能力。
-- [ ] 3.3 `[REQ-ATC-05]` `whoami` 增加 `capabilities`、`legacyCompat`、`expiresAt`；`/me/namespaces` 对 `skill:read` 开放；运行 `make generate-api` 与 OpenAPI 漂移检查。
-- [ ] 3.4 `[REQ-ATC-04, REQ-ATC-05]` 集成测试：`token:manage` 签出 `skill:delete` 被拒、省略 scopes 不绕过、空空间角色、旧版 Token 的 whoami 展开。
+- [x] 3.1 `[REQ-ATC-04]` `TokenController`／`ApiTokenService`：未知 scope 400；
+  Token 调用时创建、同名轮换、续期执行子集与到期时间检查，失败不吊销同名旧 Token。
+- [x] 3.2 `[REQ-ATC-04]` 设备码兑换只签发 D7 固定能力。
+- [x] 3.3 `[REQ-ATC-05]` `whoami` 增加 `capabilities`、`legacyCompat`、`expiresAt`；
+  `/me/namespaces` 对 `skill:read` 开放；运行 `make generate-api` 与 OpenAPI 漂移检查。
+- [x] 3.4 `[REQ-ATC-04, REQ-ATC-05]` 集成测试：`token:manage` 签出 `skill:delete` 被拒、
+  省略 scopes 不绕过、空空间角色、旧版 Token 的 whoami 展开。
 
 ## 4. Web 与 CLI
 

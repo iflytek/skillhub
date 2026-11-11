@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.auth.rbac;
 
 import java.io.Serializable;
+import java.time.Instant;
 import java.util.Set;
 
 /**
@@ -13,7 +14,9 @@ public record PlatformPrincipal(
     String avatarUrl,
     String oauthProvider,
     Set<String> platformRoles,
-    Set<String> tokenCapabilities
+    Set<String> tokenCapabilities,
+    boolean legacyCompat,
+    Instant tokenExpiresAt
 ) implements Serializable {
     public PlatformPrincipal {
         tokenCapabilities = "api_token".equals(oauthProvider)
@@ -23,6 +26,11 @@ public record PlatformPrincipal(
 
     public PlatformPrincipal(String userId, String displayName, String email, String avatarUrl,
                              String oauthProvider, Set<String> platformRoles) {
-        this(userId, displayName, email, avatarUrl, oauthProvider, platformRoles, null);
+        this(userId, displayName, email, avatarUrl, oauthProvider, platformRoles, null, false, null);
+    }
+
+    public PlatformPrincipal(String userId, String displayName, String email, String avatarUrl,
+                             String oauthProvider, Set<String> platformRoles, Set<String> tokenCapabilities) {
+        this(userId, displayName, email, avatarUrl, oauthProvider, platformRoles, tokenCapabilities, false, null);
     }
 }

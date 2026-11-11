@@ -85,6 +85,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /** Real filters, token hashing, application/domain services and database state; object storage is isolated. */
@@ -155,7 +157,9 @@ class TokenCapabilityFlowIntegrationTest {
         clearInvocations(storage);
         http.perform(post(route(prefix, "/confirm-publish")).header("Authorization", bearer(token))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"version\":\"1.0.0\"}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("error.apiToken.scope.missing"))
+                .andExpect(jsonPath("$.errorArgs[0]").value("skill:publish-private"));
         http.perform(post(route(prefix, "/archive")).header("Authorization", bearer(token)))
                 .andExpect(status().isForbidden());
         http.perform(delete(route(prefix, "/versions/1.0.0")).header("Authorization", bearer(token)))
@@ -323,6 +327,58 @@ class TokenCapabilityFlowIntegrationTest {
         assertThat(current).isEqualTo(SkillVisibility.PRIVATE);
         assertThat(versions.findBySkillIdAndVersion(skill.getId(), "2.0.0").orElseThrow().getStatus())
                 .isEqualTo(target.equals("PRIVATE") ? SkillVersionStatus.UPLOADED : SkillVersionStatus.PENDING_REVIEW);
+    }
+
+    @Test
+    void issuanceDenialsPreserveSameNameTokenAndCannotBypassTheCeilingWithDefaultsOrExpiry() throws Exception {
+        var original = tokens.createToken(actor, "rotation-target", "[\"skill:read\"]");
+        String expiry = Instant.now().plusSeconds(3600).toString();
+        String caller = tokens.createToken(actor, "limited-manager", "[\"token:manage\",\"skill:read\"]", expiry).rawToken();
+        for (String body : List.of(
+                "{\"name\":\"rotation-target\",\"scopes\":[\"skill:delete\"]}",
+                "{\"name\":\"rotation-target\"}",
+                "{\"name\":\"rotation-target\",\"scopes\":[\"skill:read\"]}")) {
+            http.perform(post("/api/v1/tokens").header("Authorization", bearer(caller))
+                            .contentType(MediaType.APPLICATION_JSON).content(body))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.errorCode").value("error.apiToken.scope.escalation"));
+            assertThat(tokens.validateToken(original.rawToken())).isPresent();
+        }
+        http.perform(post("/api/v1/tokens").header("Authorization", bearer(caller))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"rotation-target\",\"scopes\":[\"no-such:scope\"]}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("error.apiToken.scope.unknown"));
+        assertThat(tokens.validateToken(original.rawToken())).isPresent();
+        http.perform(put("/api/v1/tokens/" + original.entity().getId() + "/expiration")
+                        .header("Authorization", bearer(caller)).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expiresAt\":\"" + Instant.now().plusSeconds(7200) + "\"}"))
+                .andExpect(status().isForbidden());
+        assertThat(tokens.validateToken(original.rawToken()).orElseThrow().getExpiresAt()).isNull();
+        http.perform(post("/api/v1/tokens").header("Authorization", bearer(caller))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"name\":\"allowed-child\",\"scopes\":[\"skill:read\"],\"expiresAt\":\"" + expiry + "\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.capabilities[0]").value("skill:read"))
+                .andExpect(jsonPath("$.data.deprecatedDefault").value(false));
+    }
+
+    @Test
+    void readTokenCanQueryEmptyNamespaceRolesAndExpandedLegacyWhoamiWithoutTokenManagement() throws Exception {
+        var membership = memberships.findByNamespaceIdAndUserId(namespace.getId(), actor).orElseThrow();
+        membership.setRole(NamespaceRole.ADMIN);
+        memberships.save(membership);
+        String legacy = token("skill:read", "skill:publish");
+        http.perform(get("/api/cli/v1/auth/whoami").header("Authorization", bearer(legacy)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.legacyCompat").value(true))
+                .andExpect(jsonPath("$.data.capabilities").value(org.hamcrest.Matchers.containsInAnyOrder(
+                        "skill:read", "skill:submit", "skill:manage", "skill:publish-private", "suite:legacy-write")));
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            http.perform(get(prefix + "/me/namespaces").header("Authorization", bearer(legacy)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data[0].slug").value(namespace.getSlug()))
+                    .andExpect(jsonPath("$.data[0].currentUserRole").value("ADMIN"));
+            http.perform(get(prefix + "/me/namespaces/page").header("Authorization", bearer(legacy)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].currentUserRole").value("ADMIN"));
+        }
     }
 
     private SkillVersion upload(String prefix, String token, String version) throws Exception {

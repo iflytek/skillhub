@@ -2,6 +2,8 @@ package com.iflytek.skillhub.auth.token;
 
 import com.iflytek.skillhub.auth.repository.ApiTokenRepository;
 import com.iflytek.skillhub.auth.entity.ApiToken;
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +20,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HexFormat;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,7 +42,9 @@ class ApiTokenServiceTest {
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(Instant.parse("2026-03-18T00:00:00Z"), ZoneOffset.UTC);
-        service = new ApiTokenService(tokenRepo, clock);
+        service = new ApiTokenService(tokenRepo, clock, new ApiTokenScopeService(
+                new com.fasterxml.jackson.databind.ObjectMapper(),
+                new com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry()));
     }
 
     @Test
@@ -153,6 +158,58 @@ class ApiTokenServiceTest {
         when(tokenRepo.findByTokenHash(sha256("revoked-token"))).thenReturn(Optional.of(token));
 
         assertThat(service.validateToken("revoked-token")).isEmpty();
+    }
+
+    @Test
+    void rotationRejectsUnknownAndEscalatingScopesBeforeRevokingAnyToken() {
+        PlatformPrincipal caller = caller(Set.of("token:manage", "skill:read"), null);
+        for (String scopes : new String[] {"[\"skill:delete\"]", ApiTokenScopes.DEFAULT_USER_SCOPE_JSON}) {
+            assertThatThrownBy(() -> service.rotateToken("user-1", "CLI", scopes, null, caller))
+                    .isInstanceOf(DomainForbiddenException.class)
+                    .hasMessageContaining("error.apiToken.scope.escalation");
+        }
+        assertThatThrownBy(() -> service.rotateToken("user-1", "CLI", "[\"no-such:scope\"]", null, caller))
+                .isInstanceOf(DomainBadRequestException.class).hasMessageContaining("error.apiToken.scope.unknown");
+        org.mockito.Mockito.verifyNoInteractions(tokenRepo);
+    }
+
+    @Test
+    void creationCannotOutliveTheCallerIncludingUnlimitedExpiry() {
+        Instant expiry = Instant.parse("2026-03-19T00:00:00Z");
+        for (String requested : new String[] {null, "2026-03-20T00:00:00Z"}) {
+            assertThatThrownBy(() -> service.createToken("user-1", "CLI", "[\"skill:read\"]", requested,
+                    caller(Set.of("skill:read", "token:manage"), expiry)))
+                    .isInstanceOf(DomainForbiddenException.class)
+                    .hasMessageContaining("error.apiToken.scope.escalation");
+        }
+        verify(tokenRepo, never()).save(any());
+    }
+
+    @Test
+    void legacyAliasIsComparedAfterExpansionAndSessionCanIssueAnyKnownCombination() {
+        when(tokenRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        var caller = caller(Set.of("skill:submit", "skill:publish-private", "skill:manage", "suite:legacy-write"), null);
+        var result = service.createToken("user-1", "legacy", "[\"skill:publish\"]", null, caller);
+        assertThat(result.entity().getScopeJson()).isEqualTo("[\"skill:publish\"]");
+        assertThat(service.createToken("user-1", "session", "[\"skill:delete\",\"token:manage\"]").entity())
+                .isNotNull();
+    }
+
+    @Test
+    void expirationUpdateChecksExistingCapabilitiesAndLeavesStateUnchangedOnDenial() {
+        ApiToken token = new ApiToken("user-1", "old", "prefix", "hash", "[\"skill:delete\"]");
+        Instant original = Instant.parse("2026-03-19T00:00:00Z");
+        token.setExpiresAt(original);
+        when(tokenRepo.findById(1L)).thenReturn(Optional.of(token));
+        assertThatThrownBy(() -> service.updateExpiration(1L, "user-1", "2026-03-20T00:00:00Z",
+                caller(Set.of("skill:read", "token:manage"), null))).isInstanceOf(DomainForbiddenException.class);
+        assertThat(token.getExpiresAt()).isEqualTo(original);
+        verify(tokenRepo, never()).save(any());
+    }
+
+    private PlatformPrincipal caller(Set<String> capabilities, Instant expiry) {
+        return new PlatformPrincipal("user-1", "Caller", null, null, "api_token", Set.of("SUPER_ADMIN"),
+                capabilities, false, expiry);
     }
 
     private static String sha256(String input) {

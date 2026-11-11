@@ -7486,6 +7486,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillSuiteMemberResponse: {
             /** Format: int64 */
@@ -7541,6 +7543,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillLabelDto: {
             slug?: string;
@@ -7555,6 +7559,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillReviewRequest: {
             /** Format: int32 */
@@ -7569,6 +7575,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillReviewMeResponse: {
             rated?: boolean;
@@ -7601,6 +7609,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         TagResponse: {
             /** Format: int64 */
@@ -7621,6 +7631,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NotificationPreferenceUpdateRequest: {
             preferences?: components["schemas"]["PreferenceItem"][];
@@ -7638,6 +7650,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NotificationPreferenceResponse: {
             category?: string;
@@ -7659,6 +7673,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         UpdateMemberRoleRequest: {
             /** @enum {string} */
@@ -7672,6 +7688,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         MemberResponse: {
             /** Format: int64 */
@@ -7701,6 +7719,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NamespaceResponse: {
             /** Format: int64 */
@@ -7730,6 +7750,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         Execution: {
             /** Format: uuid */
@@ -7782,6 +7804,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSourceIgnoreResponse: {
             /** Format: int64 */
@@ -7805,6 +7829,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         DraftFileResponse: {
             /** Format: int64 */
@@ -7860,6 +7886,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         TokenSummaryResponse: {
             /** Format: int64 */
@@ -7869,6 +7897,8 @@ export interface components {
             createdAt?: string;
             expiresAt?: string;
             lastUsedAt?: string;
+            capabilities?: string[];
+            legacyCompat?: boolean;
         };
         AdminUserStatusUpdateRequest: {
             status: string;
@@ -7886,6 +7916,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AdminUserRoleUpdateRequest: {
             role: string;
@@ -7903,6 +7935,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ExternalRoleGrantRuleResponse: {
             /** Format: int64 */
@@ -7936,6 +7970,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NotificationEmailSettingsResponse: {
             enabled?: boolean;
@@ -7960,6 +7996,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AvatarReviewSettingsResponse: {
             machineEnabled?: boolean;
@@ -7983,6 +8021,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SystemAuthSettingsResponse: {
             passwordLoginEnabled?: boolean;
@@ -8012,6 +8052,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         LabelDefinitionResponse: {
             slug?: string;
@@ -8043,6 +8085,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncSchedulePolicyRequest: {
             /** Format: int32 */
@@ -8060,6 +8104,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncSchedulePolicyResponse: {
             /** Format: int32 */
@@ -8085,6 +8131,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubPlatformControlState: {
             /** Format: int64 */
@@ -8127,6 +8175,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         Exclusion: {
             /** @enum {string} */
@@ -8158,6 +8208,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubCredentialQuota: {
             resource?: string;
@@ -8211,6 +8263,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncAdmissionPolicyResponse: {
             /** Format: int32 */
@@ -8247,6 +8301,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         MessageResponse: {
             message?: string;
@@ -8259,6 +8315,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillSuiteInstallMemberResponse: {
             /** Format: int64 */
@@ -8296,6 +8354,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillSuiteBundleOperationResponse: {
             operationId?: string;
@@ -8310,6 +8370,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PreviewMember: {
             coordinate?: string;
@@ -8381,6 +8443,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         Result: {
             /** @enum {string} */
@@ -8401,6 +8465,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillLifecycleMutationResponse: {
             /** Format: int64 */
@@ -8430,6 +8496,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillReportMutationResponse: {
             /** Format: int64 */
@@ -8450,6 +8518,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillAvatarStatusResponse: {
             avatarUrl?: string;
@@ -8477,6 +8547,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PublishResponse: {
             /** Format: int64 */
@@ -8498,6 +8570,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillPackagePreviewResponse: {
             name?: string;
@@ -8519,6 +8593,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillAvatarUploadResponse: {
             uploadId: string;
@@ -8537,6 +8613,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ReviewTaskResponse: {
             /** Format: int64 */
@@ -8588,6 +8666,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PromotionResponseDto: {
             /** Format: int64 */
@@ -8644,6 +8724,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PromotionRevocationResponse: {
             /** Format: int64 */
@@ -8685,6 +8767,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NotificationEmailContactResponse: {
             email?: string | null;
@@ -8717,6 +8801,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         BatchMemberResponse: {
             /** Format: int32 */
@@ -8744,6 +8830,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         Created: {
             token?: string;
@@ -8765,6 +8853,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSourceRescanResponse: {
             /** Format: int64 */
@@ -8789,6 +8879,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncManualBindingResponse: {
             /** Format: uuid */
@@ -8817,6 +8909,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         Preview: {
             namespaceSlug?: string;
@@ -8840,6 +8934,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseGovernanceNotificationResponse: {
             /** Format: int32 */
@@ -8849,6 +8945,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GovernanceNotificationResponse: {
             /** Format: int64 */
@@ -8871,6 +8969,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ValidationRunResponse: {
             /** Format: int64 */
@@ -8911,6 +9011,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NotificationEmailRetryRequest: {
             confirmDuplicateRisk?: boolean;
@@ -8928,6 +9030,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         TokenCreateResponse: {
             token?: string;
@@ -8937,6 +9041,9 @@ export interface components {
             tokenPrefix?: string;
             createdAt?: string;
             expiresAt?: string;
+            capabilities?: string[];
+            legacyCompat?: boolean;
+            deprecatedDefault?: boolean;
         };
         ClawHubStarResponse: {
             ok?: boolean;
@@ -8965,6 +9072,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AuthMeResponse: {
             userId?: string;
@@ -9012,6 +9121,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         DeviceTokenResponse: {
             accessToken?: string;
@@ -9026,6 +9137,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         DeviceCodeResponse: {
             deviceCode?: string;
@@ -9057,6 +9170,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseSkillReviewResponse: {
             /** Format: int32 */
@@ -9066,6 +9181,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillReviewResponse: {
             /** Format: int64 */
@@ -9102,6 +9219,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ProfileReviewMutationResponse: {
             /** Format: int64 */
@@ -9121,6 +9240,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         OrganizationCreateResponse: {
             id?: string;
@@ -9176,6 +9297,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AdminLabelCreateRequest: {
             slug: string;
@@ -9210,6 +9333,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         MergeInitiateResponse: {
             /** Format: int64 */
@@ -9233,6 +9358,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         CliPublishResponse: {
             namespace?: string;
@@ -9248,6 +9375,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         CliDryRunResponse: {
             valid?: boolean;
@@ -9267,6 +9396,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         UpdateProfileResponse: {
             /** @enum {string} */
@@ -9287,6 +9418,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillSuiteVersionSummaryResponse: {
             /** Format: int64 */
@@ -9313,6 +9446,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseListSkillSuiteMemberCandidateResponse: {
             /** Format: int32 */
@@ -9322,6 +9457,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillSuiteMemberCandidateResponse: {
             /** Format: int64 */
@@ -9344,6 +9481,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         OperationMember: {
             /** Format: int32 */
@@ -9403,6 +9542,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillSuiteBundleOperationPageResponse: {
             items?: components["schemas"]["SkillSuiteBundleOperationSummaryResponse"][];
@@ -9441,6 +9582,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseSkillSuiteBundleOperationSummaryResponse: {
             items?: components["schemas"]["SkillSuiteBundleOperationSummaryResponse"][];
@@ -9459,6 +9602,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ComplianceEvidenceResponse: {
             type?: string;
@@ -9545,6 +9690,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponsePageResponseSkillReviewResponse: {
             /** Format: int32 */
@@ -9554,6 +9701,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseSkillReviewResponse: {
             items?: components["schemas"]["SkillReviewResponse"][];
@@ -9572,6 +9721,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillRatingStatusResponse: {
             /** Format: int32 */
@@ -9586,6 +9737,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillFileResponse: {
             /** Format: int64 */
@@ -9604,6 +9757,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillVersionDetailResponse: {
             /** Format: int64 */
@@ -9629,6 +9784,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillVersionCompareFileResponse: {
             path?: string;
@@ -9688,6 +9845,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseSkillVersionResponse: {
             items?: components["schemas"]["SkillVersionResponse"][];
@@ -9723,6 +9882,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponsePageResponseSkillSuiteReferenceResponse: {
             /** Format: int32 */
@@ -9732,6 +9893,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseSkillSuiteReferenceResponse: {
             items?: components["schemas"]["SkillSuiteReferenceResponse"][];
@@ -9776,6 +9939,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ResolveVersionResponse: {
             /** Format: int64 */
@@ -9797,6 +9962,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSkillSourceResponse: {
             ownerLogin?: string;
@@ -9863,6 +10030,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AvatarChange: {
             /** Format: int64 */
@@ -9917,6 +10086,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseGithubSyncReviewSourceResponse: {
             /** Format: int32 */
@@ -9926,6 +10097,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         EvidenceDocument: {
             scope?: string;
@@ -9983,6 +10156,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncReviewQueueItemResponse: {
             review?: components["schemas"]["ReviewTaskResponse"];
@@ -10014,6 +10189,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ReviewScopeResponse: {
             /** Format: int64 */
@@ -10029,6 +10206,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseReviewTaskResponse: {
             items?: components["schemas"]["ReviewTaskResponse"][];
@@ -10047,6 +10226,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ReviewProgressPageResponse: {
             items?: components["schemas"]["ReviewProgressResponse"][];
@@ -10097,6 +10278,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ResourceSearchResponse: {
             items?: components["schemas"]["ResourceSummaryResponse"][];
@@ -10133,6 +10316,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PromotionState: {
             requestKind?: string;
@@ -10150,6 +10335,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponsePromotionResponseDto: {
             items?: components["schemas"]["PromotionResponseDto"][];
@@ -10168,6 +10355,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponsePageResponsePromotionRevocationResponse: {
             /** Format: int32 */
@@ -10177,6 +10366,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponsePromotionRevocationResponse: {
             items?: components["schemas"]["PromotionRevocationResponse"][];
@@ -10197,6 +10388,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponsePageResponseNotificationResponse: {
             /** Format: int32 */
@@ -10206,6 +10399,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NotificationResponse: {
             /** Format: int64 */
@@ -10242,6 +10437,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NotificationEmailDeliveryDetailResponse: {
             /** Format: int64 */
@@ -10287,6 +10484,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseMemberResponse: {
             items?: components["schemas"]["MemberResponse"][];
@@ -10305,6 +10504,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NamespaceCandidateUserResponse: {
             userId?: string;
@@ -10320,6 +10521,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         InvitationHistoryItem: {
             invitationId?: string;
@@ -10357,6 +10560,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         InvitationStatus: {
             active?: boolean;
@@ -10369,6 +10574,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncRunSummaryResponse: {
             /** Format: uuid */
@@ -10419,6 +10626,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncSkillPathResponse: {
             skillPath?: string;
@@ -10465,6 +10674,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncSourceSummaryResponse: {
             /** Format: int64 */
@@ -10519,6 +10730,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponsePageResponseNamespaceResponse: {
             /** Format: int32 */
@@ -10528,6 +10741,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseNamespaceResponse: {
             items?: components["schemas"]["NamespaceResponse"][];
@@ -10546,6 +10761,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         Item: {
             /** Format: int64 */
@@ -10583,6 +10800,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         MySkillSuiteSummaryResponse: {
             /** Format: int64 */
@@ -10618,6 +10837,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseSkillSummaryResponse: {
             items?: components["schemas"]["SkillSummaryResponse"][];
@@ -10636,6 +10857,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         MyNamespaceResponse: {
             /** Format: int64 */
@@ -10679,6 +10902,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseGovernanceSummaryResponse: {
             /** Format: int32 */
@@ -10688,6 +10913,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GovernanceSummaryResponse: {
             /** Format: int64 */
@@ -10707,6 +10934,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseGovernanceNotificationResponse: {
             items?: components["schemas"]["GovernanceNotificationResponse"][];
@@ -10725,6 +10954,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GovernanceInboxItemResponse: {
             type?: string;
@@ -10755,6 +10986,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GovernanceActivityItemResponse: {
             /** Format: int64 */
@@ -10784,6 +11017,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         FilePatch: {
             filePath?: string;
@@ -10825,6 +11060,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ValidationEventResponse: {
             /** Format: int64 */
@@ -10849,6 +11086,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseDraftFileContentResponse: {
             /** Format: int32 */
@@ -10858,6 +11097,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         DraftFileContentResponse: {
             path?: string;
@@ -10876,6 +11117,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseListDraftResponse: {
             /** Format: int32 */
@@ -10885,6 +11128,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseNotificationEmailDeliveryAdminPageResponse: {
             /** Format: int32 */
@@ -10894,6 +11139,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         NotificationEmailDeliveryAdminPageResponse: {
             items?: components["schemas"]["NotificationEmailDeliveryAdminResponse"][];
@@ -10938,6 +11185,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         FieldPolicyResponse: {
             editable?: boolean;
@@ -10969,6 +11218,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseTokenSummaryResponse: {
             items?: components["schemas"]["TokenSummaryResponse"][];
@@ -11011,6 +11262,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SecurityAuditResponse: {
             /** Format: int64 */
@@ -11112,6 +11365,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         OrganizationPermissionsResponse: {
             canViewManagement?: boolean;
@@ -11158,6 +11413,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         OrganizationDetailResponse: {
             id?: string;
@@ -11186,6 +11443,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         LoginConnectionSummaryResponse: {
             id?: string;
@@ -11219,6 +11478,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AuthProviderResponse: {
             id?: string;
@@ -11233,6 +11494,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AuthMethodResponse: {
             id?: string;
@@ -11249,6 +11512,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         LocalAuthCapabilitiesResponse: {
             passwordLoginEnabled?: boolean;
@@ -11272,6 +11537,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseAdminUserSummaryResponse: {
             items?: components["schemas"]["AdminUserSummaryResponse"][];
@@ -11290,6 +11557,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PlatformRoleResponse: {
             code?: string;
@@ -11303,6 +11572,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AdminSkillReportSummaryResponse: {
             /** Format: int64 */
@@ -11331,6 +11602,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseAdminSkillReportSummaryResponse: {
             items?: components["schemas"]["AdminSkillReportSummaryResponse"][];
@@ -11349,6 +11622,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         PageResponseProfileReviewSummaryResponse: {
             items?: components["schemas"]["ProfileReviewSummaryResponse"][];
@@ -11421,6 +11696,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseGithubSyncWorkerStatusResponse: {
             /** Format: int32 */
@@ -11430,6 +11707,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncWorkerStatusResponse: {
             /** Format: date-time */
@@ -11444,6 +11723,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncRunDetailResponse: {
             /** Format: uuid */
@@ -11480,6 +11761,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncRunTaskResponse: {
             /** Format: uuid */
@@ -11516,6 +11799,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncRunPathResponse: {
             /** Format: uuid */
@@ -11552,6 +11837,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncRepositorySummary: {
             /** Format: int64 */
@@ -11590,6 +11877,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncRepositoryDetail: {
             repository?: components["schemas"]["GithubSyncRepositorySummary"];
@@ -11609,6 +11898,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubDeepDiscoveryPathResult: {
             skillPath?: string;
@@ -11644,6 +11935,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubSyncRepositoryOrigin: {
             /** @enum {string} */
@@ -11682,6 +11975,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubDeepDiscoveryCurrent: {
             /** Format: int64 */
@@ -11747,6 +12042,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         DiscoveryPageGithubDeepDiscoveryRepositorySummary: {
             items?: components["schemas"]["GithubDeepDiscoveryRepositorySummary"][];
@@ -11786,6 +12083,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubDeepDiscoveryRepositoryDetail: {
             repository?: components["schemas"]["GithubDeepDiscoveryRepositorySummary"];
@@ -11808,6 +12107,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         DiscoveryPageGithubDeepDiscoveryProvenance: {
             items?: components["schemas"]["GithubDeepDiscoveryProvenance"][];
@@ -11849,6 +12150,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         DiscoveryPageGithubDeepDiscoveryPathResult: {
             items?: components["schemas"]["GithubDeepDiscoveryPathResult"][];
@@ -11869,6 +12172,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         GithubDeepDiscoveryChannelProgress: {
             /** @enum {string} */
@@ -11913,6 +12218,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponsePageResponseAuditLogItemResponse: {
             /** Format: int32 */
@@ -11922,6 +12229,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AuditLogItemResponse: {
             /** Format: int64 */
@@ -11954,6 +12263,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         MergeApprovalDetailsResponse: {
             /** Format: int64 */
@@ -11970,6 +12281,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         CliResolveResponse: {
             namespace: string;
@@ -11988,6 +12301,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         CliSearchItemResponse: {
             namespace?: string;
@@ -12010,6 +12325,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         CliNamespaceSyncItemResponse: {
             namespace?: string;
@@ -12035,11 +12352,17 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         CliWhoAmIResponse: {
             handle?: string;
             displayName?: string;
             email?: string;
+            capabilities?: string[];
+            legacyCompat?: boolean;
+            /** Format: date-time */
+            expiresAt?: string;
         };
         ApiResponseSkillDeleteResponse: {
             /** Format: int32 */
@@ -12049,6 +12372,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SkillDeleteResponse: {
             /** Format: int64 */
@@ -12070,6 +12395,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         CliDeleteResponse: {
             ok?: boolean;

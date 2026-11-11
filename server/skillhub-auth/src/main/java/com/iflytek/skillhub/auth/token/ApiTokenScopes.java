@@ -16,6 +16,7 @@ public final class ApiTokenScopes {
 
     public static final String DEFAULT_USER_SCOPE_JSON =
             "[\"skill:read\",\"skill:publish\",\"skill:delete\"]";
+    public static final String CLI_SCOPE_JSON = "[\"skill:read\",\"skill:submit\"]";
 
     private ApiTokenScopes() {
     }

@@ -79,6 +79,20 @@ public class ApiTokenScopeService {
         }
     }
 
+    public Set<String> validateScopeJson(String scopeJson) {
+        List<String> scopes;
+        try {
+            scopes = objectMapper.readValue(scopeJson, STRING_LIST);
+        } catch (Exception exception) {
+            throw new DomainBadRequestException("error.apiToken.scope.unknown", "invalid scope list");
+        }
+        if (scopes == null) {
+            throw new DomainBadRequestException("error.apiToken.scope.unknown", "null");
+        }
+        validateScopes(scopes);
+        return expandScopes(Set.copyOf(scopes));
+    }
+
     public AuthorizationDecision authorize(String method, String path, Set<String> tokenScopes) {
         RouteSecurityPolicyRegistry.ApiTokenAuthorizationDecision decision =
                 routeSecurityPolicyRegistry.authorizeApiToken(method, path, expandScopes(tokenScopes));

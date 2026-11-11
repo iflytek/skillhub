@@ -170,7 +170,7 @@ public class DeviceAuthService {
             String token = apiTokenService.rotateToken(
                 data.getUserId(),
                 CLI_DEVICE_TOKEN_NAME,
-                ApiTokenScopes.DEFAULT_USER_SCOPE_JSON
+                ApiTokenScopes.CLI_SCOPE_JSON
             ).rawToken();
 
             data.setStatus(DeviceCodeStatus.USED);
