@@ -263,6 +263,7 @@ public class ReviewTask {
         this.decisionScanTaskId = scanTaskId;
     }
 
+    /** Meaningful only for tasks that captured a grant: whether fallback already notified reviewers. */
     public boolean isManualReviewNotified() { return manualReviewNotified; }
 
     public void markManualReviewNotified() { this.manualReviewNotified = true; }

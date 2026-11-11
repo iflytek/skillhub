@@ -53,7 +53,6 @@ public class ReviewService {
     private final SkillVersionRepository skillVersionRepository;
     private final SkillRepository skillRepository;
     private final NamespaceRepository namespaceRepository;
-    private final com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository namespaceMemberRepository;
     private final ReviewPermissionChecker permissionChecker;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectMapper objectMapper;
@@ -74,12 +73,10 @@ public class ReviewService {
     public void setAvatarParticipant(ReviewAvatarParticipant participant) { this.avatarParticipant = participant; }
 
 
-    @Autowired
     public ReviewService(SkillOwnerAccessPolicy ownerAccess, ReviewTaskRepository reviewTaskRepository,
                          SkillVersionRepository skillVersionRepository,
                          SkillRepository skillRepository,
                          NamespaceRepository namespaceRepository,
-                         com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository namespaceMemberRepository,
                          ReviewPermissionChecker permissionChecker,
                          ApplicationEventPublisher eventPublisher,
                          ObjectMapper objectMapper,
@@ -92,7 +89,6 @@ public class ReviewService {
         this.skillVersionRepository = skillVersionRepository;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
-        this.namespaceMemberRepository = namespaceMemberRepository;
         this.permissionChecker = permissionChecker;
         this.eventPublisher = eventPublisher;
         this.objectMapper = objectMapper;
@@ -100,18 +96,6 @@ public class ReviewService {
         this.governanceNotificationService = governanceNotificationService;
         this.entityManager = entityManager;
         this.clock = clock;
-    }
-
-    public ReviewService(SkillOwnerAccessPolicy ownerAccess, ReviewTaskRepository reviewTaskRepository,
-                         SkillVersionRepository skillVersionRepository, SkillRepository skillRepository,
-                         NamespaceRepository namespaceRepository, ReviewPermissionChecker permissionChecker,
-                         ApplicationEventPublisher eventPublisher, ObjectMapper objectMapper,
-                         SkillGovernanceService skillGovernanceService,
-                         GovernanceNotificationService governanceNotificationService,
-                         EntityManager entityManager, Clock clock) {
-        this(ownerAccess, reviewTaskRepository, skillVersionRepository, skillRepository,
-                namespaceRepository, null, permissionChecker, eventPublisher, objectMapper,
-                skillGovernanceService, governanceNotificationService, entityManager, clock);
     }
 
     /**
@@ -279,7 +263,9 @@ public class ReviewService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
         }
+        reviewTaskRepository.recordDecision(reviewTaskId, ReviewDecisionMethod.HUMAN, null);
         syncReviewTaskState(task, ReviewTaskStatus.APPROVED, reviewerId, comment);
+        task.recordDecision(ReviewDecisionMethod.HUMAN, null);
         entityManager.detach(task);
 
         Skill skill = skillRepository.findById(skillVersion.getSkillId())
@@ -316,7 +302,8 @@ public class ReviewService {
                 BusinessEventSnapshot.capture(skill, reviewerId, "review")));
         eventPublisher.publishEvent(new ReviewApprovedEvent(
                 task.getId(), skill.getId(), skillVersion.getId(),
-                reviewerId, task.getSubmittedBy(), BusinessEventSnapshot.capture(skill, reviewerId, "review")));
+                reviewerId, task.getSubmittedBy(), BusinessEventSnapshot.capture(skill, reviewerId, "review"),
+                ReviewDecisionMethod.HUMAN));
         governanceNotificationService.notifyUser(
                 task.getSubmittedBy(),
                 "REVIEW",
@@ -327,6 +314,52 @@ public class ReviewService {
         );
 
         return task;
+    }
+
+    /**
+     * Publishes an eligible team-only version as a system decision. The caller holds namespace,
+     * Skill and version locks and has verified the current SAFE scan round and active grant.
+     * No human reviewer is recorded; the submitter remains only the submitter and publisher.
+     *
+     * @return false when another transition already settled this task (duplicate or late callback)
+     */
+    public boolean approveAutomatically(ReviewTask task, Skill skill, SkillVersion skillVersion, String scanTaskId) {
+        if (task.getStatus() != ReviewTaskStatus.PENDING
+                || skillVersion.getStatus() != SkillVersionStatus.PENDING_REVIEW) {
+            return false;
+        }
+        int updated = reviewTaskRepository.updateStatusWithVersion(
+                task.getId(), ReviewTaskStatus.APPROVED, null, null, task.getVersion());
+        if (updated == 0) {
+            return false;
+        }
+        reviewTaskRepository.recordDecision(task.getId(), ReviewDecisionMethod.SYSTEM_AUTOMATIC, scanTaskId);
+        syncReviewTaskState(task, ReviewTaskStatus.APPROVED, null, null);
+        task.recordDecision(ReviewDecisionMethod.SYSTEM_AUTOMATIC, scanTaskId);
+
+        skillVersion.setStatus(SkillVersionStatus.PUBLISHED);
+        skillVersion.setPublishedAt(currentTime());
+        skillVersionRepository.save(skillVersion);
+
+        skill.setLatestVersionId(skillVersion.getId());
+        applyPublishedMetadata(skill, skillVersion);
+        skillRepository.save(skill);
+
+        BusinessEventSnapshot snapshot = BusinessEventSnapshot.capture(skill, null, "system", "review");
+        eventPublisher.publishEvent(new SkillPublishedEvent(
+                skill.getId(), skillVersion.getId(), task.getSubmittedBy(), snapshot));
+        eventPublisher.publishEvent(new ReviewApprovedEvent(
+                task.getId(), skill.getId(), skillVersion.getId(),
+                null, task.getSubmittedBy(), snapshot, ReviewDecisionMethod.SYSTEM_AUTOMATIC));
+        governanceNotificationService.notifyUser(
+                task.getSubmittedBy(),
+                "REVIEW",
+                "REVIEW_TASK",
+                task.getId(),
+                "Review approved",
+                AuditDetail.of("status", "APPROVED", "decisionMethod", ReviewDecisionMethod.SYSTEM_AUTOMATIC.name())
+        );
+        return true;
     }
 
     /**
@@ -370,7 +403,9 @@ public class ReviewService {
         if (updated == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
         }
+        reviewTaskRepository.recordDecision(reviewTaskId, ReviewDecisionMethod.HUMAN, null);
         syncReviewTaskState(task, ReviewTaskStatus.REJECTED, reviewerId, comment);
+        task.recordDecision(ReviewDecisionMethod.HUMAN, null);
         entityManager.detach(task);
 
         SkillVersion skillVersion = skillVersionRepository.findById(task.getSkillVersionId())
@@ -437,7 +472,9 @@ public class ReviewService {
         if (reviewTaskRepository.updateStatusWithVersion(task.getId(), status, reviewer, comment, task.getVersion()) == 0) {
             throw new ConcurrentModificationException("Review task was modified concurrently");
         }
+        reviewTaskRepository.recordDecision(task.getId(), ReviewDecisionMethod.HUMAN, null);
         syncReviewTaskState(task, status, reviewer, comment);
+        task.recordDecision(ReviewDecisionMethod.HUMAN, null);
         if (task.getRequestedVisibility() != null && approved) { visibilityService.approve(task, reviewer); }
         avatarParticipant.decide(task, approved, reviewer, comment);
         governanceNotificationService.notifyUser(task.getSubmittedBy(), "REVIEW", "REVIEW_TASK", task.getId(),

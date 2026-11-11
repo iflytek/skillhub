@@ -91,7 +91,7 @@ public class SkillPublishService {
     private SkillVisibilityService visibilityService;
     private TeamAutoPublicationPolicy teamAutoPublicationPolicy;
 
-    @Autowired
+    @Autowired(required = false)
     public void setTeamAutoPublicationPolicy(TeamAutoPublicationPolicy policy) {
         this.teamAutoPublicationPolicy = policy;
     }
@@ -958,9 +958,6 @@ public class SkillPublishService {
                             namespace, skill, newSkill, visibility, publisherId, true)
                     : Optional.empty();
             autoPublicationGrant.ifPresent(grantId -> reviewTask.captureAutoPublicationEligibility(grantId, true));
-            if (autoPublicationGrant.isEmpty()) {
-                reviewTask.markManualReviewNotified();
-            }
             ReviewTask savedReviewTask = reviewTaskRepository.save(reviewTask);
             // Eligible tasks announce themselves to reviewers only if they fall back to normal review.
             if (autoPublicationGrant.isEmpty()) {

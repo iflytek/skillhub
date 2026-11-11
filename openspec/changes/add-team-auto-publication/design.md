@@ -81,7 +81,8 @@ PostgreSQL tests must prove lock waiting sees committed state rather than stale 
 Clear the grant and irreversibly cancel pending tasks tied to that member/grant in the same transaction.
 Do not change SCANNING or bypass scanning to make a task visible.
 Emit the existing ReviewSubmittedEvent once per fallback task and mark manual_review_notified atomically.
-Normal submissions use the same marker. No new channel or unconditional email is introduced;
+Ordinary (never-eligible) submissions keep emitting ReviewSubmittedEvent at submission time; the marker is only
+meaningful for tasks that captured a grant. No new channel or unconditional email is introduced;
 existing notification preferences/platform configuration govern downstream delivery.
 If eligibility is lost through account/namespace/governance changes, the approval-time recheck performs the
 same irreversible handoff. A failure or non-SAFE completed scan also hands the task to existing normal processing.

@@ -173,7 +173,6 @@ class SkillPublishServiceTest {
 
             ReviewTask task = savedReviewTask();
             assertNull(task.getAutoPublicationGrantId(), "visibility expansion from " + current);
-            assertTrue(task.isManualReviewNotified());
             assertEquals(current, existing.getVisibility());
             verify(eventPublisher).publishEvent(any(ReviewSubmittedEvent.class));
         }
