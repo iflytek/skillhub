@@ -84,8 +84,9 @@ class SitePresentationPostgresTest {
             statement.executeUpdate("INSERT INTO " + schema + ".system_setting(setting_key, value_json) "
                     + "VALUES ('auth.local', '{\"passwordLoginEnabled\":false,\"selfRegistrationEnabled\":false}'::jsonb) "
                     + "ON CONFLICT (setting_key) DO UPDATE SET value_json=EXCLUDED.value_json");
+            // Pin the upgrade to V122 so later migrations do not change what this upgrade step proves.
             var upgraded = Flyway.configure().dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
-                    .schemas(schema).defaultSchema(schema).locations("classpath:db/migration").load();
+                    .schemas(schema).defaultSchema(schema).locations("classpath:db/migration").target("122").load();
             assertThat(upgraded.migrate().migrationsExecuted).isEqualTo(1);
             try (var rows = statement.executeQuery("SELECT value_json->>'passwordLoginEnabled' FROM " + schema
                     + ".system_setting WHERE setting_key='auth.local'")) {
