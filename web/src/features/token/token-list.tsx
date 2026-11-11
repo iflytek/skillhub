@@ -210,6 +210,7 @@ export function TokenList() {
               <TableRow>
                 <TableHead className={TOKEN_TABLE_HEAD_CLASS_NAME}>{t('token.name')}</TableHead>
                 <TableHead className={TOKEN_TABLE_HEAD_CLASS_NAME}>{t('token.prefix')}</TableHead>
+                <TableHead className={TOKEN_TABLE_HEAD_CLASS_NAME}>{t('token.capabilities')}</TableHead>
                 <TableHead className={TOKEN_TABLE_HEAD_CLASS_NAME}>{t('token.createdAt')}</TableHead>
                 <TableHead className={TOKEN_TABLE_HEAD_CLASS_NAME}>{t('token.lastUsed')}</TableHead>
                 <TableHead className={TOKEN_TABLE_HEAD_CLASS_NAME}>{t('token.expiresAt')}</TableHead>
@@ -224,6 +225,14 @@ export function TokenList() {
                     <code className="text-sm bg-muted px-2 py-1 rounded">
                       {token.tokenPrefix}...
                     </code>
+                  </TableCell>
+                  <TableCell className="max-w-64">
+                    <p className="break-words font-mono text-xs">
+                      {token.capabilities?.join(', ') ?? t('token.capabilitiesUnavailable')}
+                    </p>
+                    {token.legacyCompat ? (
+                      <span className="text-xs text-muted-foreground">{t('token.legacyCompat')}</span>
+                    ) : null}
                   </TableCell>
                   <TableCell>{formatDate(token.createdAt)}</TableCell>
                   <TableCell>{formatDate(token.lastUsedAt)}</TableCell>

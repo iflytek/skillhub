@@ -36,10 +36,11 @@
 
 ## 4. Web 与 CLI
 
-- [ ] 4.1 `[REQ-ATC-06]` Token 创建对话框提供只读下载、候选提交、私有发布、自定义预设，删除与 Token 管理仅在自定义中勾选；列表展示能力与旧版兼容标记。
-- [ ] 4.2 `[REQ-ATC-06]` `cli-auth` 与设备码签发 `skill:read + skill:submit`。
-- [ ] 4.3 `[REQ-ATC-06]` CLI `whoami` 展示能力；`remove` 识别 `scope.missing`（`skill:delete`）并提示显式授权，不自动换发。
-- [ ] 4.4 `[REQ-ATC-06]` 兼容测试：旧版 CLI 使用新登录 Token 的 publish、validate、送审、remove；
+- [x] 4.1 `[REQ-ATC-06]` Token 创建对话框提供只读下载、候选提交、私有发布、自定义预设，
+  删除与 Token 管理仅在自定义中勾选；列表展示能力与旧版兼容标记。
+- [x] 4.2 `[REQ-ATC-06]` `cli-auth` 与设备码签发 `skill:read + skill:submit`。
+- [x] 4.3 `[REQ-ATC-06]` CLI `whoami` 展示能力；`remove` 识别 `scope.missing`（`skill:delete`）并提示显式授权，不自动换发。
+- [x] 4.4 `[REQ-ATC-06]` 兼容测试：旧版 CLI 使用新登录 Token 的 publish、validate、送审、remove；
   普通存量 Token 的原路由授权不变，并对 SUPER_ADMIN Token 直发例外与会话行为分别断言。
 
 ## 5. 文档与发布

@@ -2402,6 +2402,14 @@
     "next": "다음"
   },
   "createToken": {
+    "presetLabel": "권한 사전 설정",
+    "presets": {
+      "readonly": "읽기 및 다운로드",
+      "candidate": "후보 제출",
+      "private": "비공개 게시",
+      "custom": "사용자 지정"
+    },
+    "capabilityHint": "계정 및 네임스페이스 권한도 적용됩니다. 삭제와 토큰 관리는 사용자 지정에서 명시적으로 허용해야 합니다.",
     "title": "API 토큰 만들기",
     "description": "CLI 또는 API 접근을 위한 새 API 토큰을 만드세요",
     "nameLabel": "토큰 이름",
@@ -2906,6 +2914,17 @@
     "noDocumentation": "이 검토 버전에는 읽을 수 있는 문서 파일이 없습니다."
   },
   "token": {
+    "capabilities": "유효 권한",
+    "capabilitiesUnavailable": "서버가 권한 정보를 제공하지 않았습니다",
+    "legacyCompat": "기존 토큰 호환 (skill:publish 확장)",
+    "capabilityLabels": {
+      "read": "읽기 및 다운로드",
+      "submit": "업로드 및 검토 제출",
+      "publishPrivate": "비공개 게시 확인",
+      "manage": "스킬 관리",
+      "delete": "스킬 삭제",
+      "tokenManage": "API 토큰 관리"
+    },
     "title": "API 토큰",
     "createNew": "토큰 만들기",
     "copyHint": "보안을 위해 토큰 원문은 생성 시에만 복사할 수 있습니다. 나중에 다시 보거나 복사할 수 없습니다. 필요하면 새 토큰을 만드세요.",
