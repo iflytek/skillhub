@@ -75,7 +75,6 @@ Before a dependent implementation edit:
 4. For a design-system-dependent page/component, read the actual selected theme values,
    used component contracts and page/interaction rules selected by the frontend index.
    Missing private design resources block dependent design work, not unrelated work.
-   Figma stays optional; when explicitly selected, use figma-web-bridge.
 5. Briefly record the selected paths and reasons in the existing execution record or
    conversation. Reuse `implement.jsonl`/`check.jsonl` when a Trellis task exists, with
    matching applicable topics; no second formal requirement or task list is created.
@@ -154,5 +153,4 @@ plain `openspec update` can replace the project adaptation or deselect optional 
 Integrity checks prove entry configuration only, not body delivery or model compliance.
 
 Public rules and the explicit-reading procedure remain usable without optional local
-automation. See the [reader guide](../../../docs/openspec-trellis-guide.md) for mechanism
-examples and delivery boundaries.
+automation.

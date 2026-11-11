@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Progress 进度条 · SkillHub 设计系统</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="../assets/icons.css">
+<link rel="stylesheet" href="../assets/theme-toggle.css">
+<style>
+  /* @component-css-start */
+  .progress { position: relative; width: 100%; height: var(--sh-size-progress-sm); overflow: hidden; border-radius: var(--sh-radius-full); background: var(--sh-bg-muted); }
+  .progress--md { height: var(--sh-size-progress-md); }
+  .progress--lg { height: var(--sh-size-progress-lg); }
+  .progress-bar { height: 100%; width: 0; border-radius: inherit; background: var(--sh-primary-base); transition: width var(--sh-duration-slow) var(--sh-ease-out); }
+  .progress--success .progress-bar { background: var(--sh-tone-success-fg); }
+  .progress--warning .progress-bar { background: var(--sh-tone-warning-fg); }
+  .progress--danger .progress-bar { background: var(--sh-tone-danger-fg); }
+  .progress--indeterminate .progress-bar { width: 35%; animation: progress-slide 1.4s var(--sh-ease-standard) infinite; }
+  .progress-meta { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sh-space-3); margin-bottom: var(--sh-space-1_5); font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+  .progress-value { font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-primary); font-variant-numeric: tabular-nums; }
+  .progress-stack { display: flex; flex-direction: column; gap: var(--sh-space-1); }
+  @keyframes progress-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(320%); }
+  }
+  /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+  /* preview-only scaffolding（不进 runtime） */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); -webkit-font-smoothing: antialiased; }
+  .pv-page { max-width: 1120px; margin: 0 auto; padding: var(--sh-space-10) var(--sh-space-8) var(--sh-space-16); }
+  .pv-head { padding-bottom: var(--sh-space-6); border-bottom: var(--sh-size-border-width) solid var(--sh-border-default); }
+  .pv-eyebrow { margin: 0 0 var(--sh-space-2); font-size: var(--sh-text-xs); letter-spacing: .08em; color: var(--sh-text-secondary); }
+  .pv-head h1 { margin: 0; font-size: var(--sh-text-3xl); line-height: var(--sh-text-3xl-lh); font-weight: var(--sh-weight-semibold); }
+  .pv-lede { margin: var(--sh-space-2) 0 0; max-width: var(--sh-size-container-reading); font-size: var(--sh-text-base); line-height: 1.7; color: var(--sh-text-secondary); }
+  .pv-block { margin-top: var(--sh-space-10); }
+  .pv-block h2 { margin: 0 0 var(--sh-space-1); font-size: var(--sh-text-lg); line-height: var(--sh-text-lg-lh); font-weight: var(--sh-weight-medium); }
+  .pv-block p { margin: 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+  .pv-row { display: flex; flex-wrap: wrap; gap: var(--sh-space-8); margin-top: var(--sh-space-5); }
+  .pv-state { display: flex; flex-direction: column; gap: var(--sh-space-2); width: 300px; max-width: 100%; }
+  .pv-label { font-size: var(--sh-text-xs); color: var(--sh-text-tertiary); }
+  .pv-card { padding: var(--sh-space-4); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); background: var(--sh-bg-raised); }
+  .pv-note { margin-top: var(--sh-space-6); font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+  .pv-foot { margin-top: var(--sh-space-12); padding-top: var(--sh-space-4); border-top: var(--sh-size-border-width) solid var(--sh-border-subtle); font-size: var(--sh-text-xs); color: var(--sh-text-tertiary); }
+</style>
+</head>
+<body>
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+<main class="pv-page">
+  <header class="pv-head">
+    <p class="pv-eyebrow">SkillHub Design Library · 组件预览 · Feedback</p>
+    <h1>Progress 进度条</h1>
+    <p class="pv-lede">用一条 4px 轨道表达单一进度。默认 4px、强调 8px、粗 12px；文字值在轨道上方，不上浮在轨道里。没有确定进度时用 indeterminate，不伪造百分比。</p>
+  </header>
+
+  <section class="pv-block">
+    <h2>确定性进度 <em>default / success / warning / danger</em></h2>
+    <p>用于上传、导入、批量操作；数值变化有 200ms 缓动，避免跳变。</p>
+    <div class="pv-row">
+      <div class="pv-state">
+        <div class="progress-stack">
+          <div class="progress-meta"><span>上传中</span><span class="progress-value">46%</span></div>
+          <div class="progress" role="progressbar" aria-valuenow="46" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:46%"></div></div>
+        </div>
+        <span class="pv-label">default · 4px / 主色</span>
+      </div>
+      <div class="pv-state">
+        <div class="progress-stack">
+          <div class="progress-meta"><span>已完成</span><span class="progress-value">100%</span></div>
+          <div class="progress progress--success" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:100%"></div></div>
+        </div>
+        <span class="pv-label">success · 完成态</span>
+      </div>
+      <div class="pv-state">
+        <div class="progress-stack">
+          <div class="progress-meta"><span>接近上限</span><span class="progress-value">82%</span></div>
+          <div class="progress progress--warning" role="progressbar" aria-valuenow="82" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:82%"></div></div>
+        </div>
+        <span class="pv-label">warning · 容量预警</span>
+      </div>
+      <div class="pv-state">
+        <div class="progress-stack">
+          <div class="progress-meta"><span>扫描失败</span><span class="progress-value">67%</span></div>
+          <div class="progress progress--danger" role="progressbar" aria-valuenow="67" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:67%"></div></div>
+        </div>
+        <span class="pv-label">danger · 中断/失败</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="pv-block">
+    <h2>尺寸与不确定态 <em>4 / 8 / 12 / indeterminate</em></h2>
+    <p>表格行内用 4px，卡片内用 8px，只有大块加载区才用 12px。</p>
+    <div class="pv-row">
+      <div class="pv-state">
+        <div class="pv-card"><div class="progress" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:60%"></div></div></div>
+        <span class="pv-label">sm · 4px</span>
+      </div>
+      <div class="pv-state">
+        <div class="pv-card"><div class="progress progress--md" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:60%"></div></div></div>
+        <span class="pv-label">md · 8px</span>
+      </div>
+      <div class="pv-state">
+        <div class="pv-card"><div class="progress progress--lg" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100"><div class="progress-bar" style="width:60%"></div></div></div>
+        <span class="pv-label">lg · 12px</span>
+      </div>
+      <div class="pv-state">
+        <div class="pv-card">
+          <div class="progress-meta"><span>正在计算…</span></div>
+          <div class="progress progress--indeterminate" role="progressbar" aria-valuetext="计算中"><div class="progress-bar"></div></div>
+        </div>
+        <span class="pv-label">indeterminate · 不伪造百分比</span>
+      </div>
+    </div>
+    <p class="pv-note">轨道高 4px 时 <code>border-radius:full</code>；indeterminate 只用于无法估算时长的动作，确定进度必须给出百分比。</p>
+  </section>
+
+  <footer class="pv-foot">轨道用 <code>--sh-bg-muted</code>，填充用主色 / tone solid；不与 badge 混用，不在进度条内嵌文字。</footer>
+</main>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+<script src="../assets/icon-check.js" defer></script>
+<script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

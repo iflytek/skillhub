@@ -27,7 +27,7 @@ Before performing changes that depend on engineering rules, the workflow MUST se
 
 ### Requirement: Design-system context is concrete and scoped
 
-The workflow MUST obtain the actual theme sources, used component contracts, and applicable page or interaction rules for a design-system-dependent task. It MUST preserve the optional nature of Figma and MUST NOT claim design-system adoption when required design resources are unavailable.
+The workflow MUST obtain the actual theme sources, used component contracts, and applicable page or interaction rules for a design-system-dependent task. It MUST NOT claim design-system adoption when required design resources are unavailable.
 
 #### Scenario: Implement a page using the selected design system
 - **WHEN** the task changes a page or shared component according to the selected design system

@@ -1,0 +1,61 @@
+/* theme-toggle.css — the single theme-switch implementation.
+   Contract: components/theme-toggle.json. Preview: preview/component-theme-toggle.html.
+   Usage:
+     <button class="sh-theme-toggle" type="button" data-theme-toggle
+             aria-pressed="false" aria-label="切换明暗主题">
+       <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+       <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+     </button>
+   Script: assets/theme-toggle.js (toggles `.dark` on <html>, keeps aria-pressed in sync).
+   Requires assets/icons.css for the sun / moon glyphs. */
+
+.sh-theme-toggle {
+  position: absolute;
+  top: var(--sh-space-3);
+  right: var(--sh-space-6);
+  z-index: var(--sh-z-sticky);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sh-control-md-height);
+  height: var(--sh-control-md-height);
+  padding: 0;
+  border: var(--sh-size-border-width) solid var(--sh-border-default);
+  border-radius: var(--sh-control-md-radius);
+  background: var(--sh-bg-page);
+  color: var(--sh-text-secondary);
+  cursor: pointer;
+  transition: background-color var(--sh-duration-fast) var(--sh-ease-standard),
+    border-color var(--sh-duration-fast) var(--sh-ease-standard),
+    color var(--sh-duration-fast) var(--sh-ease-standard);
+}
+
+.sh-theme-toggle:hover {
+  background: var(--sh-bg-muted);
+  border-color: var(--sh-border-strong);
+  color: var(--sh-text-primary);
+}
+
+.sh-theme-toggle:focus-visible {
+  outline: var(--sh-focus-ring-width) solid var(--sh-border-focus);
+  outline-offset: var(--sh-focus-ring-offset);
+}
+
+/* light context shows the moon (action: switch to dark) */
+.sh-theme-toggle [data-theme-icon="sun"] { display: none; }
+.sh-theme-toggle [data-theme-icon="moon"] { display: inline-block; }
+
+/* dark context shows the sun (action: switch back to light) */
+.dark .sh-theme-toggle [data-theme-icon="sun"] { display: inline-block; }
+.dark .sh-theme-toggle [data-theme-icon="moon"] { display: none; }
+
+/* placement modifiers — one implementation, three container contexts */
+.sh-theme-toggle--fixed {
+  position: fixed;
+  top: var(--sh-space-3);
+  right: max(var(--sh-space-6), env(safe-area-inset-right));
+}
+
+.sh-theme-toggle--inline {
+  position: static;
+}

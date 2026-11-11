@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Notification 通知浮层 · SkillHub 设计系统</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<link rel="stylesheet" href="../assets/icons.css">
+<link rel="stylesheet" href="../assets/theme-toggle.css">
+<style>
+  /* @component-css-start */
+  /* 通知宿主：生产环境 Portal 挂 body，四角之一固定定位；每条卡片 pointer-events 单独开启 */
+  .notification-host { position: fixed; right: var(--sh-space-4); bottom: var(--sh-space-4); z-index: var(--sh-z-toast); display: flex; flex-direction: column; gap: var(--sh-space-2); width: min(360px, calc(100vw - var(--sh-space-8))); pointer-events: none; }
+  .notification-host--top { top: var(--sh-space-4); bottom: auto; }
+  .notification-host--left { right: auto; left: var(--sh-space-4); }
+  .notification-host > * { pointer-events: auto; }
+
+  .notification { display: flex; align-items: flex-start; gap: var(--sh-space-2_5); width: 100%; padding: var(--sh-space-3); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-md); background: var(--sh-bg-raised); box-shadow: var(--sh-shadow-popover); color: var(--sh-text-primary); font-family: var(--sh-font-sans); animation: notification-in var(--sh-duration-base) var(--sh-ease-emphasized); }
+  .notification.is-leaving { animation: notification-out var(--sh-duration-fast) var(--sh-ease-in) forwards; pointer-events: none; }
+  .notification-icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-icon-16); height: var(--sh-icon-16); margin-top: var(--sh-space-0_5); }
+  .notification-body { flex: 1 1 auto; min-width: 0; }
+  .notification-title { margin: 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); font-weight: var(--sh-weight-medium); }
+  .notification-desc { margin: var(--sh-space-0_5) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); overflow-wrap: anywhere; }
+  .notification-actions { display: flex; align-items: center; gap: var(--sh-space-2); margin-top: var(--sh-space-2); }
+  .notification-action { appearance: none; box-sizing: border-box; margin: 0; text-align: start; height: var(--sh-control-xs-height); padding: 0 var(--sh-space-2); border: 0; border-radius: var(--sh-control-xs-radius); background: transparent; color: var(--sh-text-primary); font-family: var(--sh-font-sans); font-size: var(--sh-text-caption); line-height: var(--sh-control-xs-line); font-weight: var(--sh-weight-medium); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+  .notification-action:hover { background: var(--sh-interaction-hover-bg); }
+  .notification-close { display: inline-flex; appearance: none; box-sizing: border-box;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none; align-items: center; justify-content: center; flex: none; width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); margin: calc(-1 * var(--sh-space-1)) calc(-1 * var(--sh-space-1)) 0 0; border: 0; border-radius: var(--sh-control-xs-radius); background: transparent; color: var(--sh-text-tertiary); cursor: pointer; }
+  .notification-close:hover { background: var(--sh-interaction-hover-bg); color: var(--sh-text-primary); }
+
+  /* 语义只由图标承载：不画左侧实心色条（旧版 3px，亮色下是 #8f1c12 酒红竖条） */
+  .notification--info .notification-icon { color: var(--sh-tone-info-fg); }
+  .notification--success .notification-icon { color: var(--sh-tone-success-fg); }
+  .notification--warning .notification-icon { color: var(--sh-tone-warning-fg); }
+  .notification--error .notification-icon { color: var(--sh-tone-danger-fg); }
+
+  @keyframes notification-in { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }
+  @keyframes notification-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(4px); } }
+  /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+  /* preview-only scaffolding */
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); -webkit-font-smoothing: antialiased; }
+  .pv-page { max-width: 1120px; margin: 0 auto; padding: var(--sh-space-10) var(--sh-space-8) var(--sh-space-16); }
+  .pv-head { padding-bottom: var(--sh-space-6); border-bottom: var(--sh-size-border-width) solid var(--sh-border-default); }
+  .pv-eyebrow { margin: 0 0 var(--sh-space-2); font-size: var(--sh-text-xs); letter-spacing: .08em; color: var(--sh-text-secondary); }
+  .pv-head h1 { margin: 0; font-size: var(--sh-text-3xl); line-height: var(--sh-text-3xl-lh); font-weight: var(--sh-weight-semibold); }
+  .pv-lede { margin: var(--sh-space-2) 0 0; max-width: var(--sh-size-container-reading); font-size: var(--sh-text-base); line-height: 1.7; color: var(--sh-text-secondary); }
+  .pv-block { margin-top: var(--sh-space-10); }
+  .pv-block h2 { margin: 0 0 var(--sh-space-1); font-size: var(--sh-text-lg); line-height: var(--sh-text-lg-lh); font-weight: var(--sh-weight-medium); }
+  .pv-block p { margin: 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+  .pv-row { display: flex; flex-wrap: wrap; gap: var(--sh-space-8); margin-top: var(--sh-space-5); }
+  .pv-state { display: flex; flex-direction: column; gap: var(--sh-space-2); min-width: 0; }
+  .pv-label { font-size: var(--sh-text-xs); color: var(--sh-text-tertiary); }
+  .pv-frame { position: relative; width: 440px; max-width: 100%; min-height: 380px; padding: var(--sh-space-5); display: flex; align-items: flex-end; justify-content: flex-end; border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-xl); background: var(--sh-bg-muted); overflow: hidden; }
+  .pv-frame .notification-host { position: absolute; right: var(--sh-space-4); bottom: var(--sh-space-4); width: 360px; max-width: calc(100% - var(--sh-space-8)); }
+  .pv-btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-control-md-radius); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); font-size: var(--sh-control-md-font); font-weight: var(--sh-weight-medium); cursor: pointer; }
+  .pv-btn:hover { background: var(--sh-interaction-hover-bg); }
+  .pv-actions { display: flex; flex-wrap: wrap; gap: var(--sh-space-2); margin-top: var(--sh-space-3); }
+  .pv-table { width: 100%; margin-top: var(--sh-space-4); border-collapse: collapse; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); }
+  .pv-table th, .pv-table td { padding: var(--sh-space-2) var(--sh-space-2_5); border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle); text-align: left; vertical-align: top; }
+  .pv-table th { color: var(--sh-text-tertiary); font-weight: var(--sh-weight-medium); white-space: nowrap; }
+  .pv-table td code { font-family: var(--sh-font-mono); font-size: var(--sh-text-caption-xs); color: var(--sh-text-primary); }
+  .pv-note { margin-top: var(--sh-space-6); font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+  .pv-note code { font-family: var(--sh-font-mono); font-size: var(--sh-text-caption-xs); }
+  .pv-foot { margin-top: var(--sh-space-12); padding-top: var(--sh-space-4); border-top: var(--sh-size-border-width) solid var(--sh-border-subtle); font-size: var(--sh-text-xs); color: var(--sh-text-tertiary); }
+</style>
+</head>
+<body>
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+<main class="pv-page">
+  <header class="pv-head">
+    <p class="pv-eyebrow">SkillHub Design Library · 组件预览 · Feedback</p>
+    <h1>Notification 通知浮层</h1>
+    <p class="pv-lede">右上 / 右下固定宿主上的轻量通知卡，360px 宽、12px 内边距、四边统一 1px 中性边框。四档 info / success / warning / error 只靠图标着色区分，卡片本体不染色、不画左侧色条；进场 200ms 上移淡入，退场 150ms 淡出。与行内 <code>loading-chip</code> 分工：浮层只用于「结果已发生」的异步反馈。</p>
+  </header>
+
+  <section class="pv-block">
+    <h2>四档语义 <em>info / success / warning / error</em></h2>
+    <p>语义只落在 16px 图标上（tone-fg），卡片底色保持 raised，不整块染色，也不加左侧色条：亮色下 tone-fg 是 #8f1c12 这类深酒红，做 3px 实心竖条会显得过于「AI 感」。标题 13/500，说明 13 可换行。</p>
+    <div class="pv-row">
+      <div class="pv-state">
+        <div class="pv-frame">
+          <div class="notification-host">
+            <div class="notification notification--success" role="status" aria-live="polite">
+              <span class="notification-icon sh-i i16-check-circle" aria-hidden="true"></span>
+              <div class="notification-body">
+                <p class="notification-title">版本已发布</p>
+                <p class="notification-desc">skillhub/publish 1.4.2 已通过审核，Agent 侧约 1 分钟后可见。</p>
+              </div>
+              <button class="notification-close" type="button" aria-label="关闭通知"><span class="sh-i i16-x" aria-hidden="true"></span></button>
+            </div>
+            <div class="notification notification--warning" role="alert">
+              <span class="notification-icon sh-i i16-alert-triangle" aria-hidden="true"></span>
+              <div class="notification-body">
+                <p class="notification-title">授权将在 3 天后到期</p>
+                <p class="notification-desc">@data-platform 的 2 条服务账号授权需要续期，过期后下载会被拒绝。</p>
+              </div>
+              <button class="notification-close" type="button" aria-label="关闭通知"><span class="sh-i i16-x" aria-hidden="true"></span></button>
+            </div>
+            <div class="notification notification--error" role="alert">
+              <span class="notification-icon sh-i i16-x-circle" aria-hidden="true"></span>
+              <div class="notification-body">
+                <p class="notification-title">扫描未通过</p>
+                <p class="notification-desc">包内 3 个脚本触发高危规则 <code>shell-exec</code>，已退回草稿。</p>
+              </div>
+              <button class="notification-close" type="button" aria-label="关闭通知"><span class="sh-i i16-x" aria-hidden="true"></span></button>
+            </div>
+          </div>
+        </div>
+        <span class="pv-label">stack · 多条自上而下堆叠，间距 8px，超出视口高度时从最旧开始丢弃</span>
+      </div>
+
+      <div class="pv-state">
+        <div class="pv-frame" style="min-height: 220px; align-items: flex-start;">
+          <div class="notification notification--info" role="status" aria-live="polite" style="width: 100%;">
+            <span class="notification-icon sh-i i16-info" aria-hidden="true"></span>
+            <div class="notification-body">
+              <p class="notification-title">已复制到剪贴板</p>
+              <p class="notification-desc">安装命令可直接粘贴到终端。</p>
+            </div>
+            <button class="notification-close" type="button" aria-label="关闭通知"><span class="sh-i i16-x" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <span class="pv-label">single · 单行说明的最小形态（高 56px）</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="pv-block">
+    <h2>带操作 <em>title / desc / actions</em></h2>
+    <p>需要用户决策时最多给两个行内操作，主操作在前；不要放整颗按钮，浮层里按钮会抢视觉。</p>
+    <div class="pv-row">
+      <div class="pv-state">
+        <div class="pv-frame" style="min-height: 240px; align-items: flex-start;">
+          <div class="notification notification--info" role="status" aria-live="polite" style="width: 100%;">
+            <span class="notification-icon sh-i i16-info" aria-hidden="true"></span>
+            <div class="notification-body">
+              <p class="notification-title">发现新版本 1.5.0</p>
+              <p class="notification-desc">包含 2 条规则更新与 1 个破坏性变更，建议先查看迁移说明。</p>
+              <div class="notification-actions">
+                <button class="notification-action" type="button">查看变更</button>
+                <button class="notification-action" type="button">稍后提醒</button>
+              </div>
+            </div>
+            <button class="notification-close" type="button" aria-label="关闭通知"><span class="sh-i i16-x" aria-hidden="true"></span></button>
+          </div>
+        </div>
+        <span class="pv-label">actions · 24px 高文本链，下划线，hover 给行内底色</span>
+      </div>
+
+      <div class="pv-state">
+        <div class="pv-frame" style="min-height: 240px; align-items: flex-start;">
+          <div class="notification-host" style="position: static; width: 360px;">
+            <div class="notification notification--success" role="status" aria-live="polite">
+              <span class="notification-icon sh-i i16-check-circle" aria-hidden="true"></span>
+              <div class="notification-body">
+                <p class="notification-title">已加入审阅队列</p>
+                <p class="notification-desc">预计 10 分钟内出结果，可离开本页。</p>
+              </div>
+            </div>
+            <div class="notification notification--success is-leaving" aria-hidden="true">
+              <span class="notification-icon sh-i i16-check-circle" aria-hidden="true"></span>
+              <div class="notification-body">
+                <p class="notification-title">正在退出…</p>
+                <p class="notification-desc"><code>is-leaving</code> 播完 150ms 后由宿主移除节点。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span class="pv-label">进出场 · 进场 200ms emphasized；退场 150ms，期间不接受点击</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="pv-block">
+    <h2>实时触发 <em>host / animation</em></h2>
+    <p>点按钮向宿主插入一条通知；3 秒后自动播退场并移除。宿主只负责定位与堆叠，不接管业务逻辑。</p>
+    <div class="pv-actions">
+      <button class="pv-btn" type="button" data-tone="info">info</button>
+      <button class="pv-btn" type="button" data-tone="success">success</button>
+      <button class="pv-btn" type="button" data-tone="warning">warning</button>
+      <button class="pv-btn" type="button" data-tone="error">error</button>
+    </div>
+    <div class="pv-state" style="margin-top: var(--sh-space-4);">
+      <div class="pv-frame" id="live-frame" style="min-height: 300px;">
+        <div class="notification-host" id="live-host"></div>
+      </div>
+      <span class="pv-label">右下宿主 · 320px 以下视频宽度由 <code>min(360px, 100vw - 32px)</code> 自动收窄</span>
+    </div>
+
+    <table class="pv-table">
+      <thead>
+        <tr><th>契约</th><th>值</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>宿主定位</td><td><code>fixed</code> / 24 偏移角；<code>z-index: var(--sh-z-toast)</code>（60）</td></tr>
+        <tr><td>卡片宽度</td><td>360，<code>max-width: calc(100vw - 32px)</code></td></tr>
+        <tr><td>内边距 / 圆角</td><td>12 / <code>--sh-radius-md</code>（10）</td></tr>
+        <tr><td>语义色条</td><td>左侧 3px，info / success / warning / error 分别取 <code>--sh-tone-*-fg</code></td></tr>
+        <tr><td>标题 / 说明</td><td>13/18/500 + 13/18 secondary，<code>overflow-wrap: anywhere</code></td></tr>
+        <tr><td>关闭钮</td><td>24×24（xs 档），负 4px 外扩贴近右上角</td></tr>
+        <tr><td>进场 / 退场</td><td>200ms <code>--sh-ease-emphasized</code> / 150ms <code>--sh-ease-in</code></td></tr>
+      </tbody>
+    </table>
+    <p class="pv-note">禁忌：同时堆叠超过 3 条（多余的在入队时合并成「还有 N 条」）；用通知替代表单校验（校验贴字段）；把需要阻断流程的错误只放进通知。<code>role="alert"</code> 只给 warning / error，其余用 <code>role="status"</code>。</p>
+  </section>
+
+  <footer class="pv-foot">与 <code>.loading-chip</code>（行内 24px chip）分工：未完成的加载/复制反馈用 chip，已完成的结果用通知浮层。</footer>
+  <footer class="pv-foot" style="border:0;margin-top:0;">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+</main>
+<script src="../assets/icon-check.js" defer></script>
+<script src="../assets/theme-toggle.js" defer></script>
+<script>
+(function () {
+  var host = document.getElementById('live-host');
+  if (!host) return;
+  var meta = {
+    info: ['i16-info', 'info', '一个小提示', '这条说明最多两行，超出换行不截断。'],
+    success: ['i16-check-circle', 'success', '操作成功', '结果已写入，Agent 侧约 1 分钟后可见。'],
+    warning: ['i16-alert-triangle', 'warning', '需要注意', '授权将在 3 天后到期，请尽快续期。'],
+    error: ['i16-x-circle', 'error', '操作失败', '请求超时，已保留本地草稿。']
+  };
+  function push(tone) {
+    var cfg = meta[tone] || meta.info;
+    var el = document.createElement('div');
+    el.className = 'notification notification--' + cfg[1];
+    el.setAttribute('role', tone === 'warning' || tone === 'error' ? 'alert' : 'status');
+    el.innerHTML = '<span class="notification-icon sh-i ' + cfg[0] + '" aria-hidden="true"></span>' +
+      '<div class="notification-body"><p class="notification-title">' + cfg[2] + '</p>' +
+      '<p class="notification-desc">' + cfg[3] + '</p></div>' +
+      '<button class="notification-close" type="button" aria-label="关闭通知"><span class="sh-i i16-x" aria-hidden="true"></span></button>';
+    host.appendChild(el);
+    var close = el.querySelector('.notification-close');
+    function dismiss() {
+      if (!el.parentNode) return;
+      el.classList.add('is-leaving');
+      el.addEventListener('animationend', function () { el.remove(); }, { once: true });
+    }
+    close.addEventListener('click', dismiss);
+    setTimeout(dismiss, 3000);
+  }
+  document.querySelectorAll('[data-tone]').forEach(function (btn) {
+    btn.addEventListener('click', function () { push(btn.getAttribute('data-tone')); });
+  });
+})();
+</script>
+</body>
+</html>

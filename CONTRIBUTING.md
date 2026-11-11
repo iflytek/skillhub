@@ -36,7 +36,11 @@ standard library. Generated Skills and setup metadata stay local. Re-run setup/c
 updating upstream instruction files; it refuses to overwrite conflicting local edits and
 backs up changed managed entries. Do not use a successful setup check as proof that the
 Agent read all rules or implemented them correctly. The explicit-reading procedure works
-without optional setup. See the [mechanism guide](docs/openspec-trellis-guide.md).
+without optional setup.
+
+### Shared design resources
+
+The [SkillHub design core](design-system/skillhub/README.md) ships with this repository under Apache-2.0, with third-party icon notices retained. Read the relevant theme, component contracts and design rules alongside the frontend engineering conventions. The reader defaults to this versioned core; no private library, editor plugin or local cache is required.
 
 ## Before You Start
 

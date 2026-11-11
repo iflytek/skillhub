@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Input / Textarea 输入 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); } .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); } .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sh-space-4) var(--sh-space-6); }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); } .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-placeholder); }
+    .label { font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-medium); color: var(--sh-text-primary); } .req { color: var(--sh-danger-base); }
+    .input, .textarea { width: 100%; box-sizing: border-box; border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-control-md-radius); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); } .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); } .textarea { min-height: 100px; padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); resize: vertical; }
+    .input::placeholder, .textarea::placeholder { color: var(--sh-text-placeholder); }
+    .input:focus, .textarea:focus { outline: none; border-color: var(--sh-border-focus); }
+    .input.is-focus, .textarea.is-focus { border-color: var(--sh-border-focus); }
+    .input.is-error, .textarea.is-error { border-color: var(--sh-danger-base); }
+    .input:disabled { background: var(--sh-bg-muted); color: var(--sh-text-disabled); border-color: var(--sh-border-default); cursor: not-allowed; }
+    .help { font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-secondary); } .error { font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-danger-base); } .counter { display: flex; justify-content: space-between; gap: var(--sh-space-2); font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-placeholder); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body data-component="input">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Input / Textarea 输入</h1>
+    <p class="lede">28px 高、6px 圆角、13px 字号、发丝边框；聚焦时只把边框转为近黑，不叠加外环。</p>
+  </header>
+  <section class="block">
+    <h2 class="block-title">单行输入 · 状态 <em>idle / focus / error / disabled</em></h2>
+    <div class="grid">
+      <div class="state"><span class="state-label">idle</span>
+        <label class="label" for="reason-idle">举报理由 <span class="req">*</span></label>
+        <input class="input" id="reason-idle" placeholder="例如：描述与技能实际能力不符" aria-required="true" />
+        <span class="help">必填，审核员会在 3 个工作日内处理。</span>
+      </div>
+      <div class="state"><span class="state-label">focus</span>
+        <label class="label" for="reason-focus">举报理由 <span class="req">*</span></label>
+        <input class="input is-focus" id="reason-focus" value="技能说明中承诺的批量导出功能无法使用" aria-required="true" />
+        <span class="help">聚焦时边框转为近黑，不出现第二层外环。</span>
+      </div>
+      <div class="state"><span class="state-label">error</span>
+        <label class="label" for="reason-error">举报理由 <span class="req">*</span></label>
+        <input class="input is-error" id="reason-error" value="不好用" aria-invalid="true" aria-describedby="reason-error-text" aria-required="true" />
+        <span class="error" id="reason-error-text">请至少填写 10 个字，说明具体差异。</span>
+      </div>
+      <div class="state"><span class="state-label">disabled</span>
+        <label class="label" for="reason-disabled">举报理由</label>
+        <input class="input" id="reason-disabled" value="审核期间不可修改举报理由" disabled />
+        <span class="help">如需补充材料，请在审核详情页上传。</span>
+      </div>
+    </div>
+  </section>
+  <section class="block">
+    <h2 class="block-title">多行输入 · 评价内容 <em>default / focus / error</em></h2>
+    <div class="grid">
+      <div class="state"><span class="state-label">default</span>
+        <label class="label" for="review-default">评价内容</label>
+        <textarea class="textarea" id="review-default" placeholder="写下你的使用体验，例如安装步骤是否顺畅、文档是否清晰。"></textarea>
+        <span class="counter"><span>支持 Markdown</span><span>0 / 500</span></span>
+      </div>
+      <div class="state"><span class="state-label">focus</span>
+        <label class="label" for="review-focus">评价内容</label>
+        <textarea class="textarea is-focus" id="review-focus">按文档三步就装好了，版本快照里的安装命令可以直接复制。</textarea>
+        <span class="counter"><span>支持 Markdown</span><span>48 / 500</span></span>
+      </div>
+      <div class="state"><span class="state-label">error</span>
+        <label class="label" for="review-error">评价内容 <span class="req">*</span></label>
+        <textarea class="textarea is-error" id="review-error" aria-invalid="true" aria-describedby="review-error-text"></textarea>
+        <span class="error" id="review-error-text">评价内容不能为空，至少填写 20 个字。</span>
+      </div>
+    </div>
+  </section>
+  <section class="block">
+    <h2 class="block-title">Label 组合 <em>标签在上 · 控件居中 · 帮助文案在下</em></h2>
+    <div class="grid">
+      <div class="state">
+        <label class="label" for="skill-id">技能标识</label>
+        <input class="input" id="skill-id" value="@global/data-cleanup" aria-describedby="skill-id-help" />
+        <span class="help" id="skill-id-help">由系统生成，命名空间与技能名不可在此修改。</span>
+      </div>
+      <div class="state">
+        <label class="label" for="review-privacy">补充说明</label>
+        <textarea class="textarea" id="review-privacy" placeholder="可补充复现步骤或截图链接" aria-describedby="review-privacy-help"></textarea>
+        <span class="help" id="review-privacy-help">请勿填写手机号、邮箱等个人信息。</span>
+      </div>
+    </div>
+  </section>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

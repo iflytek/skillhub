@@ -1,0 +1,382 @@
+{
+  "schemaVersion": 1,
+  "library": "lucide-react",
+  "versionRange": "^0.344.0",
+  "strokeWidth": {
+    "note": "24 viewBox 下的无单位用户单位；= 目标视觉线宽 × 24 / 渲染尺寸 / 0.955（墨迹归一化缩放），完整规则见 specs/icons.md",
+    "12": 3.14,
+    "14": 2.72,
+    "16": 2.36,
+    "18": 2.44,
+    "20": 2.2,
+    "24": 2.09
+  },
+  "sizes": {
+    "16": "标准三档（小）：默认行内图标、按钮图标、输入框前后缀；视觉线宽 1.5px",
+    "20": "标准三档（中）：区块标题、卡片标题、工具条主操作、图标按钮；视觉线宽 1.75px",
+    "24": "标准三档（大）：空态、引导块、少量强调；视觉线宽 2px",
+    "12": "例外档：徽标内提示、表格内状态；不用于按钮",
+    "14": "例外档：紧凑工具栏、分页、下拉项",
+    "18": "例外档：Tab、筛选栏、二级导航、代码块操作条"
+  },
+  "panelAssets": "assets/icons/*.svg",
+  "semanticMap": {
+    "navigation": {
+      "首页": {
+        "lucide": "House",
+        "name": "home",
+        "path": "assets/icons/home.svg"
+      },
+      "搜索": {
+        "lucide": "Search",
+        "name": "search",
+        "path": "assets/icons/search.svg"
+      },
+      "发现": {
+        "lucide": "Compass",
+        "name": "compass",
+        "path": "assets/icons/compass.svg"
+      },
+      "技能库": {
+        "lucide": "Library",
+        "name": "library",
+        "path": "assets/icons/library.svg"
+      },
+      "通知": {
+        "lucide": "Bell",
+        "name": "bell",
+        "path": "assets/icons/bell.svg"
+      },
+      "设置": {
+        "lucide": "Settings",
+        "name": "settings",
+        "path": "assets/icons/settings.svg"
+      },
+      "账号": {
+        "lucide": "User",
+        "name": "user",
+        "path": "assets/icons/user.svg"
+      },
+      "头像占位（实心）": {
+        "lucide": "—（库内私有）",
+        "name": "avatar-filled",
+        "path": "assets/icons/avatar-filled.svg"
+      },
+      "头像占位（线性）": {
+        "lucide": "—（库内私有）",
+        "name": "avatar-outline",
+        "path": "assets/icons/avatar-outline.svg"
+      },
+      "退出": {
+        "lucide": "LogOut",
+        "name": "log-out",
+        "path": "assets/icons/log-out.svg"
+      },
+      "返回": {
+        "lucide": "ArrowLeft",
+        "name": "arrow-left",
+        "path": "assets/icons/arrow-left.svg"
+      },
+      "展开/收起": {
+        "lucide": "ChevronDown",
+        "name": "chevron-down",
+        "path": "assets/icons/chevron-down.svg"
+      },
+      "进入下一级": {
+        "lucide": "ChevronRight",
+        "name": "chevron-right",
+        "path": "assets/icons/chevron-right.svg"
+      },
+      "菜单": {
+        "lucide": "Menu",
+        "name": "menu",
+        "path": "assets/icons/menu.svg"
+      },
+      "返回上一级": {
+        "lucide": "ArrowLeft",
+        "name": "arrow-left",
+        "path": "assets/icons/arrow-left.svg"
+      },
+      "前往下一页": {
+        "lucide": "ArrowRight",
+        "name": "arrow-right",
+        "path": "assets/icons/arrow-right.svg"
+      },
+      "收起": {
+        "lucide": "ChevronUp",
+        "name": "chevron-up",
+        "path": "assets/icons/chevron-up.svg"
+      },
+      "外部链接": {
+        "lucide": "ExternalLink",
+        "name": "external-link",
+        "path": "assets/icons/external-link.svg"
+      }
+    },
+    "action": {
+      "安装/下载": {
+        "lucide": "Download",
+        "name": "download",
+        "path": "assets/icons/download.svg"
+      },
+      "上传/发布": {
+        "lucide": "Upload",
+        "name": "upload",
+        "path": "assets/icons/upload.svg"
+      },
+      "复制": {
+        "lucide": "Copy",
+        "name": "copy",
+        "path": "assets/icons/copy.svg"
+      },
+      "已复制": {
+        "lucide": "Check",
+        "name": "check",
+        "path": "assets/icons/check.svg"
+      },
+      "新建": {
+        "lucide": "Plus",
+        "name": "plus",
+        "path": "assets/icons/plus.svg"
+      },
+      "编辑": {
+        "lucide": "Pencil",
+        "name": "pencil",
+        "path": "assets/icons/pencil.svg"
+      },
+      "删除": {
+        "lucide": "Trash2",
+        "name": "trash",
+        "path": "assets/icons/trash.svg"
+      },
+      "更多操作": {
+        "lucide": "MoreHorizontal",
+        "name": "more-horizontal",
+        "path": "assets/icons/more-horizontal.svg"
+      },
+      "分享": {
+        "lucide": "Share2",
+        "name": "share",
+        "path": "assets/icons/share.svg"
+      },
+      "筛选": {
+        "lucide": "Filter",
+        "name": "filter",
+        "path": "assets/icons/filter.svg"
+      },
+      "排序": {
+        "lucide": "SlidersHorizontal",
+        "name": "sliders-horizontal",
+        "path": "assets/icons/sliders-horizontal.svg"
+      },
+      "刷新": {
+        "lucide": "RefreshCw",
+        "name": "refresh",
+        "path": "assets/icons/refresh.svg"
+      },
+      "外链": {
+        "lucide": "ExternalLink",
+        "name": "external-link",
+        "path": "assets/icons/external-link.svg"
+      },
+      "关闭": {
+        "lucide": "X",
+        "name": "x",
+        "path": "assets/icons/x.svg"
+      },
+      "排序（升降）": {
+        "lucide": "ArrowUpDown",
+        "name": "sort",
+        "path": "assets/icons/sort.svg"
+      },
+      "切换为浅色": {
+        "lucide": "—（库内私有）",
+        "name": "sun",
+        "path": "assets/icons/sun.svg"
+      },
+      "切换为深色": {
+        "lucide": "—（库内私有）",
+        "name": "moon",
+        "path": "assets/icons/moon.svg"
+      },
+      "已选中（加粗勾）": {
+        "lucide": "—（库内私有）",
+        "name": "check-bold",
+        "path": "assets/icons/check-bold.svg"
+      },
+      "收藏": {
+        "lucide": "Heart",
+        "name": "heart",
+        "path": "assets/icons/heart.svg"
+      },
+      "举报": {
+        "lucide": "Flag",
+        "name": "flag",
+        "path": "assets/icons/flag.svg"
+      }
+    },
+    "status": {
+      "安全通过": {
+        "lucide": "ShieldCheck",
+        "name": "shield-check",
+        "path": "assets/icons/shield-check.svg"
+      },
+      "安全风险": {
+        "lucide": "ShieldAlert",
+        "name": "shield-alert",
+        "path": "assets/icons/shield-alert.svg"
+      },
+      "成功": {
+        "lucide": "CircleCheck",
+        "name": "check-circle",
+        "path": "assets/icons/check-circle.svg"
+      },
+      "提示": {
+        "lucide": "CircleAlert",
+        "name": "alert-circle",
+        "path": "assets/icons/alert-circle.svg"
+      },
+      "警告": {
+        "lucide": "TriangleAlert",
+        "name": "alert-triangle",
+        "path": "assets/icons/alert-triangle.svg"
+      },
+      "失败": {
+        "lucide": "CircleX",
+        "name": "x-circle",
+        "path": "assets/icons/x-circle.svg"
+      },
+      "等待/待审": {
+        "lucide": "Clock",
+        "name": "clock",
+        "path": "assets/icons/clock.svg"
+      },
+      "加载中": {
+        "lucide": "Loader2",
+        "name": "loader",
+        "path": "assets/icons/loader.svg"
+      },
+      "可见": {
+        "lucide": "Eye",
+        "name": "eye",
+        "path": "assets/icons/eye.svg"
+      },
+      "隐藏": {
+        "lucide": "EyeOff",
+        "name": "eye-off",
+        "path": "assets/icons/eye-off.svg"
+      },
+      "锁定/私有": {
+        "lucide": "Lock",
+        "name": "lock",
+        "path": "assets/icons/lock.svg"
+      },
+      "信息": {
+        "lucide": "Info",
+        "name": "info",
+        "path": "assets/icons/info.svg"
+      },
+      "封禁": {
+        "lucide": "Ban",
+        "name": "ban",
+        "path": "assets/icons/ban.svg"
+      },
+      "评分": {
+        "lucide": "Star",
+        "name": "star",
+        "path": "assets/icons/star.svg"
+      },
+      "评分（已评）": {
+        "lucide": "—（库内私有）",
+        "name": "star-filled",
+        "path": "assets/icons/star-filled.svg"
+      },
+      "检查清单": {
+        "lucide": "ListCheck",
+        "name": "list-check",
+        "path": "assets/icons/list-check.svg"
+      }
+    },
+    "empty": {
+      "无数据": {
+        "lucide": "Inbox",
+        "name": "inbox",
+        "path": "assets/icons/inbox.svg"
+      },
+      "无搜索结果": {
+        "lucide": "SearchX",
+        "name": "search-x",
+        "path": "assets/icons/search-x.svg"
+      },
+      "无技能包": {
+        "lucide": "PackageOpen",
+        "name": "package-open",
+        "path": "assets/icons/package-open.svg"
+      },
+      "无文件": {
+        "lucide": "FileQuestion",
+        "name": "file-question",
+        "path": "assets/icons/file-question.svg"
+      }
+    },
+    "fileType": {
+      "markdown": {
+        "lucide": "FileText",
+        "name": "file-text",
+        "path": "assets/icons/file-text.svg"
+      },
+      "text": {
+        "lucide": "FileText",
+        "name": "file-text",
+        "path": "assets/icons/file-text.svg"
+      },
+      "json": {
+        "lucide": "FileJson",
+        "name": "file-json",
+        "path": "assets/icons/file-json.svg"
+      },
+      "code": {
+        "lucide": "FileCode",
+        "name": "file-code",
+        "path": "assets/icons/file-code.svg"
+      },
+      "image": {
+        "lucide": "FileImage",
+        "name": "file-image",
+        "path": "assets/icons/file-image.svg"
+      },
+      "archive": {
+        "lucide": "FileArchive",
+        "name": "file-archive",
+        "path": "assets/icons/file-archive.svg"
+      },
+      "other": {
+        "lucide": "File",
+        "name": "file",
+        "path": "assets/icons/file.svg"
+      },
+      "folder": {
+        "lucide": "Folder",
+        "name": "folder",
+        "path": "assets/icons/folder.svg"
+      },
+      "folderOpen": {
+        "lucide": "FolderOpen",
+        "name": "folder-open",
+        "path": "assets/icons/folder-open.svg"
+      }
+    }
+  },
+  "doNot": [
+    "禁止引入第二套图标库（heroicons / phosphor / antd icons）",
+    "禁止手写简化 SVG 替代 lucide 已有图标",
+    "禁止 emoji 当功能图标",
+    "禁止在同一上下文混用面性与线性图标",
+    "禁止给图标叠加第二种强调色（状态色除外，且一屏不超过一处）"
+  ],
+  "baselineAlignment": {
+    "rule": "图标与 13/14/16px 文字同行时，容器使用 inline-flex + align-items:center，图标不单独设置 margin-top；必要时整体下移 1px",
+    "gap": "图标与文字间距 var(--sh-space-1_5) = 6px",
+    "flex": "图标设 flex:none，文字可截断"
+  }
+}

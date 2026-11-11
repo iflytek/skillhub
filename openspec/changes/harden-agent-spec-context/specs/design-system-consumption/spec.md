@@ -9,12 +9,12 @@ Theme and component readers SHALL verify the complete supported token projection
 - **AND** refreshing reviewed CSS produces a stable projection including light/dark aliases and control proportions
 
 ### Requirement: Automatic scoped design context
-SkillHub visible UI work SHALL use the selected SkillHub design target by default without requiring the user to name a Skill. Pure data work SHALL retain proportional context, and Figma SHALL remain optional.
+SkillHub visible UI work SHALL read the applicable repository visual and component rules without requiring the user to name a Skill. The shared design core SHALL ship under its reviewed license and be the default source; another source requires explicit task selection. Pure data work SHALL retain proportional context.
 
-#### Scenario: New worktree with an approved private snapshot
-- **WHEN** existing local sync prepares a new supported worktree without a project-local library
-- **THEN** the design entry and reader can locate a verified user-private snapshot
-- **AND** the whole private library and other worktrees' task state are not copied into its Git tree
+#### Scenario: Clean public checkout
+- **WHEN** a contributor checks out the repository without private design files, editor plugins or registered caches
+- **THEN** the default reader obtains the repository-owned theme, complete component contracts and applicable design rules
+- **AND** private resources and personal work records are not required or published
 
 #### Scenario: Changed or unavailable source
 - **WHEN** a required snapshot is absent or its content differs from registration

@@ -1,0 +1,5 @@
+<!-- SkillHub core asset; see THIRD_PARTY_NOTICES.md. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-label="flag">
+  <title>flag</title>
+  <g fill="none" stroke="#171717" stroke-width="2.09" stroke-linecap="round" stroke-linejoin="round" transform="translate(0.540 0.540) scale(0.955)"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></g>
+</svg>

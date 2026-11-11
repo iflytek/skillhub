@@ -8,6 +8,8 @@ on:
       - '.trellis/spec/**'
       - 'openspec/**'
       - 'scripts/setup-agent-workflow.py'
+      - 'design-system/**'
+      - 'scripts/tests/design-system-package-test.py'
       - 'scripts/read-design-system.py'
       - 'scripts/design_tokens.py'
       - 'scripts/context_pages.py'
@@ -18,7 +20,6 @@ on:
       - 'scripts/check-engineering-specs.py'
       - 'scripts/tests/setup-agent-workflow-test.py'
       - 'scripts/tests/workflow-security-test.sh'
-      - 'docs/openspec-trellis-guide.md'
       - '.github/workflows/agent-workflow.yml'
 
 permissions:
@@ -44,6 +45,8 @@ jobs:
       - run: bash scripts/tests/workflow-security-test.sh
       - run: python3 scripts/tests/setup-agent-workflow-test.py
       - run: python3 scripts/tests/read-design-system-test.py
+      - run: python3 scripts/read-design-system.py check
+      - run: python3 scripts/tests/design-system-package-test.py
       - run: python3 scripts/tests/context-delivery-test.py
       - run: python3 scripts/setup-agent-workflow.py --apply
       - run: python3 scripts/setup-agent-workflow.py --check

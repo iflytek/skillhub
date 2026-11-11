@@ -14,7 +14,8 @@ from context_pages import DEFAULT_LIMIT, page
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 ROOT = SCRIPT_DIR.parent.parent if SCRIPT_DIR.parent.name == '.trellis' else SCRIPT_DIR.parent
-DEFAULT_LIBRARY = ROOT / '.design_library/skillhub'
+DEFAULT_LIBRARY = ROOT / 'design-system/skillhub'
+PRIVATE_LIBRARY = ROOT / '.design_library/skillhub'
 REGISTRY = Path.home() / '.local/share/skillhub/design-library.json'
 
 
@@ -33,6 +34,8 @@ def resolve_library(explicit=None):
         return explicit.resolve()
     if DEFAULT_LIBRARY.exists():
         return DEFAULT_LIBRARY.resolve()
+    if PRIVATE_LIBRARY.exists():
+        return PRIVATE_LIBRARY.resolve()
     if REGISTRY.exists():
         entry = load_json(REGISTRY)
         library = Path(entry['path']).resolve()
@@ -142,7 +145,7 @@ def projection(library, refresh=False):
 def read(library, args):
     if not library.is_dir():
         raise ValueError('Design library not loaded. Place the selected library at '
-                         '.design_library/skillhub/ or supply --library PATH. '
+                         'design-system/skillhub/ or supply --library PATH. '
                          'No design constraints were loaded.')
     if args.command == 'refresh':
         return projection(library, refresh=True)
@@ -216,7 +219,7 @@ def read(library, args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--library', type=Path, help='Explicit library; otherwise project-local, then registered private snapshot')
+    parser.add_argument('--library', type=Path, help='Explicit library; otherwise repository core, project-local, then registered private snapshot')
     parser.add_argument('--offset', type=int, default=0, help='Character offset in the stable full JSON payload')
     parser.add_argument('--limit', type=int, default=DEFAULT_LIMIT, help='Page size, default 1800, maximum 2400 characters; UTF-8 budget may reduce it')
     parser.add_argument('--expect-sha256', help='Required payload identity for continuation pages')
