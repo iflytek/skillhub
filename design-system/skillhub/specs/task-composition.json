@@ -1,0 +1,121 @@
+{
+  "source": "specs/task-composition.md",
+  "status": "unreleased-user-authorized",
+  "button": {
+    "height": 32,
+    "font": 13,
+    "paddingInline": 12,
+    "iconSize": 16,
+    "gap": 8,
+    "rowHeight": 24,
+    "rowFont": 12,
+    "rowPaddingInline": 8,
+    "toolbarHeight": 28,
+    "toolbarFont": 13,
+    "toolbarPaddingInline": 10
+  },
+  "badge": {
+    "height": 24,
+    "font": 12,
+    "paddingInline": 6,
+    "radius": 6,
+    "tableHeight": 20
+  },
+  "table": {
+    "header": 36,
+    "font": 13,
+    "singleLine": 40,
+    "twoLine": 52,
+    "paddingInline": 12
+  },
+  "navigation": {
+    "strategy": "one local navigation level; no compulsory secondary rail",
+    "items": [
+      "概览",
+      "技能",
+      "成员",
+      "加入申请",
+      "邀请链接",
+      "技能审核",
+      "设置"
+    ],
+    "narrowBelow": 1024
+  },
+  "toneMap": {
+    "正常": "success",
+    "有效": "success",
+    "已批准": "success",
+    "已使用": "success",
+    "已发布": "success",
+    "待处理": "warning",
+    "待审核": "warning",
+    "已冻结": "warning",
+    "已过期": "warning",
+    "已拒绝": "danger",
+    "已替换": "info",
+    "管理员": "info",
+    "所有者": "info",
+    "已归档": "neutral",
+    "已撤回": "neutral",
+    "成员": "neutral"
+  },
+  "profiles": {
+    "reading": {
+      "maxWidth": 760,
+      "bodyFont": [
+        14,
+        16
+      ]
+    },
+    "collection": {
+      "maxWidth": 1152,
+      "sectionGap": 24,
+      "cardGap": 16
+    },
+    "workspace": {
+      "sidebarOptional": true,
+      "sidebarWidth": 240,
+      "horizontalPadding": 24,
+      "sectionGap": 24
+    }
+  },
+  "memberSearch": {
+    "modes": [
+      "账号关键词",
+      "手机号"
+    ],
+    "keywordFields": [
+      "userId",
+      "displayName",
+      "email"
+    ],
+    "minimumKeywordLength": 2,
+    "phoneMatch": "exact",
+    "manualUserId": true,
+    "presentation": {
+      "variant": "bounded-search-and-confirm-workspace",
+      "width": 960,
+      "maxHeight": 720,
+      "viewportMargin": 48,
+      "asideWidth": 288,
+      "candidateLimit": 10,
+      "resultScroll": "independent",
+      "selection": "single",
+      "footer": "fixed",
+      "controls": 32,
+      "narrowResultsMaxHeight": 240
+    }
+  },
+  "contentFit": {
+    "focusedWidth": 960,
+    "cardColumns": 3,
+    "cardPadding": 16,
+    "cardGap": 8,
+    "dialogWidth": 480,
+    "dialogPadding": 20,
+    "fieldGroupGap": 12,
+    "maxMockAccountHeight": 584,
+    "maxMockPhoneHeight": 504,
+    "fixedDialogHeight": false
+  }
+}

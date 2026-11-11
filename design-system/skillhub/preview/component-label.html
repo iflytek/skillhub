@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Label 表单标签 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-xl); font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); }
+    .row { display: flex; flex-wrap: wrap; gap: var(--sh-space-4) var(--sh-space-8); align-items: flex-end; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); align-items: flex-start; min-width: 240px; }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); color: var(--sh-text-placeholder); }
+    .note { margin: 0; font-size: var(--sh-text-xs); line-height: var(--sh-text-xs-lh); color: var(--sh-text-secondary); }
+
+    .field-label { display: inline-flex; align-items: center; gap: var(--sh-space-1); font-size: var(--sh-control-sm-font); font-weight: var(--sh-weight-medium); line-height: var(--sh-control-sm-line); color: var(--sh-text-primary); cursor: pointer; }
+    .field-label.is-required .req { color: var(--sh-danger-base); }
+    .field-label.is-disabled { color: var(--sh-text-disabled); cursor: not-allowed; }
+    .field-label-control:disabled { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border: var(--sh-size-border-width) solid var(--sh-border-subtle); border-radius: var(--sh-control-md-radius); background: var(--sh-bg-muted); color: var(--sh-text-disabled); font-family: var(--sh-font-sans); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+    .field-label-control { width: 100%; height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-control-md-radius); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+    .req { font-weight: var(--sh-weight-regular); }
+    .hint { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-text-tertiary); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+  </style>
+</head>
+<body data-component="label">
+  <button class="sh-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Label 表单标签</h1>
+    <p class="lede">基于产品 <code>web/src/shared/ui/label.tsx</code>：两层字阶——<code>.label</code> 13px / 18px，<code>.field-label</code> 12px / 16px；均 500 字重，禁用态随控件一起降层级。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">基础与必填 <em>default / required</em></h2>
+    <div class="row">
+      <div class="state">
+        <span class="field-label" for="f1">命名空间</span>
+        <input class="field-label-control" id="f1" value="@global" />
+        <span class="state-label">default · 14px / 500 / leading-none</span>
+      </div>
+      <div class="state">
+        <span class="field-label is-required" for="f2">技能名称<span class="req">*</span></span>
+        <input class="field-label-control" id="f2" placeholder="例如 skillhub-helper" />
+        <span class="state-label">required · 星号用 danger-base</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">禁用与提示 <em>disabled / with hint</em></h2>
+    <div class="row">
+      <div class="state">
+        <span class="field-label is-disabled" for="f3">可见范围</span>
+        <input class="field-label-control" id="f3" value="组织内可见" disabled />
+        <span class="state-label">disabled · text-disabled，不用 opacity 叠文字</span>
+      </div>
+      <div class="state">
+        <span class="field-label" for="f4">描述</span>
+        <input class="field-label-control" id="f4" placeholder="一句话说明技能用途" />
+        <span class="hint">不超过 120 个字符</span>
+        <span class="state-label">with hint · 12px tertiary</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">产品 Label 没有尺寸变体，也没有独立 error 状态；错误文案放在控件下方，不改变标签本身颜色。</p>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

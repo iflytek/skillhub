@@ -1,0 +1,5 @@
+<!-- SkillHub core asset; see THIRD_PARTY_NOTICES.md. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" role="img" aria-label="share">
+  <title>share</title>
+  <g fill="none" stroke="#171717" stroke-width="2.09" stroke-linecap="round" stroke-linejoin="round" transform="translate(0.540 0.540) scale(0.955)"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98"/><path d="m15.41 6.51-6.82 3.98"/></g>
+</svg>

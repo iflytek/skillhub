@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>FilterBar 筛选栏 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <link rel="stylesheet" href="../components.runtime.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); } .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); } .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); text-transform: none; letter-spacing: var(--sh-tracking-body); color: var(--sh-text-placeholder); }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); } .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-placeholder); }
+
+    .filter-bar { display: flex; align-items: center; gap: var(--sh-space-2); flex-wrap: wrap; padding: var(--sh-space-3); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); background: var(--sh-bg-sunken); }
+    .filter-search { flex: 1 1 260px; min-width: 180px; }
+    .filter-search .input { width: 100%; }
+    /* 筛选栏内的下拉按内容宽展示；select-trigger 默认 100% 只适合表单列 */
+    .filter-bar .select-trigger { width: auto; flex: 0 0 auto; }
+    .filter-pills { display: flex; align-items: center; gap: var(--sh-space-1); flex-wrap: wrap; }
+    /* 圆角回到库内 tag 尺度：24px 高 + 6px 圆角 = 25% 比例，与 badge/lifecycle 完全一致；
+       旧版 999px 胶囊只适合 chip 语义，分段筛选是有边界的控件。 */
+    .filter-pill { display: inline-flex; appearance: none; box-sizing: border-box; margin: 0;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none; align-items: center; gap: var(--sh-space-1); height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-control-xs-radius); background: var(--sh-bg-page); color: var(--sh-text-secondary); font-size: var(--sh-size-badge-font); line-height: 1; white-space: nowrap; cursor: pointer; transition: background var(--sh-duration-fast) var(--sh-ease-standard), border-color var(--sh-duration-fast) var(--sh-ease-standard), color var(--sh-duration-fast) var(--sh-ease-standard); }
+    .filter-pill:hover { border-color: var(--sh-border-strong); color: var(--sh-text-primary); }
+    .filter-pill:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+    /* 选中态改为浅底 + 主色文字 + 中字重（对齐 Volcengine segmented-picker.active 的构图），
+       不再用纯黑实心：实心块在暗色会和主按钮抢层级，浅底能保持筛选区是二级控件。 */
+    .filter-pill.is-active { border-color: var(--sh-border-strong); background: var(--sh-interaction-selected-bg); color: var(--sh-text-primary); font-weight: var(--sh-weight-medium); }
+    /* 计数：等宽数字 + 次文本色，固定 4px 间距，不再用 opacity 压暗（会拖低对比度） */
+    .filter-pill .filter-pill-count { font-variant-numeric: tabular-nums; color: var(--sh-text-tertiary); font-weight: var(--sh-weight-regular); }
+    .filter-pill.is-active .filter-pill-count { color: var(--sh-text-secondary); }
+    /* 单行溢出：筛选多到放不下时横向滚动而不是无限换行把工具栏撑高 */
+    .filter-pills--scroll { flex: 1 1 240px; min-width: 0; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; padding-bottom: var(--sh-size-border-width); }
+    .filter-pills--scroll > .filter-pill { flex: none; }
+    .filter-actions { display: flex; align-items: center; gap: var(--sh-space-1_5); margin-left: auto; }
+    .filter-meta { width: 100%; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-tertiary); }
+    .filter-bar--stacked { align-items: stretch; }
+    /* 预览脚手架：把容器压到 520px 以真实触发横向滚动（不属于库样式） */
+    .preview-narrow { max-width: 520px; }
+    .filter-bar--stacked .filter-search { flex-basis: 100%; }
+    .filter-bar--stacked .filter-actions { margin-left: 0; }
+    /* 640px 断点：搜索独占一行，筛选胶囊换行，动作换行 */
+    @media (max-width: 640px) {
+      .filter-bar { align-items: stretch; }
+      .filter-search { flex-basis: 100%; }
+      .filter-pills { flex-wrap: wrap; min-width: 0; }
+      .filter-pills > * { flex: none; }
+      .filter-actions { margin-left: 0; width: 100%; }
+    }
+    .filter-pill--sm {
+      height: var(--sh-control-sm-height);
+      padding-inline: var(--sh-control-sm-pad-x);
+      border-radius: var(--sh-control-sm-radius);
+      font-size: var(--sh-control-sm-font);
+    }
+    .filter-pill--md {
+      height: var(--sh-control-md-height);
+      padding-inline: var(--sh-control-md-pad-x);
+      border-radius: var(--sh-control-md-radius);
+      font-size: var(--sh-control-md-font);
+    }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* Unreleased task-composition source rules. */
+.task-toolbar .btn, .task-toolbar .input, .task-toolbar .select-trigger, .task-pagination .btn {
+  height: var(--sh-control-sm-height);
+  padding-inline: var(--sh-control-sm-pad-x);
+  border-radius: var(--sh-control-sm-radius);
+  font-size: var(--sh-control-sm-font);
+}
+/* @component-css-end */
+
+  </style>
+</head>
+<body data-component="filter-bar">
+  <button class="sh-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">FilterBar 筛选栏</h1>
+    <p class="lede">列表页顶部的检索与筛选容器：搜索、筛选胶囊、结果计数与批量入口。筛选项本身是胶囊语义，普通按钮不得借用。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">默认 <em>default · 搜索 + 胶囊 + 结果数</em></h2>
+    <div class="state"><span class="state-label">default</span>
+      <div class="filter-bar">
+        <div class="filter-search"><input class="input" type="search" placeholder="搜索技能名、描述或标签" /></div>
+        <div class="filter-pills">
+          <button class="filter-pill is-active">全部 <span class="filter-pill-count">128</span></button>
+          <button class="filter-pill">已发布 <span class="filter-pill-count">96</span></button>
+          <button class="filter-pill">待审核 <span class="filter-pill-count">18</span></button>
+          <button class="filter-pill">已撤回 <span class="filter-pill-count">14</span></button>
+        </div>
+        <div class="filter-actions"><button class="btn btn-sm btn-outline">新建技能</button></div>
+        <span class="filter-meta">共 128 个技能 · 按更新时间排序</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">已应用筛选 <em>applied · 胶囊带计数，可清除</em></h2>
+    <div class="state"><span class="state-label">applied</span>
+      <div class="filter-bar">
+        <div class="filter-search"><input class="input" type="search" value="pdf" /></div>
+        <div class="filter-pills">
+          <button class="filter-pill">全部</button>
+          <button class="filter-pill is-active">已发布 <span class="filter-pill-count">12</span></button>
+          <button class="filter-pill">待审核</button>
+          <button class="filter-pill">已撤回</button>
+        </div>
+        <div class="filter-actions">
+          <button class="btn btn-sm btn-ghost">清除筛选</button>
+          <button class="btn btn-sm btn-outline">新建技能</button>
+        </div>
+        <span class="filter-meta">12 个结果 · 关键词「pdf」</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">窄屏堆叠 <em>stacked · ≤640px 使用（G-034）</em></h2>
+    <div class="state"><span class="state-label">stacked</span>
+      <div class="filter-bar filter-bar--stacked">
+        <div class="filter-search"><input class="input" type="search" placeholder="搜索技能" /></div>
+        <div class="filter-pills">
+          <button class="filter-pill is-active">全部</button>
+          <button class="filter-pill">已发布</button>
+          <button class="filter-pill">待审核</button>
+        </div>
+        <div class="filter-actions"><button class="btn btn-sm btn-outline">新建技能</button></div>
+      </div>
+    </div>
+  </section>
+  <section class="block">
+    <h2 class="block-title">尺寸档位 <em>size · 24 / 28 / 32</em></h2>
+    <div class="state"><span class="state-label">size-sm / default / size-md</span>
+      <div class="filter-pills">
+        <button class="filter-pill filter-pill--sm is-active">全部 <span class="filter-pill-count">128</span></button>
+        <button class="filter-pill filter-pill--sm">已发布 <span class="filter-pill-count">96</span></button>
+        <button class="filter-pill">全部 <span class="filter-pill-count">128</span></button>
+        <button class="filter-pill">已发布 <span class="filter-pill-count">96</span></button>
+        <button class="filter-pill filter-pill--md is-active">全部 <span class="filter-pill-count">128</span></button>
+        <button class="filter-pill filter-pill--md">已发布 <span class="filter-pill-count">96</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">溢出滚动 <em>overflow · 单行横向滚动，不撑高工具栏</em></h2>
+    <div class="state"><span class="state-label">scroll-x</span>
+      <div class="filter-bar preview-narrow">
+        <div class="filter-pills filter-pills--scroll">
+          <button class="filter-pill is-active">全部 <span class="filter-pill-count">128</span></button>
+          <button class="filter-pill">已发布 <span class="filter-pill-count">96</span></button>
+          <button class="filter-pill">待审核 <span class="filter-pill-count">18</span></button>
+          <button class="filter-pill">已撤回 <span class="filter-pill-count">14</span></button>
+          <button class="filter-pill">草稿 <span class="filter-pill-count">6</span></button>
+          <button class="filter-pill">扫描失败 <span class="filter-pill-count">2</span></button>
+          <button class="filter-pill">已归档 <span class="filter-pill-count">31</span></button>
+          <button class="filter-pill">被举报 <span class="filter-pill-count">3</span></button>
+        </div>
+        <div class="filter-actions"><button class="btn btn-sm btn-outline">新建技能</button></div>
+      </div>
+    </div>
+  </section>
+
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

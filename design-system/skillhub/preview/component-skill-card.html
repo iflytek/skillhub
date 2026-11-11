@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>SkillCard 技能卡片 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <link rel="stylesheet" href="../components.runtime.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); } .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); } .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); text-transform: none; letter-spacing: var(--sh-tracking-body); color: var(--sh-text-placeholder); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--sh-space-4); align-items: stretch; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); max-width: 360px; } .state > .skill-card { flex: 1; } .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-placeholder); }
+
+    .skill-card { display: flex; flex-direction: column; gap: var(--sh-space-2); padding: var(--sh-space-card-padding); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); background: var(--sh-bg-raised); box-shadow: var(--sh-shadow-card); color: var(--sh-text-primary); transition: background var(--sh-duration-fast) var(--sh-ease-standard), border-color var(--sh-duration-fast) var(--sh-ease-standard), box-shadow var(--sh-duration-fast) var(--sh-ease-standard); }
+    .skill-card:hover, .skill-card.is-hover { border-color: var(--sh-interaction-hover-border); background: var(--sh-interaction-hover-bg); box-shadow: var(--sh-shadow-card-hover); cursor: pointer; }
+    .skill-card:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+    .skill-card.is-offline { opacity: .68; }
+    .skill-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sh-space-2); }
+    .skill-card-id { display: flex; align-items: center; gap: var(--sh-space-2); min-width: 0; }
+    .skill-card-logo { display: grid; place-items: center; width: 34px; height: 34px; flex: none; border-radius: var(--sh-radius-sm); background: var(--sh-accent-base); color: var(--sh-text-primary); font-size: var(--sh-text-h6); }
+    .skill-card-heading { min-width: 0; }
+    .skill-card-name { margin: 0; min-height: calc(var(--sh-text-h6-lh) * 2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-size: var(--sh-text-h6); line-height: var(--sh-text-h6-lh); font-weight: var(--sh-weight-semibold); }
+    .skill-card-slug { margin: 1px 0 0; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; font-family: var(--sh-font-mono); font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-tertiary); }
+    .skill-card-desc { margin: 0; min-height: 42px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: var(--sh-text-body-sm); line-height: var(--sh-text-body-sm-lh); color: var(--sh-text-secondary); }
+    .skill-card-tags { display: flex; gap: var(--sh-space-1_5); flex-wrap: wrap; }
+    .skill-card-foot { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sh-space-2); margin-top: auto; padding-top: var(--sh-space-2_5); border-top: var(--sh-size-border-width) solid var(--sh-border-subtle); }
+    .skill-card-meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-tertiary); white-space: nowrap; }
+    .skill-card-meta--end { margin-left: auto; }
+    .skill-card--compact { padding: var(--sh-space-4); gap: var(--sh-space-1); }
+    .skill-card--compact .skill-card-desc { -webkit-line-clamp: 1; min-height: 0; }
+    .skill-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--sh-space-4); align-items: stretch; }
+    /* 640px 断点：卡片单列；标签换行展示，不用隐藏滚动条裁切 */
+    @media (max-width: 640px) {
+      .skill-grid { grid-template-columns: minmax(0, 1fr); gap: var(--sh-space-3); }
+      .skill-card-tags { flex-wrap: wrap; min-width: 0; }
+      .skill-card-tags > * { flex: none; }
+      .skill-card-top .lifecycle, .skill-card-top .verdict { flex: none; }
+    }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+  </style>
+</head>
+<body data-component="skill-card">
+  <button class="sh-theme-toggle" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">SkillCard 技能卡片</h1>
+    <p class="lede">列表页的最小信息单元：标识 + 状态 + 描述 + 标签 + 版本/安装量 + 主操作。卡片本身不决定网格列数。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">五种状态 <em>published / hover / scanning / pending-review / offline</em></h2>
+    <div class="grid">
+      <div class="state"><span class="state-label">published · default</span>
+        <article class="skill-card">
+          <div class="skill-card-top">
+            <div class="skill-card-id">
+              <span class="skill-card-logo" aria-hidden="true">▤</span>
+              <div class="skill-card-heading">
+                <h2 class="skill-card-name">pdf-toolkit</h2>
+                <p class="skill-card-slug">@global / pdf-toolkit</p>
+              </div>
+            </div>
+            <span class="lifecycle lifecycle-published">已发布</span>
+          </div>
+          <p class="skill-card-desc">合并、拆分、提取表单字段与 OCR。适合合同归档与票据处理流程。</p>
+          <div class="skill-card-tags"><span class="tag-gray">PDF</span><span class="tag-gray">OCR</span><span class="tag-gray">归档</span></div>
+          <div class="skill-card-foot">
+            <span class="skill-card-meta">v1.4.2 · 2 天前</span>
+            <span class="skill-card-meta">12.8k 安装</span>
+            <button class="btn btn-sm btn-outline">安装</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="state"><span class="state-label">hover · 淡蓝底 + 抬升阴影</span>
+        <article class="skill-card is-hover">
+          <div class="skill-card-top">
+            <div class="skill-card-id">
+              <span class="skill-card-logo" aria-hidden="true">▤</span>
+              <div class="skill-card-heading">
+                <h2 class="skill-card-name">pdf-toolkit</h2>
+                <p class="skill-card-slug">@global / pdf-toolkit</p>
+              </div>
+            </div>
+            <span class="lifecycle lifecycle-published">已发布</span>
+          </div>
+          <p class="skill-card-desc">合并、拆分、提取表单字段与 OCR。适合合同归档与票据处理流程。</p>
+          <div class="skill-card-tags"><span class="tag-gray">PDF</span><span class="tag-gray">OCR</span><span class="tag-gray">归档</span></div>
+          <div class="skill-card-foot">
+            <span class="skill-card-meta">v1.4.2 · 2 天前</span>
+            <span class="skill-card-meta">12.8k 安装</span>
+            <button class="btn btn-sm btn-outline">安装</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="state"><span class="state-label">scanning · 安装禁用</span>
+        <article class="skill-card">
+          <div class="skill-card-top">
+            <div class="skill-card-id">
+              <span class="skill-card-logo" aria-hidden="true">◈</span>
+              <div class="skill-card-heading">
+                <h2 class="skill-card-name">data-cleanup</h2>
+                <p class="skill-card-slug">@data-platform / data-cleanup</p>
+              </div>
+            </div>
+            <span class="lifecycle lifecycle-scanning">扫描中</span>
+          </div>
+          <p class="skill-card-desc">识别 CSV 中的重复行、缺失值与异常编码，输出可复核的清洗报告。</p>
+          <div class="skill-card-tags"><span class="tag-gray">CSV</span><span class="tag-gray">数据质量</span></div>
+          <div class="skill-card-foot">
+            <span class="skill-card-meta">v2.1.0 · 1 天前</span>
+            <span class="skill-card-meta">8.4k 安装</span>
+            <button class="btn btn-sm btn-outline" disabled>安装</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="state"><span class="state-label">pending-review · 不提供安装</span>
+        <article class="skill-card">
+          <div class="skill-card-top">
+            <div class="skill-card-id">
+              <span class="skill-card-logo" aria-hidden="true">◫</span>
+              <div class="skill-card-heading">
+                <h2 class="skill-card-name">chinese-office-assistant</h2>
+                <p class="skill-card-slug">@global / chinese-office-assistant</p>
+              </div>
+            </div>
+            <span class="lifecycle lifecycle-pending-review">待审核</span>
+          </div>
+          <p class="skill-card-desc">公文格式校对、红头模板填充、长文档摘要与术语一致性检查。</p>
+          <div class="skill-card-tags"><span class="tag-gray">公文</span><span class="tag-gray">写作</span></div>
+          <div class="skill-card-foot">
+            <span class="skill-card-meta">v0.9.0 · 4 小时前</span>
+            <span class="skill-card-meta">3.2k 安装</span>
+            <button class="btn btn-sm btn-ghost">查看审核</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="state"><span class="state-label">offline · 撤回/归档，整卡降权</span>
+        <article class="skill-card is-offline">
+          <div class="skill-card-top">
+            <div class="skill-card-id">
+              <span class="skill-card-logo" aria-hidden="true">◇</span>
+              <div class="skill-card-heading">
+                <h2 class="skill-card-name">legacy-report-export</h2>
+                <p class="skill-card-slug">@team-report / legacy-report-export</p>
+              </div>
+            </div>
+            <span class="lifecycle lifecycle-yanked">已撤回</span>
+          </div>
+          <p class="skill-card-desc">旧版报表导出流程，已由 @team-report/report-v2 取代。</p>
+          <div class="skill-card-tags"><span class="tag-gray">报表</span></div>
+          <div class="skill-card-foot">
+            <span class="skill-card-meta">v1.0.0 · 90 天前</span>
+            <span class="skill-card-meta">642 安装</span>
+            <button class="btn btn-sm btn-outline" disabled>不可安装</button>
+          </div>
+        </article>
+      </div>
+
+      <div class="state"><span class="state-label">超长技能名 · 单行截断</span>
+        <article class="skill-card">
+          <div class="skill-card-top">
+            <div class="skill-card-id">
+              <span class="skill-card-logo" aria-hidden="true">∑</span>
+              <div class="skill-card-heading">
+                <h2 class="skill-card-name">enterprise-contract-ocr-and-legal-document-analysis-pipeline</h2>
+                <p class="skill-card-slug">@legal / enterprise-contract-ocr-and-legal-document-analysis-pipeline</p>
+              </div>
+            </div>
+            <span class="lifecycle lifecycle-published">已发布</span>
+          </div>
+          <p class="skill-card-desc">合同字段抽取、条款比对与风险摘要，支持批量扫描件。</p>
+          <div class="skill-card-tags"><span class="tag-gray">合同</span><span class="tag-gray">OCR</span></div>
+          <div class="skill-card-foot">
+            <span class="skill-card-meta">v0.3.1 · 6 天前</span>
+            <span class="skill-card-meta">128 安装</span>
+            <button class="btn btn-sm btn-outline">安装</button>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">紧凑变体 <em>compact · 用于侧栏推荐</em></h2>
+    <div class="state"><span class="state-label">compact</span>
+      <article class="skill-card skill-card--compact">
+        <div class="skill-card-top">
+          <div class="skill-card-id">
+            <span class="skill-card-logo" aria-hidden="true">▥</span>
+            <div class="skill-card-heading">
+              <h2 class="skill-card-name">api-mock</h2>
+              <p class="skill-card-slug">@global / api-mock</p>
+            </div>
+          </div>
+          <span class="lifecycle lifecycle-published">已发布</span>
+        </div>
+        <p class="skill-card-desc">根据 OpenAPI 文档生成可运行的 Mock 服务。</p>
+        <div class="skill-card-foot">
+          <span class="skill-card-meta">v2.0.4 · 645 安装</span>
+          <button class="btn btn-sm btn-outline" style="margin-left: auto">安装</button>
+        </div>
+      </article>
+    </div>
+  </section>
+<footer style="margin-top:var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

@@ -3,32 +3,33 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/shared/lib/utils'
 
 const buttonVariants = cva(
-  // 基础：紧致圆角、精准属性过渡、按下回弹、聚焦双层光晕
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[transform,background-color,box-shadow,border-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] motion-reduce:transform-none select-none',
+  // Size-specific controls and a single keyboard outline; preserve native button behavior.
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--control-radius)] text-[length:var(--control-font-size)] leading-[var(--control-line-height)] font-medium transition-[background-color,border-color] duration-150 ease-out focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] motion-reduce:transform-none select-none',
   {
     variants: {
       variant: {
-        // default：三层阴影（inset 顶高光 + 底部投影 + 1px 描边），模拟立体片状按钮
+        // Keep variant names stable while adopting the neutral target palette.
         default:
-          'bg-primary text-primary-foreground shadow-[inset_0_1px_0_0_hsl(0_0%_100%/0.10),0_1px_2px_0_rgb(0_0_0/0.10),0_0_0_1px_rgb(0_0_0/0.04)] hover:bg-primary/92 hover:shadow-[inset_0_1px_0_0_hsl(0_0%_100%/0.14),0_2px_4px_-1px_rgb(0_0_0/0.14),0_0_0_1px_rgb(0_0_0/0.06)] active:shadow-[inset_0_1px_2px_0_rgb(0_0_0/0.14)]',
+          'bg-primary text-primary-foreground hover:bg-primary/90',
         destructive:
-          'bg-destructive text-destructive-foreground shadow-[inset_0_1px_0_0_hsl(0_0%_100%/0.12),0_1px_2px_0_rgb(0_0_0/0.10)] hover:bg-destructive/92 hover:shadow-[inset_0_1px_0_0_hsl(0_0%_100%/0.16),0_2px_4px_-1px_rgb(0_0_0/0.14)]',
+          'bg-destructive text-destructive-foreground hover:bg-destructive/90',
         outline:
-          'border border-border/60 bg-background/70 text-foreground shadow-[0_1px_1px_0_rgb(0_0_0/0.04)] hover:bg-accent/80 hover:border-border hover:text-accent-foreground hover:shadow-[0_1px_2px_0_rgb(0_0_0/0.06)]',
+          'border border-border bg-background text-foreground hover:bg-accent hover:text-accent-foreground',
         secondary:
-          'bg-secondary text-secondary-foreground shadow-[inset_0_1px_0_0_hsl(0_0%_100%/0.04),0_1px_1px_0_rgb(0_0_0/0.04)] hover:bg-secondary/80 hover:shadow-[inset_0_1px_0_0_hsl(0_0%_100%/0.06),0_1px_2px_0_rgb(0_0_0/0.06)]',
+          'bg-secondary text-secondary-foreground hover:bg-secondary/80',
         soft:
-          'border border-blue-500/20 bg-blue-500/10 text-blue-700 shadow-none hover:border-blue-500/30 hover:bg-blue-500/15 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-200',
+          'border border-primary/15 bg-primary/5 text-primary shadow-none hover:bg-primary/10',
         ghost:
           'hover:bg-accent/70 hover:text-accent-foreground',
         link:
           'text-primary underline-offset-4 hover:underline active:scale-100',
       },
       size: {
-        default: 'h-[var(--control-height)] px-4 py-2',
-        sm: 'h-8 rounded-sm px-3 text-xs',
-        lg: 'h-10 rounded-lg px-8',
-        icon: 'h-[var(--control-height)] w-[var(--control-height)]',
+        default: 'h-[var(--control-height)] px-[var(--control-padding-x)] py-0',
+        xs: 'h-[var(--control-xs-height)] px-2 py-0 text-xs leading-4',
+        sm: 'h-[var(--control-sm-height)] px-2.5 py-0',
+        lg: 'h-[var(--control-lg-height)] rounded-[var(--control-lg-radius)] px-3 py-0 text-sm leading-[22px]',
+        icon: 'h-[var(--control-icon-size)] w-[var(--control-icon-size)]',
       },
     },
     defaultVariants: {
