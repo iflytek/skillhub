@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller.portal;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.dto.AdminSkillActionRequest;
@@ -14,6 +15,7 @@ import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -164,6 +166,7 @@ public class SkillLifecycleController extends BaseApiController {
                                                                        @Valid @RequestBody ConfirmPublishRequest request,
                                                                        @RequestAttribute("userId") String userId,
                                                                        @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                                       @AuthenticationPrincipal PlatformPrincipal principal,
                                                                        HttpServletRequest httpRequest) {
         return ok("response.success.updated",
                 governanceWorkflowAppService.confirmPublish(
@@ -172,6 +175,6 @@ public class SkillLifecycleController extends BaseApiController {
                         request.version(),
                         userId,
                         userNsRoles,
-                        AuditRequestContext.from(httpRequest)));
+                        AuditRequestContext.from(httpRequest), principal.tokenCapabilities()));
     }
 }

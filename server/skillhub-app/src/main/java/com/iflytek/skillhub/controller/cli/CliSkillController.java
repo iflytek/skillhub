@@ -135,7 +135,7 @@ public class CliSkillController extends BaseApiController {
         var result = cliSkillAppService.publish(
                 namespace, entries, principal.userId(),
                 SkillVisibility.valueOf((visibility != null ? visibility : "PUBLIC").toUpperCase()),
-                principal.platformRoles());
+                principal.platformRoles(), principal.tokenCapabilities());
         return ok("response.success.published", result);
     }
 }

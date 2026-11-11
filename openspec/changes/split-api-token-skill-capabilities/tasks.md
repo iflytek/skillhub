@@ -11,14 +11,16 @@
 
 ## 2. 组合操作上限
 
-- [ ] 2.1 `[REQ-ATC-03]` 认证过滤器把 Token 有效能力写入 `PlatformPrincipal`（会话为空表示不受限），AppService 层传入领域服务。
-- [ ] 2.2 `[REQ-ATC-03]` `SkillPublishService`：Token 调用且已有技能可见性变化时要求 `skill:manage`，在创建版本与修改技能之前拒绝；Token 调用时 SUPER_ADMIN 不触发 `autoPublish`。
-- [ ] 2.3 `[REQ-ATC-03]` `SkillReviewSubmitService#confirmPublish` 在 Token 调用时要求 `skill:publish-private`；`rerelease` 验证 PRIVATE 落在 `UPLOADED`。
-- [ ] 2.4 `[REQ-ATC-03]` 先盘点迁移前 Bundle 操作可按 operation ID 关联的发起方式及旧授权证据；
+- [x] 2.1 `[REQ-ATC-03]` 认证过滤器把 Token 有效能力写入 `PlatformPrincipal`（会话为空表示不受限），AppService 层传入领域服务。
+- [x] 2.2 `[REQ-ATC-03]` `SkillPublishService`：Token 调用且已有技能可见性变化时要求 `skill:manage`，
+  在创建版本与修改技能之前拒绝；Token 调用时 SUPER_ADMIN 不触发 `autoPublish`。
+- [x] 2.3 `[REQ-ATC-03]` `SkillReviewSubmitService#confirmPublish` 在 Token 调用时要求 `skill:publish-private`；
+  `rerelease` 验证 PRIVATE 落在 `UPLOADED`。
+- [x] 2.4 `[REQ-ATC-03]` 先盘点迁移前 Bundle 操作可按 operation ID 关联的发起方式及旧授权证据；
   操作记录持久化发起方式与 Token 能力快照（Flyway 新增字段）。新 Token 操作缺快照在落库前拒绝；
   恢复／失败重试只沿用原授权，可证历史记录按原授权处理，来源不明的空快照保持 `BLOCKED_RETRYABLE`，
   不按创建时间、当前 actor 角色或重试者权限推断旧版全能力。
-- [ ] 2.5 `[REQ-ATC-03]` 集成测试覆盖 spec 中全部场景及无副作用拒绝，尤其是 Bundle 新操作缺快照、
+- [x] 2.5 `[REQ-ATC-03]` 集成测试覆盖 spec 中全部场景及无副作用拒绝，尤其是 Bundle 新操作缺快照、
   历史空快照来源不明、可证历史恢复、提权重试；分别覆盖普通存量 Token、SUPER_ADMIN 存量 Token、
   SUPER_ADMIN 会话和新 read + submit Token 的 PRIVATE 上传／显式确认行为。
 

@@ -97,7 +97,7 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
             Set<String> scopes = apiTokenScopeService.parseScopes(apiToken.getScopeJson());
             PlatformPrincipal principal = new PlatformPrincipal(
                 userAccount.getId(), userAccount.getDisplayName(), userAccount.getEmail(),
-                userAccount.getAvatarUrl(), "api_token", roles
+                userAccount.getAvatarUrl(), "api_token", roles, apiTokenScopeService.expandScopes(scopes)
             );
             List<SimpleGrantedAuthority> authorities = new ArrayList<>();
             authorities.addAll(roles.stream()

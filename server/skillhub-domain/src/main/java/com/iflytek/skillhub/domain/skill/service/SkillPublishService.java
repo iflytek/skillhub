@@ -351,6 +351,18 @@ public class SkillPublishService {
                 confirmWarnings, false, false, null, null, displayName, shortDescription, overview, resetPresentation);
     }
 
+    /** Publishes a request carrying an explicit Token capability ceiling. */
+    @Transactional
+    public PublishResult publishCandidateFromEntries(
+            String namespaceSlug, List<PackageEntry> entries, String publisherId,
+            SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
+            String displayName, String shortDescription, String overview, boolean resetPresentation,
+            Set<String> tokenCapabilities) {
+        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles,
+                confirmWarnings, false, false, null, null, displayName, shortDescription, overview,
+                resetPresentation, tokenCapabilities);
+    }
+
     /** Publishes a validated GitHub package into the dedicated sync review queue. */
     @Transactional
     public PublishResult publishGithubSyncFromEntries(
@@ -393,6 +405,17 @@ public class SkillPublishService {
             Set<String> platformRoles,
             boolean confirmWarnings
     ) {
+        return publishBundleMemberFromEntries(namespaceSlug, expectedSkillId, expectedSkillSlug,
+                expectedVersion, entries, stagedSha256, publisherId, visibility, userNamespaceRoles,
+                platformRoles, confirmWarnings, null);
+    }
+
+    @Transactional
+    public PublishResult publishBundleMemberFromEntries(
+            String namespaceSlug, Long expectedSkillId, String expectedSkillSlug, String expectedVersion,
+            List<PackageEntry> entries, Map<String, String> stagedSha256, String publisherId,
+            SkillVisibility visibility, Map<Long, NamespaceRole> userNamespaceRoles,
+            Set<String> platformRoles, boolean confirmWarnings, Set<String> tokenCapabilities) {
         BundlePublicationTarget target = new BundlePublicationTarget(
                 expectedSkillId, expectedSkillSlug, expectedVersion,
                 userNamespaceRoles == null ? Map.of() : Map.copyOf(userNamespaceRoles),
@@ -400,7 +423,7 @@ public class SkillPublishService {
         return publishFromEntriesInternal(
                 namespaceSlug, entries, publisherId, visibility,
                 platformRoles == null ? Set.of() : platformRoles,
-                confirmWarnings, false, false, target);
+                confirmWarnings, false, false, target, null, null, null, null, false, tokenCapabilities);
     }
 
     /**
@@ -542,6 +565,17 @@ public class SkillPublishService {
             boolean forceAutoPublish, boolean bypassMembershipCheck,
             BundlePublicationTarget bundleTarget, GithubSyncPublicationTarget syncTarget, String displayName,
             String shortDescription, String overview, boolean resetPresentation) {
+        return publishFromEntriesInternal(namespaceSlug, entries, publisherId, visibility, platformRoles,
+                confirmWarnings, forceAutoPublish, bypassMembershipCheck, bundleTarget, syncTarget,
+                displayName, shortDescription, overview, resetPresentation, null);
+    }
+
+    private PublishResult publishFromEntriesInternal(
+            String namespaceSlug, List<PackageEntry> entries, String publisherId,
+            SkillVisibility visibility, Set<String> platformRoles, boolean confirmWarnings,
+            boolean forceAutoPublish, boolean bypassMembershipCheck,
+            BundlePublicationTarget bundleTarget, GithubSyncPublicationTarget syncTarget, String displayName,
+            String shortDescription, String overview, boolean resetPresentation, Set<String> tokenCapabilities) {
 
         // 1. Find namespace by slug
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
@@ -694,6 +728,10 @@ public class SkillPublishService {
             newSkill = bundleTarget.expectedSkillId() == null;
         }
 
+        if (!newSkill && skill.getVisibility() != visibility) {
+            SkillTokenCapabilityPolicy.require(tokenCapabilities, SkillTokenCapabilityPolicy.MANAGE);
+        }
+
         if (!newSkill && skill.getLatestVersionId() != null && !resetPresentation
                 && shortDescription == null && overview == null && !hasPackagePresentation(metadata)) {
             SkillVersion published = skillVersionRepository.findBySkillIdAndStatus(
@@ -721,7 +759,10 @@ public class SkillPublishService {
         }
 
         if (visibilityService != null) {
-            visibilityService.lockedSkill(skill.getId());
+            Skill locked = visibilityService.lockedSkill(skill.getId());
+            if (!newSkill && locked.getVisibility() != visibility) {
+                SkillTokenCapabilityPolicy.require(tokenCapabilities, SkillTokenCapabilityPolicy.MANAGE);
+            }
             visibilityService.assertNoPendingVisibility(skill.getId());
         }
         if (skill.getStatus() == SkillStatus.ARCHIVED) {
@@ -788,7 +829,7 @@ public class SkillPublishService {
         if (syncTarget != null) {
             version.setGithubSyncIngestionId(syncTarget.ingestionId());
         }
-        boolean autoPublish = forceAutoPublish || isSuperAdmin;
+        boolean autoPublish = tokenCapabilities == null && (forceAutoPublish || isSuperAdmin);
         if (autoPublish) {
             version.setStatus(SkillVersionStatus.PUBLISHED);
             version.setPublishedAt(currentTime());

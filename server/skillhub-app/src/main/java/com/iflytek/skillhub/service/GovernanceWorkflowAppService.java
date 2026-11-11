@@ -379,6 +379,17 @@ public class GovernanceWorkflowAppService {
                                                           String userId,
                                                           Map<Long, NamespaceRole> userNsRoles,
                                                           AuditRequestContext auditContext) {
+        return confirmPublish(namespace, slug, version, userId, userNsRoles, auditContext, null);
+    }
+
+    public SkillLifecycleMutationResponse confirmPublish(String namespace, String slug, String version,
+                                                         String userId, Map<Long, NamespaceRole> userNsRoles,
+                                                         AuditRequestContext auditContext,
+                                                         java.util.Set<String> tokenCapabilities) {
+        if (tokenCapabilities != null) {
+            return skillLifecycleAppService.confirmPublish(
+                    namespace, slug, version, userId, userNsRoles, auditContext, tokenCapabilities);
+        }
         return skillLifecycleAppService.confirmPublish(
                 namespace,
                 slug,

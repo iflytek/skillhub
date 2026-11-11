@@ -249,15 +249,23 @@ public class SkillLifecycleAppService {
                                                           String userId,
                                                           Map<Long, NamespaceRole> userNamespaceRoles,
                                                           AuditRequestContext auditContext) {
+        return confirmPublish(namespace, slug, version, userId, userNamespaceRoles, auditContext, null);
+    }
+
+    @Transactional
+    public SkillLifecycleMutationResponse confirmPublish(String namespace, String slug, String version,
+                                                          String userId, Map<Long, NamespaceRole> userNamespaceRoles,
+                                                          AuditRequestContext auditContext,
+                                                          java.util.Set<String> tokenCapabilities) {
         Skill skill = findSkill(namespace, slug, userId);
         SkillVersion skillVersion = findVersion(skill.getId(), version);
-        skillReviewSubmitService.confirmPublish(
-                skill.getId(),
-                skillVersion.getId(),
-                userId,
-                normalizeRoles(userNamespaceRoles),
-                ownerPlatformRoles(skill, userId)
-        );
+        if (tokenCapabilities == null) {
+            skillReviewSubmitService.confirmPublish(skill.getId(), skillVersion.getId(), userId,
+                    normalizeRoles(userNamespaceRoles), ownerPlatformRoles(skill, userId));
+        } else {
+            skillReviewSubmitService.confirmPublish(skill.getId(), skillVersion.getId(), userId,
+                    normalizeRoles(userNamespaceRoles), ownerPlatformRoles(skill, userId), tokenCapabilities);
+        }
         auditLogService.record(
                 userId,
                 "CONFIRM_PUBLISH",

@@ -112,8 +112,10 @@ public class AuthController extends BaseApiController {
                     principal.email(),
                     user.getAvatarUrl(),      // use DB value
                     principal.oauthProvider(),
-                    freshRoles);
-            platformSessionService.establishSession(principal, request, false);
+                    freshRoles, principal.tokenCapabilities());
+            if (principal.tokenCapabilities() == null) {
+                platformSessionService.establishSession(principal, request, false);
+            }
         }
         return ok("response.success.read", authMeResponseAssembler.from(principal));
     }

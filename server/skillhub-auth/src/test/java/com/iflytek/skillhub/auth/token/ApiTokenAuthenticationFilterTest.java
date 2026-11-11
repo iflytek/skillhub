@@ -81,6 +81,9 @@ class ApiTokenAuthenticationFilterTest {
             .anyMatch(authority -> authority.getAuthority().equals("SCOPE_skill:publish")));
         assertTrue(authentication.getAuthorities().stream()
             .anyMatch(authority -> authority.getAuthority().equals("SCOPE_token:manage")));
+        var principal = (com.iflytek.skillhub.auth.rbac.PlatformPrincipal) authentication.getPrincipal();
+        assertEquals(java.util.Set.of("skill:submit", "skill:publish-private", "skill:manage",
+                "suite:legacy-write", "token:manage"), principal.tokenCapabilities());
         verify(apiTokenService).touchLastUsed(token);
     }
 

@@ -173,9 +173,16 @@ public class CliSkillAppService {
     }
 
     public CliPublishResponse publish(String namespace, List<PackageEntry> entries, String publisherId, SkillVisibility visibility, Set<String> platformRoles) {
-        SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
-                namespace, entries, publisherId, visibility, platformRoles, false
-        );
+        return publish(namespace, entries, publisherId, visibility, platformRoles, null);
+    }
+
+    public CliPublishResponse publish(String namespace, List<PackageEntry> entries, String publisherId,
+                                      SkillVisibility visibility, Set<String> platformRoles,
+                                      Set<String> tokenCapabilities) {
+        SkillPublishService.PublishResult result = tokenCapabilities == null
+                ? skillPublishService.publishFromEntries(namespace, entries, publisherId, visibility, platformRoles, false)
+                : skillPublishService.publishCandidateFromEntries(namespace, entries, publisherId, visibility,
+                        platformRoles, false, null, null, null, false, tokenCapabilities);
 
         return new CliPublishResponse(
                 namespace,

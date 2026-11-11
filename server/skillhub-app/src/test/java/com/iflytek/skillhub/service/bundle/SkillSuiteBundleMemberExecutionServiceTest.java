@@ -182,7 +182,7 @@ class SkillSuiteBundleMemberExecutionServiceTest {
                 org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.anyMap(),
                 org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyMap(), org.mockito.ArgumentMatchers.anySet(),
-                org.mockito.ArgumentMatchers.anyBoolean())).thenAnswer(invocation -> {
+                org.mockito.ArgumentMatchers.anyBoolean(), org.mockito.ArgumentMatchers.anySet())).thenAnswer(invocation -> {
                     List<com.iflytek.skillhub.domain.skill.validation.PackageEntry> entries = invocation.getArgument(4);
                     capturedEntries.set(entries);
                     assertThat(entries.getFirst().content()).isEqualTo(content);
