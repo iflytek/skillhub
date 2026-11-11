@@ -1341,6 +1341,7 @@
     "switchToDark": "어두운 테마로 전환"
   },
   "reviewProgress": {
+    "systemAutomaticDecision": "안전한 검사 후 시스템이 자동 승인함",
     "title": "내 검토 진행 상황",
     "subtitle": "스킬과 스킬 모음의 현재 결정, 검토자 의견, 모든 재제출 내역을 확인하세요",
     "searchLabel": "스킬, 스킬 모음 또는 네임스페이스 검색",
@@ -2161,6 +2162,24 @@
     "historyRefresh": "내역 새로고침"
   },
   "members": {
+    "autoPublication": {
+      "column": "팀 내 자동 게시",
+      "granted": "허용됨",
+      "notGranted": "허용 안 됨",
+      "notApplicable": "해당 없음",
+      "grant": "허용",
+      "revoke": "취소",
+      "scopeHint": "팀 내 자동 게시는 이 구성원이 이 네임스페이스에서 웹으로 제출한 항목과 제출 권한이 있는 모든 API 토큰에 적용됩니다. 새 스킬을 팀 전용으로 처음 게시하거나 이미 팀 전용인 스킬의 새 버전에만 적용되며, 현재 보안 검사가 명시적으로 안전하다고 판정된 뒤에만 시스템이 자동 승인합니다. 공개 범위 변경, 공개 게시, 전역 승격은 기존 검토 절차를 따릅니다. 네임스페이스 소유자 또는 관리자만 허용하거나 취소할 수 있습니다.",
+      "grantConfirmTitle": "팀 내 자동 게시 허용",
+      "grantConfirmDescription": "허용 후 {{userId}}이(가) 웹 또는 제출 권한이 있는 API 토큰으로 새로 제출한 팀 전용 게시물은 현재 보안 검사가 안전하면 시스템이 자동 승인합니다. 이미 검토 중인 제출에는 영향이 없으며 구성원의 역할과 권한은 바뀌지 않습니다.",
+      "revokeConfirmTitle": "팀 내 자동 게시 취소",
+      "revokeConfirmDescription": "취소하면 자동 승인을 기다리던 {{userId}}의 대기 중 제출은 일반 검토로 이동합니다. 진행 중인 검사는 계속되며 이미 게시된 버전은 유지됩니다. 나중에 다시 허용해도 해당 제출의 자동 승인은 복구되지 않습니다.",
+      "grantSuccessTitle": "자동 게시가 허용됨",
+      "grantSuccessDescription": "{{userId}}의 새 팀 전용 제출은 안전한 검사 후 시스템이 승인할 수 있습니다.",
+      "revokeSuccessTitle": "자동 게시가 취소됨",
+      "revokeSuccessDescription": "{{userId}}의 대기 중 제출은 이제 일반 검토를 따릅니다.",
+      "errorTitle": "팀 내 자동 게시를 변경하지 못했습니다"
+    },
     "title": "멤버 관리",
     "addMember": "멤버 추가",
     "addingMember": "추가하는 중...",
@@ -2772,6 +2791,12 @@
     "close": "닫기"
   },
   "review": {
+    "decisionMethodLabel": "결정 방식",
+    "decisionMethod": {
+      "HUMAN": "사람 검토",
+      "SYSTEM_AUTOMATIC": "시스템 자동 승인"
+    },
+    "decisionScanBasis": "검사 근거: {{scanTaskId}}",
     "avatarUpdate": "아바타 업데이트",
     "avatarRemoval": "아바타 제거",
     "metadataChange": "아바타 변경",

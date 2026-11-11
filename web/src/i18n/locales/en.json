@@ -1342,6 +1342,7 @@
     "switchToDark": "Switch to dark theme"
   },
   "reviewProgress": {
+    "systemAutomaticDecision": "Approved automatically by the system after a safe scan",
     "title": "My Review Progress",
     "subtitle": "Track the current decision, reviewer feedback, and every resubmission of your skills and suites",
     "searchLabel": "Search skills, suites, or namespaces",
@@ -2162,6 +2163,24 @@
     "historyRefresh": "Refresh history"
   },
   "members": {
+    "autoPublication": {
+      "column": "Team-only automatic publication",
+      "granted": "Granted",
+      "notGranted": "Not granted",
+      "notApplicable": "Not applicable",
+      "grant": "Grant",
+      "revoke": "Revoke",
+      "scopeHint": "Team-only automatic publication covers this member's browser submissions in this namespace and every API token they hold with submit capability. It applies only to new team-only Skills and new versions of Skills that are already team-only, and only after the current security scan is explicitly safe. Visibility changes, public publishing and global promotion still follow normal review. Only the namespace owner or admins can grant or revoke it.",
+      "grantConfirmTitle": "Grant team-only automatic publication",
+      "grantConfirmDescription": "After the grant, new team-only submissions by {{userId}} from the browser or any API token with submit capability are approved by the system once the current security scan is safe. Existing pending submissions are not affected, and the member's role and permissions do not change.",
+      "revokeConfirmTitle": "Revoke team-only automatic publication",
+      "revokeConfirmDescription": "After revocation, pending submissions by {{userId}} that were waiting for automatic approval move to normal review. Scans in progress continue. Already published versions remain published. Granting again later does not restore automatic approval for those submissions.",
+      "grantSuccessTitle": "Automatic publication granted",
+      "grantSuccessDescription": "New team-only submissions by {{userId}} can be approved by the system after a safe scan.",
+      "revokeSuccessTitle": "Automatic publication revoked",
+      "revokeSuccessDescription": "Pending submissions by {{userId}} now follow normal review.",
+      "errorTitle": "Failed to update team-only automatic publication"
+    },
     "title": "Member Management",
     "addMember": "Add Member",
     "addingMember": "Adding...",
@@ -2774,6 +2793,12 @@
     "close": "Close"
   },
   "review": {
+    "decisionMethodLabel": "Decision method",
+    "decisionMethod": {
+      "HUMAN": "Human review",
+      "SYSTEM_AUTOMATIC": "System automatic approval"
+    },
+    "decisionScanBasis": "Scan basis: {{scanTaskId}}",
     "avatarUpdate": "Avatar update",
     "avatarRemoval": "Remove avatar",
     "metadataChange": "Avatar change",

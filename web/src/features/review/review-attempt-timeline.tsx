@@ -48,7 +48,11 @@ export function ReviewAttemptTimeline({
             {attempt.reviewComment ? (
               <p className="mt-2 whitespace-pre-wrap text-foreground/85">{attempt.reviewComment}</p>
             ) : null}
-            {attempt.reviewedBy ? (
+            {attempt.decisionMethod === 'SYSTEM_AUTOMATIC' ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t('reviewProgress.systemAutomaticDecision')}
+              </p>
+            ) : attempt.reviewedBy ? (
               <p className="mt-2 text-xs text-muted-foreground">
                 {t('reviewProgress.reviewedBy', {
                   reviewer: attempt.reviewedByName || attempt.reviewedBy,

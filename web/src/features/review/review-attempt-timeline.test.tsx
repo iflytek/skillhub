@@ -51,4 +51,30 @@ describe('ReviewAttemptTimeline', () => {
     expect(html).toContain('reviewProgress.reviewedBy:Reviewer One')
     expect(html).toContain('Add tests')
   })
+
+  it('labels system automatic approval without naming the submitter as reviewer', () => {
+    const attempts: ReviewTask[] = [
+      {
+        id: 3,
+        skillVersionId: 30,
+        namespace: 'team-a',
+        skillSlug: 'demo',
+        version: '1.1.0',
+        status: 'APPROVED',
+        submittedBy: 'author',
+        decisionMethod: 'SYSTEM_AUTOMATIC',
+        decisionScanTaskId: 'scan-1',
+        submittedAt: '2026-09-02T00:00:00Z',
+        reviewedAt: '2026-09-02T00:01:00Z',
+      },
+    ]
+
+    const html = renderToStaticMarkup(
+      <ReviewAttemptTimeline attempts={attempts} locale="en" />,
+    )
+
+    expect(html).toContain('reviewProgress.systemAutomaticDecision')
+    expect(html).not.toContain('reviewProgress.reviewedBy')
+    expect(html).not.toContain('reviewProgress.reviewedBy:author')
+  })
 })

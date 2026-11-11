@@ -345,9 +345,19 @@ function ReviewDetailScreen({
               : isReviewAttemptsError ? <p className="text-sm text-destructive">{t('review.attemptHistoryError')}</p>
                 : <ReviewAttemptTimeline attempts={reviewAttempts ?? []} locale={i18n.language} compact />}
           </section>
-          {(review.reviewedBy || review.reviewComment) && (
+          {(review.reviewedBy || review.reviewComment || review.decisionMethod) && (
             <Card className="space-y-3 p-4">
               <h2 className="text-base font-semibold">{t('review.reviewResult')}</h2>
+              {review.decisionMethod && (
+                <p className="text-sm">
+                  {t('review.decisionMethodLabel')}: {t(`review.decisionMethod.${review.decisionMethod}`)}
+                </p>
+              )}
+              {review.decisionMethod === 'SYSTEM_AUTOMATIC' && review.decisionScanTaskId && (
+                <p className="break-all text-xs text-muted-foreground">
+                  {t('review.decisionScanBasis', { scanTaskId: review.decisionScanTaskId })}
+                </p>
+              )}
               {review.reviewedBy && <p className="text-sm">{t('review.reviewer')}: {review.reviewedByName || review.reviewedBy}</p>}
               {review.reviewedAt && <p className="text-sm text-muted-foreground">{t('review.reviewTime')}: {formatDate(review.reviewedAt)}</p>}
               {review.reviewComment && <p className="whitespace-pre-wrap rounded-lg bg-muted/40 p-4 text-sm">{review.reviewComment}</p>}
