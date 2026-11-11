@@ -290,52 +290,6 @@ class ReviewServiceTest {
 
     @Nested
     class ApproveReview {
-    @Test
-    void trustedPublishRequiresCurrentMemberGrantAndNamespacePolicy() {
-        var members = mock(com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository.class);
-        reviewService = new ReviewService(mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class),
-                reviewTaskRepository, skillVersionRepository, skillRepository, namespaceRepository, members,
-                permissionChecker, eventPublisher, objectMapper, skillGovernanceService,
-                governanceNotificationService, entityManager, CLOCK);
-        ReviewTask task = createPendingReviewTask();
-        task.setAutoApproveOnSafeScan(true);
-        Namespace namespace = createTeamNamespace();
-        namespace.setTrustedPublishEnabled(true);
-        var member = new com.iflytek.skillhub.domain.namespace.NamespaceMember(NAMESPACE_ID, USER_ID, NamespaceRole.MEMBER);
-        member.setReviewExempt(true);
-        SkillVersion version = createPendingReviewSkillVersion();
-        version.setRequestedVisibility(SkillVisibility.NAMESPACE_ONLY);
-        when(reviewTaskRepository.findBySkillVersionIdAndStatus(SKILL_VERSION_ID, ReviewTaskStatus.PENDING))
-                .thenReturn(Optional.of(task));
-        when(namespaceRepository.findLockedById(NAMESPACE_ID)).thenReturn(Optional.of(namespace));
-        when(members.findByNamespaceIdAndUserId(NAMESPACE_ID, USER_ID)).thenReturn(Optional.of(member));
-        when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(version));
-        when(reviewTaskRepository.updateStatusWithVersion(eq(REVIEW_TASK_ID), eq(ReviewTaskStatus.APPROVED),
-                eq(USER_ID), contains("System auto-approved"), anyInt())).thenReturn(1);
-        when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(createSkill()));
-        when(skillRepository.findByNamespaceIdAndSlug(eq(NAMESPACE_ID), anyString())).thenReturn(List.of());
-
-        reviewService.approveTrustedAfterSafeScan(SKILL_VERSION_ID);
-        assertEquals(SkillVersionStatus.PUBLISHED, version.getStatus());
-        verify(reviewTaskRepository).updateStatusWithVersion(eq(REVIEW_TASK_ID), eq(ReviewTaskStatus.APPROVED),
-                eq(USER_ID), contains("SAFE scan"), anyInt());
-
-        namespace.setTrustedPublishEnabled(false);
-        version.setStatus(SkillVersionStatus.PENDING_REVIEW);
-        reviewService.approveTrustedAfterSafeScan(SKILL_VERSION_ID);
-        assertEquals(SkillVersionStatus.PENDING_REVIEW, version.getStatus());
-        verify(reviewTaskRepository, times(1)).updateStatusWithVersion(eq(REVIEW_TASK_ID), eq(ReviewTaskStatus.APPROVED),
-                eq(USER_ID), anyString(), anyInt());
-    }
-
-    @Test
-    void unmarkedPendingReviewCannotAutoApprove() {
-        when(reviewTaskRepository.findBySkillVersionIdAndStatus(SKILL_VERSION_ID, ReviewTaskStatus.PENDING))
-                .thenReturn(Optional.of(createPendingReviewTask()));
-        reviewService.approveTrustedAfterSafeScan(SKILL_VERSION_ID);
-        verifyNoInteractions(namespaceRepository, skillVersionRepository);
-    }
-
 
         @org.junit.jupiter.params.ParameterizedTest
         @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})

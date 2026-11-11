@@ -13,7 +13,7 @@ public record MemberResponse(
         String displayName,
         String email,
         NamespaceRole role,
-        boolean reviewExempt,
+        boolean teamAutoPublicationGranted,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -25,7 +25,7 @@ public record MemberResponse(
                 null,
                 null,
                 member.getRole(),
-                member.isReviewExempt(),
+                member.isTeamAutoPublicationGranted(),
                 member.getCreatedAt(),
                 member.getUpdatedAt()
         );
@@ -39,7 +39,7 @@ public record MemberResponse(
                 user != null ? user.getDisplayName() : null,
                 user != null ? user.getEmail() : null,
                 member.getRole(),
-                member.isReviewExempt(),
+                member.isTeamAutoPublicationGranted(),
                 member.getCreatedAt(),
                 member.getUpdatedAt()
         );

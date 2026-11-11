@@ -28,9 +28,6 @@ public class Namespace {
     @Column(nullable = false, length = 32)
     private NamespaceType type = NamespaceType.TEAM;
 
-    @Column(name = "trusted_publish_enabled", nullable = false)
-    private boolean trustedPublishEnabled;
-
     @Column(name = "avatar_url", length = 512)
     private String avatarUrl;
 
@@ -72,8 +69,6 @@ public class Namespace {
     public void setStatus(NamespaceStatus status) { this.status = status; }
     public NamespaceType getType() { return type; }
     public void setType(NamespaceType type) { this.type = type; }
-    public boolean isTrustedPublishEnabled() { return trustedPublishEnabled; }
-    public void setTrustedPublishEnabled(boolean enabled) { this.trustedPublishEnabled = enabled; }
     public String getAvatarUrl() { return avatarUrl; }
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
     public String getCreatedBy() { return createdBy; }

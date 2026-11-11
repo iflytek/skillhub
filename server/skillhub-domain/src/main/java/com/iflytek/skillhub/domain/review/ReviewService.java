@@ -261,26 +261,6 @@ public class ReviewService {
         return approveCheckedTask(task, reviewerId, comment);
     }
 
-    /** Called by the scanner only after the current attempt has returned SAFE. */
-    @Transactional
-    public void approveTrustedAfterSafeScan(Long skillVersionId) {
-        ReviewTask task = reviewTaskRepository.findBySkillVersionIdAndStatus(skillVersionId, ReviewTaskStatus.PENDING).orElse(null);
-        if (task == null || !task.isAutoApproveOnSafeScan() || task.getSubjectType() != ReviewSubjectType.SKILL_VERSION) return;
-        Namespace namespace = namespaceRepository.findLockedById(task.getNamespaceId()).orElse(null);
-        if (namespace == null || namespace.getType() != com.iflytek.skillhub.domain.namespace.NamespaceType.TEAM
-                || namespace.getStatus() != NamespaceStatus.ACTIVE || !namespace.isTrustedPublishEnabled()) return;
-        boolean granted = namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), task.getSubmittedBy())
-                .filter(member -> member.getRole() == NamespaceRole.MEMBER && member.isReviewExempt()).isPresent();
-        if (!granted) return;
-        SkillVersion version = skillVersionRepository.findById(skillVersionId).orElse(null);
-        if (version == null || version.getStatus() != SkillVersionStatus.PENDING_REVIEW
-                || version.getRequestedVisibility() != com.iflytek.skillhub.domain.skill.SkillVisibility.NAMESPACE_ONLY
-                || version.getGithubSyncIngestionId() != null) return;
-        if (avatarParticipant != null) { avatarParticipant.lock(task); entityManager.refresh(task); }
-        if (task.getStatus() != ReviewTaskStatus.PENDING) return;
-        approveCheckedTask(task, task.getSubmittedBy(), "System auto-approved: trusted TEAM publisher after SAFE scan");
-    }
-
     private ReviewTask approveCheckedTask(ReviewTask task, String reviewerId, String comment) {
         Long reviewTaskId = task.getId();
         if (task.getRequestedVisibility() != null) { visibilityService.validateApproval(task); }

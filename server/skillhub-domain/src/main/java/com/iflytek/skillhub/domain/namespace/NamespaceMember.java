@@ -3,6 +3,7 @@ package com.iflytek.skillhub.domain.namespace;
 import jakarta.persistence.*;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "namespace_member",
@@ -22,8 +23,8 @@ public class NamespaceMember {
     @Column(nullable = false, length = 32)
     private NamespaceRole role;
 
-    @Column(name = "review_exempt", nullable = false)
-    private boolean reviewExempt;
+    @Column(name = "team_auto_publication_grant_id")
+    private UUID teamAutoPublicationGrantId;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -55,8 +56,19 @@ public class NamespaceMember {
     public void setNamespaceId(Long namespaceId) { this.namespaceId = namespaceId; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
-    public boolean isReviewExempt() { return reviewExempt; }
-    public void setReviewExempt(boolean reviewExempt) { this.reviewExempt = reviewExempt; }
+    public UUID getTeamAutoPublicationGrantId() { return teamAutoPublicationGrantId; }
+    public boolean isTeamAutoPublicationGranted() { return teamAutoPublicationGrantId != null; }
+    public UUID grantTeamAutoPublication() {
+        if (teamAutoPublicationGrantId == null) {
+            teamAutoPublicationGrantId = UUID.randomUUID();
+        }
+        return teamAutoPublicationGrantId;
+    }
+    public UUID revokeTeamAutoPublication() {
+        UUID previous = teamAutoPublicationGrantId;
+        teamAutoPublicationGrantId = null;
+        return previous;
+    }
     public NamespaceRole getRole() { return role; }
     public void setRole(NamespaceRole role) { this.role = role; }
     public Instant getCreatedAt() { return createdAt; }

@@ -307,6 +307,8 @@ public class AccountMergeService {
                     secondaryUserId
                 );
             } else {
+                // A grant identifies one member's accepted submissions; it never follows a merged account.
+                secondaryMembership.revokeTeamAutoPublication();
                 secondaryMembership.setUserId(primaryUserId);
                 namespaceMemberRepository.save(secondaryMembership);
             }

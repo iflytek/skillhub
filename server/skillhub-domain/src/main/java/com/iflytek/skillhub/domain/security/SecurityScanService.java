@@ -231,11 +231,6 @@ public class SecurityScanService {
         }
         if (currentAttempt) {
             skillVersionRepository.save(version);
-            if (reviewService != null && version.getStatus() == SkillVersionStatus.PENDING_REVIEW
-                    && response.verdict() == SecurityVerdict.SAFE
-                    && version.getRequestedVisibility() == SkillVisibility.NAMESPACE_ONLY) {
-                reviewService.approveTrustedAfterSafeScan(versionId);
-            }
         }
     }
 

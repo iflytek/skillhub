@@ -157,15 +157,17 @@ public class NamespacePortalCommandAppService {
     }
 
     @Transactional
-    public MemberResponse setReviewExempt(String slug, String memberId, boolean enabled, String operatorId) {
-        NamespaceMember member = namespaceMemberService.setReviewExempt(namespaceId(slug), memberId, enabled, operatorId);
-        return MemberResponse.from(member, userAccountRepository.findById(memberId).orElse(null));
-    }
-
-    @Transactional
-    public boolean setTrustedPublishEnabled(String slug, boolean enabled, String operatorId) {
-        return namespaceMemberService.setTrustedPublishEnabled(namespaceId(slug), enabled, operatorId)
-                .isTrustedPublishEnabled();
+    public MemberResponse setTeamAutoPublication(String slug,
+                                                 String memberUserId,
+                                                 boolean granted,
+                                                 String operatorUserId) {
+        NamespaceMember member = namespaceMemberService.setTeamAutoPublication(
+                namespaceId(slug),
+                memberUserId,
+                granted,
+                operatorUserId
+        );
+        return MemberResponse.from(member, userAccountRepository.findById(memberUserId).orElse(null));
     }
 
     // Intentionally not @Transactional: each addMember runs in its own transaction

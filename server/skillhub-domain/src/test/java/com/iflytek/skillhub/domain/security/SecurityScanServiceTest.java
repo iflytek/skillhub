@@ -62,43 +62,6 @@ class SecurityScanServiceTest {
     }
 
     @Test
-    void safeCurrentScanInvokesTrustedApproval() throws Exception {
-        var approvals = org.mockito.Mockito.mock(com.iflytek.skillhub.domain.review.ReviewService.class);
-        service.setReviewService(approvals);
-        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
-        setId(version, 42L);
-        version.setStatus(SkillVersionStatus.SCANNING);
-        version.setRequestedVisibility(com.iflytek.skillhub.domain.skill.SkillVisibility.NAMESPACE_ONLY);
-        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "attempt-1");
-        given(auditRepository.findByTaskId("attempt-1")).willReturn(Optional.of(audit));
-        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
-                .willReturn(Optional.of(audit));
-        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
-        service.processScanResult("attempt-1", 42L, ScannerType.SKILL_SCANNER,
-                new SecurityScanResponse("scan-1", SecurityVerdict.SAFE, 0, null, List.of(), 0.1));
-        verify(approvals).approveTrustedAfterSafeScan(42L);
-    }
-
-    @Test
-    void unsafeCurrentScanNeverInvokesTrustedApproval() throws Exception {
-        var approvals = org.mockito.Mockito.mock(com.iflytek.skillhub.domain.review.ReviewService.class);
-        service.setReviewService(approvals);
-        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
-        setId(version, 42L);
-        version.setStatus(SkillVersionStatus.SCANNING);
-        version.setRequestedVisibility(com.iflytek.skillhub.domain.skill.SkillVisibility.NAMESPACE_ONLY);
-        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "attempt-unsafe");
-        given(auditRepository.findByTaskId("attempt-unsafe")).willReturn(Optional.of(audit));
-        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
-                .willReturn(Optional.of(audit));
-        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
-        service.processScanResult("attempt-unsafe", 42L, ScannerType.SKILL_SCANNER,
-                new SecurityScanResponse("scan-unsafe", SecurityVerdict.DANGEROUS, 1, "HIGH", List.of(), 0.1));
-        org.mockito.Mockito.verifyNoInteractions(approvals);
-        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.PENDING_REVIEW);
-    }
-
-    @Test
     void scanPublishedVersionUsesStoredBundleAndKeepsPublishedState() throws Exception {
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
         setId(version, 42L);

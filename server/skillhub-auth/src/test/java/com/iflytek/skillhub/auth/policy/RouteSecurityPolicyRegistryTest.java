@@ -19,11 +19,19 @@ class RouteSecurityPolicyRegistryTest {
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
     @Test
-    void trustedPublishGovernanceWritesRejectApiTokens() {
+    void teamAutoPublicationGrantsAreSessionOnlyForEveryTokenScope() {
+        Set<String> everyScope = Set.of("skill:read", "skill:publish", "skill:delete", "token:manage",
+                "skill:submit", "skill:publish-private", "skill:manage");
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            String route = prefix + "/namespaces/team-a/members/publisher/team-auto-publication";
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED, registry.accessLevel("PUT", route));
+            assertTrue(registry.sessionOnlyRoutes()
+                    .contains("PUT " + prefix + "/namespaces/*/members/*/team-auto-publication"));
+            assertFalse(registry.authorizeApiToken("PUT", route, everyScope).allowed());
+            assertFalse(registry.authorizeApiToken("PUT", route, Set.of()).allowed());
+        }
         assertFalse(registry.authorizeApiToken("PUT", "/api/web/namespaces/team-a/trusted-publish-policy",
-                Set.of("skill:publish")).allowed());
-        assertFalse(registry.authorizeApiToken("PUT", "/api/web/namespaces/team-a/members/publisher/review-exemption",
-                Set.of("skill:publish")).allowed());
+                everyScope).allowed());
     }
 
     @Test
