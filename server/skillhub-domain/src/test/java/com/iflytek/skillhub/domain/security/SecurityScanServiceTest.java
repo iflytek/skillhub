@@ -358,6 +358,28 @@ class SecurityScanServiceTest {
     }
 
     @Test
+    void processUndispatchableScan_usesTheFailureCallbackPathOrReportsMissingAttempt() {
+        TeamAutoPublicationService autoPublication = mock(TeamAutoPublicationService.class);
+        service.setTeamAutoPublication(autoPublication);
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-undispatched");
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        version.setStatus(SkillVersionStatus.SCANNING);
+        given(auditRepository.findByTaskId("task-undispatched")).willReturn(Optional.of(audit));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        assertThat(service.processUndispatchableScan("task-undispatched", 42L, ScannerType.SKILL_SCANNER,
+                "SCAN_TASK_PUBLISH_FAILED:IllegalStateException")).isTrue();
+        assertThat(service.processUndispatchableScan("task-missing", 42L, ScannerType.SKILL_SCANNER,
+                "SCAN_TASK_PUBLISH_FAILED:IllegalStateException")).isFalse();
+
+        assertThat(audit.getScannedAt()).isNotNull();
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
+        verify(autoPublication).onCurrentScanFailed(42L, "task-undispatched");
+    }
+
+    @Test
     void processScanResult_updatesAuditAndMovesVersionToPendingReview() {
         SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-current");
         SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");

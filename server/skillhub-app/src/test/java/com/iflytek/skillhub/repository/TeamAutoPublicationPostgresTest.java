@@ -196,6 +196,7 @@ class TeamAutoPublicationPostgresTest {
     @Autowired private PlatformTransactionManager transactions;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private EventRecorder recorder;
+    @Autowired private com.iflytek.skillhub.infra.jpa.ScanTaskOutboxJpaRepository outboxes;
 
     private String owner;
     private String publisher;
@@ -553,6 +554,39 @@ class TeamAutoPublicationPostgresTest {
         assertHandedOffWithoutPublication(submitted);
         assertThat(grantChangeAudits()).hasSize(2).last()
                 .satisfies(log -> assertThat(log.getActorUserId()).isEqualTo(platformAdmin));
+    }
+
+    @Test
+    void permanentScanDispatchFailureHandsOffAndRetryNeverAutoApproves() {
+        grant();
+        Submitted submitted = submit("1.0.0");
+        org.mockito.Mockito.doThrow(new RuntimeException("broker down")).when(scanTaskProducer).publishScanTask(any());
+        var dispatcher = new com.iflytek.skillhub.task.ScanTaskOutboxDispatcher(
+                outboxes, scanTaskProducer, versions, Clock.systemUTC(), 50, 1,
+                java.time.Duration.ofMinutes(2), java.time.Duration.ofMinutes(5));
+        dispatcher.setScanFailures(scanning);
+
+        new TransactionTemplate(transactions).executeWithoutResult(status -> dispatcher.dispatch());
+
+        ReviewTask failed = reviews.findById(submitted.reviewId()).orElseThrow();
+        assertThat(version(submitted.versionId()).getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
+        assertThat(failed.getStatus()).isEqualTo(ReviewTaskStatus.PENDING);
+        assertThat(failed.isAutoPublicationCancelled()).isTrue();
+        assertThat(failed.isManualReviewNotified()).isTrue();
+        assertThat(recorder.count(ReviewSubmittedEvent.class)).isEqualTo(1);
+
+        org.mockito.Mockito.reset(scanTaskProducer);
+        String retryTask = new TransactionTemplate(transactions).execute(status -> scanning.retryStoredBundleScan(
+                version(submitted.versionId()), "packages/x/bundle.zip", publisher).taskId());
+        complete(new Submitted(submitted.skillId(), submitted.versionId(), submitted.reviewId(), retryTask),
+                SecurityVerdict.SAFE);
+
+        ReviewTask manual = reviews.findById(submitted.reviewId()).orElseThrow();
+        assertThat(manual.getStatus()).isEqualTo(ReviewTaskStatus.PENDING);
+        assertThat(manual.getDecisionMethod()).isNull();
+        assertThat(version(submitted.versionId()).getStatus()).isEqualTo(SkillVersionStatus.PENDING_REVIEW);
+        assertThat(recorder.count(SkillPublishedEvent.class)).isZero();
+        assertThat(recorder.count(ReviewSubmittedEvent.class)).isEqualTo(1);
     }
 
     private com.iflytek.skillhub.service.AdminNamespaceAppService adminConsole() {

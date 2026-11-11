@@ -169,6 +169,28 @@ public class SecurityScanService {
                 && auditRepository.existsByTaskIdAndScannedAtIsNotNull(taskId);
     }
 
+    /**
+     * Records that a scan attempt could never be handed to the scanner (permanent outbox dispatch
+     * failure). It is treated exactly like a scanner failure callback for that attempt: the attempt is
+     * settled as failed, the current round moves to {@code SCAN_FAILED} and team-only automatic
+     * eligibility falls back to normal review.
+     *
+     * @return {@code false} when no scan attempt record exists for the task, so the caller keeps its
+     *         legacy handling
+     */
+    @Transactional
+    public boolean processUndispatchableScan(String taskId, Long versionId, ScannerType scannerType, String reason) {
+        boolean attemptExists = auditRepository.findByTaskId(taskId)
+                .filter(candidate -> candidate.getSkillVersionId().equals(versionId))
+                .filter(candidate -> candidate.getScannerType() == scannerType)
+                .isPresent();
+        if (!attemptExists) {
+            return false;
+        }
+        processScanFailure(taskId, versionId, scannerType, reason);
+        return true;
+    }
+
     @Transactional
     public void processScanFailure(String taskId, Long versionId, ScannerType scannerType, String reason) {
         SecurityAudit audit = auditRepository.findByTaskId(taskId)

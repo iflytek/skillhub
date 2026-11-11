@@ -3,10 +3,13 @@ package com.iflytek.skillhub.task;
 import com.iflytek.skillhub.domain.security.ScanTaskOutbox;
 import com.iflytek.skillhub.domain.security.ScanTaskOutboxRepository;
 import com.iflytek.skillhub.domain.security.ScanTaskProducer;
+import com.iflytek.skillhub.domain.security.ScannerType;
+import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -30,6 +33,7 @@ public class ScanTaskOutboxDispatcher {
     private final int maxAttempts;
     private final Duration lease;
     private final Duration maxBackoff;
+    private SecurityScanService scanFailures;
 
     public ScanTaskOutboxDispatcher(ScanTaskOutboxRepository repository,
                                     ScanTaskProducer producer,
@@ -50,6 +54,15 @@ public class ScanTaskOutboxDispatcher {
         this.maxAttempts = maxAttempts;
         this.lease = lease;
         this.maxBackoff = maxBackoff;
+    }
+
+    /**
+     * Routes permanent dispatch failures through the same failure handling as a scanner failure
+     * callback, including the team-only automatic publication fallback to normal review.
+     */
+    @Autowired(required = false)
+    public void setScanFailures(SecurityScanService scanFailures) {
+        this.scanFailures = scanFailures;
     }
 
     @Scheduled(fixedDelayString = "${skillhub.security.outbox.dispatch-interval-ms:5000}")
@@ -78,12 +91,14 @@ public class ScanTaskOutboxDispatcher {
         if (nextAttempt >= maxAttempts) {
             outbox.markFailed(now, failureCode);
             repository.save(outbox);
-            versionRepository.findById(outbox.getVersionId())
-                    .filter(version -> version.getStatus() == SkillVersionStatus.SCANNING)
-                    .ifPresent(version -> {
-                        version.setStatus(SkillVersionStatus.SCAN_FAILED);
-                        versionRepository.save(version);
-                    });
+            if (!failScanAttempt(outbox, failureCode)) {
+                versionRepository.findById(outbox.getVersionId())
+                        .filter(version -> version.getStatus() == SkillVersionStatus.SCANNING)
+                        .ifPresent(version -> {
+                            version.setStatus(SkillVersionStatus.SCAN_FAILED);
+                            versionRepository.save(version);
+                        });
+            }
             log.error("Scan task publish failed permanently: taskId={}, versionId={}, attempts={}, errorType={}",
                     outbox.getTaskId(), outbox.getVersionId(), outbox.getRetryCount(), errorType);
             return;
@@ -93,6 +108,16 @@ public class ScanTaskOutboxDispatcher {
         repository.save(outbox);
         log.warn("Failed to publish scan task; will retry taskId={}, retryCount={}, nextDelay={}, errorType={}",
                 outbox.getTaskId(), outbox.getRetryCount(), delay, errorType);
+    }
+
+    private boolean failScanAttempt(ScanTaskOutbox outbox, String failureCode) {
+        if (scanFailures == null) {
+            return false;
+        }
+        String scannerType = outbox.toScanTask().metadata()
+                .getOrDefault("scannerType", ScannerType.SKILL_SCANNER.getValue());
+        return scanFailures.processUndispatchableScan(outbox.getTaskId(), outbox.getVersionId(),
+                ScannerType.fromValue(scannerType), failureCode);
     }
 
     @Scheduled(cron = "0 20 2 * * ?")
