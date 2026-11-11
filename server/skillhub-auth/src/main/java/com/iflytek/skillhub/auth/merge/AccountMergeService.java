@@ -12,6 +12,7 @@ import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -51,6 +52,7 @@ public class AccountMergeService {
     private final ApiTokenRepository apiTokenRepository;
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final NamespaceRepository namespaceRepository;
+    private final NamespaceMemberService namespaceMemberService;
     private final Clock clock;
 
     public AccountMergeService(AccountMergeRequestRepository mergeRequestRepository,
@@ -61,6 +63,7 @@ public class AccountMergeService {
                                ApiTokenRepository apiTokenRepository,
                                NamespaceMemberRepository namespaceMemberRepository,
                                NamespaceRepository namespaceRepository,
+                               NamespaceMemberService namespaceMemberService,
                                Clock clock) {
         this.mergeRequestRepository = mergeRequestRepository;
         this.userAccountRepository = userAccountRepository;
@@ -70,6 +73,7 @@ public class AccountMergeService {
         this.apiTokenRepository = apiTokenRepository;
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.namespaceRepository = namespaceRepository;
+        this.namespaceMemberService = namespaceMemberService;
         this.clock = clock;
     }
 
@@ -296,9 +300,16 @@ public class AccountMergeService {
         for (NamespaceMember secondaryMembership : secondaryMemberships) {
             Optional<NamespaceMember> existingPrimaryMembership = namespaceMemberRepository
                 .findByNamespaceIdAndUserId(secondaryMembership.getNamespaceId(), primaryUserId);
+            // A grant identifies one member's accepted submissions; it never follows a merged account.
+            // Revocation hands pending eligible work to normal review now and audits the confirmer.
+            namespaceMemberService.revokeForEligibilityLoss(secondaryMembership, primaryUserId,
+                NamespaceMemberService.REASON_ACCOUNT_MERGED);
             if (existingPrimaryMembership.isPresent()) {
                 NamespaceMember primaryMembership = existingPrimaryMembership.get();
                 if (NAMESPACE_ROLE_ORDER.compare(secondaryMembership.getRole(), primaryMembership.getRole()) > 0) {
+                    // The surviving membership leaves MEMBER, so its own grant ends too.
+                    namespaceMemberService.revokeForEligibilityLoss(primaryMembership, primaryUserId,
+                        NamespaceMemberService.REASON_ROLE_CHANGED);
                     primaryMembership.setRole(secondaryMembership.getRole());
                     namespaceMemberRepository.save(primaryMembership);
                 }
@@ -307,8 +318,6 @@ public class AccountMergeService {
                     secondaryUserId
                 );
             } else {
-                // A grant identifies one member's accepted submissions; it never follows a merged account.
-                secondaryMembership.revokeTeamAutoPublication();
                 secondaryMembership.setUserId(primaryUserId);
                 namespaceMemberRepository.save(secondaryMembership);
             }
