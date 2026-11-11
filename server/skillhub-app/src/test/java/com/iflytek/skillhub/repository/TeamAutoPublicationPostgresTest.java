@@ -201,6 +201,7 @@ class TeamAutoPublicationPostgresTest {
     private String publisher;
     private String slug;
     private Long namespaceId;
+    private String platformAdmin;
 
     @BeforeEach
     void setUp() {
@@ -211,9 +212,11 @@ class TeamAutoPublicationPostgresTest {
         owner = "tap-owner-" + suffix;
         publisher = "tap-member-" + suffix;
         slug = "tap-" + suffix;
+        platformAdmin = "tap-admin-" + suffix;
         namespaceId = new TransactionTemplate(transactions).execute(status -> {
             users.saveAndFlush(new UserAccount(owner, owner, null, null));
             users.saveAndFlush(new UserAccount(publisher, publisher, null, null));
+            users.saveAndFlush(new UserAccount(platformAdmin, platformAdmin, null, null));
             Namespace namespace = namespaces.saveAndFlush(new Namespace(slug, "Team", owner));
             members.saveAndFlush(new NamespaceMember(namespace.getId(), owner, NamespaceRole.OWNER));
             members.saveAndFlush(new NamespaceMember(namespace.getId(), publisher, NamespaceRole.MEMBER));
@@ -497,6 +500,83 @@ class TeamAutoPublicationPostgresTest {
         assertThat(skills.findById(older.skillId()).orElseThrow().getLatestVersionId()).isNull();
         complete(newer, SecurityVerdict.SAFE);
         assertThat(skills.findById(older.skillId()).orElseThrow().getLatestVersionId()).isEqualTo(newer.versionId());
+    }
+
+    @Test
+    void platformAdminRoleRoundTripRevokesAndNeverRevivesInFlightTask() {
+        grant();
+        Submitted submitted = submit("1.0.0");
+        var admin = adminConsole();
+
+        new TransactionTemplate(transactions).executeWithoutResult(status -> admin.updateMemberRole(slug, publisher,
+                new com.iflytek.skillhub.dto.UpdateMemberRoleRequest(NamespaceRole.ADMIN), platformAdmin));
+        assertThat(members.findByNamespaceIdAndUserId(namespaceId, publisher).orElseThrow()
+                .getTeamAutoPublicationGrantId()).isNull();
+        new TransactionTemplate(transactions).executeWithoutResult(status -> admin.updateMemberRole(slug, publisher,
+                new com.iflytek.skillhub.dto.UpdateMemberRoleRequest(NamespaceRole.MEMBER), platformAdmin));
+        complete(submitted, SecurityVerdict.SAFE);
+
+        assertHandedOffWithoutPublication(submitted);
+        assertThat(grantChangeAudits()).hasSize(2)
+                .last()
+                .satisfies(log -> {
+                    assertThat(log.getActorUserId()).isEqualTo(platformAdmin);
+                    assertThat(log.getDetailJson()).contains("ROLE_CHANGED", "\"handedOffTasks\": 1");
+                });
+    }
+
+    @Test
+    void platformAdminRemovalRevokesAndHandsOffInFlightTask() {
+        grant();
+        Submitted submitted = submit("1.0.0");
+
+        new TransactionTemplate(transactions).executeWithoutResult(status ->
+                adminConsole().removeMember(slug, publisher, platformAdmin));
+        complete(submitted, SecurityVerdict.SAFE);
+
+        assertHandedOffWithoutPublication(submitted);
+        assertThat(grantChangeAudits()).hasSize(2).last()
+                .satisfies(log -> assertThat(log.getDetailJson()).contains("MEMBER_REMOVED"));
+    }
+
+    @Test
+    void platformAdminOwnershipTransferRevokesNewOwnersGrant() {
+        grant();
+        Submitted submitted = submit("1.0.0");
+
+        new TransactionTemplate(transactions).executeWithoutResult(status ->
+                adminConsole().transferOwnership(slug, publisher, platformAdmin));
+        complete(submitted, SecurityVerdict.SAFE);
+
+        assertThat(members.findByNamespaceIdAndUserId(namespaceId, publisher).orElseThrow().getRole())
+                .isEqualTo(NamespaceRole.OWNER);
+        assertHandedOffWithoutPublication(submitted);
+        assertThat(grantChangeAudits()).hasSize(2).last()
+                .satisfies(log -> assertThat(log.getActorUserId()).isEqualTo(platformAdmin));
+    }
+
+    private com.iflytek.skillhub.service.AdminNamespaceAppService adminConsole() {
+        return new com.iflytek.skillhub.service.AdminNamespaceAppService(
+                null, null, null, memberService, members, namespaces, null, new NamespaceAccessPolicy(), users);
+    }
+
+    private void assertHandedOffWithoutPublication(Submitted submitted) {
+        ReviewTask task = reviews.findById(submitted.reviewId()).orElseThrow();
+        assertThat(task.getStatus()).isEqualTo(ReviewTaskStatus.PENDING);
+        assertThat(task.getDecisionMethod()).isNull();
+        assertThat(task.isAutoPublicationCancelled()).isTrue();
+        assertThat(task.isManualReviewNotified()).isTrue();
+        assertThat(version(submitted.versionId()).getStatus()).isEqualTo(SkillVersionStatus.PENDING_REVIEW);
+        assertThat(recorder.count(SkillPublishedEvent.class)).isZero();
+        assertThat(recorder.count(ReviewSubmittedEvent.class)).isEqualTo(1);
+    }
+
+    private List<com.iflytek.skillhub.domain.audit.AuditLog> grantChangeAudits() {
+        return auditLogs.findAll().stream()
+                .filter(log -> "TEAM_AUTO_PUBLICATION_CHANGE".equals(log.getAction()))
+                .filter(log -> log.getDetailJson().contains(publisher))
+                .sorted(java.util.Comparator.comparing(com.iflytek.skillhub.domain.audit.AuditLog::getId))
+                .toList();
     }
 
     private void grant() {

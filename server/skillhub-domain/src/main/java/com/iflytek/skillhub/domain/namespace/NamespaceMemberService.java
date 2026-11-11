@@ -21,6 +21,10 @@ import java.util.UUID;
 @Service
 public class NamespaceMemberService {
 
+    public static final String REASON_ROLE_CHANGED = "ROLE_CHANGED";
+    public static final String REASON_MEMBER_REMOVED = "MEMBER_REMOVED";
+    public static final String REASON_ACCOUNT_MERGED = "ACCOUNT_MERGED";
+
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final NamespaceService namespaceService;
     private final NamespaceAccessPolicy namespaceAccessPolicy;
@@ -107,7 +111,7 @@ public class NamespaceMemberService {
             throw new DomainBadRequestException("error.namespace.member.owner.remove");
         }
 
-        revokeForEligibilityLoss(member, operatorUserId, "MEMBER_REMOVED");
+        revokeForEligibilityLoss(member, operatorUserId, REASON_MEMBER_REMOVED);
         namespaceMemberRepository.deleteByNamespaceIdAndUserId(namespaceId, userId);
     }
 
@@ -125,7 +129,7 @@ public class NamespaceMemberService {
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.member.notFound"));
 
         if (newRole != NamespaceRole.MEMBER) {
-            revokeForEligibilityLoss(member, operatorUserId, "ROLE_CHANGED");
+            revokeForEligibilityLoss(member, operatorUserId, REASON_ROLE_CHANGED);
         }
         member.setRole(newRole);
         return namespaceMemberRepository.save(member);
@@ -156,7 +160,7 @@ public class NamespaceMemberService {
         NamespaceMember newOwner = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, newOwnerId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.owner.new.notFound"));
 
-        revokeForEligibilityLoss(newOwner, currentOwnerId, "ROLE_CHANGED");
+        revokeForEligibilityLoss(newOwner, currentOwnerId, REASON_ROLE_CHANGED);
         currentOwner.setRole(NamespaceRole.ADMIN);
         newOwner.setRole(NamespaceRole.OWNER);
 
@@ -173,7 +177,17 @@ public class NamespaceMemberService {
         return namespaceMemberRepository.findByNamespaceId(namespaceId, pageable);
     }
 
-    private void revokeForEligibilityLoss(NamespaceMember member, String operatorUserId, String reason) {
+    /**
+     * Revokes team-only automatic publication because the member is leaving the {@code MEMBER} role,
+     * being removed or being merged away: clears the grant identity, irreversibly hands the member's
+     * pending eligible tasks to normal review (one notification each) and audits the actual operator
+     * with the before value. A member without a grant is left untouched and not audited.
+     *
+     * <p>Every path that changes a member's role or deletes a membership outside this service must
+     * call this first. The caller must hold the member's user lock and then the namespace row lock,
+     * the same order this service uses, so revocation serializes with automatic approval.
+     */
+    public void revokeForEligibilityLoss(NamespaceMember member, String operatorUserId, String reason) {
         UUID before = member.revokeTeamAutoPublication();
         if (before == null) {
             return;
