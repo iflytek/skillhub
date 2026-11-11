@@ -91,10 +91,15 @@ CLAUDE.md
 !/.trellis/spec/
 !/.trellis/spec/**
 /.agents/skills/trellis-*/
+/.agents/skills/openspec-*/
+/.agents/skills/.openspec-target
 /AGENTS.override.md
 
 # Local report-generation skill
 .agents/skills/generate-skillhub-weekly-report/
+
+# User-supplied design libraries may contain internal licensed material.
+/.design_library/
 
 # Helm chart dependencies
 charts/skillhub/charts/*.tgz

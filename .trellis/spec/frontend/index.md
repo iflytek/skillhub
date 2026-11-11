@@ -1,5 +1,7 @@
 # 前端规范入口
 
+正文读取与换会话接续遵循[有界读取规则](../workflow/context-reading.md)，按本页触发条件选资料，不批量加载整个目录。
+
 适用于 SkillHub 的页面、组件、样式、状态、Hook 和 API 消费代码。先读本页，再按任务
 读取下表中的专题；不要求纯类型或数据逻辑修改加载全部视觉规范，也不要求纯前端任务
 读取全部后端规范。仓库 AGENTS.md 仍适用；CLAUDE.md 仅在当前检出存在时读取。
@@ -30,7 +32,9 @@
 | 修改触发条件 | 读取内容 |
 |---|---|
 | 新增文件或调整层次 | [目录结构](./directory-structure.md) |
-| 修改视觉、布局或可见 UI | [视觉基础](./visual-foundations.md)、[组件规则](./component-guidelines.md) |
+| 修改视觉、布局或可见 UI | 默认采用 [SkillHub 设计系统](./design-system.md)，再读[视觉基础](./visual-foundations.md)、[组件规则](./component-guidelines.md) |
+| 使用选定设计系统调整主题、组件或页面 | [设计系统采用](./design-system.md)；按任务读取库内主题、组件和规范 |
+| 用户选择使用 Figma 设计、审阅或对照实现（默认不启用） | [设计证据](./design-evidence.md)；使用 `$figma-web-bridge`，不隐式回退官方 MCP |
 | 动效设计、实现或评审 | [交互动效规范入口](./motion-guidelines.md)及其链接的正文；按入口说明为实现／检查 Agent 准备上下文 |
 | 选型、新增或盘点组件 | [组件目录](./component-catalog.md)；候选不代表已安装 |
 | 新增页面或改变页面组合 | [页面模式](./page-patterns.md)及其引用的视觉与组件专题 |

@@ -12,6 +12,32 @@ AI coding agents working in this repository should follow the rules in
 without installing Trellis or any engineering Skill. Architecture and business
 design remain in `docs/`; execution tools and task records remain local.
 
+### Optional OpenSpec agent integration
+
+OpenSpec owns the change lifecycle. For a managed change, use its original requirements,
+design and tasks; read the applicable engineering topic bodies before implementation and
+verification. Follow the [OpenSpec project procedure](.trellis/spec/workflow/openspec.md).
+Verification reports findings; repair product code in apply rather than silently fixing it
+during verify. Small edits do not require an OpenSpec change or a local Trellis task.
+
+For Codex, the optional setup uses the installed OpenSpec 1.17.0 CLI to generate native
+Skills including verify, with thin project reading instructions. It leaves the global
+OpenSpec profile and hook trust unchanged:
+
+```bash
+npm install --global @fission-ai/openspec@1.17.0
+python3 scripts/setup-agent-workflow.py          # preview
+python3 scripts/setup-agent-workflow.py --apply
+python3 scripts/setup-agent-workflow.py --check
+```
+
+Node.js >=22.12.0 is required by this OpenSpec version. The Python setup uses only the
+standard library. Generated Skills and setup metadata stay local. Re-run setup/check after
+updating upstream instruction files; it refuses to overwrite conflicting local edits and
+backs up changed managed entries. Do not use a successful setup check as proof that the
+Agent read all rules or implemented them correctly. The explicit-reading procedure works
+without optional setup. See the [mechanism guide](docs/openspec-trellis-guide.md).
+
 ## Before You Start
 
 - Read [`README.md`](./README.md) for local development commands.

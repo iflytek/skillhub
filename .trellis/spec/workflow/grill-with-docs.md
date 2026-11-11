@@ -1,7 +1,7 @@
 # Grill With Docs
 
 Clarify requirements when misunderstood terms, boundaries, or trade-offs would make implementation risky.
-`$grill-with-docs` is an optional local aid when installed; this workflow does not require any Skill installation.
+For requirements analysis with material ambiguity, the Agent selects `$grill-with-docs` automatically when installed; the user does not need to type a Skill name. Clear small edits and already settled decisions skip the interview. This shared workflow remains readable without a local Skill installation.
 
 ## Position in the Workflow
 
@@ -15,10 +15,17 @@ Run this before OpenSpec or implementation planning when any of these are true:
 
 Recommended sequence:
 
-1. Clarify the unsettled requirements directly, or use an available clarification Skill
+1. The Agent reads and uses the available `grill-with-docs` entry, including both `grilling` and `domain-modeling`; without a host Skill tool, read their instructions directly. Do not ask the user to run commands. If the Skill is unavailable, report that fact and clarify directly rather than pretending it ran
 2. OpenSpec change for large requirements
 3. Trellis task for multi-step execution context when authorized; small edits can proceed directly
 4. Backend/frontend/workflow specs for implementation
+
+## Agent Responsibilities
+
+- Resolve source/tool facts through available read-only investigation; ask the user about unresolved business or design decisions.
+- Read applicable project/domain topic bodies before relying on their constraints in questions or proposals. Paths, indexes and successful synchronization are not evidence of body delivery.
+- Reuse answers already given. Clarification requires the user's decisions, not manual workflow activation. Once shared understanding is confirmed, continue only within the user's authorized scope and the selected planning/implementation workflow's boundary.
+- When an OpenSpec change already exists, write formal decisions back to its original artifacts; do not restart a second Trellis planning package.
 
 ## What the Skill Does
 

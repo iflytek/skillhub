@@ -8,6 +8,7 @@ Respect an existing user choice about task creation; do not repeatedly ask or si
 
 - Product capability or scope changes: read [Product Direction](../../../docs/00-product-direction.md); preserve registry-first positioning and compatibility requirements.
 - Read `.trellis/spec/index.md` for the unified routing map.
+- Follow [Bounded Context Reading](./context-reading.md) for document delivery and resumption.
 - Read [Grill With Docs](./grill-with-docs.md) when the requirement, domain language, or design
   boundary is still fuzzy.
 - Read [OpenSpec Workflow](./openspec.md) for large requirements.

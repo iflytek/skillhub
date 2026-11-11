@@ -1,0 +1,49 @@
+name: Agent Workflow
+
+on:
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - 'CONTRIBUTING.md'
+      - '.trellis/spec/**'
+      - 'openspec/**'
+      - 'scripts/setup-agent-workflow.py'
+      - 'scripts/read-design-system.py'
+      - 'scripts/design_tokens.py'
+      - 'scripts/context_pages.py'
+      - 'scripts/read-context.py'
+      - 'scripts/tests/context-delivery-test.py'
+      - 'scripts/tests/read-design-system-test.py'
+      - '.agents/skills/skillhub-design/**'
+      - 'scripts/check-engineering-specs.py'
+      - 'scripts/tests/setup-agent-workflow-test.py'
+      - 'scripts/tests/workflow-security-test.sh'
+      - 'docs/openspec-trellis-guide.md'
+      - '.github/workflows/agent-workflow.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  agent-workflow:
+    name: Agent Context Integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: npm install --global @fission-ai/openspec@1.17.0
+      - run: python3 scripts/check-engineering-specs.py
+      - run: bash scripts/tests/workflow-security-test.sh
+      - run: python3 scripts/tests/setup-agent-workflow-test.py
+      - run: python3 scripts/tests/read-design-system-test.py
+      - run: python3 scripts/tests/context-delivery-test.py
+      - run: python3 scripts/setup-agent-workflow.py --apply
+      - run: python3 scripts/setup-agent-workflow.py --check

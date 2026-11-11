@@ -1,1 +1,17 @@
 schema: spec-driven
+
+context: |
+  SkillHub 的工程规范正文位于 .trellis/spec/，AGENTS.md 是项目入口。
+  需求分析有实质歧义时，Agent 按 .trellis/spec/workflow/grill-with-docs.md 主动使用已安装的 grill-with-docs，无需用户点名；明确的小修跳过访谈。
+  实施和验证前，读取 .trellis/spec/workflow/openspec.md，按当前阶段执行其规范读取步骤。
+  根据需求和实际影响选择并读取领域与专题正文；索引、文件路径、注入标记不代表正文已送达。
+  页面设计任务还需取得实际主题、所用组件契约和设计规则；缺失或截断的必需资料先补读。
+  实现与验证使用相同适用规范，恢复、来源变化或影响扩大时重新核对。
+  本次需求、设计、任务以 OpenSpec 原生产物为准，不复制第二套正式规划。
+
+operations:
+  apply:
+    guidance:
+      - 默认在主会话实施；只有明确选择委派时才启动子 Agent。
+      - 可使用已安装的 trellis-before-dev 组织读取；没有本地 Trellis 时直接读取同一组规范。
+      - 保留真实失败和未验证内容；任务勾选、规划产物齐备不等于行为验收通过。
