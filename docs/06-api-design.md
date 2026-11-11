@@ -76,9 +76,9 @@ Token 与会话共享资源／治理权限检查，但账号或空间角色不�
 
 | 入口 | Token 能力 |
 |---|---|
-| 上传、package-preview、CLI publish/validate、兼容 publish、送审、撤审、rerelease | `skill:submit` |
+| 上传、package-preview、CLI publish/validate、兼容 publish、送审、rerelease | `skill:submit` |
 | `POST .../confirm-publish` | `skill:publish-private` |
-| 可见范围写入、归档／恢复、yank、标签写入／删除、头像、扫描重试 | `skill:manage` |
+| 可见范围写入、归档／恢复、yank、撤审、标签写入／删除、扫描重试 | `skill:manage` |
 | 删除技能或内容版本 | `skill:delete` |
 | `PUT/DELETE .../subscription`、我的空间及角色 | `skill:read` |
 | `/api/v1/tokens` 创建／列表、吊销和续期 | `token:manage` |

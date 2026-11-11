@@ -485,9 +485,9 @@ Token 有效权限 = 账号／空间权限 ∩ Token 有效能力 ∩ 资源状�
 | 能力 | 用途 |
 |---|---|
 | `skill:read` | 读取／下载、我的空间与角色、订阅；不授予资源访问权 |
-| `skill:submit` | 上传候选、预检、送审、撤回审核、重新发版 |
+| `skill:submit` | 上传候选、预检、送审、重新发版 |
 | `skill:publish-private` | 显式确认 PRIVATE 候选发布 |
-| `skill:manage` | 可见范围、归档、yank、标签、扫描重试等技能管理 |
+| `skill:manage` | 可见范围、归档、yank、撤回审核、标签、扫描重试等技能管理 |
 | `skill:delete` | 删除技能／版本；与标签删除、取消订阅的能力不同 |
 
 read + submit 可以完成 PRIVATE 上传、送审、版本状态查询，但不能确认私有发布、管理或删除。
