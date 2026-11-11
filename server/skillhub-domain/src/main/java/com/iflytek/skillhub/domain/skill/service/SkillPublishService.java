@@ -760,7 +760,7 @@ public class SkillPublishService {
 
         if (visibilityService != null) {
             Skill locked = visibilityService.lockedSkill(skill.getId());
-            if (!newSkill && locked.getVisibility() != visibility) {
+            if (tokenCapabilities != null && !newSkill && locked != null && locked.getVisibility() != visibility) {
                 SkillTokenCapabilityPolicy.require(tokenCapabilities, SkillTokenCapabilityPolicy.MANAGE);
             }
             visibilityService.assertNoPendingVisibility(skill.getId());
