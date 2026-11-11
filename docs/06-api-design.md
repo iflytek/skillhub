@@ -68,6 +68,32 @@
 
 ## 7.1 Public API（匿名可访问）
 
+### API Token 能力要求
+
+Token 与会话共享资源／治理权限检查，但账号或空间角色不能扩大 Token 能力。
+以下要求也适用于等价 `/api/web` 路由和内部组合操作；旧 `skill:publish` 按
+[兼容规则](./03-authentication-design.md#51-token-能力上限与兼容)展开，不改写已存 scope。
+
+| 入口 | Token 能力 |
+|---|---|
+| 上传、package-preview、CLI publish/validate、兼容 publish、送审、撤审、rerelease | `skill:submit` |
+| `POST .../confirm-publish` | `skill:publish-private` |
+| 可见范围写入、归档／恢复、yank、标签写入／删除、头像、扫描重试 | `skill:manage` |
+| 删除技能或内容版本 | `skill:delete` |
+| `PUT/DELETE .../subscription`、我的空间及角色 | `skill:read` |
+| `/api/v1/tokens` 创建／列表、吊销和续期 | `token:manage` |
+| 原要求 publish 的 Suite／Bundle 路由（含 Suite 标签和 Bundle operation GET） | 兼容 publish 展开 |
+| Suite 删除 | `skill:delete`，不改变既有授权 |
+
+普通技能读取保留旧路由授权，不统一新增 read 要求，资源可见性仍生效。
+read + submit 可上传 PRIVATE 候选、送审和查询状态；确认／管理／删除返回 403，状态不变。
+上传改变现有技能可见性还需 manage，必须在写入版本前拒绝。Token 超管上传不再自动发布。
+
+Token 错误保留原信封并增加 `errorCode`、`errorArgs`：缺能力为
+`error.apiToken.scope.missing`（例如 `['skill:publish-private']`），路由不支持为
+`error.apiToken.endpoint.unsupported`，签发越权为 `error.apiToken.scope.escalation`（403），
+未知 scope 为 `error.apiToken.scope.unknown`（400）。客户端不应解析本地化 `msg`。
+
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/v1/skills` | 搜索/列表（匿名仅返回 PUBLIC 技能） |
@@ -259,7 +285,10 @@ Public API 的可见性规则：
 
 ### 技能可见范围
 
-已发布技能可独立调整范围，不上传新 ZIP、不创建内容版本。`GET/POST /api/v1/skills/{namespace}/{slug}/visibility`（Web 同时支持 `/api/web`）提供当前范围及申请提交；Token 写入需 `skill:publish`，仍需维护权限。扩大范围走统一技能审核，缩小立即生效。请求、响应、扫描和冲突说明见[可见范围使用指南](./skill-visibility.md)。
+已发布技能可独立调整范围，不上传新 ZIP、不创建内容版本。
+`GET/POST /api/v1/skills/{namespace}/{slug}/visibility`（Web 同时支持 `/api/web`）提供当前范围及申请提交；
+Token 写入需 `skill:manage`，仍需维护权限。扩大范围走统一审核，缩小立即生效。
+请求、响应、扫描和冲突说明见[可见范围使用指南](./skill-visibility.md)。
 
 ### 技能生命周期管理
 
@@ -268,7 +297,7 @@ Public API 的可见性规则：
 | POST | `/api/v1/skills/{namespace}/{slug}/archive` | 归档技能（namespace ADMIN 或 owner） |
 | POST | `/api/v1/skills/{namespace}/{slug}/unarchive` | 恢复归档（namespace ADMIN 或 owner） |
 | DELETE | `/api/v1/skills/{namespace}/{slug}/versions/{version}` | 删除 DRAFT/UPLOADED/REJECTED/SCAN_FAILED 版本；不能删除最后一个版本 |
-| POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/yank` | 撤回已发布版本（namespace ADMIN 或 owner；可选 body `{"reason"}`；API Token 需 `skill:publish`） |
+| POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/yank` | 撤回已发布版本；Token 需 `skill:manage`，仍需维护权限 |
 | POST | `/api/v1/skills/{namespace}/{slug}/versions/{version}/rerelease` | 从已发布版本重新发出一个新版本（namespace ADMIN 或 owner） |
 
 当前代码中的 skill 生命周期读模型不再依赖 `latestVersionStatus` / `viewingVersionStatus` 一类拼装字段，而统一使用以下 projection：
@@ -300,7 +329,8 @@ Public API 的可见性规则：
 
 - 普通用户上传 PRIVATE 技能：启用扫描时先进入 `SCANNING`，扫描完成后进入 `UPLOADED`；关闭扫描时直接进入 `UPLOADED`。
 - 普通用户上传 PUBLIC / NAMESPACE_ONLY 技能必须启用扫描，先进入 `SCANNING`，扫描完成后进入 `PENDING_REVIEW`。扫描执行失败与扫描发现风险是不同结果，不能把进入待审等同于通过安全验收。
-- `SUPER_ADMIN` 可免人工审核、免 namespace 成员校验而直接创建 `PUBLISHED` 版本，但不绕过 PUBLIC / NAMESPACE_ONLY 的扫描启用要求，也不表示扫描和安装门禁已通过。
+- `SUPER_ADMIN` 会话保留免人工审核直发行为，不绕过扫描和安装门禁；
+  Token 上传 PRIVATE 不直发，需显式确认且具备 `skill:publish-private`。
 - 撤回审核保留版本记录，将 `PENDING_REVIEW → UPLOADED`；`DRAFT` 是兼容状态，不是当前撤回目标。
 - 确认私有发布、提交审核、扫描重试及安装门禁见 [生命周期文档](./14-skill-lifecycle.md)，不要只根据发布响应的 `status` 判断可安装性。
 
@@ -311,6 +341,17 @@ Public API 的可见性规则：
 | POST | `/api/v1/tokens` | 创建 API Token |
 | GET | `/api/v1/tokens` | 列出我的 Token |
 | DELETE | `/api/v1/tokens/{id}` | 吊销 Token |
+| PUT | `/api/v1/tokens/{id}/expiration` | 修改到期时间，仍受调用 Token 能力和到期时间上限约束 |
+
+创建请求显式传 `scopes` 数组；同名创建轮换旧 Token，拒绝不会吊销旧凭据。
+能力在兼容别名展开后比较，创建／轮换／续期都不能越过调用 Token 的能力或到期时间。
+省略 scopes 暂保留 read + publish + delete，响应 `deprecatedDefault=true`，下一个次版本改为仅 read。
+显式空数组不授予能力。创建／列表响应提供 `capabilities` 和 `legacyCompat`。
+
+`GET /api/cli/v1/auth/whoami` 返回当前身份和 `capabilities`（排序数组，session 为 null）、
+`legacyCompat`、`expiresAt`，不需要 token:manage，也不返回其他 Token。
+`GET /api/{v1,web}/me/namespaces` 及 `/page` 需 read，可查询空空间的 `currentUserRole`。
+设备码与浏览器 CLI 登录固定签发 read + submit，不接受隐式删除授权。
 
 ## 7.5 CLI API（Bearer Token 认证，CLI 主流程由 Device Flow 获取凭证）
 

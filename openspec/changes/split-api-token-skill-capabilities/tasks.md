@@ -45,6 +45,7 @@
 
 ## 5. 文档与发布
 
-- [ ] 5.1 更新 `docs/03-authentication-design.md` 作用域与默认权限、`docs/06-api-design.md` 中各接口的 Token 要求、OpenClaw 集成说明。
-- [ ] 5.2 发布说明写明能力拆分、存量 Token 的路由兼容及 SUPER_ADMIN Token 上传直发例外、
+- [x] 5.1 更新 `docs/03-authentication-design.md` 作用域与默认权限、
+  `docs/06-api-design.md` 中各接口的 Token 要求、OpenClaw 集成说明。
+- [x] 5.2 发布说明写明能力拆分、存量 Token 的路由兼容及 SUPER_ADMIN Token 上传直发例外、
   Bundle 无法证明来源的空快照需重新授权、CLI 重新登录后的删除授权，以及省略 scopes 默认值将在下一个次版本收紧。
