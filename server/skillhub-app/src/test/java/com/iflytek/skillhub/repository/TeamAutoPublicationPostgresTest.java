@@ -450,6 +450,42 @@ class TeamAutoPublicationPostgresTest {
     }
 
     @Test
+    void withdrawalRacingSafeCompletionPublishesOnceAndNeverDeletesTheDecidedTask() throws Exception {
+        grant();
+        Submitted submitted = submit("1.0.0");
+        CountDownLatch start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var withdraw = pool.submit(() -> {
+                start.await();
+                try {
+                    new TransactionTemplate(transactions).executeWithoutResult(status ->
+                            reviewing.withdrawReview(submitted.versionId(), publisher));
+                    return true;
+                } catch (RuntimeException rejected) {
+                    // Still scanning, or already settled by the system decision.
+                    return false;
+                }
+            });
+            var automatic = pool.submit(() -> {
+                start.await();
+                complete(submitted, SecurityVerdict.SAFE);
+                return true;
+            });
+            start.countDown();
+            assertThat(withdraw.get(30, TimeUnit.SECONDS)).isFalse();
+            automatic.get(30, TimeUnit.SECONDS);
+        }
+
+        ReviewTask task = reviews.findById(submitted.reviewId()).orElseThrow();
+        assertThat(task.getStatus()).isEqualTo(ReviewTaskStatus.APPROVED);
+        assertThat(task.getDecisionMethod()).isEqualTo(ReviewDecisionMethod.SYSTEM_AUTOMATIC);
+        assertThat(version(submitted.versionId()).getStatus()).isEqualTo(SkillVersionStatus.PUBLISHED);
+        assertThat(skills.findById(submitted.skillId()).orElseThrow().getLatestVersionId())
+                .isEqualTo(submitted.versionId());
+        assertThat(recorder.count(SkillPublishedEvent.class)).isEqualTo(1);
+    }
+
+    @Test
     void supersedingUploadPreventsOlderSafeRoundFromMovingLatest() {
         grant();
         Submitted older = submit("1.0.0");
