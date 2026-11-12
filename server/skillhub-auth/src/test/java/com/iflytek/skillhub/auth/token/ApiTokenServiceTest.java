@@ -186,6 +186,19 @@ class ApiTokenServiceTest {
     }
 
     @Test
+    void childMayReuseParentExpiryGivenWithNanosecondPrecision() {
+        when(tokenRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        Instant stored = Instant.parse("2026-03-19T00:00:00.123456Z");
+        var result = service.createToken("user-1", "child", "[\"skill:read\"]", "2026-03-19T00:00:00.123456789Z",
+                caller(Set.of("skill:read", "token:manage"), stored));
+        assertThat(result.entity().getExpiresAt()).isEqualTo(stored);
+        assertThatThrownBy(() -> service.createToken("user-1", "later", "[\"skill:read\"]", "2026-03-19T00:00:00.123457Z",
+                caller(Set.of("skill:read", "token:manage"), stored)))
+                .isInstanceOf(DomainForbiddenException.class)
+                .hasMessageContaining("error.apiToken.scope.escalation");
+    }
+
+    @Test
     void legacyAliasIsComparedAfterExpansionAndSessionCanIssueAnyKnownCombination() {
         when(tokenRepo.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         var caller = caller(Set.of("skill:submit", "skill:publish-private", "skill:manage", "suite:legacy-write"), null);

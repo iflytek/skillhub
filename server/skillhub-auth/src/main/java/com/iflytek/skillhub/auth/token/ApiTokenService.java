@@ -22,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
@@ -227,7 +228,8 @@ public class ApiTokenService {
         }
 
         try {
-            Instant parsed = parseInstant(expiresAt.trim());
+            // Stored at microsecond precision; normalize so a child can reuse its parent's exact expiry.
+            Instant parsed = parseInstant(expiresAt.trim()).truncatedTo(ChronoUnit.MICROS);
             if (!parsed.isAfter(currentTime())) {
                 throw new DomainBadRequestException("validation.token.expiresAt.future");
             }
