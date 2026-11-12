@@ -9,32 +9,34 @@ import java.util.Set;
 import org.junit.jupiter.api.Test;
 
 /**
- * Maintainer #1069 section 3 combination matrix, expressed with the token scopes current main ships.
+ * Maintainer #1069 section 3 combination matrix at the route-policy layer.
  *
- * <p>Rows that need #1078's split capabilities (read+submit without publish-private) cannot be
- * expressed yet: today {@code skill:publish} covers both submission and PRIVATE confirmation.
- * These tests pin the route-policy half; the domain half is covered by publish/approval tests.
+ * <p>The scope that means "may submit" is read from the registry rather than hard-coded: it is
+ * {@code skill:publish} before #1078 and {@code skill:submit} once #1078 splits token capabilities.
+ * Every upload route must agree on that one scope. The domain half is covered by publish/approval tests.
  */
 class TeamAutoPublicationTokenMatrixTest {
 
-    /** The single route-policy capability that currently means "may submit". */
-    private static final String SUBMIT_CAPABILITY = "skill:publish";
+    /** Scopes that may legitimately mean "may submit", before and after #1078. */
+    private static final Set<String> SUBMIT_CAPABILITIES = Set.of("skill:publish", "skill:submit");
 
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
     @Test
     void readOnlyTokenCannotUploadEvenIfMemberIsGranted() {
+        String submitCapability = submitCapability();
         for (String route : uploadRoutes()) {
             var decision = registry.authorizeApiToken("POST", route, Set.of("skill:read"));
             assertFalse(decision.allowed(), route);
-            assertEquals(SUBMIT_CAPABILITY, decision.requiredScope(), route);
+            assertEquals(submitCapability, decision.requiredScope(), route);
         }
     }
 
     @Test
     void submitCapableTokenReachesTheSameUploadPolicyAsBrowserSubmission() {
+        String submitCapability = submitCapability();
         for (String route : uploadRoutes()) {
-            assertTrue(registry.authorizeApiToken("POST", route, Set.of("skill:read", SUBMIT_CAPABILITY)).allowed(),
+            assertTrue(registry.authorizeApiToken("POST", route, Set.of("skill:read", submitCapability)).allowed(),
                     route);
         }
     }
@@ -62,7 +64,15 @@ class TeamAutoPublicationTokenMatrixTest {
     @Test
     void reviewDecisionsAreNotReachableThroughSubmitCapability() {
         assertFalse(registry.authorizeApiToken("POST", "/api/web/suites/reviews/1/approve",
-                Set.of(SUBMIT_CAPABILITY)).allowed());
+                Set.of(submitCapability())).allowed());
+    }
+
+    /** The scope the registry requires for uploads; it must be one known submit scope on every route. */
+    private String submitCapability() {
+        String required = registry.authorizeApiToken("POST", uploadRoutes().getFirst(), Set.of("skill:read"))
+                .requiredScope();
+        assertTrue(SUBMIT_CAPABILITIES.contains(required), "unexpected upload scope " + required);
+        return required;
     }
 
     private static List<String> uploadRoutes() {
