@@ -96,5 +96,5 @@ Grant/revoke audit SHALL retain actual operator, namespace/member and before/aft
 - AND no separate page, token scope or namespace switch is required.
 
 #### Scenario: Migration and startup
-- WHEN Flyway migrates an empty PostgreSQL database or upgrades representative pre-V123 data
+- WHEN Flyway migrates an empty PostgreSQL database or upgrades representative pre-V124 data
 - THEN existing members/tasks default to no automatic eligibility and the application starts successfully.

@@ -10,7 +10,7 @@ It grants no review, delete, ownership, management, PRIVATE confirmation or cros
 
 ## Data model and migration
 
-Rewrite unreleased V123 only. Remove the draft namespace flag and review-exempt boolean model.
+Rewrite unreleased V124 only. Remove the draft namespace flag and review-exempt boolean model.
 Use namespace_member.team_auto_publish_grant_id (nullable UUID). NULL is the default, including old members.
 Generate a fresh UUID only when transitioning from ungranted to granted; repeated enable is idempotent.
 Revocation clears the active identity. A later grant always has a different identity, including after member rejoining.

@@ -21,7 +21,7 @@ A grant authorizes system approval after a current SAFE scan, not a new role or 
 ## Impact
 
 Affected areas: namespace membership, ordinary Skill submission, scanning/review, events/projections,
-web member/review management, protocol documentation and the unreleased V123 migration.
+web member/review management, protocol documentation and the unreleased V124 migration.
 Migrations through V122 and GitHub/Suite/Bundle policies remain unchanged.
 
 The source of truth is the maintainer confirmation for #1069, comment 6785596349, sections 1–8.
