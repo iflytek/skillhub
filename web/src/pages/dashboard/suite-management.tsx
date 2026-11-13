@@ -156,14 +156,16 @@ export function SuiteManagementPage() {
           },
           replace: true,
         })}
-        className="space-y-3"
+        className="min-w-0 space-y-3"
       >
-        <TabsList>
-          <TabsTrigger data-analytics-id="suite.overview.tab" value="overview" className="py-2 text-xs">{t('suite.management.tabs.overview')}</TabsTrigger>
-          <TabsTrigger data-analytics-id="suite.members.tab" value="members" className="py-2 text-xs">{t('suite.management.tabs.members', { count: suite.members.length })}</TabsTrigger>
-          <TabsTrigger data-analytics-id="suite.versions.tab" value="versions" className="py-2 text-xs">{t('suite.management.tabs.versions', { count: versions.length })}</TabsTrigger>
-          <TabsTrigger data-analytics-id="suite.publishing.tab" value="publishing" className="py-2 text-xs">{t('suite.management.tabs.publishing', { count: suiteOperations.length })}</TabsTrigger>
-        </TabsList>
+        <div className="-m-1 overflow-x-auto p-1">
+          <TabsList className="min-w-max">
+            <TabsTrigger data-analytics-id="suite.overview.tab" value="overview" className="py-2 text-xs">{t('suite.management.tabs.overview')}</TabsTrigger>
+            <TabsTrigger data-analytics-id="suite.members.tab" value="members" className="py-2 text-xs">{t('suite.management.tabs.members', { count: suite.members.length })}</TabsTrigger>
+            <TabsTrigger data-analytics-id="suite.versions.tab" value="versions" className="py-2 text-xs">{t('suite.management.tabs.versions', { count: versions.length })}</TabsTrigger>
+            <TabsTrigger data-analytics-id="suite.publishing.tab" value="publishing" className="py-2 text-xs">{t('suite.management.tabs.publishing', { count: suiteOperations.length })}</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_15rem]">
