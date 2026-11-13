@@ -1,0 +1,43 @@
+{
+  "week": "2026-W46",
+  "title": "SkillHub 开源周报｜2026 年第 46 周（截至 11 月 12 日 20:15）",
+  "period": "2026-11-06 00:00—2026-11-12 20:15",
+  "period_start": "2026-11-06T00:00:00+08:00",
+  "period_end": "2026-11-12T20:15:14+08:00",
+  "period_boundary": "[)",
+  "period_status": "partial-thursday",
+  "snapshot": "2026-11-13 04:51 Asia/Shanghai",
+  "freeze_note": "正式截止为 11 月 13 日 00:00",
+  "stars": 5408,
+  "stars_delta": "+19",
+  "stars_baseline": "较 W45 观测（11-05 17:44，5,389）",
+  "forks": 821,
+  "forks_delta": "+5",
+  "open_issues": 24,
+  "open_prs": 9,
+  "issue_created": 3,
+  "issue_closed": 7,
+  "pr_created": 9,
+  "pr_merged": 10,
+  "actions_total": 386,
+  "actions_success": 277,
+  "actions_failure": 14,
+  "actions_rate": "95.19%",
+  "cli_downloads": 1740,
+  "cli_downloads_days": 6,
+  "new_issue_authors": 3,
+  "new_pr_authors": 3,
+  "merged_pr_authors": 2,
+  "releases": [
+    {
+      "type": "app",
+      "version": "v0.2.26",
+      "date": "2026-11-06"
+    },
+    {
+      "type": "dsh-npm",
+      "version": "0.6.3",
+      "date": "2026-11-10"
+    }
+  ]
+}
