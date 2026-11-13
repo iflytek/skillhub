@@ -1,0 +1,66 @@
+# Behavior validation cases for the text-stats skill.
+#
+# Every task runs the skill's own script inside the isolated validation
+# workspace. Together the tasks exercise all six script assertion types:
+# exit_code, stdout_contains, stdout_json, stdout_matches, artifact_exists,
+# and tool_call_count.
+version: 1
+tasks:
+  # Happy path: the fixture produces the documented counters.
+  - name: fixture-stats
+    description: the helper reports correct counters for references/sample.txt
+    type: script
+    script: scripts/text-stats.sh
+    args: ["references/sample.txt"]
+    timeoutMs: 15000
+    assertions:
+      - type: exit_code
+        equals: 0
+      - type: stdout_contains
+        value: '"input":"references/sample.txt"'
+      - type: stdout_json
+        pointer: /words
+        equals: 20
+      - type: stdout_json
+        pointer: /lines
+        equals: 2
+      - type: tool_call_count
+        min: 1
+        max: 1
+
+  # Output shape: one JSON line with exactly the documented keys.
+  - name: output-shape
+    description: stdout is a single JSON object with the documented keys
+    type: script
+    script: scripts/text-stats.sh
+    args: ["references/sample.txt"]
+    timeoutMs: 15000
+    assertions:
+      - type: exit_code
+        equals: 0
+      - type: stdout_matches
+        pattern: '^\{"input":"[^"]+","lines":\d+,"words":\d+,"characters":\d+\}$'
+
+  # Side effect: the report artifact is written to the workspace.
+  - name: report-artifact
+    description: the run leaves a machine-readable report artifact
+    type: script
+    script: scripts/text-stats.sh
+    args: ["references/sample.txt"]
+    timeoutMs: 15000
+    assertions:
+      - type: exit_code
+        equals: 0
+      - type: artifact_exists
+        path: artifacts/report.json
+
+  # Failure mode: bad usage exits non-zero instead of printing partial output.
+  - name: rejects-missing-file
+    description: the helper refuses missing input files with a non-zero exit code
+    type: script
+    script: scripts/text-stats.sh
+    args: ["references/does-not-exist.txt"]
+    timeoutMs: 15000
+    assertions:
+      - type: exit_code
+        equals: 2
