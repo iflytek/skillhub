@@ -18,6 +18,7 @@ export const PRESENTATION_CONTENT = {
     "highlightMultiClient": "landing.experience.highlights.multiClient",
     "highlightTraceable": "landing.experience.highlights.traceable"
   },
+  "curated": {},
   "capabilities": {
     "eyebrow": "landing.experience.capabilities.eyebrow",
     "title": "landing.experience.capabilities.title",
@@ -116,6 +117,7 @@ export const PRESENTATION_ITEMS = {
     "primaryAction",
     "secondaryAction"
   ],
+  "curated": [],
   "capabilities": [
     "secure",
     "community",

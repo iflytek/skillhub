@@ -7,6 +7,7 @@ import java.util.Set;
 final class SitePresentationSchema {
     static final Set<String> LOCALES = Set.of("en", "zh", "ko", "ru");
     static final Map<String, Set<String>> TEXT_SLOTS = Map.of(
+            "curated", Set.of(),
             "hero", Set.of("badge", "title", "description", "primaryActionLabel", "secondaryActionLabel", "searchPlaceholder", "previewTitle", "previewCaption", "previewPublishTitle", "previewPublishDescription", "highlightSelfHosted", "highlightGovernance", "highlightMultiClient", "highlightTraceable"),
             "capabilities", Set.of("eyebrow", "title", "description", "secureTitle", "secureDescription", "communityTitle", "communityDescription", "integrationTitle", "integrationDescription", "versionControlTitle", "versionControlDescription", "cliTitle", "cliDescription", "governanceTitle", "governanceDescription"),
             "quickStart", Set.of("title", "description", "agentTitle", "agentDescription", "cliTitle", "cliDescription", "webTitle", "webDescription"),
@@ -16,6 +17,7 @@ final class SitePresentationSchema {
             "cta", Set.of("title", "description", "primaryActionLabel", "secondaryActionLabel"),
             "footer", Set.of("description", "copyright", "productTitle", "developersTitle", "projectTitle", "resourcesTitle", "marketLabel", "publishLabel", "consoleLabel", "documentationLabel", "cliPackageLabel", "repositoryLabel", "licenseLabel", "contributingLabel", "changelogLabel", "codeOfConductLabel", "communityLabel", "privacyLabel", "termsLabel"));
     static final Map<String, Set<String>> ITEM_SLOTS = Map.of(
+            "curated", Set.of(),
             "hero", Set.of("preview", "highlights", "primaryAction", "secondaryAction"),
             "capabilities", Set.of("secure", "community", "integration", "versionControl", "cli", "governance"),
             "quickStart", Set.of("agent", "cli", "web"),

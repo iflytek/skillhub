@@ -16,8 +16,8 @@ describe('AvatarReviewSettingsPanel', () => {
     api.updateAvatarReview.mockResolvedValue({ machineEnabled: true, manualEnabled: false, version: 4 })
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(<QueryClientProvider client={client}><AvatarReviewSettingsPanel /></QueryClientProvider>)
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'skillAvatar.machineEnabled' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'skillAvatar.manualEnabled' }))
+    fireEvent.click(await screen.findByRole('switch', { name: 'skillAvatar.machineEnabled' }))
+    fireEvent.click(screen.getByRole('switch', { name: 'skillAvatar.manualEnabled' }))
     fireEvent.click(screen.getByRole('button', { name: 'skillAvatar.save' }))
     await waitFor(() => expect(api.updateAvatarReview.mock.calls[0]?.[0]).toEqual({
       machineEnabled: true, manualEnabled: false, version: 3,
@@ -28,7 +28,7 @@ describe('AvatarReviewSettingsPanel', () => {
     api.getAvatarReview.mockResolvedValue({ machineEnabled: false, manualEnabled: true, version: 3 })
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
     render(<QueryClientProvider client={client}><AvatarReviewSettingsPanel /></QueryClientProvider>)
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'skillAvatar.manualEnabled' }))
+    fireEvent.click(await screen.findByRole('switch', { name: 'skillAvatar.manualEnabled' }))
     expect(screen.getByRole('alert').textContent).toBe('skillAvatar.noReviewRisk')
   })
 })

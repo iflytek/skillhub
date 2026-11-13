@@ -15,12 +15,12 @@ public record SitePresentationSettings(
         @Schema(nullable = true) @Size(max = 80) @Pattern(regexp = "[^\\p{Cntrl}]*") String siteName,
         @Schema(nullable = true) @Size(max = 256) String logoUrl,
         @Schema(nullable = true) @Size(max = 256) String faviconUrl,
-        @NotEmpty @Size(max = 8) Map<@Pattern(regexp = "hero|capabilities|quickStart|popular|latest|enterprise|cta|footer") String,
+        @NotEmpty @Size(max = 9) Map<@Pattern(regexp = "hero|curated|capabilities|quickStart|popular|latest|enterprise|cta|footer") String,
                 @NotNull @Valid SitePresentationSection> sections,
         @NotNull @Size(max = 9) Map<@Pattern(regexp = "repository|documentation|cliDocumentation|cliPackage|license|contributing|changelog|codeOfConduct|community") String,
                 @NotNull @Size(max = 2048) String> links) {
     public static final List<String> SECTION_IDS = List.of(
-            "hero", "capabilities", "quickStart", "popular", "latest", "enterprise", "cta", "footer");
+            "hero", "curated", "capabilities", "quickStart", "popular", "latest", "enterprise", "cta", "footer");
 
     public static SitePresentationSettings defaults() {
         Map<String, SitePresentationSection> sections = new LinkedHashMap<>();

@@ -30,8 +30,18 @@ export function NotificationBell() {
         setOpen(false)
       }
     }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setOpen(false)
+      containerRef.current?.querySelector('button')?.focus()
+    }
     document.addEventListener('mousedown', handleClick)
-    return () => document.removeEventListener('mousedown', handleClick)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
   }, [open])
 
   const badgeLabel = unreadCount > 99 ? '99+' : String(unreadCount)
@@ -41,6 +51,7 @@ export function NotificationBell() {
       <button data-analytics-id="notification.menu.toggle"
         type="button"
         aria-label={t('notification.title')}
+        aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="relative flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-muted"
       >

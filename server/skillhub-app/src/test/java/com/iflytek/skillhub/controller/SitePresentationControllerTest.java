@@ -59,6 +59,7 @@ class SitePresentationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", "no-store"))
                 .andExpect(jsonPath("$.data.settings.sections.hero.enabled").value(true))
+                .andExpect(jsonPath("$.data.settings.sections.curated.enabled").value(true))
                 .andExpect(jsonPath("$.data.settings.sections.popular.enabled").value(true))
                 .andExpect(jsonPath("$.data.settings.sections.footer.enabled").value(true))
                 .andExpect(jsonPath("$.data.settings.homepageMode").doesNotExist())

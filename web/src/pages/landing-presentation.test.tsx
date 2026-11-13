@@ -1,3 +1,4 @@
+vi.mock('@/features/recommendation/recommendation-preview', () => ({ HomepageRecommendations: () => <div>published-curated-content</div> }))
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
@@ -76,6 +77,17 @@ describe('configurable original homepage and market boundary', () => {
     expect(screen.queryByText('home.latestTitle')).toBeNull()
     expect(state.search).toHaveBeenCalledWith({ sort: 'downloads', size: 6 }, false)
     expect(state.search).toHaveBeenCalledWith({ sort: 'newest', size: 6 }, false)
+  })
+  it('defaults legacy missing picks to visible and respects explicit hidden picks', () => {
+    state.settings = defaultSitePresentation()
+    delete state.settings.sections.curated
+    const view = render(<LandingPage />)
+    expect(screen.getByText('published-curated-content')).toBeTruthy()
+    view.unmount()
+    state.settings.sections.curated = { enabled: false, texts: {}, items: {} }
+    render(<LandingPage />)
+    expect(screen.queryByText('published-curated-content')).toBeNull()
+    expect(screen.getByRole('heading', { level: 1 })).toBeTruthy()
   })
   it('can hide every homepage section without changing the skills marketplace', () => {
     state.settings = defaultSitePresentation()
