@@ -38,6 +38,9 @@ for (const theme of ['light', 'dark']) {
       await page.route('**/api/web/suites/layout/suite-layout/versions', route => route.fulfill({
         json: { code: 0, data: [] },
       }))
+      await page.route('**/api/web/suites/layout/suite-layout/labels', route => route.fulfill({
+        json: { code: 0, data: [] },
+      }))
       await page.goto('/dashboard/suites/layout/suite-layout?version=1.0.0&tab=members')
       const create = page.getByRole('button', { name: 'Create new version', exact: true })
       const preview = page.getByRole('button', { name: 'Preview marketplace page', exact: true })
