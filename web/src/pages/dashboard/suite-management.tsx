@@ -102,7 +102,7 @@ export function SuiteManagementPage() {
         backLabel={t('suite.management.backToSuites')}
         onBack={() => navigate({ to: '/dashboard/suites' })}
         actions={(
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {primaryAction}
             <Button data-analytics-id="suite.market.preview" size="sm" variant="soft" className="gap-1.5" onClick={() => navigate({
               to: `/suite/${namespace}/${encodeURIComponent(slug)}`,
