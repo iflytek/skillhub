@@ -42,6 +42,7 @@ for (const theme of ['light', 'dark']) {
         json: { code: 0, data: [] },
       }))
       await page.goto('/dashboard/suites/layout/suite-layout?version=1.0.0&tab=members')
+      await expect(page.getByRole('heading', { name: suite.displayName, exact: true })).toBeVisible({ timeout: 15_000 })
       const create = page.getByRole('button', { name: 'Create new version', exact: true })
       const preview = page.getByRole('button', { name: 'Preview marketplace page', exact: true })
       await expect(create).toBeVisible()
