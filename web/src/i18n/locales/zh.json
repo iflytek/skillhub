@@ -2402,6 +2402,14 @@
     "next": "下一页"
   },
   "createToken": {
+    "presetLabel": "能力预设",
+    "presets": {
+      "readonly": "只读下载",
+      "candidate": "候选提交",
+      "private": "私有发布",
+      "custom": "自定义"
+    },
+    "capabilityHint": "仍受账号与空间权限约束。删除与令牌管理必须在自定义中显式授权。",
     "title": "创建 API Token",
     "description": "创建一个新的 API Token 用于 CLI 或 API 访问",
     "nameLabel": "Token 名称",
@@ -2918,6 +2926,17 @@
     "noDocumentation": "当前待审核版本未提供可读的说明文档。"
   },
   "token": {
+    "capabilities": "有效能力",
+    "capabilitiesUnavailable": "服务端未提供能力信息",
+    "legacyCompat": "旧版兼容（已展开 skill:publish）",
+    "capabilityLabels": {
+      "read": "读取与下载",
+      "submit": "上传与送审",
+      "publishPrivate": "确认私有发布",
+      "manage": "管理技能",
+      "delete": "删除技能",
+      "tokenManage": "管理 API 令牌"
+    },
     "title": "API Tokens",
     "createNew": "创建新 Token",
     "copyHint": "出于安全原因，Token 明文只在创建成功时可复制一次，后续无法再次查看或复制。若仍需使用，请重新创建新的 Token。",
@@ -3368,6 +3387,11 @@
         "memberExecutionFailed": {
           "title": "有成员发布失败",
           "description": "已完成成员不会重复处理。请处理下方未完成成员后继续。"
+        },
+        "authorization": {
+          "title": "此操作无法确认足够的授权",
+          "TOKEN_CAPABILITY_MISSING": "原 Token 缺少 {{capability}} 能力。请取消此操作，并使用具备该能力的 Token 创建新操作。重试无法更改原始授权。",
+          "AUTHORIZATION_PROVENANCE_UNKNOWN": "无法验证原始授权。请取消此操作，并以明确授权重新创建；重试无法修复此问题。"
         },
         "authorizationBlocked": {
           "title": "权限或命名空间状态已变化",

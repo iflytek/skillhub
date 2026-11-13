@@ -30,6 +30,11 @@ public class ApiResponseFactory {
 
     public ApiResponse<Void> error(int code, String messageCode, Object... args) {
         String msg = messageSource.getMessage(messageCode, args, messageCode, LocaleContextHolder.getLocale());
+        if (messageCode.startsWith("error.apiToken.")) {
+            var arguments = java.util.Arrays.stream(args).map(String::valueOf).toList();
+            return new ApiResponse<>(code, msg, null, Instant.now(clock), requestIdAccessor.current(),
+                    messageCode, arguments);
+        }
         return new ApiResponse<>(code, msg, null, Instant.now(clock), requestIdAccessor.current());
     }
 

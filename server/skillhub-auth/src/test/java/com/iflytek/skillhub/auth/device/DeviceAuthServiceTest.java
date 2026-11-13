@@ -86,7 +86,7 @@ class DeviceAuthServiceTest {
         verify(apiTokenService).rotateToken(
             "usr_1",
             "CLI Device Flow",
-            "[\"skill:read\",\"skill:publish\",\"skill:delete\"]"
+            "[\"skill:read\",\"skill:submit\"]"
         );
     }
 

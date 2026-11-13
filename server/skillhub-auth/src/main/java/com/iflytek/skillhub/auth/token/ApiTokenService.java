@@ -1,8 +1,10 @@
 package com.iflytek.skillhub.auth.token;
 
 import com.iflytek.skillhub.auth.entity.ApiToken;
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.repository.ApiTokenRepository;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -20,6 +22,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
@@ -37,10 +40,12 @@ public class ApiTokenService {
     private final SecureRandom secureRandom = new SecureRandom();
     private final ApiTokenRepository tokenRepo;
     private final Clock clock;
+    private final ApiTokenScopeService scopeService;
 
-    public ApiTokenService(ApiTokenRepository tokenRepo, Clock clock) {
+    public ApiTokenService(ApiTokenRepository tokenRepo, Clock clock, ApiTokenScopeService scopeService) {
         this.tokenRepo = tokenRepo;
         this.clock = clock;
+        this.scopeService = scopeService;
     }
 
     public record TokenCreateResult(String rawToken, ApiToken entity) {}
@@ -59,9 +64,16 @@ public class ApiTokenService {
      */
     @Transactional
     public TokenCreateResult createToken(String userId, String name, String scopeJson, String expiresAt) {
+        return createToken(userId, name, scopeJson, expiresAt, null);
+    }
+
+    @Transactional
+    public TokenCreateResult createToken(String userId, String name, String scopeJson, String expiresAt,
+                                         PlatformPrincipal caller) {
         String normalizedName = normalizeName(name);
         validateTokenName(userId, normalizedName);
         Instant parsedExpiresAt = parseExpiresAt(expiresAt);
+        requireIssuanceCeiling(scopeJson, parsedExpiresAt, caller);
 
         byte[] randomBytes = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(randomBytes);
@@ -94,13 +106,20 @@ public class ApiTokenService {
      */
     @Transactional
     public TokenCreateResult rotateToken(String userId, String name, String scopeJson, String expiresAt) {
+        return rotateToken(userId, name, scopeJson, expiresAt, null);
+    }
+
+    @Transactional
+    public TokenCreateResult rotateToken(String userId, String name, String scopeJson, String expiresAt,
+                                         PlatformPrincipal caller) {
+        requireIssuanceCeiling(scopeJson, parseExpiresAt(expiresAt), caller);
         String normalizedName = normalizeName(name);
         tokenRepo.findByUserIdAndNameIgnoreCaseAndRevokedAtIsNull(userId, normalizedName)
                 .ifPresent(existing -> {
                     existing.setRevokedAt(currentTime());
                     tokenRepo.save(existing);
                 });
-        return createToken(userId, name, scopeJson, expiresAt);
+        return createToken(userId, name, scopeJson, expiresAt, caller);
     }
 
     /**
@@ -130,10 +149,17 @@ public class ApiTokenService {
      */
     @Transactional
     public ApiToken updateExpiration(Long tokenId, String userId, String expiresAt) {
+        return updateExpiration(tokenId, userId, expiresAt, null);
+    }
+
+    @Transactional
+    public ApiToken updateExpiration(Long tokenId, String userId, String expiresAt, PlatformPrincipal caller) {
         ApiToken token = tokenRepo.findById(tokenId)
                 .filter(existing -> existing.getUserId().equals(userId) && existing.getRevokedAt() == null)
                 .orElseThrow(() -> new DomainNotFoundException("error.token.notFound", tokenId));
-        token.setExpiresAt(parseExpiresAt(expiresAt));
+        Instant expiration = parseExpiresAt(expiresAt);
+        requireIssuanceCeiling(token.getScopeJson(), expiration, caller);
+        token.setExpiresAt(expiration);
         return tokenRepo.save(token);
     }
 
@@ -182,13 +208,28 @@ public class ApiTokenService {
         }
     }
 
+    private void requireIssuanceCeiling(String scopeJson, Instant expiresAt, PlatformPrincipal caller) {
+        var capabilities = scopeService.validateScopeJson(scopeJson);
+        if (caller == null || caller.tokenCapabilities() == null) {
+            return;
+        }
+        if (!caller.tokenCapabilities().containsAll(capabilities)) {
+            throw new DomainForbiddenException("error.apiToken.scope.escalation", "capabilities");
+        }
+        if (caller.tokenExpiresAt() != null
+                && (expiresAt == null || expiresAt.isAfter(caller.tokenExpiresAt()))) {
+            throw new DomainForbiddenException("error.apiToken.scope.escalation", "expiresAt");
+        }
+    }
+
     private Instant parseExpiresAt(String expiresAt) {
         if (expiresAt == null || expiresAt.isBlank()) {
             return null;
         }
 
         try {
-            Instant parsed = parseInstant(expiresAt.trim());
+            // Stored at microsecond precision; normalize so a child can reuse its parent's exact expiry.
+            Instant parsed = parseInstant(expiresAt.trim()).truncatedTo(ChronoUnit.MICROS);
             if (!parsed.isAfter(currentTime())) {
                 throw new DomainBadRequestException("validation.token.expiresAt.future");
             }

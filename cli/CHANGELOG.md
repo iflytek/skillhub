@@ -2,6 +2,34 @@
 
 All notable CLI behavior changes are documented in this file.
 
+## Unreleased — token capability split (#1049)
+
+### Changed
+
+- Device-code and browser login issue `skill:read + skill:submit`, not private-publication, management or delete authority.
+- `whoami` shows effective capabilities, legacy compatibility and expiration; older-server responses remain usable.
+- Missing `skill:delete` during remote remove gives explicit Web authorization and `login --token` guidance,
+  without automatic token reissuance. Logging in again intentionally no longer grants delete.
+- Server-side Skill capabilities are `skill:read`, `skill:submit`, `skill:publish-private`, `skill:manage`
+  and `skill:delete`. Account and namespace
+  roles never widen a token. Ordinary stored `skill:publish` tokens keep their route authorization via alias
+  expansion; stored scopes are not migrated. Suite permission granularity is unchanged.
+- Exception: SUPER_ADMIN token PRIVATE upload no longer auto-publishes. Explicit confirmation is required;
+  legacy publish aliases permit it, read+submit does not. SUPER_ADMIN sessions retain the original behavior.
+- Bundle recovery uses persisted initiator/capability authority only. Historical empty snapshots without
+  reliable provenance remain blocked at PRIVATE confirmation; create a new explicitly authorized operation,
+  rather than retrying with a more privileged caller.
+- Omitted token-creation scopes retain read + publish + delete this release with `deprecatedDefault=true`.
+  This default is deprecated and will narrow to read only in the next minor release; pass scopes explicitly.
+
+### 升级提示
+
+- 新登录只签发读取与候选提交能力。远端删除需在 Web 自定义 Token 中显式勾选 `skill:delete`，
+  再使用 `skillhub login --token <token>`；不会自动换发。
+- 存量 Token 不改写，原路由授权兼容；但 SUPER_ADMIN Token 的 PRIVATE 上传不再直发，必须显式确认。
+  会话直发保持原行为。来源不明的 Bundle 空快照不能通过提权重试补权，应重新创建明确授权的操作。
+- 省略 scopes 的宽默认值已弃用，下一个次版本收紧为仅 read。
+
 ## 0.3.0
 
 ### Changed

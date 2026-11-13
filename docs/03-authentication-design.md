@@ -468,11 +468,56 @@ API Token 仍保留，但定位从“CLI 唯一认证方式”调整为“平台
 - 存储：只存 SHA-256 哈希，明文只展示一次
 - 校验：从 `Authorization: Bearer <token>` 提取 → 哈希比对 → 加载关联用户 → 检查用户状态
 - 失败闭合与身份优先级：共享认证过滤器只识别 Bearer scheme。有效 Bearer 覆盖已加载的 Web Session 身份；Bearer 为空、格式错误、未知、过期、已吊销、用户缺失或用户禁用时立即返回 401，即使存在有效 Session 也不得回退。缺少 `Authorization` 头或使用 Basic/其他非 Bearer scheme 时保留有效 Session；若无 Session，公共读接口按匿名访问，`whoami` 返回 401
-- 作用域：`skill:read`, `skill:publish`, `skill:delete`, `token:manage`
-- 默认权限：Web 自助创建和 CLI Device Flow 均签发 `skill:read`、`skill:publish`、`skill:delete`；`token:manage` 仅在调用方显式请求时授予
-- 拒绝原因：API Token 缺少作用域或不能访问某个接口时，403 响应返回本地化的安全原因和 `requestId`；其他授权失败仍返回通用信息，避免暴露内部异常
+- 技能能力：`skill:read`、`skill:submit`、`skill:publish-private`、`skill:manage`、`skill:delete`；
+  凭据管理另需 `token:manage`，不授予技能能力。
+- Web 创建预设：只读下载（read）、候选提交（read + submit，默认）、私有发布
+  （read + submit + publish-private）、自定义。删除与 Token 管理只在自定义中显式勾选。
+- CLI Device Flow 与浏览器回跳登录只签发 `skill:read + skill:submit`。
+- 拒绝原因：保留数字 `code`、本地化 `msg` 和 `requestId`，Token 错误另返回稳定
+  `errorCode` 与字符串数组 `errorArgs`，不要解析翻译文案来判断能力。
 
-> **一期作用域说明（非最小权限）**：一期 Token 作用域为粗粒度动作级别，不与 namespace 绑定。Token 继承用户的全部权限——如果用户是某个 namespace 的 MEMBER，则该用户的任何 Token（只要包含 `skill:publish` scope）都可以向该 namespace 发布技能。这是有意的一期简化，不满足最小权限原则。后续版本计划引入 namespace 级别的 Token 作用域限定（如 `namespace:ai-team:skill:publish`），或通过 `api_token_scope` 子表实现 Token 与 namespace 的绑定。
+### 5.1 Token 能力上限与兼容
+
+Token 有效权限 = 账号／空间权限 ∩ Token 有效能力 ∩ 资源状态与治理规则。
+能力不绑定 namespace，不能替代成员身份；OWNER、SUPER_ADMIN 也不能扩大 Token 能力。
+读取路由保留原兼容策略，不把所有历史读取接口新增为 `skill:read` 门禁。
+
+| 能力 | 用途 |
+|---|---|
+| `skill:read` | 读取／下载、我的空间与角色、订阅；不授予资源访问权 |
+| `skill:submit` | 上传候选、预检、送审、重新发版 |
+| `skill:publish-private` | 显式确认 PRIVATE 候选发布 |
+| `skill:manage` | 可见范围、归档、yank、撤回审核、标签、扫描重试等技能管理 |
+| `skill:delete` | 删除技能／版本；与标签删除、取消订阅的能力不同 |
+
+read + submit 可以完成 PRIVATE 上传、送审、版本状态查询，但不能确认私有发布、管理或删除。
+上传改变已有技能可见性时还需 manage，在版本写入前拒绝；PRIVATE 重新发版保持 `UPLOADED`。
+Token 调用上传 PRIVATE 不再触发 SUPER_ADMIN 直发，必须显式确认；会话保留原直发行为。
+
+存量 `scope_json` 不迁移。`skill:publish` 作为兼容别名展开为 submit、publish-private、manage
+及内部 `suite:legacy-write`，不包含 delete 或 token:manage。`legacyCompat=true` 标记该来源。
+Suite／Bundle 原要求 publish 的路由保持旧授权，Suite 删除仍需 delete；本期不细分 Suite 能力。
+内部 Suite 标记不能直接作为新 Token scope 请求，只能由旧 publish 别名展开。
+
+创建、同名轮换与续期都校验展开后的能力子集，且不得超出调用 Token 的到期时间
+（有限期调用 Token 不能签发无限期凭据）。未知 scope 返回 400 `error.apiToken.scope.unknown`，
+越权返回 403 `error.apiToken.scope.escalation`，不会吊销同名旧 Token。
+会话可请求合法能力组合；设备码不接受自定义 scope。
+
+兼容期省略 `scopes` 仍签发 read + publish + delete，响应 `deprecatedDefault=true`；
+显式空数组不授予能力。宽默认值已弃用，下一个次版本将收紧为仅 read，应立即显式传 scopes。
+
+`GET /api/cli/v1/auth/whoami` 返回排序后的 `capabilities`、`legacyCompat`、`expiresAt`；
+会话的 capabilities 为 null，无需 token:manage。`GET /api/{v1,web}/me/namespaces` 及 `/page`
+返回现有空间和 `currentUserRole`，包括没有技能的空间，Token 需 read。
+
+CLI 重新登录不再获得 delete。需要远端删除时在 Web 自定义 Token 中显式勾选 delete，
+再运行 `skillhub login --token <token>`；不会自动换发更宽 Token。已有旧凭据保留原能力。
+
+Bundle 在创建操作时持久化发起方式和能力快照；恢复与重试只沿用原授权，不继承 worker／重试者权限。
+历史空快照没有可关联操作 ID 的可靠授权证据，遇到 PRIVATE 确认保持 `BLOCKED_RETRYABLE`
+并标明来源不明。应重新创建明确授权的操作，不能通过重试补权。
+盘点依据见[Bundle 授权证据](../openspec/changes/split-api-token-skill-capabilities/bundle-authorization-inventory.md)。
 
 ## 6. RBAC 授权判定
 
@@ -497,14 +542,14 @@ API Token 仍保留，但定位从“CLI 唯一认证方式”调整为“平台
 1. 从 SecurityContext 获取当前用户
 2. 检查用户状态（`DISABLED` → 拒绝所有操作）
 3. 查询用户的平台角色（`user_role_binding` → `role` → `role_permission`）
-4. `SUPER_ADMIN` 短路：直接通过所有权限检查
+4. `SUPER_ADMIN` 可短路账号角色检查，但不能跳过 Token 能力上限
 5. 如果涉及命名空间资源，查询用户在该命名空间的角色（`namespace_member.role`）
 6. 检查命名空间状态（`FROZEN` → 拒绝写操作）
 7. 合并平台权限 + 命名空间角色，判定是否满足
 
 | 操作 | 所需权限 | 判定逻辑 |
 |------|---------|---------|
-| 发布技能包 | `skill:publish` | 普通用户要求是目标 namespace 成员；`SUPER_ADMIN` 可绕过成员校验并直发 |
+| 发布技能包 | 账号发布权限；Token 另需 `skill:submit` | 普通用户要求目标空间成员；SUPER_ADMIN Token 不直发 |
 | 提交已有版本进入审核 | `review:submit` | owner 本人，或 namespace `ADMIN` / `OWNER`，或 `SKILL_ADMIN` / `SUPER_ADMIN` |
 | 管理技能（归档/版本管理） | `skill:manage` | namespace ADMIN 以上，或 owner 本人 |
 | 提升到全局 | `skill:promote` | namespace ADMIN 以上，或 owner 本人 |
@@ -710,7 +755,7 @@ window.location.href = '/oauth2/authorization/github'
 | `POST /api/v1/skills/{ns}/{slug}/archive` | namespace ADMIN 以上 或 owner | `namespace_member.role` 或 `skill.owner_id` |
 | `POST .../versions/{ver}/rerelease` | namespace ADMIN 以上 或 owner；源版本必须 `PUBLISHED` | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
 | `DELETE .../versions/{ver}` | namespace ADMIN 以上 或 owner（仅 `DRAFT` / `REJECTED`） | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
-| `POST .../versions/{ver}/yank` | namespace ADMIN 以上 或 owner；版本必须 `PUBLISHED`；API Token 需 `skill:publish` | `namespace_member.role` 或 `skill.owner_id` + `skill_version.status` |
+| `POST .../versions/{ver}/yank` | namespace ADMIN 以上或 owner；版本必须 `PUBLISHED`；Token 需 `skill:manage` | 角色／owner + 版本状态 |
 
 ### 10.3 CLI API
 
@@ -752,4 +797,4 @@ Spring Security 先加载 Web Session 身份，共享 API token 过滤器随后�
 | `GET /api/v1/search` | 可选（匿名限 PUBLIC） | `SearchVisibilityScope` |
 | `GET /api/v1/resolve` | 可选（匿名仅限 `PUBLIC`、`ACTIVE`、非 hidden、命名空间未归档且目标版本可安装） | visibility + namespace status + `SkillInstallability` |
 | `GET /api/v1/download/{slug}/{version}` | 可选（匿名仅限 `PUBLIC`、`ACTIVE`、非 hidden、命名空间未归档且目标版本可安装） | visibility + namespace status + `SkillInstallability` |
-| `POST /api/v1/publish` | Bearer Token + `skill:publish` | 普通用户要求目标 namespace 成员；`SUPER_ADMIN` 可绕过（namespace 由 canonical slug 解析） |
+| `POST /api/v1/publish` | Bearer Token + `skill:submit` | 仍检查空间权限；改变现有可见性另需 manage；不因 Token 管理员直发 |

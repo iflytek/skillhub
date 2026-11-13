@@ -57,7 +57,7 @@ npx clawhub --help
 1. Log in to SkillHub Web UI
 2. Navigate to **Settings → API Tokens**
 3. Click **Create New Token**
-4. Set token name and permissions
+4. Choose a name and the Read-only downloads preset; use Candidate submission for uploads
 5. Copy the generated token
 
 ### 3. Search/Explore/View Skills
@@ -125,9 +125,27 @@ npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 ```
 
 Notes:
-- Publishing requires an API Token with the `skill:publish` scope and permission in the target namespace.
+- Upload, validation and review submission require `skill:submit`, normally with `skill:read`, plus namespace permission.
+- PRIVATE uploads remain candidates. Explicit confirmation requires `skill:publish-private`; management requires `skill:manage`.
+- Existing `skill:publish` tokens expand to submission, private publication and management.
+  They show a legacy marker, not extra deletion rights.
+- SUPER_ADMIN token PRIVATE uploads no longer auto-publish; sessions retain their behavior, while tokens require explicit confirmation.
 - `clawhub login` and the SkillHub CLI do not share credentials; set `SKILLHUB_TOKEN` separately for the first-party CLI.
 - The first-party CLI uses a separate namespace option, but it still follows the server's slug validation rules.
+
+### Capabilities and logging in again
+
+First-party device-code and browser-callback login issue only `skill:read + skill:submit`.
+Existing legacy tokens keep their route authorization. After logging in again, remote removal
+requires explicit authorization: create a Custom token with `skill:delete` in Web, then run
+`skillhub login --token <token>`. The CLI never automatically reissues a broader token.
+Local uninstall does not require remote delete authority. `skillhub whoami` displays capabilities,
+legacy compatibility and expiration without requiring `token:manage`.
+Account and namespace administrator roles cannot expand a token's capabilities.
+
+Older scripts calling the token API should send scopes explicitly. Omission still selects
+read + publish + delete for compatibility and returns `deprecatedDefault=true`; the next minor
+release will narrow omitted scopes to read only.
 
 ## API Endpoints
 

@@ -13,8 +13,11 @@ import org.springframework.mock.web.MockHttpServletRequest;
 
 class RouteSecurityPolicyRegistryTest {
 
-    private static final Set<String> ALL_SCOPES =
-            Set.of("skill:read", "skill:publish", "skill:delete", "token:manage");
+    private static final Set<String> PUBLISH_CAPABILITIES =
+            Set.of("skill:submit", "skill:publish-private", "skill:manage", "suite:legacy-write");
+    private static final Set<String> ALL_SCOPES = Set.of(
+            "skill:read", "skill:submit", "skill:publish-private", "skill:manage",
+            "suite:legacy-write", "skill:delete", "token:manage");
 
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
@@ -37,7 +40,7 @@ class RouteSecurityPolicyRegistryTest {
             assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED, registry.accessLevel("GET", route));
             assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED, registry.accessLevel("POST", route));
             assertFalse(registry.authorizeApiToken("POST", route, Set.of("skill:read")).allowed());
-            assertTrue(registry.authorizeApiToken("POST", route, Set.of("skill:publish")).allowed());
+            assertTrue(registry.authorizeApiToken("POST", route, Set.of("skill:manage")).allowed());
         }
     }
 
@@ -47,7 +50,8 @@ class RouteSecurityPolicyRegistryTest {
             assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
                     registry.accessLevel("POST", prefix + "/skills/package-preview"));
             assertFalse(registry.authorizeApiToken("POST", prefix + "/skills/package-preview", Set.of("skill:read")).allowed());
-            assertTrue(registry.authorizeApiToken("POST", prefix + "/skills/package-preview", Set.of("skill:publish")).allowed());
+            assertTrue(registry.authorizeApiToken(
+                    "POST", prefix + "/skills/package-preview", Set.of("skill:submit")).allowed());
         }
     }
 
@@ -87,7 +91,7 @@ class RouteSecurityPolicyRegistryTest {
             String upload = prefix + "/skills/avatar-uploads";
             assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED, registry.accessLevel("POST", upload));
             assertTrue(registry.sessionOnlyRoutes().contains("POST " + upload));
-            assertFalse(registry.authorizeApiToken("POST", upload, Set.of("skill:read", "skill:publish", "skill:delete", "token:manage")).allowed());
+            assertFalse(registry.authorizeApiToken("POST", upload, ALL_SCOPES).allowed());
             assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
                     registry.accessLevel("GET", upload + "/upload-id/image"));
         }
@@ -116,10 +120,10 @@ class RouteSecurityPolicyRegistryTest {
     @Test
     void authorizeApiToken_requiresPublishScopeForPublishEndpoints() {
         var denied = registry.authorizeApiToken("POST", "/api/web/skills/global/publish", Set.of("skill:read"));
-        var allowed = registry.authorizeApiToken("POST", "/api/web/skills/global/publish", Set.of("skill:publish"));
+        var allowed = registry.authorizeApiToken("POST", "/api/web/skills/global/publish", Set.of("skill:submit"));
 
         assertFalse(denied.allowed());
-        assertEquals("skill:publish", denied.requiredScope());
+        assertEquals("skill:submit", denied.requiredScope());
         assertTrue(allowed.allowed());
     }
 
@@ -153,14 +157,14 @@ class RouteSecurityPolicyRegistryTest {
                 "/api/v1/skills/global/demo/labels/official", "/api/web/skills/global/demo/labels/official"}) {
             var deniedAttach = registry.authorizeApiToken("PUT", path, Set.of("skill:read"));
             assertFalse(deniedAttach.allowed());
-            assertEquals("skill:publish", deniedAttach.requiredScope());
+            assertEquals("skill:manage", deniedAttach.requiredScope());
             var deniedDetach = registry.authorizeApiToken("DELETE", path, Set.of("skill:read"));
             assertFalse(deniedDetach.allowed());
-            assertEquals("skill:publish", deniedDetach.requiredScope());
+            assertEquals("skill:manage", deniedDetach.requiredScope());
             assertFalse(registry.authorizeApiToken("PUT", path, Set.of()).allowed());
             assertFalse(registry.authorizeApiToken("DELETE", path, Set.of()).allowed());
-            assertTrue(registry.authorizeApiToken("PUT", path, Set.of("skill:publish")).allowed());
-            assertTrue(registry.authorizeApiToken("DELETE", path, Set.of("skill:publish")).allowed());
+            assertTrue(registry.authorizeApiToken("PUT", path, Set.of("skill:manage")).allowed());
+            assertTrue(registry.authorizeApiToken("DELETE", path, Set.of("skill:manage")).allowed());
         }
         assertTrue(registry.authorizeApiToken("GET", "/api/v1/skills/global/demo/labels", Set.of()).allowed());
     }
@@ -174,23 +178,23 @@ class RouteSecurityPolicyRegistryTest {
         var deniedAttachLabel = registry.authorizeApiToken(
                 "PUT", "/api/v1/suites/global/starter/labels/official", Set.of("skill:read"));
         var allowedAttachLabel = registry.authorizeApiToken(
-                "PUT", "/api/v1/suites/global/starter/labels/official", Set.of("skill:publish"));
+                "PUT", "/api/v1/suites/global/starter/labels/official", Set.of("suite:legacy-write"));
         assertFalse(deniedAttachLabel.allowed());
-        assertEquals("skill:publish", deniedAttachLabel.requiredScope());
+        assertEquals("suite:legacy-write", deniedAttachLabel.requiredScope());
         assertTrue(allowedAttachLabel.allowed());
 
         var deniedCreate = registry.authorizeApiToken("POST", "/api/v1/suites", Set.of("skill:read"));
-        var allowedCreate = registry.authorizeApiToken("POST", "/api/v1/suites", Set.of("skill:publish"));
+        var allowedCreate = registry.authorizeApiToken("POST", "/api/v1/suites", Set.of("suite:legacy-write"));
         var deniedSubmit = registry.authorizeApiToken(
                 "POST", "/api/v1/suites/8/versions/42/submit", Set.of("skill:read"));
 
         assertFalse(deniedCreate.allowed());
-        assertEquals("skill:publish", deniedCreate.requiredScope());
+        assertEquals("suite:legacy-write", deniedCreate.requiredScope());
         assertTrue(allowedCreate.allowed());
         assertFalse(deniedSubmit.allowed());
-        assertEquals("skill:publish", deniedSubmit.requiredScope());
+        assertEquals("suite:legacy-write", deniedSubmit.requiredScope());
         assertFalse(registry.authorizeApiToken(
-                "POST", "/api/v1/suites/reviews/7/approve", Set.of("skill:read", "skill:publish", "skill:delete", "token:manage")).allowed());
+                "POST", "/api/v1/suites/reviews/7/approve", ALL_SCOPES).allowed());
     }
 
     @Test
@@ -198,16 +202,16 @@ class RouteSecurityPolicyRegistryTest {
         var denied = registry.authorizeApiToken(
                 "POST", "/api/v1/skills/8/versions/42/security-audit/retry", Set.of("skill:read"));
         var allowed = registry.authorizeApiToken(
-                "POST", "/api/v1/skills/8/versions/42/security-audit/retry", Set.of("skill:publish"));
+                "POST", "/api/v1/skills/8/versions/42/security-audit/retry", Set.of("skill:manage"));
 
         assertFalse(denied.allowed());
-        assertEquals("skill:publish", denied.requiredScope());
+        assertEquals("skill:manage", denied.requiredScope());
         assertTrue(allowed.allowed());
     }
 
     @Test
     void authorizeApiToken_requiresDeleteScopeForHardDeleteEndpoint() {
-        var denied = registry.authorizeApiToken("DELETE", "/api/v1/skills/global/demo-skill", Set.of("skill:publish"));
+        var denied = registry.authorizeApiToken("DELETE", "/api/v1/skills/global/demo-skill", PUBLISH_CAPABILITIES);
         var allowed = registry.authorizeApiToken("DELETE", "/api/v1/skills/global/demo-skill", Set.of("skill:delete"));
 
         assertFalse(denied.allowed());
@@ -221,10 +225,10 @@ class RouteSecurityPolicyRegistryTest {
             for (String action : List.of("archive", "unarchive")) {
                 String path = prefix + "/skills/global/demo-skill/" + action;
                 var denied = registry.authorizeApiToken("POST", path, Set.of("skill:read", "skill:delete"));
-                var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:publish"));
+                var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:manage"));
 
                 assertFalse(denied.allowed(), path);
-                assertEquals("skill:publish", denied.requiredScope(), path);
+                assertEquals("skill:manage", denied.requiredScope(), path);
                 assertTrue(allowed.allowed(), path);
             }
         }
@@ -234,7 +238,7 @@ class RouteSecurityPolicyRegistryTest {
     void authorizeApiToken_requiresDeleteScopeForVersionDeleteEndpoint() {
         for (String prefix : List.of("/api/v1", "/api/web")) {
             String path = prefix + "/skills/global/demo-skill/versions/1.2.3";
-            var denied = registry.authorizeApiToken("DELETE", path, Set.of("skill:publish"));
+            var denied = registry.authorizeApiToken("DELETE", path, PUBLISH_CAPABILITIES);
             var allowed = registry.authorizeApiToken("DELETE", path, Set.of("skill:delete"));
 
             assertFalse(denied.allowed(), path);
@@ -248,17 +252,17 @@ class RouteSecurityPolicyRegistryTest {
         for (String prefix : List.of("/api/v1", "/api/web")) {
             String path = prefix + "/skills/global/demo-skill/versions/1.2.3/yank";
             var denied = registry.authorizeApiToken("POST", path, Set.of("skill:read", "skill:delete"));
-            var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:publish"));
+            var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:manage"));
 
             assertFalse(denied.allowed(), path);
-            assertEquals("skill:publish", denied.requiredScope(), path);
+            assertEquals("skill:manage", denied.requiredScope(), path);
             assertTrue(allowed.allowed(), path);
         }
     }
 
     @Test
     void authorizeApiToken_keepsAdminYankSessionOnly() {
-        assertFalse(registry.authorizeApiToken("POST", "/api/v1/admin/skills/versions/42/yank", Set.of("skill:read", "skill:publish", "skill:delete", "token:manage")).allowed());
+        assertFalse(registry.authorizeApiToken("POST", "/api/v1/admin/skills/versions/42/yank", ALL_SCOPES).allowed());
     }
 
     @Test
@@ -270,10 +274,12 @@ class RouteSecurityPolicyRegistryTest {
                     prefix + "/skills/global/demo-skill/submit-review",
                     prefix + "/skills/global/demo-skill/confirm-publish")) {
                 var denied = registry.authorizeApiToken("POST", path, Set.of("skill:read", "skill:delete"));
-                var allowed = registry.authorizeApiToken("POST", path, Set.of("skill:publish"));
+                var allowed = registry.authorizeApiToken("POST", path, PUBLISH_CAPABILITIES);
 
                 assertFalse(denied.allowed(), path);
-                assertEquals("skill:publish", denied.requiredScope(), path);
+                String expected = path.endsWith("confirm-publish") ? "skill:publish-private"
+                        : path.endsWith("withdraw-review") ? "skill:manage" : "skill:submit";
+                assertEquals(expected, denied.requiredScope(), path);
                 assertTrue(allowed.allowed(), path);
             }
         }
@@ -281,8 +287,9 @@ class RouteSecurityPolicyRegistryTest {
 
     @Test
     void authorizeApiToken_keepsWholeSkillWebDeleteSessionOnlyWhileAllowingVersionDelete() {
-        assertFalse(registry.authorizeApiToken("DELETE", "/api/web/skills/global/demo-skill", Set.of("skill:read", "skill:publish", "skill:delete", "token:manage")).allowed());
-        assertTrue(registry.authorizeApiToken("DELETE", "/api/web/skills/global/demo-skill/versions/1.2.3", Set.of("skill:read", "skill:publish", "skill:delete", "token:manage")).allowed());
+        assertFalse(registry.authorizeApiToken("DELETE", "/api/web/skills/global/demo-skill", ALL_SCOPES).allowed());
+        assertTrue(registry.authorizeApiToken(
+                "DELETE", "/api/web/skills/global/demo-skill/versions/1.2.3", ALL_SCOPES).allowed());
     }
 
     @Test
@@ -350,9 +357,10 @@ class RouteSecurityPolicyRegistryTest {
         assertTrue(registry.authorizeApiToken("GET", "/api/cli/v1/skills/search", Set.of()).allowed());
         assertTrue(registry.authorizeApiToken("GET", "/api/cli/v1/skills/global/demo/resolve", Set.of()).allowed());
         assertFalse(registry.authorizeApiToken("POST", "/api/cli/v1/skills/global/publish", Set.of()).allowed());
-        assertTrue(registry.authorizeApiToken("POST", "/api/cli/v1/skills/global/publish", Set.of("skill:publish")).allowed());
+        assertTrue(registry.authorizeApiToken("POST", "/api/cli/v1/skills/global/publish", Set.of("skill:submit")).allowed());
         assertFalse(registry.authorizeApiToken("POST", "/api/cli/v1/skills/global/publish/validate", Set.of()).allowed());
-        assertTrue(registry.authorizeApiToken("POST", "/api/cli/v1/skills/global/publish/validate", Set.of("skill:publish")).allowed());
+        assertTrue(registry.authorizeApiToken(
+                "POST", "/api/cli/v1/skills/global/publish/validate", Set.of("skill:submit")).allowed());
         assertTrue(registry.authorizeApiToken("DELETE", "/api/cli/v1/skills/global/demo", Set.of("skill:delete")).allowed());
     }
 
@@ -453,7 +461,7 @@ class RouteSecurityPolicyRegistryTest {
 
             String method = policy.method() == null ? "GET" : policy.method().name();
             String path = samplePath(policy.pattern());
-            if (!registry.authorizeApiToken(method, path, Set.of("skill:read", "skill:publish", "skill:delete", "token:manage")).allowed()) {
+            if (!registry.authorizeApiToken(method, path, ALL_SCOPES).allowed()) {
                 gaps.add(key);
             }
         }
@@ -475,7 +483,7 @@ class RouteSecurityPolicyRegistryTest {
                 "/api/web/suite-bundles/operations/operation/retry")) {
             assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
                     registry.accessLevel("POST", path));
-            assertTrue(registry.authorizeApiToken("POST", path, Set.of("skill:publish")).allowed());
+            assertTrue(registry.authorizeApiToken("POST", path, Set.of("suite:legacy-write")).allowed());
             assertFalse(registry.authorizeApiToken("POST", path, Set.of("skill:read")).allowed());
         }
         for (String path : List.of(
@@ -483,7 +491,7 @@ class RouteSecurityPolicyRegistryTest {
                 "/api/web/suite-bundles/operations/operation")) {
             assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED,
                     registry.accessLevel("GET", path));
-            assertTrue(registry.authorizeApiToken("GET", path, Set.of("skill:publish")).allowed());
+            assertTrue(registry.authorizeApiToken("GET", path, Set.of("suite:legacy-write")).allowed());
             assertFalse(registry.authorizeApiToken("GET", path, Set.of("skill:read")).allowed());
         }
     }
@@ -493,7 +501,7 @@ class RouteSecurityPolicyRegistryTest {
         for (String route : registry.sessionOnlyRoutes()) {
             String[] parts = route.split(" ", 2);
             String method = "ANY".equals(parts[0]) ? "POST" : parts[0];
-            assertFalse(registry.authorizeApiToken(method, samplePath(parts[1]), Set.of("skill:read", "skill:publish", "skill:delete", "token:manage")).allowed(),
+            assertFalse(registry.authorizeApiToken(method, samplePath(parts[1]), ALL_SCOPES).allowed(),
                     "session-only route must stay closed to API tokens: " + route);
         }
     }

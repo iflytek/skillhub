@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 
 /** Durable execution state created only after explicit Bundle confirmation. */
 @Entity
@@ -30,6 +31,11 @@ public class SkillSuiteBundleExecutionOperation {
     private String clientRequestId;
     @Column(name = "actor_id", nullable = false, length = 128)
     private String actorId;
+    @Column(name = "initiator_type", length = 16, updatable = false)
+    private String initiatorType;
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "token_capabilities", columnDefinition = "jsonb", updatable = false)
+    private Set<String> tokenCapabilities;
     @Enumerated(EnumType.STRING)
     @Column(name = "mode", nullable = false, length = 16)
     private SkillSuiteBundleMode mode;
@@ -127,6 +133,55 @@ public class SkillSuiteBundleExecutionOperation {
             throw new IllegalArgumentException("UPDATE reservation requires suite and target version");
         }
         return "update:" + suiteId + ":" + targetVersion;
+    }
+
+    /** Capture once, before insertion; unknown historical provenance never means session authority. */
+    public void captureAuthorization(boolean tokenCall, Set<String> capabilities) {
+        if (initiatorType != null) {
+            throw new IllegalStateException("Bundle authorization is immutable");
+        }
+        if (tokenCall && (capabilities == null || capabilities.isEmpty())) {
+            throw new DomainBadRequestException("error.suite.bundle.authorization.snapshotRequired");
+        }
+        initiatorType = tokenCall ? "TOKEN" : "SESSION";
+        tokenCapabilities = tokenCall ? Set.copyOf(capabilities) : null;
+    }
+
+    public String privatePublishBlockCode() {
+        if ("SESSION".equals(initiatorType)) {
+            return null;
+        }
+        if (!"TOKEN".equals(initiatorType) || tokenCapabilities == null || tokenCapabilities.isEmpty()) {
+            return "AUTHORIZATION_PROVENANCE_UNKNOWN";
+        }
+        return tokenCapabilities.contains("skill:publish-private") ? null : "TOKEN_CAPABILITY_MISSING";
+    }
+
+    public String privatePublishBlockDetail() {
+        return "TOKEN_CAPABILITY_MISSING".equals(privatePublishBlockCode())
+                ? "skill:publish-private" : "error.suite.bundle.authorization.provenanceUnknown";
+    }
+
+    public Set<String> executionTokenCapabilities() {
+        return "SESSION".equals(initiatorType) ? null
+                : tokenCapabilities == null ? Set.of() : Set.copyOf(tokenCapabilities);
+    }
+
+    public boolean blockPrivatePublishIfUnauthorized(SkillSuiteBundleMemberResult member, Instant now) {
+        String code = privatePublishBlockCode();
+        if (code == null) {
+            return false;
+        }
+        String detail = privatePublishBlockDetail();
+        member.markBlockedRetryable("TOKEN_CAPABILITY_MISSING".equals(code)
+                ? "error.suite.bundle.authorization.capabilityMissing: " + detail : detail, now);
+        markBlockedRetryable(code, detail, now);
+        return true;
+    }
+
+    public String getInitiatorType() { return initiatorType; }
+    public Set<String> getTokenCapabilities() {
+        return tokenCapabilities == null ? null : Set.copyOf(tokenCapabilities);
     }
 
     public void transition(SkillSuiteBundleOperationStatus next, Instant now) {

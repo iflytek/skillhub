@@ -26,6 +26,7 @@ import { centeredToastOptions, toast } from '@/shared/lib/toast'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import type { CreateTokenRequest, CreateTokenResponse } from '@/api/types'
 import { resolveTokenExpiresAt, toLocalDateTimeInputValue, type TokenExpirationMode } from './token-expiration'
+import { TOKEN_CAPABILITIES, TOKEN_PRESETS, type TokenPreset } from './token-capabilities'
 
 interface CreateTokenDialogProps {
   children: React.ReactNode
@@ -47,6 +48,8 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
   const [expirationMode, setExpirationMode] = useState<TokenExpirationMode>('never')
   const [customExpiresAt, setCustomExpiresAt] = useState('')
   const [expiresAtError, setExpiresAtError] = useState<string | null>(null)
+  const [preset, setPreset] = useState<TokenPreset>('candidate')
+  const [customScopes, setCustomScopes] = useState<string[]>([])
   const [, copy] = useCopyToClipboard()
   const queryClient = useQueryClient()
 
@@ -90,11 +93,14 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
 
     setNameError(null)
     setExpiresAtError(null)
-    createMutation.mutate({ name: normalizedName, expiresAt })
+    const scopes = preset === 'custom' ? customScopes : TOKEN_PRESETS[preset]
+    createMutation.mutate({ name: normalizedName, expiresAt, scopes })
   }
 
   const handleClose = () => {
     setOpen(false)
+    setPreset('candidate')
+    setCustomScopes([])
     setCreatedToken(null)
     setName('')
     setNameError(null)
@@ -130,6 +136,8 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
     // is only meant to be shown once, immediately after a successful create call.
     <Dialog open={open} onOpenChange={(nextOpen) => {
       if (nextOpen) {
+        setPreset('candidate')
+        setCustomScopes([])
         setCreatedToken(null)
         setName('')
         setNameError(null)
@@ -181,6 +189,44 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="token-preset">{t('createToken.presetLabel')}</Label>
+                <Select value={preset} onValueChange={(value) => setPreset(value as TokenPreset)}>
+                  <SelectTrigger id="token-preset">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(['readonly', 'candidate', 'private', 'custom'] as const).map((value) => (
+                      <SelectItem key={value} value={value}>
+                        {t(`createToken.presets.${value}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">{t('createToken.capabilityHint')}</p>
+                {preset === 'custom' ? (
+                  <div className="space-y-2">
+                    {TOKEN_CAPABILITIES.map(({ scope, label }) => (
+                      <div key={scope} className="flex items-center gap-2">
+                        <Input
+                          id={`scope-${label}`}
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={customScopes.includes(scope)}
+                          onChange={(event) => setCustomScopes((current) => event.target.checked
+                            ? [...current, scope]
+                            : current.filter((item) => item !== scope))}
+                        />
+                        <Label htmlFor={`scope-${label}`}>
+                          {t(`token.capabilityLabels.${label}`)} ({scope})
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="break-words font-mono text-xs">{TOKEN_PRESETS[preset].join(', ')}</p>
+                )}
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="token-expiration">{t('createToken.expirationLabel')}</Label>
                 <Select
@@ -259,6 +305,10 @@ export function CreateTokenDialog({ children, existingNames = [] }: CreateTokenD
               <div className="space-y-2">
                 <Label>{t('createToken.expiresAtDisplay')}</Label>
                 <div className="text-sm">{formatExpiresAt(createdToken.expiresAt)}</div>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('token.capabilities')}</Label>
+                <p className="break-words font-mono text-xs">{createdToken.capabilities?.join(', ')}</p>
               </div>
             </div>
             <DialogFooter className="sm:justify-center sm:space-x-3">

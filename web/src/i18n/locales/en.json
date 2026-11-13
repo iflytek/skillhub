@@ -2404,6 +2404,14 @@
     "next": "Next"
   },
   "createToken": {
+    "presetLabel": "Capability preset",
+    "presets": {
+      "readonly": "Read-only downloads",
+      "candidate": "Candidate submission",
+      "private": "Private publication",
+      "custom": "Custom"
+    },
+    "capabilityHint": "Account and namespace permissions still apply. Delete and token management require explicit custom authorization.",
     "title": "Create API Token",
     "description": "Create a new API Token for CLI or API access",
     "nameLabel": "Token Name",
@@ -2920,6 +2928,17 @@
     "noDocumentation": "This review version does not include a readable documentation file."
   },
   "token": {
+    "capabilities": "Capabilities",
+    "capabilitiesUnavailable": "Not reported by this server",
+    "legacyCompat": "Legacy compatibility (skill:publish expanded)",
+    "capabilityLabels": {
+      "read": "Read and download",
+      "submit": "Upload and submit for review",
+      "publishPrivate": "Confirm private publication",
+      "manage": "Manage skills",
+      "delete": "Delete skills",
+      "tokenManage": "Manage API tokens"
+    },
     "title": "API Tokens",
     "createNew": "Create Token",
     "copyHint": "For security reasons, token plaintext can only be copied once when it is created. It cannot be viewed or copied again later. If you still need it, create a new token.",
@@ -3370,6 +3389,11 @@
         "memberExecutionFailed": {
           "title": "A member failed to publish",
           "description": "Completed members will not run again. Resolve the unfinished member below, then continue."
+        },
+        "authorization": {
+          "title": "This operation cannot verify sufficient authorization",
+          "TOKEN_CAPABILITY_MISSING": "Token lacks {{capability}}. Cancel and create a new operation with a token granting it.",
+          "AUTHORIZATION_PROVENANCE_UNKNOWN": "Cannot verify original authorization. Cancel and recreate with explicit authorization."
         },
         "authorizationBlocked": {
           "title": "Permissions or namespace access changed",

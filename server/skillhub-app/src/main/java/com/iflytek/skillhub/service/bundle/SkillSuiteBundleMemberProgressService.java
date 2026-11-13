@@ -67,7 +67,8 @@ public class SkillSuiteBundleMemberProgressService {
     public ProgressOutcome reconcile(String operationId) {
         SkillSuiteBundleExecutionOperation operation = operationRepository.findByIdForUpdate(operationId)
                 .orElse(null);
-        if (operation == null || terminal(operation.getStatus())) {
+        if (operation == null || terminal(operation.getStatus())
+                || operation.getStatus() == SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE) {
             return ProgressOutcome.TERMINAL;
         }
         SkillSuiteBundleActorContextService.ActorContext actor =
@@ -104,9 +105,14 @@ public class SkillSuiteBundleMemberProgressService {
                     if (state.skill().getVisibility() != SkillVisibility.PRIVATE) {
                         throw stateChanged();
                     }
+                    if (operation.blockPrivatePublishIfUnauthorized(member, now)) {
+                        memberRepository.saveAll(members);
+                        operationRepository.save(operation);
+                        return ProgressOutcome.TERMINAL;
+                    }
                     skillReviewSubmitService.confirmPublish(
                             state.skill().getId(), state.version().getId(), operation.getActorId(),
-                            actor.namespaceRoles(), actor.platformRoles());
+                            actor.namespaceRoles(), actor.platformRoles(), operation.executionTokenCapabilities());
                     member.markCompleted(now);
                 }
                 case SCAN_FAILED -> {

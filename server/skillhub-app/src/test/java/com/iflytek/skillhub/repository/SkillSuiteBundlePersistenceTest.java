@@ -88,6 +88,31 @@ class SkillSuiteBundlePersistenceTest {
     @Autowired private PlatformTransactionManager transactionManager;
 
     @Test
+    void authorizationSnapshotSurvivesReloadAndOldRowsRemainUnknown() {
+        Namespace namespace = persistNamespace("bundle-authorization");
+        previewRepository.save(preview("auth-preview", "actor", namespace.getId(), "auth-suite", null, null));
+        SkillSuiteBundleExecutionOperation operation = operation("auth-operation", "auth-preview", "auth-request",
+                "actor", SkillSuiteBundleMode.CREATE, namespace.getId(), "auth-suite", null, null);
+        operation.captureAuthorization(true, Set.of("skill:submit", "skill:publish-private", "suite:legacy-write"));
+        operationRepository.save(operation);
+        entityManager.flush();
+        entityManager.clear();
+        var loaded = operationRepository.findById("auth-operation").orElseThrow();
+        assertThat(loaded.getInitiatorType()).isEqualTo("TOKEN");
+        assertThat(loaded.getTokenCapabilities()).containsExactlyInAnyOrder(
+                "skill:submit", "skill:publish-private", "suite:legacy-write");
+        assertThatThrownBy(() -> loaded.captureAuthorization(false, null)).isInstanceOf(IllegalStateException.class);
+        assertThat(loaded.privatePublishBlockCode()).isNull();
+        previewRepository.save(preview("old-preview", "actor", namespace.getId(), "old-suite", null, null));
+        operationRepository.save(operation("old-operation", "old-preview", "old-request", "actor",
+                SkillSuiteBundleMode.CREATE, namespace.getId(), "old-suite", null, null));
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(operationRepository.findById("old-operation").orElseThrow().privatePublishBlockCode())
+                .isEqualTo("AUTHORIZATION_PROVENANCE_UNKNOWN");
+    }
+
+    @Test
     void previewsForTheSameCreateTargetCanCoexistWithoutReservingIt() {
         Namespace namespace = persistNamespace("bundle-preview");
         previewRepository.save(preview("preview-a", "actor-a", namespace.getId(), "target", null, null));

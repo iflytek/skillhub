@@ -20,6 +20,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import com.iflytek.skillhub.domain.social.SkillStarService;
 import com.iflytek.skillhub.dto.SkillLabelDto;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
@@ -337,14 +338,8 @@ public class ClawHubCompatAppService {
                                                String userAgent) throws IOException {
         MultipartPackageExtractor.ExtractedPackage extracted = multipartPackageExtractor.extract(files, payloadJson);
         String namespace = determineNamespace(extracted.payload());
-        SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
-                namespace,
-                extracted.entries(),
-                principal.userId(),
-                SkillVisibility.PUBLIC,
-                principal.platformRoles(),
-                confirmWarnings
-        );
+        SkillPublishService.PublishResult result = publishWithCapabilities(
+                namespace, extracted.entries(), confirmWarnings, principal);
         recordCompatPublishAudit(principal.userId(), result.version().getId(), clientIp, userAgent,
                 AuditDetail.of("namespace", namespace, "slug", extracted.payload().slug()));
         return new ClawHubPublishResponse(result.skillId().toString(), result.version().getId().toString());
@@ -356,17 +351,23 @@ public class ClawHubCompatAppService {
                                           PlatformPrincipal principal,
                                           String clientIp,
                                           String userAgent) throws IOException {
-        SkillPublishService.PublishResult result = skillPublishService.publishFromEntries(
-                namespace,
-                zipPackageExtractor.extract(file),
-                principal.userId(),
-                SkillVisibility.PUBLIC,
-                principal.platformRoles(),
-                confirmWarnings
-        );
+        SkillPublishService.PublishResult result = publishWithCapabilities(
+                namespace, zipPackageExtractor.extract(file), confirmWarnings, principal);
         recordCompatPublishAudit(principal.userId(), result.version().getId(), clientIp, userAgent,
                 AuditDetail.of("namespace", namespace));
         return new ClawHubPublishResponse(result.skillId().toString(), result.version().getId().toString());
+    }
+
+    private SkillPublishService.PublishResult publishWithCapabilities(
+            String namespace, List<PackageEntry> entries,
+            boolean confirmWarnings, PlatformPrincipal principal) {
+        if (principal.tokenCapabilities() == null) {
+            return skillPublishService.publishFromEntries(namespace, entries, principal.userId(),
+                    SkillVisibility.PUBLIC, principal.platformRoles(), confirmWarnings);
+        }
+        return skillPublishService.publishCandidateFromEntries(namespace, entries, principal.userId(),
+                SkillVisibility.PUBLIC, principal.platformRoles(), confirmWarnings, null, null, null,
+                false, principal.tokenCapabilities());
     }
 
     public ClawHubWhoamiResponse whoami(PlatformPrincipal principal) {
