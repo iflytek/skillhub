@@ -91,7 +91,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
 /**
- * Team-only automatic publication on real PostgreSQL: Flyway V124 schema, row locks, committed
+ * Team-only automatic publication on real PostgreSQL: Flyway V125 schema, row locks, committed
  * state and the exact events produced by submission, scan completion, fallback and replay.
  *
  * <p>The scan result is injected through {@link SecurityScanService#processScanResult}, i.e. a

@@ -47,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * Proves the full filter chain keeps team-only automatic publication grants session-only.
  *
- * <p>Member mutations take PostgreSQL row locks, and this also validates the V124 schema against
+ * <p>Member mutations take PostgreSQL row locks, and this also validates the V125 schema against
  * the JPA mappings after Flyway migrates an empty database.
  */
 @SpringBootTest(classes = SkillhubApplication.class)

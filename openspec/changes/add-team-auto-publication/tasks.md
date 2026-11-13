@@ -1,7 +1,7 @@
 # Tasks
 
 - [x] 0. Read maintainer confirmation and source; document replacement design and acceptance.
-- [x] 1. Rewrite unreleased V124, implement grant identities, governance/audit and session-only management tests.
+- [x] 1. Rewrite unreleased V125, implement grant identities, governance/audit and session-only management tests.
 - [x] 2. Capture eligibility only for ordinary first/team-same-visibility submissions; test exclusion and denial state.
 - [x] 3. Implement current-round SAFE approval, locking/idempotency, decision identity and fallback notifications.
 - [x] 3.1 Cover revocation/regrant/removal, capability ceiling and governance races with PostgreSQL integration.
