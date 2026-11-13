@@ -27,12 +27,18 @@ import {
   useNamespaceDetail,
   useNamespaceMembers,
   useRemoveNamespaceMember,
+  useSetNamespaceMemberTeamAutoPublication,
   useUpdateNamespaceMemberRole,
 } from '@/shared/hooks/use-namespace-queries'
 import { toast } from '@/shared/lib/toast'
 
 type PendingRemoval = {
   userId: string
+}
+
+type PendingAutoPublication = {
+  userId: string
+  granted: boolean
 }
 
 const MEMBER_PAGE_SIZE = 20
@@ -51,6 +57,7 @@ export function NamespaceMembersPage() {
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null)
   const [savingRoleUserId, setSavingRoleUserId] = useState<string | null>(null)
   const [removingUserId, setRemovingUserId] = useState<string | null>(null)
+  const [pendingAutoPublication, setPendingAutoPublication] = useState<PendingAutoPublication | null>(null)
   const roleSelectRefs = useRef<Record<string, HTMLButtonElement | null>>({})
   const roleToFocus = useRef<string | null>(null)
 
@@ -67,6 +74,7 @@ export function NamespaceMembersPage() {
   const { data: myNamespaces } = useMyNamespaces()
   const updateRoleMutation = useUpdateNamespaceMemberRole()
   const removeMemberMutation = useRemoveNamespaceMember()
+  const autoPublicationMutation = useSetNamespaceMemberTeamAutoPublication()
 
   const members = membersPage?.items ?? []
   const totalMembers = membersPage?.total ?? 0
@@ -81,6 +89,8 @@ export function NamespaceMembersPage() {
   const canViewInvitations = namespace?.type === 'TEAM' && (currentUserRole === 'OWNER' || currentUserRole === 'ADMIN')
   const canEditNamespace = canManageMembers
   const canTransferOwnership = !isReadOnly && currentUserRole === 'OWNER'
+  // The permission exists only for TEAM namespaces; managers see the grant controls.
+  const showAutoPublication = namespace?.type === 'TEAM'
 
   const readOnlyMessage = namespace?.type === 'GLOBAL'
     ? t('members.globalReadOnly')
@@ -145,6 +155,32 @@ export function NamespaceMembersPage() {
       throw error
     } finally {
       setRemovingUserId(null)
+    }
+  }
+
+  const handleAutoPublicationChange = async () => {
+    if (!pendingAutoPublication) {
+      return
+    }
+
+    const { userId, granted } = pendingAutoPublication
+    try {
+      await autoPublicationMutation.mutateAsync({
+        slug,
+        userId,
+        granted,
+      })
+      toast.success(
+        t(granted ? 'members.autoPublication.grantSuccessTitle' : 'members.autoPublication.revokeSuccessTitle'),
+        t(
+          granted ? 'members.autoPublication.grantSuccessDescription' : 'members.autoPublication.revokeSuccessDescription',
+          { userId },
+        ),
+      )
+      setPendingAutoPublication(null)
+    } catch (error) {
+      toast.error(t('members.autoPublication.errorTitle'), error instanceof Error ? error.message : '')
+      throw error
     }
   }
 
@@ -225,6 +261,11 @@ export function NamespaceMembersPage() {
                     <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colUsername')}</th>
                     <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colEmail')}</th>
                     <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colRole')}</th>
+                    {showAutoPublication ? (
+                      <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">
+                        {t('members.autoPublication.column')}
+                      </th>
+                    ) : null}
                     <th className="text-left p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colJoinedAt')}</th>
                     {canManageMembers ? <th className="text-right p-4 font-medium font-heading text-sm text-muted-foreground">{t('members.colActions')}</th> : null}
                   </tr>
@@ -277,6 +318,40 @@ export function NamespaceMembersPage() {
                             </span>
                           )}
                         </td>
+                        {showAutoPublication ? (
+                          <td className="p-4 text-sm">
+                            {member.role === 'MEMBER' ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span
+                                  className="inline-flex items-center rounded-full border border-border/60 px-2.5 py-1 text-xs font-medium"
+                                >
+                                  {t(member.teamAutoPublicationGranted
+                                    ? 'members.autoPublication.granted'
+                                    : 'members.autoPublication.notGranted')}
+                                </span>
+                                {canManageMembers ? (
+                                  <Button
+                                    data-analytics-id="namespace.member.autopublish.open"
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={isRemoving || isSavingRole}
+                                    onClick={() => setPendingAutoPublication({
+                                      userId: member.userId,
+                                      granted: !member.teamAutoPublicationGranted,
+                                    })}
+                                  >
+                                    {t(member.teamAutoPublicationGranted
+                                      ? 'members.autoPublication.revoke'
+                                      : 'members.autoPublication.grant')}
+                                  </Button>
+                                ) : null}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">{t('members.autoPublication.notApplicable')}</span>
+                            )}
+                          </td>
+                        ) : null}
                         <td className="p-4 text-sm whitespace-nowrap text-muted-foreground">
                           {formatLocalDateTime(member.createdAt, i18n.language, { dateStyle: 'medium' })}
                         </td>
@@ -327,6 +402,10 @@ export function NamespaceMembersPage() {
           </Card>
         )}
 
+        {showAutoPublication ? (
+          <p className="text-xs text-muted-foreground">{t('members.autoPublication.scopeHint')}</p>
+        ) : null}
+
         {totalMembers > MEMBER_PAGE_SIZE ? (
           <Pagination analyticsId="namespace.member.paginate" page={page} totalPages={totalPages} onPageChange={setPage} />
         ) : null}
@@ -344,6 +423,33 @@ export function NamespaceMembersPage() {
         confirmText={t('members.remove')}
         variant="destructive"
         onConfirm={handleRemoveMember}
+      />
+
+      <ConfirmDialog
+        confirmAnalyticsId="namespace.member.autopublish.confirm"
+        cancelAnalyticsId="namespace.member.autopublish.cancel"
+        open={!!pendingAutoPublication}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingAutoPublication(null)
+          }
+        }}
+        title={t(pendingAutoPublication?.granted
+          ? 'members.autoPublication.grantConfirmTitle'
+          : 'members.autoPublication.revokeConfirmTitle')}
+        description={pendingAutoPublication
+          ? t(
+            pendingAutoPublication.granted
+              ? 'members.autoPublication.grantConfirmDescription'
+              : 'members.autoPublication.revokeConfirmDescription',
+            { userId: pendingAutoPublication.userId },
+          )
+          : ''}
+        confirmText={t(pendingAutoPublication?.granted
+          ? 'members.autoPublication.grant'
+          : 'members.autoPublication.revoke')}
+        variant={pendingAutoPublication?.granted ? 'default' : 'destructive'}
+        onConfirm={handleAutoPublicationChange}
       />
     </div>
   )

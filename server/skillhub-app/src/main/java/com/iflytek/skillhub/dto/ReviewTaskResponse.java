@@ -28,7 +28,10 @@ public record ReviewTaskResponse(
         String displayName,
         String summary,
         String reviewKind,
-        boolean canReview
+        boolean canReview,
+        String decisionMethod,
+        String decisionScanTaskId,
+        String autoPublicationGrantId
 ) {
     public ReviewTaskResponse(Long id, Long skillVersionId, String namespace, String skillSlug,
             String version, String status, String submittedBy, String submittedByName,
@@ -39,7 +42,8 @@ public record ReviewTaskResponse(
         this(id, skillVersionId, namespace, skillSlug, version, status, submittedBy, submittedByName,
                 reviewedBy, reviewedByName, reviewComment, submittedAt, reviewedAt, subjectType,
                 subjectId, subjectVersionId, subjectSlug, avatarCandidateId, avatarRemoval,
-                previousVisibility, requestedVisibility, originType, null, null, null, false);
+                previousVisibility, requestedVisibility, originType, null, null, null, false,
+                null, null, null);
     }
 
     public ReviewTaskResponse withReviewPermission(boolean allowed) {
@@ -47,7 +51,8 @@ public record ReviewTaskResponse(
                 submittedBy, submittedByName, reviewedBy, reviewedByName, reviewComment,
                 submittedAt, reviewedAt, subjectType, subjectId, subjectVersionId, subjectSlug,
                 avatarCandidateId, avatarRemoval, previousVisibility, requestedVisibility,
-                originType, displayName, summary, reviewKind, allowed);
+                originType, displayName, summary, reviewKind, allowed,
+                decisionMethod, decisionScanTaskId, autoPublicationGrantId);
     }
 
     public ReviewTaskResponse withPresentation(String displayName, String summary, String reviewKind) {
@@ -55,7 +60,21 @@ public record ReviewTaskResponse(
                 submittedBy, submittedByName, reviewedBy, reviewedByName, reviewComment,
                 submittedAt, reviewedAt, subjectType, subjectId, subjectVersionId, subjectSlug,
                 avatarCandidateId, avatarRemoval, previousVisibility, requestedVisibility,
-                originType, displayName, summary, reviewKind, canReview);
+                originType, displayName, summary, reviewKind, canReview,
+                decisionMethod, decisionScanTaskId, autoPublicationGrantId);
+    }
+
+    /**
+     * Adds the structured decision basis. {@code reviewedBy} stays empty for a system decision, so
+     * consumers must use {@code decisionMethod} rather than inferring a human from the submitter.
+     */
+    public ReviewTaskResponse withDecision(String method, String scanTaskId, String grantId) {
+        return new ReviewTaskResponse(id, skillVersionId, namespace, skillSlug, version, status,
+                submittedBy, submittedByName, reviewedBy, reviewedByName, reviewComment,
+                submittedAt, reviewedAt, subjectType, subjectId, subjectVersionId, subjectSlug,
+                avatarCandidateId, avatarRemoval, previousVisibility, requestedVisibility,
+                originType, displayName, summary, reviewKind, canReview,
+                method, scanTaskId, grantId);
     }
 
     public ReviewTaskResponse(Long id, Long skillVersionId, String namespace, String skillSlug, String version, String status, String submittedBy, String submittedByName, String reviewedBy, String reviewedByName, String reviewComment, Instant submittedAt, Instant reviewedAt, String subjectType, Long subjectId, Long subjectVersionId, String subjectSlug, String originType) {

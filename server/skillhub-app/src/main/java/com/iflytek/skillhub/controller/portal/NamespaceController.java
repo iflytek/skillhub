@@ -16,8 +16,10 @@ import com.iflytek.skillhub.dto.NamespaceLifecycleRequest;
 import com.iflytek.skillhub.dto.NamespaceRequest;
 import com.iflytek.skillhub.dto.NamespaceResponse;
 import com.iflytek.skillhub.dto.PageResponse;
+import com.iflytek.skillhub.dto.TeamAutoPublicationRequest;
 import com.iflytek.skillhub.dto.TransferOwnershipRequest;
 import com.iflytek.skillhub.dto.UpdateMemberRoleRequest;
+import com.iflytek.skillhub.exception.UnauthorizedException;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import com.iflytek.skillhub.service.GovernanceWorkflowAppService;
 import com.iflytek.skillhub.service.NamespacePortalCommandAppService;
@@ -176,6 +178,12 @@ public class NamespaceController extends BaseApiController {
                 namespacePortalQueryAppService.listMembers(slug, pageable, userId, platformRoles(principal)));
     }
 
+    private void requireBrowserSession(PlatformPrincipal principal, HttpServletRequest request) {
+        if (principal == null || "api_token".equals(principal.oauthProvider()) || request.getSession(false) == null) {
+            throw new UnauthorizedException("error.auth.required");
+        }
+    }
+
     private Set<String> platformRoles(PlatformPrincipal principal) {
         return principal != null && principal.platformRoles() != null
                 ? principal.platformRoles()
@@ -226,6 +234,27 @@ public class NamespaceController extends BaseApiController {
             @RequestAttribute("userId") String operatorUserId) {
         return ok("response.success.updated",
                 namespacePortalCommandAppService.updateMemberRole(slug, userId, request, operatorUserId));
+    }
+
+    /**
+     * Session-only management of team-only automatic publication. API tokens are rejected by the
+     * route policy and again here, so no token scope can grant or revoke this permission.
+     */
+    @PutMapping("/namespaces/{slug}/members/{userId}/team-auto-publication")
+    public ApiResponse<MemberResponse> updateTeamAutoPublication(
+            @PathVariable String slug,
+            @PathVariable String userId,
+            @Valid @RequestBody TeamAutoPublicationRequest request,
+            @RequestAttribute("userId") String operatorUserId,
+            @AuthenticationPrincipal PlatformPrincipal principal,
+            HttpServletRequest httpRequest) {
+        requireBrowserSession(principal, httpRequest);
+        return ok("response.success.updated",
+                namespacePortalCommandAppService.setTeamAutoPublication(
+                        slug,
+                        userId,
+                        request.granted(),
+                        operatorUserId));
     }
 
     @PostMapping("/namespaces/{slug}/transfer-ownership")

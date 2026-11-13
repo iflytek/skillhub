@@ -1341,6 +1341,7 @@
     "switchToDark": "切换到深色主题"
   },
   "reviewProgress": {
+    "systemAutomaticDecision": "安全扫描通过后由系统自动批准",
     "title": "我的审核进度",
     "subtitle": "查看技能和套件提交的当前状态、审核意见和每次重提记录",
     "searchLabel": "搜索技能、套件或命名空间",
@@ -2161,6 +2162,24 @@
     "historyRefresh": "刷新记录"
   },
   "members": {
+    "autoPublication": {
+      "column": "团队内自动发布",
+      "granted": "已授权",
+      "notGranted": "未授权",
+      "notApplicable": "不适用",
+      "grant": "授权",
+      "revoke": "撤销",
+      "scopeHint": "团队内自动发布适用于该成员在本空间的网页提交，以及其所有具备提交能力的 API Token。仅覆盖新技能首次发布为团队内可见、以及已为团队内可见的技能提交新版本，并且必须在当前安全扫描明确安全后才由系统自动批准。可见范围变更、公开发布和全局提升仍走原有审核流程。仅本空间的所有者或管理员可以授权或撤销。",
+      "grantConfirmTitle": "授权团队内自动发布",
+      "grantConfirmDescription": "授权后，{{userId}} 通过网页或任意具备提交能力的 API Token 新提交的团队内发布，会在当前安全扫描明确安全后由系统自动批准。已在审核中的提交不受影响，成员的角色和其他权限不变。",
+      "revokeConfirmTitle": "撤销团队内自动发布",
+      "revokeConfirmDescription": "撤销后，{{userId}} 尚未完成自动批准的待审提交将转入普通审核流程；正在进行的扫描会继续完成；已发布的版本不会被下架。之后重新授权也不会恢复这些提交的自动批准资格。",
+      "grantSuccessTitle": "已授权团队内自动发布",
+      "grantSuccessDescription": "{{userId}} 新的团队内提交在扫描安全后可由系统自动批准。",
+      "revokeSuccessTitle": "已撤销团队内自动发布",
+      "revokeSuccessDescription": "{{userId}} 的待审提交已转为普通审核流程。",
+      "errorTitle": "更新团队内自动发布失败"
+    },
     "title": "成员管理",
     "addMember": "添加成员",
     "addingMember": "添加中...",
@@ -2784,6 +2803,12 @@
     "close": "关闭"
   },
   "review": {
+    "decisionMethodLabel": "批准方式",
+    "decisionMethod": {
+      "HUMAN": "人工审核",
+      "SYSTEM_AUTOMATIC": "系统自动批准"
+    },
+    "decisionScanBasis": "扫描依据：{{scanTaskId}}",
     "avatarUpdate": "头像更新",
     "avatarRemoval": "移除头像",
     "metadataChange": "头像变更",

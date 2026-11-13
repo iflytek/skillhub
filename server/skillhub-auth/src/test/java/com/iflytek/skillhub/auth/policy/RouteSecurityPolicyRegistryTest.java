@@ -19,6 +19,22 @@ class RouteSecurityPolicyRegistryTest {
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
     @Test
+    void teamAutoPublicationGrantsAreSessionOnlyForEveryTokenScope() {
+        Set<String> everyScope = Set.of("skill:read", "skill:publish", "skill:delete", "token:manage",
+                "skill:submit", "skill:publish-private", "skill:manage");
+        for (String prefix : List.of("/api/v1", "/api/web")) {
+            String route = prefix + "/namespaces/team-a/members/publisher/team-auto-publication";
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED, registry.accessLevel("PUT", route));
+            assertTrue(registry.sessionOnlyRoutes()
+                    .contains("PUT " + prefix + "/namespaces/*/members/*/team-auto-publication"));
+            assertFalse(registry.authorizeApiToken("PUT", route, everyScope).allowed());
+            assertFalse(registry.authorizeApiToken("PUT", route, Set.of()).allowed());
+        }
+        assertFalse(registry.authorizeApiToken("PUT", "/api/web/namespaces/team-a/trusted-publish-policy",
+                everyScope).allowed());
+    }
+
+    @Test
     void sitePresentationIsPublicReadOnlyAndManagementIsNeverAnApiTokenCapability() {
         for (String route : List.of("/api/v1/site-presentation", "/api/v1/site-presentation/assets/asset-id")) {
             assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL, registry.accessLevel("GET", route));

@@ -10,6 +10,7 @@ import com.iflytek.skillhub.domain.security.ScanTaskOutboxRepository;
 import com.iflytek.skillhub.domain.security.ScanTaskOutboxStatus;
 import com.iflytek.skillhub.domain.security.ScanTaskProducer;
 import com.iflytek.skillhub.domain.security.ScannerType;
+import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
@@ -120,6 +121,27 @@ class ScanTaskOutboxDispatcherTest {
         assertThat(outbox.getStatus()).isEqualTo(ScanTaskOutboxStatus.FAILED);
         assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
         verify(versionRepository).save(version);
+    }
+
+    @Test
+    void lastPublishAttemptSettlesTheScanAttemptThroughTheScanFailurePath() {
+        ScanTaskOutbox outbox = outbox("task-3", 3L);
+        SecurityScanService scanFailures = org.mockito.Mockito.mock(SecurityScanService.class);
+        given(repository.findDispatchable(any(), any(Integer.class))).willReturn(List.of(outbox));
+        given(scanFailures.processUndispatchableScan(org.mockito.ArgumentMatchers.eq("task-3"),
+                org.mockito.ArgumentMatchers.eq(3L), org.mockito.ArgumentMatchers.eq(ScannerType.SKILL_SCANNER),
+                any())).willReturn(true);
+        doThrow(new IllegalStateException("redis unavailable")).when(producer).publishScanTask(any());
+        ScanTaskOutboxDispatcher dispatcher = dispatcher(1);
+        dispatcher.setScanFailures(scanFailures);
+
+        dispatcher.dispatch();
+
+        assertThat(outbox.getStatus()).isEqualTo(ScanTaskOutboxStatus.FAILED);
+        verify(scanFailures).processUndispatchableScan(org.mockito.ArgumentMatchers.eq("task-3"),
+                org.mockito.ArgumentMatchers.eq(3L), org.mockito.ArgumentMatchers.eq(ScannerType.SKILL_SCANNER),
+                org.mockito.ArgumentMatchers.startsWith("SCAN_TASK_PUBLISH_FAILED:"));
+        verifyNoInteractions(versionRepository);
     }
 
     @Test

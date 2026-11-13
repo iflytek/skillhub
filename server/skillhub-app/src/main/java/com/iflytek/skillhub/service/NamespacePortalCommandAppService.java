@@ -156,6 +156,20 @@ public class NamespacePortalCommandAppService {
         return MemberResponse.from(member, user);
     }
 
+    @Transactional
+    public MemberResponse setTeamAutoPublication(String slug,
+                                                 String memberUserId,
+                                                 boolean granted,
+                                                 String operatorUserId) {
+        NamespaceMember member = namespaceMemberService.setTeamAutoPublication(
+                namespaceId(slug),
+                memberUserId,
+                granted,
+                operatorUserId
+        );
+        return MemberResponse.from(member, userAccountRepository.findById(memberUserId).orElse(null));
+    }
+
     // Intentionally not @Transactional: each addMember runs in its own transaction
     // so partial success is possible (some members added even if others fail).
     public BatchMemberResponse batchAddMembers(String slug, List<MemberRequest> members, String operatorUserId) {

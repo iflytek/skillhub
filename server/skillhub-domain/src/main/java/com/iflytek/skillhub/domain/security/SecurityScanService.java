@@ -2,6 +2,7 @@ package com.iflytek.skillhub.domain.security;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.review.TeamAutoPublicationService;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
@@ -11,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,6 +43,12 @@ public class SecurityScanService {
     private final String scanMode;
     private final boolean enabled;
     private com.iflytek.skillhub.domain.skill.service.SkillDownloadService bundles;
+    private TeamAutoPublicationService teamAutoPublication;
+
+    @Autowired(required = false)
+    public void setTeamAutoPublication(@Lazy TeamAutoPublicationService service) {
+        this.teamAutoPublication = service;
+    }
 
     @Autowired
     public void setBundles(com.iflytek.skillhub.domain.skill.service.SkillDownloadService service) { this.bundles = service; }
@@ -161,6 +169,28 @@ public class SecurityScanService {
                 && auditRepository.existsByTaskIdAndScannedAtIsNotNull(taskId);
     }
 
+    /**
+     * Records that a scan attempt could never be handed to the scanner (permanent outbox dispatch
+     * failure). It is treated exactly like a scanner failure callback for that attempt: the attempt is
+     * settled as failed, the current round moves to {@code SCAN_FAILED} and team-only automatic
+     * eligibility falls back to normal review.
+     *
+     * @return {@code false} when no scan attempt record exists for the task, so the caller keeps its
+     *         legacy handling
+     */
+    @Transactional
+    public boolean processUndispatchableScan(String taskId, Long versionId, ScannerType scannerType, String reason) {
+        boolean attemptExists = auditRepository.findByTaskId(taskId)
+                .filter(candidate -> candidate.getSkillVersionId().equals(versionId))
+                .filter(candidate -> candidate.getScannerType() == scannerType)
+                .isPresent();
+        if (!attemptExists) {
+            return false;
+        }
+        processScanFailure(taskId, versionId, scannerType, reason);
+        return true;
+    }
+
     @Transactional
     public void processScanFailure(String taskId, Long versionId, ScannerType scannerType, String reason) {
         SecurityAudit audit = auditRepository.findByTaskId(taskId)
@@ -169,6 +199,12 @@ public class SecurityScanService {
                 .orElseThrow(() -> new IllegalStateException("SecurityAudit not found for taskId=" + taskId));
         if (audit.getScannedAt() != null) {
             return;
+        }
+        if (teamAutoPublication != null) {
+            teamAutoPublication.lockForScanCompletion(versionId, audit);
+            if (audit.getScannedAt() != null) {
+                return;
+            }
         }
         audit.markFailed(Instant.now(Clock.systemUTC()), reason);
         auditRepository.save(audit);
@@ -185,6 +221,9 @@ public class SecurityScanService {
                 .ifPresent(version -> {
                     version.setStatus(SkillVersionStatus.SCAN_FAILED);
                     skillVersionRepository.save(version);
+                    if (teamAutoPublication != null) {
+                        teamAutoPublication.onCurrentScanFailed(versionId, taskId);
+                    }
                 });
     }
 
@@ -198,6 +237,16 @@ public class SecurityScanService {
                 .filter(candidate -> candidate.getScannerType() == scannerType)
                 .orElseThrow(() -> new IllegalStateException(
                         "SecurityAudit not found for taskId=" + taskId));
+        if (audit.getScannedAt() != null) {
+            // A redelivered or replayed result for a settled round must not change any state.
+            return;
+        }
+        if (teamAutoPublication != null) {
+            teamAutoPublication.lockForScanCompletion(versionId, audit);
+            if (audit.getScannedAt() != null) {
+                return;
+            }
+        }
         SkillVersion version = skillVersionRepository.findById(versionId)
                 .orElseThrow(() -> new IllegalStateException("SkillVersion not found: " + versionId));
 
@@ -216,7 +265,8 @@ public class SecurityScanService {
                 .map(latest -> taskId.equals(latest.getTaskId()))
                 .orElse(false);
         // A late result is retained on its own audit round but cannot complete a newer attempt.
-        if (currentAttempt && version.getStatus() == SkillVersionStatus.SCANNING) {
+        boolean completedCurrentRound = currentAttempt && version.getStatus() == SkillVersionStatus.SCANNING;
+        if (completedCurrentRound) {
             if (version.getRequestedVisibility() == SkillVisibility.PRIVATE) {
                 version.setStatus(SkillVersionStatus.UPLOADED);
             } else {
@@ -225,6 +275,9 @@ public class SecurityScanService {
         }
         if (currentAttempt) {
             skillVersionRepository.save(version);
+        }
+        if (completedCurrentRound && teamAutoPublication != null) {
+            teamAutoPublication.onCurrentScanCompleted(versionId, taskId, response.verdict());
         }
     }
 

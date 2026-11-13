@@ -394,6 +394,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/namespaces/{slug}/members/{userId}/team-auto-publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateTeamAutoPublication"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/namespaces/{slug}/members/{userId}/team-auto-publication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["updateTeamAutoPublication_1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/namespaces/{slug}/members/{userId}/role": {
         parameters: {
             query?: never;
@@ -7815,9 +7847,8 @@ export interface components {
             timestamp?: string;
             requestId?: string;
         };
-        UpdateMemberRoleRequest: {
-            /** @enum {string} */
-            role: "OWNER" | "ADMIN" | "MEMBER";
+        TeamAutoPublicationRequest: {
+            granted: boolean;
         };
         ApiResponseMemberResponse: {
             /** Format: int32 */
@@ -7838,10 +7869,15 @@ export interface components {
             email?: string;
             /** @enum {string} */
             role?: "OWNER" | "ADMIN" | "MEMBER";
+            teamAutoPublicationGranted?: boolean;
             /** Format: date-time */
             createdAt?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        UpdateMemberRoleRequest: {
+            /** @enum {string} */
+            role: "OWNER" | "ADMIN" | "MEMBER";
         };
         NamespaceRequest: {
             slug: string;
@@ -8873,6 +8909,9 @@ export interface components {
             summary?: string;
             reviewKind?: string;
             canReview?: boolean;
+            decisionMethod?: string;
+            decisionScanTaskId?: string;
+            autoPublicationGrantId?: string;
         };
         ReviewTaskRequest: {
             /** Format: int64 */
@@ -13475,6 +13514,60 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseListNotificationEmailPreferenceResponse"];
+                };
+            };
+        };
+    };
+    updateTeamAutoPublication: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamAutoPublicationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
+                };
+            };
+        };
+    };
+    updateTeamAutoPublication_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TeamAutoPublicationRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseMemberResponse"];
                 };
             };
         };

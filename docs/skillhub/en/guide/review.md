@@ -13,6 +13,8 @@ This page covers pending-content inspection, decision submission and result veri
 
 Owners and Admins of a team namespace can review their own submissions; super administrators can self-review. Other own submissions cannot be self-reviewed solely through the platform Skill administrator role. Only a super administrator can review their own global promotion request. Ordinary review decisions also require an `ACTIVE` namespace. Source: [review permission policy](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewPermissionChecker.java).
 
+For ordinary members granted [team-only automatic publication](./team-auto-publication.html), first namespace-only publications and same-visibility updates are approved by the system after the current scan is `SAFE`. The task is retained and marked System automatic approval; tasks that do not qualify appear in the pending queue as usual.
+
 Ordinary public (`PUBLIC`) or namespace-member-visible (`NAMESPACE_ONLY`) uploads enter scanning and review. Private (`PRIVATE`) uploads are retained first and still require publication confirmation or a separate review submission. A previously published version may remain available while an update is pending.
 
 ## Find Review Requests
@@ -74,7 +76,7 @@ A task can be `PENDING` while its version is still `SCANNING`. Task and version 
 | State | Meaning | Responsible party and next action |
 | --- | --- | --- |
 | `PENDING` | Awaiting a decision | Authorized reviewer reads the current request before acting |
-| `APPROVED` | Approved | Submitter verifies the version or metadata effect |
+| `APPROVED` | Approved; decision method is Human review or System automatic approval | Submitter verifies the version or metadata effect |
 | `REJECTED` | Rejected with comments retained | Submitter revises and resubmits |
 | `SUPERSEDED` | Replaced by a later request | Submitter and reviewer read the current request |
 

@@ -95,6 +95,7 @@ class AdminNamespaceControllerTest {
                         "Alice",
                         "alice@example.com",
                         NamespaceRole.MEMBER,
+                        false,
                         Instant.parse("2026-08-12T00:00:00Z"),
                         Instant.parse("2026-08-12T00:00:00Z")));
 

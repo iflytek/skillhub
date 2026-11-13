@@ -1403,6 +1403,19 @@ export const namespaceApi = {
     )
   },
 
+  async setTeamAutoPublication(slug: string, userId: string, granted: boolean): Promise<NamespaceMember> {
+    return fetchJson<NamespaceMember>(
+      `${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}/team-auto-publication`,
+      {
+        method: 'PUT',
+        headers: await ensureCsrfHeaders({
+          'Content-Type': 'application/json',
+        }),
+        body: JSON.stringify({ granted }),
+      },
+    )
+  },
+
   async removeMember(slug: string, userId: string): Promise<void> {
     await fetchJson<void>(`${WEB_API_PREFIX}/namespaces/${normalizeNamespaceSlug(slug)}/members/${encodeURIComponent(userId)}`, {
       method: 'DELETE',

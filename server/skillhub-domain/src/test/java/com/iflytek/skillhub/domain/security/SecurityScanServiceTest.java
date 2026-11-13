@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.domain.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.iflytek.skillhub.domain.review.TeamAutoPublicationService;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
@@ -25,8 +26,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class SecurityScanServiceTest {
@@ -290,6 +293,90 @@ class SecurityScanServiceTest {
         assertThatThrownBy(() -> service.triggerScan(42L, List.of(entry), "publisher-1"))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("Unsafe scan path");
+    }
+
+    @Test
+    void processScanResult_handsCurrentCompletedRoundToTeamAutoPublicationOnce() {
+        TeamAutoPublicationService autoPublication = mock(TeamAutoPublicationService.class);
+        service.setTeamAutoPublication(autoPublication);
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-current");
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        version.setStatus(SkillVersionStatus.SCANNING);
+        version.setRequestedVisibility(com.iflytek.skillhub.domain.skill.SkillVisibility.NAMESPACE_ONLY);
+        given(auditRepository.findByTaskId("task-current")).willReturn(Optional.of(audit));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+        SecurityScanResponse safe = new SecurityScanResponse("scan-1", SecurityVerdict.SAFE, 0, null, List.of(), 0.1);
+
+        service.processScanResult("task-current", 42L, ScannerType.SKILL_SCANNER, safe);
+        service.processScanResult("task-current", 42L, ScannerType.SKILL_SCANNER, safe);
+
+        verify(autoPublication).lockForScanCompletion(42L, audit);
+        verify(autoPublication).onCurrentScanCompleted(42L, "task-current", SecurityVerdict.SAFE);
+        verify(skillVersionRepository).save(version);
+    }
+
+    @Test
+    void processScanResult_staleRoundNeverReachesTeamAutoPublicationDecision() {
+        TeamAutoPublicationService autoPublication = mock(TeamAutoPublicationService.class);
+        service.setTeamAutoPublication(autoPublication);
+        SecurityAudit stale = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-old");
+        SecurityAudit current = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-new");
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        version.setStatus(SkillVersionStatus.SCANNING);
+        given(auditRepository.findByTaskId("task-old")).willReturn(Optional.of(stale));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(current));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        service.processScanResult("task-old", 42L, ScannerType.SKILL_SCANNER,
+                new SecurityScanResponse("scan-old", SecurityVerdict.SAFE, 0, null, List.of(), 0.1));
+
+        verify(autoPublication, never()).onCurrentScanCompleted(any(), any(), any());
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCANNING);
+    }
+
+    @Test
+    void processScanFailure_currentRoundFallsBackOnceAndReplayIsIgnored() {
+        TeamAutoPublicationService autoPublication = mock(TeamAutoPublicationService.class);
+        service.setTeamAutoPublication(autoPublication);
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-current");
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        version.setStatus(SkillVersionStatus.SCANNING);
+        given(auditRepository.findByTaskId("task-current")).willReturn(Optional.of(audit));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        service.processScanFailure("task-current", 42L, ScannerType.SKILL_SCANNER, "timeout");
+        service.processScanFailure("task-current", 42L, ScannerType.SKILL_SCANNER, "timeout");
+
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
+        verify(autoPublication).onCurrentScanFailed(42L, "task-current");
+        verify(autoPublication, never()).onCurrentScanCompleted(any(), any(), any());
+    }
+
+    @Test
+    void processUndispatchableScan_usesTheFailureCallbackPathOrReportsMissingAttempt() {
+        TeamAutoPublicationService autoPublication = mock(TeamAutoPublicationService.class);
+        service.setTeamAutoPublication(autoPublication);
+        SecurityAudit audit = new SecurityAudit(42L, ScannerType.SKILL_SCANNER, "task-undispatched");
+        SkillVersion version = new SkillVersion(8L, "1.0.0", "publisher-1");
+        version.setStatus(SkillVersionStatus.SCANNING);
+        given(auditRepository.findByTaskId("task-undispatched")).willReturn(Optional.of(audit));
+        given(auditRepository.findLatestActiveByVersionIdAndScannerType(42L, ScannerType.SKILL_SCANNER))
+                .willReturn(Optional.of(audit));
+        given(skillVersionRepository.findById(42L)).willReturn(Optional.of(version));
+
+        assertThat(service.processUndispatchableScan("task-undispatched", 42L, ScannerType.SKILL_SCANNER,
+                "SCAN_TASK_PUBLISH_FAILED:IllegalStateException")).isTrue();
+        assertThat(service.processUndispatchableScan("task-missing", 42L, ScannerType.SKILL_SCANNER,
+                "SCAN_TASK_PUBLISH_FAILED:IllegalStateException")).isFalse();
+
+        assertThat(audit.getScannedAt()).isNotNull();
+        assertThat(version.getStatus()).isEqualTo(SkillVersionStatus.SCAN_FAILED);
+        verify(autoPublication).onCurrentScanFailed(42L, "task-undispatched");
     }
 
     @Test

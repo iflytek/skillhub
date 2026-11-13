@@ -18,6 +18,7 @@ import com.iflytek.skillhub.domain.namespace.SlugValidator;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
+import com.iflytek.skillhub.domain.review.TeamAutoPublicationPolicy;
 import com.iflytek.skillhub.domain.security.SecurityScanService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
@@ -59,6 +60,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -87,6 +89,13 @@ public class SkillPublishService {
 
     private ReviewAvatarParticipant avatarParticipant;
     private SkillVisibilityService visibilityService;
+    private TeamAutoPublicationPolicy teamAutoPublicationPolicy;
+
+    @Autowired(required = false)
+    public void setTeamAutoPublicationPolicy(TeamAutoPublicationPolicy policy) {
+        this.teamAutoPublicationPolicy = policy;
+    }
+
     @org.springframework.beans.factory.annotation.Autowired
     public void setVisibilityService(SkillVisibilityService service) { this.visibilityService = service; }
 
@@ -941,14 +950,25 @@ public class SkillPublishService {
                     : ReviewTask.forGithubSyncSkillVersion(version.getId(), skill.getId(),
                             namespace.getId(), version.getVersion(), publisherId,
                             syncTarget.ingestionId());
+            // Only ordinary single-Skill submissions may capture team-only automatic eligibility.
+            // Privileged direct publish, GitHub sync and Bundle orchestration keep their own rules.
+            Optional<UUID> autoPublicationGrant = syncTarget == null && bundleTarget == null
+                    && teamAutoPublicationPolicy != null
+                    ? teamAutoPublicationPolicy.grantForSubmission(
+                            namespace, skill, newSkill, visibility, publisherId, true)
+                    : Optional.empty();
+            autoPublicationGrant.ifPresent(grantId -> reviewTask.captureAutoPublicationEligibility(grantId, true));
             ReviewTask savedReviewTask = reviewTaskRepository.save(reviewTask);
-            eventPublisher.publishEvent(new ReviewSubmittedEvent(
-                    savedReviewTask.getId(),
-                    skill.getId(),
-                    version.getId(),
-                    savedReviewTask.getSubmittedBy(),
-                    savedReviewTask.getNamespaceId()
-            ));
+            // Eligible tasks announce themselves to reviewers only if they fall back to normal review.
+            if (autoPublicationGrant.isEmpty()) {
+                eventPublisher.publishEvent(new ReviewSubmittedEvent(
+                        savedReviewTask.getId(),
+                        skill.getId(),
+                        version.getId(),
+                        savedReviewTask.getSubmittedBy(),
+                        savedReviewTask.getNamespaceId()
+                ));
+            }
         }
 
         // Trigger security scan for all versions (including auto-publish)
