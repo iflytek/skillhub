@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+  <title>Skeleton 骨架屏 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <link rel="stylesheet" href="../assets/icons.css">
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+
+    .page {
+      max-width: var(--sh-size-container-page);
+      margin: 0 auto;
+      padding: var(--sh-space-12) var(--sh-space-8) var(--sh-space-16);
+    }
+
+    .page-head {
+      padding-bottom: var(--sh-space-6);
+      border-bottom: var(--sh-size-border-width) solid var(--sh-border-default);
+      margin-bottom: var(--sh-space-10);
+    }
+
+    .eyebrow {
+      margin: 0 0 var(--sh-space-2);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      letter-spacing: 0.08em;
+      color: var(--sh-text-secondary);
+    }
+
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sh-space-3);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: var(--sh-text-4xl);
+      line-height: var(--sh-text-4xl-lh);
+      font-weight: var(--sh-weight-semibold);
+      letter-spacing: var(--sh-tracking-heading);
+    }
+
+    .slug {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-tertiary);
+      background: var(--sh-bg-muted);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-sm);
+      padding: var(--sh-space-0_5) var(--sh-space-2);
+    }
+
+    .lede {
+      margin: var(--sh-space-3) 0 0;
+      max-width: var(--sh-size-container-reading);
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      color: var(--sh-text-secondary);
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sh-space-2);
+      margin: var(--sh-space-4) 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .meta li {
+      padding: 3px var(--sh-space-2_5);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-full);
+      background: var(--sh-bg-muted);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+    }
+
+    .block { margin-bottom: var(--sh-space-12); }
+
+    .block-head { margin-bottom: var(--sh-space-4); }
+
+    h2 {
+      display: flex;
+      align-items: baseline;
+      gap: var(--sh-space-3);
+      margin: 0;
+      font-size: var(--sh-text-xl);
+      line-height: var(--sh-text-xl-lh);
+      font-weight: var(--sh-weight-semibold);
+    }
+
+    .idx {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-tertiary);
+    }
+
+    .block-head p {
+      margin: var(--sh-space-1) 0 0;
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      color: var(--sh-text-secondary);
+    }
+
+    .stage {
+      padding: var(--sh-space-6);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-xl);
+      box-shadow: var(--sh-shadow-card);
+    }
+
+    .stage-head {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sh-space-6);
+      padding-bottom: var(--sh-space-3);
+      border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle);
+      margin-bottom: var(--sh-space-2);
+    }
+
+    .stage-head span {
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      letter-spacing: 0.04em;
+      color: var(--sh-text-tertiary);
+    }
+
+    .row { padding: var(--sh-space-3) 0 var(--sh-space-2); }
+
+    .row + .row {
+      border-top: 1px dashed var(--sh-border-subtle);
+    }
+
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sh-space-6);
+      align-items: center;
+    }
+
+    .pair--name { min-height: 36px; }
+    .pair--desc { min-height: 56px; }
+    .pair--version { min-height: 32px; }
+
+    .sk {
+      display: block;
+      border-radius: 6px;
+      background: linear-gradient(
+        90deg,
+        var(--sh-bg-muted) 25%,
+        var(--sh-bg-sunken) 50%,
+        var(--sh-bg-muted) 75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.8s ease-in-out infinite;
+    }
+
+    /* 骨架组件契约（1.2.0）：线 / 宽度档位 / 卡片 / 表格行 */
+    .skeleton { display: block; border-radius: var(--sh-radius-xs); background: linear-gradient(90deg, var(--sh-bg-muted) 25%, var(--sh-bg-sunken) 50%, var(--sh-bg-muted) 75%); background-size: 200% 100%; animation: shimmer 1.8s ease-in-out infinite; }
+    .skeleton--text { height: 12px; }
+    .skeleton--title { height: 20px; }
+    .skeleton--avatar { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-radius-full); }
+    .skeleton--block { height: var(--sh-space-16); }
+    .skeleton--short { width: 40%; }
+    .skeleton--medium { width: 64%; }
+    .skeleton--long { width: 88%; }
+    .skeleton--full { width: 100%; }
+    .skeleton-card { display: flex; flex-direction: column; justify-content: center; gap: var(--sh-space-2); height: 96px; padding: var(--sh-space-4); background: var(--sh-bg-raised); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); }
+    /* 表格骨架行：与 .data-table 行高一致（单行 40 / 双行 52），列宽按真实列比例 */
+    .skeleton-table-row { display: flex; align-items: center; gap: var(--sh-space-3); min-height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle); }
+    .skeleton-table-row--two-line { min-height: 52px; align-items: flex-start; }
+    .skeleton-table-row .skeleton { flex: none; }
+    .skeleton-table-row .skeleton--grow { flex: 1 1 auto; }
+
+    .h12 { height: 12px; }
+    .h16 { height: 16px; }
+    .h20 { height: 20px; }
+
+    .w14 { width: 14%; }
+    .w18 { width: 18%; }
+    .w40 { width: 40%; }
+    .w45 { width: 45%; }
+    .w64 { width: 64%; }
+    .w70 { width: 70%; }
+    .w72 { width: 72%; }
+    .w80 { width: 80%; }
+    .w90 { width: 90%; }
+    .w100 { width: 100%; }
+
+    .sk-pill { border-radius: var(--sh-radius-full); }
+    .mt-2 { margin-top: var(--sh-space-2); }
+
+    .real-title {
+      margin: 0;
+      font-size: var(--sh-text-xl);
+      line-height: var(--sh-text-xl-lh);
+      font-weight: var(--sh-weight-semibold);
+      letter-spacing: var(--sh-tracking-heading);
+    }
+
+    .real-desc {
+      margin: 0;
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      color: var(--sh-text-secondary);
+    }
+
+    .real-desc + .real-desc { margin-top: var(--sh-space-0_5); }
+
+    .ver-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sh-space-3);
+    }
+
+    .ver {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-sm);
+      color: var(--sh-text-primary);
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sh-space-1_5);
+      padding: var(--sh-space-1) var(--sh-space-2);
+      border-radius: var(--sh-radius-full);
+      font-size: var(--sh-text-xs);
+      line-height: 1;
+      white-space: nowrap;
+      flex: none;
+    }
+
+    .status-pub {
+      background: var(--sh-success-weak);
+      color: var(--sh-success-on-weak);
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: var(--sh-radius-full);
+      background: currentColor;
+    }
+
+    .date {
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+      font-variant-numeric: tabular-nums;
+      flex: none;
+    }
+
+    .cap {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sh-space-1_5);
+      margin: var(--sh-space-2) 0 0;
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+    }
+
+    .cap-src { color: var(--sh-text-tertiary); }
+    .cap-arrow { color: var(--sh-text-secondary); font-family: var(--sh-font-mono); }
+    .cap-real { color: var(--sh-text-primary); font-weight: var(--sh-weight-medium); }
+
+    .card-grid,
+    .list-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sh-space-6);
+    }
+
+    .col-label {
+      margin: 0 0 var(--sh-space-2);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      letter-spacing: 0.04em;
+      color: var(--sh-text-tertiary);
+    }
+
+    .sk-card {
+      height: 96px;
+      padding: var(--sh-space-4);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: var(--sh-space-2);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+    }
+
+    .real-card {
+      height: 96px;
+      padding: var(--sh-space-4);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: var(--sh-space-1);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+      box-shadow: var(--sh-shadow-card);
+    }
+
+    .rc-name {
+      margin: 0;
+      font-size: var(--sh-text-base);
+      line-height: 22px;
+      font-weight: var(--sh-weight-semibold);
+    }
+
+    .rc-meta {
+      margin: 0;
+      font-size: var(--sh-text-xs);
+      line-height: 16px;
+      color: var(--sh-text-secondary);
+    }
+
+    .list {
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+      overflow: hidden;
+    }
+
+    .list-row {
+      height: 48px;
+      padding: 0 var(--sh-space-4);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--sh-space-4);
+      border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle);
+    }
+
+    .list-row:last-child { border-bottom: 0; }
+
+    .sk-row {
+      display: flex;
+      align-items: center;
+      gap: var(--sh-space-3);
+    }
+
+    .ver-name {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-sm);
+      font-weight: var(--sh-weight-medium);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: var(--sh-space-0_5) var(--sh-space-2);
+      border-radius: var(--sh-radius-full);
+      font-size: var(--sh-text-xs);
+      line-height: 16px;
+      white-space: nowrap;
+      flex: none;
+    }
+
+    .badge-pub {
+      background: var(--sh-success-weak);
+      color: var(--sh-success-on-weak);
+    }
+
+    .badge-review {
+      background: var(--sh-bg-muted);
+      color: var(--sh-status-review);
+    }
+
+    .badge-archived {
+      background: var(--sh-bg-muted);
+      color: var(--sh-status-archived);
+    }
+
+    .rules {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sh-space-4);
+    }
+
+    .rule {
+      padding: var(--sh-space-4);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+    }
+
+    .rule h3 {
+      margin: 0 0 var(--sh-space-1_5);
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      font-weight: var(--sh-weight-semibold);
+    }
+
+    .rule p {
+      margin: 0;
+      font-size: var(--sh-text-xs);
+      line-height: 1.6;
+      color: var(--sh-text-secondary);
+    }
+
+    .note {
+      margin-top: var(--sh-space-4);
+      padding: var(--sh-space-4);
+      background: var(--sh-bg-muted);
+      border: 1px dashed var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+      font-size: var(--sh-text-xs);
+      line-height: 1.7;
+      color: var(--sh-text-secondary);
+    }
+
+    .note code {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-primary);
+    }
+
+    .foot {
+      margin: var(--sh-space-8) 0 0;
+      padding-top: var(--sh-space-4);
+      border-top: var(--sh-size-border-width) solid var(--sh-border-default);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+    }
+
+    @media (max-width: 720px) {
+      .page { padding: var(--sh-space-6) var(--sh-space-4) var(--sh-space-10); }
+      .pair,
+      .stage-head,
+      .card-grid,
+      .list-grid,
+      .rules {
+        grid-template-columns: 1fr;
+      }
+      .stage { padding: var(--sh-space-4); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .sk {
+        animation: none;
+        background: var(--sh-bg-muted);
+      }
+    }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body data-component="skeleton">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+<main class="page">
+  <header class="page-head">
+    <p class="eyebrow">反馈组件 · Feedback</p>
+    <div class="title-row">
+      <h1>Skeleton 骨架屏</h1>
+      <code class="slug">skeleton</code>
+    </div>
+    <p class="lede">用于技能详情页首屏与 Tab 切换的灰阶占位。骨架形状必须与真实内容一致，避免加载完成时发生跳动。</p>
+    <ul class="meta">
+      <li>shimmer 1.8s</li>
+      <li>灰阶，不使用品牌色</li>
+      <li>加载超过 1.5s 才显示</li>
+      <li>首屏最多 3 块</li>
+    </ul>
+  </header>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">01</span>行骨架 · line</h2>
+      <p>高度 12 / 20px，圆角 6px，宽度为真实文案的 40%–70%。三行分别对应标题、简介与版本信息；另提供 block 64px 与卡片占位 96px。</p>
+    </div>
+
+    <div class="stage">
+      <div class="stage-head">
+        <span>加载中 · Skeleton</span>
+        <span>加载完成 · 真实内容</span>
+      </div>
+
+      <div class="row">
+        <div class="pair pair--name">
+          <div><span class="sk h20 w64" aria-hidden="true"></span></div>
+          <div><p class="real-title">中文办公助手</p></div>
+        </div>
+        <p class="cap"><span class="cap-src">技能名称占位</span><span class="cap-arrow">→</span><span class="cap-real">中文办公助手</span></p>
+      </div>
+
+      <div class="row">
+        <div class="pair pair--desc">
+          <div>
+            <span class="sk h12 w90" aria-hidden="true"></span>
+            <span class="sk h12 w70 mt-2" aria-hidden="true"></span>
+          </div>
+          <div>
+            <p class="real-desc">自动整理会议纪要、周报与待办，按项目归档到飞书云文档。</p>
+            <p class="real-desc">支持飞书、钉钉与本地 Markdown，无需额外配置。</p>
+          </div>
+        </div>
+        <p class="cap"><span class="cap-src">简介两行占位</span><span class="cap-arrow">→</span><span class="cap-real">技能简介</span></p>
+      </div>
+
+      <div class="row">
+        <div class="pair pair--version">
+          <div><span class="sk h12 w40" aria-hidden="true"></span></div>
+          <div>
+            <div class="ver-row">
+              <span class="ver">v1.4.0</span>
+              <span class="status status-pub"><span class="dot"></span>已发布</span>
+              <span class="date">2026-03-12</span>
+            </div>
+          </div>
+        </div>
+        <p class="cap"><span class="cap-src">版本行占位</span><span class="cap-arrow">→</span><span class="cap-real">v1.4.0 已发布</span></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">02</span>卡片骨架 · card</h2>
+      <p>侧栏信息卡占位：96px 高、圆角 10px、1px --sh-border-default 描边，与真实信息卡完全等高。</p>
+    </div>
+
+    <div class="stage">
+      <div class="card-grid">
+        <div>
+          <p class="col-label">加载中 · SkeletonCard</p>
+          <div class="sk-card" aria-hidden="true">
+            <span class="sk h20 w72"></span>
+            <span class="sk h12 w100"></span>
+            <span class="sk h12 w80"></span>
+          </div>
+        </div>
+        <div>
+          <p class="col-label">加载完成 · 真实内容</p>
+          <div class="real-card">
+            <p class="rc-name">中文办公助手</p>
+            <p class="rc-meta">维护者 · @global 办公效率组</p>
+            <p class="rc-meta">更新于 2026-03-12</p>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><span class="cap-src">侧栏卡片占位</span><span class="cap-arrow">→</span><span class="cap-real">维护者信息卡</span></p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">03</span>列表骨架 · list</h2>
+      <p>版本列表占位 4 行，行高 48px；左侧保留版本名与状态徽标的位置，右侧保留发布日期。</p>
+    </div>
+
+    <div class="stage">
+      <div class="list-grid">
+        <div>
+          <p class="col-label">加载中 · SkeletonList</p>
+          <div class="list" aria-hidden="true">
+            <div class="list-row">
+              <div class="sk-row"><span class="sk h12 w40"></span><span class="sk sk-pill h12 w14"></span></div>
+              <span class="sk h12 w18"></span>
+            </div>
+            <div class="list-row">
+              <div class="sk-row"><span class="sk h12 w40"></span><span class="sk sk-pill h12 w14"></span></div>
+              <span class="sk h12 w18"></span>
+            </div>
+            <div class="list-row">
+              <div class="sk-row"><span class="sk h12 w40"></span><span class="sk sk-pill h12 w14"></span></div>
+              <span class="sk h12 w18"></span>
+            </div>
+            <div class="list-row">
+              <div class="sk-row"><span class="sk h12 w40"></span><span class="sk sk-pill h12 w14"></span></div>
+              <span class="sk h12 w18"></span>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <p class="col-label">加载完成 · 真实内容</p>
+          <div class="list">
+            <div class="list-row">
+              <div class="ver-row">
+                <span class="ver-name">v1.4.0</span>
+                <span class="badge badge-pub">已发布</span>
+              </div>
+              <span class="date">2026-03-12</span>
+            </div>
+            <div class="list-row">
+              <div class="ver-row">
+                <span class="ver-name">v1.3.2</span>
+                <span class="badge badge-pub">已发布</span>
+              </div>
+              <span class="date">2026-02-18</span>
+            </div>
+            <div class="list-row">
+              <div class="ver-row">
+                <span class="ver-name">v1.3.1</span>
+                <span class="badge badge-review">审核中</span>
+              </div>
+              <span class="date">2026-01-09</span>
+            </div>
+            <div class="list-row">
+              <div class="ver-row">
+                <span class="ver-name">v1.2.4</span>
+                <span class="badge badge-archived">已归档</span>
+              </div>
+              <span class="date">2025-12-02</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="cap"><span class="cap-src">版本列表占位</span><span class="cap-arrow">→</span><span class="cap-real">v1.4.0 已发布</span></p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">05</span>表格骨架与宽度档位</h2>
+      <p>表格加载态使用契约类：行高与真实表格一致（单行 40 / 双行 52），不再由页面自写 CSS。</p>
+    </div>
+
+    <div class="rules" style="margin-bottom: var(--sh-space-4);">
+      <article class="rule">
+        <h3>宽度档位</h3>
+        <p><code>.skeleton--short</code> 40% · <code>.skeleton--medium</code> 64% · <code>.skeleton--long</code> 88% · <code>.skeleton--full</code> 100%；按真实文案长度选档，不用随意百分比。</p>
+      </article>
+      <article class="rule">
+        <h3>两行行高</h3>
+        <p>名称 + 副标题的列用 <code>.skeleton-table-row--two-line</code>（52px），单行数据用默认 40px，避免加载完成时跳动。</p>
+      </article>
+      <article class="rule">
+        <h3>列宽映射</h3>
+        <p>骨架列宽按真实列比例分配；操作列放 <code>.skeleton--text</code> 短块，不要用按钮骨架。</p>
+      </article>
+    </div>
+
+    <div class="table-shell" style="background: var(--sh-bg-raised); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); overflow: hidden;">
+      <div class="skeleton-table-row skeleton-table-row--two-line">
+        <div style="display:flex; flex-direction:column; gap:var(--sh-space-1); flex:1 1 24%;">
+          <span class="skeleton skeleton--text" style="width:72%;"></span>
+          <span class="skeleton skeleton--text" style="width:44%;"></span>
+        </div>
+        <span class="skeleton skeleton--text" style="width:14%;"></span>
+        <span class="skeleton skeleton--text" style="width:10%;"></span>
+        <span class="skeleton skeleton--text" style="width:16%;"></span>
+        <span class="skeleton skeleton--text" style="width:8%; margin-left:auto;"></span>
+      </div>
+      <div class="skeleton-table-row">
+        <span class="skeleton skeleton--text" style="width:24%;"></span>
+        <span class="skeleton skeleton--text" style="width:14%;"></span>
+        <span class="skeleton skeleton--text" style="width:10%;"></span>
+        <span class="skeleton skeleton--text" style="width:16%;"></span>
+        <span class="skeleton skeleton--text" style="width:8%; margin-left:auto;"></span>
+      </div>
+      <div class="skeleton-table-row">
+        <span class="skeleton skeleton--text" style="width:20%;"></span>
+        <span class="skeleton skeleton--text" style="width:14%;"></span>
+        <span class="skeleton skeleton--text" style="width:10%;"></span>
+        <span class="skeleton skeleton--text" style="width:16%;"></span>
+        <span class="skeleton skeleton--text" style="width:8%; margin-left:auto;"></span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">06</span>使用规则</h2>
+      <p>骨架屏是加载反馈，不是装饰；规则决定它出现与消失的时机。</p>
+    </div>
+
+    <div class="rules">
+      <article class="rule">
+        <h3>形状对齐真实内容</h3>
+        <p>行数、宽度与高度必须映射到真实文案，避免加载完成后布局抖动。</p>
+      </article>
+      <article class="rule">
+        <h3>首屏最多 3 块</h3>
+        <p>只覆盖标题、简介与版本行；列表场景按行占位，不铺满整屏。</p>
+      </article>
+      <article class="rule">
+        <h3>延迟 1.5s 出现</h3>
+        <p>短于 300ms 的操作不使用骨架；超过 1.5s 的加载才显示 shimmer。</p>
+      </article>
+    </div>
+
+    <p class="note">
+      动效降级：系统开启「减少动态效果」时停止 shimmer，退化为 <code>--sh-bg-muted</code> 静态灰阶。
+      两个不做：不使用彩色骨架，也不做整页全屏骨架。
+    </p>
+  </section>
+
+  <p class="foot">所有颜色、间距、圆角与动效均来自 colors_and_type.css；本页为静态预览，不含脚本。</p>
+</main>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

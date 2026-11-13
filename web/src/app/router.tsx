@@ -92,6 +92,8 @@ function createRoleProtectedRouteComponent<TModule extends Record<string, unknow
   }
 }
 
+const FeaturedPage = createLazyRouteComponent(() => import('@/pages/recommendations'), 'FeaturedPage')
+const RecommendationTopicPage = createLazyRouteComponent(() => import('@/pages/recommendations'), 'RecommendationTopicPage')
 const LandingPage = createLazyRouteComponent(() => import('@/pages/landing'), 'LandingPage')
 const HomePage = createLazyRouteComponent(() => import('@/pages/home'), 'HomePage')
 const LoginPage = createLazyRouteComponent(() => import('@/pages/login'), 'LoginPage')
@@ -782,7 +784,12 @@ const adminNamespacesRoute = createRoute({
   component: AdminNamespacesPage,
 })
 
+const featuredRoute = createRoute({ getParentRoute: () => rootRoute, path: '/featured', component: FeaturedPage })
+const recommendationTopicRoute = createRoute({ getParentRoute: () => rootRoute, path: '/topics/$topicId', component: RecommendationTopicPage })
+
 const routeTree = rootRoute.addChildren([
+  featuredRoute,
+  recommendationTopicRoute,
   landingRoute,
   skillsRoute,
   loginRoute,

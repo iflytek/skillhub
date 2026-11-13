@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>FormField 表单字段 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-xl); font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-heading); } .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); } .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: var(--sh-space-5) var(--sh-space-6); }
+    .row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--sh-space-5); }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-1_5); } .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); color: var(--sh-text-placeholder); }
+
+    .field { display: flex; flex-direction: column; gap: var(--sh-space-1); }
+    .field-label { display: flex; align-items: baseline; gap: var(--sh-space-1); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); font-weight: var(--sh-weight-medium); color: var(--sh-text-primary); }
+    .req { color: var(--sh-danger-base); } .optional { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); font-weight: var(--sh-weight-regular); color: var(--sh-text-tertiary); }
+    .field-control { position: relative; display: flex; }
+    .input { width: 100%; box-sizing: border-box; height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-control-md-radius); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+    .field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+    .field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+    .input::placeholder { color: var(--sh-text-placeholder); }
+    .input:focus { outline: none; border-color: var(--sh-border-focus); }
+    .input.is-error { border-color: var(--sh-danger-base); }
+    .input.is-disabled { background: var(--sh-bg-muted); color: var(--sh-text-disabled); border-color: var(--sh-border-default); cursor: not-allowed; }
+    .input.is-loading { padding-right: calc(var(--sh-control-md-pad-x) + var(--sh-control-md-icon) + var(--sh-space-2)); }
+    .spinner { box-sizing: border-box; display: inline-block; flex: none; position: static; vertical-align: middle; width: var(--sh-control-md-icon); height: var(--sh-control-md-icon); border: var(--sh-size-border-width) solid var(--sh-border-default); border-top-color: var(--sh-text-primary); border-radius: var(--sh-radius-full); animation: sh-spin 900ms linear infinite; }
+    /* 覆盖式加载态：仅用于输入框尾随图标、按钮图标等需要脱离文档流的宿主 */
+    .spinner--overlay { position: absolute; right: var(--sh-control-md-pad-x); top: 50%; transform: translateY(-50%); animation-name: sh-spin-overlay; }
+    @keyframes sh-spin { to { transform: rotate(360deg); } }
+    @keyframes sh-spin-overlay { to { transform: translateY(-50%) rotate(360deg); } }
+
+    .help { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-text-secondary); }
+    .error { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-danger-base); }
+    .field-meta { display: flex; justify-content: space-between; gap: var(--sh-space-1); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+    .counter { font-variant-numeric: tabular-nums; color: var(--sh-text-placeholder); }
+    .hint { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-text-secondary); }
+
+    .field--horizontal { display: grid; grid-template-columns: 104px minmax(0, 1fr); row-gap: var(--sh-space-1); column-gap: var(--sh-space-4); align-items: center; }
+    .field--horizontal .field-label { grid-column: 1; grid-row: 1; align-self: center; }
+    .field--horizontal .field-control { grid-column: 2; grid-row: 1; }
+    .field--horizontal .help, .field--horizontal .error { grid-column: 2; grid-row: 2; }
+
+    .form-card { display: flex; flex-direction: column; gap: var(--sh-space-5); width: 100%; max-width: var(--sh-size-container-form); padding: var(--sh-space-5); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); background: var(--sh-bg-raised); }
+    .form-head { display: flex; flex-direction: column; gap: var(--sh-space-1); }
+    .form-title { margin: 0; font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); color: var(--sh-text-primary); }
+    .form-sub { margin: 0; font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-text-secondary); }
+
+    .notes { margin: 0; padding: var(--sh-space-4); list-style: none; display: flex; flex-direction: column; gap: var(--sh-space-2); border: 1px dashed var(--sh-border-default); border-radius: var(--sh-radius-md); background: var(--sh-bg-muted); font-size: var(--sh-text-xs); line-height: 1.7; color: var(--sh-text-secondary); }
+    .notes li { display: flex; gap: var(--sh-space-2); }
+    .notes b { font-family: var(--sh-font-mono); font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+
+    @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* Unreleased content-fit rules. */
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sh-space-3);
+}
+.form-stack > .field { margin-top: 0; min-width: 0; }
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body data-component="form-field">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">FormField 表单字段</h1>
+    <p class="lede">标签在上、控件居中、帮助或错误文案在下；标签 12px/500，错误 12px 且使用危险色。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">解剖 <em>label → control → help / error</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">anatomy · 标签 + 控件 + 帮助</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-skill-id">技能标识</label>
+          <div class="field-control">
+            <input class="input" id="ff-skill-id" value="@global/data-cleanup" aria-describedby="ff-skill-id-help" />
+          </div>
+          <span class="help" id="ff-skill-id-help">由系统生成，命名空间与技能名不可在此修改。</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">anatomy · 错误替换帮助</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-anatomy-email">邮箱 <span class="req">*</span></label>
+          <div class="field-control">
+            <input class="input is-error" id="ff-anatomy-email" value="admin@" aria-invalid="true" aria-describedby="ff-anatomy-email-error" aria-required="true" />
+          </div>
+          <span class="error" id="ff-anatomy-email-error">请输入完整的邮箱地址，例如 name@company.com。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">标签变体 <em>required / optional / with-counter</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">required · 必填</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-required">邮箱 <span class="req">*</span></label>
+          <div class="field-control">
+            <input class="input" id="ff-required" placeholder="name@company.com" aria-required="true" aria-describedby="ff-required-help" />
+          </div>
+          <span class="help" id="ff-required-help">用于接收审核结果与治理通知。</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">optional · 选填</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-optional">备注 <span class="optional">选填</span></label>
+          <div class="field-control">
+            <input class="input" id="ff-optional" value="用于内部归档" aria-describedby="ff-optional-help" />
+          </div>
+          <span class="help" id="ff-optional-help">选填项，最多 80 个字。</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">with-counter · 字数计数</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-counter">变更说明</label>
+          <div class="field-control">
+            <input class="input" id="ff-counter" value="更新了安装步骤与示例命令" aria-describedby="ff-counter-help" />
+          </div>
+          <div class="field-meta" id="ff-counter-help">
+            <span class="help">最多 120 个字</span>
+            <span class="counter">12 / 120</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">状态 · 六种 <em>default / focus / filled / error / disabled / loading</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">default · 默认</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-default">命名空间</label>
+          <div class="field-control">
+            <input class="input" id="ff-default" placeholder="@global/my-team" />
+          </div>
+          <span class="help">使用小写字母、数字与连字符。</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">focus · 聚焦</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-focus">命名空间</label>
+          <div class="field-control">
+            <input class="input" id="ff-focus" value="@global/chinese-office-assistant" />
+          </div>
+          <span class="help">聚焦时描边转为近黑，并附 2px 外环。</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">filled · 已填写</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-filled">命名空间</label>
+          <div class="field-control">
+            <input class="input" id="ff-filled" value="@global/chinese-office-assistant" />
+          </div>
+          <span class="help">已保存，修改后需重新提交审核。</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">error · 错误</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-error">命名空间 <span class="req">*</span></label>
+          <div class="field-control">
+            <input class="input is-error" id="ff-error" value="Chinese Office" aria-invalid="true" aria-describedby="ff-error-text" aria-required="true" />
+          </div>
+          <span class="error" id="ff-error-text">只能使用小写字母、数字与连字符，不能包含空格。</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">disabled · 禁用</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-disabled">命名空间</label>
+          <div class="field-control">
+            <input class="input is-disabled" id="ff-disabled" value="@global/chinese-office-assistant" disabled />
+          </div>
+          <span class="help">审核期间不可修改命名空间。</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">loading · 校验中</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-loading">命名空间</label>
+          <div class="field-control">
+            <input class="input is-loading" id="ff-loading" value="@global/chinese-office-assistant" readonly aria-describedby="ff-loading-help" />
+            <span class="spinner spinner--overlay" aria-hidden="true"></span>
+          </div>
+          <span class="help" id="ff-loading-help">正在检查该命名空间是否可用…</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">尺寸 <em>sm 24px / md 28px</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">sm · 24px 控件</span>
+        <div class="field field--sm" data-component="form-field">
+          <label class="field-label" for="ff-sm">搜索关键词</label>
+          <div class="field-control">
+            <input class="input" id="ff-sm" placeholder="例如：办公助手" />
+          </div>
+          <span class="help">紧凑表格与筛选栏使用 sm 尺寸。</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">md · 28px 控件</span>
+        <div class="field field--md" data-component="form-field">
+          <label class="field-label" for="ff-md">搜索关键词</label>
+          <div class="field-control">
+            <input class="input" id="ff-md" placeholder="例如：办公助手" />
+          </div>
+          <span class="help">表单页默认使用 md 尺寸。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">布局 <em>vertical 堆叠 / horizontal 标签在左</em></h2>
+    <div class="row">
+      <div class="state">
+        <span class="state-label">vertical · 两字段堆叠表单</span>
+        <div class="form-card">
+          <div class="form-head">
+            <p class="form-title">新建命名空间</p>
+            <p class="form-sub">创建后可在成员管理中添加协作者。</p>
+          </div>
+          <div class="field field--md" data-component="form-field">
+            <label class="field-label" for="ff-form-name">显示名称 <span class="req">*</span></label>
+            <div class="field-control">
+              <input class="input" id="ff-form-name" placeholder="例如：中文办公助手" aria-required="true" aria-describedby="ff-form-name-help" />
+            </div>
+            <span class="help" id="ff-form-name-help">会展示在技能卡片与搜索结果中。</span>
+          </div>
+          <div class="field field--md" data-component="form-field">
+            <label class="field-label" for="ff-form-purpose">用途说明 <span class="optional">选填</span></label>
+            <div class="field-control">
+              <input class="input" id="ff-form-purpose" placeholder="一句话说明使用场景" aria-describedby="ff-form-purpose-help" />
+            </div>
+            <span class="help" id="ff-form-purpose-help">帮助其他成员判断是否适用。</span>
+          </div>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">horizontal · 标签在左</span>
+        <div class="field field--md field--horizontal" data-component="form-field">
+          <label class="field-label" for="ff-horizontal">命名空间</label>
+          <div class="field-control">
+            <input class="input" id="ff-horizontal" value="@global/my-team" aria-describedby="ff-horizontal-help" />
+          </div>
+          <span class="help" id="ff-horizontal-help">横向布局仅用于设置项，默认仍为标签在上。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">禁忌 <em>静态预览的三条红线</em></h2>
+    <ul class="notes">
+      <li><b>01</b><span>不要把标签做成浮动标签，或用占位符替代标签；标签必须常驻在控件上方（12px/500）。</span></li>
+      <li><b>02</b><span>不要在同一个字段同时显示帮助与错误文案，错误出现时应替换帮助文本。</span></li>
+      <li><b>03</b><span>不要给标签上色或用图标替代必填标识；必填统一使用危险色星号，选填标注为「选填」。</span></li>
+    </ul>
+  </section>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

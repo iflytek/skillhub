@@ -18,7 +18,6 @@ import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
-import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import com.iflytek.skillhub.domain.skill.validation.SkillPackagePolicy;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -63,7 +62,7 @@ public class BuiltinSkillInitializer {
     private final SkillRepository skillRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SkillFileRepository skillFileRepository;
-    private final SkillPublishService skillPublishService;
+    private final BuiltinSkillPublicationService skillPublishService;
 
     public BuiltinSkillInitializer(
             BuiltinSkillProperties properties,
@@ -77,7 +76,7 @@ public class BuiltinSkillInitializer {
             SkillRepository skillRepository,
             SkillVersionRepository skillVersionRepository,
             SkillFileRepository skillFileRepository,
-            SkillPublishService skillPublishService) {
+            BuiltinSkillPublicationService skillPublishService) {
         this.properties = properties;
         this.manifestLoader = manifestLoader;
         this.downloader = downloader;

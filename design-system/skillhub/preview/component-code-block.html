@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+  <title>CodeBlock 代码块 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <link rel="stylesheet" href="../assets/icons.css">
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    .icon, .icon-16 { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-icon-16); height: var(--sh-icon-16); stroke-width: var(--sh-icon-stroke-16); vertical-align: middle; color: inherit; }
+    .icon-12 { width: var(--sh-icon-12); height: var(--sh-icon-12); stroke-width: var(--sh-icon-stroke-12); }
+    .icon-14 { width: var(--sh-icon-14); height: var(--sh-icon-14); stroke-width: var(--sh-icon-stroke-14); }
+    .icon-18 { width: var(--sh-icon-18); height: var(--sh-icon-18); stroke-width: var(--sh-icon-stroke-18); }
+    .icon-20 { width: var(--sh-icon-20); height: var(--sh-icon-20); stroke-width: var(--sh-icon-stroke-20); }
+    .icon-24 { width: var(--sh-icon-24); height: var(--sh-icon-24); stroke-width: var(--sh-icon-stroke-24); }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+
+    .page {
+      max-width: var(--sh-size-container-page);
+      margin: 0 auto;
+      padding: var(--sh-space-12) var(--sh-space-8) var(--sh-space-16);
+    }
+
+    .page-head {
+      padding-bottom: var(--sh-space-6);
+      border-bottom: var(--sh-size-border-width) solid var(--sh-border-default);
+      margin-bottom: var(--sh-space-10);
+    }
+
+    .eyebrow {
+      margin: 0 0 var(--sh-space-2);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      letter-spacing: 0.08em;
+      color: var(--sh-text-secondary);
+    }
+
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sh-space-3);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: var(--sh-text-4xl);
+      line-height: var(--sh-text-4xl-lh);
+      font-weight: var(--sh-weight-semibold);
+      letter-spacing: var(--sh-tracking-heading);
+    }
+
+    .slug {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-tertiary);
+      background: var(--sh-bg-muted);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-sm);
+      padding: var(--sh-space-0_5) var(--sh-space-2);
+    }
+
+    .lede {
+      margin: var(--sh-space-3) 0 0;
+      max-width: var(--sh-size-container-reading);
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      color: var(--sh-text-secondary);
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sh-space-2);
+      margin: var(--sh-space-4) 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .meta li {
+      padding: 3px var(--sh-space-2_5);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-full);
+      background: var(--sh-bg-muted);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+    }
+
+    .block { margin-bottom: var(--sh-space-12); }
+
+    .block-head { margin-bottom: var(--sh-space-4); }
+
+    h2 {
+      display: flex;
+      align-items: baseline;
+      gap: var(--sh-space-3);
+      margin: 0;
+      font-size: var(--sh-text-xl);
+      line-height: var(--sh-text-xl-lh);
+      font-weight: var(--sh-weight-semibold);
+    }
+
+    .idx {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-tertiary);
+    }
+
+    .block-head p {
+      margin: var(--sh-space-1) 0 0;
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      color: var(--sh-text-secondary);
+    }
+
+    .stage {
+      padding: var(--sh-space-6);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-xl);
+      box-shadow: var(--sh-shadow-card);
+    }
+
+    .stage-label {
+      margin: 0 0 var(--sh-space-2);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      letter-spacing: 0.04em;
+      color: var(--sh-text-tertiary);
+    }
+
+    .stage-note {
+      margin: var(--sh-space-3) 0 0;
+      font-size: var(--sh-text-xs);
+      line-height: 1.7;
+      color: var(--sh-text-secondary);
+    }
+
+    .code-block {
+      position: relative;
+      padding: var(--sh-space-2_5) var(--sh-space-3) var(--sh-space-2_5) var(--sh-space-3);
+      padding-right: var(--sh-space-12);
+      background: var(--sh-bg-muted);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-sm);
+      overflow: hidden;
+    }
+
+    .code-block pre {
+      margin: 0;
+      overflow-x: auto;
+    }
+
+    .code-block code {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-caption);
+      line-height: var(--sh-text-mono-lh);
+      color: var(--sh-text-primary);
+      white-space: pre;
+    }
+
+    .code-block--wrap code {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .code-block .copy {
+    appearance: none; box-sizing: border-box; margin: 0;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none;
+      position: absolute;
+      top: var(--sh-space-2);
+      right: var(--sh-space-2);
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: 0;
+      border-radius: var(--sh-radius-sm);
+      background: transparent;
+      color: var(--sh-text-tertiary);
+      cursor: pointer;
+      transition:
+        background-color var(--sh-duration-fast) var(--sh-ease-standard),
+        color var(--sh-duration-fast) var(--sh-ease-standard);
+    }
+
+    .code-block .copy:hover {
+      background: var(--sh-accent-base);
+      color: var(--sh-text-primary);
+    }
+
+    .code-block .copy:focus-visible {
+      outline: var(--sh-focus-ring-width) solid var(--sh-border-focus);
+      outline-offset: var(--sh-focus-ring-offset);
+    }
+
+    .code-block .copy.is-copied { color: var(--sh-text-primary); }
+
+    .copy-state .loading-chip, .toast {
+      position: absolute;
+      top: var(--sh-space-2);
+      right: 44px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sh-space-1);
+      padding: 0 var(--sh-space-2_5);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-full);
+      box-shadow: var(--sh-shadow-card);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-primary);
+      white-space: nowrap;
+    }
+
+    .methods {
+      display: flex;
+      flex-direction: column;
+      gap: var(--sh-space-5);
+    }
+
+    .method-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: var(--sh-space-3);
+      margin-bottom: var(--sh-space-2);
+    }
+
+    .method-head h3 {
+      margin: 0;
+      font-size: var(--sh-text-base);
+      line-height: var(--sh-text-base-lh);
+      font-weight: var(--sh-weight-semibold);
+    }
+
+    .method-head p {
+      margin: 0;
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-secondary);
+    }
+
+    .copy-states {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--sh-space-5);
+    }
+
+    .copy-state { min-width: 0; }
+
+    .copy-state .state-name {
+      margin: var(--sh-space-3) 0 var(--sh-space-1);
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      font-weight: var(--sh-weight-medium);
+    }
+
+    .copy-state .state-note {
+      margin: 0;
+      font-size: var(--sh-text-xs);
+      line-height: 1.7;
+      color: var(--sh-text-secondary);
+    }
+
+    .landing {
+      padding: var(--sh-space-8);
+      background: var(--sh-bg-page);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-2xl);
+    }
+
+    .landing-eyebrow {
+      margin: 0 0 var(--sh-space-2);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      letter-spacing: 0.08em;
+      color: var(--sh-text-secondary);
+    }
+
+    .landing h3 {
+      margin: 0;
+      font-size: var(--sh-text-2xl);
+      line-height: var(--sh-text-2xl-lh);
+      font-weight: var(--sh-weight-semibold);
+      color: var(--sh-text-primary);
+    }
+
+    .landing-desc {
+      margin: var(--sh-space-2) 0 var(--sh-space-5);
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      color: var(--sh-text-secondary);
+    }
+
+    .code-block--dark {
+      background: var(--sh-code-bg);
+      border-color: var(--sh-border-default);
+    }
+
+    .code-block--dark code { color: var(--sh-code-fg); }
+
+    .code-block--dark .copy { color: var(--sh-code-fg); }
+
+    .code-block--dark .copy:hover {
+      background: var(--sh-accent-base);
+      color: var(--sh-text-primary);
+    }
+
+    .landing-note {
+      margin: var(--sh-space-3) 0 0;
+      font-size: var(--sh-text-xs);
+      line-height: 1.7;
+      color: var(--sh-text-tertiary);
+    }
+
+    .spec-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sh-space-4);
+    }
+
+    .spec {
+      padding: var(--sh-space-4);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+    }
+
+    .spec-k {
+      margin: 0 0 var(--sh-space-1);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+    }
+
+    .spec-v {
+      margin: 0;
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-mono-lh);
+      color: var(--sh-text-primary);
+    }
+
+    .spec-v code {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-primary);
+    }
+
+    .note {
+      margin-top: var(--sh-space-4);
+      padding: var(--sh-space-4);
+      background: var(--sh-bg-muted);
+      border: 1px dashed var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+      font-size: var(--sh-text-xs);
+      line-height: 1.7;
+      color: var(--sh-text-secondary);
+    }
+
+    .foot {
+      margin: var(--sh-space-8) 0 0;
+      padding-top: var(--sh-space-4);
+      border-top: var(--sh-size-border-width) solid var(--sh-border-default);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+    }
+
+    @media (max-width: 720px) {
+      .page { padding: var(--sh-space-6) var(--sh-space-4) var(--sh-space-10); }
+      .stage { padding: var(--sh-space-4); }
+      .copy-states,
+      .spec-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .code-block .copy { transition: none; }
+    }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+    .icon-12 { width: 12px; height: 12px; }
+    .icon-18 { width: 18px; height: 18px; }
+    .icon-20 { width: 20px; height: 20px; }
+    .icon-24 { width: 24px; height: 24px; }
+
+
+
+  </style>
+</head>
+<body data-component="code-block">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+<main class="page">
+  <header class="page-head">
+    <p class="eyebrow">内容组件 · Content</p>
+    <div class="title-row">
+      <h1>CodeBlock 代码块</h1>
+      <code class="slug">code-block</code>
+    </div>
+    <p class="lede">安装命令与 API 示例的统一呈现。命令完整展示、不省略、不截断，复制时不带 $ 提示符。</p>
+    <ul class="meta">
+      <li>等宽字体 13px</li>
+      <li>复制按钮 28px</li>
+      <li>两种安装方式分行展示</li>
+      <li>深色底仅用于落地页</li>
+    </ul>
+  </header>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">01</span>浅色 · 单行安装命令</h2>
+      <p>技能详情页首屏使用。浅灰底、1px 描边、圆角 8px、内边距 10px 12px；命令单行完整可读。</p>
+    </div>
+
+    <div class="stage">
+      <p class="stage-label">技能详情页 · 安装命令</p>
+      <div class="code-block">
+        <pre><code>clawhub install @global/chinese-office-assistant</code></pre>
+        <button class="copy" type="button" title="复制" aria-label="复制">
+          <span class="sh-i i16-copy" aria-hidden="true"></span>
+        </button>
+      </div>
+      <p class="stage-note">命令前不加 $ 提示符，复制内容即为可执行命令。</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">02</span>两种安装方式 · 分行展示</h2>
+      <p>SkillHub CLI 与 ClawHub CLI 并列成行，明确标注来源；不使用 Tab 隐藏其中一种。</p>
+    </div>
+
+    <div class="stage">
+      <div class="methods">
+        <article class="method">
+          <div class="method-head">
+            <h3>SkillHub CLI</h3>
+            <p>企业内部注册表的默认方式，携带版本号。</p>
+          </div>
+          <div class="code-block code-block--wrap">
+            <pre><code>npx @astron-team/skillhub@latest install @global/chinese-office-assistant --version 1.4.0</code></pre>
+            <button class="copy" type="button" title="复制" aria-label="复制">
+              <span class="sh-i i16-copy" aria-hidden="true"></span>
+            </button>
+          </div>
+        </article>
+
+        <article class="method">
+          <div class="method-head">
+            <h3>ClawHub CLI</h3>
+            <p>保留既有 ClawHub 工作流的项目继续使用兼容 slug。</p>
+          </div>
+          <div class="code-block code-block--wrap">
+            <pre><code>npx clawhub install chinese-office-assistant</code></pre>
+            <button class="copy" type="button" title="复制" aria-label="复制">
+              <span class="sh-i i16-copy" aria-hidden="true"></span>
+            </button>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">03</span>复制按钮 · idle / copied</h2>
+      <p>复制图标位于代码块右上角；复制成功后切换为对勾，1.5s 后恢复，并弹出「已复制」提示。</p>
+    </div>
+
+    <div class="stage">
+      <div class="copy-states">
+        <div class="copy-state">
+          <div class="code-block">
+            <pre><code>clawhub install @global/chinese-office-assistant</code></pre>
+            <button class="copy" type="button" title="复制" aria-label="复制">
+              <span class="sh-i i16-copy" aria-hidden="true"></span>
+            </button>
+          </div>
+          <p class="state-name">idle · 复制</p>
+          <p class="state-note">ghost 28px 图标按钮，悬停显示 --sh-accent-base 底色。</p>
+        </div>
+
+        <div class="copy-state">
+          <div class="code-block">
+            <pre><code>clawhub install @global/chinese-office-assistant</code></pre>
+            <button class="copy is-copied" type="button" title="已复制" aria-label="已复制">
+              <span class="sh-i i16-check" aria-hidden="true"></span>
+            </button>
+            <span class="loading-chip">
+              <span class="sh-i i12-check" aria-hidden="true"></span>
+              已复制
+            </span>
+          </div>
+          <p class="state-name">copied · 已复制</p>
+          <p class="state-note">图标切换为对勾，1.5s 后恢复为复制图标。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">04</span>深色变体 · 落地页</h2>
+      <p>落地页与营销区块使用 --sh-code-bg 深色底、--sh-code-fg 浅色文字；详情页仍使用浅色变体。</p>
+    </div>
+
+    <div class="dark landing">
+      <p class="landing-eyebrow">安装到你的 Agent</p>
+      <h3>中文办公助手</h3>
+      <p class="landing-desc">会议纪要、周报与文档归档，一条命令接入企业技能注册表。</p>
+      <div class="code-block code-block--dark">
+        <pre><code>clawhub install @global/chinese-office-assistant</code></pre>
+        <button class="copy" type="button" title="复制" aria-label="复制">
+          <span class="sh-i i16-copy" aria-hidden="true"></span>
+        </button>
+      </div>
+      <p class="landing-note">深色代码块仅用于落地页，不用于技能详情页的安装命令区域。</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">05</span>规格与书写规则</h2>
+      <p>代码块服务于「可复制」这一目标：宁可换行，也不省略任何命令内容。</p>
+    </div>
+
+    <div class="spec-grid">
+      <div class="spec">
+        <p class="spec-k">字体与字号</p>
+        <p class="spec-v">JetBrains Mono / 等宽栈，13px，行高 1.6</p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">浅色容器</p>
+        <p class="spec-v">背景 <code>--sh-bg-muted</code>，1px <code>--sh-border-default</code>，圆角 8px</p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">复制按钮</p>
+        <p class="spec-v">28 × 28px，绝对定位 right 8 top 8，悬停 <code>--sh-accent-base</code></p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">长命令</p>
+        <p class="spec-v">pre-wrap + break-all，整行完整可读，不使用省略号截断</p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">提示符</p>
+        <p class="spec-v">命令前不加 <code>$</code>，避免复制时误带符号</p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">复制反馈</p>
+        <p class="spec-v">图标切换为对勾，toast 文案「已复制」，1.5s 后恢复</p>
+      </div>
+    </div>
+
+    <p class="note">不使用彩色语法主题，也不给大量代码加行号。本页为静态预览，复制按钮不执行实际复制。</p>
+  </section>
+
+  <p class="foot">所有颜色、间距、圆角与动效均来自 colors_and_type.css；本页为静态预览，不含脚本。</p>
+</main>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

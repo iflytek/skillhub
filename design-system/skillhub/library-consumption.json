@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "version": "1.3.1",
+  "tokenSource": "colors_and_type.css",
+  "css": {
+    "runtime": "components.runtime.css",
+    "entry": "components.css",
+    "previewOnly": "components.preview.css",
+    "rule": "静态示例消费runtime；previewOnly仅服务预览，不进入React产品全局。"
+  },
+  "recommendedReadOrder": [
+    "README.md",
+    "colors_and_type.css",
+    "tokens.full.json",
+    "components/index.json",
+    "specs/task-composition.md",
+    "preview/component-{slug}.html"
+  ],
+  "coreComponents": [
+    "button",
+    "dropdown-menu",
+    "card",
+    "badge",
+    "table",
+    "code-block"
+  ],
+  "supportComponents": [
+    "input",
+    "tabs",
+    "dialog",
+    "empty-state",
+    "skeleton",
+    "pagination",
+    "breadcrumb",
+    "alert",
+    "tooltip",
+    "avatar",
+    "checkbox",
+    "radio",
+    "switch",
+    "sheet",
+    "copy-button",
+    "form-field",
+    "select",
+    "textarea",
+    "label"
+  ],
+  "workingRevision": {
+    "status": "reviewed-core-snapshot",
+    "updatedAt": "2026-11-11",
+    "scope": "Apache-2.0核心资源整理；不包含私人原型、编辑器插件或未提供的生成工具。"
+  },
+  "productAdoption": "specs/product-adoption.md"
+}

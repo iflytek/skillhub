@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Table 表格 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    .icon, .icon-16 { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-icon-16); height: var(--sh-icon-16); stroke-width: var(--sh-icon-stroke-16); vertical-align: middle; color: inherit; }
+    .icon-12 { width: var(--sh-icon-12); height: var(--sh-icon-12); stroke-width: var(--sh-icon-stroke-12); }
+    .icon-14 { width: var(--sh-icon-14); height: var(--sh-icon-14); stroke-width: var(--sh-icon-stroke-14); }
+    .icon-18 { width: var(--sh-icon-18); height: var(--sh-icon-18); stroke-width: var(--sh-icon-stroke-18); }
+    .icon-20 { width: var(--sh-icon-20); height: var(--sh-icon-20); stroke-width: var(--sh-icon-stroke-20); }
+    .icon-24 { width: var(--sh-icon-24); height: var(--sh-icon-24); stroke-width: var(--sh-icon-stroke-24); }
+
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .state-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sh-space-6); align-items: start; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); min-width: 0; }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-placeholder); }
+
+    .table-shell { background: var(--sh-bg-raised); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); overflow: hidden; }
+    .table-shell--scroll { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+    .data-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    /* 640px 断点：表格横向滚动，标记为次要的列隐藏 */
+    @media (max-width: 640px) {
+      .table-shell, .table-shell--scroll { overflow-x: auto; overflow-y: hidden; max-width: 100%; }
+      .data-table { min-width: 560px; }
+      .data-table .col-secondary { display: none; }
+    }
+    .data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); text-align: left; font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); color: var(--sh-text-secondary); background: var(--sh-bg-muted); border-bottom: var(--sh-size-border-width) solid var(--sh-border-default); white-space: nowrap; }
+    /* 行头单元格在 tbody 内按数据行规则排版：纵向 padding + 行高下限，双行内容不再被 0 padding 压扁 */
+    .data-table tbody th { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); text-align: left; font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); color: var(--sh-text-primary); background: transparent; border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle); white-space: normal; vertical-align: middle; }
+    /* td 的 height 在表格布局中是最小高度：content 行数 × 18 + 2 × 8 会把行撑开 */
+    .data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-primary); border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle); white-space: normal; vertical-align: middle; transition: background var(--sh-duration-fast) var(--sh-ease-standard); }
+    .data-table tbody tr:last-child td { border-bottom: 0; }
+    .data-table .num, .data-table .actions, .data-table .mono, .data-table .nowrap { white-space: nowrap; }
+    .data-table .cell-sub { display: block; font-size: var(--sh-size-badge-font); line-height: var(--sh-control-md-line); color: var(--sh-text-secondary); }
+    .data-table .num, .data-table .actions { text-align: right; }
+    .data-table .num { font-variant-numeric: tabular-nums; }
+    .data-table .version { font-weight: var(--sh-weight-medium); }
+    .meta { color: var(--sh-text-secondary); }
+    .data-table tbody tr:hover td { background: var(--sh-interaction-hover-bg); }
+
+    /* 表头吸顶 + 首列冻结：宽表横向滚动时保留标识列 */
+    .data-table--sticky-head th { position: sticky; top: 0; z-index: 3; }
+    .data-table--freeze-first :where(thead th:first-child) { width: min(212px, 40vw); }
+    .data-table--freeze-first th[scope="row"]:first-child, .data-table--freeze-first td:first-child { position: sticky; left: 0; z-index: 2; max-width: min(212px, 40vw); background: var(--sh-bg-raised); box-shadow: 1px 0 0 var(--sh-border-subtle); }
+    .data-table--freeze-first thead th:first-child { position: sticky; left: 0; z-index: 3; max-width: min(212px, 40vw); }
+    .data-table--freeze-first tbody th[scope="row"]:first-child { background: var(--sh-bg-page); z-index: 4; }
+    .data-table--freeze-first tbody tr:hover td:first-child { background: var(--sh-interaction-hover-bg); }
+
+    /* 表内空态：不显示空表头，用整行空态替代 */
+    .table-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--sh-space-2); min-height: var(--sh-size-empty-inline); padding: var(--sh-space-6) var(--sh-space-4); text-align: center; }
+    .table-empty .icon { color: var(--sh-text-placeholder); }
+    .table-empty-title { margin-top: var(--sh-space-1); font-size: var(--sh-text-body-sm); line-height: var(--sh-text-body-sm-lh); font-weight: var(--sh-weight-medium); color: var(--sh-text-primary); }
+    .table-empty-desc { max-width: var(--sh-size-container-reading); font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .data-table-empty td { padding: 0; }
+
+    .badge-soft { display: inline-flex; align-items: center; height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border: 0; border-radius: var(--sh-radius-xs); font-size: var(--sh-text-caption-xs); line-height: 1; font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-caption); }
+    .badge-soft-green { background: var(--sh-tone-success-weak); color: var(--sh-tone-success-fg); }
+    .badge-soft-warning { background: var(--sh-tone-warning-weak); color: var(--sh-tone-warning-fg); }
+    .badge-soft-neutral { background: var(--sh-tone-neutral-weak); color: var(--sh-tone-neutral-fg); }
+
+    .data-table .action { display: inline-flex; appearance: none; box-sizing: border-box; margin: 0; text-align: start; align-items: center; min-height: var(--sh-control-xs-height); padding: 0 var(--sh-space-1); border: 0; background: transparent; font-family: var(--sh-font-sans); font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); text-decoration: none; cursor: pointer; }
+    .data-table .action:hover { color: var(--sh-text-primary); }
+    .data-table .action + .action { margin-left: var(--sh-space-3); }
+    .data-table .btn-icon { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); }
+
+    .note { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-secondary); }
+
+    @media (max-width: 760px) {
+      .state-grid { grid-template-columns: minmax(0, 1fr); }
+    }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* Unreleased task-composition source rules. */
+.data-table--management thead th, .data-table--task thead th {
+  height: var(--sh-size-row-header-compact);
+  font-size: var(--sh-control-md-font);
+}
+.data-table--management td, .data-table--management tbody th, .data-table--task td, .data-table--task tbody th {
+  height: var(--sh-size-row-default);
+}
+.data-table--management .is-two-line td, .data-table--management .is-two-line th, .data-table--task .is-two-line td, .data-table--task .is-two-line th {
+  height: calc(var(--sh-control-md-line) * 2 + var(--sh-size-table-pad-y) * 2);
+}
+.data-table--task .cell-sub, .data-table--management .cell-sub {
+  line-height: var(--sh-control-xs-line);
+}
+/* @component-css-end */
+
+
+    .icon-12 { width: 12px; height: 12px; }
+    .icon-18 { width: 18px; height: 18px; }
+    .icon-20 { width: 20px; height: 20px; }
+    .icon-24 { width: 24px; height: 24px; }
+
+
+  </style>
+</head>
+<body data-component="table">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Table 表格</h1>
+    <p class="lede">展示版本列表等结构化数据：发丝线分隔、无斑马纹。表头 40px / 13px / 500；行高由内容行数决定（单行 40、双行 52），单元格纵向 8px 呼吸。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">版本列表 <em>default · 版本 / 状态 / 发布时间 / 文件数 / 操作</em></h2>
+    <div class="table-shell">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>版本</th>
+            <th>状态</th>
+            <th>发布时间</th>
+            <th class="num">文件数</th>
+            <th class="actions">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="version">v1.4.0</td>
+            <td><span class="badge-soft badge-soft-green">已发布</span></td>
+            <td class="meta">2026-10-28 14:20</td>
+            <td class="num meta">12</td>
+            <td class="actions">
+              <button type="button" class="action">下载</button>
+              <a class="action" href="#view-version">查看</a>
+            </td>
+          </tr>
+          <tr>
+            <td class="version">v1.3.2</td>
+            <td><span class="badge-soft badge-soft-neutral">已撤回</span></td>
+            <td class="meta">2026-09-16 10:05</td>
+            <td class="num meta">9</td>
+            <td class="actions">
+              <button type="button" class="action">查看</button>
+            </td>
+          </tr>
+          <tr>
+            <td class="version">v1.4.1</td>
+            <td><span class="badge-soft badge-soft-warning">审核中</span></td>
+            <td class="meta">2026-11-04 09:30</td>
+            <td class="num meta">11</td>
+            <td class="actions">
+              <button type="button" class="action">撤回</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">行状态与空态 <em>row hover / empty</em></h2>
+    <div class="state-grid">
+      <div class="state">
+        <span class="state-label">row / hover · 鼠标移入行</span>
+        <div class="table-shell">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>版本</th>
+                <th>状态</th>
+                <th class="actions">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="version">v1.4.0</td>
+                <td><span class="badge-soft badge-soft-green">已发布</span></td>
+                <td class="actions">
+                  <button type="button" class="action">查看</button>
+                </td>
+              </tr>
+              <tr class="row">
+                <td class="version">v1.3.2</td>
+                <td><span class="badge-soft badge-soft-neutral">已撤回</span></td>
+                <td class="actions">
+                  <button type="button" class="action">查看</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="state">
+        <span class="state-label">empty · 表内空态（保留表头）</span>
+        <div class="table-shell">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>版本</th>
+                <th>状态</th>
+                <th class="actions">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="data-table-empty">
+                <td colspan="3">
+                  <div class="table-empty">
+                    <span class="sh-i i24-file-text" aria-hidden="true"></span>
+                    <span class="table-empty-title">暂无版本记录</span>
+                    <span class="table-empty-desc">上传新版本后会显示在这里；也可用下方的文本按钮引导首次上传。</span>
+                    <button type="button" class="btn btn-sm">上传版本</button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">双行内容与宽表 <em>two-line cell / freeze first column / sticky head</em></h2>
+    <div class="table-shell table-shell--scroll" style="max-height: 260px; overflow-y: auto;">
+      <table class="data-table data-table--freeze-first data-table--sticky-head" style="min-width: 980px;">
+        <thead>
+          <tr>
+            <th>技能</th>
+            <th>归属</th>
+            <th>最新版本</th>
+            <th>状态</th>
+            <th class="num">文件数</th>
+            <th>更新时间</th>
+            <th class="actions">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row">
+              <div class="version">安全事件分级助手</div>
+              <div class="meta">security-triage</div>
+            </th>
+            <td>
+              <div>@global</div>
+              <div class="meta">平台公共空间</div>
+            </td>
+            <td class="mono">v2.1.0</td>
+            <td><span class="badge-soft badge-soft-green">已发布</span></td>
+            <td class="num meta">34</td>
+            <td class="meta">2026-11-04 09:30</td>
+            <td class="actions">
+              <button type="button" class="btn-icon btn-icon-xs sh-i i16-more-horizontal" aria-label="更多"></button>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <div class="version">数据资产编目规范</div>
+              <div class="meta">data-catalog-standard</div>
+            </th>
+            <td>
+              <div>@data-platform</div>
+              <div class="meta">数据平台组</div>
+            </td>
+            <td class="mono">v1.4.0</td>
+            <td><span class="badge-soft badge-soft-warning">审核中</span></td>
+            <td class="num meta">18</td>
+            <td class="meta">2026-11-02 15:12</td>
+            <td class="actions">
+              <button type="button" class="action">撤回</button>
+            </td>
+          </tr>
+          <tr>
+            <th scope="row">
+              <div class="version">访问授权审计</div>
+              <div class="meta">access-grant-audit</div>
+            </th>
+            <td>
+              <div>@security</div>
+              <div class="meta">安全运营组</div>
+            </td>
+            <td class="mono">v0.9.1</td>
+            <td><span class="badge-soft badge-soft-neutral">已撤回</span></td>
+            <td class="num meta">7</td>
+            <td class="meta">2026-10-28 11:40</td>
+            <td class="actions">
+              <button type="button" class="action">查看</button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">首列冻结：横向滚动时技能名保持可见；表头吸顶：纵向滚动时列名保持可见。单元格默认允许换行，<code>.num / .mono / .actions / .nowrap</code> 保持单行。</p>
+  </section>
+
+  <p class="note">文本左对齐、数字与操作列右对齐；行分隔为 1px 发丝线，悬停只改变底色，不位移、不加阴影。</p>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

@@ -41,6 +41,10 @@ vi.mock('@/features/skill/skill-card', () => ({
   SkillCard: () => null,
 }))
 
+vi.mock('@/features/recommendation/recommendation-preview', () => ({
+  HomepageRecommendations: () => null,
+}))
+
 vi.mock('@/shared/components/skeleton-loader', () => ({
   SkeletonList: () => null,
 }))

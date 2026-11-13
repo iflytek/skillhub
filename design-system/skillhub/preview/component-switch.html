@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Switch 开关 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-xl); font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sh-space-4) var(--sh-space-6); }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-1_5); }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); color: var(--sh-text-placeholder); }
+
+    .switch { position: relative; appearance: none; box-sizing: border-box; margin: 0;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none; display: inline-flex; flex: none; width: 36px; height: 20px; padding: 0; border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-full); background: var(--sh-switch-track); cursor: pointer; transition: background var(--sh-duration-base) var(--sh-ease-standard), border-color var(--sh-duration-base) var(--sh-ease-standard); }
+    .switch-knob { box-sizing: border-box; position: absolute; left: var(--sh-space-0_5); top: 1px; width: 16px; height: 16px; border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-full); background: var(--sh-bg-page); transition: left var(--sh-duration-base) var(--sh-ease-standard), width var(--sh-duration-base) var(--sh-ease-standard), height var(--sh-duration-base) var(--sh-ease-standard), top var(--sh-duration-base) var(--sh-ease-standard), border-color var(--sh-duration-base) var(--sh-ease-standard); }
+    .switch[aria-checked="true"] { background: var(--sh-primary-base); border-color: var(--sh-primary-base); }
+    .switch[aria-checked="true"] .switch-knob { left: calc(100% - 18px); }
+
+    .switch:hover:not([aria-checked="true"]) { border-color: var(--sh-text-tertiary); }
+    .switch:hover[aria-checked="true"] { background: var(--sh-primary-hover); border-color: var(--sh-primary-hover); }
+    .switch:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+    .switch:disabled:not(.is-loading),
+    .switch.is-disabled { background: var(--sh-bg-muted); border-color: var(--sh-border-default); cursor: not-allowed; }
+    .switch:disabled .switch-knob,
+    .switch.is-disabled .switch-knob { background: var(--sh-text-disabled); }
+
+    .switch--sm { width: 32px; height: 18px; }
+    .switch--sm .switch-knob { left: 1px; top: 1px; width: 14px; height: 14px; }
+    .switch--sm[aria-checked="true"] .switch-knob { left: calc(100% - 15px); }
+
+    .switch.is-loading { cursor: progress; }
+    .switch.is-loading .switch-knob { left: calc(50% - 3px); top: calc(50% - 3px); width: 6px; height: 6px; }
+
+    .switch-line { display: flex; align-items: center; gap: var(--sh-space-2); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-primary); }
+    .switch-note { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-text-secondary); }
+
+    .settings-list { max-width: 520px; border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-lg); overflow: hidden; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sh-space-4); padding: var(--sh-space-3) var(--sh-space-4); border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle); }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-text { display: flex; flex-direction: column; gap: var(--sh-space-1); }
+    .settings-label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); color: var(--sh-text-primary); }
+    .settings-desc { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-text-secondary); }
+
+    .notes { display: flex; flex-direction: column; gap: var(--sh-space-2); }
+    .notes p { margin: 0; font-size: var(--sh-text-xs); line-height: 1.7; color: var(--sh-text-secondary); }
+    .notes ul { margin: 0; padding-left: var(--sh-space-4); display: flex; flex-direction: column; gap: var(--sh-space-1); }
+    .notes li { font-size: var(--sh-text-xs); line-height: 1.7; color: var(--sh-text-secondary); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body data-component="switch">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Switch 开关</h1>
+    <p class="lede">36×20 轨道配 16px 滑块，200ms 过渡；只表达即时生效的二元状态，需要点击保存的批量表单请用 Checkbox。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">状态 <em>off / on / hover / focus-visible / disabled / loading</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">关闭 · off</span>
+        <div class="switch-line">
+          <button class="switch" type="button" role="switch" aria-checked="false" aria-label="订阅技能更新" data-component="switch"><span class="switch-knob"></span></button>
+          <span>订阅技能更新</span>
+        </div>
+        <span class="switch-note">轨道为浅灰，滑块靠左。</span>
+      </div>
+
+      <div class="state">
+        <span class="state-label">开启 · on</span>
+        <div class="switch-line">
+          <button class="switch" type="button" role="switch" aria-checked="true" aria-label="订阅技能更新" data-component="switch"><span class="switch-knob"></span></button>
+          <span>订阅技能更新</span>
+        </div>
+        <span class="switch-note">轨道转为近黑，滑块靠右。</span>
+      </div>
+
+      <div class="state">
+        <span class="state-label">悬停 · hover</span>
+        <div class="switch-line">
+          <button class="switch" type="button" role="switch" aria-checked="false" aria-label="公开可见" data-component="switch"><span class="switch-knob"></span></button>
+          <span>公开可见</span>
+        </div>
+        <span class="switch-note">悬停仅加深边框，不改变滑块位置。</span>
+      </div>
+
+      <div class="state">
+        <span class="state-label">聚焦 · focus-visible</span>
+        <div class="switch-line">
+          <button class="switch" type="button" role="switch" aria-checked="true" aria-label="公开可见" data-component="switch"><span class="switch-knob"></span></button>
+          <span>公开可见</span>
+        </div>
+        <span class="switch-note">键盘聚焦时使用 2px 近黑外环。</span>
+      </div>
+
+      <div class="state">
+        <span class="state-label">禁用关闭 · disabled off</span>
+        <div class="switch-line">
+          <button class="switch" type="button" role="switch" aria-checked="false" aria-label="自动同步上游更新" disabled data-component="switch"><span class="switch-knob"></span></button>
+          <span>自动同步上游更新</span>
+        </div>
+        <span class="switch-note">整体 45% 不透明度，不响应点击。</span>
+      </div>
+
+      <div class="state">
+        <span class="state-label">禁用开启 · disabled on</span>
+        <div class="switch-line">
+          <button class="switch" type="button" role="switch" aria-checked="true" aria-label="组织策略强制开启" disabled data-component="switch"><span class="switch-knob"></span></button>
+          <span>组织策略强制开启</span>
+        </div>
+        <span class="switch-note">由管理员锁定，成员不可关闭。</span>
+      </div>
+
+      <div class="state">
+        <span class="state-label">保存中 · loading</span>
+        <div class="switch-line">
+          <button class="switch is-loading" type="button" role="switch" aria-checked="false" aria-busy="true" aria-disabled="true" aria-label="正在保存可见性设置" data-component="switch"><span class="switch-knob"></span></button>
+          <span>正在保存…</span>
+        </div>
+        <span class="switch-note">滑块缩为 6px 圆点，期间禁止重复点击。</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">尺寸 <em>sm 32×18 / md 36×20</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">sm · 关闭</span>
+        <div class="switch-line">
+          <button class="switch switch--sm" type="button" role="switch" aria-checked="false" aria-label="紧凑开关" data-component="switch"><span class="switch-knob"></span></button>
+          <span>紧凑列表 · 关闭</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">sm · 开启</span>
+        <div class="switch-line">
+          <button class="switch switch--sm" type="button" role="switch" aria-checked="true" aria-label="紧凑开关" data-component="switch"><span class="switch-knob"></span></button>
+          <span>紧凑列表 · 开启</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">md · 关闭</span>
+        <div class="switch-line">
+          <button class="switch" type="button" role="switch" aria-checked="false" aria-label="标准开关" data-component="switch"><span class="switch-knob"></span></button>
+          <span>默认设置 · 关闭</span>
+        </div>
+      </div>
+      <div class="state">
+        <span class="state-label">md · 开启</span>
+        <div class="switch-line">
+          <button class="switch" type="button" role="switch" aria-checked="true" aria-label="标准开关" data-component="switch"><span class="switch-knob"></span></button>
+          <span>默认设置 · 开启</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">设置行组合 <em>label + description + switch</em></h2>
+    <div class="settings-list" data-component="switch">
+      <div class="settings-row">
+        <span class="settings-text">
+          <span class="settings-label">订阅技能更新</span>
+          <span class="settings-desc">新版本发布后通过站内消息提醒，不发送邮件。</span>
+        </span>
+        <button class="switch" type="button" role="switch" aria-checked="true" aria-label="订阅技能更新" data-component="switch"><span class="switch-knob"></span></button>
+      </div>
+      <div class="settings-row">
+        <span class="settings-text">
+          <span class="settings-label">在搜索结果中公开可见</span>
+          <span class="settings-desc">关闭后仅命名空间成员可以搜索到该技能。</span>
+        </span>
+        <button class="switch" type="button" role="switch" aria-checked="false" aria-label="在搜索结果中公开可见" data-component="switch"><span class="switch-knob"></span></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">使用禁忌</h2>
+    <div class="notes">
+      <ul>
+        <li>不要使用彩色开关，开启态只有近黑 <code>--sh-primary-base</code> 一种，成功/危险色不参与。</li>
+        <li>不要给滑块加阴影，轨道与滑块保持扁平两层。</li>
+        <li>需要点击保存才生效的批量表单请用 Checkbox，Switch 表示即时生效。</li>
+      </ul>
+    </div>
+  </section>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

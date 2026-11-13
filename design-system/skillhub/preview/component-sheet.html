@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Sheet 侧滑面板 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* preview-only：11px 仅用于压力测试标注 / 假数据 / 评分脚手架，不属于产品字阶；产品最小字号为 --sh-text-caption（13px）。 */
+    /* @component-css-start */
+    .icon, .icon-16 { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-icon-16); height: var(--sh-icon-16); stroke-width: var(--sh-icon-stroke-16); vertical-align: middle; color: inherit; }
+    .icon-12 { width: var(--sh-icon-12); height: var(--sh-icon-12); stroke-width: var(--sh-icon-stroke-12); }
+    .icon-14 { width: var(--sh-icon-14); height: var(--sh-icon-14); stroke-width: var(--sh-icon-stroke-14); }
+    .icon-18 { width: var(--sh-icon-18); height: var(--sh-icon-18); stroke-width: var(--sh-icon-stroke-18); }
+    .icon-20 { width: var(--sh-icon-20); height: var(--sh-icon-20); stroke-width: var(--sh-icon-stroke-20); }
+    .icon-24 { width: var(--sh-icon-24); height: var(--sh-icon-24); stroke-width: var(--sh-icon-stroke-24); }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-xl); font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-1_5); }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); color: var(--sh-text-placeholder); }
+
+    .demo-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--sh-space-6); }
+    .frame-col { display: flex; flex-direction: column; min-width: 0; }
+    .frame { position: relative; width: 640px; max-width: 100%; height: 480px; border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-xl); overflow: hidden; background: var(--sh-bg-raised); box-shadow: var(--sh-shadow-card); }
+    .frame--mobile { width: 360px; height: 480px; }
+    .frame-col .state-label { margin-top: var(--sh-space-2); }
+
+    .mock { position: absolute; inset: 0; display: flex; flex-direction: column; gap: var(--sh-space-2_5); padding: var(--sh-space-4); }
+    .crumb { margin: 0; font-family: var(--sh-font-mono); font-size: 11px; letter-spacing: var(--sh-tracking-code); color: var(--sh-text-secondary); }
+    .mock-title-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sh-space-2); }
+    .mock-title { margin: 0; font-size: var(--sh-text-body-sm); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+    .mock-badge { display: inline-flex; align-items: center; height: 18px; padding: 0 var(--sh-space-1_5); border-radius: var(--sh-radius-sm); background: var(--sh-bg-muted); color: var(--sh-text-secondary); font-size: 11px; }
+    .mock-meta { margin: 0; font-size: 11px; color: var(--sh-text-secondary); }
+    .mock-search { display: flex; align-items: center; height: 32px; padding: 0 var(--sh-space-3); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-md); background: var(--sh-bg-page); font-size: 11px; color: var(--sh-text-placeholder); }
+    .bar { height: 6px; border-radius: var(--sh-radius-full); background: var(--sh-bg-muted); }
+
+    .scrim, .sheet-scrim { position: absolute; inset: 0; z-index: 0; background: var(--sh-bg-scrim); opacity: var(--sh-overlay-scrim-alpha); }
+
+    /* 定位宿主：生产环境 fixed inset:0（Portal 挂 body）；预览内用 .frame 覆盖为 absolute */
+    .sheet-layer { position: fixed; inset: 0; z-index: var(--sh-z-overlay); display: flex; }
+    .sheet-layer[hidden] { display: none; }
+    .sheet-layer--center { align-items: center; justify-content: center; padding: var(--sh-space-4); }
+    .sheet-layer--center > .dialog { position: relative; z-index: 1; flex: none; }
+    .sheet-panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 1; box-sizing: border-box; width: min(var(--sh-size-sheet-sm), calc(100vw - var(--sh-space-8))); display: flex; flex-direction: column; gap: var(--sh-space-4); padding: var(--sh-space-5); background: var(--sh-bg-overlay); border-left: var(--sh-size-border-width) solid var(--sh-border-default); box-shadow: var(--sh-shadow-dialog); }
+    .sheet-panel--sm { width: min(var(--sh-size-sheet-sm), calc(100vw - var(--sh-space-8))); }
+    .sheet-panel--md { width: min(var(--sh-size-sheet-md), calc(100vw - var(--sh-space-8))); }
+    .sheet-panel--lg { width: min(var(--sh-size-sheet-lg), calc(100vw - var(--sh-space-8))); }
+    .sheet-head { flex: none; display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sh-space-3); padding-bottom: var(--sh-space-3); border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle); }
+    .sheet-title { margin: 0; font-size: var(--sh-text-lg); line-height: var(--sh-text-lg-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+    .sheet-sub { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-xs); line-height: var(--sh-text-xs-lh); color: var(--sh-text-secondary); }
+    .sheet-body { flex: 1 1 auto; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: var(--sh-space-5); padding-right: var(--sh-space-1); }
+    .sheet-foot { flex: none; display: flex; justify-content: flex-end; gap: var(--sh-space-2); padding-top: var(--sh-space-3); border-top: var(--sh-size-border-width) solid var(--sh-border-default); }
+
+    .icon-btn { display: inline-flex; flex: none; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: var(--sh-size-border-width) solid transparent; border-radius: var(--sh-radius-sm); background: transparent; color: var(--sh-text-secondary); cursor: pointer; }
+    .icon-btn:hover { background: var(--sh-accent-base); color: var(--sh-text-primary); }
+    .icon-btn .icon { width: 12px; height: 12px; }
+
+    .sheet-group { display: flex; flex-direction: column; }
+    .group-title { margin: 0 0 var(--sh-space-2); font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); }
+    .filter-row { display: flex; align-items: center; justify-content: space-between; gap: var(--sh-space-3); padding: var(--sh-space-2) 0; border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle); font-size: var(--sh-text-caption); }
+    .filter-row:last-child { border-bottom: none; }
+    .filter-label { flex: none; font-size: var(--sh-text-xs); color: var(--sh-text-secondary); }
+    .filter-value { text-align: right; color: var(--sh-text-primary); }
+
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sh-space-2); height: 36px; padding: 0 var(--sh-space-4); border: var(--sh-size-border-width) solid transparent; border-radius: var(--sh-radius-md); font-family: inherit; font-size: var(--sh-text-sm); font-weight: var(--sh-weight-medium); line-height: 1; white-space: nowrap; cursor: pointer; }
+    .btn-primary { background: var(--sh-primary-base); color: var(--sh-primary-foreground); box-shadow: var(--sh-shadow-btn); }
+    .btn-primary:hover { background: var(--sh-primary-hover); }
+    .btn-outline { background: var(--sh-bg-page); border-color: var(--sh-border-default); color: var(--sh-text-primary); }
+    .btn-outline:hover { background: var(--sh-accent-base); border-color: var(--sh-accent-border); }
+
+    .bottom-sheet { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; max-height: 85%; display: flex; flex-direction: column; gap: var(--sh-space-3); padding: var(--sh-space-4) var(--sh-space-4) var(--sh-space-5); background: var(--sh-bg-overlay); border-top: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-xl) var(--sh-radius-xl) 0 0; box-shadow: var(--sh-shadow-dialog); }
+    .grabber { flex: none; width: 36px; height: 4px; margin: 0 auto var(--sh-space-1); border-radius: var(--sh-radius-full); background: var(--sh-border-default); }
+    .bottom-sheet .sheet-foot { justify-content: stretch; }
+    .bottom-sheet .sheet-foot .btn { flex: 1 1 0; }
+
+    .spec-row { display: grid; grid-template-columns: minmax(160px, 220px) 1fr; gap: var(--sh-space-3); padding: var(--sh-space-2) 0; border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle); }
+    .spec-key { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); color: var(--sh-text-placeholder); }
+    .spec-desc { margin: 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+
+    .notes { display: flex; flex-direction: column; gap: var(--sh-space-2); }
+    .notes p { margin: 0; font-size: var(--sh-text-xs); line-height: 1.7; color: var(--sh-text-secondary); }
+    .notes ul { margin: 0; padding-left: var(--sh-space-4); display: flex; flex-direction: column; gap: var(--sh-space-1); }
+    .notes li { font-size: var(--sh-text-xs); line-height: 1.7; color: var(--sh-text-secondary); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+    .icon-12 { width: 12px; height: 12px; }
+    .icon-18 { width: 18px; height: 18px; }
+    .icon-20 { width: 20px; height: 20px; }
+    .icon-24 { width: 24px; height: 24px; }
+    /* preview-only：把 fixed 图层收进演示框 */
+    .frame .sheet-layer { position: absolute; z-index: 1; }
+
+
+  </style>
+</head>
+<body data-component="sheet">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Sheet 侧滑面板</h1>
+    <p class="lede">右侧 360px 抽屉或底部 85vh 面板，复用 Dialog 遮罩与焦点陷阱；简单确认请用 Dialog，不要用 Sheet 承载。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">打开态 <em>right / open · 长内容滚动</em></h2>
+    <div class="demo-row">
+      <div class="frame-col">
+        <div class="frame">
+          <div class="mock">
+            <p class="crumb">@global / data-cleanup</p>
+            <div class="mock-title-row">
+              <h3 class="mock-title">技能列表</h3>
+              <span class="mock-badge">128 个结果</span>
+            </div>
+            <p class="mock-meta">按最近更新排序 · 已应用 3 个筛选条件</p>
+            <div class="mock-search">搜索技能名称、标签或维护者</div>
+            <div class="bar" style="width: 96%"></div>
+            <div class="bar" style="width: 78%"></div>
+            <div class="bar" style="width: 88%"></div>
+            <div class="bar" style="width: 64%"></div>
+            <div class="bar" style="width: 92%"></div>
+            <div class="bar" style="width: 70%"></div>
+            <div class="bar" style="width: 84%"></div>
+            <div class="bar" style="width: 58%"></div>
+          </div>
+
+          <div class="sheet-layer" data-component="sheet-layer">
+          <div class="scrim"></div>
+
+          <aside class="sheet-panel sheet-panel--sm" role="dialog" aria-modal="true" aria-labelledby="sheet-filter-title" aria-describedby="sheet-filter-sub" data-component="sheet">
+            <header class="sheet-head">
+              <div>
+                <h2 class="sheet-title" id="sheet-filter-title">筛选条件</h2>
+                <p class="sheet-sub" id="sheet-filter-sub">列表结果 128 个 · 已应用 3 项</p>
+              </div>
+              <button class="icon-btn" type="button" aria-label="关闭筛选面板">
+                <span class="sh-i i12-x" aria-hidden="true"></span>
+              </button>
+            </header>
+
+            <div class="sheet-body">
+              <div class="sheet-group">
+                <p class="group-title">命名空间</p>
+                <div class="filter-row"><span class="filter-label">范围</span><span class="filter-value">全部命名空间</span></div>
+                <div class="filter-row"><span class="filter-label">包含</span><span class="filter-value">@global、@team-data</span></div>
+                <div class="filter-row"><span class="filter-label">排除</span><span class="filter-value">@archived-legacy</span></div>
+                <div class="filter-row"><span class="filter-label">成员可见性</span><span class="filter-value">仅我可见以外的全部</span></div>
+              </div>
+
+              <div class="sheet-group">
+                <p class="group-title">版本状态</p>
+                <div class="filter-row"><span class="filter-label">已发布</span><span class="filter-value">62</span></div>
+                <div class="filter-row"><span class="filter-label">审核中</span><span class="filter-value">18</span></div>
+                <div class="filter-row"><span class="filter-label">已上传</span><span class="filter-value">24</span></div>
+                <div class="filter-row"><span class="filter-label">已撤回</span><span class="filter-value">14</span></div>
+                <div class="filter-row"><span class="filter-label">已拒绝</span><span class="filter-value">10</span></div>
+              </div>
+
+              <div class="sheet-group">
+                <p class="group-title">安全等级</p>
+                <div class="filter-row"><span class="filter-label">扫描状态</span><span class="filter-value">全部通过</span></div>
+                <div class="filter-row"><span class="filter-label">风险等级</span><span class="filter-value">中风险及以下</span></div>
+                <div class="filter-row"><span class="filter-label">扫描时间</span><span class="filter-value">最近 7 天</span></div>
+              </div>
+
+              <div class="sheet-group">
+                <p class="group-title">更新时间</p>
+                <div class="filter-row"><span class="filter-label">最近更新</span><span class="filter-value">30 天内</span></div>
+                <div class="filter-row"><span class="filter-label">首次发布</span><span class="filter-value">不限</span></div>
+              </div>
+
+              <div class="sheet-group">
+                <p class="group-title">来源与许可</p>
+                <div class="filter-row"><span class="filter-label">维护者</span><span class="filter-value">官方团队</span></div>
+                <div class="filter-row"><span class="filter-label">许可证</span><span class="filter-value">MIT</span></div>
+                <div class="filter-row"><span class="filter-label">安装方式</span><span class="filter-value">ClawHub CLI</span></div>
+              </div>
+
+              <div class="sheet-group">
+                <p class="group-title">排序</p>
+                <div class="filter-row"><span class="filter-label">主排序</span><span class="filter-value">最近更新</span></div>
+                <div class="filter-row"><span class="filter-label">次排序</span><span class="filter-value">安装量</span></div>
+              </div>
+            </div>
+
+            <footer class="sheet-foot">
+              <button class="btn btn-outline" type="button">重置</button>
+              <button class="btn btn-primary" type="button">应用筛选</button>
+            </footer>
+          </aside>
+          </div>
+        </div>
+        <p class="state-label">right / open · 360px（sm）贴边、全高、padding 20px，内容区可滚动；遮罩层 + 定位宿主</p>
+      </div>
+
+      <div class="frame-col">
+        <div class="frame frame--mobile">
+          <div class="mock">
+            <p class="crumb">@global / data-cleanup</p>
+            <div class="mock-title-row">
+              <h3 class="mock-title">技能列表</h3>
+              <span class="mock-badge">128</span>
+            </div>
+            <p class="mock-meta">移动端 · 底部抽屉筛选</p>
+            <div class="mock-search">搜索技能</div>
+            <div class="bar" style="width: 94%"></div>
+            <div class="bar" style="width: 80%"></div>
+            <div class="bar" style="width: 86%"></div>
+            <div class="bar" style="width: 66%"></div>
+            <div class="bar" style="width: 90%"></div>
+          </div>
+
+          <div class="sheet-layer" data-component="sheet-layer">
+          <div class="scrim"></div>
+
+          <aside class="bottom-sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-bottom-title" data-component="sheet">
+            <span class="grabber" aria-hidden="true"></span>
+            <header class="sheet-head">
+              <div>
+                <h2 class="sheet-title" id="sheet-bottom-title">筛选条件</h2>
+                <p class="sheet-sub">已应用 2 项 · 结果 128 个</p>
+              </div>
+              <button class="icon-btn" type="button" aria-label="关闭筛选面板">
+                <span class="sh-i i12-x" aria-hidden="true"></span>
+              </button>
+            </header>
+
+            <div class="sheet-body">
+              <div class="sheet-group">
+                <p class="group-title">命名空间</p>
+                <div class="filter-row"><span class="filter-label">范围</span><span class="filter-value">全部命名空间</span></div>
+                <div class="filter-row"><span class="filter-label">包含</span><span class="filter-value">@global</span></div>
+                <div class="filter-row"><span class="filter-label">成员可见性</span><span class="filter-value">全部</span></div>
+              </div>
+              <div class="sheet-group">
+                <p class="group-title">版本状态</p>
+                <div class="filter-row"><span class="filter-label">已发布</span><span class="filter-value">62</span></div>
+                <div class="filter-row"><span class="filter-label">审核中</span><span class="filter-value">18</span></div>
+                <div class="filter-row"><span class="filter-label">已上传</span><span class="filter-value">24</span></div>
+                <div class="filter-row"><span class="filter-label">已撤回</span><span class="filter-value">14</span></div>
+              </div>
+              <div class="sheet-group">
+                <p class="group-title">更新时间</p>
+                <div class="filter-row"><span class="filter-label">最近更新</span><span class="filter-value">30 天内</span></div>
+                <div class="filter-row"><span class="filter-label">首次发布</span><span class="filter-value">不限</span></div>
+              </div>
+            </div>
+
+            <footer class="sheet-foot">
+              <button class="btn btn-outline" type="button">重置</button>
+              <button class="btn btn-primary" type="button">应用筛选</button>
+            </footer>
+          </aside>
+          </div>
+        </div>
+        <p class="state-label">bottom / open · 85vh、顶部 14px 圆角 + 36×4 拖拽条，按钮等宽</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">结构 <em>Overlay / Content / Header / Body / Footer</em></h2>
+    <div>
+      <div class="spec-row">
+        <span class="spec-key">宽度档位</span>
+        <p class="spec-desc"><code>--sm 360</code> / <code>--md 480</code> / <code>--lg 640</code>；窄屏统一收到 <code>100vw − 32px</code>，不横向溢出。宽度由内容决定档位，不随手写死。</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">遮罩与定位</span>
+        <p class="spec-desc">遮罩与面板都挂在 <code>.sheet-layer</code>（fixed inset:0，z-overlay）里；点击遮罩关闭、Esc 关闭、打开时焦点进入面板。</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Radix Dialog</span>
+        <p class="spec-desc">根节点复用 Dialog + Overlay 组合，不引入新依赖，不新增 Sheet 包。</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Overlay</span>
+        <p class="spec-desc">45% 遮罩，点击遮罩或按 Esc 关闭，关闭时 150ms 淡出。</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Content · right</span>
+        <p class="spec-desc">右侧贴边，宽 360px、全高，border-left 1px，背景 <code>--sh-bg-overlay</code>。</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Content · bottom</span>
+        <p class="spec-desc">底部贴边，高度上限 85vh，顶部 14px 圆角，36×4 拖拽条仅作视觉提示。</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Header</span>
+        <p class="spec-desc">标题 18px / 600，右侧关闭图标；副标题 12px 说明已应用条件与结果数。</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Body</span>
+        <p class="spec-desc">唯一滚动区，<code>min-height: 0</code> 保证长内容可滚动，分组标题 12px。</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">Footer</span>
+        <p class="spec-desc">固定在底部，右侧对齐「重置 / 应用筛选」；移动端按钮等宽。</p>
+      </div>
+      <div class="spec-row">
+        <span class="spec-key">state</span>
+        <p class="spec-desc">open / closing（150ms 淡出）/ scrollable；打开时锁定背景滚动。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">使用禁忌</h2>
+    <div class="notes">
+      <p>行为约定：使用 Radix Dialog 语义（<code>role="dialog"</code>、<code>aria-modal</code>），Esc 与遮罩点击均可关闭，关闭后焦点回到触发按钮，并在打开期间把焦点限制在面板内。</p>
+      <ul>
+        <li>不要用全屏抽屉承载技能详情页，详情应走独立路由。</li>
+        <li>不要多层抽屉嵌套，需要更深一层时改用 Dialog。</li>
+        <li>简单确认类操作请用 Dialog，Sheet 只服务筛选、复杂表单与文件预览。</li>
+      </ul>
+    </div>
+  </section>
+<footer style="margin-top:var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

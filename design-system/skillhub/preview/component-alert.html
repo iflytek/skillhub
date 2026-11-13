@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alert 提示条 · SkillHub 设计系统</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    .icon, .icon-16 { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-icon-16); height: var(--sh-icon-16); stroke-width: var(--sh-icon-stroke-16); vertical-align: middle; color: inherit; }
+    .icon-12 { width: var(--sh-icon-12); height: var(--sh-icon-12); stroke-width: var(--sh-icon-stroke-12); }
+    .icon-14 { width: var(--sh-icon-14); height: var(--sh-icon-14); stroke-width: var(--sh-icon-stroke-14); }
+    .icon-18 { width: var(--sh-icon-18); height: var(--sh-icon-18); stroke-width: var(--sh-icon-stroke-18); }
+    .icon-20 { width: var(--sh-icon-20); height: var(--sh-icon-20); stroke-width: var(--sh-icon-stroke-20); }
+    .icon-24 { width: var(--sh-icon-24); height: var(--sh-icon-24); stroke-width: var(--sh-icon-stroke-24); }
+
+    .preview-shell { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .row { display: flex; flex-wrap: wrap; gap: var(--sh-space-4) var(--sh-space-8); align-items: flex-start; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); align-items: flex-start; min-width: 0; max-width: 100%; }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-placeholder); }
+    .note { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-secondary); }
+
+    .alert { box-sizing: border-box; display: flex; align-items: center; gap: var(--sh-space-2); width: 100%; max-width: 100%; padding: var(--sh-space-2) var(--sh-space-3); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-sm); background: var(--sh-bg-muted); color: var(--sh-text-primary); font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); transition: border-color var(--sh-duration-fast) var(--sh-ease-standard); }
+    /* 行内提示：不抢占整行，按内容收缩；需要整行横幅时保持默认 width:100% */
+    .alert--inline { width: auto; }
+    .alert-stacked { align-items: flex-start; }
+    .alert-stacked .alert-icon { margin-top: calc(var(--sh-space-1) * 0.5); }
+    .alert-icon { flex: none; width: var(--sh-icon-16); height: var(--sh-icon-16); }
+    .alert-body { display: flex; flex-direction: column; gap: var(--sh-space-1); min-width: 0; }
+    .alert-title { margin: 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); font-weight: var(--sh-weight-semibold); }
+    .alert-desc { margin: 0; font-size: var(--sh-text-xs); line-height: var(--sh-text-xs-lh); color: var(--sh-text-secondary); }
+    .alert-neutral .alert-icon { color: var(--sh-text-secondary); }
+    .alert-info { background: var(--sh-info-weak); border-color: var(--sh-info-border); }
+    .alert-info .alert-icon { color: var(--sh-info-on-weak); }
+    .alert-success { background: var(--sh-success-weak); border-color: var(--sh-success-border); }
+    .alert-success .alert-icon { color: var(--sh-success-base); }
+    .alert-warning { background: var(--sh-warning-weak); border-color: var(--sh-warning-border); color: var(--sh-warning-on-weak); }
+    .alert-warning .alert-icon { color: var(--sh-warning-base); }
+    .alert-warning .alert-title { color: var(--sh-warning-on-weak); }
+    .alert-danger { background: var(--sh-danger-weak); border-color: var(--sh-danger-border); color: var(--sh-danger-base); }
+    .alert-danger .alert-icon { color: var(--sh-danger-base); }
+    .alert-danger .alert-desc { color: var(--sh-danger-base); }
+    .alert-close { flex: none; appearance: none; box-sizing: border-box;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; width: var(--sh-space-6); height: var(--sh-space-6); margin-left: auto; padding: 0; border: 0; border-radius: var(--sh-radius-md); background: transparent; color: var(--sh-text-secondary); cursor: pointer; transition: color var(--sh-duration-fast) var(--sh-ease-standard), background var(--sh-duration-fast) var(--sh-ease-standard); }
+    .alert-close:hover { color: var(--sh-text-primary); background: var(--sh-bg-muted); }
+    .alert-close:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+    .alert-close .icon { width: 12px; height: 12px; }
+    .alert:hover { border-color: var(--sh-interaction-hover-border); }
+    .alert.is-dismissed { background: var(--sh-bg-muted); color: var(--sh-text-disabled); border-color: var(--sh-border-default); }
+    .alert.is-dismissed .alert-icon,
+    .alert.is-dismissed .alert-title,
+    .alert.is-dismissed .alert-desc,
+    .alert.is-dismissed .alert-close { color: var(--sh-text-disabled); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+    .icon-12 { width: 12px; height: 12px; }
+    .icon-18 { width: 18px; height: 18px; }
+    .icon-20 { width: 20px; height: 20px; }
+    .icon-24 { width: 24px; height: 24px; }
+
+
+
+
+
+
+  </style>
+</head>
+<body class="preview-shell" data-component="alert">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Alert 提示条</h1>
+    <p class="lede">发丝线 + 浅软底的单行提示，语义色只作用于图标与文字，不做整块高饱和色域。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">语义色调 <em>tone · neutral / info / success / warning / danger</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="alert alert-neutral" data-component="alert" role="note">
+          <span class="alert-icon sh-i i16-info" aria-hidden="true"></span>
+          <span>发布权限由 @global 命名空间 OWNER 授予。</span>
+        </div>
+        <span class="state-label">neutral · 权限与安全说明</span>
+      </div>
+      <div class="state">
+        <div class="alert alert-info" data-component="alert" role="note">
+          <span class="alert-icon sh-i i16-info" aria-hidden="true"></span>
+          <span>待审核版本预计 1 个工作日内完成审核。</span>
+        </div>
+        <span class="state-label">info · 待审核流程提示</span>
+      </div>
+      <div class="state">
+        <div class="alert alert-success" data-component="alert" role="status">
+          <span class="alert-icon sh-i i16-check-circle" aria-hidden="true"></span>
+          <span>合规扫描通过，未发现高危依赖与敏感凭据。</span>
+        </div>
+        <span class="state-label">success · 合规扫描通过</span>
+      </div>
+      <div class="state">
+        <div class="alert alert-warning" data-component="alert" role="note">
+          <span class="alert-icon sh-i i16-alert-triangle" aria-hidden="true"></span>
+          <span>该版本包含 2 个可执行脚本，请确认来源可信。</span>
+        </div>
+        <span class="state-label">warning · 可执行脚本提醒</span>
+      </div>
+      <div class="state">
+        <div class="alert alert-danger" data-component="alert" role="alert">
+          <span class="alert-icon sh-i i16-alert-circle" aria-hidden="true"></span>
+          <span>版本已被驳回：请根据审核意见修改后重新提交。</span>
+        </div>
+        <span class="state-label">danger · 审核驳回原因，必须给出下一步</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">布局 <em>layout · single-line / title+desc / dismissible</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="alert alert-neutral" data-component="alert" role="note">
+          <span class="alert-icon sh-i i16-info" aria-hidden="true"></span>
+          <span>技能包内的脚本将以只读方式加载，不写入宿主目录。</span>
+        </div>
+        <span class="state-label">single-line · 单行权限说明</span>
+      </div>
+      <div class="state">
+        <div class="alert alert-success alert-stacked" data-component="alert" role="status">
+          <span class="alert-icon sh-i i16-check-circle" aria-hidden="true"></span>
+          <div class="alert-body">
+            <span class="alert-title">合规扫描通过</span>
+            <span class="alert-desc">未发现高危依赖与明文凭据，可发布至 @global 命名空间。</span>
+          </div>
+        </div>
+        <span class="state-label">title+desc · 合规通过，标题 13px / 600</span>
+      </div>
+      <div class="state">
+        <div class="alert alert-info" data-component="alert" role="note">
+          <span class="alert-icon sh-i i16-info" aria-hidden="true"></span>
+          <span>该技能仅对 @global 命名空间成员可见。</span>
+          <button class="alert-close" type="button" aria-label="关闭提示">
+            <span class="sh-i i12-x" aria-hidden="true"></span>
+          </button>
+        </div>
+        <span class="state-label">dismissible · 可关闭提示，右侧 24px 关闭按钮</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">状态 <em>state · idle / hover / dismissed</em></h2>
+    <div class="row">
+      <div class="state">
+        <div class="alert alert-info" data-component="alert" role="note">
+          <span class="alert-icon sh-i i16-info" aria-hidden="true"></span>
+          <span>该技能仅对 @global 命名空间成员可见。</span>
+          <button class="alert-close" type="button" aria-label="关闭提示">
+            <span class="sh-i i12-x" aria-hidden="true"></span>
+          </button>
+        </div>
+        <span class="state-label">idle · 可关闭提示默认</span>
+      </div>
+      <div class="state">
+        <div class="alert alert-info" data-component="alert" role="note">
+          <span class="alert-icon sh-i i16-info" aria-hidden="true"></span>
+          <span>该技能仅对 @global 命名空间成员可见。</span>
+          <button class="alert-close" type="button" aria-label="关闭提示">
+            <span class="sh-i i12-x" aria-hidden="true"></span>
+          </button>
+        </div>
+        <span class="state-label">hover · 可关闭提示 hover 时边框转深、关闭钮变底</span>
+      </div>
+      <div class="state">
+        <div class="alert alert-danger is-dismissed" data-component="alert" role="alert">
+          <span class="alert-icon sh-i i16-alert-circle" aria-hidden="true"></span>
+          <span>版本已被驳回：请根据审核意见修改后重新提交。</span>
+        </div>
+        <span class="state-label">dismissed · 关闭后淡出并移出布局</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">禁止整块高饱和底色；禁止带边框阴影的浮层提示；warning 使用专用软底 `--sh-warning-weak` 与 `--sh-warning-border`。</p>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

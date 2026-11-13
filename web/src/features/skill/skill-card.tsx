@@ -11,6 +11,7 @@ import { formatRelativeTime } from '@/shared/lib/format-relative-time'
 import { Bookmark, Boxes, ShieldCheck, User, Clock } from 'lucide-react'
 
 interface SkillCardProps {
+  labels?: { slug: string; displayName: string }[]
   analyticsId?: string
   skill: SkillSummary
   onClick?: () => void
@@ -20,7 +21,7 @@ interface SkillCardProps {
 /**
  * Reusable card for displaying one skill in lists such as landing, namespace, search, and stars.
  */
-export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId }: SkillCardProps) {
+export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId, labels }: SkillCardProps) {
   const { t, i18n } = useTranslation()
   const { isAuthenticated } = useAuth()
   // Batch highlight via shared ['skills','stars'] — never N× useStar per grid row.
@@ -54,7 +55,7 @@ export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId
     >
       <div className="flex h-full flex-col">
         <div className="mb-3 flex min-w-0 items-start gap-3">
-          <SkillAvatar name={skill.displayName} url={skill.avatarUrl} />
+          <SkillAvatar name={skill.displayName} url={skill.avatarUrl} seed={`${skill.namespace}/${skill.slug}`} />
           <div className="min-w-0 flex-1">
             <h3
               className="line-clamp-2 text-base font-semibold [overflow-wrap:anywhere] group-hover:text-primary transition-colors duration-150"
@@ -91,6 +92,8 @@ export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId
             {skill.summary}
           </p>
         )}
+
+        {labels?.length ? <ul className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{labels.map(label => <li key={label.slug}>{label.displayName}</li>)}</ul> : null}
 
         {complianceItems.length > 0 ? (
           <div className="mb-4 flex flex-wrap gap-1.5">

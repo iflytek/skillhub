@@ -53,12 +53,12 @@ class SitePresentationServiceTest {
     static void closeValidators() { VALIDATORS.close(); }
 
     @Test
-    void missingRowReturnsAllEightUnchangedSectionsWithoutWriting() {
+    void missingRowReturnsAllNineUnchangedSectionsWithoutWriting() {
         when(repository.findBySettingKey(SitePresentationService.SETTING_KEY)).thenReturn(Optional.empty());
         var response = service.current();
         assertThat(response.settings()).isEqualTo(SitePresentationSettings.defaults());
         assertThat(response.settings().sections()).containsOnlyKeys(
-                "hero", "capabilities", "quickStart", "popular", "latest", "enterprise", "cta", "footer");
+                "hero", "curated", "capabilities", "quickStart", "popular", "latest", "enterprise", "cta", "footer");
         response.settings().sections().values().forEach(section -> {
             assertThat(section.enabled()).isTrue();
             assertThat(section.texts()).isEmpty();
@@ -84,7 +84,7 @@ class SitePresentationServiceTest {
         for (String id : new String[]{"popular", "latest", "quickStart", "footer"}) {
             assertThat(settings.sections().get(id).enabled()).isFalse();
         }
-        for (String id : new String[]{"hero", "capabilities", "enterprise", "cta"}) {
+        for (String id : new String[]{"hero", "curated", "capabilities", "enterprise", "cta"}) {
             assertThat(settings.sections().get(id).enabled()).isTrue();
         }
         assertThat(settings.sections().get("hero").texts().get("title")).containsExactly(Map.entry("zh", "团队技能"));
@@ -92,6 +92,43 @@ class SitePresentationServiceTest {
         assertThat(settings.toString()).doesNotContain("do-not-return", "CATALOG", "homepageMode");
         assertThat(response.version()).isEqualTo(stored.getVersion()).isZero();
         verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void existingSectionSettingsDefaultCuratedToVisibleWithoutWriting() {
+        Map<String, Object> original = Map.of("sections", Map.of(
+                "hero", Map.of("enabled", true, "texts", Map.of()),
+                "popular", Map.of("enabled", false, "texts", Map.of())));
+        stored = new SystemSetting(SitePresentationService.SETTING_KEY, original);
+        when(repository.findBySettingKey(SitePresentationService.SETTING_KEY)).thenReturn(Optional.of(stored));
+
+        var response = service.current();
+
+        assertThat(response.settings().sections().get("curated").enabled()).isTrue();
+        assertThat(response.settings().sections().get("popular").enabled()).isFalse();
+        assertThat(stored.getValue()).isEqualTo(original);
+        assertThat(response.version()).isZero();
+        verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void curatedVisibilitySavesAndReadsExplicitFalseWithoutTouchingRecommendationSettings() {
+        when(repository.findBySettingKey(SitePresentationService.SETTING_KEY)).thenReturn(Optional.of(stored));
+        var response = update(withSection("curated", new SitePresentationSection(false, Map.of(), Map.of())));
+
+        assertThat(response.settings().sections().get("curated").enabled()).isFalse();
+        assertThat(service.current().settings().sections().get("curated").enabled()).isFalse();
+        assertThat(((Map<?, ?>) stored.getValue().get("sections")).get("curated"))
+                .isEqualTo(Map.of("enabled", false, "texts", Map.of(), "items", Map.of()));
+        verify(repository, org.mockito.Mockito.times(2)).findBySettingKey(SitePresentationService.SETTING_KEY);
+        verify(repository).saveAndFlush(stored);
+        verify(repository, never()).findBySettingKey("site.recommendations");
+    }
+
+    @Test
+    void curatedIsVisibilityOnlyAndRejectsContentOverrides() {
+        invalid(withSection("curated", new SitePresentationSection(true, Map.of("title", Map.of("zh", "Other title")), Map.of())));
+        invalid(withSection("curated", new SitePresentationSection(true, Map.of(), Map.of("topics", false))));
     }
 
     @Test

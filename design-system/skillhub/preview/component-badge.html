@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Badge / Tag 徽标 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-3); }
+    .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); text-transform: none; letter-spacing: var(--sh-tracking-body); color: var(--sh-text-placeholder); }
+    .row { display: flex; flex-wrap: wrap; gap: var(--sh-space-3) var(--sh-space-6); align-items: flex-start; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); align-items: flex-start; }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-placeholder); }
+
+    /* 统一形态：紧凑胶囊，同色系 tint 底 + 同色系饱和文字，无描边、无阴影、无状态点。
+       高度 24px / 内边距 6px / 圆角 6px / 字号 12px / 字重 500，所有标签严格一致。 */
+    .badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { appearance: none; box-sizing: border-box; margin: 0; background: transparent;
+    color: inherit; text-align: center; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: var(--sh-space-1); height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border: 0; border-radius: var(--sh-radius-xs); box-shadow: none; font-family: var(--sh-font-sans); font-size: var(--sh-text-caption-xs); line-height: 1; font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-caption); white-space: nowrap; transition: background var(--sh-duration-fast) var(--sh-ease-standard); }
+    /* 徽标内图标槽：固定 12px 方槽、不参与收缩，避免图标贴边或挤压文字 */
+    .badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); }
+
+    .badge-tone-neutral, .badge-soft-neutral, .lifecycle-draft, .lifecycle-scan-failed, .lifecycle-uploaded, .lifecycle-yanked, .verdict-scan-failed { background: var(--sh-tone-neutral-weak); color: var(--sh-tone-neutral-fg); }
+    .badge-tone-success, .badge-soft-green, .lifecycle-published, .verdict-safe { background: var(--sh-tone-success-weak); color: var(--sh-tone-success-fg); }
+    .badge-tone-warning, .badge-soft-warning, .lifecycle-pending-review, .verdict-suspicious { background: var(--sh-tone-warning-weak); color: var(--sh-tone-warning-fg); }
+    .badge-tone-danger, .lifecycle-rejected, .verdict-dangerous { background: var(--sh-tone-danger-weak); color: var(--sh-tone-danger-fg); }
+    .badge-tone-info, .badge-soft-blue, .lifecycle-scanning, .verdict-scanning { background: var(--sh-tone-info-weak); color: var(--sh-tone-info-fg); }
+
+    .badge-tone-neutral:hover { background: var(--sh-tone-neutral-hover); }
+    .badge-tone-success:hover { background: var(--sh-tone-success-hover); }
+    .badge-tone-warning:hover { background: var(--sh-tone-warning-hover); }
+    .badge-tone-danger:hover { background: var(--sh-tone-danger-hover); }
+    .badge-tone-info:hover { background: var(--sh-tone-info-hover); }
+
+    /* 第 6 档不靠新增色相：阻断（BLOCKED）用 danger 色的实心强度，文字区分。 */
+    .verdict-blocked { background: var(--sh-danger-base); color: var(--sh-danger-foreground); }
+
+    .status-pill { box-sizing: border-box; appearance: none; border: 0; background: transparent; margin: 0;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none; display: inline-flex; align-items: center; height: var(--sh-size-badge-height); padding: 0 var(--sh-space-3_5); border-radius: var(--sh-radius-full); font-size: var(--sh-size-badge-font); line-height: 1; font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-caption); color: var(--sh-primary-foreground); }
+    .status-pill-published { background: var(--sh-status-published); }
+    .status-pill-review { background: var(--sh-status-review); }
+    .status-pill-archived { background: var(--sh-status-archived); }
+    .status-pill-rejected { background: var(--sh-status-rejected); }
+
+    .handle-tag { box-sizing: border-box; appearance: none; margin: 0;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none; display: inline-flex; align-items: center; height: var(--sh-size-badge-height); padding: 0 9px; border-radius: var(--sh-radius-full); border: var(--sh-size-border-width) solid var(--sh-info-border); background: var(--sh-info-weak); color: var(--sh-info-on-weak); font-size: var(--sh-size-badge-font); line-height: 1; font-weight: var(--sh-weight-medium); }
+
+    .tag-color { box-sizing: border-box; appearance: none; border: 0; background: transparent; color: inherit; margin: 0;
+    font-family: var(--sh-font-sans); text-align: center; text-decoration: none; display: inline-flex; align-items: center; height: var(--sh-size-badge-height); padding: 0 9px; border-radius: var(--sh-radius-full); font-size: var(--sh-size-badge-font); line-height: 1; font-weight: var(--sh-weight-medium); }
+    .tag-green { background: var(--sh-success-weak); color: var(--sh-success-on-weak); }
+    .tag-blue { background: var(--sh-info-weak); color: var(--sh-info-on-weak); }
+    .tag-cyan { background: var(--sh-info-weak); color: var(--sh-info-on-weak); }
+    .tag-gray { background: var(--sh-bg-muted); color: var(--sh-text-secondary); }
+
+    .tone-swatch { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: var(--sh-space-3); padding: var(--sh-space-2) var(--sh-space-3); border: var(--sh-size-border-width) solid var(--sh-border-subtle); border-radius: var(--sh-radius-sm); }
+    .tone-swatch code { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-tertiary); }
+
+    .note { margin: 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* Unreleased task-composition source rules. */
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .badge-green, .badge-plain, .lifecycle, .verdict {
+  width: max-content;
+  min-width: 0;
+  max-width: 100%;
+  flex: 0 0 auto;
+}
+.badge--sm, .lifecycle.badge--sm, .verdict.badge--sm {
+  height: var(--sh-space-5);
+}
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body data-component="badge">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Badge / Tag 徽标</h1>
+    <p class="lede">紧凑胶囊 + 同色系 tint 底：8 种版本状态与 6 种安全结论只收敛到 5 个色调，同级细分靠文字而不是靠增加颜色。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">版本生命周期 <em>lifecycle — 8 个状态 → 5 个色调</em></h2>
+    <div class="row">
+      <div class="state"><span class="lifecycle lifecycle-draft">草稿</span><span class="state-label">DRAFT · neutral</span></div>
+      <div class="state"><span class="lifecycle lifecycle-scanning">扫描中</span><span class="state-label">SCANNING · info</span></div>
+      <div class="state"><span class="lifecycle lifecycle-scan-failed">扫描失败</span><span class="state-label">SCAN_FAILED · neutral</span></div>
+      <div class="state"><span class="lifecycle lifecycle-uploaded">已上传</span><span class="state-label">UPLOADED · neutral</span></div>
+      <div class="state"><span class="lifecycle lifecycle-pending-review">待审核</span><span class="state-label">PENDING_REVIEW · warning</span></div>
+      <div class="state"><span class="lifecycle lifecycle-published">已发布</span><span class="state-label">PUBLISHED · success</span></div>
+      <div class="state"><span class="lifecycle lifecycle-rejected">已拒绝</span><span class="state-label">REJECTED · danger</span></div>
+      <div class="state"><span class="lifecycle lifecycle-yanked">已撤回</span><span class="state-label">YANKED · neutral</span></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">安全结论 <em>verdict — 6 个结论 → 5 个色调 + 1 档强度</em></h2>
+    <div class="row">
+      <div class="state"><span class="verdict verdict-scanning">扫描中</span><span class="state-label">SCANNING · info</span></div>
+      <div class="state"><span class="verdict verdict-scan-failed">扫描失败</span><span class="state-label">SCAN_FAILED · neutral</span></div>
+      <div class="state"><span class="verdict verdict-safe">安全</span><span class="state-label">SAFE · success</span></div>
+      <div class="state"><span class="verdict verdict-suspicious">可疑</span><span class="state-label">SUSPICIOUS · warning</span></div>
+      <div class="state"><span class="verdict verdict-dangerous">危险</span><span class="state-label">DANGEROUS · danger</span></div>
+      <div class="state"><span class="verdict verdict-blocked">已阻断</span><span class="state-label">BLOCKED · danger 实心</span></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">色调标尺 <em>tone — 每档只有 weak / fg / hover 三个 token</em></h2>
+    <div class="row">
+      <div class="state"><span class="badge badge-tone-neutral">中性</span><span class="state-label">neutral · 草稿 / 已上传 / 已撤回 / 扫描失败</span></div>
+      <div class="state"><span class="badge badge-tone-success">通过</span><span class="state-label">success · 已发布 / 安全</span></div>
+      <div class="state"><span class="badge badge-tone-warning">待处理</span><span class="state-label">warning · 待审核 / 可疑</span></div>
+      <div class="state"><span class="badge badge-tone-danger">拒绝</span><span class="state-label">danger · 已拒绝 / 危险</span></div>
+      <div class="state"><span class="badge badge-tone-info">进行中</span><span class="state-label">info · 扫描中</span></div>
+    </div>
+    <div class="tone-swatch">
+      <span class="badge badge-tone-neutral">24px</span>
+      <code>height var(--sh-size-badge-height) · padding-inline var(--sh-size-badge-padding-inline) · radius var(--sh-radius-xs) · text-caption-xs / 500</code>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">旧形态 <em>legacy — 实心胶囊，保留兼容，不再新增</em></h2>
+    <div class="row">
+      <div class="state">
+        <span class="status-pill status-pill-published">已发布</span>
+        <span class="state-label">published · 白字实心，信息密度低</span>
+      </div>
+      <div class="state">
+        <span class="status-pill status-pill-review">审核中</span>
+        <span class="state-label">review · 旧的高强调形态</span>
+      </div>
+      <div class="state">
+        <span class="status-pill status-pill-archived">已归档</span>
+        <span class="state-label">archived · 容器已归档，只读</span>
+      </div>
+      <div class="state">
+        <span class="status-pill status-pill-rejected">已拒绝</span>
+        <span class="state-label">rejected · 审核未通过</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">命名空间胶囊 <em>handle — 用途：命名空间归属标识</em></h2>
+    <div class="row">
+      <div class="state">
+        <span class="handle-tag">@global</span>
+        <span class="state-label">handle / global · 平台公共命名空间</span>
+      </div>
+      <div class="state">
+        <span class="handle-tag">@data-team</span>
+        <span class="state-label">handle / team · 部门团队命名空间</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">多色标签 <em>color tag — 用途：内容标签，同组最多 4 色</em></h2>
+    <div class="row">
+      <div class="state">
+        <span class="tag-color tag-green">中文办公助手</span>
+        <span class="state-label">green · 办公与流程类</span>
+      </div>
+      <div class="state">
+        <span class="tag-color tag-blue">数据清洗</span>
+        <span class="state-label">blue · 数据处理类</span>
+      </div>
+      <div class="state">
+        <span class="tag-color tag-cyan">代码审查</span>
+        <span class="state-label">cyan · 研发工具类</span>
+      </div>
+      <div class="state">
+        <span class="tag-color tag-gray">文档生成</span>
+        <span class="state-label">gray · 文档写作类</span>
+      </div>
+    </div>
+  </section>
+
+  <p class="note">状态与安全结论一律使用 5 色调紧凑胶囊：neutral 覆盖草稿 / 已上传 / 已撤回 / 扫描失败，靠文字区分；success、warning、danger、info 各自承担一个语义方向。只有 BLOCKED 例外——同色（danger）改用实心强度，不新增第 6 个色相。标签超过 5 个时折叠为「+N」；徽标不承担点击筛选职责。</p>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

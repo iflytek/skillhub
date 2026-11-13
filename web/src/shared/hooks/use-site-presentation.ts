@@ -1,12 +1,15 @@
+import { createContext, useContext } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { PRESENTATION_CONTENT, type PresentationSection } from '@/shared/lib/presentation-content'
 import { sitePresentationApi, type SitePresentationSettings } from '@/api/site-presentation'
+
+export const SitePresentationPreviewContext = createContext<SitePresentationSettings | null>(null)
 
 export const SITE_PRESENTATION_QUERY_KEY = ['site-presentation'] as const
 
 export function defaultSitePresentation(): SitePresentationSettings {
   return { siteName: null, logoUrl: null, faviconUrl: null, sections: {
-    hero: { enabled: true, texts: {}, items: {} }, capabilities: { enabled: true, texts: {}, items: {} },
+    hero: { enabled: true, texts: {}, items: {} }, curated: { enabled: true, texts: {}, items: {} }, capabilities: { enabled: true, texts: {}, items: {} },
     quickStart: { enabled: true, texts: {}, items: {} }, popular: { enabled: true, texts: {}, items: {} },
     latest: { enabled: true, texts: {}, items: {} }, enterprise: { enabled: true, texts: {}, items: {} },
     cta: { enabled: true, texts: {}, items: {} }, footer: { enabled: true, texts: {}, items: {} },
@@ -19,8 +22,9 @@ export function localizedPresentationText(values: Record<string, string>, langua
 }
 
 export function useSitePresentation() {
-  const query = useQuery({ queryKey: SITE_PRESENTATION_QUERY_KEY, queryFn: sitePresentationApi.get, staleTime: 30_000, retry: false, refetchOnMount: false, meta: { skipGlobalErrorHandler: true } })
-  return { ...query, settings: query.data?.settings ?? defaultSitePresentation() }
+  const preview = useContext(SitePresentationPreviewContext)
+  const query = useQuery({ enabled: preview === null, queryKey: SITE_PRESENTATION_QUERY_KEY, queryFn: sitePresentationApi.get, staleTime: 30_000, retry: false, refetchOnMount: false, meta: { skipGlobalErrorHandler: true } })
+  return { ...query, settings: preview ?? query.data?.settings ?? defaultSitePresentation() }
 }
 
 /** The allowlist has one authoritative fallback for both the homepage and its settings editor. */

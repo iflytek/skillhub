@@ -9,7 +9,7 @@ vi.mock('./base-path', () => ({ BASE_PATH: '/skillhub/', withBasePath: (value: s
 
 describe('presentation allowlist and safe links', () => {
   it('contains the frozen 88 text slots and defaults absent items to visible', () => {
-    expect(Object.values(PRESENTATION_CONTENT).reduce((sum, section) => sum + Object.keys(section).length, 0)).toBe(88)
+    expect(Object.values(PRESENTATION_CONTENT).reduce<number>((sum, section) => sum + Object.keys(section).length, 0)).toBe(88)
     const value = defaultSitePresentation()
     expect(presentationItemVisible(value, 'hero', 'preview')).toBe(true)
     value.sections.hero.items = null

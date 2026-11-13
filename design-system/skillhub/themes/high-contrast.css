@@ -1,0 +1,51 @@
+/* SkillHub Design System — high-contrast accessibility theme (opt-in variant).
+   Scope: [data-contrast="high"]. Default theme is untouched.
+   Target: 正文与控件文字 ≥ 7:1；UI 边界 ≥ 4.5:1（超过 WCAG 3:1 下限）。
+   扩增项，需评审：3px 焦点环、加粗边界均为无障碍模式的额外要求，不进入默认主题。 */
+
+[data-contrast="high"] {
+  --sh-text-primary: #000000;
+  --sh-text-secondary: #2b2b2b;
+  --sh-text-tertiary: #333333;
+  --sh-text-placeholder: #333333;
+  --sh-text-disabled: #595959;
+  --sh-border-default: #595959;
+  --sh-border-subtle: #767676;
+  --sh-border-strong: #4d4d4d;
+  --sh-border-contrast: #000000;
+  --sh-border-focus: #000000;
+
+  --sh-status-published: #14663c;
+  --sh-status-review: #7d4a00;
+  --sh-status-archived: #4b5563;
+  --sh-status-rejected: #991b1b;
+
+  --sh-success-base: #14663c;
+  --sh-warning-base: #7d4a00;
+  --sh-danger-base: #991b1b;
+  --sh-info-base: #0f4f73;
+
+  --sh-focus-ring-width: 3px;
+  --sh-focus-ring-offset: 2px;
+}
+
+[data-contrast="high"].dark {
+  --sh-text-primary: #ffffff;
+  --sh-text-secondary: #e8e8e8;
+  --sh-text-tertiary: #dedede;
+  --sh-text-placeholder: #c8c8c8;
+  --sh-text-disabled: #a6a6a6;
+  --sh-border-default: #a6a6a6;
+  --sh-border-subtle: #6e6e6e;
+  --sh-border-strong: #d8d8d8;
+  --sh-border-contrast: #ffffff;
+  --sh-border-focus: #ffffff;
+
+  --sh-status-published: #9bcfb7;
+  --sh-status-review: #d6c094;
+  --sh-status-archived: #c8c8c8;
+  --sh-status-rejected: #ebc0bc;
+
+  --sh-focus-ring-width: 3px;
+  --sh-focus-ring-offset: 2px;
+}

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Button 按钮 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    .icon, .icon-16 { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-icon-16); height: var(--sh-icon-16); stroke-width: var(--sh-icon-stroke-16); vertical-align: middle; color: inherit; }
+    .icon-12 { width: var(--sh-icon-12); height: var(--sh-icon-12); stroke-width: var(--sh-icon-stroke-12); }
+    .icon-14 { width: var(--sh-icon-14); height: var(--sh-icon-14); stroke-width: var(--sh-icon-stroke-14); }
+    .icon-18 { width: var(--sh-icon-18); height: var(--sh-icon-18); stroke-width: var(--sh-icon-stroke-18); }
+    .icon-20 { width: var(--sh-icon-20); height: var(--sh-icon-20); stroke-width: var(--sh-icon-stroke-20); }
+    .icon-24 { width: var(--sh-icon-24); height: var(--sh-icon-24); stroke-width: var(--sh-icon-stroke-24); }
+
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-h3); line-height: var(--sh-text-h3-lh); font-weight: var(--sh-weight-semibold); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-caption-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); font-weight: var(--sh-weight-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .matrix { display: grid; grid-template-columns: 52px repeat(6, max-content); gap: var(--sh-space-4); align-items: center; overflow-x: auto; padding-bottom: var(--sh-space-1); }
+    .col-head, .row-head { font-family: var(--sh-font-mono); font-size: var(--sh-text-mono-sm); line-height: var(--sh-text-mono-sm-lh); color: var(--sh-text-secondary); }
+    .row-head { color: var(--sh-text-placeholder); }
+    .row { display: flex; gap: var(--sh-space-4); align-items: flex-start; flex-wrap: wrap; }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-2); align-items: flex-start; } .state-label { font-size: var(--sh-text-caption-xs); line-height: var(--sh-text-caption-xs-lh); color: var(--sh-text-secondary); }
+    .btn { display: inline-flex; appearance: none; box-sizing: border-box; margin: 0; text-align: center; align-items: center; justify-content: center; gap: var(--sh-space-2); border: var(--sh-size-border-width) solid transparent; border-radius: var(--sh-control-md-radius); font-family: var(--sh-font-sans); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); white-space: nowrap; text-decoration: none; cursor: pointer; transition: background var(--sh-duration-fast) var(--sh-ease-standard), border-color var(--sh-duration-fast) var(--sh-ease-standard), transform var(--sh-duration-fast) var(--sh-ease-standard); }
+    /* 正文链接：保留下划线用于识别；按钮/操作链接由 .btn 的 text-decoration:none 复位 */
+    .text-link { color: var(--sh-text-link); text-decoration: underline; text-decoration-thickness: var(--sh-size-border-width); text-underline-offset: 0.15em; cursor: pointer; transition: color var(--sh-duration-fast) var(--sh-ease-standard); }
+    .text-link:hover { color: var(--sh-text-primary); }
+    .text-link:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: 2px; border-radius: var(--sh-radius-xs); }
+    .btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); } .btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); } .btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+    .btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; }
+    .btn-default { background: var(--sh-primary-base); color: var(--sh-primary-foreground); box-shadow: var(--sh-shadow-btn); }
+    .btn-default:hover { background: var(--sh-primary-hover); }
+    .btn-destructive { background: var(--sh-danger-base); color: var(--sh-danger-foreground); }
+    .btn-destructive:hover { background: var(--sh-danger-hover); }
+    .btn-outline { background: var(--sh-bg-page); border-color: var(--sh-border-default); color: var(--sh-text-primary); }
+    .btn-outline:hover { background: var(--sh-interaction-hover-bg); border-color: var(--sh-interaction-hover-border); }
+    .btn-secondary { background: var(--sh-bg-muted); color: var(--sh-text-primary); }
+    .btn-secondary:hover { background: var(--sh-bg-sunken); }
+    .btn-ghost { background: transparent; color: var(--sh-text-primary); }
+    .btn-ghost:hover { background: var(--sh-interaction-hover-bg); }
+    .btn-link { padding-inline: 0; background: transparent; border-color: transparent; color: var(--sh-primary-base); }
+    .btn-link:hover { text-decoration: underline; text-underline-offset: 2px; }
+    .btn.is-active { transform: scale(.97); }
+    .btn:focus-visible { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+    .btn.is-disabled { background: var(--sh-bg-muted); color: var(--sh-text-disabled); border-color: var(--sh-border-default); cursor: not-allowed; }
+    .demo-static.is-hover { background: var(--sh-primary-hover); }
+    .demo-static.is-focus { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* Unreleased task-composition source rules. */
+    .btn { width: max-content; max-width: 100%; flex: 0 0 auto; }
+/* @component-css-end */
+
+
+    .icon-12 { width: 12px; height: 12px; }
+    .icon-18 { width: 18px; height: 18px; }
+    .icon-20 { width: 20px; height: 20px; }
+    .icon-24 { width: 24px; height: 24px; }
+
+
+
+
+
+
+
+  </style>
+</head>
+<body data-component="button">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Button 按钮</h1>
+    <p class="lede">主操作用近黑实心按钮，次要操作降级为描边或幽灵按钮；同一区块只保留一个主按钮。</p>
+  </header>
+  <section class="block">
+    <h2 class="block-title">变体 × 尺寸 <em>6 variant · 4 size</em></h2>
+    <div class="matrix">
+      <span></span><span class="col-head">default</span><span class="col-head">destructive</span><span class="col-head">outline</span><span class="col-head">secondary</span><span class="col-head">ghost</span><span class="col-head">link</span>
+      <span class="row-head">xs · 24</span>
+      <button class="btn btn-xs btn-default">安装到 Agent</button><button class="btn btn-xs btn-destructive">删除版本</button><button class="btn btn-xs btn-outline">复制命令</button><button class="btn btn-xs btn-secondary">提交审核</button><button class="btn btn-xs btn-ghost">撤回审核</button><button class="btn btn-xs btn-link">查看全部版本</button>
+      <span class="row-head">sm · 28</span>
+      <button class="btn btn-sm btn-default">安装到 Agent</button><button class="btn btn-sm btn-destructive">删除版本</button><a class="btn btn-sm btn-outline" href="#copy-command">复制命令</a><button class="btn btn-sm btn-secondary">提交审核</button><button class="btn btn-sm btn-ghost">撤回审核</button><a class="btn btn-sm btn-link" href="#all-versions">查看全部版本</a>
+      <span class="row-head">md · 32</span>
+      <button class="btn btn-md btn-default">安装到 Agent</button><button class="btn btn-md btn-destructive">删除版本</button><button class="btn btn-md btn-outline">复制命令</button><button class="btn btn-md btn-secondary">提交审核</button><button class="btn btn-md btn-ghost">撤回审核</button><button class="btn btn-md btn-link">查看全部版本</button>
+      <span class="row-head">lg · 36</span>
+      <button class="btn btn-lg btn-default">安装到 Agent</button><button class="btn btn-lg btn-destructive">删除版本</button><button class="btn btn-lg btn-outline">复制命令</button><button class="btn btn-lg btn-secondary">提交审核</button><button class="btn btn-lg btn-ghost">撤回审核</button><button class="btn btn-lg btn-link">查看全部版本</button>
+      <span class="row-head">icon · 28</span>
+      <button class="btn btn-icon btn-default" aria-label="复制安装命令"><span class="sh-i i16-copy" aria-hidden="true"></span></button><button class="btn btn-icon btn-destructive" aria-label="删除技能版本"><span class="sh-i i16-trash" aria-hidden="true"></span></button><button class="btn btn-icon btn-outline" aria-label="下载技能包"><span class="sh-i i16-download" aria-hidden="true"></span></button><button class="btn btn-icon btn-secondary" aria-label="查看更多操作"><span class="sh-i i16-more-horizontal" aria-hidden="true"></span></button><button class="btn btn-icon btn-ghost" aria-label="关闭安装面板"><span class="sh-i i16-x" aria-hidden="true"></span></button><button class="btn btn-icon btn-link" aria-label="查看全部版本"><span class="sh-i i16-external-link" aria-hidden="true"></span></button>
+      <span class="row-head">icon-xs · 24</span>
+      <button class="btn btn-icon btn-icon-xs btn-default" aria-label="复制安装命令"><span class="sh-i i16-copy" aria-hidden="true"></span></button><button class="btn btn-icon btn-icon-xs btn-outline" aria-label="下载技能包"><span class="sh-i i16-download" aria-hidden="true"></span></button><button class="btn btn-icon btn-icon-xs btn-ghost" aria-label="查看更多操作"><span class="sh-i i16-more-horizontal" aria-hidden="true"></span></button>
+    </div>
+  </section>
+  <section class="block">
+    <h2 class="block-title">链接语义 <em>正文链接 .text-link / 操作链接 .btn-link</em></h2>
+    <div class="row">
+      <div class="state"><a class="text-link" href="#release-notes">查看发布说明</a><span class="state-label">正文链接：保留下划线，用于段落内导航</span></div>
+      <div class="state"><a class="btn btn-sm btn-link" href="#all-versions">查看全部版本</a><span class="state-label">操作链接：无下划线，属于按钮语义</span></div>
+    </div>
+  </section>
+  <section class="block">
+    <h2 class="block-title">交互状态 <em>default / hover / active / focus-visible / disabled / loading</em></h2>
+    <div class="row">
+      <div class="state"><button class="btn btn-md btn-default">安装到 Agent</button><span class="state-label">default</span></div>
+      <div class="state"><button class="btn btn-md btn-default">安装到 Agent</button><span class="state-label">hover · 鼠标移入查看</span></div>
+      <div class="state"><button class="btn btn-md btn-default is-active">安装到 Agent</button><span class="state-label">active · scale .97</span></div>
+      <div class="state"><button class="btn btn-md btn-default">安装到 Agent</button><span class="state-label">focus-visible · 键盘聚焦查看</span></div>
+      <div class="state"><button class="btn btn-md btn-default is-disabled" disabled>安装到 Agent</button><span class="state-label">disabled</span></div>
+      <div class="state"><button class="btn btn-md btn-default is-disabled" disabled aria-busy="true">处理中…</button><span class="state-label">loading</span></div>
+    </div>
+  </section>
+  <section class="block">
+    <h2 class="block-title">尺寸与圆角 <em>24 / 28 / 32 / 36；page 用 md，行内用 xs</em></h2>
+    <div class="row">
+      <div class="state"><button class="btn btn-xs btn-default">xs · 24px / 6px</button><span class="state-label">表格/列表行内</span></div>
+      <div class="state"><button class="btn btn-sm btn-default">sm · 28px / 6px</button><span class="state-label">工具栏 / 筛选栏</span></div>
+      <div class="state"><button class="btn btn-md btn-default">md · 32px / 6px</button><span class="state-label">默认：页头 / 表单</span></div>
+      <div class="state"><button class="btn btn-lg btn-default">lg · 36px / 8px</button><span class="state-label">引导 CTA</span></div>
+    </div>
+    <p class="note">普通按钮不使用全圆角胶囊；胶囊形状只用于 chip、筛选标签、头像与分段切换滑块。</p>
+  </section>
+  <section class="block">
+    <h2 class="block-title">静态状态对照 <em>仅视觉演示</em></h2>
+    <p class="note">真实组件使用 :hover / :focus-visible，这里仅静态对照。</p>
+    <div class="row">
+      <div class="state"><button class="btn btn-md btn-default demo-static is-hover">安装到 Agent</button><span class="state-label">hover</span></div>
+      <div class="state"><button class="btn btn-md btn-default demo-static is-focus">安装到 Agent</button><span class="state-label">focus-visible</span></div>
+    </div>
+  </section>
+  <section class="block">
+    <h2 class="block-title">宿主标签解耦 <em>div / button / a / label 同一 .btn</em></h2>
+    <p class="note">组件类不绑定标签；四种宿主必须得到相同的边框、底色、字体、下划线状态与文字对齐。</p>
+    <div class="row">
+      <div class="state"><div class="btn btn-md btn-default">div · 安装到 Agent</div><span class="state-label">div</span></div>
+      <div class="state"><button class="btn btn-md btn-default" type="button">button · 安装到 Agent</button><span class="state-label">button</span></div>
+      <div class="state"><a class="btn btn-md btn-default" href="#host-a">a · 安装到 Agent</a><span class="state-label">a</span></div>
+      <div class="state"><label class="btn btn-md btn-default">label · 安装到 Agent</label><span class="state-label">label</span></div>
+    </div>
+  </section>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

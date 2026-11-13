@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+  <title>Pagination 分页 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <link rel="stylesheet" href="../assets/icons.css">
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+
+    .page {
+      max-width: var(--sh-size-container-page);
+      margin: 0 auto;
+      padding: var(--sh-space-12) var(--sh-space-8) var(--sh-space-16);
+    }
+
+    .page-head {
+      padding-bottom: var(--sh-space-6);
+      border-bottom: var(--sh-size-border-width) solid var(--sh-border-default);
+      margin-bottom: var(--sh-space-10);
+    }
+
+    .eyebrow {
+      margin: 0 0 var(--sh-space-2);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      letter-spacing: 0.08em;
+      color: var(--sh-text-secondary);
+    }
+
+    .title-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sh-space-3);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: var(--sh-text-4xl);
+      line-height: var(--sh-text-4xl-lh);
+      font-weight: var(--sh-weight-semibold);
+      letter-spacing: var(--sh-tracking-heading);
+    }
+
+    .slug {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-tertiary);
+      background: var(--sh-bg-muted);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-sm);
+      padding: var(--sh-space-0_5) var(--sh-space-2);
+    }
+
+    .lede {
+      margin: var(--sh-space-3) 0 0;
+      max-width: var(--sh-size-container-reading);
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      color: var(--sh-text-secondary);
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--sh-space-2);
+      margin: var(--sh-space-4) 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .meta li {
+      padding: 3px var(--sh-space-2_5);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-full);
+      background: var(--sh-bg-muted);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+    }
+
+    .block { margin-bottom: var(--sh-space-12); }
+
+    .block-head { margin-bottom: var(--sh-space-4); }
+
+    h2 {
+      display: flex;
+      align-items: baseline;
+      gap: var(--sh-space-3);
+      margin: 0;
+      font-size: var(--sh-text-xl);
+      line-height: var(--sh-text-xl-lh);
+      font-weight: var(--sh-weight-semibold);
+    }
+
+    .idx {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-tertiary);
+    }
+
+    .block-head p {
+      margin: var(--sh-space-1) 0 0;
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      color: var(--sh-text-secondary);
+    }
+
+    .stage {
+      padding: var(--sh-space-6);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-xl);
+      box-shadow: var(--sh-shadow-card);
+    }
+
+    .pagination {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sh-space-3);
+      margin: 0;
+      padding: 0;
+    }
+
+    .pg-nav {
+      appearance: none; box-sizing: border-box; margin: 0;
+      text-align: center; text-decoration: none;
+      height: var(--sh-size-control-md);
+      padding: 0 var(--sh-space-3);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-sm);
+      background: var(--sh-bg-raised);
+      color: var(--sh-text-primary);
+      font-family: var(--sh-font-sans);
+      font-size: var(--sh-text-caption);
+      line-height: var(--sh-text-caption-lh);
+      cursor: pointer;
+      transition: background-color var(--sh-duration-fast) var(--sh-ease-standard);
+    }
+
+    .pg-nav:hover:not(:disabled) { background: var(--sh-accent-base); }
+
+    .pg-nav:disabled {
+      background: var(--sh-bg-muted);
+      color: var(--sh-text-disabled);
+      border-color: var(--sh-border-default);
+      cursor: not-allowed;
+    }
+
+    .pg-pages {
+      display: flex;
+      align-items: center;
+      gap: var(--sh-space-1_5);
+    }
+
+    .pg-btn {
+      appearance: none; box-sizing: border-box; margin: 0;
+      text-align: center; text-decoration: none;
+      width: var(--sh-size-control-md);
+      height: var(--sh-size-control-md);
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 0;
+      border-radius: var(--sh-radius-sm);
+      background: transparent;
+      color: var(--sh-text-primary);
+      font-family: var(--sh-font-sans);
+      font-size: var(--sh-text-caption);
+      line-height: var(--sh-text-caption-lh);
+      cursor: pointer;
+      transition:
+        background-color var(--sh-duration-fast) var(--sh-ease-standard),
+        color var(--sh-duration-fast) var(--sh-ease-standard);
+    }
+
+    .pg-btn:hover { background: var(--sh-accent-base); }
+
+    .pg-btn[aria-current="page"] {
+      background: var(--sh-primary-base);
+      color: var(--sh-primary-foreground);
+      font-weight: var(--sh-weight-medium);
+    }
+
+    .pg-btn[aria-current="page"]:hover { background: var(--sh-primary-base); }
+
+    .pg-btn.is-disabled,
+    .pg-btn:disabled {
+      background: var(--sh-bg-muted);
+      color: var(--sh-text-disabled);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      cursor: not-allowed;
+    }
+
+    .pg-btn:focus-visible,
+    .pg-nav:focus-visible {
+      outline: var(--sh-focus-ring-width) solid var(--sh-border-focus);
+      outline-offset: var(--sh-focus-ring-offset);
+    }
+
+    .pagination .ellipsis {
+      display: inline-flex;
+      width: 20px;
+      justify-content: center;
+      color: var(--sh-text-secondary);
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      user-select: none;
+    }
+
+    .pg-demo {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: var(--sh-space-6);
+      padding: var(--sh-space-2) 0;
+    }
+
+    .annotation {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--sh-space-2);
+      margin: 0;
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-secondary);
+      white-space: nowrap;
+    }
+
+    .ann-arrow {
+      font-family: var(--sh-font-mono);
+      color: var(--sh-text-tertiary);
+    }
+
+    .annotation code {
+      padding: var(--sh-space-0_5) var(--sh-space-1_5);
+      background: var(--sh-bg-muted);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-sm);
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-primary);
+    }
+
+    .states {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: var(--sh-space-4);
+    }
+
+    .state {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--sh-space-1_5);
+      padding: var(--sh-space-4);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+    }
+
+    .state-name {
+      margin: var(--sh-space-1_5) 0 0;
+      font-size: var(--sh-text-sm);
+      line-height: var(--sh-text-sm-lh);
+      font-weight: var(--sh-weight-medium);
+    }
+
+    .state-note {
+      margin: 0;
+      font-size: var(--sh-text-xs);
+      line-height: 1.6;
+      color: var(--sh-text-secondary);
+    }
+
+    .demo-block + .demo-block {
+      margin-top: var(--sh-space-5);
+      padding-top: var(--sh-space-5);
+      border-top: 1px dashed var(--sh-border-subtle);
+    }
+
+    .demo-label {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--sh-space-2);
+      margin: 0 0 var(--sh-space-3);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-secondary);
+      text-align: center;
+      justify-content: center;
+    }
+
+    .demo-label code {
+      padding: var(--sh-space-0_5) var(--sh-space-1_5);
+      background: var(--sh-bg-muted);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-sm);
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-tertiary);
+    }
+
+    .phone {
+      width: 360px;
+      max-width: 100%;
+      margin: 0 auto;
+      padding: var(--sh-space-4);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-2xl);
+      box-shadow: var(--sh-shadow-dialog);
+    }
+
+    .phone-head {
+      margin: 0 0 var(--sh-space-3);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+    }
+
+    .pagination-mobile {
+      flex-wrap: nowrap;
+      gap: var(--sh-space-2);
+    }
+
+    .pagination-mobile .pg-nav { flex: 1; }
+
+    .mobile-count {
+      flex: 1.2;
+      text-align: center;
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-secondary);
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .spec-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--sh-space-4);
+    }
+
+    .spec {
+      padding: var(--sh-space-4);
+      background: var(--sh-bg-raised);
+      border: var(--sh-size-border-width) solid var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+    }
+
+    .spec-k {
+      margin: 0 0 var(--sh-space-1);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+    }
+
+    .spec-v {
+      margin: 0;
+      font-size: var(--sh-text-sm);
+      line-height: 1.6;
+      color: var(--sh-text-primary);
+    }
+
+    .spec-v code {
+      font-family: var(--sh-font-mono);
+      font-size: var(--sh-text-xs);
+      color: var(--sh-text-primary);
+    }
+
+    .note {
+      margin-top: var(--sh-space-4);
+      padding: var(--sh-space-4);
+      background: var(--sh-bg-muted);
+      border: 1px dashed var(--sh-border-default);
+      border-radius: var(--sh-radius-md);
+      font-size: var(--sh-text-xs);
+      line-height: 1.7;
+      color: var(--sh-text-secondary);
+    }
+
+    .foot {
+      margin: var(--sh-space-8) 0 0;
+      padding-top: var(--sh-space-4);
+      border-top: var(--sh-size-border-width) solid var(--sh-border-default);
+      font-size: var(--sh-text-xs);
+      line-height: var(--sh-text-xs-lh);
+      color: var(--sh-text-tertiary);
+    }
+
+    @media (max-width: 720px) {
+      .page { padding: var(--sh-space-6) var(--sh-space-4) var(--sh-space-10); }
+      .stage { padding: var(--sh-space-4); }
+      .states,
+      .spec-grid { grid-template-columns: 1fr 1fr; }
+      .pg-demo { gap: var(--sh-space-3); }
+    }
+
+    @media (max-width: 420px) {
+      .states,
+      .spec-grid { grid-template-columns: 1fr; }
+      .pg-nav { flex: 1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .pg-nav,
+      .pg-btn { transition: none; }
+    }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body data-component="pagination">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+<main class="page">
+  <header class="page-head">
+    <p class="eyebrow">导航组件 · Navigation</p>
+    <div class="title-row">
+      <h1>Pagination 分页</h1>
+      <code class="slug">pagination</code>
+    </div>
+    <p class="lede">28px 方块页码，当前页近黑实心。用于搜索结果与技能列表；首末页自动禁用对应方向的按钮。</p>
+    <ul class="meta">
+      <li>页码按钮 28 × 28</li>
+      <li>当前页 aria-current="page"</li>
+      <li>最多 7 个页码</li>
+      <li>移动端仅保留上一页 / 下一页</li>
+    </ul>
+  </header>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">01</span>桌面端 · numbers</h2>
+      <p>第 1–7 页，当前第 3 页。右侧标注当前页对应的 <code>aria-current="page"</code>。</p>
+    </div>
+
+    <div class="stage">
+      <div class="pg-demo">
+        <nav class="pagination" aria-label="分页导航">
+          <button class="pg-nav" type="button">上一页</button>
+          <div class="pg-pages">
+            <button class="pg-btn" type="button" aria-label="第 1 页">1</button>
+            <button class="pg-btn" type="button" aria-label="第 2 页">2</button>
+            <button class="pg-btn" type="button" aria-label="第 3 页" aria-current="page">3</button>
+            <button class="pg-btn" type="button" aria-label="第 4 页">4</button>
+            <button class="pg-btn" type="button" aria-label="第 5 页">5</button>
+            <button class="pg-btn" type="button" aria-label="第 6 页">6</button>
+            <button class="pg-btn" type="button" aria-label="第 7 页">7</button>
+          </div>
+          <button class="pg-nav" type="button">下一页</button>
+        </nav>
+        <p class="annotation"><span class="ann-arrow">←</span><span>第 3 页</span><code>aria-current="page"</code></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">02</span>页码状态 · idle / hover / active / disabled</h2>
+      <p>默认透明底；悬停使用 --sh-accent-base；当前页使用 --sh-primary-base 实心；禁用态 40% 透明度且不响应点击。</p>
+    </div>
+
+    <div class="stage">
+      <div class="states">
+        <div class="state">
+          <button class="pg-btn" type="button" aria-label="第 4 页">4</button>
+          <p class="state-name">默认</p>
+          <p class="state-note">透明底，文字使用 --sh-text-primary。</p>
+        </div>
+        <div class="state">
+          <button class="pg-btn" type="button" aria-label="第 4 页（悬停）">4</button>
+          <p class="state-name">悬停</p>
+          <p class="state-note">底色切换为 --sh-accent-base，150ms 过渡。</p>
+        </div>
+        <div class="state">
+          <button class="pg-btn" type="button" aria-label="第 3 页（当前页）" aria-current="page">3</button>
+          <p class="state-name">当前页</p>
+          <p class="state-note">实心 --sh-primary-base，白字，aria-current="page"。</p>
+        </div>
+        <div class="state">
+          <button class="pg-btn is-disabled" type="button" aria-label="第 8 页（禁用）" disabled>8</button>
+          <p class="state-name">禁用</p>
+          <p class="state-note">禁用色底与 text-disabled，cursor not-allowed。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">03</span>首末页 · prev / next 禁用</h2>
+      <p>第 1 页禁用「上一页」，第 7 页禁用「下一页」；另一侧保持可点击，页码组不变。</p>
+    </div>
+
+    <div class="stage">
+      <div class="demo-block">
+        <p class="demo-label"><span>第 1 页</span><code>上一页 disabled</code></p>
+        <nav class="pagination" aria-label="分页导航 · 第 1 页">
+          <button class="pg-nav" type="button" disabled>上一页</button>
+          <div class="pg-pages">
+            <button class="pg-btn" type="button" aria-label="第 1 页" aria-current="page">1</button>
+            <button class="pg-btn" type="button" aria-label="第 2 页">2</button>
+            <button class="pg-btn" type="button" aria-label="第 3 页">3</button>
+            <button class="pg-btn" type="button" aria-label="第 4 页">4</button>
+            <button class="pg-btn" type="button" aria-label="第 5 页">5</button>
+            <button class="pg-btn" type="button" aria-label="第 6 页">6</button>
+            <button class="pg-btn" type="button" aria-label="第 7 页">7</button>
+          </div>
+          <button class="pg-nav" type="button">下一页</button>
+        </nav>
+      </div>
+
+      <div class="demo-block">
+        <p class="demo-label"><span>第 7 页</span><code>下一页 disabled</code></p>
+        <nav class="pagination" aria-label="分页导航 · 第 7 页">
+          <button class="pg-nav" type="button">上一页</button>
+          <div class="pg-pages">
+            <button class="pg-btn" type="button" aria-label="第 1 页">1</button>
+            <button class="pg-btn" type="button" aria-label="第 2 页">2</button>
+            <button class="pg-btn" type="button" aria-label="第 3 页">3</button>
+            <button class="pg-btn" type="button" aria-label="第 4 页">4</button>
+            <button class="pg-btn" type="button" aria-label="第 5 页">5</button>
+            <button class="pg-btn" type="button" aria-label="第 6 页">6</button>
+            <button class="pg-btn" type="button" aria-label="第 7 页" aria-current="page">7</button>
+          </div>
+          <button class="pg-nav" type="button" disabled>下一页</button>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">04</span>省略号折叠 · 超过 7 页</h2>
+      <p>首尾页始终可见，当前页居中显示左右相邻页，其余页码折叠为「…」。示例共 20 页，当前第 7 页。</p>
+    </div>
+
+    <div class="stage">
+      <nav class="pagination" aria-label="分页导航 · 省略号折叠">
+        <button class="pg-nav" type="button">上一页</button>
+        <div class="pg-pages">
+          <button class="pg-btn" type="button" aria-label="第 1 页">1</button>
+          <span class="ellipsis" aria-hidden="true">…</span>
+          <button class="pg-btn" type="button" aria-label="第 6 页">6</button>
+          <button class="pg-btn" type="button" aria-label="第 7 页" aria-current="page">7</button>
+          <button class="pg-btn" type="button" aria-label="第 8 页">8</button>
+          <span class="ellipsis" aria-hidden="true">…</span>
+          <button class="pg-btn" type="button" aria-label="第 20 页">20</button>
+        </div>
+        <button class="pg-nav" type="button">下一页</button>
+      </nav>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">05</span>移动端 · 精简版</h2>
+      <p>屏幕宽度不超过 640px 时隐藏页码组，只保留「上一页 / 下一页」，中间补充当前页与总页数。</p>
+    </div>
+
+    <div class="stage">
+      <div class="phone">
+        <p class="phone-head">搜索结果 · 共 7 页</p>
+        <nav class="pagination pagination-mobile" aria-label="分页导航 · 移动端">
+          <button class="pg-nav" type="button">上一页</button>
+          <span class="mobile-count">第 3 页 / 共 7 页</span>
+          <button class="pg-nav" type="button">下一页</button>
+        </nav>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="block-head">
+      <h2><span class="idx">06</span>规格</h2>
+      <p>尺寸与色彩来自契约，键盘焦点与禁用规则保证可访问性。</p>
+    </div>
+
+    <div class="spec-grid">
+      <div class="spec">
+        <p class="spec-k">页码按钮</p>
+        <p class="spec-v">28 × 28px，圆角 6px，字号 13px</p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">按钮间距</p>
+        <p class="spec-v">页码之间 6px，分组之间 12px</p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">当前页</p>
+        <p class="spec-v">实心 <code>--sh-primary-base</code>，标记 <code>aria-current="page"</code></p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">悬停</p>
+        <p class="spec-v">背景 <code>--sh-accent-base</code>，过渡 150ms</p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">键盘焦点</p>
+        <p class="spec-v">2px <code>--sh-border-focus</code> 外描边，偏移 2px</p>
+      </div>
+      <div class="spec">
+        <p class="spec-k">禁用态</p>
+        <p class="spec-v">禁用色底、text-disabled，cursor not-allowed，不可点击</p>
+      </div>
+    </div>
+
+    <p class="note">页码上限为 7 个，超出后使用省略号折叠；不使用彩色页码，也不使用圆形大按钮分页。本页为静态预览，按钮不触发翻页。</p>
+  </section>
+
+  <p class="foot">所有颜色、间距、圆角与动效均来自 colors_and_type.css；本页为静态预览，不含脚本。</p>
+</main>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>

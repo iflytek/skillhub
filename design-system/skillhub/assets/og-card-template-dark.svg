@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="SkillHub 技能封面模板（深色）">
+  <rect width="1200" height="630" fill="#0f0f0f"/>
+  <rect x="24" y="24" width="1152" height="582" fill="none" stroke="#333333"/>
+  <text x="64" y="92" font-family="'Plus Jakarta Sans', 'PingFang SC', sans-serif" font-size="28" font-weight="600" letter-spacing="-0.02em" fill="#f0f0f0">SkillHub</text>
+  <text x="64" y="272" font-family="'Plus Jakarta Sans', 'PingFang SC', sans-serif" font-size="56" font-weight="600" letter-spacing="-0.02em" fill="#f0f0f0">技能名称</text>
+  <text x="64" y="300" font-family="'Plus Jakarta Sans', 'PingFang SC', sans-serif" font-size="56" font-weight="600" letter-spacing="-0.02em" fill="#f0f0f0">第二行（最多两行）</text>
+  <text x="64" y="358" font-family="'Plus Jakarta Sans', 'PingFang SC', sans-serif" font-size="24" fill="#adadad">@global · 办公效率</text>
+  <text x="64" y="486" font-family="'Plus Jakarta Sans', 'PingFang SC', sans-serif" font-size="20" fill="#d6d6d6">一句话说明：这个技能解决什么问题、适合谁。</text>
+  <text x="64" y="566" font-family="'JetBrains Mono', monospace" font-size="16" fill="#adadad">clawhub install @global/skill-name</text>
+  <text x="1136" y="566" text-anchor="end" font-family="'JetBrains Mono', monospace" font-size="14" fill="#808080">1200 × 630 · safe 64</text>
+</svg>

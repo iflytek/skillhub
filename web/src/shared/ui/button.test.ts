@@ -6,7 +6,7 @@ describe('buttonVariants', () => {
     const classes = buttonVariants()
     expect(classes).toContain('bg-primary')
     expect(classes).toContain('h-[var(--control-height)]')
-    expect(classes).toContain('px-4')
+    expect(classes).toContain('px-[var(--control-padding-x)]')
   })
 
   it('applies destructive variant classes', () => {
@@ -17,7 +17,7 @@ describe('buttonVariants', () => {
   it('applies outline variant classes', () => {
     const classes = buttonVariants({ variant: 'outline' })
     expect(classes).toContain('border')
-    expect(classes).toContain('bg-background/70')
+    expect(classes).toContain('bg-background')
   })
 
   it('applies secondary variant classes', () => {
@@ -25,10 +25,10 @@ describe('buttonVariants', () => {
     expect(classes).toContain('bg-secondary')
   })
 
-  it('applies soft blue variant classes', () => {
+  it('keeps the soft variant on the neutral theme', () => {
     const classes = buttonVariants({ variant: 'soft' })
-    expect(classes).toContain('bg-blue-500/10')
-    expect(classes).toContain('text-blue-700')
+    expect(classes).toContain('bg-primary/5')
+    expect(classes).toContain('text-primary')
   })
 
   it('applies ghost variant classes', () => {
@@ -43,25 +43,25 @@ describe('buttonVariants', () => {
 
   it('applies sm size classes', () => {
     const classes = buttonVariants({ size: 'sm' })
-    expect(classes).toContain('h-8')
-    expect(classes).toContain('text-xs')
+    expect(classes).toContain('h-[var(--control-sm-height)]')
+    expect(classes).toContain('px-2.5')
   })
 
   it('applies lg size classes', () => {
     const classes = buttonVariants({ size: 'lg' })
-    expect(classes).toContain('h-10')
-    expect(classes).toContain('px-8')
+    expect(classes).toContain('h-[var(--control-lg-height)]')
+    expect(classes).toContain('px-3')
   })
 
   it('applies icon size classes', () => {
     const classes = buttonVariants({ size: 'icon' })
-    expect(classes).toContain('h-[var(--control-height)]')
-    expect(classes).toContain('w-[var(--control-height)]')
+    expect(classes).toContain('h-[var(--control-icon-size)]')
+    expect(classes).toContain('w-[var(--control-icon-size)]')
   })
 
   it('always includes base focus-visible and disabled styles', () => {
     const classes = buttonVariants()
-    expect(classes).toContain('focus-visible:outline-none')
+    expect(classes).toContain('focus-visible:outline-2')
     expect(classes).toContain('disabled:pointer-events-none')
     expect(classes).toContain('disabled:opacity-50')
   })

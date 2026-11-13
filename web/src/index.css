@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --font-sans: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Monaco, Menlo, Consolas, monospace;
     /* ═══════════════════════════════════════════
        SkillHub — 白 + 近黑（ref: skillhub-clone, TabTin, skillhub.cn）
        纯白底，冷灰卡片 #f2f3f5，近黑按钮 #202020
@@ -13,37 +13,37 @@
        ═══════════════════════════════════════════ */
 
     /* ── 基础层 — 纯白底，对标 skillhub-clone / skillhub.cn ── */
-    --background: 0 0% 100%;               /* #ffffff */
-    --foreground: 0 0% 0%;                 /* #000000 文字 */
-    --card: 0 0% 100%;                     /* #ffffff 纯白卡片 */
-    --card-foreground: 0 0% 0%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 0%;
+    --background: 0.000000 0.000000% 100.000000%; /* design: --sh-bg-page */
+    --foreground: 0.000000 0.000000% 9.019608%; /* design: --sh-text-primary */
+    --card: 0.000000 0.000000% 100.000000%; /* design: --sh-bg-raised */
+    --card-foreground: 0.000000 0.000000% 9.019608%; /* design: --sh-text-primary */
+    --popover: 0.000000 0.000000% 100.000000%; /* design: --sh-bg-overlay */
+    --popover-foreground: 0.000000 0.000000% 9.019608%; /* design: --sh-text-primary */
 
     /* ── 主色 — 近黑（无品牌色，对标 skillhub-clone #202020） ── */
-    --primary: 0 0% 13%;                   /* #202020 */
-    --primary-foreground: 0 0% 100%;
+    --primary: 0.000000 0.000000% 12.941176%; /* design: --sh-primary-base */
+    --primary-foreground: 0.000000 0.000000% 100.000000%; /* design: --sh-primary-foreground */
 
     /* ── 表面层 — 冷灰递进 ── */
-    --secondary: 240 3% 97%;               /* #f6f7f9 */
-    --secondary-foreground: 0 0% 0%;
-    --muted: 240 3% 94%;                   /* #eef0f2 */
-    --muted-foreground: 0 0% 45%;          /* #737373，保证辅助文字可读性 */
+    --secondary: 240.000000 3.225806% 93.921569%; /* design: --sh-bg-muted */
+    --secondary-foreground: 0.000000 0.000000% 9.019608%; /* design: --sh-text-primary */
+    --muted: 240.000000 3.225806% 93.921569%; /* design: --sh-bg-muted */
+    --muted-foreground: 0.000000 0.000000% 45.098039%; /* design: --sh-text-tertiary */
 
     /* ── 强调色 — 淡蓝 hover（对齐 TabTin hsl(214 70% 96%)） ── */
-    --accent: 214 70% 96%;                  /* 淡蓝 hover */
-    --accent-foreground: 0 0% 7%;          /* #111111 */
+    --accent: 214.285714 70.000000% 96.078431%; /* design: --sh-accent-base */
+    --accent-foreground: 0.000000 0.000000% 9.019608%; /* design: --sh-accent-foreground */
 
     /* ── 功能色 ── */
-    --destructive: 0 55% 48%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 92%;                    /* rgba(0,0,0,0.08) */
-    --input: 240 3% 95%;                   /* #f2f3f5 */
-    --ring: 0 0% 13%;                      /* #202020 */
-    --radius: 0.625rem;                    /* 10px，对标 skillhub-clone */
+    --destructive: 4.230769 76.470588% 40.000000%; /* design: --sh-danger-base */
+    --destructive-foreground: 0.000000 0.000000% 100.000000%; /* design: --sh-danger-foreground */
+    --border: 0.000000 0.000000% 89.803922%; /* design: --sh-border-default */
+    --input: 0.000000 0.000000% 100.000000%; /* design: --sh-bg-page */
+    --ring: 0.000000 0.000000% 9.019608%; /* design: --sh-border-focus */
+    --radius: 0.625rem;                    /* Surface fallback; controls use their size-specific radius. */
 
     /* ── 扩展色板 ── */
-    --surface-glass: 0 0% 100%;
+    --surface-glass: 0.000000 0.000000% 100.000000%; /* design: --sh-bg-glass */
     --glow-primary: 0 0% 13%;
     --glow-accent: 0 0% 7%;
     --success: 160 60% 28%;
@@ -59,9 +59,9 @@
     --brand-gradient: none;
 
     /* ── 文字语义色 — 对标 clone 的 rgba(0,0,0,0.62) / 0.4 ── */
-    --text-secondary: 0 0% 45%;            /* #737373，正文辅助信息 */
-    --text-muted: 0 0% 38%;
-    --text-placeholder: 0 0% 45%;
+    --text-secondary: 0.000000 0.000000% 34.117647%; /* design: --sh-text-secondary */
+    --text-muted: 0.000000 0.000000% 45.098039%; /* design: --sh-text-tertiary */
+    --text-placeholder: 0.000000 0.000000% 46.274510%; /* design: --sh-text-placeholder */
 
     /* ── 边框语义 ── */
     --border-card: 0 0% 94%;               /* rgba(0,0,0,0.06) */
@@ -70,18 +70,30 @@
     --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.04);
     --shadow-card-hover: 0 4px 12px 0 rgb(0 0 0 / 0.08);
     --shadow-btn-primary: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+    /* Adopted SkillHub snapshot e77738474d9eedbf. Controls keep their React contracts. */
+    --control-radius: 6px;
+    --control-font-size: 13px;
+    --control-line-height: 18px;
+    --control-sm-height: 28px;
+    --control-icon-size: 28px;
+    --control-xs-height: 24px;
+    --control-lg-height: 36px;
+    --control-lg-radius: 8px;
+
   }
 
   :root,
   [data-density="regular"] {
-    --control-height: 2.25rem;
+    --control-height: 32px;
+    --control-padding-y: 5px;
     --control-padding-x: 0.75rem;
     --table-cell-padding: 0.75rem;
     --card-padding: 1.25rem;
   }
 
   [data-density="compact"] {
-    --control-height: 2rem;
+    --control-height: 28px;
+    --control-padding-y: 4px;
     --control-padding-x: 0.625rem;
     --table-cell-padding: 0.5rem;
     --card-padding: 1rem;
@@ -89,36 +101,36 @@
 
   .dark {
     /* ── 基础层 — 暗色保持近黑风格，但提高卡片对比度以改善 hover 可见性 ── */
-    --background: 0 0% 6%;                 /* #0f0f0f */
-    --foreground: 0 0% 94%;                /* 更亮的文字 */
-    --card: 0 0% 10%;                      /* #1a1a1a 稍微亮一点 */
-    --card-foreground: 0 0% 94%;
-    --popover: 0 0% 11%;
-    --popover-foreground: 0 0% 94%;
+    --background: 0.000000 0.000000% 6.274510%; /* design: --sh-bg-page */
+    --foreground: 0.000000 0.000000% 95.686275%; /* design: --sh-text-primary */
+    --card: 0.000000 0.000000% 9.411765%; /* design: --sh-bg-raised */
+    --card-foreground: 0.000000 0.000000% 95.686275%; /* design: --sh-text-primary */
+    --popover: 0.000000 0.000000% 13.333333%; /* design: --sh-bg-overlay */
+    --popover-foreground: 0.000000 0.000000% 95.686275%; /* design: --sh-text-primary */
 
     /* ── 主色 — 白（暗色下反转） ── */
-    --primary: 0 0% 94%;                   /* 近白 */
-    --primary-foreground: 0 0% 6%;         /* 近黑 */
+    --primary: 0.000000 0.000000% 92.941176%; /* design: --sh-primary-base */
+    --primary-foreground: 0.000000 0.000000% 6.274510%; /* design: --sh-primary-foreground */
 
     /* ── 表面层 — 灰阶递进，提高对比度 ── */
-    --secondary: 0 0% 14%;                 /* 从 12% 提升 */
-    --secondary-foreground: 0 0% 90%;
-    --muted: 0 0% 18%;                     /* 从 15% 提升 */
-    --muted-foreground: 0 0% 68%;          /* 从 60% 提升，图标更清晰 */
+    --secondary: 0.000000 0.000000% 16.470588%; /* design: --sh-bg-muted */
+    --secondary-foreground: 0.000000 0.000000% 95.686275%; /* design: --sh-text-primary */
+    --muted: 0.000000 0.000000% 16.470588%; /* design: --sh-bg-muted */
+    --muted-foreground: 0.000000 0.000000% 56.470588%; /* design: --sh-text-tertiary */
 
     /* ── 强调色 — hover 更明显 ── */
-    --accent: 0 0% 22%;                    /* 从 18% 提升 */
-    --accent-foreground: 0 0% 85%;
+    --accent: 240.000000 1.408451% 13.921569%; /* design: --sh-accent-base */
+    --accent-foreground: 240.000000 1.960784% 90.000000%; /* design: --sh-accent-foreground */
 
     /* ── 功能色 ── */
-    --destructive: 0 45% 48%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 20%;                    /* 从 18% 提升 */
-    --input: 0 0% 16%;
-    --ring: 0 0% 85%;
+    --destructive: 5.373134 54.471545% 75.882353%; /* design: --sh-danger-base */
+    --destructive-foreground: 6.666667 17.647059% 10.000000%; /* design: --sh-danger-foreground */
+    --border: 0.000000 0.000000% 18.823529%; /* design: --sh-border-default */
+    --input: 0.000000 0.000000% 6.274510%; /* design: --sh-bg-page */
+    --ring: 0.000000 0.000000% 90.196078%; /* design: --sh-border-focus */
 
     /* ── 扩展色板 ── */
-    --surface-glass: 0 0% 10%;
+    --surface-glass: 0.000000 0.000000% 9.411765%; /* design: --sh-bg-glass */
     --glow-primary: 0 0% 80%;
     --glow-accent: 0 0% 60%;
     --success: 160 50% 48%;
@@ -129,9 +141,9 @@
     --warning-foreground: 26 60% 12%;
 
     /* ── 文字语义 — 提高可读性 ── */
-    --text-secondary: 0 0% 75%;            /* 从 70% 提升 */
-    --text-muted: 0 0% 68%;                /* 从 60% 提升 */
-    --text-placeholder: 0 0% 55%;
+    --text-secondary: 0.000000 0.000000% 72.549020%; /* design: --sh-text-secondary */
+    --text-muted: 0.000000 0.000000% 56.470588%; /* design: --sh-text-tertiary */
+    --text-placeholder: 0.000000 0.000000% 54.117647%; /* design: --sh-text-placeholder */
 
     /* ── 边框 ── */
     --border-card: 0 0% 18%;               /* 从 16% 提升 */

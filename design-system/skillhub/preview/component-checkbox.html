@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="data:," />
+  <title>Checkbox 复选框 · SkillHub 设计系统</title>
+  <link rel="stylesheet" href="../colors_and_type.css" />
+  <link rel="stylesheet" href="../assets/icons.css" />
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+  <style>
+    /* @component-css-start */
+    body { margin: 0; padding: var(--sh-space-6); display: flex; flex-direction: column; gap: var(--sh-space-6); background: var(--sh-bg-page); color: var(--sh-text-primary); font-family: var(--sh-font-sans); }
+    .title { margin: 0; font-size: var(--sh-text-xl); font-weight: var(--sh-weight-medium); letter-spacing: var(--sh-tracking-heading); }
+    .lede { margin: var(--sh-space-1) 0 0; font-size: var(--sh-text-caption); line-height: var(--sh-text-sm-lh); color: var(--sh-text-secondary); }
+    .block { display: flex; flex-direction: column; gap: var(--sh-space-4); }
+    .block-title { margin: 0; font-size: var(--sh-text-xs); font-weight: var(--sh-weight-medium); letter-spacing: .04em; color: var(--sh-text-tertiary); }
+    .block-title em { margin-left: var(--sh-space-2); font-style: normal; font-weight: var(--sh-weight-regular); color: var(--sh-text-placeholder); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--sh-space-4) var(--sh-space-6); }
+    .state { display: flex; flex-direction: column; gap: var(--sh-space-1_5); }
+    .state-label { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); color: var(--sh-text-placeholder); }
+
+    .check-row { box-sizing: border-box; appearance: none; border: 0; background: transparent; margin: 0;
+    font-family: var(--sh-font-sans); text-align: start; text-decoration: none; position: relative; display: flex; align-items: flex-start; gap: var(--sh-space-2); min-height: var(--sh-control-md-height); padding: var(--sh-space-1) var(--sh-space-2); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-primary); cursor: pointer; transition: background var(--sh-duration-fast) var(--sh-ease-standard); }
+    /* 行级 hover / 选中底只给「带文案的选择项」；表格单元格里的纯复选框保持透明，
+       否则会在 40px 行里画出一块灰底方块。判定依据是结构（.check-label/.check-text），
+       不依赖宿主选择器，宿主导航/表格/抽屉都能自动适配。 */
+    .check-row:has(.check-label):not(.is-disabled):hover { background: var(--sh-interaction-hover-bg); }
+    .check-row:has(.check-label):has(.check-input:checked):not(.is-disabled),
+    .check-row.is-checked:has(.check-label):not(.is-disabled) { background: var(--sh-interaction-selected-bg); }
+    .check-row .check-input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+    .check-box { box-sizing: border-box; position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center; width: var(--sh-control-md-icon); height: var(--sh-control-md-icon); margin-top: 1px; border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-2xs); background: transparent; transition: background var(--sh-duration-fast) var(--sh-ease-standard), border-color var(--sh-duration-fast) var(--sh-ease-standard); }
+    .check-mark { width: var(--sh-icon-12); height: var(--sh-icon-12); color: var(--sh-primary-foreground); opacity: 0; }
+    .check-dash { position: absolute; left: 50%; top: 50%; width: 8px; height: 2px; border-radius: var(--sh-radius-full); background: var(--sh-primary-foreground); opacity: 0; transform: translate(-50%, -50%); }
+
+    .check-input:checked + .check-box,
+    .check-input:indeterminate + .check-box,
+    .check-row.is-checked .check-box { background: var(--sh-primary-base); border-color: var(--sh-primary-base); }
+    .check-input:checked + .check-box .check-mark,
+    .check-row.is-checked .check-mark { opacity: 1; }
+    .check-row.is-indeterminate .check-box { background: var(--sh-primary-base); border-color: var(--sh-primary-base); }
+    .check-row.is-indeterminate .check-mark { opacity: 0; }
+    .check-row.is-indeterminate .check-dash,
+    .check-input:indeterminate + .check-box .check-dash { opacity: 1; }
+    .check-input:indeterminate + .check-box .check-mark { opacity: 0; }
+    /* hover 只提边框，不做底色填充：暗色下 bg-muted 会在 raised 卡上补出一块可见方块 */
+    .check-row:hover .check-box { border-color: var(--sh-text-tertiary); }
+    .check-row:hover.is-checked .check-box,
+    .check-row:hover:has(.check-input:checked) .check-box { background: var(--sh-primary-hover); border-color: var(--sh-primary-hover); }
+    .check-row:has(.check-input:focus-visible) .check-box { outline: var(--sh-focus-ring-width) solid var(--sh-border-focus); outline-offset: var(--sh-focus-ring-offset); }
+    .check-row.is-error .check-box { border-color: var(--sh-danger-base); }
+    .check-row.is-disabled { cursor: not-allowed; color: var(--sh-text-disabled); }
+    .check-row.is-disabled .check-box { background: var(--sh-bg-muted); border-color: var(--sh-border-default); }
+    /* 禁用但已选中：填充降到 muted，勾/半选标记改用 tertiary，保证 ≥3:1 非文本对比 */
+    .check-row.is-disabled .check-mark { color: var(--sh-text-tertiary); }
+    .check-row.is-disabled .check-dash { background: var(--sh-text-tertiary); }
+    .check-row.is-disabled .check-label,
+    .check-row.is-disabled .check-desc { color: var(--sh-text-disabled); }
+
+    .check-row--md .check-box { width: var(--sh-icon-20); height: var(--sh-icon-20); }
+    .check-row--md .check-mark { width: var(--sh-icon-14); height: var(--sh-icon-14); }
+    .check-row--md .check-dash { width: 10px; }
+
+    .check-text { display: flex; flex-direction: column; gap: var(--sh-space-1); }
+    .check-label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); color: var(--sh-text-primary); }
+    .check-desc { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-text-secondary); }
+    .error { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-danger-base); }
+
+    .group { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sh-space-2); }
+    .group-legend { padding: 0; font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); font-weight: var(--sh-weight-medium); color: var(--sh-text-primary); }
+    .group-row { display: flex; flex-wrap: wrap; gap: var(--sh-space-2) var(--sh-space-6); }
+    .group-help { font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); color: var(--sh-text-secondary); }
+
+    .notes { display: flex; flex-direction: column; gap: var(--sh-space-2); }
+    .notes p { margin: 0; font-size: var(--sh-text-xs); line-height: 1.7; color: var(--sh-text-secondary); }
+    .notes ul { margin: 0; padding-left: var(--sh-space-4); display: flex; flex-direction: column; gap: var(--sh-space-1); }
+    .notes li { font-size: var(--sh-text-xs); line-height: 1.7; color: var(--sh-text-secondary); }
+    /* 宿主对比：模拟 40px 表格单元格，验证纯复选框不带行级底色 */
+    .host-demo { display: flex; flex-wrap: wrap; gap: var(--sh-space-3); }
+    .host-cell { display: flex; align-items: center; height: var(--sh-size-row-default); padding: 0 var(--sh-size-table-pad-x); border: var(--sh-size-border-width) solid var(--sh-border-default); border-radius: var(--sh-radius-2xs); background: var(--sh-bg-page); }
+    .host-note { margin: 0; font-size: var(--sh-text-xs); line-height: 1.7; color: var(--sh-text-secondary); }
+    .host-note code { font-family: var(--sh-font-mono); font-size: var(--sh-text-xs); }
+      /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+  </style>
+</head>
+<body data-component="checkbox">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+  <header>
+    <h1 class="title">Checkbox 复选框</h1>
+    <p class="lede">16px 方框配 4px 圆角，选中为近黑底白勾；整行标签都可点击切换，单一开关场景应改用 Switch。</p>
+  </header>
+
+  <section class="block">
+    <h2 class="block-title">状态 <em>unchecked / hover / focus-visible / checked / indeterminate / disabled / error</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">未选中 · unchecked</span>
+        <label class="check-row" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="state-unchecked" />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">显示已归档技能</span>
+        </label>
+      </div>
+
+      <div class="state">
+        <span class="state-label">悬停 · hover</span>
+        <label class="check-row" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="state-hover" />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">显示安全扫描失败的技能</span>
+        </label>
+      </div>
+
+      <div class="state">
+        <span class="state-label">聚焦 · focus-visible</span>
+        <label class="check-row" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="state-focus" />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">在搜索结果中高亮关键词</span>
+        </label>
+      </div>
+
+      <div class="state">
+        <span class="state-label">选中 · checked</span>
+        <label class="check-row is-checked" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="state-checked" checked />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">仅显示已发布版本</span>
+        </label>
+      </div>
+
+      <div class="state">
+        <span class="state-label">半选 · indeterminate</span>
+        <label class="check-row is-indeterminate" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="state-indeterminate" data-indeterminate aria-label="全选当前页，部分已选" />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">全选当前页（8 / 20）</span>
+        </label>
+      </div>
+
+      <div class="state">
+        <span class="state-label">禁用 · disabled</span>
+        <label class="check-row is-disabled" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="state-disabled" disabled />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">仅管理员可修改可见性</span>
+        </label>
+      </div>
+
+      <div class="state">
+        <span class="state-label">禁用且选中 · disabled-checked</span>
+        <label class="check-row is-checked is-disabled" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="state-disabled-checked" checked disabled />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">自动同步上游更新</span>
+        </label>
+      </div>
+
+      <div class="state">
+        <span class="state-label">错误 · error</span>
+        <label class="check-row is-error" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="state-error" aria-invalid="true" aria-describedby="cb-error-msg" />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">我已阅读《技能发布规范》</span>
+        </label>
+        <span class="error" id="cb-error-msg">发布前必须勾选此协议。</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">尺寸 <em>16 · 默认 / 20 · 强调</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">16px · 未选中</span>
+        <label class="check-row" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="size-16" />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">筛选条件：团队命名空间</span>
+        </label>
+      </div>
+
+      <div class="state">
+        <span class="state-label">20px · 选中</span>
+        <label class="check-row check-row--md is-checked" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="size-20" checked />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label">批量操作：归档所选 12 个版本</span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">标签与描述 <em>label + description</em></h2>
+    <div class="grid">
+      <div class="state">
+        <span class="state-label">选中 · 带描述</span>
+        <label class="check-row is-checked" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="desc-checked" checked />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-text">
+            <span class="check-label">订阅版本发布通知</span>
+            <span class="check-desc">新版本发布后通过站内消息提醒，不发送邮件。</span>
+          </span>
+        </label>
+      </div>
+
+      <div class="state">
+        <span class="state-label">未选中 · 带描述</span>
+        <label class="check-row" data-component="checkbox">
+          <input class="check-input" type="checkbox" name="desc-unchecked" />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-text">
+            <span class="check-label">在下载记录中保留扫描报告</span>
+            <span class="check-desc">关闭后仅保留最近 30 天的扫描结论。</span>
+          </span>
+        </label>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">多选组 <em>fieldset + legend</em></h2>
+    <div class="grid">
+      <fieldset class="group" data-component="checkbox">
+        <legend class="group-legend">版本状态</legend>
+        <div class="group-row">
+          <label class="check-row is-checked" data-component="checkbox">
+            <input class="check-input" type="checkbox" name="status-filter" checked />
+            <span class="check-box" aria-hidden="true">
+              <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+              <span class="check-dash"></span>
+            </span>
+            <span class="check-label">已发布</span>
+          </label>
+          <label class="check-row is-checked" data-component="checkbox">
+            <input class="check-input" type="checkbox" name="status-filter" checked />
+            <span class="check-box" aria-hidden="true">
+              <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+              <span class="check-dash"></span>
+            </span>
+            <span class="check-label">审核中</span>
+          </label>
+          <label class="check-row" data-component="checkbox">
+            <input class="check-input" type="checkbox" name="status-filter" />
+            <span class="check-box" aria-hidden="true">
+              <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+              <span class="check-dash"></span>
+            </span>
+            <span class="check-label">已撤回</span>
+          </label>
+          <label class="check-row" data-component="checkbox">
+            <input class="check-input" type="checkbox" name="status-filter" />
+            <span class="check-box" aria-hidden="true">
+              <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+              <span class="check-dash"></span>
+            </span>
+            <span class="check-label">已拒绝</span>
+          </label>
+        </div>
+        <span class="group-help">筛选结果会立即刷新，可同时选择多个状态。</span>
+      </fieldset>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">宿主用法 <em>表格单元格 vs 表单选择项</em></h2>
+    <div class="host-demo">
+      <div class="host-cell" data-component="checkbox">
+        <label class="check-row">
+          <input class="check-input" type="checkbox" name="cell-plain" aria-label="选择第 3 行" />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+        </label>
+      </div>
+      <div class="host-cell" data-component="checkbox">
+        <label class="check-row is-checked">
+          <input class="check-input" type="checkbox" name="cell-checked" checked aria-label="选择第 4 行" />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+        </label>
+      </div>
+      <div class="host-cell" data-component="checkbox">
+        <label class="check-row is-checked">
+          <input class="check-input" type="checkbox" name="cell-labeled" checked />
+          <span class="check-box" aria-hidden="true">
+            <svg class="check-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 5 5 9-10"></path></svg>
+            <span class="check-dash"></span>
+          </span>
+          <span class="check-label" style="font-size: var(--sh-control-sm-font)">随行同步</span>
+        </label>
+      </div>
+    </div>
+    <p class="host-note">前两个是单元格里的纯复选框：没有 <code>.check-label</code> 时不画行级底色，40px 行内只有 16px 方框。第三个带文案，因此保留选中底。</p>
+  </section>
+
+  <section class="block">
+    <h2 class="block-title">使用禁忌</h2>
+    <div class="notes">
+      <ul>
+        <li>不要做大号彩色复选框，勾选色只有近黑 <code>--sh-primary-base</code> 一种。</li>
+        <li>不要用 iOS 风格开关代替复选框，多选语义必须保留方框。</li>
+        <li>单一即时开合状态请使用 Switch，不要用单个 Checkbox 伪装。</li>
+      </ul>
+    </div>
+  </section>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+  <script>
+    /* 半选态必须落在 input.indeterminate 上：CSS 用 :indeterminate 伪类判定，
+       不依赖手写 .is-indeterminate 类（该类仅作无 JS 环境的兜底）。 */
+    document.querySelectorAll('.check-input[data-indeterminate]').forEach(function (el) {
+      el.indeterminate = true;
+    });
+  </script>
+</body>
+</html>

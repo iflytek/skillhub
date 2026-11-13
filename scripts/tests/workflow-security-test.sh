@@ -26,6 +26,7 @@ assert_pr_workflow_hardened "$REPO_ROOT/.github/workflows/pr-cli.yml"
 assert_pr_workflow_hardened "$REPO_ROOT/.github/workflows/pr-e2e.yml"
 assert_pr_workflow_hardened "$REPO_ROOT/.github/workflows/pr-helm-chart.yml"
 assert_pr_workflow_hardened "$REPO_ROOT/.github/workflows/pr-tests.yml"
+assert_pr_workflow_hardened "$REPO_ROOT/.github/workflows/agent-workflow.yml"
 assert_pr_workflow_hardened "$PR_SCRIPTS_WORKFLOW"
 assert_pr_workflow_hardened "$SECURITY_WORKFLOW"
 

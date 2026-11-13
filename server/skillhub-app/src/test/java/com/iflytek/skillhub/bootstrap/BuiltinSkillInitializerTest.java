@@ -77,7 +77,7 @@ class BuiltinSkillInitializerTest {
     @Mock private SkillRepository skillRepository;
     @Mock private SkillVersionRepository skillVersionRepository;
     @Mock private SkillFileRepository skillFileRepository;
-    @Mock private SkillPublishService skillPublishService;
+    @Mock private BuiltinSkillPublicationService skillPublishService;
 
     private BuiltinSkillProperties properties;
     private BuiltinSkillInitializer initializer;

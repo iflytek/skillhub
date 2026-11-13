@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>EmptyState 空态 · SkillHub 设计系统</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+  <link rel="stylesheet" href="../assets/icons.css">
+  <link rel="stylesheet" href="../assets/theme-toggle.css" />
+<style>
+    /* @component-css-start */
+    .icon, .icon-16 { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-icon-16); height: var(--sh-icon-16); stroke-width: var(--sh-icon-stroke-16); vertical-align: middle; color: inherit; }
+    .icon-12 { width: var(--sh-icon-12); height: var(--sh-icon-12); stroke-width: var(--sh-icon-stroke-12); }
+    .icon-14 { width: var(--sh-icon-14); height: var(--sh-icon-14); stroke-width: var(--sh-icon-stroke-14); }
+    .icon-18 { width: var(--sh-icon-18); height: var(--sh-icon-18); stroke-width: var(--sh-icon-stroke-18); }
+    .icon-20 { width: var(--sh-icon-20); height: var(--sh-icon-20); stroke-width: var(--sh-icon-stroke-20); }
+    .icon-24 { width: var(--sh-icon-24); height: var(--sh-icon-24); stroke-width: var(--sh-icon-stroke-24); }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--sh-bg-page);
+    color: var(--sh-text-primary);
+    font-family: var(--sh-font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--sh-space-12) var(--sh-space-8) var(--sh-space-16);
+  }
+
+  /* ---------- 页头 ---------- */
+  .page-head {
+    padding-bottom: var(--sh-space-8);
+    border-bottom: var(--sh-size-border-width) solid var(--sh-border-default);
+  }
+
+  .eyebrow {
+    margin: 0 0 var(--sh-space-3);
+    font-size: var(--sh-text-xs);
+    letter-spacing: 0.08em;
+    color: var(--sh-text-secondary);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: var(--sh-text-3xl);
+    line-height: var(--sh-text-3xl-lh);
+    font-weight: var(--sh-weight-semibold);
+    letter-spacing: var(--sh-tracking-heading);
+  }
+
+  .lead {
+    margin: var(--sh-space-3) 0 0;
+    max-width: var(--sh-size-container-reading);
+    font-size: var(--sh-text-base);
+    line-height: 1.7;
+    color: var(--sh-text-secondary);
+  }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sh-space-2);
+    margin-top: var(--sh-space-5);
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sh-space-1_5);
+    padding: 3px var(--sh-space-2_5);
+    border: var(--sh-size-border-width) solid var(--sh-border-default);
+    border-radius: var(--sh-radius-full);
+    background: var(--sh-bg-muted);
+    font-size: var(--sh-text-xs);
+    color: var(--sh-text-secondary);
+    white-space: nowrap;
+  }
+
+  /* ---------- 分节 ---------- */
+  .section { margin-top: var(--sh-space-12); }
+
+  .section-title {
+    margin: 0;
+    font-size: var(--sh-text-lg);
+    line-height: var(--sh-text-lg-lh);
+    font-weight: var(--sh-weight-medium);
+    letter-spacing: var(--sh-tracking-heading);
+  }
+
+  .section-desc {
+    margin: var(--sh-space-1_5) 0 0;
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .demo-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--sh-space-8);
+    align-items: flex-start;
+    margin-top: var(--sh-space-6);
+  }
+
+  /* ---------- 面板 ---------- */
+  .panel {
+    box-sizing: border-box;
+    width: 380px;
+    max-width: 100%;
+    flex: none;
+    overflow: hidden;
+    border: var(--sh-size-border-width) solid var(--sh-border-default);
+    border-radius: var(--sh-radius-lg);
+    background: var(--sh-bg-raised);
+    box-shadow: var(--sh-shadow-card);
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sh-space-2);
+    padding: var(--sh-space-2_5) var(--sh-space-3_5);
+    border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle);
+  }
+
+  .panel-title {
+    margin: 0;
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    font-weight: var(--sh-weight-medium);
+    letter-spacing: var(--sh-tracking-heading);
+  }
+
+  .panel-meta {
+    font-size: var(--sh-text-caption-xs);
+    line-height: var(--sh-text-caption-xs-lh);
+    color: var(--sh-text-secondary);
+    white-space: nowrap;
+  }
+
+  .search-echo {
+    display: flex;
+    align-items: center;
+    gap: var(--sh-space-2);
+    padding: var(--sh-space-2_5) var(--sh-space-3_5);
+    border-bottom: var(--sh-size-border-width) solid var(--sh-border-subtle);
+    color: var(--sh-text-secondary);
+  }
+
+  .search-echo .icon {
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+
+  .search-echo .query {
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    color: var(--sh-text-primary);
+  }
+
+  .search-echo .count {
+    margin-left: auto;
+    font-size: var(--sh-text-caption-xs);
+    line-height: var(--sh-text-caption-xs-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  /* ---------- 空态 ---------- */
+  .empty-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sh-space-1_5);
+    min-height: var(--sh-size-empty-page);
+    padding: var(--sh-space-6);
+    text-align: center;
+  }
+
+  .empty-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: var(--sh-size-empty-inline);
+    padding: 0 var(--sh-space-5);
+    text-align: center;
+  }
+
+  .empty-compact {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sh-space-1);
+    min-height: var(--sh-size-empty-compact);
+    padding: var(--sh-space-4);
+    text-align: center;
+  }
+
+  .empty-icon {
+    display: inline-flex;
+    margin-bottom: var(--sh-space-1);
+    color: var(--sh-text-tertiary);
+  }
+
+  .empty-icon .icon { display: block; width: 24px; height: 24px; }
+
+  .empty-title {
+    margin: 0;
+    font-size: var(--sh-text-sm);
+    line-height: var(--sh-text-sm-lh);
+    font-weight: var(--sh-weight-medium);
+    color: var(--sh-text-primary);
+  }
+
+  .empty-desc {
+    margin: 0;
+    max-width: 250px;
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .empty-inline .empty-desc {
+    max-width: none;
+  }
+
+  .empty-action { margin-top: var(--sh-space-2); }
+
+  .btn-outline-sm {
+    appearance: none; box-sizing: border-box; margin: 0;
+    text-align: center; text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--sh-control-sm-height);
+    padding: 0 var(--sh-control-sm-pad-x);
+    border: var(--sh-size-border-width) solid var(--sh-border-default);
+    border-radius: var(--sh-control-sm-radius);
+    background: var(--sh-bg-page);
+    color: var(--sh-text-primary);
+    font-family: var(--sh-font-sans);
+    font-size: var(--sh-control-sm-font);
+    line-height: var(--sh-control-sm-line);
+    font-weight: var(--sh-weight-medium);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background var(--sh-duration-fast) var(--sh-ease-standard), border-color var(--sh-duration-fast) var(--sh-ease-standard);
+  }
+
+  .btn-outline-sm:hover {
+    background: var(--sh-interaction-hover-bg);
+    border-color: var(--sh-interaction-hover-border);
+  }
+
+  /* ---------- 说明卡 ---------- */
+  .notes {
+    width: 380px;
+    max-width: 100%;
+    padding: var(--sh-space-5);
+    border: var(--sh-size-border-width) solid var(--sh-border-default);
+    border-radius: var(--sh-radius-lg);
+    background: var(--sh-bg-muted);
+  }
+
+  .notes-title {
+    margin: 0;
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    font-weight: var(--sh-weight-semibold);
+    letter-spacing: var(--sh-tracking-heading);
+    color: var(--sh-text-primary);
+  }
+
+  .notes ul {
+    display: grid;
+    gap: var(--sh-space-1_5);
+    margin: var(--sh-space-2_5) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .notes li {
+    position: relative;
+    padding-left: var(--sh-space-3_5);
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .notes li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0.62em;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--sh-text-secondary);
+  }
+
+  .caption {
+    margin: var(--sh-space-3) 0 0;
+    width: 380px;
+    max-width: 100%;
+    font-size: var(--sh-text-xs);
+    line-height: 1.7;
+    color: var(--sh-text-secondary);
+  }
+
+  .caption strong {
+    color: var(--sh-text-primary);
+    font-weight: var(--sh-weight-medium);
+  }
+
+  .frame-col { flex: none; min-width: 0; max-width: 100%; }
+
+  .foot-note {
+    margin: var(--sh-space-3_5) 0 0;
+    font-size: var(--sh-text-caption);
+    line-height: var(--sh-text-caption-lh);
+    color: var(--sh-text-secondary);
+  }
+
+  .page-foot {
+    margin-top: var(--sh-space-16);
+    padding-top: var(--sh-space-5);
+    border-top: var(--sh-size-border-width) solid var(--sh-border-subtle);
+    font-size: var(--sh-text-xs);
+    color: var(--sh-text-secondary);
+  }
+    /* @proportions-start */
+/* control proportions — height / pad-y / pad-x / font / line / icon / radius
+   1.2.0 四档 24 / 28 / 32 / 36；默认 md 32。档位按容器职责选：
+   xs 24 行内 → sm 28 工具栏 → md 32 页面/表单 → lg 36 引导 CTA。 */
+.btn { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-xs { height: var(--sh-control-xs-height); padding-inline: var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.btn-sm { height: var(--sh-control-sm-height); padding-inline: var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.btn-md { height: var(--sh-control-md-height); padding-inline: var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.btn-lg { height: var(--sh-control-lg-height); padding-inline: var(--sh-control-lg-pad-x); border-radius: var(--sh-control-lg-radius); font-size: var(--sh-control-lg-font); line-height: var(--sh-control-lg-line); }
+.btn-icon { width: var(--sh-size-control-icon); height: var(--sh-size-control-icon); padding: 0; border-radius: var(--sh-control-md-radius); }
+.btn-icon-xs { width: var(--sh-control-xs-height); height: var(--sh-control-xs-height); padding: 0; border-radius: var(--sh-control-xs-radius); }
+.btn-link { padding-inline: 0; }
+.input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.textarea { padding: var(--sh-control-md-pad-y) var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.label { font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field-label { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.field--md .input { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.field--sm .input { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.help, .error, .counter, .field-meta, .hint { font-size: var(--sh-control-xs-font); line-height: var(--sh-control-xs-line); }
+.select-trigger { height: var(--sh-control-md-height); padding: 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-item { min-height: var(--sh-control-md-height); padding: 0 calc(var(--sh-control-md-pad-x) + var(--sh-space-6)) 0 var(--sh-control-md-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.select-content, .menu { border-radius: var(--sh-radius-md); }
+.tooltip { border-radius: var(--sh-radius-sm); }
+.menu-item { height: var(--sh-control-md-height); padding: 0 var(--sh-space-2_5); border-radius: var(--sh-control-md-radius); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); }
+.pg-btn { width: var(--sh-control-sm-height); height: var(--sh-control-sm-height); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.pg-nav { height: var(--sh-control-sm-height); padding: 0 var(--sh-control-sm-pad-x); border-radius: var(--sh-control-sm-radius); font-size: var(--sh-control-sm-font); line-height: var(--sh-control-sm-line); }
+.loading-chip, .toast { height: var(--sh-control-xs-height); padding: 0 var(--sh-control-xs-pad-x); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-control-xs-font); line-height: 1; }
+.badge, .badge-soft, .badge-soft-neutral, .badge-soft-green, .badge-soft-warning, .badge-soft-blue, .lifecycle, .verdict { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; gap: var(--sh-space-1); }
+.badge > .icon, .badge-soft > .icon, .badge-soft-neutral > .icon, .badge-soft-green > .icon, .badge-soft-warning > .icon, .badge-soft-blue > .icon, .lifecycle > .icon, .verdict > .icon { display: inline-flex; align-items: center; justify-content: center; flex: none; width: var(--sh-text-caption-xs); height: var(--sh-text-caption-xs); font-size: var(--sh-text-caption-xs); }
+.badge-green, .badge-plain { height: var(--sh-size-badge-height); padding: 0 var(--sh-size-badge-padding-inline); border-radius: var(--sh-control-xs-radius); font-size: var(--sh-size-badge-font); line-height: 1; }
+.tab { padding: var(--sh-space-2) 0; margin-bottom: calc(-1 * var(--sh-size-border-width-strong)); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); color: var(--sh-text-tertiary); }
+.data-table th, .data-table td { box-sizing: border-box; }
+/* td 的 height 在表格布局里是最小高度：内容行数 × 18 + 2 × 8 会把行撑开 */
+.data-table th { height: var(--sh-size-row-header); padding: 0 var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); font-weight: var(--sh-weight-medium); }
+.data-table td { height: var(--sh-size-row-default); padding: var(--sh-size-table-pad-y) var(--sh-size-table-pad-x); font-size: var(--sh-control-md-font); line-height: var(--sh-control-md-line); white-space: normal; vertical-align: middle; }
+.dialog { border-radius: var(--sh-radius-lg); max-width: var(--sh-size-container-dialog); max-height: calc(100vh - var(--sh-space-10)); }
+.dialog-close { width: var(--sh-control-md-height); height: var(--sh-control-md-height); border-radius: var(--sh-control-md-radius); }
+.card, .form-card, .table-shell, .empty-shell, .sk-card { border-radius: var(--sh-radius-lg); }
+.alert { border-radius: var(--sh-radius-sm); }
+.code-block, .card .code { border-radius: var(--sh-radius-sm); }
+/* @proportions-end */
+/* @component-css-end */
+
+
+    .icon-12 { width: 12px; height: 12px; }
+    .icon-18 { width: 18px; height: 18px; }
+    .icon-20 { width: 20px; height: 20px; }
+    .icon-24 { width: 24px; height: 24px; }
+
+
+
+
+  </style>
+</head>
+<body data-component="empty-state">
+  <button class="sh-theme-toggle sh-theme-toggle--inline" type="button" data-theme-toggle aria-pressed="false" aria-label="切换明暗主题" title="切换明暗主题">
+    <span class="sh-i i16-moon" data-theme-icon="moon" aria-hidden="true"></span>
+    <span class="sh-i i16-sun" data-theme-icon="sun" aria-hidden="true"></span>
+  </button>
+<main class="page">
+
+  <header class="page-head">
+    <p class="eyebrow">SkillHub Design Library · 组件预览 · Feedback</p>
+    <h1>EmptyState 空态</h1>
+    <p class="lead">
+      居中线性图标 + 一句标题 + 一句说明，可选一个主操作。block 空态高度 240px，inline 空态高度 96px；
+      不画插画，不使用彩色图标，加载中应改用 Skeleton。
+    </p>
+    <div class="chips">
+      <span class="chip">variant · no-data / no-result</span>
+      <span class="chip">size · block 240px / inline 96px / compact 64px</span>
+      <span class="chip">action · none / single-button</span>
+      <span class="chip">icon 32px · muted-foreground</span>
+    </div>
+  </header>
+
+  <section class="section">
+    <h2 class="section-title">no-data / block · 该版本暂无文件</h2>
+    <p class="section-desc">
+      用于版本详情「文件」区域：说明为什么为空，并给出唯一的下一步操作。
+    </p>
+
+    <div class="demo-grid">
+      <div class="frame-col">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="panel-title">文件</p>
+            <span class="panel-meta">0 个文件</span>
+          </div>
+          <div class="empty-block">
+            <span class="empty-icon">
+              <span class="sh-i i24-inbox" aria-hidden="true"></span>
+            </span>
+            <p class="empty-title">该版本暂无文件</p>
+            <p class="empty-desc">上传安装包后，文件会显示在这里。</p>
+            <div class="empty-action">
+              <button class="btn-outline-sm" type="button">重新上传</button>
+            </div>
+          </div>
+        </div>
+        <p class="caption"><strong>no-data / block</strong> · 高度 240px，单个 outline 操作</p>
+      </div>
+
+      <aside class="notes">
+        <p class="notes-title">契约要点</p>
+        <ul>
+          <li>图标 32px，颜色 <code>--sh-text-tertiary</code>，只用线性图标。</li>
+          <li>标题 14px / 500；说明 13px <code>--sh-text-secondary</code>，交代原因与下一步。</li>
+          <li>block 高度 240px，inline 高度 96px，compact 高度 64px；高度由容器 className 传入。</li>
+          <li>最多一个操作按钮，使用 outline / sm（32px 高）样式。</li>
+          <li>加载中不使用空态，改用 Skeleton 占位。</li>
+        </ul>
+      </aside>
+    </div>
+  </section>
+
+  <section class="section">
+    <h2 class="section-title">no-data / inline 与 no-search-result</h2>
+    <p class="section-desc">
+      inline 只保留一句 13px 说明，适合侧栏或分组内的小面积空态；搜索无结果不提供操作按钮。
+    </p>
+
+    <div class="demo-grid">
+
+      <div class="frame-col">
+        <div class="panel">
+          <div class="panel-head">
+            <p class="panel-title">评价</p>
+            <span class="panel-meta">0 条</span>
+          </div>
+          <div class="empty-inline">
+            <p class="empty-desc">暂无评价</p>
+          </div>
+        </div>
+        <p class="caption"><strong>no-data / inline</strong> · 最小高度 96px，仅说明文字，行内优先用它</p>
+      </div>
+
+      <div class="frame-col">
+        <div class="panel">
+          <div class="search-echo">
+            <span class="sh-i i16-search" aria-hidden="true"></span>
+            <span class="query">部署脚本</span>
+            <span class="count">0 个结果</span>
+          </div>
+          <div class="empty-block">
+            <span class="empty-icon">
+              <span class="sh-i i24-search-x" aria-hidden="true"></span>
+            </span>
+            <p class="empty-title">没有匹配的技能</p>
+            <p class="empty-desc">换个关键词试试，或浏览全部技能。</p>
+          </div>
+        </div>
+        <p class="caption"><strong>no-search-result</strong> · 最小高度 240px（page 档），父容器可覆盖 <code>--sh-size-empty-page</code></p>
+      </div>
+
+      <div class="frame-col">
+        <div class="panel">
+          <div class="empty-compact">
+            <p class="empty-desc">暂无关联技能</p>
+          </div>
+        </div>
+        <p class="caption"><strong>no-data / compact</strong> · 最小高度 64px，用于卡片内或表格空行</p>
+      </div>
+
+    </div>
+
+    <p class="foot-note">
+      inline 空态不放置图标与操作，避免在窄侧栏内产生多余的视觉重量；no-search-result 的文案只说明原因与下一步，不引导创建。
+    </p>
+  </section>
+
+  <footer class="page-foot">
+    空态不使用插画或彩色图标；若内容正在加载，请改用 Skeleton，不要提前显示空态。
+  </footer>
+</main>
+<footer style="margin-top: var(--sh-space-8);padding-top: var(--sh-space-4);border-top:var(--sh-size-border-width) solid var(--sh-border-subtle);font-family:var(--sh-font-sans);font-size:var(--sh-text-xs);line-height:var(--sh-text-xs-lh);color:var(--sh-text-tertiary);">SkillHub Design Library v1.3.1 · 2026-11-08</footer>
+  <script src="../assets/icon-check.js" defer></script>
+  <script src="../assets/theme-toggle.js" defer></script>
+</body>
+</html>
