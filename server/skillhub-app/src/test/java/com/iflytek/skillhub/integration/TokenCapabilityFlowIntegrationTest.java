@@ -92,7 +92,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /** Real filters, token hashing, application/domain services and database state; object storage is isolated. */
 @SpringBootTest(properties = {
-        "skillhub.ratelimit.enabled=false", "skillhub.suite.bundle.confirmation-enabled=true"
+        "skillhub.ratelimit.enabled=false", "skillhub.suite.bundle.confirmation-enabled=true",
+        // Built-in skill sync runs asynchronously after startup and writes to storage; keep it out of
+        // the no-side-effect assertions here.
+        "skillhub.builtin-skills.enabled=false"
 })
 @AutoConfigureMockMvc(print = MockMvcPrint.NONE)
 @ActiveProfiles("test")
