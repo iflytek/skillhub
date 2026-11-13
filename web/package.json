@@ -49,6 +49,7 @@
     "generate-api": "openapi-typescript http://localhost:8080/v3/api-docs -o src/api/generated/schema.d.ts"
   },
   "dependencies": {
+    "@dnd-kit/react": "0.5.3",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-select": "^2.2.6",

@@ -5,7 +5,7 @@ describe('site presentation defaults and locale fallback', () => {
   it('preserves landing sections and isolates mutable default maps', () => {
     const first = defaultSitePresentation()
     expect(first).toMatchObject({ siteName: null, logoUrl: null, faviconUrl: null, links: {} })
-    expect(Object.keys(first.sections)).toEqual(['hero', 'capabilities', 'quickStart', 'popular', 'latest', 'enterprise', 'cta', 'footer'])
+    expect(Object.keys(first.sections)).toEqual(['hero', 'curated', 'capabilities', 'quickStart', 'popular', 'latest', 'enterprise', 'cta', 'footer'])
     expect(Object.values(first.sections).every(section => section.enabled)).toBe(true)
     first.sections.hero.texts.title = { en: 'Changed' }
     expect(defaultSitePresentation().sections.hero.texts).toEqual({})

@@ -54,10 +54,19 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
         setIsClickOpen(false)
       }
     }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      setIsHovered(false)
+      setIsClickOpen(false)
+      rootRef.current?.querySelector('button')?.focus()
+    }
 
     document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
     }
   }, [open])
 
@@ -113,6 +122,7 @@ export function UserMenu({ user, triggerClassName }: UserMenuProps) {
         type="button"
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={user.displayName}
         className={cn('flex items-center gap-3 text-foreground hover:opacity-80 transition-opacity focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-md', triggerClassName)}
         onClick={() => setIsClickOpen((current) => !current)}
       >

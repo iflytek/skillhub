@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { BrandMark } from '@/shared/components/brand-mark'
 import { LandingQuickStartSection } from '@/shared/components/landing-quick-start'
+import { HomepageRecommendations } from '@/features/recommendation/recommendation-preview'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
@@ -437,6 +438,8 @@ function LandingIntroduction() {
       {settings.sections.quickStart.enabled && <div ref={quickStartView.ref} className={`scroll-fade-up${quickStartView.inView ? ' in-view' : ''}`}>
         <LandingQuickStartSection />
       </div>}
+
+      {settings.sections.curated?.enabled !== false && <HomepageRecommendations />}
 
       {settings.sections.popular.enabled && <section ref={popularView.ref} className={`[overflow-wrap:anywhere] relative z-10 w-full bg-background py-16 scroll-fade-up${popularView.inView ? ' in-view' : ''} md:py-20`}>
         <div className={`${APP_FRAME_CLASS_NAME} space-y-6`}>

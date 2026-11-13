@@ -7,6 +7,9 @@ vi.mock('./notification-email-api', () => ({ notificationEmailApi: api }))
 vi.mock('@/api/client', () => ({ ApiError: class ApiError extends Error { constructor(message: string, public status: number) { super(message) } } }))
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }) }))
 import { NotificationEmailSettingsPanel } from './notification-email-settings'
+Element.prototype.scrollIntoView = vi.fn()
+Element.prototype.hasPointerCapture = () => false
+Element.prototype.releasePointerCapture = vi.fn()
 function setup() { const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }); render(<QueryClientProvider client={client}><NotificationEmailSettingsPanel /></QueryClientProvider>); return client }
 describe('business email administration', () => {
   beforeEach(() => {
@@ -30,15 +33,19 @@ describe('business email administration', () => {
     fireEvent.click(screen.getByRole('button', { name: 'pagination.next' }))
     await waitFor(() => expect(api.deliveries).toHaveBeenCalledWith(1, ''))
     api.deliveries.mockResolvedValue({ items: [], totalPages: 0 })
-    fireEvent.change(screen.getByLabelText('notificationEmail.filter'), { target: { value: 'FAILED' } })
+    fireEvent.keyDown(screen.getByRole('combobox', { name: 'notificationEmail.filter' }), { key: 'Enter' })
+    fireEvent.click(await screen.findByRole('option', { name: 'notificationEmail.status.FAILED' }))
     await waitFor(() => expect(api.deliveries).toHaveBeenCalledWith(0, 'FAILED'))
     await screen.findByText('notificationEmail.noDeliveries')
     expect(screen.queryByText('#18')).toBeNull()
   })
   it('does not expose secrets and saves ordinary settings with their version', async () => {
-    setup(); const checkbox = await screen.findByRole('checkbox', { name: 'notificationEmail.enabled' })
-    fireEvent.click(checkbox)
-    fireEvent.change(screen.getByLabelText('notificationEmail.window'), { target: { value: '30' } })
+    setup(); const toggle = await screen.findByRole('switch', { name: 'notificationEmail.enabled' })
+    expect(toggle.getAttribute('aria-checked')).toBe('false')
+    fireEvent.click(toggle)
+    expect(toggle.getAttribute('aria-checked')).toBe('true')
+    expect(api.updateSettings).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'notificationEmail.window' }), { target: { value: '30' } })
     fireEvent.click(screen.getByRole('button', { name: 'notificationEmail.save' }))
     await waitFor(() => expect(api.updateSettings.mock.calls[0]?.[0]).toEqual({ enabled: true, digestWindowMinutes: 30, publicBaseUrl: 'https://example.test/sub', version: 2 }))
     expect(screen.queryByLabelText(/password|secret/i)).toBeNull()
@@ -52,4 +59,27 @@ describe('business email administration', () => {
     await screen.findByRole('alert')
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
+  it('shows delivery metadata without email content and does not retry SENT batches', async () => {
+    api.deliveries.mockResolvedValue({ items: [{ id: 27, recipientId: 'owner-sent', status: 'SENT', attempts: 1, resultCode: 'SMTP_ACCEPTED', createdAt: '2026-10-22T00:00:00Z' }], totalPages: 1 })
+    setup()
+    fireEvent.click(await screen.findByRole('button', { name: 'notificationEmail.details' }))
+    expect(screen.getByRole('dialog').textContent).toContain('notificationEmail.deliveryMeaning')
+    expect(screen.getByRole('dialog').textContent).toContain('SMTP_ACCEPTED')
+    expect(screen.queryByRole('button', { name: 'notificationEmail.retry' })).toBeNull()
+    expect(api.retry).not.toHaveBeenCalled()
+  })
+
+  it('discards an unsaved email change and reports dirty state to the settings shell', async () => {
+    const onDirtyChange = vi.fn()
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(<QueryClientProvider client={client}><NotificationEmailSettingsPanel view="mail" onDirtyChange={onDirtyChange} /></QueryClientProvider>)
+    const field = await screen.findByRole('spinbutton', { name: 'notificationEmail.window' })
+    fireEvent.change(field, { target: { value: '35' } })
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(true))
+    fireEvent.click(screen.getByRole('button', { name: 'systemConfig.discard' }))
+    expect((field as HTMLInputElement).value).toBe('15')
+    await waitFor(() => expect(onDirtyChange).toHaveBeenLastCalledWith(false))
+    expect(api.updateSettings).not.toHaveBeenCalled()
+  })
+
 })

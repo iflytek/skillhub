@@ -222,7 +222,7 @@ public class SkillSearchAppService {
                 .toList();
     }
 
-    private List<SkillSummaryResponse> mapVisibleSkillSummaries(List<Long> skillIds, String userId) {
+    List<SkillSummaryResponse> mapVisibleSkillSummaries(List<Long> skillIds, String userId) {
         if (skillIds.isEmpty()) {
             return List.of();
         }
