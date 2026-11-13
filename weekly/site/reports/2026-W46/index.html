@@ -1,0 +1,1447 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="SkillHub 2026 年第 46 周部分周期：仓库状态、主分支迭代与生态进展。">
+  <title>SkillHub 开源周报｜2026 年第 46 周（截至 11 月 12 日 20:15）</title>
+  <script>document.documentElement.classList.add('js')</script>
+<style data-report-theme="notion-light">
+:root {
+  color-scheme: light;
+  --page: #ffffff;
+  --paper: #ffffff;
+  --warm: #f6f5f4;
+  --ink: #0d0d0d;
+  --ink-soft: #31302e;
+  --muted: #615d59;
+  --faint: #76716c;
+  --line: #e5e3e1;
+  --line-soft: #efeeec;
+  --blue: #0075de;
+  --blue-active: #005bab;
+  --blue-soft: #f2f9ff;
+  --green: #147a33;
+  --green-soft: #e9f7ec;
+  --orange: #b84d00;
+  --orange-soft: #fdf0e3;
+  --red: #b52d25;
+  --red-soft: #fdecea;
+  --neutral-soft: #f1f0ef;
+  --focus: #097fe8;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --shadow: 0 2px 8px rgb(0 0 0 / 4%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--page);
+  color: var(--ink);
+  font: 15px/1.65 Inter, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--blue);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+a:hover {
+  color: var(--blue-active);
+  text-decoration: underline;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: var(--neutral-soft);
+  color: var(--ink-soft);
+  font-size: .92em;
+}
+
+.skip-link {
+  position: fixed;
+  z-index: 30;
+  top: 8px;
+  left: -999px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  background: var(--ink-soft);
+  color: #fff;
+}
+
+.skip-link:focus {
+  left: 8px;
+}
+
+.report {
+  width: min(1200px, 100%);
+  min-height: 100vh;
+  margin: 0 auto;
+  background: var(--paper);
+}
+
+.masthead {
+  padding: 44px 28px 36px;
+  border-bottom: 1px solid var(--line);
+}
+
+.topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 26px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+}
+
+.brand-mark {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--ink-soft);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .04em;
+}
+
+.brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+}
+
+.brand-tag {
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: var(--neutral-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.utility-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  font-size: 13px;
+}
+
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+h1 {
+  max-width: 820px;
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(32px, 4vw, 44px);
+  line-height: 1.15;
+  letter-spacing: -.025em;
+}
+
+.report-sub {
+  margin: 8px 0 24px;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+.header-grid {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  gap: 16px;
+}
+
+.meta-card,
+.headline {
+  border-radius: var(--radius-sm);
+  padding: 20px 22px;
+}
+
+.meta-card {
+  background: var(--warm);
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.meta-item .key,
+.headline-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--faint);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: .01em;
+}
+
+.meta-item .value {
+  color: var(--ink-soft);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.period {
+  margin: 0;
+}
+
+.headline {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin: 0;
+  border: 0;
+  background: var(--orange-soft);
+  color: var(--ink-soft);
+}
+
+.headline-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.headline-status strong {
+  color: var(--orange);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.headline p {
+  margin: 0;
+  max-width: 60ch;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+  border: 0;
+}
+
+.metric {
+  min-width: 0;
+  padding: 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--warm);
+}
+
+.metric strong {
+  display: block;
+  color: var(--ink);
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.tabs-wrap {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line);
+  background: rgb(255 255 255 / 97%);
+  backdrop-filter: saturate(1.1) blur(5px);
+}
+
+.tabs {
+  display: flex;
+  min-width: max-content;
+  padding: 0 28px;
+}
+
+.tab {
+  position: relative;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.tab::after {
+  position: absolute;
+  right: 14px;
+  bottom: -1px;
+  left: 14px;
+  height: 2px;
+  background: transparent;
+  content: "";
+}
+
+.tab:hover,
+.tab[aria-selected="true"] {
+  color: var(--ink);
+}
+
+.tab[aria-selected="true"] {
+  font-weight: 600;
+}
+
+.tab[aria-selected="true"]::after {
+  background: var(--ink-soft);
+}
+
+main {
+  padding: 0 28px 48px;
+}
+
+.tab-panel {
+  padding-top: 4px;
+}
+
+.js .tab-panel[hidden] {
+  display: none;
+}
+
+.panel-intro {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin: 30px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.panel-intro p {
+  margin: 0;
+}
+
+section.report-section {
+  margin: 0;
+  padding: 48px 0;
+  border: 0;
+}
+
+.tab-panel > section.report-section:nth-of-type(even) {
+  background: var(--warm);
+  box-shadow: 0 0 0 100vmax var(--warm);
+  clip-path: inset(0 -100vmax);
+}
+
+section.report-section:first-of-type {
+  padding-top: 42px;
+}
+
+h2 {
+  margin: 0 0 18px;
+  color: var(--ink);
+  font-size: 26px;
+  line-height: 1.25;
+  letter-spacing: -.02em;
+}
+
+h3 {
+  margin: 30px 0 12px;
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.35;
+  letter-spacing: -.01em;
+}
+
+p {
+  max-width: 75ch;
+  text-wrap: pretty;
+}
+
+.section-lead {
+  margin: -7px 0 18px;
+  color: var(--muted);
+}
+
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+caption {
+  padding: 10px 14px;
+  background: var(--warm);
+  color: var(--ink-soft);
+  font-weight: 600;
+  text-align: left;
+}
+
+th,
+td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+  text-align: left;
+}
+
+th {
+  background: var(--warm);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+tbody tr:hover {
+  background: #faf9f8;
+}
+
+.number {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.status,
+.value-level {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 25px;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.status::before {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.status.ok {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.status.warn {
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+
+.status.risk {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.value-a {
+  background: var(--red-soft);
+  color: var(--red);
+}
+
+.value-b {
+  background: var(--orange-soft);
+  color: var(--orange);
+}
+
+.value-c {
+  background: var(--blue-soft);
+  color: var(--blue-active);
+}
+
+.value-d {
+  background: var(--neutral-soft);
+  color: var(--muted);
+}
+
+.risk-note {
+  margin: 16px 0 0;
+  padding: 14px 18px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--orange-soft);
+  color: var(--ink-soft);
+}
+
+.repo-visuals {
+  display: grid;
+  grid-template-columns: minmax(280px, .85fr) minmax(0, 1.15fr);
+  gap: 18px;
+}
+
+.snapshot-list {
+  display: grid;
+  gap: 0;
+}
+
+.snapshot-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) auto;
+  gap: 4px 16px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.snapshot-row:first-child {
+  padding-top: 0;
+}
+
+.snapshot-row:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.snapshot-row .snapshot-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.snapshot-row strong {
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1.05;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.snapshot-row .snapshot-change {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.snapshot-row .snapshot-change.positive {
+  color: var(--green);
+}
+
+.snapshot-row .snapshot-change.missing {
+  color: var(--orange);
+}
+
+.chart-note {
+  margin: 14px 0 0;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.ecosystem-signals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.ecosystem-signal {
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.ecosystem-signal strong {
+  display: block;
+  color: var(--ink);
+  font-size: 24px;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.ecosystem-signal span {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.ecosystem-signal-note {
+  grid-column: 1 / -1;
+  margin: -3px 0 0;
+  color: var(--faint);
+  font-size: 12px;
+}
+
+.ecosystem-list,
+.method-list {
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  list-style: none;
+}
+
+.ecosystem-list li,
+.method-list li {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 20px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.method-list li {
+  grid-template-columns: 180px 1fr;
+}
+
+.ecosystem-list strong,
+.method-list strong {
+  color: var(--ink);
+}
+
+.next-actions {
+  margin: 4px 0 30px;
+  padding: 20px 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.next-actions h2 {
+  margin-bottom: 8px;
+  font-size: 18px;
+}
+
+.next-actions ol {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.next-actions li {
+  margin: 7px 0;
+}
+
+.health-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.health-card,
+.chart-box,
+.health-note {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.health-card {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 20px 22px;
+}
+
+.health-card .top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.health-card .name {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.health-card .health-metric {
+  color: var(--ink);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.health-card .health-metric small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.health-card p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+
+.health-card .detail {
+  padding-top: 9px;
+  border-top: 1px dashed var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.segbar {
+  display: flex;
+  height: 24px;
+  overflow: hidden;
+  margin: 15px 0 10px;
+  border-radius: 6px;
+  background: var(--neutral-soft);
+}
+
+.segbar > span {
+  min-width: 2px;
+  height: 100%;
+}
+
+.seg-success {
+  background: #1aae39;
+}
+
+.seg-failure {
+  background: #e16259;
+}
+
+.seg-auth {
+  background: #e8a94b;
+}
+
+.seg-skipped {
+  background: #d6d2cd;
+}
+
+.seg-cancelled {
+  background: #8e8984;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.chart-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+}
+
+.chart-legend b {
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.chart-box {
+  padding: 20px 22px;
+}
+
+.chart-box h3 {
+  margin: 0 0 14px;
+  font-size: 15px;
+}
+
+.bars {
+  display: grid;
+  gap: 11px;
+}
+
+.bar-row {
+  display: grid;
+  grid-template-columns: 88px 1fr 42px;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.repo-visuals .bar-row {
+  grid-template-columns: 112px 1fr 36px;
+}
+
+.bar-label {
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.bar-track {
+  height: 16px;
+  overflow: hidden;
+  border-radius: 5px;
+  background: var(--neutral-soft);
+}
+
+.bar-fill {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 5px;
+  background: var(--blue);
+}
+
+.bar-fill.hot {
+  background: var(--orange);
+}
+
+.bar-value {
+  color: var(--ink-soft);
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.donut-layout {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 22px;
+  align-items: center;
+}
+
+.donut {
+  position: relative;
+  width: 142px;
+  height: 142px;
+  border-radius: 50%;
+  background: conic-gradient(var(--orange) 0 var(--value), #d6d2cd var(--value) 100%);
+}
+
+.donut::after {
+  position: absolute;
+  inset: 24px;
+  border-radius: 50%;
+  background: var(--paper);
+  content: "";
+}
+
+.donut-center {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.donut-center strong {
+  color: var(--ink);
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.donut-center span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.donut-copy p {
+  margin: 0 0 9px;
+  color: var(--ink-soft);
+  font-size: 13.5px;
+}
+
+.donut-copy p:last-child {
+  margin-bottom: 0;
+}
+
+.health-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.chart-box + .table-wrap {
+  margin-top: 18px;
+}
+
+.health-note {
+  padding: 18px;
+}
+
+.health-note h3 {
+  margin: 0 0 7px;
+  font-size: 15px;
+}
+
+.health-note p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.flow-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 24px;
+}
+
+.flow-item {
+  padding: 16px 18px;
+  border-radius: var(--radius-sm);
+  background: var(--warm);
+}
+
+.flow-item strong {
+  display: block;
+  color: var(--ink);
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.flow-item span {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+details {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+summary {
+  padding: 14px 18px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.details-body {
+  padding: 0 18px 16px;
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 28px 28px;
+  border-top: 1px solid var(--line);
+  background: var(--warm);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 760px) {
+  .masthead,
+  main,
+  footer {
+    padding-right: 18px;
+    padding-left: 18px;
+  }
+
+  .topline,
+  footer,
+  .panel-intro {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .header-grid,
+  .meta-grid,
+  .repo-visuals,
+  .chart-grid,
+  .health-grid,
+  .flow-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .header-grid > *,
+  .meta-item {
+    min-width: 0;
+  }
+
+  .headline-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .headline p,
+  .metric span {
+    overflow-wrap: anywhere;
+  }
+
+  .meta-item .value {
+    overflow-wrap: anywhere;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .tabs {
+    padding: 0 6px;
+  }
+
+  section.report-section {
+    padding: 38px 0;
+  }
+
+  .ecosystem-list li,
+  .method-list li {
+    grid-template-columns: 1fr;
+    gap: 3px;
+  }
+
+  .ecosystem-signals {
+    grid-template-columns: 1fr;
+  }
+
+  .ecosystem-signal-note {
+    grid-column: auto;
+  }
+
+  .donut-layout {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+
+  .donut-copy {
+    text-align: center;
+  }
+}
+
+@media (max-width: 430px) {
+  h1 {
+    font-size: 30px;
+    overflow-wrap: anywhere;
+  }
+
+  .bar-row {
+    grid-template-columns: 76px 1fr 32px;
+    gap: 7px;
+  }
+
+  .repo-visuals .bar-row {
+    grid-template-columns: 98px 1fr 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 13mm;
+  }
+
+  body {
+    background: #fff;
+    font-size: 10px;
+  }
+
+  .report {
+    width: 100%;
+  }
+
+  .masthead,
+  main,
+  footer {
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .tabs-wrap,
+  .skip-link,
+  .utility-links {
+    display: none !important;
+  }
+
+  .tab-panel[hidden] {
+    display: block !important;
+  }
+
+  .tab-panel {
+    break-before: page;
+  }
+
+  .tab-panel:first-child {
+    break-before: auto;
+  }
+
+  .tab-panel > section.report-section:nth-of-type(even) {
+    background: #fff;
+    box-shadow: none;
+    clip-path: none;
+  }
+
+  section.report-section {
+    padding: 16px 0;
+  }
+
+  h1 {
+    font-size: 27px;
+  }
+
+  h2,
+  h3,
+  tr,
+  .health-card,
+  .health-note,
+  .chart-box,
+  .next-actions {
+    break-inside: avoid;
+  }
+
+  table {
+    min-width: 0;
+    font-size: 8px;
+  }
+
+  th,
+  td {
+    padding: 5px 6px;
+  }
+
+  .health-card,
+  .health-note,
+  .chart-box {
+    box-shadow: none;
+  }
+
+  .segbar,
+  .bar-fill,
+  .donut,
+  .status,
+  .value-level,
+  .metric,
+  .headline {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
+  </style>  <noscript>
+    <style>
+      .tabs-wrap { display: none !important; }
+      .tab-panel[hidden] { display: block !important; }
+    </style>
+  </noscript>
+</head>
+<body>
+  <a class="skip-link" href="#report-content">跳到报告正文</a>
+  <article class="report"
+    data-period-start="2026-11-06T00:00:00+08:00"
+    data-period-end="2026-11-12T20:15:14+08:00"
+    data-period-boundary="[)"
+    data-period-status="partial-thursday"
+    data-snapshot-at="2026-11-05T17:44:02+08:00"
+    data-pr-target-branch="main"
+    data-star-evidence="current-visible-arrivals"
+    data-star-api-status="success"
+    data-star-arrivals="57"
+    data-star-observed-total="5389"
+    data-star-observed-at="2026-11-05T17:44:02+08:00"
+    data-star-previous-observed-total="5338"
+    data-star-previous-observed-at="2026-10-30T14:23:59+08:00"
+    data-star-observation-delta="51"
+    data-star-start-at=""
+    data-star-end-at="">
+    <header class="masthead">
+      <div class="topline">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">SH</span><span class="brand-name">SkillHub</span><span class="brand-tag">开源周报</span></div>
+        <nav class="utility-links" aria-label="报告链接"><a href="../../archive.html">历史周报</a><a href="https://iflytek.github.io/skillhub/">项目文档</a><a href="https://github.com/iflytek/skillhub">GitHub 仓库</a></nav>
+      </div>
+      <h1>2026 年第 46 周</h1>
+      <p class="report-sub">仓库状态 · 主分支迭代 · 开源生态</p>
+      <div class="header-grid">
+        <div class="meta-card"><div class="meta-grid">
+          <div class="meta-item"><span class="key">统计范围</span><span class="value">2026-11-06 00:00—2026-11-12 20:15 · Asia/Shanghai</span></div>
+          <div class="meta-item"><span class="key">统计状态</span><span class="value">部分周期 · 正式截止为 11 月 13 日 00:00</span></div>
+          <div class="meta-item"><span class="key">PR 统计分支</span><span class="value"><code>main</code></span></div>
+          <div class="meta-item"><span class="key">数据来源</span><span class="value">GitHub API（认证）· Actions · npm · Traffic</span></div>
+        </div></div>
+        <div class="headline">
+          <span class="headline-kicker">阶段判断</span>
+          <div class="headline-status"><strong>多轨版本持续交付，DSH 能力集中演进</strong><span class="status warn">部分周期</span></div>
+          <p>应用与 CLI 共发布 3 个 GitHub Release，DSH npm 发布 0.6.1、0.6.2；主分支合并 21 个 PR。Actions 有效成功率为 96.9%，失败主要集中在 DSH 插件验证。</p>
+        </div>
+      </div>
+      <div class="metrics" aria-label="关键指标">
+        <div class="metric"><strong>5,389</strong><span>Stars · 较上次观测 +51</span></div>
+        <div class="metric"><strong>+7 / −4</strong><span>Issue · 净增加 3 · 开放 28</span></div>
+        <div class="metric"><strong>+26 / 21</strong><span>PR 新增 / 合并 · 开放 10</span></div>
+        <div class="metric"><strong>96.9%</strong><span>Actions 有效成功率 · 539 / 556</span></div>
+      </div>
+    </header>
+
+    <div class="tabs-shell">
+      <div class="tabs" role="tablist" aria-label="周报内容">
+        <button class="tab active" id="tab-overview" role="tab" aria-selected="true" aria-controls="panel-overview" tabindex="0" data-tab="overview">总览</button>
+        <button class="tab" id="tab-health" role="tab" aria-selected="false" aria-controls="panel-health" tabindex="-1" data-tab="health">项目健康</button>
+        <button class="tab" id="tab-flow" role="tab" aria-selected="false" aria-controls="panel-flow" tabindex="-1" data-tab="flow">Issue 与 PR</button>
+        <button class="tab" id="tab-method" role="tab" aria-selected="false" aria-controls="panel-method" tabindex="-1" data-tab="method">数据说明</button>
+      </div>
+    </div>
+
+    <main id="report-content" tabindex="-1">
+      <div class="tab-panel active" id="panel-overview" role="tabpanel" tabindex="0" aria-labelledby="tab-overview" data-panel="overview">
+        <div class="panel-intro"><p>先看仓库规模和协作流转，再看已经交付与仍待验证的内容。</p><p>本页是截至 11 月 5 日 17:44 的部分周期预览，最终数据需在 11 月 6 日 00:00 后重采。</p></div>
+        <section class="report-section" data-module="repository-summary" aria-labelledby="repo-title"><h2 id="repo-title">一、仓库关键信息</h2>
+          <p class="section-lead">Issue 与 PR 队列均净流入；应用、CLI 和 DSH npm 多轨交付活跃，17 次 Actions 失败仍需跟踪。</p>
+          <div class="chart-grid">
+            <div class="chart-box" data-module="repository-scale"><h3>规模快照</h3><div class="snapshot-list">
+              <div class="snapshot-row"><span class="snapshot-label">Stars</span><strong>5,389</strong><span class="snapshot-change positive">较上次观测 +51</span></div>
+              <div class="snapshot-row"><span class="snapshot-label">Forks</span><strong>816</strong><span class="snapshot-change">仓库库存字段</span></div>
+            </div><p class="chart-note">10 月 30 日 14:23 认证观测 5,338 Stars，本次于 11 月 5 日 17:44 观测 5,389，观测差 +51；两次观测不对齐周期边界，不能解释为周净增长。认证 Stargazer 完整分页与库存同为 5,389，其中 57 个当前仍可见到达落入本期部分区间，也不代表净增长。Fork 列表 1,170 条与库存字段 816 不一致，因此不展示 Fork 到达数。</p></div>
+            <div class="chart-box" data-module="weekly-collaboration-chart"><h3>协作流转</h3><div class="bars" role="img" aria-label="部分周期 Issue 新增 7，关闭 4；PR 新增 26，合并 21，关闭未合并 1">
+              <div class="bar-row"><span class="bar-label">Issue 新增</span><span class="bar-track"><span class="bar-fill" style="width:26.92%"></span></span><span class="bar-value">7</span></div>
+              <div class="bar-row"><span class="bar-label">Issue 关闭</span><span class="bar-track"><span class="bar-fill alt" style="width:15.38%"></span></span><span class="bar-value">4</span></div>
+              <div class="bar-row"><span class="bar-label">PR 新增</span><span class="bar-track"><span class="bar-fill" style="width:100%"></span></span><span class="bar-value">26</span></div>
+              <div class="bar-row"><span class="bar-label">PR 合并</span><span class="bar-track"><span class="bar-fill alt" style="width:80.77%"></span></span><span class="bar-value">21</span></div>
+              <div class="bar-row"><span class="bar-label">PR 关闭未合并</span><span class="bar-track"><span class="bar-fill hot" style="width:3.85%"></span></span><span class="bar-value">1</span></div>
+            </div><p class="chart-note">Issue 事件净增加 3，快照开放 28；main PR 事件净增加 4，快照开放 10。库存只用于当前快照，不用于倒推周期起点。</p></div>
+          </div>
+          <p class="callout"><strong>运行判断：</strong>截至快照共有 732 条 Actions，成功 539、失败 17，有效成功率 96.9%。本期 GitHub Release 为应用 1 个、CLI 2 个、DSH 0 个；DSH 另有 2 个 npm 版本。当前开放 Issue 28 个、main PR 10 个。</p>
+          <p class="risk-note"><strong>主要风险：</strong>17 次失败中 Check DSH Plugin 占 10 次、PR E2E Tests 占 3 次；报告保留失败记录，不以随后成功覆盖历史失败。</p>
+        </section>
+
+        <section class="report-section" data-module="feature-iterations" aria-labelledby="feature-title"><h2 id="feature-title">二、功能迭代信息</h2>
+          <p class="section-lead"><strong>版本发布情况：</strong>截至快照共发布 3 个 GitHub Release：应用 1 个、CLI 2 个、DSH 0 个；npm 同期发布 CLI 2 个版本、DSH 2 个版本。</p>
+          <div class="table-wrap"><table><caption>本期版本发布情况</caption><thead><tr><th>产品线</th><th>GitHub Release</th><th>包仓库状态</th><th>发布时间与边界</th></tr></thead><tbody>
+            <tr><td>SkillHub 应用</td><td><a href="https://github.com/iflytek/skillhub/releases/tag/v0.2.25">v0.2.25</a></td><td>不适用</td><td>10 月 30 日 18:01 发布。这里只证明 Release 已发布，不把随后合并到 <code>main</code> 的功能倒推为版本内容。</td></tr>
+            <tr><td>SkillHub CLI</td><td><a href="https://github.com/iflytek/skillhub/releases/tag/cli-v0.3.0">0.3.0</a>、<a href="https://github.com/iflytek/skillhub/releases/tag/cli-v0.3.1">0.3.1</a></td><td><code>@astron-team/skillhub</code> 同期发布 0.3.0、0.3.1，latest 为 0.3.1。</td><td>GitHub Release 分别于 10 月 30 日 10:17、11 月 4 日 16:10 发布；npm 分别于 10:20、16:11 发布。</td></tr>
+            <tr><td>SkillHub DSH</td><td>本期无新增 GitHub Release</td><td><code>@astron-team/skillhub-dsh</code> 发布 0.6.1、0.6.2，latest 为 0.6.2。</td><td>npm 分别于 10 月 30 日 15:48、11 月 4 日 15:56 发布。GitHub 与 npm 版本轨道分别说明。</td></tr>
+          </tbody></table></div>
+          <h3>本期主分支重点进展</h3>
+          <div class="table-wrap"><table><caption class="sr-only">本期主分支重点迭代</caption><thead><tr><th>方向</th><th>事项</th><th>截至快照进展</th><th>证据边界</th></tr></thead><tbody>
+            <tr><td><span class="status ok">DSH</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1047">来源隔离更新 #1047</a> / <a href="https://github.com/iflytek/skillhub/pull/1055">升级差异与本地修改 #1055</a> / <a href="https://github.com/iflytek/skillhub/pull/1061">导入导出 #1061</a> / <a href="https://github.com/iflytek/skillhub/pull/1065">本地收藏 #1065</a></td><td>均已合并；DSH npm 0.6.1、0.6.2 已独立核验发布。</td><td>不把所有主分支改动自动归入某个包版本。</td></tr>
+            <tr><td><span class="status ok">Web</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1037">可选前端分析 #1037</a> / <a href="https://github.com/iflytek/skillhub/pull/1040">Suite 列溢出 #1040</a> / <a href="https://github.com/iflytek/skillhub/pull/1062">站点框架与技能管理 #1062</a></td><td>均已进入 <code>main</code>。</td><td>合并不等于生产环境已经启用或部署。</td></tr>
+            <tr><td><span class="status ok">CLI 与安全</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1059">Registry 凭证范围 #1059</a> / <a href="https://github.com/iflytek/skillhub/pull/1058">依赖告警修复 #1058</a> / <a href="https://github.com/iflytek/skillhub/pull/1066">CLI 0.3.1 #1066</a></td><td>均已合并；CLI 0.3.1 GitHub Release 与 npm 均已核验。</td><td>安全工作流成功不等于私有告警数量为 0。</td></tr>
+          </tbody></table></div>
+        </section>
+
+        <section class="report-section" data-module="ecosystem-progress" aria-labelledby="ecosystem-title"><h2 id="ecosystem-title">三、生态相关进展</h2>
+          <div class="ecosystem-signals" data-module="ecosystem-signals" role="img" aria-label="部分周期新增 Issue 作者 4 人，新增 main PR 作者 8 人，合并 PR 作者 6 人，CLI 五个稳定 UTC 日桶下载 1360 次">
+            <div><strong>3</strong><span>新增 Issue 作者</span></div><div><strong>3</strong><span>新增 PR 作者</span></div><div><strong>2</strong><span>合并 PR 作者</span></div>
+          </div>
+          <p class="chart-note">作者、Fork 库存和 npm 下载是独立信号，不构成转化漏斗。CLI 在当前可用的 11 月 6 日—11 月 11 日 6 个稳定 UTC 日桶记录 1,740 次下载；11 月 12 日数据可能延迟，Fork 到达数因来源不一致而省略。</p>
+          <div class="table-wrap"><table><caption class="sr-only">生态交付</caption><thead><tr><th>类型</th><th>进展</th><th>证据与边界</th></tr></thead><tbody>
+            <tr><td>多贡献者协作</td><td>Suite UI、可选前端分析、部署文档、CLI 安全和版本发布均有不同作者参与。</td><td>作者数按登录账号去重，不推断组织归属或转化关系。</td></tr>
+            <tr><td>Skill 可发现性</td><td><a href="https://github.com/iflytek/skillhub/pull/1043">#1043</a> 推进短描述与概览展示字段。</td><td>截至快照仍开放，不写成已交付。</td></tr>
+            <tr><td>创作与治理</td><td><a href="https://github.com/iflytek/skillhub/pull/1053">#1053</a> 创作工作台、<a href="https://github.com/iflytek/skillhub/pull/1060">#1060</a> Skill 所有权转移持续推进。</td><td>两项截至快照仍开放，需要独立评审和验收。</td></tr>
+            <tr><td>受信任发布</td><td><a href="https://github.com/iflytek/skillhub/issues/1068">#1068</a> / <a href="https://github.com/iflytek/skillhub/pull/1069">#1069</a> 讨论 TEAM namespace 可审计免人工审核发布。</td><td>#1069 为草稿，权限和扫描边界尚未完成验收。</td></tr>
+          </tbody></table></div>
+        </section>
+
+        <aside class="next-actions" data-module="next-actions" aria-labelledby="next-title"><h2 id="next-title">下周关注</h2><ul class="next-list">
+          <li><strong>完成周期结报：</strong>11 月 6 日 00:00 后重新采集差异数据，确保最终 W45 不混入截止后的事件。</li>
+          <li><strong>收敛 CI 失败：</strong>定位 Check DSH Plugin 10 次与 PR E2E Tests 3 次失败，给出可复现根因和恢复证据。</li>
+          <li><strong>推进高价值开放项：</strong>审查 <a href="https://github.com/iflytek/skillhub/issues/1049">#1049</a> 发布 Token 权限、<a href="https://github.com/iflytek/skillhub/pull/1069">#1069</a> 受信任发布，并处理 <a href="https://github.com/iflytek/skillhub/issues/1070">#1070</a> Suite 审核通知缺失。</li>
+        </ul></aside>
+      </div>
+
+      <div class="tab-panel" id="panel-health" role="tabpanel" tabindex="-1" aria-labelledby="tab-health" data-panel="health" hidden>
+        <div class="panel-intro"><p>健康判断只使用可观察执行与开放队列证据。</p><p>成功的安全工作流不等于漏洞为零。</p></div>
+        <section class="report-section" data-module="health-summary" aria-labelledby="health-summary-title"><h2 id="health-summary-title">项目健康状态</h2><div class="health-cards">
+          <article class="health-card"><div class="top"><span class="name">工程稳定性</span><span class="status warn">失败需收敛</span></div><div class="health-metric">96.9% <small>539/556</small></div><p>有效运行成功 539 次、失败 17 次。</p><div class="detail">共 732 条：另有等待授权 15、跳过 130、取消 31。</div></article>
+          <article class="health-card"><div class="top"><span class="name">安全流水线</span><span class="status ok">无失败结论</span></div><div class="health-metric">75 / 0 <small>成功 / 失败</small></div><p>Security 成功 75、失败 0。</p><div class="detail">另有等待授权 3、跳过 36；执行结果不等同于漏洞数量为 0。</div></article>
+          <article class="health-card"><div class="top"><span class="name">自动化运营</span><span class="status ok">核心任务运行</span></div><div class="health-metric">27 <small>Backlog Rescore 成功</small></div><p>Issue Triage 成功 18、失败 0。</p><div class="detail">Triage 另有跳过 36；仅表示工作流执行结果。</div></article>
+          <article class="health-card"><div class="top"><span class="name">Release 交付</span><span class="status ok">多轨发布</span></div><div class="health-metric">1 / 2 / 0 <small>应用 / CLI / DSH GitHub Release</small></div><p>应用 v0.2.25，CLI 0.3.0/0.3.1；DSH 本期无 GitHub Release。</p><div class="detail">DSH npm 已发布 0.6.1、0.6.2；不同发布轨道不混算。</div></article>
+          <article class="health-card"><div class="top"><span class="name">Issue 治理</span><span class="status warn">事件净增加</span></div><div class="health-metric">+3 <small>部分周期事件净流量</small></div><p>新增 7、关闭 4；快照开放 28 个。</p><div class="detail">11 个带 <code>triage/needs-info</code>，占 39.3%；16 个已开放至少 30 天。</div></article>
+          <article class="health-card"><div class="top"><span class="name">PR 治理</span><span class="status warn">事件净增加</span></div><div class="health-metric">+4 <small>部分周期事件净流量</small></div><p>main：新增 26、合并 21、关闭未合并 1。</p><div class="detail">快照开放 10 个，其中草稿 2 个、3 个已开放至少 30 天。</div></article>
+        </div></section>
+
+        <section class="report-section" data-module="workflow-execution" aria-labelledby="actions-title"><h2 id="actions-title">CI 与自动化执行</h2>
+          <p class="section-lead">截至快照共 732 条 Actions：成功 539、失败 17、等待授权 15、跳过 130、取消 31。</p>
+          <div class="chart-box" data-module="actions-outcome-chart"><h3>Actions 结果构成</h3><div class="segbar" role="img" aria-label="W45 截至快照 Actions 共 732 条记录：成功 539，失败 17，等待授权 15，条件跳过 130，取消 31"><span class="seg-success" style="width:73.63%"></span><span class="seg-failure" style="width:2.32%"></span><span class="seg-auth" style="width:2.05%"></span><span class="seg-skipped" style="width:17.76%"></span><span class="seg-cancelled" style="width:4.24%"></span></div><div class="chart-legend" aria-hidden="true"><span><i class="seg-success"></i>成功 <b>539</b></span><span><i class="seg-failure"></i>失败 <b>17</b></span><span><i class="seg-auth"></i>等待授权 <b>15</b></span><span><i class="seg-skipped"></i>跳过 <b>130</b></span><span><i class="seg-cancelled"></i>取消 <b>31</b></span></div><p class="chart-note">有效成功率 = 539 / (539 + 17) = 96.9%。失败分布：Check DSH Plugin 10、PR E2E Tests 3；DeepWiki、PR CLI、PR Helm Chart、Release DSH Plugin 各 1。</p></div>
+          <div class="table-wrap"><table><caption>重点工作流执行结果</caption><thead><tr><th>工作流</th><th>成功 / 失败</th><th>其他结果与判断</th></tr></thead><tbody>
+            <tr><td>Check DSH Plugin</td><td>17 / 10</td><td>取消 2；为最大失败来源。</td></tr>
+            <tr><td>PR E2E Tests</td><td>21 / 3</td><td>等待授权 3、跳过 18、取消 3。</td></tr>
+            <tr><td>PR CLI</td><td>13 / 1</td><td>与 CLI 版本发布并行，失败记录不因发布成功而删除。</td></tr>
+            <tr><td>PR Tests</td><td>44 / 0</td><td>等待授权 3、跳过 36、取消 8。</td></tr>
+            <tr><td>Security</td><td>75 / 0</td><td>等待授权 3、跳过 36；不能据此推断私有告警为 0。</td></tr>
+            <tr><td>backend-tests</td><td>77 / 0</td><td>等待授权 3；无失败结论。</td></tr>
+          </tbody></table></div>
+        </section>
+
+        <section class="report-section" data-module="backlog-health" aria-labelledby="backlog-title"><h2 id="backlog-title">开放队列健康</h2><p class="section-lead">以下为 11 月 5 日 17:44 后采集的认证 API 快照。</p>
+          <h3>Issue 健康</h3><div class="chart-grid"><div class="chart-box" data-module="issue-age-chart"><h3>开放 Issue 年龄结构</h3><div class="bars" role="img" aria-label="当前开放 Issue 28 个：不足 7 天 5 个，7 到 13 天 1 个，14 到 29 天 6 个，30 天以上 16 个"><div class="bar-row"><span class="bar-label">&lt; 7 天</span><span class="bar-track"><span class="bar-fill" style="width:31.25%"></span></span><span class="bar-value">5</span></div><div class="bar-row"><span class="bar-label">7—13 天</span><span class="bar-track"><span class="bar-fill" style="width:6.25%"></span></span><span class="bar-value">1</span></div><div class="bar-row"><span class="bar-label">14—29 天</span><span class="bar-track"><span class="bar-fill" style="width:37.50%"></span></span><span class="bar-value">6</span></div><div class="bar-row"><span class="bar-label">≥ 30 天</span><span class="bar-track"><span class="bar-fill hot" style="width:100%"></span></span><span class="bar-value">16</span></div></div></div><div class="chart-box" data-module="issue-needs-info-chart"><h3><code>triage/needs-info</code> 占比</h3><div class="donut-layout"><div class="donut" style="--value:39.3%" role="img" aria-label="当前开放 Issue 中 11 个带 triage/needs-info 标签，占 28 个开放 Issue 的 39.3%"><div class="donut-center"><strong>39.3%</strong><span>11 / 28</span></div></div><div class="donut-copy"><p><strong>11 个</strong> Issue 仍需补充信息。</p><p>应集中澄清、拆解或关闭。</p></div></div></div></div>
+          <h3>PR 健康</h3><div class="chart-box" data-module="pr-age-chart"><div class="bars" role="img" aria-label="当前开放 main PR 10 个：不足 7 天 4 个，7 到 13 天 1 个，14 到 29 天 2 个，30 天以上 3 个"><div class="bar-row"><span class="bar-label">&lt; 7 天</span><span class="bar-track"><span class="bar-fill" style="width:100.00%"></span></span><span class="bar-value">4</span></div><div class="bar-row"><span class="bar-label">7—13 天</span><span class="bar-track"><span class="bar-fill" style="width:25.00%"></span></span><span class="bar-value">1</span></div><div class="bar-row"><span class="bar-label">14—29 天</span><span class="bar-track"><span class="bar-fill" style="width:50.00%"></span></span><span class="bar-value">2</span></div><div class="bar-row"><span class="bar-label">≥ 30 天</span><span class="bar-track"><span class="bar-fill hot" style="width:75.00%"></span></span><span class="bar-value">3</span></div></div><p class="chart-note">长期开放 PR 为 <a href="https://github.com/iflytek/skillhub/pull/437">#437</a>、<a href="https://github.com/iflytek/skillhub/pull/797">#797</a>、<a href="https://github.com/iflytek/skillhub/pull/894">#894</a>；其中 #894 与 #1069 为草稿。快照时共有 2 个草稿 PR。</p></div>
+        </section>
+      </div>
+
+      <div class="tab-panel" id="panel-flow" role="tabpanel" tabindex="-1" aria-labelledby="tab-flow" data-panel="flow" hidden>
+        <div class="panel-intro"><p>先看周期事件流转，再看需要优先判断的高价值输入。</p><p>价值级别是治理判断，不替代仓库标签。</p></div>
+        <section class="report-section" data-module="weekly-flow" aria-labelledby="flow-title"><h2 id="flow-title">本周 Issue 与 PR 流转</h2>
+          <div class="flow-summary"><div class="flow-item"><strong>Issue +7 / 关闭 4</strong><span>重新打开 0 · 事件净增加 3 · 快照开放 28</span></div><div class="flow-item"><strong>PR +26 / 完成 22</strong><span>合并 21 + 关闭未合并 1 · 事件净增加 4 · 快照开放 10</span></div></div>
+          <p class="risk-note"><strong>数据解读：</strong>4 个关闭 Issue 与 21 个合并 PR 可包含更早周期创建项。所有 PR 流量只保留目标分支为 <code>main</code> 的记录；当前只覆盖 10 月 30 日 00:00 至 11 月 5 日 17:44。</p>
+          <h3>新增 Issue（按价值排序，7 / 7）</h3><div class="table-wrap"><table><caption class="sr-only">W45 截至快照新增 Issue 价值排序，共 7 个</caption><thead><tr><th>价值</th><th>Issue</th><th>判断</th><th>结果</th></tr></thead><tbody><tr><td><span class="value-level value-a">A</span></td><td><a href="https://github.com/iflytek/skillhub/issues/1049">#1049 发布 Token 仅提交审核、禁止免审确认发布</a></td><td>直接影响发布权限最小化和 PRIVATE 版本治理。</td><td>截至快照开放，需明确 Token、人工审核与确认发布边界。</td></tr>
+<tr><td><span class="value-level value-a">A</span></td><td><a href="https://github.com/iflytek/skillhub/issues/1070">#1070 套件审核不会发通知</a></td><td>审核完成但缺少通知会影响发布者闭环。</td><td>截至快照开放，仓库标记为 P2。</td></tr>
+<tr><td><span class="value-level value-b">B</span></td><td><a href="https://github.com/iflytek/skillhub/issues/1068">#1068 TEAM namespace 受信任 MEMBER 可审计发布</a></td><td>减少人工审核成本，但权限、扫描与审计风险较高。</td><td><a href="https://github.com/iflytek/skillhub/pull/1069">#1069</a> 为草稿，尚未交付。</td></tr>
+<tr><td><span class="value-level value-b">B</span></td><td><a href="https://github.com/iflytek/skillhub/issues/1067">#1067 明确 PostgreSQL 17 与 Flyway 支持范围</a></td><td>关系到部署兼容和升级边界。</td><td>截至快照开放，需补充支持矩阵与验证证据。</td></tr>
+<tr><td><span class="value-level value-c">C</span></td><td><a href="https://github.com/iflytek/skillhub/issues/1064">#1064 DSH 本地收藏与来源筛选</a></td><td>提升多来源技能管理效率。</td><td><a href="https://github.com/iflytek/skillhub/pull/1065">#1065</a> 已合并，DSH npm 0.6.2 已发布。</td></tr>
+<tr><td><span class="value-level value-c">C</span></td><td><a href="https://github.com/iflytek/skillhub/issues/1042">#1042 v0.2.25 接入导航与部署文档缺口</a></td><td>影响新版本接入和排障可用性。</td><td><a href="https://github.com/iflytek/skillhub/pull/1046">#1046</a> 已合并并关闭 Issue。</td></tr>
+<tr><td><span class="value-level value-c">C</span></td><td><a href="https://github.com/iflytek/skillhub/issues/1039">#1039 Suite 固定版本列表格文本溢出</a></td><td>影响套件详情可读性。</td><td><a href="https://github.com/iflytek/skillhub/pull/1040">#1040</a>、<a href="https://github.com/iflytek/skillhub/pull/1045">#1045</a> 已合并。</td></tr></tbody></table></div>
+          <h3>关键 PR 流转</h3><div class="table-wrap"><table><caption class="sr-only">W45 截至快照关键 PR 流转</caption><thead><tr><th>状态</th><th>价值</th><th>PR</th><th>结果与判断</th></tr></thead><tbody>
+            <tr><td>版本已发布</td><td><span class="value-level value-a">A</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1066">#1066 CLI 0.3.1</a> / <a href="https://github.com/iflytek/skillhub/pull/1038">#1038 DSH 0.6.1</a> / <a href="https://github.com/iflytek/skillhub/pull/1065">#1065 DSH 0.6.2</a></td><td>CLI GitHub Release/npm 与 DSH npm 发布均已独立核验。</td></tr>
+            <tr><td>主分支已合并</td><td><span class="value-level value-a">A</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1059">#1059</a> / <a href="https://github.com/iflytek/skillhub/pull/1058">#1058</a></td><td>CLI 凭证范围和依赖安全修复已进入 <code>main</code>。</td></tr>
+            <tr><td>主分支已合并</td><td><span class="value-level value-b">B</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1037">#1037</a> / <a href="https://github.com/iflytek/skillhub/pull/1062">#1062</a></td><td>可选前端分析、站点框架与技能管理优化已合并；不推断生产已经启用。</td></tr>
+            <tr><td>推进中</td><td><span class="value-level value-b">B</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1043">#1043</a> / <a href="https://github.com/iflytek/skillhub/pull/1053">#1053</a> / <a href="https://github.com/iflytek/skillhub/pull/1060">#1060</a> / <a href="https://github.com/iflytek/skillhub/pull/1069">#1069</a></td><td>截至快照均开放；#1069 为草稿，不能写成已交付。</td></tr>
+          </tbody></table></div>
+          <details data-module="closed-pr-cleanup"><summary>本期关闭未合并 PR（1 个）</summary><div class="details-body"><p><a href="https://github.com/iflytek/skillhub/pull/1050">#1050 DataFinder adapter</a> 于本期关闭，PR 详情显示 <code>merged_at=null</code>，只计入关闭未合并，不解释为交付。GitHub Search 暂未收录该关闭未合并状态，统计以 Pulls REST API 与 PR 详情为准。</p></div></details>
+          <h3>当前 A / B 判断队列</h3><div class="table-wrap"><table><caption class="sr-only">当前高价值 PR 队列</caption><thead><tr><th>价值</th><th>对象</th><th>快照状态与下一门槛</th></tr></thead><tbody>
+            <tr><td><span class="value-level value-a">A</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1069">#1069 受信任 TEAM 发布</a></td><td>草稿；扫描、审批绕过、授权与审计边界尚未完成验收。</td></tr>
+            <tr><td><span class="value-level value-a">A</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1053">#1053 创作与结构校验工作台</a></td><td>截至快照开放；仍需验证真实创作、校验和失败恢复路径。</td></tr>
+            <tr><td><span class="value-level value-b">B</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1060">#1060 Skill 所有权转移</a></td><td>截至快照开放；需要核对权限、审计和历史版本归属。</td></tr>
+            <tr><td><span class="value-level value-b">B</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1043">#1043 Skill 展示字段</a></td><td>截至快照开放；需确认数据兼容、编辑入口与展示回退。</td></tr>
+            <tr><td><span class="value-level value-b">B</span></td><td><a href="https://github.com/iflytek/skillhub/pull/1029">#1029 业务事件出口</a></td><td>仍开放；默认关闭、脱敏与投递责任仍是验收门槛。</td></tr>
+          </tbody></table></div>
+        </section>
+      </div>
+
+      <div class="tab-panel" id="panel-method" role="tabpanel" tabindex="-1" aria-labelledby="tab-method" data-panel="method" hidden>
+        <div class="panel-intro"><p>这里说明时间边界、数据来源与缺失项。</p><p>未取得的维度不以 0 或上期数值替代。</p></div>
+        <section class="report-section" data-module="metric-definitions" aria-labelledby="method-title"><h2 id="method-title">统计口径</h2><ul class="method-list">
+          <li><strong>正式周期</strong><span>按“上周四收口至本周四收口”使用半开区间 <code>[2026-10-30 00:00:00, 2026-11-06 00:00:00)</code>（Asia/Shanghai），UTC 等价区间为 <code>[2026-10-29 16:00:00, 2026-11-05 16:00:00)</code>。</span></li>
+          <li><strong>当前覆盖</strong><span>本预览的事件截止固定为 11 月 5 日 17:44:02，即 <code>[2026-10-30 00:00:00, 2026-11-05 17:44:02)</code>。正式周期尚余约 6 小时 16 分钟，最终版必须在 11 月 6 日 00:00 后重采。</span></li>
+          <li><strong>Issue 与 PR</strong><span>Issue 剔除带 <code>pull_request</code> 字段的条目；PR 只保留目标为 <code>main</code> 的记录。新增、关闭、合并分别按 <code>created_at</code>、<code>closed_at</code>、<code>merged_at</code> 过滤；重开来自 events 端点。</span></li>
+          <li><strong>Star 证据</strong><span>上一期于 10 月 30 日 14:23 认证观测 5,338 Stars，本次于 11 月 5 日 17:44 认证观测 5,389，观测差 +51。两次观测不对齐周期边界，只能描述观测差。57 为完整 <code>starred_at</code> 分页中落入当前部分区间且查询时仍可见的到达数，不代表净增长。</span></li>
+          <li><strong>Release 与交付状态</strong><span>按 <code>published_at</code> 过滤，应用 GitHub Release 1 个、CLI 2 个、DSH 0 个；npm 包独立统计为 CLI 2 个版本、DSH 2 个版本。进入 <code>main</code>、GitHub Release、npm 发布和生产部署分别表述。</span></li>
+          <li><strong>Actions 成功率</strong><span><code>success / (success + failure)</code>；等待授权、跳过和取消不进入分母，但单独展示。</span></li>
+          <li><strong>生态日桶</strong><span>npm 与 Traffic 统一汇总目前稳定可用的 10 月 30 日—11 月 3 日 5 个 UTC 日桶。它们完全位于当前覆盖区间内，但未覆盖本地周期两端和最新延迟日桶，因此标记为部分覆盖。</span></li>
+        </ul></section>
+        <section class="report-section" data-module="source-coverage" aria-labelledby="source-title"><h2 id="source-title">数据来源与限制</h2><div class="table-wrap"><table><caption>来源覆盖</caption><thead><tr><th>指标</th><th>取值</th><th>来源与覆盖</th></tr></thead><tbody>
+          <tr><td>Stars 库存 / 观测差</td><td>5,389 / +51</td><td>GitHub REST 仓库快照；认证 Stargazer 完整分页共 5,389 条，与库存一致。观测差不是周净增长。</td></tr>
+          <tr><td>Star 当前可见到达</td><td>57</td><td>按 <code>starred_at</code> 精确过滤当前部分区间，只表示查询时仍可见到达，不代表净增长。</td></tr>
+          <tr><td>Forks 库存</td><td>816</td><td>仓库库存字段；Fork 列表 1,170 条与库存不一致，不展示到达数。</td></tr>
+          <tr><td>Issue 新增 / 关闭 / 重开</td><td>7 / 4 / 0</td><td>Issues 与 events 分页；剔除 PR；事件净增加 3，快照开放 28。</td></tr>
+          <tr><td>PR 新增 / 合并 / 关闭未合并 / 重开</td><td>26 / 21 / 1 / 0</td><td>Pulls 与 events 完整分页，仅含目标分支 <code>main</code>；事件净增加 4，快照开放 10。#1050 的关闭未合并以 PR 详情为准。</td></tr>
+          <tr><td>应用 / CLI / DSH GitHub Release</td><td>1 / 2 / 0</td><td>Releases 端点按 <code>published_at</code> 过滤；DSH 本期仅有 npm 发布。</td></tr>
+          <tr><td>npm CLI / DSH latest</td><td>0.3.1 / 0.6.2</td><td>Registry 快照 latest；当前部分周期内 CLI 发布 0.3.0、0.3.1，DSH 发布 0.6.1、0.6.2。</td></tr>
+          <tr><td>Actions 记录</td><td>732</td><td>API total、分页行数和唯一 run ID 均为 732；成功 539、失败 17、等待授权 15、跳过 130、取消 31。</td></tr>
+          <tr><td>CLI 下载</td><td>1,360</td><td>npm Downloads API 当前稳定可用的 5 个 UTC 日桶（10 月 30 日—11 月 3 日），部分覆盖。</td></tr>
+          <tr><td>Views / Clones</td><td>3,723 / 8,240</td><td>GitHub Traffic API 的同 5 个 UTC 日桶，部分覆盖。</td></tr>
+          <tr><td>快照开放 Issue / main PR</td><td>28 / 10</td><td>11 月 5 日 17:44 后认证 API 快照；仓库 open_issues_count 38 = Issue 28 + PR 10。</td></tr>
+        </tbody></table></div><p class="risk-note"><strong>未取得：</strong>周期起止时刻严格对齐的 Star/Fork 库存快照、可信 Fork 到达数、精确对齐 Asia/Shanghai 的 npm/Traffic 完整汇总、生产实例可用率与延迟、生产扫描成功率、私有安全告警，以及文章、直播、社区分享和合作项目链接。以上缺口不以 0 或推断值替代。</p></section>
+      </div>
+    </main>
+    <footer><span>SkillHub Open Source Weekly · 2026-W46</span><span>部分周期预览 · 正式截止 11 月 6 日 00:00</span></footer>
+  </article>
+  <script>
+    (function () {
+      var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+      var panels = Array.prototype.slice.call(document.querySelectorAll('[role="tabpanel"]'));
+
+      function activate(name, moveFocus, updateHash) {
+        var nextTab = tabs.find(function (tab) { return tab.dataset.tab === name; }) || tabs[0];
+        tabs.forEach(function (tab) {
+          var selected = tab === nextTab;
+          tab.setAttribute('aria-selected', selected ? 'true' : 'false');
+          tab.tabIndex = selected ? 0 : -1;
+        });
+        panels.forEach(function (panel) {
+          panel.hidden = panel.dataset.panel !== nextTab.dataset.tab;
+        });
+        if (moveFocus) nextTab.focus();
+        if (updateHash && history.replaceState) {
+          history.replaceState(null, '', '#' + nextTab.dataset.tab);
+        }
+      }
+
+      tabs.forEach(function (tab, index) {
+        tab.addEventListener('click', function () {
+          activate(tab.dataset.tab, false, true);
+        });
+        tab.addEventListener('keydown', function (event) {
+          var nextIndex = index;
+          if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
+          else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
+          else if (event.key === 'Home') nextIndex = 0;
+          else if (event.key === 'End') nextIndex = tabs.length - 1;
+          else return;
+          event.preventDefault();
+          activate(tabs[nextIndex].dataset.tab, true, true);
+        });
+      });
+
+      window.addEventListener('hashchange', function () {
+        activate(location.hash.replace('#', ''), false, false);
+      });
+      activate(location.hash.replace('#', ''), false, false);
+    }());
+  </script>
+</body>
+</html>
