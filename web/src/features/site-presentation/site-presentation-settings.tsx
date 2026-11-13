@@ -1,13 +1,15 @@
-import { useRef, useState, type ChangeEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useBlocker } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ImagePlus } from 'lucide-react'
+import { Eye, Upload } from 'lucide-react'
 import { ApiError } from '@/api/client'
 import { presentationAssetUrl, sitePresentationApi, type SitePresentationResponse, type SitePresentationSettings } from '@/api/site-presentation'
 import { defaultSitePresentation, presentationText, SITE_PRESENTATION_QUERY_KEY } from '@/shared/hooks/use-site-presentation'
 import { Button } from '@/shared/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/shared/ui/dialog'
+import { Switch } from '@/shared/ui/switch'
+import { SitePresentationPreview } from './site-presentation-preview'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
 import { Textarea } from '@/shared/ui/textarea'
@@ -18,7 +20,12 @@ import { PRESENTATION_CONTENT, PRESENTATION_LINKS, type PresentationSection } fr
 
 const ADMIN_QUERY_KEY = ['system-config', 'presentation'] as const
 const LOCALES = ['zh', 'en', 'ko', 'ru'] as const
-const sameSettings = (left: SitePresentationSettings, right: SitePresentationSettings) => JSON.stringify(left) === JSON.stringify(right)
+const normalizeSettings = (value: SitePresentationSettings): SitePresentationSettings => ({ ...value, sections: { ...defaultSitePresentation().sections, ...value.sections } })
+const settingsSnapshot = (value: SitePresentationSettings) => JSON.stringify(normalizeSettings(value), (_key, entry: unknown) =>
+  entry !== null && typeof entry === 'object' && !Array.isArray(entry)
+    ? Object.fromEntries(Object.entries(entry).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0))
+    : entry)
+const sameSettings = (left: SitePresentationSettings, right: SitePresentationSettings) => settingsSnapshot(left) === settingsSnapshot(right)
 type Draft = SitePresentationResponse & { original: SitePresentationSettings }
 
 function AssetUpload({ name, value, disabled, onChange, onBusy }: { name: 'logoUrl' | 'faviconUrl'; value: string | null | undefined; disabled: boolean; onChange: (value: string | null) => void; onBusy: (busy: boolean) => void }) {
@@ -42,13 +49,13 @@ function AssetUpload({ name, value, disabled, onChange, onBusy }: { name: 'logoU
   const src = presentationAssetUrl(value)
   return <div className="min-w-0 space-y-2">
     <Label htmlFor={`presentation-${name}`}>{t(`sitePresentation.${name}`)}</Label>
-    <div className="flex min-h-32 flex-wrap items-center gap-4 rounded-xl border border-dashed border-border bg-secondary/30 p-4" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); receive(event.dataTransfer.files[0]) }}>
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border bg-background">
-        {src && failedUrl !== src ? <img src={src} alt={t(`sitePresentation.${name}`)} className="h-12 w-12 object-contain" onError={() => setFailedUrl(src)} /> : <ImagePlus className="h-6 w-6 text-muted-foreground" aria-hidden />}
+    <div className="flex min-h-28 items-center gap-3 rounded-xl border border-dashed border-border bg-secondary/30 p-4" onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); receive(event.dataTransfer.files[0]) }}>
+      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border bg-background">
+        <img src={src && failedUrl !== src ? src : withBasePath('/favicon.svg')} alt={t(`sitePresentation.${name}`)} className="h-9 w-9 object-contain" onError={() => setFailedUrl(src)} />
       </div>
       <div className="min-w-0 flex-1 space-y-2">
-        <input ref={input} id={`presentation-${name}`} aria-label={t(`sitePresentation.${name}`)} type="file" accept="image/png,image/jpeg" disabled={disabled || upload.isPending} onChange={changeFile} className="block w-full text-sm file:mr-3 file:rounded-md file:border file:border-border file:bg-background file:px-3 file:py-2 file:text-foreground" />
-        <p className="text-xs leading-relaxed text-muted-foreground">{upload.isPending ? t('sitePresentation.uploading') : t('sitePresentation.assetHelp')}</p>
+        <input ref={input} id={`presentation-${name}`} aria-label={t(`sitePresentation.${name}`)} type="file" accept="image/png,image/jpeg" disabled={disabled || upload.isPending} onChange={changeFile} className="sr-only" />
+        <p className="text-sm font-medium">{value ? t('sitePresentation.currentImage') : t('sitePresentation.defaultImage')}</p><p className="text-xs text-muted-foreground">{t('sitePresentation.assetTypes')}</p><Button type="button" size="sm" variant="outline" disabled={disabled || upload.isPending} onClick={() => input.current?.click()}><Upload aria-hidden className="h-4 w-4" />{upload.isPending ? t('sitePresentation.uploading') : t('sitePresentation.uploadImage')}</Button>
         {value && <Button type="button" variant="ghost" size="sm" disabled={disabled || upload.isPending} onClick={() => onChange(null)}>{t('sitePresentation.removeAsset')}</Button>}
       </div>
     </div>
@@ -63,7 +70,7 @@ function SettingsSection({ title, help, children }: { title: string; help: strin
   </section>
 }
 
-export function SitePresentationSettingsPanel() {
+export function SitePresentationSettingsPanel({ onDirtyChange, onBusyChange }: { onDirtyChange?: (dirty: boolean) => void; onBusyChange?: (busy: boolean) => void } = {}) {
   const { t, i18n } = useTranslation()
   const client = useQueryClient()
   const query = useQuery({ queryKey: ADMIN_QUERY_KEY, queryFn: sitePresentationApi.getAdmin, meta: { skipGlobalErrorHandler: true } })
@@ -74,7 +81,10 @@ export function SitePresentationSettingsPanel() {
   const [uploading, setUploading] = useState(false)
   const [conflict, setConflict] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
-  const value = draft?.settings ?? query.data?.settings
+  const [tab, setTab] = useState<'identity' | 'home'>('identity')
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const rawValue = draft?.settings ?? query.data?.settings
+  const value = rawValue ? normalizeSettings(rawValue) : undefined
   const dirty = draft !== null && !sameSettings(draft.settings, draft.original)
   const blocker = useBlocker({ shouldBlockFn: () => dirty || uploading, enableBeforeUnload: dirty || uploading, withResolver: true })
   const save = useMutation({
@@ -112,43 +122,68 @@ export function SitePresentationSettingsPanel() {
     const hero = value.sections.hero
     edit({ sections: { ...value.sections, hero: { ...hero, texts: { ...hero.texts, [slot]: { ...hero.texts[slot], [locale]: text } } } } })
   }
-  const busy = uploading || save.isPending
-  return <Card>
-    <CardHeader><CardTitle>{t('sitePresentation.title')}</CardTitle><p className="text-sm text-muted-foreground">{t('sitePresentation.intro')}</p></CardHeader>
-    <CardContent>
+  const busy = uploading || save.isPending || query.isFetching
+  const callbacks = useRef({ onDirtyChange, onBusyChange })
+  callbacks.current = { onDirtyChange, onBusyChange }
+  useEffect(() => { callbacks.current.onDirtyChange?.(dirty) }, [dirty])
+  useEffect(() => { callbacks.current.onBusyChange?.(busy) }, [busy])
+  const discard = async () => {
+    setDraft(null); setSaved(false)
+    if (conflict) {
+      const refreshed = await query.refetch()
+      if (refreshed.isError) { setError(t('sitePresentation.loadFailed')); return }
+    }
+    setConflict(false); setError('')
+  }
+  return <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+    <section aria-labelledby="site-presentation-title" className="min-w-0 space-y-6">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1"><h2 id="site-presentation-title" className="text-2xl font-semibold">{t('sitePresentation.title')}</h2><p className="text-sm text-muted-foreground">{t('sitePresentation.intro')}</p></div>
+        <DialogTrigger asChild><Button type="button" variant="outline" disabled={!value || busy}><Eye aria-hidden className="h-4 w-4" />{t('sitePresentation.preview')}</Button></DialogTrigger>
+      </header>
       {query.isPending && <p role="status">{t('common.loading')}</p>}
       {query.isError && <div role="alert" className="space-y-3"><p>{t('sitePresentation.loadFailed')}</p><Button variant="outline" onClick={() => void query.refetch()}>{t('sitePresentation.retry')}</Button></div>}
-      {value && <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); if (draft && dirty && !busy) save.mutate({ settings: draft.settings, version: draft.version }) }}>
-        <fieldset disabled={busy} className="min-w-0 space-y-6">
-          <SettingsSection title={t('sitePresentation.siteInformation')} help={t('sitePresentation.siteInformationHelp')}>
-            <div className="space-y-2"><Label htmlFor="presentation-name">{t('sitePresentation.siteName')}</Label><Input id="presentation-name" maxLength={80} value={value.siteName ?? ''} placeholder="SkillHub" onChange={(event) => edit({ siteName: event.target.value || null })} /><p className="text-xs text-muted-foreground">{t('sitePresentation.defaultHelp')}</p></div>
-            <div className="grid gap-5 xl:grid-cols-2">
-              <AssetUpload name="logoUrl" value={value.logoUrl} disabled={busy} onBusy={setUploading} onChange={(logoUrl) => edit({ logoUrl })} />
-              <AssetUpload name="faviconUrl" value={value.faviconUrl} disabled={busy} onBusy={setUploading} onChange={(faviconUrl) => edit({ faviconUrl })} />
-            </div>
-            <div className="grid min-w-0 gap-4 lg:grid-cols-2">{(['documentation', 'repository'] as const).map(slot => <div key={slot} className="min-w-0 space-y-2"><Label htmlFor={`presentation-link-${slot}`}>{t(`sitePresentation.linkLabels.${slot}`)}</Label><Input id={`presentation-link-${slot}`} maxLength={2048} placeholder={PRESENTATION_LINKS[slot]} value={value.links[slot] ?? ''} onChange={(event) => edit({ links: { ...value.links, [slot]: event.target.value } })} /></div>)}</div>
-            <p className="text-xs text-muted-foreground">{t('sitePresentation.commonLinksHelp')}</p>
-          </SettingsSection>
-          <SettingsSection title={t('sitePresentation.introductionTitle')} help={t('sitePresentation.introductionHelp')}>
-            <div className="space-y-2"><Label htmlFor="presentation-language">{t('sitePresentation.textLanguage')}</Label><Select value={locale} onValueChange={setLocale}><SelectTrigger id="presentation-language" className="w-full sm:max-w-64"><SelectValue /></SelectTrigger><SelectContent>{LOCALES.map(language => <SelectItem key={language} value={language}>{t(`sitePresentation.language.${language}`)}</SelectItem>)}</SelectContent></Select><p className="text-xs leading-relaxed text-muted-foreground">{t('sitePresentation.languageHelp')}</p></div>
-            <div className="space-y-2"><Label htmlFor="presentation-hero-title">{t('sitePresentation.introductionHeading')}</Label><Input id="presentation-hero-title" maxLength={160} value={value.sections.hero.texts.title?.[locale] ?? ''} placeholder={presentationText(defaultSitePresentation(), 'hero', 'title', locale, key => t(key, { lng: locale }))} onChange={event => editIntroduction('title', event.target.value)} /></div>
-            <div className="space-y-2"><Label htmlFor="presentation-hero-description">{t('sitePresentation.introductionDescription')}</Label><Textarea id="presentation-hero-description" maxLength={1000} className="min-h-24" value={value.sections.hero.texts.description?.[locale] ?? ''} placeholder={presentationText(defaultSitePresentation(), 'hero', 'description', locale, key => t(key, { lng: locale }))} onChange={event => editIntroduction('description', event.target.value)} /></div>
-          </SettingsSection>
-          <SettingsSection title={t('sitePresentation.homeContentTitle')} help={t('sitePresentation.homeContentHelp')}>
-            <div className="grid gap-x-6 gap-y-4 sm:grid-cols-2">{sectionIds.map(section => <label key={section} className="flex items-center gap-3 text-sm"><input type="checkbox" checked={value.sections[section].enabled} onChange={event => edit({ sections: { ...value.sections, [section]: { ...value.sections[section], enabled: event.target.checked } } })} />{t(`sitePresentation.regions.${section}`)}</label>)}</div>
-          </SettingsSection>
-        </fieldset>
-        {error && <div role="alert" className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><p>{conflict ? t('sitePresentation.conflict') : error}</p>{conflict && <Button type="button" variant="outline" onClick={() => void query.refetch()}>{t('sitePresentation.retry')}</Button>}</div>}
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-5">
-          <p role="status" className="text-sm text-muted-foreground">{saved ? t('sitePresentation.saved') : dirty ? t('sitePresentation.unsaved') : t('sitePresentation.current')}</p>
-          <div className="flex flex-wrap items-center gap-3"><Button type="button" variant="ghost" disabled={busy} onClick={() => setResetOpen(true)}>{t('sitePresentation.restorePage')}</Button><Button type="submit" disabled={!dirty || busy || conflict}>{save.isPending ? t('sitePresentation.saving') : t('sitePresentation.save')}</Button></div>
+      {value && <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); if (draft && dirty && !busy && !conflict) save.mutate({ settings: draft.settings, version: draft.version }) }}>
+        <div role="group" aria-label={t('sitePresentation.settingsContent')} className="inline-flex max-w-full gap-1 rounded-full border bg-secondary/60 p-1">
+          {(['identity', 'home'] as const).map(id => <Button key={id} type="button" variant="ghost" aria-pressed={tab === id} disabled={busy} onClick={() => setTab(id)} className={`rounded-full px-4 ${tab === id ? 'border bg-background text-foreground shadow-sm hover:bg-background' : 'text-muted-foreground'}`}>{t(`sitePresentation.tabs.${id}`)}</Button>)}
         </div>
-        <p className="text-sm text-muted-foreground">{dirty ? t('sitePresentation.saveBeforeViewing') : <a href={withBasePath('/')} target="_blank" rel="noreferrer" className="underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">{t('sitePresentation.viewHomepage')}</a>}</p>
-        {conflict && <p className="text-sm text-muted-foreground">{t('sitePresentation.conflictHelp')} <Button type="button" variant="ghost" onClick={() => { setDraft(null); setConflict(false); setError(''); void query.refetch() }}>{t('sitePresentation.discardReload')}</Button></p>}
+        <fieldset disabled={busy} className="min-w-0 space-y-6">
+          <div hidden={tab !== 'identity'} className="space-y-6">
+            <SettingsSection title={t('sitePresentation.brandTitle')} help={t('sitePresentation.brandHelp')}>
+              <div className="space-y-2"><Label htmlFor="presentation-name">{t('sitePresentation.siteName')}</Label><Input id="presentation-name" maxLength={80} value={value.siteName ?? ''} placeholder="SkillHub" onChange={(event) => edit({ siteName: event.target.value || null })} /><p className="text-xs text-muted-foreground">{t('sitePresentation.defaultHelp')}</p></div>
+              <div className="grid gap-5 sm:grid-cols-2"><AssetUpload name="logoUrl" value={value.logoUrl} disabled={busy} onBusy={setUploading} onChange={(logoUrl) => edit({ logoUrl })} /><AssetUpload name="faviconUrl" value={value.faviconUrl} disabled={busy} onBusy={setUploading} onChange={(faviconUrl) => edit({ faviconUrl })} /></div>
+              <p className="text-xs leading-relaxed text-muted-foreground">{t('sitePresentation.assetHelp')}</p>
+            </SettingsSection>
+            <SettingsSection title={t('sitePresentation.commonLinksTitle')} help={t('sitePresentation.commonLinksHelp')}>
+              <div className="grid min-w-0 gap-4 sm:grid-cols-2">{(['documentation', 'repository'] as const).map(slot => <div key={slot} className="min-w-0 space-y-2"><Label htmlFor={`presentation-link-${slot}`}>{t(`sitePresentation.linkLabels.${slot}`)}</Label><Input id={`presentation-link-${slot}`} maxLength={2048} placeholder={PRESENTATION_LINKS[slot]} value={value.links[slot] ?? ''} onChange={(event) => edit({ links: { ...value.links, [slot]: event.target.value } })} /></div>)}</div>
+            </SettingsSection>
+          </div>
+          <div hidden={tab !== 'home'} className="space-y-6">
+            <SettingsSection title={t('sitePresentation.introductionTitle')} help={t('sitePresentation.introductionHelp')}>
+              <div className="space-y-2"><Label htmlFor="presentation-language">{t('sitePresentation.textLanguage')}</Label><Select value={locale} onValueChange={setLocale}><SelectTrigger id="presentation-language" className="w-full sm:max-w-48"><SelectValue /></SelectTrigger><SelectContent>{LOCALES.map(language => <SelectItem key={language} value={language}>{t(`sitePresentation.language.${language}`)}</SelectItem>)}</SelectContent></Select><p className="text-xs leading-relaxed text-muted-foreground">{t('sitePresentation.languageHelp')}</p></div>
+              <div className="space-y-2"><Label htmlFor="presentation-hero-title">{t('sitePresentation.introductionHeading')}</Label><Input id="presentation-hero-title" maxLength={160} value={value.sections.hero.texts.title?.[locale] ?? ''} placeholder={presentationText(defaultSitePresentation(), 'hero', 'title', locale, key => t(key, { lng: locale }))} onChange={event => editIntroduction('title', event.target.value)} /></div>
+              <div className="space-y-2"><Label htmlFor="presentation-hero-description">{t('sitePresentation.introductionDescription')}</Label><Textarea id="presentation-hero-description" maxLength={1000} className="min-h-24" value={value.sections.hero.texts.description?.[locale] ?? ''} placeholder={presentationText(defaultSitePresentation(), 'hero', 'description', locale, key => t(key, { lng: locale }))} onChange={event => editIntroduction('description', event.target.value)} /></div>
+            </SettingsSection>
+            <SettingsSection title={t('sitePresentation.homeContentTitle')} help={t('sitePresentation.homeContentHelp')}>
+              <div className="grid overflow-hidden rounded-xl border sm:grid-cols-2">{sectionIds.map((section, index) => <div key={section} className="flex min-w-0 items-center gap-3 border-b px-4 py-4 last:border-b-0 sm:odd:border-r">
+                <span aria-hidden className="text-xs tabular-nums text-muted-foreground">{String(index + 1).padStart(2, '0')}</span><span id={`presentation-section-${section}`} className="min-w-0 flex-1 text-sm font-medium">{t(`sitePresentation.regions.${section}`)}</span><span className="text-xs text-muted-foreground">{t(value.sections[section].enabled ? 'sitePresentation.visible' : 'sitePresentation.hidden')}</span><Switch aria-labelledby={`presentation-section-${section}`} checked={value.sections[section].enabled} onCheckedChange={enabled => edit({ sections: { ...value.sections, [section]: { ...value.sections[section], enabled } } })} />
+              </div>)}</div>
+              <p className="text-xs leading-relaxed text-muted-foreground">{t('sitePresentation.curatedVisibilityHelp')}</p>
+            </SettingsSection>
+          </div>
+        </fieldset>
+        {error && <div role="alert" className="space-y-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"><p>{conflict ? t('sitePresentation.conflict') : error}</p>{conflict && <Button type="button" variant="outline" disabled={busy} onClick={() => void query.refetch()}>{t('sitePresentation.retry')}</Button>}</div>}
+        <div className="flex flex-wrap items-center justify-between gap-4 border-t pt-5"><p role="status" className="text-sm text-muted-foreground">{saved ? t('sitePresentation.saved') : dirty ? t('sitePresentation.unsaved') : t('sitePresentation.current')}</p><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={!dirty || busy} onClick={() => void discard()}>{t('sitePresentation.discard')}</Button><Button type="submit" disabled={!dirty || busy || conflict}>{save.isPending ? t('sitePresentation.saving') : t('sitePresentation.save')}</Button></div></div>
+        <div className="flex flex-wrap items-center gap-3"><Button type="button" variant="ghost" disabled={busy} onClick={() => setResetOpen(true)}>{t('sitePresentation.restorePage')}</Button><span className="text-xs text-muted-foreground">{t('sitePresentation.restoreDraftHelp')}</span></div>
+        {conflict && <p className="text-sm text-muted-foreground">{t('sitePresentation.conflictHelp')} <Button type="button" variant="ghost" disabled={busy} onClick={() => void discard()}>{t('sitePresentation.discardReload')}</Button></p>}
       </form>}
       <ConfirmDialog open={resetOpen} onOpenChange={setResetOpen} title={t('sitePresentation.restorePageTitle')} description={t('sitePresentation.restorePageHelp')} onConfirm={reset} />
-      <ConfirmDialog open={blocker.status === 'blocked'} onOpenChange={(open) => { if (!open && blocker.status === 'blocked') blocker.reset() }} title={t('sitePresentation.leaveTitle')} description={t('sitePresentation.leaveHelp')} confirmText={t('sitePresentation.leave')} cancelText={t('sitePresentation.keepEditing')} onConfirm={() => { if (blocker.status === 'blocked') blocker.proceed() }} />
-
-    </CardContent>
-  </Card>
+      <ConfirmDialog open={blocker.status === 'blocked'} onOpenChange={(open) => { if (!open && blocker.status === 'blocked') blocker.reset() }} title={t('sitePresentation.leaveTitle')} description={uploading ? t('sitePresentation.uploading') : t('sitePresentation.leaveHelp')} confirmText={t('sitePresentation.leave')} cancelText={t('sitePresentation.keepEditing')} onConfirm={() => { if (!busy && blocker.status === 'blocked') blocker.proceed() }} />
+    </section>
+    {value && <DialogContent className="flex h-[min(900px,calc(100dvh-2rem))] w-[min(1280px,calc(100vw-2rem))] max-w-none flex-col gap-0 overflow-hidden p-0">
+      <DialogHeader className="shrink-0 border-b px-5 py-5 pr-16 sm:px-7 sm:pr-16"><DialogTitle>{t('sitePresentation.previewTitle')}</DialogTitle><DialogDescription>{t('sitePresentation.previewHelp')}</DialogDescription></DialogHeader>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-secondary/40 p-3 sm:p-5"><SitePresentationPreview settings={value} locale={locale} /></div>
+      <footer className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t px-5 py-4"><p className="text-xs text-muted-foreground">{t(`sitePresentation.language.${locale}`)} · {t('sitePresentation.previewReadOnly')}</p><Button type="button" variant="outline" onClick={() => setPreviewOpen(false)}>{t('sitePresentation.keepEditing')}</Button></footer>
+    </DialogContent>}
+  </Dialog>
 }

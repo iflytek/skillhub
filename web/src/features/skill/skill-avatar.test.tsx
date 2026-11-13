@@ -12,10 +12,26 @@ describe('SkillAvatar', () => {
     expect(screen.getByText('W')).toBeTruthy()
   })
 
+  it.each([['  weather', 'W'], ['会议纪要', '会'], ['', '?']])('uses the first visible character for %s', (name, initial) => {
+    render(<SkillAvatar name={name} />)
+    expect(screen.getByText(initial)).toBeTruthy()
+  })
+
+  it('uses varied stable identity colors even when callers do not provide a seed', () => {
+    const names = Array.from({ length: 24 }, (_, index) => `Skill ${index}`)
+    const view = render(<>{names.map(name => <SkillAvatar key={name} name={name} />)}</>)
+    const colors = Array.from(view.container.children, child => child.className)
+    expect(new Set(colors).size).toBeGreaterThanOrEqual(6)
+    expect(colors.every(color => !color.includes('bg-primary/10'))).toBe(true)
+    view.rerender(<>{names.map(name => <SkillAvatar key={name} name={name} />)}</>)
+    expect(Array.from(view.container.children, child => child.className)).toEqual(colors)
+  })
+
   it('falls back to the initial if an approved image is unavailable', () => {
     const { container } = render(<SkillAvatar name="Weather" url="/avatar" />)
     const image = container.querySelector('img')!
     expect(image.getAttribute('src')).toBe('/proxy/avatar')
+    expect(screen.queryByText('W')).toBeNull()
     fireEvent.error(image)
     expect(screen.getByText('W')).toBeTruthy()
   })

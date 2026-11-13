@@ -126,11 +126,13 @@ The homepage keeps its existing layout. The settings page provides three groups;
 | --- | --- |
 | Site information | Site name, logo, favicon, documentation link and source repository link |
 | Homepage introduction | Content language, homepage title and introduction |
-| Homepage content | Show or hide the hero, capabilities, access methods, popular skills, latest skills, enterprise, closing call to action and footer |
+| Homepage content | Show or hide the hero, platform picks, capabilities, access methods, popular skills, latest skills, enterprise, closing call to action and footer |
 
-Card text, button labels and layout retain their existing values rather than exposing individual editors. Homepage switches do not affect the independent `/skills` marketplace or user permissions. Hidden popular/latest sections do not request their homepage lists.
+Card text, button labels and layout retain their existing values rather than exposing individual editors. Homepage switches do not affect the independent `/skills` marketplace or user permissions. Hidden popular/latest sections do not request their homepage lists. The platform-picks switch only controls its homepage region; hiding it does not delete or unpublish curated skills or topics, and showing it restores the same content. Older saved settings without this switch default to visible.
 
 ### Edit and save
+
+Site and homepage settings use two views: identity and homepage content. Open the homepage preview to inspect the current unsaved changes in a large dialog. Previewing does not save or publish settings; close it to continue editing, then save to make the changes visible to visitors. Switching settings sections prompts before discarding unsaved edits. Cancel keeps the inputs; confirming discards only the local edits, not previously saved configuration.
 
 1. Change the settings you need. Homepage copy supports Chinese, English, Korean and Russian, with defaults for empty overrides. The site name allows 80 characters, the homepage title 160, and the introduction 1000.
 2. Upload a PNG or JPEG logo/favicon, no larger than 2 MiB or 1024 pixels on either side. Valid images are re-encoded as PNG. Uploads are publicly readable before settings are saved; upload public brand assets only.

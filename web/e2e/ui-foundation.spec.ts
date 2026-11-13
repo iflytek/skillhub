@@ -71,8 +71,8 @@ for (const density of ['regular', 'compact']) {
         await expect(page.getByRole('columnheader')).toHaveCSS(property, padding)
         await expect(page.getByRole('cell')).toHaveCSS(property, padding)
       }
-      await expect(page.getByTestId('default-control')).toHaveCSS('height', density === 'compact' ? '32px' : '36px')
-      await expect(page.getByLabel('Name', { exact: true })).toHaveCSS('height', density === 'compact' ? '32px' : '36px')
+      await expect(page.getByTestId('default-control')).toHaveCSS('height', density === 'compact' ? '28px' : '32px')
+      await expect(page.getByLabel('Name', { exact: true })).toHaveCSS('height', density === 'compact' ? '28px' : '32px')
       await expect(page.getByTestId('class-override')).toHaveCSS('height', '48px')
       await expect(page.getByLabel('Style override')).toHaveCSS('height', '52px')
       await expect(page.getByTestId('card')).toHaveCSS('box-shadow', /(?:none|rgba\(0, 0, 0, 0\))/)
@@ -81,8 +81,10 @@ for (const density of ['regular', 'compact']) {
       expect(await invalid.evaluate(el => getComputedStyle(el).borderColor)).not.toBe(await normal.evaluate(el => getComputedStyle(el).borderColor))
       await expect(invalid).toHaveAccessibleDescription('Enter a valid version.')
       await normal.focus()
-      await expect(normal).toHaveCSS('box-shadow', /.+/)
-      expect(await normal.evaluate(el => getComputedStyle(el).boxShadow)).not.toBe('none')
+      // The adopted Input contract uses a focus border, not an outer shadow.
+      await expect(normal).toHaveCSS('border-color', theme === 'dark' ? 'rgb(230, 230, 230)' : 'rgb(23, 23, 23)')
+      await expect(normal).toHaveCSS('box-shadow', 'none')
+      await expect(normal).toHaveCSS('outline-style', 'none')
       await page.emulateMedia({ reducedMotion: 'reduce' })
       const duration = await page.getByTestId('default-control').evaluate(el => getComputedStyle(el).transitionDuration)
       expect(duration.split(',').every(value => parseFloat(value) <= 0.001)).toBe(true)

@@ -115,6 +115,71 @@ describe('SuiteManagementPage', () => {
     expect(screen.getByRole('button', { name: 'suite.submitReview' })).not.toBeNull()
   })
 
+  it('contains long management tab labels in a page-local horizontal scroller', () => {
+    render(<SuiteManagementPage />)
+
+    const tabs = screen.getByRole('tablist')
+    const scroller = tabs.parentElement
+    expect(scroller?.classList.contains('overflow-x-auto')).toBe(true)
+    expect(scroller?.classList.contains('p-1')).toBe(true)
+    expect(scroller?.parentElement?.classList.contains('min-w-0')).toBe(true)
+    expect(tabs.classList.contains('min-w-max')).toBe(true)
+    expect(screen.getAllByRole('tab')).toHaveLength(4)
+  })
+
+  it('allows header actions to wrap without changing the fixed-version preview destination', () => {
+    render(<SuiteManagementPage />)
+
+    const create = screen.getByRole('button', { name: 'suite.createVersion' })
+    const preview = screen.getByRole('button', { name: 'suite.management.previewMarket' })
+    expect(create.parentElement).toBe(preview.parentElement)
+    expect(preview.parentElement?.classList.contains('flex-wrap')).toBe(true)
+
+    fireEvent.click(preview)
+    expect(mocks.navigate).toHaveBeenLastCalledWith({
+      to: '/suite/global/demo-yanked',
+      search: { version: '1.0.0' },
+    })
+  })
+
+  it('keeps the header preview available without exposing a version action to a read-only viewer', () => {
+    suite.allowedActions = []
+    render(<SuiteManagementPage />)
+
+    expect(screen.queryByRole('button', { name: 'suite.createVersion' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'suite.editDraft' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'suite.management.previewMarket' })).not.toBeNull()
+  })
+
+  it('preserves keyboard focus and versioned navigation across scrollable tabs', () => {
+    render(<SuiteManagementPage />)
+
+    const overview = screen.getByRole('tab', { name: 'suite.management.tabs.overview' })
+    const members = screen.getByRole('tab', { name: 'suite.management.tabs.members' })
+    const publishing = screen.getByRole('tab', { name: 'suite.management.tabs.publishing' })
+    overview.focus()
+    fireEvent.keyDown(overview, { key: 'End' })
+    expect(document.activeElement).toBe(publishing)
+    expect(mocks.navigate).toHaveBeenLastCalledWith({
+      to: '/dashboard/suites/global/demo-yanked',
+      search: { version: '1.0.0', tab: 'publishing' }, replace: true,
+    })
+
+    fireEvent.keyDown(publishing, { key: 'Home' })
+    expect(document.activeElement).toBe(overview)
+    expect(mocks.navigate).toHaveBeenLastCalledWith({
+      to: '/dashboard/suites/global/demo-yanked',
+      search: { version: '1.0.0', tab: undefined }, replace: true,
+    })
+
+    fireEvent.keyDown(overview, { key: 'ArrowRight' })
+    expect(document.activeElement).toBe(members)
+    expect(mocks.navigate).toHaveBeenLastCalledWith({
+      to: '/dashboard/suites/global/demo-yanked',
+      search: { version: '1.0.0', tab: 'members' }, replace: true,
+    })
+  })
+
   it('shows the member snapshot separately with an exact-version skill link', () => {
     mocks.search = { version: '1.0.0', tab: 'members' }
     render(<SuiteManagementPage />)

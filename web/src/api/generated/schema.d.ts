@@ -664,6 +664,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/system-config/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read recommendation draft and published settings */
+        get: operations["getRecommendationSettings"];
+        /** Save the private recommendation draft */
+        put: operations["saveRecommendationDraft"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/system-config/presentation": {
         parameters: {
             query?: never;
@@ -3435,6 +3453,23 @@ export interface paths {
         get: operations["listRoleGrants"];
         put?: never;
         post: operations["createRoleGrant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-config/recommendations/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish the saved recommendation draft */
+        post: operations["publishRecommendations"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6524,6 +6559,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/site-recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read published homepage recommendations */
+        get: operations["getSiteRecommendations"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/site-recommendations/topics/{topicId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read an available published collection */
+        get: operations["getRecommendationTopic"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/site-presentation": {
         parameters: {
             query?: never;
@@ -6790,6 +6859,23 @@ export interface paths {
             cookie?: never;
         };
         get: operations["listRoles"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/system-config/recommendations/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search eligible public skills for recommendations */
+        get: operations["getRecommendationCandidates"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8022,6 +8108,111 @@ export interface components {
             version?: number;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        RecommendationContent: {
+            topics: components["schemas"]["RecommendationTopic"][];
+            featuredSkillIds: number[];
+        };
+        RecommendationTopic: {
+            id: string;
+            title: string;
+            description: string;
+            coverUrl?: string | null;
+            /** @enum {string|null} */
+            coverStyle?: "office" | "design" | "learning" | "content" | "research" | "security" | null;
+            enabled: boolean;
+            skillIds: number[];
+        };
+        RecommendationUpdateRequest: {
+            /** Format: int64 */
+            version?: number;
+            draft: components["schemas"]["RecommendationContent"];
+        };
+        ApiResponseRecommendationAdminResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["RecommendationAdminResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        ComplianceEvidenceResponse: {
+            type?: string;
+            path?: string;
+            url?: string;
+            sha256?: string;
+        };
+        ComplianceMappingResponse: {
+            standard?: string;
+            version?: string;
+            controlId?: string;
+            title?: string;
+            evidence?: components["schemas"]["ComplianceEvidenceResponse"][];
+        };
+        ComplianceSnapshotResponse: {
+            schemaVersion?: string;
+            items?: components["schemas"]["ComplianceMappingResponse"][];
+            digest?: string;
+        };
+        ManagementState: {
+            requestedVisibility?: string;
+            /** Format: int64 */
+            reviewTaskId?: number;
+            promotionRole?: string;
+            relatedNamespace?: string;
+            relatedSlug?: string;
+            ownerReadOnly?: boolean;
+        };
+        RecommendationAdminResponse: {
+            /** Format: int64 */
+            version: number;
+            draft: components["schemas"]["RecommendationContent"];
+            published: components["schemas"]["RecommendationContent"];
+            skills: components["schemas"]["SkillSummaryResponse"][];
+            publishedAt?: string;
+            usingDefaults: boolean;
+        };
+        SkillLifecycleVersionResponse: {
+            /** Format: int64 */
+            id?: number;
+            version?: string;
+            status?: string;
+            displayName?: string;
+            summary?: string;
+            /** Format: int32 */
+            syncRevision?: number;
+        };
+        SkillSummaryResponse: {
+            /** Format: int64 */
+            id?: number;
+            slug?: string;
+            displayName?: string;
+            summary?: string;
+            visibility?: string;
+            status?: string;
+            /** Format: int64 */
+            downloadCount?: number;
+            /** Format: int32 */
+            starCount?: number;
+            ratingAvg?: number;
+            /** Format: int32 */
+            ratingCount?: number;
+            namespace?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            ownerId?: string;
+            ownerDisplayName?: string;
+            canSubmitPromotion?: boolean;
+            headlineVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            ownerPreviewVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
+            resolutionMode?: string;
+            complianceSnapshot?: components["schemas"]["ComplianceSnapshotResponse"];
+            labels?: components["schemas"]["SkillLabelDto"][];
+            avatarUrl?: string;
+            managementState?: components["schemas"]["ManagementState"];
+            hasVisibleSuites?: boolean;
         };
         SitePresentationSection: {
             enabled: boolean;
@@ -9264,6 +9455,10 @@ export interface components {
             email: string;
             roleCode: string;
         };
+        RecommendationPublishRequest: {
+            /** Format: int64 */
+            version?: number;
+        };
         ApiResponseSitePresentationAssetResponse: {
             /** Format: int32 */
             code?: number;
@@ -9727,33 +9922,6 @@ export interface components {
             errorCode?: string;
             errorArgs?: string[];
         };
-        ComplianceEvidenceResponse: {
-            type?: string;
-            path?: string;
-            url?: string;
-            sha256?: string;
-        };
-        ComplianceMappingResponse: {
-            standard?: string;
-            version?: string;
-            controlId?: string;
-            title?: string;
-            evidence?: components["schemas"]["ComplianceEvidenceResponse"][];
-        };
-        ComplianceSnapshotResponse: {
-            schemaVersion?: string;
-            items?: components["schemas"]["ComplianceMappingResponse"][];
-            digest?: string;
-        };
-        ManagementState: {
-            requestedVisibility?: string;
-            /** Format: int64 */
-            reviewTaskId?: number;
-            promotionRole?: string;
-            relatedNamespace?: string;
-            relatedSlug?: string;
-            ownerReadOnly?: boolean;
-        };
         SearchResponse: {
             items?: components["schemas"]["SkillSummaryResponse"][];
             /** Format: int64 */
@@ -9762,47 +9930,6 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
-        };
-        SkillLifecycleVersionResponse: {
-            /** Format: int64 */
-            id?: number;
-            version?: string;
-            status?: string;
-            displayName?: string;
-            summary?: string;
-            /** Format: int32 */
-            syncRevision?: number;
-        };
-        SkillSummaryResponse: {
-            /** Format: int64 */
-            id?: number;
-            slug?: string;
-            displayName?: string;
-            summary?: string;
-            visibility?: string;
-            status?: string;
-            /** Format: int64 */
-            downloadCount?: number;
-            /** Format: int32 */
-            starCount?: number;
-            ratingAvg?: number;
-            /** Format: int32 */
-            ratingCount?: number;
-            namespace?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-            ownerId?: string;
-            ownerDisplayName?: string;
-            canSubmitPromotion?: boolean;
-            headlineVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            publishedVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            ownerPreviewVersion?: components["schemas"]["SkillLifecycleVersionResponse"];
-            resolutionMode?: string;
-            complianceSnapshot?: components["schemas"]["ComplianceSnapshotResponse"];
-            labels?: components["schemas"]["SkillLabelDto"][];
-            avatarUrl?: string;
-            managementState?: components["schemas"]["ManagementState"];
-            hasVisibleSuites?: boolean;
         };
         ApiResponseBoolean: {
             /** Format: int32 */
@@ -11461,6 +11588,39 @@ export interface components {
             createdAt?: number;
             changelog?: string;
             license?: string;
+        };
+        ApiResponseRecommendationPublicResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["RecommendationPublicResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+        };
+        RecommendationPublicResponse: {
+            topics: components["schemas"]["RecommendationTopicResponse"][];
+            featuredSkills: components["schemas"]["SkillSummaryResponse"][];
+        };
+        RecommendationTopicResponse: {
+            id: string;
+            title: string;
+            description: string;
+            coverUrl?: string;
+            /** @enum {string|null} */
+            coverStyle?: "office" | "design" | "learning" | "content" | "research" | "security" | null;
+            /** Format: int32 */
+            skillCount: number;
+            skills: components["schemas"]["SkillSummaryResponse"][];
+        };
+        ApiResponseRecommendationTopicResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["RecommendationTopicResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
         };
         ClawHubSearchResponse: {
             results?: components["schemas"]["ClawHubSearchResult"][];
@@ -14318,6 +14478,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseExternalRoleGrantRuleResponse"];
+                };
+            };
+        };
+    };
+    getRecommendationSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRecommendationAdminResponse"];
+                };
+            };
+        };
+    };
+    saveRecommendationDraft: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRecommendationAdminResponse"];
                 };
             };
         };
@@ -19393,6 +19597,30 @@ export interface operations {
             };
         };
     };
+    publishRecommendations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecommendationPublishRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRecommendationAdminResponse"];
+                };
+            };
+        };
+    };
     upload_2: {
         parameters: {
             query?: never;
@@ -24155,6 +24383,48 @@ export interface operations {
             };
         };
     };
+    getSiteRecommendations: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRecommendationPublicResponse"];
+                };
+            };
+        };
+    };
+    getRecommendationTopic: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                topicId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseRecommendationTopicResponse"];
+                };
+            };
+        };
+    };
     current_2: {
         parameters: {
             query?: never;
@@ -24527,6 +24797,31 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseListPlatformRoleResponse"];
+                };
+            };
+        };
+    };
+    getRecommendationCandidates: {
+        parameters: {
+            query?: {
+                q?: string;
+                page?: number;
+                size?: number;
+                label?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseSkillSummaryResponse"];
                 };
             };
         };
