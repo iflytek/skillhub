@@ -159,6 +159,16 @@ class SkillReviewSubmitServiceTest {
     class ConfirmPublishTests {
 
         @Test
+        void tokenCeilingRejectsEvenSuperAdminBeforeReadingOrWritingResources() {
+            var exception = assertThrows(DomainForbiddenException.class,
+                    () -> service.confirmPublish(1L, 100L, "admin", Map.of(10L, NamespaceRole.OWNER),
+                            java.util.Set.of("SUPER_ADMIN"), java.util.Set.of("skill:read", "skill:submit")));
+            assertEquals("error.apiToken.scope.missing", exception.messageCode());
+            assertEquals("skill:publish-private", exception.messageArgs()[0]);
+            verifyNoInteractions(skillRepository, skillVersionRepository, reviewTaskRepository, eventPublisher);
+        }
+
+        @Test
         @DisplayName("should transition UPLOADED version to PUBLISHED for PRIVATE skill")
         void shouldTransitionToPublished() {
             // Given

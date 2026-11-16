@@ -7,13 +7,13 @@ import { cn } from '@/shared/lib/utils'
 export const SELECT_TRIGGER_CLASS_NAME = cn(
   'flex h-[var(--control-height)] w-full items-center justify-between gap-2 rounded-[var(--control-radius)] border border-border bg-background px-[var(--control-padding-x)] py-[var(--control-padding-y)] text-[length:var(--control-font-size)] leading-[var(--control-line-height)] text-foreground',
   'transition-[border-color,background-color] duration-150 ease-out',
-  'hover:border-border focus:[outline:none] focus:border-ring focus:bg-card',
+  'hover:bg-accent/50 focus:[outline:none] focus:border-ring focus:bg-card',
   'aria-[invalid=true]:border-destructive aria-[invalid=true]:focus:border-destructive disabled:cursor-not-allowed disabled:opacity-50',
   'data-[placeholder]:text-muted-foreground [&>span]:line-clamp-1'
 )
 
 export const SELECT_CONTENT_CLASS_NAME = cn(
-  'z-50 max-h-[var(--radix-select-content-available-height)] w-fit min-w-48 max-w-[18rem] overflow-x-hidden overflow-y-auto rounded-lg border border-border bg-popover text-popover-foreground shadow-md',
+  'z-50 flex max-h-[min(20rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)] min-w-[min(12rem,var(--radix-select-content-available-width,calc(100vw-1.5rem)))] max-w-[min(18rem,var(--radix-select-content-available-width,calc(100vw-1.5rem)))] flex-col overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md',
   // In-tree (no Portal): avoids React 19 removeChild races on route unmount.
   // No exit animations: delayed unmount still races commits when Content was portaled.
   'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
@@ -23,7 +23,7 @@ export const SELECT_CONTENT_CLASS_NAME = cn(
 
 export const SELECT_ITEM_CLASS_NAME = cn(
   'relative flex w-full cursor-pointer select-none items-center rounded-md py-2 pl-8 pr-8 text-sm outline-none',
-  'focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50'
+  'focus:bg-accent focus:text-accent-foreground data-[highlighted]:bg-accent data-[highlighted]:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50'
 )
 
 export const SELECT_SCROLL_BUTTON_CLASS_NAME = cn(
@@ -55,7 +55,7 @@ const SelectTrigger = React.forwardRef<
   </SelectPrimitive.Trigger>
 ))
 
-SelectTrigger.displayName = SelectPrimitive.Trigger.displayName
+SelectTrigger.displayName = SelectPrimitive.Trigger.displayName ?? 'SelectTrigger'
 
 const SelectScrollUpButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollUpButton>,
@@ -70,7 +70,7 @@ const SelectScrollUpButton = React.forwardRef<
   </SelectPrimitive.ScrollUpButton>
 ))
 
-SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
+SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName ?? 'SelectScrollUpButton'
 
 const SelectScrollDownButton = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.ScrollDownButton>,
@@ -85,20 +85,24 @@ const SelectScrollDownButton = React.forwardRef<
   </SelectPrimitive.ScrollDownButton>
 ))
 
-SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName
+SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayName ?? 'SelectScrollDownButton'
 
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', sideOffset = 4, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content> & { density?: 'default' | 'compact' }
+>(({ className, children, density = 'default', position = 'popper', sideOffset = 4, collisionPadding = 12, ...props }, ref) => {
   const portalContainer = getPortalContainer()
   const content = (
     <SelectPrimitive.Content
       ref={ref}
       translate="no"
+      data-density={density}
       sideOffset={sideOffset}
+      collisionPadding={collisionPadding}
+      sticky="always"
       className={cn(
         SELECT_CONTENT_CLASS_NAME,
+        density === 'compact' && 'w-[12.5rem] [&_[role=option]]:min-h-7 [&_[role=option]]:py-1 [&_[role=option]]:pl-7 [&_[role=option]]:pr-3 [&_[role=option]]:text-xs [&_[role=option]]:leading-5 [&_[role=option]_svg]:h-3 [&_[role=option]_svg]:w-3 max-sm:[&_[role=option]]:min-h-9 max-sm:[&_[role=option]]:py-2',
         className
       )}
       position={position}
@@ -107,9 +111,9 @@ const SelectContent = React.forwardRef<
       <SelectScrollUpButton />
       <SelectPrimitive.Viewport
         className={cn(
-          'p-1',
+          'min-h-0 w-full overscroll-contain p-1',
           position === 'popper'
-            && 'h-[var(--radix-select-trigger-height)] min-w-[var(--radix-select-trigger-width)]'
+            && 'max-h-[var(--radix-select-content-available-height)]'
         )}
       >
         {children}
@@ -128,7 +132,7 @@ const SelectContent = React.forwardRef<
   return content
 })
 
-SelectContent.displayName = SelectPrimitive.Content.displayName
+SelectContent.displayName = SelectPrimitive.Content.displayName ?? 'SelectContent'
 
 const SelectLabel = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Label>,
@@ -141,7 +145,7 @@ const SelectLabel = React.forwardRef<
   />
 ))
 
-SelectLabel.displayName = SelectPrimitive.Label.displayName
+SelectLabel.displayName = SelectPrimitive.Label.displayName ?? 'SelectLabel'
 
 const SelectItem = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Item>,
@@ -161,7 +165,7 @@ const SelectItem = React.forwardRef<
   </SelectPrimitive.Item>
 ))
 
-SelectItem.displayName = SelectPrimitive.Item.displayName
+SelectItem.displayName = SelectPrimitive.Item.displayName ?? 'SelectItem'
 
 const SelectSeparator = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Separator>,
@@ -174,7 +178,7 @@ const SelectSeparator = React.forwardRef<
   />
 ))
 
-SelectSeparator.displayName = SelectPrimitive.Separator.displayName
+SelectSeparator.displayName = SelectPrimitive.Separator.displayName ?? 'SelectSeparator'
 
 export {
   Select,

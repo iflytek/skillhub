@@ -114,7 +114,8 @@ public class SkillPublishController extends BaseApiController {
                 skillVisibility,
                 principal.platformRoles(),
                 confirmWarnings, avatarAction, avatarUploadId, expectedSlug, displayName,
-                shortDescription, overview, resetPresentation, AuditRequestContext.from(request)
+                shortDescription, overview, resetPresentation, AuditRequestContext.from(request),
+                principal.tokenCapabilities()
         );
 
         PublishResponse response = new PublishResponse(

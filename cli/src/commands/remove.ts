@@ -51,7 +51,21 @@ export async function removeCommand(skillNameArg: string, options: RemoveCommand
     }
 
     const client = new SkillHubClient(registry, token)
-    await client.deleteRemote(namespace, slug)
+    try {
+      await client.deleteRemote(namespace, slug)
+    } catch (error) {
+      if (error instanceof CliError
+          && error.details.errorCode === 'error.apiToken.scope.missing'
+          && Array.isArray(error.details.errorArgs)
+          && error.details.errorArgs.includes('skill:delete')) {
+        throw new CliError(error.message, error.exitCode, {
+          ...error.details,
+          next: 'Explicit authorization required: create a token in Web with skill:delete, '
+            + 'then use `skillhub login --token <token>`. Logging in again does not grant deletion.'
+        })
+      }
+      throw error
+    }
 
     if (options.json) {
       return JSON.stringify({ ok: true, scope: 'remote', action: 'hard-delete', namespace, slug })

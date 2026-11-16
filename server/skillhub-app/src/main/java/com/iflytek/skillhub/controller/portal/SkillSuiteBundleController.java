@@ -97,7 +97,9 @@ public class SkillSuiteBundleController extends BaseApiController {
     ) {
         return ok("response.success.created", responseMapper.toResponse(confirmationService.confirm(
                 previewToken, clientRequestId, request.warningDigest(), userId,
-                roles == null ? Map.of() : roles, platformRoles(principal))));
+                roles == null ? Map.of() : roles, platformRoles(principal),
+                principal != null && "api_token".equals(principal.oauthProvider()),
+                principal == null ? null : principal.tokenCapabilities())));
     }
 
     @GetMapping("/operations/{operationId}")

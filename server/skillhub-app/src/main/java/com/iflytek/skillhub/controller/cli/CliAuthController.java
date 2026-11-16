@@ -22,7 +22,10 @@ public class CliAuthController extends BaseApiController {
         return ok("response.success.read", new CliWhoAmIResponse(
                 principal.userId(),
                 principal.displayName(),
-                principal.email()
+                principal.email(),
+                principal.tokenCapabilities() == null ? null : principal.tokenCapabilities().stream().sorted().toList(),
+                principal.legacyCompat(),
+                principal.tokenExpiresAt()
         ));
     }
 }

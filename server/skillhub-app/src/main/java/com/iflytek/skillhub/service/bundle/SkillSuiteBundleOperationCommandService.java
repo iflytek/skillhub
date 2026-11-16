@@ -95,6 +95,12 @@ public class SkillSuiteBundleOperationCommandService {
             throw notFound();
         }
         operation.requireRetryable();
+        if ("TOKEN_CAPABILITY_MISSING".equals(operation.getFailureCode())
+                || "AUTHORIZATION_PROVENANCE_UNKNOWN".equals(operation.getFailureCode())) {
+            // Retry is not reauthorization: even a session or administrator cannot repair this snapshot.
+            return new SkillSuiteBundleOperationResponse(
+                    operation.getOperationId(), operation.getStatus().name(), false);
+        }
         SkillSuiteBundlePreviewSession preview = previewRepository.findById(operation.getPreviewToken())
                 .orElse(null);
         Instant now = clock.instant();

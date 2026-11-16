@@ -48,6 +48,8 @@ Web 使用 `/api/web`；外部客户端使用 `/api/v1`。两者支持相同的�
 
 响应 `data` 包含 `visibility`（当前生效范围）、`requestedVisibility`（待审核范围，无则为 null）和 `reviewTaskId`（申请编号，无则为 null）。不能把 `requestedVisibility` 当作已生效范围。
 
-会话调用继续遵守 CSRF；API Token 写入需要 `skill:publish`，服务端仍检查技能维护权限。重复申请和过期审批返回业务冲突。已有统一审核接口负责批准、拒绝和撤回，不新增 CLI 命令。
+会话调用继续遵守 CSRF；API Token 写入需要 `skill:manage`，服务端仍检查技能维护权限。
+旧 `skill:publish` 别名包含 manage；read + submit 不包含。上传改变已有技能可见性同样需要 manage，
+拒绝发生在创建版本之前。重复申请和过期审批返回业务冲突，现有统一审核接口负责审批与撤回。
 
 已下载到用户电脑的文件无法通过缩小范围收回；后续详情和下载接口的新请求按新范围检查。已签发的对象存储预签下载地址在原有效期内仍可能可用（当前 `SkillDownloadService.buildDownloadResult` 使用 `Duration.ofMinutes(10)`）；改变范围不会撤销已签发地址。搜索索引在事务提交后异步重建，服务端仍以当前技能权限为准。

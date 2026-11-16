@@ -82,6 +82,24 @@ class SkillSuiteBundleOperationCommandServiceTest {
     }
 
     @Test
+    void privilegedRetryCannotSupplyMissingOriginalAuthority() {
+        for (String code : List.of("TOKEN_CAPABILITY_MISSING", "AUTHORIZATION_PROVENANCE_UNKNOWN")) {
+            SkillSuiteBundleExecutionOperation operation = operation();
+            if (code.equals("TOKEN_CAPABILITY_MISSING")) {
+                operation.captureAuthorization(true, Set.of("skill:read", "skill:submit"));
+            }
+            operation.markBlockedRetryable(code, "original authorization", NOW.minusSeconds(1));
+            when(operationRepository.findByIdForUpdate("operation-1")).thenReturn(Optional.of(operation));
+            var response = service.retry("operation-1", "privileged", Map.of(), Set.of("SUPER_ADMIN"));
+            assertThat(response.status()).isEqualTo("BLOCKED_RETRYABLE");
+            assertThat(operation.getFailureCode()).isEqualTo(code);
+            assertThat(operation.getFailureDetail()).isEqualTo("original authorization");
+        }
+        org.mockito.Mockito.verifyNoInteractions(memberRepository, previewRepository, revalidationService,
+                securityScanRetryAppService);
+    }
+
+    @Test
     void repeatedCancelIsIdempotentAndUnrelatedCallerSeesNotFound() {
         SkillSuiteBundleExecutionOperation operation = operation();
         operation.cancel(NOW.minusSeconds(1));

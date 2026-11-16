@@ -1,4 +1,14 @@
 {
+  "dateTimePicker": {
+    "placeholder": "Choose date and time",
+    "title": "Choose expiration",
+    "time": "Time",
+    "localTime": "Local time · 24-hour",
+    "hour": "Hour",
+    "minute": "Minute",
+    "futureRequired": "Choose a future date and time",
+    "apply": "Apply"
+  },
   "compliance": {
     "title": "Compliance claims",
     "mappingCount": "{{count}} items",
@@ -2423,15 +2433,23 @@
     "next": "Next"
   },
   "createToken": {
+    "presetLabel": "Capability preset",
+    "presets": {
+      "readonly": "Read-only downloads",
+      "candidate": "Candidate submission",
+      "private": "Private publication",
+      "custom": "Custom"
+    },
+    "capabilityHint": "Account and namespace permissions still apply. Delete and token management require explicit custom authorization.",
     "title": "Create API Token",
-    "description": "Create a new API Token for CLI or API access",
+    "description": "Choose capabilities or start with a shortcut.",
     "nameLabel": "Token Name",
     "namePlaceholder": "e.g.: my-cli-token",
     "nameRequired": "Token name is required",
     "nameTooLong": "Token name must be at most {{max}} characters",
     "nameDuplicate": "You already have a token with this name",
     "creating": "Creating...",
-    "create": "Create",
+    "create": "Create Token",
     "successTitle": "Token Created",
     "successDescription": "Copy and save this token now. It is only shown and copyable at creation time. If you need it again later, create a new token.",
     "tokenLabel": "Token",
@@ -2447,7 +2465,37 @@
     "expiresAtDisplay": "Expires At",
     "copyToken": "Copy Token",
     "copySuccess": "Token copied to clipboard",
-    "copyFailed": "Failed to copy token. Please try again."
+    "copyFailed": "Failed to copy token. Please try again.",
+    "required": "Required",
+    "nameHint": "Name this credential by its purpose.",
+    "presetHint": "Choose a purpose, or select capabilities explicitly with Custom.",
+    "summaryTitle": "Authorization summary",
+    "selectedCount": "{{count}} capabilities selected",
+    "notGranted": "Not granted",
+    "boundaryHint": "Account, namespace and resource-state restrictions still apply.",
+    "scopeIdentifiers": "View capability identifiers",
+    "skillCapabilities": "Skill capabilities",
+    "selectCapability": "Select at least one capability.",
+    "expiresAtFuture": "Choose an expiration time in the future.",
+    "oneTimeHint": "The full credential is shown only after creation",
+    "saveNow": "Copy and securely save this token now",
+    "manualCopyHint": "If copying fails, select and copy the credential manually.",
+    "savedClose": "Saved, close",
+    "copied": "Copied",
+    "presetDescriptions": {
+      "readonly": "Browse and download accessible skills",
+      "candidate": "Upload and submit candidates for review",
+      "private": "Also allow PRIVATE confirmation and publication",
+      "custom": "Select each required capability"
+    },
+    "capabilityDescriptions": {
+      "read": "Read skills accessible to your account",
+      "submit": "Upload skills and submit candidate versions",
+      "publishPrivate": "Confirm publication of private skills only",
+      "manage": "Manage skills within existing permissions",
+      "delete": "Perform permitted skill deletion operations",
+      "tokenManage": "Create and manage tokens with explicit authorization"
+    }
   },
   "starButton": {
     "starred": "Starred",
@@ -2479,7 +2527,8 @@
     "next": "Next",
     "pagePrefix": "Page",
     "pageSuffix": "",
-    "goToPage": "Go to page {{page}}"
+    "goToPage": "Go to page {{page}}",
+    "pageIndicator": "Page {{page}} of {{total}}"
   },
   "systemConfig": {
     "upToDate": "Current settings saved",
@@ -2945,6 +2994,17 @@
     "noDocumentation": "This review version does not include a readable documentation file."
   },
   "token": {
+    "capabilities": "Capabilities",
+    "capabilitiesUnavailable": "Not reported by this server",
+    "legacyCompat": "Legacy compatibility (skill:publish expanded)",
+    "capabilityLabels": {
+      "read": "Read and download",
+      "submit": "Upload and submit for review",
+      "publishPrivate": "Confirm private publication",
+      "manage": "Manage skills",
+      "delete": "Delete skills",
+      "tokenManage": "Manage API tokens"
+    },
     "title": "API Tokens",
     "createNew": "Create Token",
     "copyHint": "For security reasons, token plaintext can only be copied once when it is created. It cannot be viewed or copied again later. If you still need it, create a new token.",
@@ -2962,19 +3022,58 @@
     "copyFailed": "Failed to copy token. Please try again.",
     "copyUnavailableTitle": "Older token plaintext cannot be copied again",
     "copyUnavailableDescription": "Token plaintext is only shown once after creation. If you no longer have it, please create a new token.",
-    "editExpiration": "Edit Expiration",
+    "editExpiration": "Edit expiration",
     "editExpirationTitle": "Edit Token Expiration",
     "editExpirationDescription": "Set a new expiration time for token \"{{name}}\".",
     "saveExpiration": "Save Expiration",
     "updatingExpiration": "Saving...",
     "updateExpirationSuccess": "Token expiration updated",
     "updateExpirationFailed": "Failed to update token expiration",
-    "delete": "Delete",
-    "deleteTitle": "Delete Token",
-    "deleteDescription": "Are you sure you want to delete token \"{{name}}\"? This action cannot be undone.",
-    "deleteSuccess": "Token deleted",
-    "deleteFailed": "Delete failed",
-    "loading": "Loading..."
+    "delete": "Revoke",
+    "deleteTitle": "Revoke this token?",
+    "deleteDescription": "New requests using this token will no longer authenticate.",
+    "deleteSuccess": "Token revoked",
+    "deleteFailed": "Revocation failed. Try again.",
+    "loading": "Loading...",
+    "boundaryTitle": "Token capabilities work within your account and namespace permissions",
+    "boundaryDescription": "Tokens cannot expand your permissions. Public publication follows the existing review rules.",
+    "nameAndPrefix": "Name / prefix",
+    "search": "Search token names",
+    "searchAction": "Search",
+    "statusFilter": "Filter validity",
+    "statusAll": "All statuses",
+    "statusActive": "Active",
+    "statusExpired": "Expired",
+    "statusPermanent": "No expiration",
+    "totalCount": "{{count}} tokens",
+    "resultRange": "Showing {{from}}–{{to}} of {{total}}",
+    "pageLoading": "Loading page {{page}}…",
+    "noResults": "No matching credentials",
+    "clearFilters": "Clear filters",
+    "retry": "Reload",
+    "usageTitle": "Give each credential a clear purpose",
+    "usageDescription": "Use separate credentials for automation tasks so they are easy to identify, replace and revoke.",
+    "capabilityHelp": "Capability guide",
+    "helpTitle": "Token capabilities",
+    "helpDescription": "Every request is constrained by both capabilities and account/namespace permissions.",
+    "viewCapabilities": "View all capabilities",
+    "revokeHint": "This cannot be undone. Create a new token if you need access again.",
+    "permissionsTitle": "Permissions",
+    "permissionsHelp": "Help",
+    "permissionsHelpDescription": "Explains permissions without changing your selection.",
+    "effectiveCapabilities": "Effective capabilities",
+    "viewCapabilitiesCount": "View {{count}} capabilities",
+    "permissionSelected": "Selected",
+    "permissionNotSelected": "Not selected",
+    "permissionShortcuts": "Permission shortcuts",
+    "permissionSelectionHint": "Pick individual capabilities; shortcuts stay in sync.",
+    "sensitiveCapabilityHint": "Delete and token management need explicit authorization.",
+    "showCapabilityIdentifiers": "Show capability identifiers",
+    "legacySuiteCapability": "Legacy suite access",
+    "additionalCapabilityDescription": "An existing credential capability, shown for reference only.",
+    "legacyCapabilityExplanation": "Legacy capabilities are retained on existing credentials and cannot be selected for new tokens.",
+    "selectedCapabilityCount": "{{count}} selected",
+    "legacyBadge": "Legacy"
   },
   "apiError": {
     "unauthorized": "Session expired, please log in again",
@@ -3395,6 +3494,11 @@
         "memberExecutionFailed": {
           "title": "A member failed to publish",
           "description": "Completed members will not run again. Resolve the unfinished member below, then continue."
+        },
+        "authorization": {
+          "title": "This operation cannot verify sufficient authorization",
+          "TOKEN_CAPABILITY_MISSING": "Token lacks {{capability}}. Cancel and create a new operation with a token granting it.",
+          "AUTHORIZATION_PROVENANCE_UNKNOWN": "Cannot verify original authorization. Cancel and recreate with explicit authorization."
         },
         "authorizationBlocked": {
           "title": "Permissions or namespace access changed",

@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Card } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { getAppBaseUrl, getCurrentUser, tokenApi } from '@/api/client'
-import type { User } from '@/api/types'
 import { ORIGINAL_URL_SEARCH } from '@/app/router'
 import { BASE_PATH } from '@/shared/lib/base-path'
 import { resolvePublicRegistryUrl } from '@/shared/lib/registry-url'
@@ -49,7 +49,13 @@ export function CliAuthPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
 
-  const [user, setUser] = useState<User | null | undefined>(undefined)
+  const { data: user, isError: userError } = useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: getCurrentUser,
+    retry: false,
+  })
+  const { mutateAsync: createToken } = useMutation({ mutationFn: tokenApi.createToken, retry: false })
+  const started = useRef(false)
   const [status, setStatus] = useState<'validating' | 'creating' | 'redirecting' | 'error'>('validating')
   const [errorMessage, setErrorMessage] = useState<string>('')
   const [token, setToken] = useState<string>('')
@@ -66,24 +72,13 @@ export function CliAuthPage() {
   )
 
   useEffect(() => {
-    // Check authentication status
-    getCurrentUser()
-      .then((currentUser) => {
-        setUser(currentUser)
-      })
-      .catch(() => {
-        setUser(null)
-      })
-  }, [])
-
-  useEffect(() => {
     // Once we know the user status, proceed with token creation
-    if (user === undefined) {
+    if (user === undefined && !userError) {
       // Still loading
       return
     }
 
-    if (user === null) {
+    if (!user) {
       // Not authenticated - user needs to log in
       setStatus('error')
       setErrorMessage(t('cliAuth.notAuthenticated'))
@@ -110,12 +105,13 @@ export function CliAuthPage() {
     }
 
     // Create token and redirect
+    if (started.current) return
+    started.current = true
     setStatus('creating')
-    tokenApi
-      .createToken({
-        name: label,
-        scopes: ['skill:read', 'skill:publish'],
-      })
+    createToken({
+      name: label,
+      scopes: ['skill:read', 'skill:submit'],
+    })
       .then((response) => {
         setToken(response.token)
         setStatus('redirecting')
@@ -137,7 +133,7 @@ export function CliAuthPage() {
         setStatus('error')
         setErrorMessage(error instanceof Error ? error.message : t('cliAuth.tokenCreationFailed'))
       })
-  }, [user, redirectUri, redirectTarget, state, label, t])
+  }, [user, userError, createToken, redirectUri, redirectTarget, state, label, t])
 
   if (status === 'validating') {
     return (
@@ -210,7 +206,7 @@ export function CliAuthPage() {
           <p className="text-muted-foreground">{errorMessage}</p>
         </div>
 
-        {user === null && (
+        {!user && (
           <div className="space-y-4">
             <p className="text-sm text-center text-muted-foreground">
               {t('cliAuth.loginRequired')}

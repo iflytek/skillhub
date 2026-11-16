@@ -169,7 +169,7 @@ class TokenControllerTest {
         org.springframework.test.util.ReflectionTestUtils.setField(second, "id", 8L);
         org.springframework.test.util.ReflectionTestUtils.setField(second, "createdAt", java.time.Instant.parse("2026-03-14T11:00:00Z"));
 
-        given(apiTokenService.listActiveTokens("user-42", 1, 10)).willReturn(tokenPage);
+        given(apiTokenService.listActiveTokens("user-42", 1, 10, "", com.iflytek.skillhub.auth.token.TokenListStatus.ALL)).willReturn(tokenPage);
 
         mockMvc.perform(get("/api/v1/tokens")
                         .with(authentication(auth))
@@ -182,6 +182,25 @@ class TokenControllerTest {
                 .andExpect(jsonPath("$.data.total").value(12))
                 .andExpect(jsonPath("$.data.page").value(1))
                 .andExpect(jsonPath("$.data.size").value(10));
+    }
+
+    @Test
+    void list_bindsFiltersAndUsesAuthenticatedUser() throws Exception {
+        var principal = new PlatformPrincipal("user-42", "tester", "tester@example.com", "", "github", Set.of("USER"));
+        var auth = new UsernamePasswordAuthenticationToken(principal, null,
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        given(apiTokenService.listActiveTokens("user-42", 0, 10, "CI_%",
+                com.iflytek.skillhub.auth.token.TokenListStatus.EXPIRED))
+                .willReturn(new PageImpl<>(List.of(), PageRequest.of(0, 10), 0));
+
+        mockMvc.perform(get("/api/v1/tokens").with(authentication(auth))
+                        .param("query", "CI_%").param("status", "EXPIRED").param("userId", "other-user"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.data.total").value(0));
+        verify(apiTokenService).listActiveTokens("user-42", 0, 10, "CI_%",
+                com.iflytek.skillhub.auth.token.TokenListStatus.EXPIRED);
+
+        mockMvc.perform(get("/api/v1/tokens").with(authentication(auth)).param("status", "UNKNOWN"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -231,7 +250,7 @@ class TokenControllerTest {
         org.springframework.test.util.ReflectionTestUtils.setField(token, "createdAt", java.time.Instant.parse("2026-03-14T10:00:00Z"));
         token.setExpiresAt(java.time.Instant.parse("2026-05-01T09:30:00Z"));
 
-        given(apiTokenService.listActiveTokens("user-42", 0, 10)).willReturn(tokenPage);
+        given(apiTokenService.listActiveTokens("user-42", 0, 10, "", com.iflytek.skillhub.auth.token.TokenListStatus.ALL)).willReturn(tokenPage);
 
         TimeZone original = TimeZone.getDefault();
         try {

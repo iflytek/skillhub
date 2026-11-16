@@ -65,6 +65,10 @@ public class SkillSuiteBundleDraftCreationService {
         if (operation.getStatus() == SkillSuiteBundleOperationStatus.SUITE_DRAFT_CREATED) {
             return true;
         }
+        if (operation.blockIfAuthorizationUnknown(clock.instant())) {
+            operationRepository.save(operation);
+            return false;
+        }
         List<SkillSuiteBundleMemberResult> members =
                 memberRepository.findByOperationIdOrderByPositionForUpdate(operationId);
         if (members.isEmpty() || members.stream().anyMatch(

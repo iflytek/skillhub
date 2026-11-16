@@ -20,7 +20,19 @@ export async function whoamiCommand(options: WhoamiCommandOptions): Promise<stri
     throw new CliError('not logged in', EXIT.auth, { registry, next: 'run `skillhub login`' })
   }
   const user = await new SkillHubClient(registry, token).whoami()
-  return options.json
-    ? JSON.stringify({ ok: true, registry, handle: user.handle, displayName: user.displayName })
-    : `Registry: ${registry}\nHandle: ${user.handle}\nName: ${user.displayName}`
+  if (options.json) {
+    return JSON.stringify({
+      ok: true, registry, handle: user.handle, displayName: user.displayName,
+      capabilities: user.capabilities ?? null, legacyCompat: user.legacyCompat ?? false,
+      expiresAt: user.expiresAt ?? null
+    })
+  }
+  return [
+    `Registry: ${registry}`,
+    `Handle: ${user.handle}`,
+    `Name: ${user.displayName}`,
+    `Capabilities: ${user.capabilities?.join(', ') ?? 'unavailable (older server or session)'}`,
+    `Legacy compatibility: ${user.legacyCompat ? 'yes' : 'no'}`,
+    `Expires: ${user.expiresAt ?? 'not reported'}`
+  ].join('\n')
 }
