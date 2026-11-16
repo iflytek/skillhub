@@ -373,10 +373,14 @@ export function CreateTokenDialog({
                       </SelectTrigger>
                       <SelectContent density="compact">
                         {(['never', '7d', '30d', '90d', 'custom'] as const).map(
-                          (value, index) => (
+                          (value) => (
                             <SelectItem
                               key={value}
-                              data-analytics-id={`account.token.create.expiry.${['never', 'week', 'month', 'quarter', 'custom'][index]}`}
+                              data-analytics-id={value === 'never' ? 'account.token.create.expiry.never'
+                                : value === '7d' ? 'account.token.create.expiry.week'
+                                  : value === '30d' ? 'account.token.create.expiry.month'
+                                    : value === '90d' ? 'account.token.create.expiry.quarter'
+                                      : 'account.token.create.expiry.custom'}
                               value={value}
                             >
                               {t(
