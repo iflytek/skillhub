@@ -39,7 +39,12 @@ public final class BusinessEventMapper {
         switch (event) {
             case SkillPublishedEvent e -> { name = "skill.publication.effective"; id(attributes, "version", e.versionId()); }
             case SkillDownloadedEvent e -> { name = "skill.download.prepared"; id(attributes, "version", e.versionId()); }
-            case ReviewApprovedEvent e -> { name = "skill.review.approved"; id(attributes, "version", e.versionId()); id(attributes, "review", e.reviewId()); }
+            case ReviewApprovedEvent e -> {
+                name = "skill.review.approved";
+                id(attributes, "version", e.versionId());
+                id(attributes, "review", e.reviewId());
+                attributes.put("skillhub.review.decision_method", e.decisionMethod().name());
+            }
             case ReviewRejectedEvent e -> { name = "skill.review.rejected"; id(attributes, "version", e.versionId()); id(attributes, "review", e.reviewId()); }
             case PromotionApprovedEvent e -> { name = "skill.promotion.approved"; id(attributes, "promotion", e.promotionId()); }
             case PromotionRejectedEvent e -> { name = "skill.promotion.rejected"; id(attributes, "promotion", e.promotionId()); }

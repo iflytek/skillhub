@@ -160,6 +160,7 @@ public class NotificationEventListener {
             Map<String, Object> body = bodyWithSkill(skill);
             body.put("reviewId", event.reviewId());
             body.put("reviewerId", event.reviewerId());
+            body.put("decisionMethod", event.decisionMethod().name());
             versionLabel(event.versionId(), body);
             String json = toJson(body);
             notificationService.create(event.submitterId(), NotificationCategory.REVIEW,

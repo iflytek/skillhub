@@ -1,13 +1,18 @@
 package com.iflytek.skillhub.domain.namespace;
 
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.audit.AuditDetail;
+import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.domain.review.ReviewAutoPublicationHandoff;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * Manages namespace membership additions, removals, and role changes under the
@@ -16,22 +21,32 @@ import java.util.Optional;
 @Service
 public class NamespaceMemberService {
 
+    public static final String REASON_ROLE_CHANGED = "ROLE_CHANGED";
+    public static final String REASON_MEMBER_REMOVED = "MEMBER_REMOVED";
+    public static final String REASON_ACCOUNT_MERGED = "ACCOUNT_MERGED";
+
     private final NamespaceMemberRepository namespaceMemberRepository;
     private final NamespaceService namespaceService;
     private final NamespaceAccessPolicy namespaceAccessPolicy;
     private final NamespaceRepository namespaceRepository;
     private final UserAccountRepository userAccountRepository;
+    private final AuditLogService auditLogService;
+    private final ReviewAutoPublicationHandoff autoPublicationHandoff;
 
     public NamespaceMemberService(NamespaceMemberRepository namespaceMemberRepository,
                                   NamespaceService namespaceService,
                                   NamespaceAccessPolicy namespaceAccessPolicy,
                                   NamespaceRepository namespaceRepository,
-                                  UserAccountRepository userAccountRepository) {
+                                  UserAccountRepository userAccountRepository,
+                                  AuditLogService auditLogService,
+                                  ReviewAutoPublicationHandoff autoPublicationHandoff) {
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.namespaceService = namespaceService;
         this.namespaceAccessPolicy = namespaceAccessPolicy;
         this.namespaceRepository = namespaceRepository;
         this.userAccountRepository = userAccountRepository;
+        this.auditLogService = auditLogService;
+        this.autoPublicationHandoff = autoPublicationHandoff;
     }
 
     @Transactional
@@ -52,6 +67,37 @@ public class NamespaceMemberService {
         return namespaceMemberRepository.save(member);
     }
 
+    /**
+     * Grants or revokes team-only automatic publication for one ordinary member of an ACTIVE TEAM
+     * namespace. Revocation irreversibly hands pending eligible work back to normal review.
+     */
+    @Transactional
+    public NamespaceMember setTeamAutoPublication(Long namespaceId,
+                                                  String userId,
+                                                  boolean granted,
+                                                  String operatorUserId) {
+        lockUserThenNamespace(userId, namespaceId);
+        assertMemberMutationAllowed(namespaceId);
+        namespaceService.assertAdminOrOwner(namespaceId, operatorUserId);
+        NamespaceMember member = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
+                .orElseThrow(() -> new DomainBadRequestException("error.namespace.member.notFound"));
+        if (granted && member.getRole() != NamespaceRole.MEMBER) {
+            throw new DomainBadRequestException("error.namespace.member.teamAutoPublication.memberOnly");
+        }
+        UUID before = member.getTeamAutoPublicationGrantId();
+        UUID after = granted ? member.grantTeamAutoPublication() : null;
+        if (!granted) {
+            member.revokeTeamAutoPublication();
+        }
+        if (Objects.equals(before, after)) {
+            return member;
+        }
+        NamespaceMember saved = namespaceMemberRepository.save(member);
+        int handedOff = granted ? 0 : autoPublicationHandoff.handOffMember(namespaceId, userId);
+        recordGrantChange(operatorUserId, saved, granted ? "GRANT" : "REVOKE", before, after, handedOff);
+        return saved;
+    }
+
     @Transactional
     public void removeMember(Long namespaceId, String userId, String operatorUserId) {
         lockUserThenNamespace(userId, namespaceId);
@@ -65,6 +111,7 @@ public class NamespaceMemberService {
             throw new DomainBadRequestException("error.namespace.member.owner.remove");
         }
 
+        revokeForEligibilityLoss(member, operatorUserId, REASON_MEMBER_REMOVED);
         namespaceMemberRepository.deleteByNamespaceIdAndUserId(namespaceId, userId);
     }
 
@@ -81,6 +128,9 @@ public class NamespaceMemberService {
         NamespaceMember member = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.member.notFound"));
 
+        if (newRole != NamespaceRole.MEMBER) {
+            revokeForEligibilityLoss(member, operatorUserId, REASON_ROLE_CHANGED);
+        }
         member.setRole(newRole);
         return namespaceMemberRepository.save(member);
     }
@@ -110,6 +160,7 @@ public class NamespaceMemberService {
         NamespaceMember newOwner = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, newOwnerId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.owner.new.notFound"));
 
+        revokeForEligibilityLoss(newOwner, currentOwnerId, REASON_ROLE_CHANGED);
         currentOwner.setRole(NamespaceRole.ADMIN);
         newOwner.setRole(NamespaceRole.OWNER);
 
@@ -124,6 +175,44 @@ public class NamespaceMemberService {
 
     public Page<NamespaceMember> listMembers(Long namespaceId, Pageable pageable) {
         return namespaceMemberRepository.findByNamespaceId(namespaceId, pageable);
+    }
+
+    /**
+     * Revokes team-only automatic publication because the member is leaving the {@code MEMBER} role,
+     * being removed or being merged away: clears the grant identity, irreversibly hands the member's
+     * pending eligible tasks to normal review (one notification each) and audits the actual operator
+     * with the before value. A member without a grant is left untouched and not audited.
+     *
+     * <p>Every path that changes a member's role or deletes a membership outside this service must
+     * call this first. The caller must hold the member's user lock and then the namespace row lock,
+     * the same order this service uses, so revocation serializes with automatic approval.
+     */
+    public void revokeForEligibilityLoss(NamespaceMember member, String operatorUserId, String reason) {
+        UUID before = member.revokeTeamAutoPublication();
+        if (before == null) {
+            return;
+        }
+        namespaceMemberRepository.save(member);
+        int handedOff = autoPublicationHandoff.handOffMember(member.getNamespaceId(), member.getUserId());
+        recordGrantChange(operatorUserId, member, reason, before, null, handedOff);
+    }
+
+    private void recordGrantChange(String operatorUserId,
+                                   NamespaceMember member,
+                                   String reason,
+                                   UUID before,
+                                   UUID after,
+                                   int handedOffTasks) {
+        auditLogService.record(operatorUserId, "TEAM_AUTO_PUBLICATION_CHANGE", "NAMESPACE_MEMBER", member.getId(),
+                null, null, null, AuditDetail.builder()
+                        .put("namespaceId", member.getNamespaceId())
+                        .put("userId", member.getUserId())
+                        .put("reason", reason)
+                        .put("granted", after != null)
+                        .put("beforeGrantId", before == null ? null : before.toString())
+                        .put("afterGrantId", after == null ? null : after.toString())
+                        .put("handedOffTasks", handedOffTasks)
+                        .build());
     }
 
     private void assertMemberMutationAllowed(Long namespaceId) {

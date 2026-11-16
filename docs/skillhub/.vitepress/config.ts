@@ -61,6 +61,7 @@ export default defineConfig({
             items: [
               { text: '管理命名空间', link: '/guide/namespace' },
               { text: '审核技能与套装', link: '/guide/review' },
+              { text: '团队内自动发布', link: '/guide/team-auto-publication' },
               { text: '安全扫描与报告', link: '/guide/scanner' },
               { text: '技能头像与审核', link: '/guide/skill-avatars' },
             ],
@@ -138,6 +139,7 @@ export default defineConfig({
             items: [
               { text: 'Manage namespaces', link: '/en/guide/namespace' },
               { text: 'Review submissions', link: '/en/guide/review' },
+              { text: 'Team-only automatic publication', link: '/en/guide/team-auto-publication' },
               { text: 'Configure scanning', link: '/en/guide/scanner' },
               { text: 'Skill avatars and moderation', link: '/en/guide/skill-avatars' },
             ],

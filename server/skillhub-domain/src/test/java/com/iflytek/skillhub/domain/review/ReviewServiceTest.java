@@ -187,6 +187,80 @@ class ReviewServiceTest {
         verifyNoInteractions(members);
     }
 
+    @Test
+    void humanApprovalRecordsHumanDecisionMethodAndActualReviewer() {
+        var task = createPendingReviewTask();
+        var version = createPendingReviewSkillVersion();
+        var skill = createSkill();
+        when(reviewTaskRepository.findById(REVIEW_TASK_ID)).thenReturn(Optional.of(task));
+        when(namespaceRepository.findById(NAMESPACE_ID)).thenReturn(Optional.of(createTeamNamespace()));
+        when(permissionChecker.canReview(any(), eq(REVIEWER_ID), any(), any(), any())).thenReturn(true);
+        when(reviewTaskRepository.updateStatusWithVersion(REVIEW_TASK_ID, ReviewTaskStatus.APPROVED,
+                REVIEWER_ID, "ok", task.getVersion())).thenReturn(1);
+        when(skillVersionRepository.findById(SKILL_VERSION_ID)).thenReturn(Optional.of(version));
+        when(skillRepository.findById(SKILL_ID)).thenReturn(Optional.of(skill));
+        when(skillRepository.findByNamespaceIdAndSlug(NAMESPACE_ID, "my-skill")).thenReturn(List.of(skill));
+
+        reviewService.approveReview(REVIEW_TASK_ID, REVIEWER_ID, "ok",
+                Map.of(NAMESPACE_ID, NamespaceRole.ADMIN), Set.of());
+
+        verify(reviewTaskRepository).recordDecision(REVIEW_TASK_ID, ReviewDecisionMethod.HUMAN, null);
+        ArgumentCaptor<com.iflytek.skillhub.domain.event.ReviewApprovedEvent> approved =
+                ArgumentCaptor.forClass(com.iflytek.skillhub.domain.event.ReviewApprovedEvent.class);
+        verify(eventPublisher, atLeastOnce()).publishEvent(approved.capture());
+        var event = approved.getAllValues().stream()
+                .filter(com.iflytek.skillhub.domain.event.ReviewApprovedEvent.class::isInstance)
+                .findFirst().orElseThrow();
+        assertEquals(ReviewDecisionMethod.HUMAN, event.decisionMethod());
+        assertEquals(REVIEWER_ID, event.reviewerId());
+    }
+
+    @Test
+    void systemApprovalPublishesWithoutRecordingSubmitterAsReviewer() {
+        var task = createPendingReviewTask();
+        var version = createPendingReviewSkillVersion();
+        version.setRequestedVisibility(SkillVisibility.NAMESPACE_ONLY);
+        var skill = createSkill();
+        when(reviewTaskRepository.updateStatusWithVersion(REVIEW_TASK_ID, ReviewTaskStatus.APPROVED,
+                null, null, task.getVersion())).thenReturn(1);
+
+        assertTrue(reviewService.approveAutomatically(task, skill, version, "scan-1"));
+
+        assertEquals(ReviewTaskStatus.APPROVED, task.getStatus());
+        assertNull(task.getReviewedBy());
+        assertEquals(ReviewDecisionMethod.SYSTEM_AUTOMATIC, task.getDecisionMethod());
+        assertEquals("scan-1", task.getDecisionScanTaskId());
+        assertEquals(SkillVersionStatus.PUBLISHED, version.getStatus());
+        assertEquals(SKILL_VERSION_ID, skill.getLatestVersionId());
+        verify(reviewTaskRepository).recordDecision(REVIEW_TASK_ID, ReviewDecisionMethod.SYSTEM_AUTOMATIC, "scan-1");
+        verify(reviewTaskRepository, never()).updateStatusWithVersion(any(), any(), eq(USER_ID), any(), any());
+        ArgumentCaptor<Object> events = ArgumentCaptor.forClass(Object.class);
+        verify(eventPublisher, times(2)).publishEvent(events.capture());
+        var approved = events.getAllValues().stream()
+                .filter(com.iflytek.skillhub.domain.event.ReviewApprovedEvent.class::isInstance)
+                .map(com.iflytek.skillhub.domain.event.ReviewApprovedEvent.class::cast)
+                .findFirst().orElseThrow();
+        assertNull(approved.reviewerId());
+        assertEquals(ReviewDecisionMethod.SYSTEM_AUTOMATIC, approved.decisionMethod());
+        assertEquals("system", approved.snapshot().actorType());
+    }
+
+    @Test
+    void systemApprovalLosingOptimisticRaceHasNoSideEffects() {
+        var task = createPendingReviewTask();
+        var version = createPendingReviewSkillVersion();
+        var skill = createSkill();
+        when(reviewTaskRepository.updateStatusWithVersion(REVIEW_TASK_ID, ReviewTaskStatus.APPROVED,
+                null, null, task.getVersion())).thenReturn(0);
+
+        assertFalse(reviewService.approveAutomatically(task, skill, version, "scan-1"));
+
+        assertEquals(SkillVersionStatus.PENDING_REVIEW, version.getStatus());
+        assertNull(skill.getLatestVersionId());
+        verifyNoInteractions(eventPublisher);
+        verify(skillVersionRepository, never()).save(any());
+    }
+
     @Nested
     class SubmitReview {
 

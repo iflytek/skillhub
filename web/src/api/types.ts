@@ -227,6 +227,7 @@ export interface NamespaceMember {
   displayName?: string
   email?: string
   role: NamespaceRole
+  teamAutoPublicationGranted?: boolean
   createdAt: string
 }
 
@@ -646,7 +647,12 @@ export interface ReviewTask {
   requestedVisibility?: string
   avatarRemoval?: boolean
   originType?: 'USER' | 'GITHUB_SYNC'
+  decisionMethod?: ReviewDecisionMethod | null
+  decisionScanTaskId?: string | null
+  autoPublicationGrantId?: string | null
 }
+
+export type ReviewDecisionMethod = 'HUMAN' | 'SYSTEM_AUTOMATIC'
 
 export type ReviewScope = Required<components['schemas']['ReviewScopeResponse']>
 

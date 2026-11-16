@@ -20,6 +20,7 @@ import com.iflytek.skillhub.auth.repository.IdentityBindingRepository;
 import com.iflytek.skillhub.auth.repository.UserRoleBindingRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberService;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -55,6 +56,8 @@ class AccountMergeServiceTest {
     private NamespaceMemberRepository namespaceMemberRepository;
     @Mock
     private NamespaceRepository namespaceRepository;
+    @Mock
+    private NamespaceMemberService namespaceMemberService;
     private AccountMergeService service;
     private Clock clock;
 
@@ -70,6 +73,7 @@ class AccountMergeServiceTest {
             apiTokenRepository,
             namespaceMemberRepository,
             namespaceRepository,
+            namespaceMemberService,
             clock
         );
     }
@@ -206,6 +210,36 @@ class AccountMergeServiceTest {
         assertThat(request.getVerificationToken()).isNull();
         verify(userRoleBindingRepository).save(any(UserRoleBinding.class));
         verify(userRoleBindingRepository).deleteAll(List.of(secondaryRole));
+    }
+
+    @Test
+    void confirm_revokesMergedAndPromotedTeamAutoPublicationThroughSharedRevocation() throws Exception {
+        UserAccount primary = new UserAccount("usr_primary", "primary", "primary@example.com", null);
+        UserAccount secondary = new UserAccount("usr_secondary", "secondary", "", null);
+        AccountMergeRequest request = request("usr_primary", "usr_secondary", "encoded");
+        request.setStatus(AccountMergeRequest.STATUS_VERIFIED);
+        NamespaceMember moved = new NamespaceMember(1L, "usr_secondary", NamespaceRole.MEMBER);
+        NamespaceMember overlapping = new NamespaceMember(2L, "usr_secondary", NamespaceRole.ADMIN);
+        NamespaceMember primaryMember = new NamespaceMember(2L, "usr_primary", NamespaceRole.MEMBER);
+
+        given(mergeRequestRepository.findByIdAndPrimaryUserId(7L, "usr_primary")).willReturn(Optional.of(request));
+        given(userAccountRepository.findLockedFreshById("usr_primary")).willReturn(Optional.of(primary));
+        given(userAccountRepository.findLockedFreshById("usr_secondary")).willReturn(Optional.of(secondary));
+        given(mergeRequestRepository.save(any(AccountMergeRequest.class))).willAnswer(invocation -> invocation.getArgument(0));
+        given(namespaceMemberRepository.findByUserId("usr_secondary")).willReturn(List.of(moved, overlapping));
+        given(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "usr_primary")).willReturn(Optional.empty());
+        given(namespaceMemberRepository.findByNamespaceIdAndUserId(2L, "usr_primary")).willReturn(Optional.of(primaryMember));
+
+        service.confirm("usr_primary", 7L);
+
+        verify(namespaceMemberService).revokeForEligibilityLoss(moved, "usr_primary",
+            NamespaceMemberService.REASON_ACCOUNT_MERGED);
+        verify(namespaceMemberService).revokeForEligibilityLoss(overlapping, "usr_primary",
+            NamespaceMemberService.REASON_ACCOUNT_MERGED);
+        verify(namespaceMemberService).revokeForEligibilityLoss(primaryMember, "usr_primary",
+            NamespaceMemberService.REASON_ROLE_CHANGED);
+        assertThat(moved.getUserId()).isEqualTo("usr_primary");
+        assertThat(primaryMember.getRole()).isEqualTo(NamespaceRole.ADMIN);
     }
 
     @Test

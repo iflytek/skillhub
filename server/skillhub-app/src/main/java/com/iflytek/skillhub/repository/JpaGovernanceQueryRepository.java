@@ -62,7 +62,12 @@ public class JpaGovernanceQueryRepository implements GovernanceQueryRepository {
     @Override
     public List<ReviewTaskResponse> getReviewTaskResponses(List<ReviewTask> tasks) {
         ReviewReadBundle bundle = loadReviewBundle(tasks);
-        return tasks.stream().map(task -> toReviewTaskResponse(task, bundle)).toList();
+        return tasks.stream()
+                .map(task -> toReviewTaskResponse(task, bundle).withDecision(
+                        task.getDecisionMethod() == null ? null : task.getDecisionMethod().name(),
+                        task.getDecisionScanTaskId(),
+                        task.getAutoPublicationGrantId() == null ? null : task.getAutoPublicationGrantId().toString()))
+                .toList();
     }
 
     @Override

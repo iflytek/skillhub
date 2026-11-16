@@ -91,6 +91,8 @@ Status: contract reference with documented implementation exception
 - `PENDING_REVIEW -> PUBLISHED`
 - review task 标记为 `APPROVED`
 - `Skill.latestVersionId` 指向该版本
+- review task 记录结构化决定方式 `decision_method`：人工审核为 `HUMAN` 并记录实际审核人；团队内自动发布为 `SYSTEM_AUTOMATIC`，记录依据的 `decision_scan_task_id`，`reviewed_by` 为空
+- 团队内自动发布：仅普通 `NAMESPACE_ONLY` 首发及同可见范围更新在提交时记录成员当前授权标识（`auto_publication_grant_id`）；当前一轮扫描完成且为 `SAFE`、授权标识仍等于成员当前有效授权时，由系统走本节同一迁移。资格丢失时任务不可逆地转入普通审核（`auto_publication_cancelled`），并只发一次待审通知（`manual_review_notified`）。不复用 4.1 的特权直发分支，扫描结束前不会发布。详见[使用指南](./skillhub/guide/team-auto-publication.md)
 - skill 展示元数据从发布版本刷新，摘要采用该版本有效 `short-description`（自定义覆盖优先，其次包内值，再退回 `description`）；`overview` 仅在选中版本详情展示。提交时的自定义继承冻结在版本快照，审核期间不随其他版本发布而变化。
 
 ### 4.3 审核拒绝

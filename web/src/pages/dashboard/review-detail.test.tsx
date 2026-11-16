@@ -628,6 +628,25 @@ describe('ReviewDetailPage', () => {
     expect(screen.queryByLabelText('review.commentLabel')).toBeNull()
   })
 
+  it('identifies a system automatic approval and its scan basis without a human reviewer', () => {
+    const task = useReviewDetailMock() as { data: Record<string, unknown> }
+    useReviewDetailMock.mockReturnValue({
+      ...task,
+      data: {
+        ...task.data,
+        status: 'APPROVED',
+        reviewedAt: '2026-03-20T00:00:00Z',
+        decisionMethod: 'SYSTEM_AUTOMATIC',
+        decisionScanTaskId: 'scan-round-1',
+      },
+    })
+    render(<ReviewDetailPage />)
+    fireEvent.click(screen.getByRole('tab', { name: 'review.tabHistory' }))
+    expect(screen.getByText(/review\.decisionMethod\.SYSTEM_AUTOMATIC/)).toBeTruthy()
+    expect(screen.getByText('review.decisionScanBasis')).toBeTruthy()
+    expect(screen.queryByText(/review\.reviewer:/)).toBeNull()
+  })
+
   it('returns to the unified queue with the original filter and page context', () => {
     route.search = { namespace: 'team-alpha', q: 'pending summary', status: 'REJECTED', page: 2 }
     render(<ReviewDetailPage />)

@@ -59,6 +59,14 @@ async function updateNamespaceMemberRole(params: { slug: string; userId: string;
   return namespaceApi.updateMemberRole(params.slug, params.userId, params.role)
 }
 
+async function setNamespaceMemberTeamAutoPublication(params: {
+  slug: string
+  userId: string
+  granted: boolean
+}): Promise<NamespaceMember> {
+  return namespaceApi.setTeamAutoPublication(params.slug, params.userId, params.granted)
+}
+
 async function removeNamespaceMember(params: { slug: string; userId: string }): Promise<void> {
   return namespaceApi.removeMember(params.slug, params.userId)
 }
@@ -165,6 +173,21 @@ export function useUpdateNamespaceMemberRole() {
         { queryKey: ['namespaces', variables.slug, 'members'] },
         (currentPage) => replaceNamespaceMemberRole(currentPage, variables.userId, member.role),
       )
+      invalidateNamespaceQueries(queryClient, variables.slug)
+    },
+  })
+}
+
+/**
+ * Grants or revokes team-only automatic publication. Revocation can return pending work to the
+ * normal review queue, so member and review caches are both refreshed.
+ */
+export function useSetNamespaceMemberTeamAutoPublication() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: setNamespaceMemberTeamAutoPublication,
+    onSuccess: (_member, variables) => {
       invalidateNamespaceQueries(queryClient, variables.slug)
     },
   })

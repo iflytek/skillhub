@@ -7,6 +7,7 @@ import java.util.Set;
 /** Capability ceilings for cross-entry-point Skill state transitions; null denotes a session. */
 public final class SkillTokenCapabilityPolicy {
 
+    public static final String SUBMIT = "skill:submit";
     public static final String MANAGE = "skill:manage";
     public static final String PUBLISH_PRIVATE = "skill:publish-private";
 

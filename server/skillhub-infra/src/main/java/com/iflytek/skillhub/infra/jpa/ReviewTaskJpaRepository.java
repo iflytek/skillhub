@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.infra.jpa;
 
 import com.iflytek.skillhub.domain.review.ReviewTask;
+import com.iflytek.skillhub.domain.review.ReviewDecisionMethod;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.review.ReviewSubjectType;
@@ -54,6 +55,43 @@ public interface ReviewTaskJpaRepository extends JpaRepository<ReviewTask, Long>
                                                               ReviewTaskStatus status, Pageable pageable);
 
     Page<ReviewTask> findBySubmittedByAndStatus(String submittedBy, ReviewTaskStatus status, Pageable pageable);
+
+    @Override
+    List<ReviewTask> findByNamespaceIdAndSubmittedByAndStatus(
+            Long namespaceId, String submittedBy, ReviewTaskStatus status);
+
+    @Override
+    @Modifying(flushAutomatically = true)
+    @Query("""
+        UPDATE ReviewTask t
+        SET t.autoPublicationCancelled = true
+        WHERE t.id = :id
+          AND t.status = com.iflytek.skillhub.domain.review.ReviewTaskStatus.PENDING
+    """)
+    int cancelPendingAutoPublication(@Param("id") Long id);
+
+    @Override
+    @Modifying(flushAutomatically = true)
+    @Query("""
+        UPDATE ReviewTask t
+        SET t.manualReviewNotified = true
+        WHERE t.id = :id
+          AND t.manualReviewNotified = false
+          AND t.status = com.iflytek.skillhub.domain.review.ReviewTaskStatus.PENDING
+    """)
+    int markPendingManualReviewNotified(@Param("id") Long id);
+
+    @Override
+    @Modifying(flushAutomatically = true)
+    @Query("""
+        UPDATE ReviewTask t
+        SET t.decisionMethod = :method,
+            t.decisionScanTaskId = :scanTaskId
+        WHERE t.id = :id
+    """)
+    int recordDecision(@Param("id") Long id,
+                       @Param("method") ReviewDecisionMethod method,
+                       @Param("scanTaskId") String scanTaskId);
 
     List<ReviewTask> findBySubmittedByAndSkillIdAndSkillVersionOrderBySubmittedAtDescIdDesc(
             String submittedBy, Long skillId, String skillVersion);

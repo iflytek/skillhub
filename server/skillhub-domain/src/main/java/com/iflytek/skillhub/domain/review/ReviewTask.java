@@ -80,6 +80,25 @@ public class ReviewTask {
     @Column(name = "submitted_by", nullable = false)
     private String submittedBy;
 
+    @Column(name = "auto_publication_grant_id")
+    private UUID autoPublicationGrantId;
+
+    @Column(name = "submission_may_submit", nullable = false)
+    private boolean submissionMaySubmit;
+
+    @Column(name = "auto_publication_cancelled", nullable = false)
+    private boolean autoPublicationCancelled;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "decision_method", length = 32)
+    private ReviewDecisionMethod decisionMethod;
+
+    @Column(name = "decision_scan_task_id", length = 100)
+    private String decisionScanTaskId;
+
+    @Column(name = "manual_review_notified", nullable = false)
+    private boolean manualReviewNotified;
+
     @Column(name = "reviewed_by")
     private String reviewedBy;
 
@@ -211,6 +230,43 @@ public class ReviewTask {
     public Integer getVersion() { return version; }
 
     public String getSubmittedBy() { return submittedBy; }
+
+    /**
+     * Captures automatic eligibility at accepted submission time. The submit flag records the
+     * accepted capability ceiling; credentials themselves are never persisted.
+     */
+    public void captureAutoPublicationEligibility(UUID grantId, boolean maySubmit) {
+        this.autoPublicationGrantId = grantId;
+        this.submissionMaySubmit = maySubmit;
+    }
+
+    public UUID getAutoPublicationGrantId() { return autoPublicationGrantId; }
+
+    public boolean isSubmissionMaySubmit() { return submissionMaySubmit; }
+
+    public boolean isAutoPublicationCancelled() { return autoPublicationCancelled; }
+
+    /** Irreversibly cancels automatic eligibility; a later grant cannot clear it. */
+    public void cancelAutoPublication() { this.autoPublicationCancelled = true; }
+
+    /** Whether this task still carries uncancelled automatic eligibility from submission. */
+    public boolean hasActiveAutoPublicationEligibility() {
+        return autoPublicationGrantId != null && submissionMaySubmit && !autoPublicationCancelled;
+    }
+
+    public ReviewDecisionMethod getDecisionMethod() { return decisionMethod; }
+
+    public String getDecisionScanTaskId() { return decisionScanTaskId; }
+
+    public void recordDecision(ReviewDecisionMethod method, String scanTaskId) {
+        this.decisionMethod = method;
+        this.decisionScanTaskId = scanTaskId;
+    }
+
+    /** Meaningful only for tasks that captured a grant: whether fallback already notified reviewers. */
+    public boolean isManualReviewNotified() { return manualReviewNotified; }
+
+    public void markManualReviewNotified() { this.manualReviewNotified = true; }
 
     public String getReviewedBy() { return reviewedBy; }
 
