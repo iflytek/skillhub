@@ -16,6 +16,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
+import com.iflytek.skillhub.domain.review.ReviewAutoPublicationHandoff;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -58,7 +59,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import({NamespaceInvitationService.class, NamespaceMemberService.class, NamespaceService.class,
         AccountMergeService.class,
         NamespaceAccessPolicy.class, NamespaceGovernanceService.class, AuditLogService.class,
-        NamespaceInvitationPostgresTest.ClockConfig.class})
+        ReviewAutoPublicationHandoff.class, NamespaceInvitationPostgresTest.ClockConfig.class})
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class NamespaceInvitationPostgresTest {
     @Container

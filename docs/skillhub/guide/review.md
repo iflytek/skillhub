@@ -13,6 +13,8 @@
 
 团队命名空间的所有者及空间管理员可审核本人提交；超级管理员可自审。其他本人提交不能仅凭平台技能管理员身份自审；全局提升的本人申请仅超级管理员可审核。普通审核决定还要求命名空间为 `ACTIVE`。规则见[审核权限策略](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/review/ReviewPermissionChecker.java)。
 
+获得[团队内自动发布](./team-auto-publication.html)授权的普通成员，其团队内可见首次发布及同可见范围更新在当前扫描为 `SAFE` 后由系统批准，任务仍保留并标记为“系统自动批准”；不满足条件的任务照常出现在待审队列。
+
 普通公开（PUBLIC）或空间成员可见（NAMESPACE_ONLY）上传进入扫描与审核流程；私有（PRIVATE）上传先保留，仍须确认发布或另行提审。新版审核期间，旧发布版可能继续可用。
 
 ## 查询审核申请
@@ -74,7 +76,7 @@
 | 状态 | 含义 | 处理者与下一步 |
 | --- | --- | --- |
 | `PENDING` | 等待决定 | 有权审核人读取当前申请后处理 |
-| `APPROVED` | 已批准 | 提交者核对版本或资料生效 |
+| `APPROVED` | 已批准；决定方式为“人工审核”或“系统自动批准” | 提交者核对版本或资料生效 |
 | `REJECTED` | 已拒绝并保留意见 | 提交者修订后重提 |
 | `SUPERSEDED` | 被后续申请替代 | 提交者及审核人查看当前申请 |
 

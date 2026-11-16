@@ -58,6 +58,8 @@ Links use `/join#invite=invitation-code`. The creator's account in the same brow
 
 History displays the creator, creation and expiration times, status, and accepted account. Account renaming or membership removal does not rewrite the original joining fact; history is not a current membership list. Only namespace Owners and Admins can read it; frozen or archived namespaces expose read-only history. Upgrades migrate only a verifiable current invitation and mark it as a legacy record; earlier history is not inferred.
 
+In `TEAM` namespaces the member table also shows the Team-only automatic publication grant state. Owners and Admins can grant or revoke it for ordinary members from a browser session; API tokens cannot. See [Team-only Automatic Publication](./team-auto-publication.html) for scope, revocation effects and troubleshooting.
+
 To change a role, select the member-row role edit action and save from the actions column, then re-read the role. Member removal and namespace ownership transfer require separate confirmation. Transferring a namespace does not transfer its Skills. Sources: [invitation service](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/namespace/NamespaceInvitationService.java) and [history presentation](https://github.com/iflytek/skillhub/blob/main/web/src/features/namespace/invitation-history.tsx).
 
 ## Lifecycle Governance
@@ -102,10 +104,11 @@ After creation, the list must show the target slug, `ACTIVE`, and the creator's 
 
 Removing a member does not delete, move or transfer their Skills. Published content retains its original visibility. The current Skill owner with an active account can still view and download their own content, including private content, unpublished versions and historical versions, from My Skills; the page displays a read-only message. Upload, republishing, avatar or visibility changes, withdrawal, archiving and deletion are unavailable on the basis of that ownership alone. This exception does not expose other members' restricted content.
 
-Rejoining restores maintenance under the original rules if ownership is unchanged. Disabled accounts cannot act; re-enabling an account does not restore removed membership. Existing submissions continue normal review and are not automatically approved or withdrawn. Existing namespace and platform governance permissions remain unchanged. This version does not add Skill transfer, self-service departure or permanent account deletion. The [owner access policy](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillOwnerAccessPolicy.java) does not replace other management permissions.
+Rejoining restores maintenance under the original rules if ownership is unchanged. Disabled accounts cannot act; re-enabling an account does not restore removed membership. Existing submissions continue normal review and are not automatically approved or withdrawn; removal revokes the member's team-only automatic publication grant and moves tasks awaiting automatic approval to normal review. Existing namespace and platform governance permissions remain unchanged. This version does not add Skill transfer, self-service departure or permanent account deletion. The [owner access policy](https://github.com/iflytek/skillhub/blob/main/server/skillhub-domain/src/main/java/com/iflytek/skillhub/domain/skill/SkillOwnerAccessPolicy.java) does not replace other management permissions.
 
 ## Further Reading
 
 - [Publish and Update Skills](./skill-publish.html): Submit versions for the intended visibility.
 - [Review Skills and Suites](./review.html): Identify pending objects and their results.
+- [Team-only Automatic Publication](./team-auto-publication.html): Let ordinary members' safe team-only submissions be approved by the system.
 - [Accounts and Access Tokens](./account-access.html): Separate login identities from API credentials.

@@ -52,6 +52,22 @@ public interface ReviewTaskRepository {
             String subjectVersion) {
         throw new UnsupportedOperationException("Typed review subjects are not supported by this repository");
     }
+    default List<ReviewTask> findByNamespaceIdAndSubmittedByAndStatus(
+            Long namespaceId, String submittedBy, ReviewTaskStatus status) {
+        return List.of();
+    }
+    /** Irreversibly cancels automatic eligibility of a still-pending task without a version bump. */
+    default int cancelPendingAutoPublication(Long id) {
+        return 0;
+    }
+    /** Marks a pending task as announced to normal reviewers; returns 1 only for the first caller. */
+    default int markPendingManualReviewNotified(Long id) {
+        return 0;
+    }
+    /** Records the structured decision method after the optimistic status transition succeeded. */
+    default int recordDecision(Long id, ReviewDecisionMethod method, String scanTaskId) {
+        return 0;
+    }
     boolean existsByNamespaceId(Long namespaceId);
     void deleteBySkillVersionIdIn(Collection<Long> skillVersionIds);
     void deleteBySkillId(Long skillId);

@@ -166,6 +166,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/v1/namespaces/*"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/namespaces"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/namespaces/*"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/v1/namespaces/*/members/*/team-auto-publication"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/web/namespaces/*/members/*/team-auto-publication"),
             RouteAuthorizationPolicy.authenticated(null, "/api/v1/admin/**"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/cli/v1/auth/whoami"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/cli/v1/namespaces/*/skills"),
@@ -321,7 +323,7 @@ public class RouteSecurityPolicyRegistry {
      * {@code "<METHOD|ANY> <pattern>"} to match {@link #routeKey(HttpMethod, String)}.
      *
      * <p>These are browser-session surfaces: the interactive login flows, the admin console,
-     * and skill deletion through the web surface, which goes through {@code /api/v1} or
+     * team-only automatic publication grants, and skill deletion through the web surface, which goes through {@code /api/v1} or
      * {@code /api/cli/v1} with the {@code skill:delete} scope instead. Bearer tokens are
      * deliberately rejected on exactly these routes and nowhere else &mdash; anything else the
      * authorization list opens must also be reachable with a token holding the required scope.</p>
@@ -338,7 +340,9 @@ public class RouteSecurityPolicyRegistry {
             "POST /api/web/suites/reviews/*/approve",
             "POST /api/web/suites/reviews/*/reject",
             "DELETE /api/web/skills/id/*",
-            "DELETE /api/web/skills/*/*"
+            "DELETE /api/web/skills/*/*",
+            "PUT /api/v1/namespaces/*/members/*/team-auto-publication",
+            "PUT /api/web/namespaces/*/members/*/team-auto-publication"
     );
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();

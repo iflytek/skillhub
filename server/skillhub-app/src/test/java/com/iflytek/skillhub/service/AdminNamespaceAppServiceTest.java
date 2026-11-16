@@ -141,6 +141,50 @@ class AdminNamespaceAppServiceTest {
         assertThat(newOwner.getRole()).isEqualTo(NamespaceRole.OWNER);
         verify(namespaceMemberRepository).save(currentOwner);
         verify(namespaceMemberRepository).save(newOwner);
+        verify(namespaceMemberService).revokeForEligibilityLoss(newOwner, "super-1",
+                NamespaceMemberService.REASON_ROLE_CHANGED);
+    }
+
+    @Test
+    void roleChangeAwayFromMemberAndRemovalRevokeTeamAutoPublicationAsThePlatformAdmin() {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        NamespaceMember promoted = member(12L, 1L, "user-2", NamespaceRole.MEMBER);
+        NamespaceMember removed = member(13L, 1L, "user-3", NamespaceRole.MEMBER);
+        when(namespaceRepository.findLockedById(1L)).thenReturn(Optional.of(namespace));
+        when(namespaceRepository.findIdBySlug("team-a")).thenReturn(Optional.of(1L));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "user-2")).thenReturn(Optional.of(promoted));
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "user-3")).thenReturn(Optional.of(removed));
+        when(namespaceMemberRepository.save(promoted)).thenReturn(promoted);
+
+        service.updateMemberRole("team-a", "user-2", new UpdateMemberRoleRequest(NamespaceRole.ADMIN), "super-1");
+        service.removeMember("team-a", "user-3", "super-1");
+
+        var order = org.mockito.Mockito.inOrder(namespaceMemberService, namespaceMemberRepository);
+        order.verify(namespaceMemberService).revokeForEligibilityLoss(promoted, "super-1",
+                NamespaceMemberService.REASON_ROLE_CHANGED);
+        order.verify(namespaceMemberRepository).save(promoted);
+        order.verify(namespaceMemberService).revokeForEligibilityLoss(removed, "super-1",
+                NamespaceMemberService.REASON_MEMBER_REMOVED);
+        order.verify(namespaceMemberRepository).deleteByNamespaceIdAndUserId(1L, "user-3");
+    }
+
+    @Test
+    void roleChangeThatStaysMemberDoesNotRevoke() {
+        Namespace namespace = namespace(1L, "team-a", NamespaceStatus.ACTIVE, NamespaceType.TEAM);
+        NamespaceMember unchanged = member(12L, 1L, "user-2", NamespaceRole.MEMBER);
+        when(namespaceRepository.findLockedById(1L)).thenReturn(Optional.of(namespace));
+        when(namespaceRepository.findIdBySlug("team-a")).thenReturn(Optional.of(1L));
+        when(namespaceAccessPolicy.isImmutable(namespace)).thenReturn(false);
+        when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "user-2")).thenReturn(Optional.of(unchanged));
+        when(namespaceMemberRepository.save(unchanged)).thenReturn(unchanged);
+
+        service.updateMemberRole("team-a", "user-2", new UpdateMemberRoleRequest(NamespaceRole.MEMBER), "super-1");
+
+        org.mockito.Mockito.verify(namespaceMemberService, org.mockito.Mockito.never())
+                .revokeForEligibilityLoss(any(), any(), any());
     }
 
     @Test

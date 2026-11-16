@@ -92,6 +92,11 @@ export function ReviewsPage() {
     return <>
       <span className="inline-flex rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">{t(kind === 'AVATAR_CHANGE' && review.avatarRemoval ? 'reviewCenter.kind.AVATAR_REMOVAL' : `reviewCenter.kind.${kind}`)}</span>
       {applied.status !== 'PENDING' && <span className="mt-1 block text-xs text-muted-foreground">{t(`reviewCenter.status.${review.status}`)}</span>}
+      {review.decisionMethod && (
+        <span className="mt-1 block text-xs text-muted-foreground">
+          {t(`review.decisionMethod.${review.decisionMethod}`)}
+        </span>
+      )}
     </>
   }
 

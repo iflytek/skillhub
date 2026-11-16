@@ -191,6 +191,11 @@ public class AdminNamespaceAppService {
         if (member.getRole() == NamespaceRole.OWNER) {
             throw new DomainBadRequestException("error.namespace.member.owner.setDirect");
         }
+        if (request.role() != NamespaceRole.MEMBER) {
+            // Same revocation as the namespace member page: leaving MEMBER ends the grant for good.
+            namespaceMemberService.revokeForEligibilityLoss(member, actorUserId,
+                    NamespaceMemberService.REASON_ROLE_CHANGED);
+        }
         member.setRole(request.role());
         NamespaceMember saved = namespaceMemberRepository.save(member);
         return MemberResponse.from(saved, userAccountRepository.findById(saved.getUserId()).orElse(null));
@@ -204,6 +209,8 @@ public class AdminNamespaceAppService {
         if (member.getRole() == NamespaceRole.OWNER) {
             throw new DomainBadRequestException("error.namespace.member.owner.remove");
         }
+        namespaceMemberService.revokeForEligibilityLoss(member, actorUserId,
+                NamespaceMemberService.REASON_MEMBER_REMOVED);
         namespaceMemberRepository.deleteByNamespaceIdAndUserId(namespace.getId(), userId);
         return new MessageResponse("Member removed successfully");
     }
@@ -222,6 +229,8 @@ public class AdminNamespaceAppService {
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.owner.current.notFound"));
         NamespaceMember newOwner = namespaceMemberRepository.findByNamespaceIdAndUserId(namespace.getId(), newOwnerId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.owner.new.notFound"));
+        namespaceMemberService.revokeForEligibilityLoss(newOwner, actorUserId,
+                NamespaceMemberService.REASON_ROLE_CHANGED);
         currentOwner.setRole(NamespaceRole.ADMIN);
         newOwner.setRole(NamespaceRole.OWNER);
         namespaceMemberRepository.save(currentOwner);
