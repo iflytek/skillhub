@@ -16,4 +16,4 @@
 
 - [x] 7. Capture the accepted request's real skill:submit ceiling instead of constant true; prove session/submit and missing-capability controls.
 - [x] 8. Prove accepted-token revoke/expiry, rejected new requests, and grant revoke/regrant/replay through authenticated filters and PostgreSQL; assert decisions, publication and fallback event counts.
-- [ ] 9. Revalidate migrations, runtime and member controls on current main; distinguish real scans from controlled callbacks and preserve evidence.
+- [x] 9. Revalidate migrations, runtime and member controls on current main; distinguish real scans from controlled callbacks and preserve evidence.
