@@ -1439,11 +1439,14 @@ export const namespaceApi = {
 }
 
 export const tokenApi = {
-  async getTokens(params?: { page?: number, size?: number }): Promise<{ items: ApiToken[], total: number, page: number, size: number }> {
+  async getTokens(params?: { page?: number, size?: number, query?: string, status?: 'ALL' | 'ACTIVE' | 'EXPIRED' }): Promise<{ items: ApiToken[], total: number, page: number, size: number }> {
     const queryPage = params?.page ?? 0
     const querySize = params?.size ?? 10
+    const search = new URLSearchParams({ page: String(queryPage), size: String(querySize) })
+    if (params?.query) search.set('query', params.query)
+    if (params?.status) search.set('status', params.status)
     const page = await fetchJson<{ items: ApiToken[], total: number, page: number, size: number }>(
-      `/api/v1/tokens?page=${queryPage}&size=${querySize}`,
+      `/api/v1/tokens?${search}`,
     )
     return {
       ...page,

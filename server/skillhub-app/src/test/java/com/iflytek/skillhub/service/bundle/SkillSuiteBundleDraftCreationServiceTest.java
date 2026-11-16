@@ -21,6 +21,8 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -74,9 +76,10 @@ class SkillSuiteBundleDraftCreationServiceTest {
         verify(draftService, never()).createVersion(any(), any(), any());
     }
 
-    @Test
-    void atomicallyRecordsTheDraftCreatedFromExactCompletedMemberIds() {
-        SkillSuiteBundleExecutionOperation operation = operation();
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void creatingDraftFromCompletedMembersRequiresRecordedAuthority(boolean authorized) {
+        SkillSuiteBundleExecutionOperation operation = operation(authorized);
         SkillSuiteBundleMemberResult member = member(true);
         SkillSuiteBundlePreviewSession preview = mock(SkillSuiteBundlePreviewSession.class);
         Map<String, Object> manifestJson = Map.of("manifest", "value");
@@ -95,7 +98,16 @@ class SkillSuiteBundleDraftCreationServiceTest {
         when(draftService.create(any(), any())).thenReturn(
                 new SkillSuiteDraftService.CreatedDraft(suite, version, List.of()));
 
-        assertThat(service.create("operation")).isTrue();
+        boolean created = service.create("operation");
+        if (!authorized) {
+            assertThat(created).isFalse();
+            assertThat(operation.getStatus()).isEqualTo(SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE);
+            assertThat(operation.getFailureCode()).isEqualTo("AUTHORIZATION_PROVENANCE_UNKNOWN");
+            assertThat(operation.getResultSuiteId()).isNull();
+            org.mockito.Mockito.verifyNoInteractions(draftService);
+            return;
+        }
+        assertThat(created).isTrue();
 
         assertThat(operation.getStatus()).isEqualTo(SkillSuiteBundleOperationStatus.SUITE_DRAFT_CREATED);
         assertThat(operation.getResultSuiteId()).isEqualTo(21L);
@@ -104,12 +116,29 @@ class SkillSuiteBundleDraftCreationServiceTest {
         verify(operationRepository).flush();
     }
 
+    @Test
+    void alreadyCreatedDraftRemainsAnIdempotentTerminalResultEvenForHistoricalRows() {
+        SkillSuiteBundleExecutionOperation operation = operation(false);
+        operation.markSuiteDraftCreated(21L, 22L, NOW.minusSeconds(1));
+        when(operationRepository.findByIdForUpdate("operation")).thenReturn(Optional.of(operation));
+
+        assertThat(service.create("operation")).isTrue();
+        assertThat(operation.getStatus()).isEqualTo(SkillSuiteBundleOperationStatus.SUITE_DRAFT_CREATED);
+        org.mockito.Mockito.verifyNoInteractions(draftService, memberRepository, previewRepository);
+    }
+
     private SkillSuiteBundleExecutionOperation operation() {
+        return operation(true);
+    }
+
+    private SkillSuiteBundleExecutionOperation operation(boolean session) {
         Map<String, Object> planJson = Map.of("plan", "value");
-        return new SkillSuiteBundleExecutionOperation(
+        SkillSuiteBundleExecutionOperation operation = new SkillSuiteBundleExecutionOperation(
                 "operation", "preview", "request", "actor", SkillSuiteBundleMode.CREATE,
                 1L, "suite", null, null, "1.0.0", "archive", "a".repeat(64),
                 planJson, "digest", NOW.minusSeconds(1));
+        if (session) operation.captureAuthorization(false, null);
+        return operation;
     }
 
     private SkillSuiteBundleMemberResult member(boolean completed) {

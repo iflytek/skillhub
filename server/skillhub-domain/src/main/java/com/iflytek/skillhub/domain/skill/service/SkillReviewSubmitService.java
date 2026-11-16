@@ -148,6 +148,14 @@ public class SkillReviewSubmitService {
     public void confirmPublish(Long skillId, Long versionId, String actorUserId,
                                Map<Long, NamespaceRole> userNamespaceRoles,
                                Set<String> platformRoles) {
+        confirmPublish(skillId, versionId, actorUserId, userNamespaceRoles, platformRoles, null);
+    }
+
+    @Transactional
+    public void confirmPublish(Long skillId, Long versionId, String actorUserId,
+                               Map<Long, NamespaceRole> userNamespaceRoles,
+                               Set<String> platformRoles, Set<String> tokenCapabilities) {
+        SkillTokenCapabilityPolicy.require(tokenCapabilities, SkillTokenCapabilityPolicy.PUBLISH_PRIVATE);
         Skill skill = skillRepository.findById(skillId)
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.notFound", skillId));
         if (skill.isGithubSyncManaged()) {

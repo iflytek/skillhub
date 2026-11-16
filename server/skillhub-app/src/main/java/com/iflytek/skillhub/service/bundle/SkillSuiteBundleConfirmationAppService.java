@@ -70,7 +70,19 @@ public class SkillSuiteBundleConfirmationAppService {
             Map<Long, NamespaceRole> namespaceRoles,
             Set<String> platformRoles
     ) {
+        return confirm(previewToken, clientRequestId, confirmedWarningDigest, actorId,
+                namespaceRoles, platformRoles, false, null);
+    }
+
+    @Transactional
+    public ConfirmationOutcome confirm(
+            String previewToken, String clientRequestId, String confirmedWarningDigest, String actorId,
+            Map<Long, NamespaceRole> namespaceRoles, Set<String> platformRoles,
+            boolean tokenCall, Set<String> tokenCapabilities) {
         requireEnabled();
+        if (tokenCall && (tokenCapabilities == null || tokenCapabilities.isEmpty())) {
+            throw new DomainBadRequestException("error.suite.bundle.authorization.snapshotRequired");
+        }
         String normalizedRequestId = normalizeRequestId(clientRequestId);
         ConfirmationOutcome existing = findIdempotent(actorId, normalizedRequestId, previewToken);
         if (existing != null) {
@@ -99,6 +111,7 @@ public class SkillSuiteBundleConfirmationAppService {
                 preview.getNamespaceId(), preview.getTargetSuiteSlug(), preview.getTargetSuiteId(),
                 preview.getBaseSuiteVersionId(), preview.getTargetVersion(), preview.getArchiveObjectKey(),
                 preview.getArchiveSha256(), preview.getPlan(), preview.getWarningDigest(), now);
+        operation.captureAuthorization(tokenCall, tokenCapabilities);
         try {
             operationRepository.save(operation);
             // The partial unique index must win before any member lifecycle work can start.

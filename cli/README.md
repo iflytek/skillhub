@@ -114,6 +114,17 @@ suppresses automatic browser launch while retaining the verification URL and cod
 Token-based login remains available for CI and other non-interactive automation. In both modes,
 credentials are persisted only after `whoami` succeeds.
 
+Device-code and browser-callback login issue `skill:read + skill:submit`: download, upload,
+validate and submit for review remain available. PRIVATE uploads are candidates, not publication.
+Explicit private confirmation needs `skill:publish-private`; management needs `skill:manage`.
+Account or namespace roles do not broaden token capabilities.
+
+After logging in again, remote removal needs an explicitly authorized `skill:delete` token.
+Create it using the Web Custom preset, then run `skillhub login --token <token>`.
+The CLI reports this next step for missing-delete errors and never reissues a broader token.
+Existing legacy tokens retain their stored scopes and route authorization until replaced.
+`whoami` shows effective capabilities, legacy compatibility and expiration; older servers remain supported.
+
 Both files are updated non-destructively: SkillHub CLI changes only its own `tokens` and `registry`
 fields and preserves unknown fields written by other compatible tools. This allows tools that share
 the `~/.skillhub` directory to keep independently named state in the same JSON documents.

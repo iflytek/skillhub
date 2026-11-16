@@ -108,7 +108,7 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
               )}>
                 {t(`suite.bundle.statusLabel.${status}`)}
               </span>
-              {status === 'BLOCKED_RETRYABLE' && !demoOnlyOperation ? (
+              {status === 'BLOCKED_RETRYABLE' && problemKind !== 'authorization' && !demoOnlyOperation ? (
                 <Button data-analytics-id="suite.operation.retry"
                   size="sm"
                   disabled={retryMutation.isPending}
@@ -200,7 +200,9 @@ export function SuiteBundleOperationDetail({ operationId }: { operationId: strin
           <div className="min-w-0">
             <p className="font-medium text-foreground">{t(`suite.bundle.problem.${problemKind}.title`)}</p>
             <p className="mt-1 text-xs leading-5 text-muted-foreground">
-              {t(`suite.bundle.problem.${problemKind}.description`)}
+              {problemKind === 'authorization'
+                ? t(`suite.bundle.problem.authorization.${operation?.failureCode}`, { capability: 'skill:publish-private' })
+                : t(`suite.bundle.problem.${problemKind}.description`)}
             </p>
             {affectedMemberNames.length > 0 ? (
               <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-foreground">

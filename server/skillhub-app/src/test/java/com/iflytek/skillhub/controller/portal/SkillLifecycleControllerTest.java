@@ -285,7 +285,7 @@ class SkillLifecycleControllerTest {
                 eq("1.2.4"),
                 eq("usr_1"),
                 anyMap(),
-                eq(false), org.mockito.ArgumentMatchers.anySet()))
+                eq(false), org.mockito.ArgumentMatchers.anySet(), org.mockito.ArgumentMatchers.isNull()))
                 .willReturn(new SkillPublishService.PublishResult(1L, "demo-skill", newVersion));
 
         mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.2.3/rerelease")
@@ -353,7 +353,7 @@ class SkillLifecycleControllerTest {
                 eq("1.2.4"),
                 eq("usr_1"),
                 anyMap(),
-                eq(false), org.mockito.ArgumentMatchers.anySet()))
+                eq(false), org.mockito.ArgumentMatchers.anySet(), org.mockito.ArgumentMatchers.isNull()))
                 .willReturn(new SkillPublishService.PublishResult(1L, "demo-skill", newVersion));
 
         mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.2.3/rerelease")
@@ -374,7 +374,7 @@ class SkillLifecycleControllerTest {
                 eq("1.2.4"),
                 eq("usr_1"),
                 anyMap(),
-                eq(false), org.mockito.ArgumentMatchers.anySet());
+                eq(false), org.mockito.ArgumentMatchers.anySet(), org.mockito.ArgumentMatchers.isNull());
     }
 
     @Test
@@ -395,7 +395,8 @@ class SkillLifecycleControllerTest {
         sourceVersion.setStatus(SkillVersionStatus.PUBLISHED);
         given(skillVersionRepository.findBySkillIdAndVersion(1L, "1.2.3")).willReturn(java.util.Optional.of(sourceVersion));
         given(skillPublishService.rereleasePublishedVersion(
-                eq(1L), eq("1.2.3"), eq("1.2.4"), eq("usr_1"), anyMap(), eq(true), org.mockito.ArgumentMatchers.anySet()))
+                eq(1L), eq("1.2.3"), eq("1.2.4"), eq("usr_1"), anyMap(), eq(true),
+                org.mockito.ArgumentMatchers.anySet(), org.mockito.ArgumentMatchers.isNull()))
                 .willReturn(new SkillPublishService.PublishResult(1L, "demo-skill", newVersion));
 
         mockMvc.perform(post("/api/web/skills/global/demo-skill/versions/1.2.3/rerelease")
@@ -410,7 +411,8 @@ class SkillLifecycleControllerTest {
                 .andExpect(jsonPath("$.data.action").value("RERELEASE_VERSION"));
 
         verify(skillPublishService).rereleasePublishedVersion(
-                eq(1L), eq("1.2.3"), eq("1.2.4"), eq("usr_1"), anyMap(), eq(true), org.mockito.ArgumentMatchers.anySet());
+                eq(1L), eq("1.2.3"), eq("1.2.4"), eq("usr_1"), anyMap(), eq(true),
+                org.mockito.ArgumentMatchers.anySet(), org.mockito.ArgumentMatchers.isNull());
     }
 
     private Skill skillWithStatus(Skill skill, com.iflytek.skillhub.domain.skill.SkillStatus status) {

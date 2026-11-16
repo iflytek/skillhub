@@ -128,7 +128,7 @@ class SkillSuiteBundleControllerTest {
                 new SkillSuiteBundleConfirmationAppService.ConfirmationOutcome(
                         "operation-1", "RUNNING", false);
         when(confirmationService.confirm(
-                "preview-1", "request-1", "warning-digest", "actor", Map.of(), Set.of()))
+                "preview-1", "request-1", "warning-digest", "actor", Map.of(), Set.of(), false, null))
                 .thenReturn(outcome);
         when(responseMapper.toResponse(outcome)).thenReturn(
                 new SkillSuiteBundleOperationResponse("operation-1", "RUNNING", false));

@@ -191,6 +191,19 @@ Status: contract reference with documented implementation exception
 
 ## 7. 当前最终约束
 
+### Token 调用的附加上限
+
+API Token 权限是账号／空间权限、Token 能力、资源状态与治理规则的交集。
+read + submit 可以上传 PRIVATE 候选、送审、查询状态，不能确认发布、管理或删除。
+确认 PRIVATE 发布需 publish-private；改变已有技能可见性（包括上传组合操作）需 manage，
+在任何版本或技能写入前拒绝。PRIVATE rerelease 保持 `UPLOADED`，不因管理员身份直接发布。
+SUPER_ADMIN Token 上传不触发自动发布，旧 publish 别名可以显式确认；会话直发不变。
+完整 scope 名称与兼容策略见[认证文档](./03-authentication-design.md#51-token-能力上限与兼容)。
+
+Bundle 操作持久化发起方式与能力快照，恢复／重试不从 worker 或当前调用者继承权限。
+历史空快照且无可靠原操作授权证据时，PRIVATE 确认保持 `BLOCKED_RETRYABLE` 并解释来源不明；
+需要以明确授权另建操作，不能通过提权重试补全旧快照。
+
 - 一个 skill 生命周期的唯一规范入口就是本文件
 - 其它文档如 `02-domain-model`、`05-business-flows`、`06-api-design`、`08-frontend-architecture` 必须与本文件保持一致
 - 生命周期行为变化先确认正式需求与验收，再同步修改实现、测试及本文；不能以文档对齐名义静默裁定新业务规则

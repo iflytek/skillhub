@@ -2,18 +2,50 @@ package com.iflytek.skillhub.auth.token;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ApiTokenScopeServiceTest {
 
     private final ApiTokenScopeService scopeService =
             new ApiTokenScopeService(new ObjectMapper(), new RouteSecurityPolicyRegistry());
+
+    @Test
+    void legacyAliasExpandsAndDeduplicatesWithoutChangingRawScopes() {
+        String json = "[\"skill:read\",\"skill:publish\",\"skill:submit\",\"skill:publish\"]";
+        assertEquals(Set.of("skill:read", "skill:publish", "skill:submit"), scopeService.parseScopes(json));
+        assertEquals(Set.of("skill:read", "skill:submit", "skill:publish-private", "skill:manage",
+                "suite:legacy-write"), scopeService.effectiveCapabilities(json));
+    }
+
+    @Test
+    void emptyAndMalformedStoredScopesFailClosed() {
+        for (String json : List.of("", "[]", "null", "not-json", "{}")) {
+            assertEquals(Set.of(), scopeService.effectiveCapabilities(json));
+        }
+        assertEquals(Set.of(), scopeService.effectiveCapabilities(null));
+    }
+
+    @Test
+    void issuanceAcceptsKnownScopesAndEmptyListButRejectsUnknownAndInternalScopes() {
+        scopeService.validateScopes(List.of());
+        scopeService.validateScopes(List.of("skill:read", "skill:submit", "skill:publish-private",
+                "skill:manage", "skill:delete", "token:manage", "skill:publish"));
+        for (String unknown : List.of("no-such:scope", "suite:legacy-write", " skill:read", "")) {
+            var exception = assertThrows(DomainBadRequestException.class,
+                    () -> scopeService.validateScopes(List.of(unknown)));
+            assertEquals("error.apiToken.scope.unknown", exception.messageCode());
+            assertEquals(unknown, exception.messageArgs()[0]);
+        }
+    }
 
     @Test
     void parseScopesShouldNormalizeJsonArray() {
@@ -42,7 +74,7 @@ class ApiTokenScopeServiceTest {
         );
 
         assertFalse(denied.allowed());
-        assertEquals("skill:publish", denied.requiredScope());
+        assertEquals("skill:submit", denied.requiredScope());
 
         ApiTokenScopeService.AuthorizationDecision allowed = scopeService.authorize(
             "POST",

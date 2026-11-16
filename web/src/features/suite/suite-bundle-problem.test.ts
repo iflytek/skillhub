@@ -6,6 +6,8 @@ describe('suiteBundleProblemKind', () => {
     ['BLOCKED_RETRYABLE', 'MEMBER_SCAN_FAILED', 'memberScanFailed'],
     ['BLOCKED_RETRYABLE', 'MEMBER_EXECUTION_FAILED', 'memberExecutionFailed'],
     ['BLOCKED_RETRYABLE', 'AUTHORIZATION_OR_NAMESPACE_BLOCKED', 'authorizationBlocked'],
+    ['BLOCKED_RETRYABLE', 'TOKEN_CAPABILITY_MISSING', 'authorization'],
+    ['BLOCKED_RETRYABLE', 'AUTHORIZATION_PROVENANCE_UNKNOWN', 'authorization'],
     ['REPREVIEW_REQUIRED', 'BUNDLE_PLAN_CHANGED', 'planChanged'],
     ['BLOCKED_RETRYABLE', 'UNKNOWN_INTERNAL_CODE', 'blocked'],
     ['REPREVIEW_REQUIRED', undefined, 'planChanged'],

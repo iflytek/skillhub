@@ -50,6 +50,15 @@ public class SkillPublishAppService {
             SkillVisibility visibility, Set<String> roles, boolean confirmWarnings, AvatarAction action,
             String uploadId, String expectedSlug, String displayName, String shortDescription,
             String overview, boolean resetPresentation, AuditRequestContext context) {
+        return publish(namespace, entries, actor, visibility, roles, confirmWarnings, action, uploadId,
+                expectedSlug, displayName, shortDescription, overview, resetPresentation, context, null);
+    }
+
+    @Transactional
+    public SkillPublishService.PublishResult publish(String namespace, List<PackageEntry> entries, String actor,
+            SkillVisibility visibility, Set<String> roles, boolean confirmWarnings, AvatarAction action,
+            String uploadId, String expectedSlug, String displayName, String shortDescription,
+            String overview, boolean resetPresentation, AuditRequestContext context, Set<String> tokenCapabilities) {
         if (action == AvatarAction.REPLACE && (uploadId == null || uploadId.isBlank())
                 || action != AvatarAction.REPLACE && uploadId != null && !uploadId.isBlank()) {
             throw new DomainBadRequestException("error.skill.avatar.invalidUpload");
@@ -65,7 +74,10 @@ public class SkillPublishAppService {
                 uploads.validateReference(namespace, targetSlug, actor, uploadId);
             }
         }
-        SkillPublishService.PublishResult result = (shortDescription == null || shortDescription.isBlank())
+        SkillPublishService.PublishResult result = tokenCapabilities != null
+                ? publications.publishCandidateFromEntries(namespace, entries, actor, visibility, roles,
+                        confirmWarnings, displayName, shortDescription, overview, resetPresentation, tokenCapabilities)
+                : (shortDescription == null || shortDescription.isBlank())
                 && (overview == null || overview.isBlank()) && !resetPresentation
                 ? (displayName == null || displayName.isBlank()
                     ? publications.publishFromEntries(namespace, entries, actor, visibility, roles, confirmWarnings)

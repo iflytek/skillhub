@@ -2402,6 +2402,14 @@
     "next": "다음"
   },
   "createToken": {
+    "presetLabel": "권한 사전 설정",
+    "presets": {
+      "readonly": "읽기 및 다운로드",
+      "candidate": "후보 제출",
+      "private": "비공개 게시",
+      "custom": "사용자 지정"
+    },
+    "capabilityHint": "계정 및 네임스페이스 권한도 적용됩니다. 삭제와 토큰 관리는 사용자 지정에서 명시적으로 허용해야 합니다.",
     "title": "API 토큰 만들기",
     "description": "CLI 또는 API 접근을 위한 새 API 토큰을 만드세요",
     "nameLabel": "토큰 이름",
@@ -2426,7 +2434,37 @@
     "expiresAtDisplay": "만료 시각",
     "copyToken": "토큰 복사",
     "copySuccess": "토큰을 클립보드에 복사했습니다",
-    "copyFailed": "토큰을 복사하지 못했습니다. 다시 시도하세요."
+    "copyFailed": "토큰을 복사하지 못했습니다. 다시 시도하세요.",
+    "required": "필수",
+    "capabilityDescriptions": {
+      "read": "계정에서 접근할 수 있는 스킬 읽기",
+      "tokenManage": "명시적 권한으로 토큰 생성 및 관리",
+      "delete": "허용된 범위에서 스킬 삭제",
+      "manage": "기존 권한 범위에서 스킬 관리",
+      "publishPrivate": "비공개 스킬의 게시만 확인",
+      "submit": "스킬 업로드 및 후보 버전 제출"
+    },
+    "oneTimeHint": "전체 토큰은 생성 직후에만 표시됩니다",
+    "presetDescriptions": {
+      "private": "PRIVATE 스킬의 게시 확인도 허용",
+      "candidate": "스킬을 업로드하고 검토 후보 제출",
+      "readonly": "접근 가능한 스킬 탐색 및 다운로드",
+      "custom": "필요한 권한을 하나씩 선택"
+    },
+    "scopeIdentifiers": "권한 식별자 보기",
+    "summaryTitle": "권한 요약",
+    "presetHint": "용도를 선택하거나 사용자 지정에서 권한을 직접 선택하세요.",
+    "expiresAtFuture": "미래의 만료 시간을 선택하세요.",
+    "notGranted": "부여되지 않음",
+    "skillCapabilities": "스킬 권한",
+    "nameHint": "용도를 알아볼 수 있는 이름을 지정하세요.",
+    "manualCopyHint": "복사되지 않으면 토큰을 직접 선택하여 복사하세요.",
+    "savedClose": "저장했으므로 닫기",
+    "selectedCount": "권한 {{count}}개 선택됨",
+    "boundaryHint": "계정, 네임스페이스 및 리소스 상태 제한은 계속 적용됩니다.",
+    "copied": "복사됨",
+    "saveNow": "지금 토큰을 복사하여 안전하게 보관하세요",
+    "selectCapability": "권한을 하나 이상 선택하세요."
   },
   "starButton": {
     "starred": "즐겨찾기됨",
@@ -2458,14 +2496,19 @@
     "next": "다음",
     "pagePrefix": "페이지",
     "pageSuffix": "",
-    "goToPage": "{{page}}페이지로 이동"
+    "goToPage": "{{page}}페이지로 이동",
+    "pageIndicator": "{{total}}페이지 중 {{page}}페이지"
   },
   "systemConfig": {
     "upToDate": "현재 설정이 저장됨",
     "independentSettings": "각 설정 영역은 별도로 저장됩니다.",
     "operationsHelp": "플랫폼 이메일 전송과 검색 유지보수를 각각 관리합니다.",
     "operationsNavigation": "알림 및 유지보수 항목",
-    "operationsTab": {"mail": "이메일 설정", "deliveries": "전송 기록", "index": "검색 유지보수"},
+    "operationsTab": {
+      "mail": "이메일 설정",
+      "deliveries": "전송 기록",
+      "index": "검색 유지보수"
+    },
     "accessHelp": "계정 접근과 콘텐츠 검토를 각각 관리하고 저장합니다.",
     "externalRulesNotice": "이메일이 같아도 로컬 계정과 외부 계정은 병합되지 않습니다. 기존 계정 권한은 사용자 관리에서 설정하세요. Feishu와 DingTalk는 이 규칙에 필요한 검증된 이메일을 제공하지 않습니다.",
     "accountSource": "계정 및 제공자",
@@ -2918,6 +2961,17 @@
     "noDocumentation": "이 검토 버전에는 읽을 수 있는 문서 파일이 없습니다."
   },
   "token": {
+    "capabilities": "유효 권한",
+    "capabilitiesUnavailable": "서버가 권한 정보를 제공하지 않았습니다",
+    "legacyCompat": "기존 토큰 호환 (skill:publish 확장)",
+    "capabilityLabels": {
+      "read": "읽기 및 다운로드",
+      "submit": "업로드 및 검토 제출",
+      "publishPrivate": "비공개 게시 확인",
+      "manage": "스킬 관리",
+      "delete": "스킬 삭제",
+      "tokenManage": "API 토큰 관리"
+    },
     "title": "API 토큰",
     "createNew": "토큰 만들기",
     "copyHint": "보안을 위해 토큰 원문은 생성 시에만 복사할 수 있습니다. 나중에 다시 보거나 복사할 수 없습니다. 필요하면 새 토큰을 만드세요.",
@@ -2944,10 +2998,49 @@
     "updateExpirationFailed": "토큰 만료를 변경하지 못했습니다",
     "delete": "삭제",
     "deleteTitle": "토큰 삭제",
-    "deleteDescription": "토큰 \"{{name}}\"을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "deleteDescription": "이 토큰으로 보내는 새 요청은 더 이상 인증되지 않습니다.",
     "deleteSuccess": "토큰을 삭제했습니다",
     "deleteFailed": "삭제 실패",
-    "loading": "불러오는 중..."
+    "loading": "불러오는 중...",
+    "effectiveCapabilities": "유효 권한",
+    "statusPermanent": "만료 없음",
+    "clearFilters": "필터 초기화",
+    "usageDescription": "자동화 작업마다 별도 토큰을 사용하면 용도 확인, 교체, 취소가 쉽습니다.",
+    "pageLoading": "{{page}}페이지 불러오는 중…",
+    "sensitiveCapabilityHint": "삭제 및 토큰 관리 권한은 명시적으로 부여해야 합니다.",
+    "helpTitle": "토큰 권한",
+    "permissionsHelp": "권한 안내",
+    "permissionSelectionHint": "권한을 개별 선택하면 빠른 선택도 함께 갱신됩니다.",
+    "boundaryDescription": "토큰으로 본인 권한을 확대할 수 없습니다. 공개 게시는 기존 검토 절차를 따릅니다.",
+    "viewCapabilitiesCount": "권한 {{count}}개 보기",
+    "revokeHint": "취소한 토큰은 복구할 수 없습니다. 다시 접근하려면 새 토큰을 만드세요.",
+    "helpDescription": "모든 요청에는 토큰 권한과 계정 및 네임스페이스 권한이 함께 적용됩니다.",
+    "boundaryTitle": "토큰 권한은 계정 및 네임스페이스 권한 안에서 적용됩니다",
+    "noResults": "일치하는 토큰이 없습니다",
+    "permissionsHelpDescription": "선택한 권한을 변경하지 않고 설명만 표시합니다.",
+    "resultRange": "총 {{total}}개 중 {{from}}–{{to}}",
+    "permissionsTitle": "접근 권한",
+    "nameAndPrefix": "이름 / 접두사",
+    "legacyBadge": "이전 버전",
+    "totalCount": "토큰 {{count}}개",
+    "permissionNotSelected": "미선택",
+    "additionalCapabilityDescription": "기존 토큰의 권한이며 참고용으로만 표시됩니다.",
+    "showCapabilityIdentifiers": "권한 식별자 표시",
+    "retry": "다시 불러오기",
+    "searchAction": "검색",
+    "capabilityHelp": "권한 안내",
+    "statusFilter": "유효 상태 필터",
+    "legacySuiteCapability": "이전 버전의 스위트 접근 권한",
+    "usageTitle": "토큰마다 용도를 명확히 구분하세요",
+    "legacyCapabilityExplanation": "기존 토큰의 이전 권한은 유지되지만 새 토큰에서는 선택할 수 없습니다.",
+    "statusAll": "모든 상태",
+    "search": "토큰 이름 검색",
+    "statusExpired": "만료됨",
+    "permissionShortcuts": "권한 빠른 선택",
+    "permissionSelected": "선택됨",
+    "viewCapabilities": "모든 권한 보기",
+    "statusActive": "유효",
+    "selectedCapabilityCount": "{{count}}개 선택됨"
   },
   "apiError": {
     "unauthorized": "세션이 만료되었습니다. 다시 로그인하세요",
@@ -3368,6 +3461,11 @@
         "memberExecutionFailed": {
           "title": "구성 스킬 게시에 실패했습니다",
           "description": "완료된 구성 스킬은 다시 실행하지 않습니다. 아래 미완료 구성 스킬의 문제를 해결한 후 계속하세요."
+        },
+        "authorization": {
+          "title": "이 작업의 충분한 권한을 확인할 수 없습니다",
+          "TOKEN_CAPABILITY_MISSING": "원래 토큰에 {{capability}} 권한이 없습니다. 이 작업을 취소하고 해당 권한을 가진 토큰으로 새 작업을 만드세요. 재시도로 원래 권한을 변경할 수 없습니다.",
+          "AUTHORIZATION_PROVENANCE_UNKNOWN": "원래 권한을 확인할 수 없습니다. 이 작업을 취소하고 명시적으로 권한을 부여하여 다시 만드세요. 재시도로 해결할 수 없습니다."
         },
         "authorizationBlocked": {
           "title": "권한 또는 네임스페이스 접근이 변경되었습니다",
@@ -4323,5 +4421,15 @@
     "untitledTopic": "이름 없는 주제",
     "close": "닫기",
     "coverUploadHelp": "PNG / JPEG, 최대 2 MiB 및 1024 × 1024픽셀. 업로드된 이미지는 공개됩니다."
+  },
+  "dateTimePicker": {
+    "localTime": "현지 시간 · 24시간제",
+    "apply": "적용",
+    "title": "만료 시간 선택",
+    "minute": "분",
+    "time": "시간",
+    "placeholder": "날짜 및 시간 선택",
+    "hour": "시",
+    "futureRequired": "미래의 날짜 및 시간을 선택하세요"
   }
 }

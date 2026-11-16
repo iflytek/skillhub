@@ -72,13 +72,13 @@ class ApiTokenScopeFilterTest {
         filter.doFilter(request, response, chain);
 
         assertEquals(HttpServletResponse.SC_FORBIDDEN, response.getStatus());
-        assertTrue(response.getErrorMessage().contains("Missing API token scope: skill:publish"));
+        assertTrue(response.getErrorMessage().contains("Missing API token scope: skill:submit"));
         ApiTokenAccessDeniedException exception = assertInstanceOf(
                 ApiTokenAccessDeniedException.class,
                 deniedException.get()
         );
         assertEquals("error.apiToken.scope.missing", exception.getMessageCode());
-        assertEquals("skill:publish", exception.getMessageArgs()[0]);
+        assertEquals("skill:submit", exception.getMessageArgs()[0]);
         verify(chain, never()).doFilter(request, response);
     }
 
@@ -141,7 +141,7 @@ class ApiTokenScopeFilterTest {
         filter.doFilter(request, response, chain);
 
         assertEquals(HttpServletResponse.SC_FORBIDDEN, response.getStatus());
-        assertTrue(response.getErrorMessage().contains("Missing API token scope: skill:publish"));
+        assertTrue(response.getErrorMessage().contains("Missing API token scope: skill:submit"));
         verify(chain, never()).doFilter(request, response);
     }
 
@@ -177,7 +177,7 @@ class ApiTokenScopeFilterTest {
         filter.doFilter(request, response, chain);
 
         assertEquals(HttpServletResponse.SC_FORBIDDEN, response.getStatus());
-        assertTrue(response.getErrorMessage().contains("Missing API token scope: skill:publish"));
+        assertTrue(response.getErrorMessage().contains("Missing API token scope: skill:submit"));
         verify(chain, never()).doFilter(request, response);
     }
 

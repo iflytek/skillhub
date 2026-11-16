@@ -175,6 +175,19 @@ class SkillSuiteBundleConfirmationAppServiceTest {
         verify(operationRepository, never()).save(any());
     }
 
+    @Test
+    void tokenWithoutSnapshotIsRejectedBeforeAnyPersistenceOrMemberWork() {
+        for (Set<String> capabilities : java.util.Arrays.asList(null, Set.<String>of())) {
+            assertThatThrownBy(() -> service.confirm("preview-1", "request-1", "warning-digest",
+                    "actor", Map.of(), Set.of("SUPER_ADMIN"), true, capabilities))
+                    .isInstanceOf(DomainBadRequestException.class)
+                    .extracting("messageCode")
+                    .isEqualTo("error.suite.bundle.authorization.snapshotRequired");
+        }
+        org.mockito.Mockito.verifyNoInteractions(previewRepository, operationRepository, memberRepository,
+                revalidationService);
+    }
+
     private SkillSuiteBundlePreviewSession preview(
             SkillSuiteBundleManifest manifest,
             SkillSuiteBundlePreviewPlanner.PreviewPlan plan

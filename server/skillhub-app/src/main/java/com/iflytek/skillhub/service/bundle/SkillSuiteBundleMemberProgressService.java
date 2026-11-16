@@ -67,14 +67,19 @@ public class SkillSuiteBundleMemberProgressService {
     public ProgressOutcome reconcile(String operationId) {
         SkillSuiteBundleExecutionOperation operation = operationRepository.findByIdForUpdate(operationId)
                 .orElse(null);
-        if (operation == null || terminal(operation.getStatus())) {
+        if (operation == null || terminal(operation.getStatus())
+                || operation.getStatus() == SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE) {
+            return ProgressOutcome.TERMINAL;
+        }
+        Instant now = clock.instant();
+        if (operation.blockIfAuthorizationUnknown(now)) {
+            operationRepository.save(operation);
             return ProgressOutcome.TERMINAL;
         }
         SkillSuiteBundleActorContextService.ActorContext actor =
                 actorContextService.requireCurrent(operation.getActorId());
         List<SkillSuiteBundleMemberResult> members =
                 memberRepository.findByOperationIdOrderByPositionForUpdate(operationId);
-        Instant now = clock.instant();
         boolean waiting = false;
         for (SkillSuiteBundleMemberResult member : members) {
             if (member.getStatus() == SkillSuiteBundleMemberResultStatus.PLANNED
@@ -104,9 +109,14 @@ public class SkillSuiteBundleMemberProgressService {
                     if (state.skill().getVisibility() != SkillVisibility.PRIVATE) {
                         throw stateChanged();
                     }
+                    if (operation.blockPrivatePublishIfUnauthorized(member, now)) {
+                        memberRepository.saveAll(members);
+                        operationRepository.save(operation);
+                        return ProgressOutcome.TERMINAL;
+                    }
                     skillReviewSubmitService.confirmPublish(
                             state.skill().getId(), state.version().getId(), operation.getActorId(),
-                            actor.namespaceRoles(), actor.platformRoles());
+                            actor.namespaceRoles(), actor.platformRoles(), operation.executionTokenCapabilities());
                     member.markCompleted(now);
                 }
                 case SCAN_FAILED -> {

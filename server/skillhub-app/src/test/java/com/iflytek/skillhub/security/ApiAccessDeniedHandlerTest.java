@@ -95,7 +95,9 @@ class ApiAccessDeniedHandlerTest {
         JsonNode body = objectMapper.readTree(response.getContentAsByteArray());
         assertThat(response.getStatus()).isEqualTo(403);
         assertThat(body.path("msg").asText())
-                .isEqualTo("API token is missing required scope: skill:publish");
+                .isEqualTo("API token is missing required scope: skill:submit");
+        assertThat(body.path("errorCode").asText()).isEqualTo("error.apiToken.scope.missing");
+        assertThat(body.path("errorArgs").get(0).asText()).isEqualTo("skill:submit");
         assertThat(body.path("requestId").asText()).isEqualTo("req-610");
     }
 

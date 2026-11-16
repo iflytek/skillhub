@@ -5,6 +5,9 @@ export interface WhoAmIResponse {
   handle: string
   displayName: string
   email?: string
+  capabilities?: string[] | null
+  legacyCompat?: boolean
+  expiresAt?: string | null
 }
 
 export interface DeviceCodeResponse {
@@ -145,6 +148,8 @@ export interface SuiteDetail {
 interface PublicErrorFields {
   msg?: string
   requestId?: string
+  errorCode?: string
+  errorArgs?: string[]
 }
 
 type ErrorResponseKind = 'json' | 'download'
@@ -406,6 +411,10 @@ export class SkillHubClient {
     if (publicFields.requestId) {
       details.requestId = publicFields.requestId
     }
+    if (publicFields.errorCode) {
+      details.errorCode = publicFields.errorCode
+      details.errorArgs = publicFields.errorArgs ?? []
+    }
 
     let fallback: string
     let exitCode: number = EXIT.generic
@@ -448,9 +457,15 @@ export class SkillHubClient {
     const record = body as Record<string, unknown>
     const msg = typeof record.msg === 'string' ? record.msg.trim() : ''
     const requestId = typeof record.requestId === 'string' ? record.requestId.trim() : ''
+    const errorCode = typeof record.errorCode === 'string' ? record.errorCode : undefined
+    const errorArgs = Array.isArray(record.errorArgs)
+      ? record.errorArgs.filter((arg): arg is string => typeof arg === 'string')
+      : undefined
     return {
       ...(msg ? { msg } : {}),
-      ...(requestId ? { requestId } : {})
+      ...(requestId ? { requestId } : {}),
+      ...(errorCode ? { errorCode } : {}),
+      ...(errorArgs ? { errorArgs } : {})
     }
   }
 

@@ -57,7 +57,7 @@ npx clawhub --help
 1. 登录 SkillHub Web UI
 2. 进入 **个人设置 → API Tokens**
 3. 点击 **创建新 Token**
-4. 设置 Token 名称和权限范围
+4. 设置名称，选择「只读下载」预设；需要上传候选时选「候选提交」
 5. 复制生成的 Token
 
 ### 3. 搜索/浏览/查看技能
@@ -125,9 +125,24 @@ npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 ```
 
 说明：
-- 发布需要具有 `skill:publish` scope 的 API Token，以及目标 namespace 对应权限。
+- 上传／预检／送审需要 `skill:submit`（通常配合 `skill:read`），以及目标 namespace 对应权限。
+- PRIVATE 上传保持候选状态，显式确认发布另需 `skill:publish-private`；管理需 `skill:manage`。
+- 原 `skill:publish` Token 继续展开为提交、私有发布和管理，显示旧版兼容；不因此获得删除能力。
+- SUPER_ADMIN Token 的 PRIVATE 上传不再自动发布；会话保留原行为，Token 须显式确认。
 - `clawhub login` 与 SkillHub CLI 不共享凭据；请为第一方 CLI 单独设置 `SKILLHUB_TOKEN`。
 - 第一方 CLI 使用独立 namespace 参数，但仍遵循服务端 slug 校验规则。
+
+### Token 能力与重新登录
+
+第一方 CLI 的设备码／浏览器回跳登录只签发 `skill:read + skill:submit`，不会静默授予删除权限。
+已有旧 Token 的路由授权保持兼容，重新登录后 `remove --remote` 需另行显式授权：
+在 Web 自定义 Token 中勾选 `skill:delete`，再运行 `skillhub login --token <token>`。
+CLI 不会为删除自动换发更宽 Token；本地卸载不需要远端删除能力。
+`skillhub whoami` 可显示当前能力、旧版兼容标记与到期时间；查询不需要 `token:manage`。
+账号／空间管理员角色不能扩大 Token 能力。
+
+直接调用 Token API 的旧脚本应显式传 scopes；省略值目前仍为 read + publish + delete，
+响应标记 `deprecatedDefault=true`，下一个次版本将收紧为仅 read。
 
 ## API 端点说明
 

@@ -94,6 +94,11 @@ public class SkillSuiteBundleMemberExecutionService {
         if (operation == null || operation.getStatus() != SkillSuiteBundleOperationStatus.RUNNING) {
             return ExecutionOutcome.NONE;
         }
+        Instant now = clock.instant();
+        if (operation.blockIfAuthorizationUnknown(now)) {
+            operationRepository.save(operation);
+            return ExecutionOutcome.NONE;
+        }
         List<SkillSuiteBundleMemberResult> members =
                 memberRepository.findByOperationIdOrderByPositionForUpdate(operationId);
         SkillSuiteBundleMemberResult member = members.stream()
@@ -104,7 +109,14 @@ public class SkillSuiteBundleMemberExecutionService {
         if (member == null) {
             return ExecutionOutcome.NONE;
         }
-        Instant now = clock.instant();
+        if (member.getRequestedVisibility() == com.iflytek.skillhub.domain.skill.SkillVisibility.PRIVATE
+                && (member.getPublishAction() == SkillSuiteBundlePublishAction.CREATE_SKILL
+                    || member.getPublishAction() == SkillSuiteBundlePublishAction.CREATE_VERSION)
+                && operation.blockPrivatePublishIfUnauthorized(member, now)) {
+            memberRepository.saveAll(List.of(member));
+            operationRepository.save(operation);
+            return ExecutionOutcome.NONE;
+        }
         if (!member.start(now)) {
             return ExecutionOutcome.NONE;
         }
@@ -154,7 +166,8 @@ public class SkillSuiteBundleMemberExecutionService {
                             SkillSuiteBundlePackageAnalyzer.StagedMemberFile::relativePath,
                             SkillSuiteBundlePackageAnalyzer.StagedMemberFile::sha256)),
                     operation.getActorId(),
-                    member.getRequestedVisibility(), actor.namespaceRoles(), actor.platformRoles(), true);
+                    member.getRequestedVisibility(), actor.namespaceRoles(), actor.platformRoles(), true,
+                    operation.executionTokenCapabilities());
             member.bindVersion(result.skillId(), result.version().getId(), now);
             advanceCreatedVersion(operation, member, result.version(), actor, now);
         } catch (IOException exception) {
@@ -176,7 +189,7 @@ public class SkillSuiteBundleMemberExecutionService {
                 == com.iflytek.skillhub.domain.skill.SkillVisibility.PRIVATE) {
             skillReviewSubmitService.confirmPublish(
                     member.getSkillId(), version.getId(), operation.getActorId(),
-                    actor.namespaceRoles(), actor.platformRoles());
+                    actor.namespaceRoles(), actor.platformRoles(), operation.executionTokenCapabilities());
             member.markCompleted(now);
             return;
         }
