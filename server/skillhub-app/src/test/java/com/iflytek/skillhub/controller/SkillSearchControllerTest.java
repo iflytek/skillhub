@@ -6,6 +6,9 @@ import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.service.SkillLabelProjectionService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import com.iflytek.skillhub.search.SkillSearchSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -51,7 +54,7 @@ class SkillSearchControllerTest {
                 eq(20),
                 eq(null),
                 any(),
-                any()))
+                any(), eq(SkillSearchSource.ALL)))
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 0, 20));
 
         mockMvc.perform(get("/api/web/skills")
@@ -75,7 +78,7 @@ class SkillSearchControllerTest {
                 eq(12),
                 eq(null),
                 any(),
-                any()))
+                any(), eq(SkillSearchSource.ALL)))
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 0, 12));
 
         mockMvc.perform(get("/api/web/skills")
@@ -97,7 +100,7 @@ class SkillSearchControllerTest {
                 eq(20),
                 eq(List.of("code-generation", "official")),
                 any(),
-                any()))
+                any(), eq(SkillSearchSource.ALL)))
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 0, 20));
 
         mockMvc.perform(get("/api/web/skills")
@@ -118,7 +121,7 @@ class SkillSearchControllerTest {
                 eq(20),
                 eq(null),
                 any(),
-                any()))
+                any(), eq(SkillSearchSource.ALL)))
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 0, 20));
 
         mockMvc.perform(get("/api/web/skills")
@@ -140,7 +143,7 @@ class SkillSearchControllerTest {
                 eq(20),
                 eq(null),
                 any(),
-                any()))
+                any(), eq(SkillSearchSource.ALL)))
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(), 0, 0, 20));
 
         mockMvc.perform(get("/api/web/skills")
@@ -154,7 +157,7 @@ class SkillSearchControllerTest {
     @Test
     void searchShouldOmitLabelsUnlessRequested() throws Exception {
         when(skillSearchAppService.search(
-                eq(null), eq(null), eq("newest"), eq(0), eq(20), eq(null), any(), any()))
+                eq(null), eq(null), eq("newest"), eq(0), eq(20), eq(null), any(), any(), eq(SkillSearchSource.ALL)))
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(summary(7L)), 1, 0, 20));
 
         mockMvc.perform(get("/api/web/skills"))
@@ -168,7 +171,7 @@ class SkillSearchControllerTest {
     @Test
     void searchShouldReturnLabelsWhenRequested() throws Exception {
         when(skillSearchAppService.search(
-                eq(null), eq(null), eq("newest"), eq(0), eq(20), eq(null), any(), any()))
+                eq(null), eq(null), eq("newest"), eq(0), eq(20), eq(null), any(), any(), eq(SkillSearchSource.ALL)))
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(summary(7L)), 1, 0, 20));
         when(skillLabelProjectionService.labelsBySkillIds(List.of(7L)))
                 .thenReturn(Map.of(7L, List.of(new SkillLabelDto("automation", "TOPIC", "Automation"))));
@@ -183,7 +186,7 @@ class SkillSearchControllerTest {
     @Test
     void searchShouldReturnEmptyLabelArrayForSkillsWithoutLabels() throws Exception {
         when(skillSearchAppService.search(
-                eq(null), eq(null), eq("newest"), eq(0), eq(20), eq(null), any(), any()))
+                eq(null), eq(null), eq("newest"), eq(0), eq(20), eq(null), any(), any(), eq(SkillSearchSource.ALL)))
                 .thenReturn(new SkillSearchAppService.SearchResponse(List.of(summary(7L)), 1, 0, 20));
         when(skillLabelProjectionService.labelsBySkillIds(List.of(7L))).thenReturn(Map.of());
 
@@ -199,6 +202,28 @@ class SkillSearchControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value(400));
 
+        verifyNoInteractions(skillSearchAppService);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"all", "platform", "github"})
+    void searchShouldPassSourceAndRetainProjection(String source) throws Exception {
+        when(skillSearchAppService.search(eq(null), eq(null), eq("newest"), eq(0), eq(20),
+                eq(null), any(), any(), eq(SkillSearchSource.valueOf(source.toUpperCase(java.util.Locale.ROOT)))))
+                .thenReturn(new SkillSearchAppService.SearchResponse(
+                        List.of(summary(7L).withSource(source).withVisibleSuites(true)), 1, 0, 20));
+        when(skillLabelProjectionService.labelsBySkillIds(List.of(7L))).thenReturn(Map.of());
+        mockMvc.perform(get("/api/web/skills").param("source", source).param("include", "labels"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].source").value(source))
+                .andExpect(jsonPath("$.data.items[0].hasVisibleSuites").value(true));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"unknown", "PLATFORM", "", " platform "})
+    void searchShouldRejectInvalidSource(String source) throws Exception {
+        mockMvc.perform(get("/api/web/skills").param("source", source))
+                .andExpect(status().isBadRequest());
         verifyNoInteractions(skillSearchAppService);
     }
 

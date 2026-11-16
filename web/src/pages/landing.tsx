@@ -275,11 +275,13 @@ function LandingIntroduction() {
   const navigate = useNavigate()
 
   const { data: popularSkills, isLoading: isLoadingPopular } = useSearchSkills({
+    source: 'platform',
     sort: 'downloads',
     size: 6,
   }, settings.sections.popular.enabled)
 
   const { data: latestSkills, isLoading: isLoadingLatest } = useSearchSkills({
+    source: 'platform',
     sort: 'newest',
     size: 6,
   }, settings.sections.latest.enabled)

@@ -36,8 +36,24 @@ public record SkillSummaryResponse(
         String avatarUrl,
         @JsonInclude(JsonInclude.Include.NON_NULL)
         ManagementState managementState,
-        boolean hasVisibleSuites
+        boolean hasVisibleSuites,
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        String source
 ) {
+
+    public SkillSummaryResponse(
+            Long id, String slug, String displayName, String summary, String visibility, String status,
+            Long downloadCount, Integer starCount, BigDecimal ratingAvg, Integer ratingCount,
+            String namespace, Instant updatedAt, String ownerId, String ownerDisplayName,
+            boolean canSubmitPromotion, SkillLifecycleVersionResponse headlineVersion,
+            SkillLifecycleVersionResponse publishedVersion, SkillLifecycleVersionResponse ownerPreviewVersion,
+            String resolutionMode, ComplianceSnapshotResponse complianceSnapshot, List<SkillLabelDto> labels,
+            String avatarUrl, ManagementState managementState, boolean hasVisibleSuites) {
+        this(id, slug, displayName, summary, visibility, status, downloadCount, starCount, ratingAvg,
+                ratingCount, namespace, updatedAt, ownerId, ownerDisplayName, canSubmitPromotion,
+                headlineVersion, publishedVersion, ownerPreviewVersion, resolutionMode, complianceSnapshot,
+                labels, avatarUrl, managementState, hasVisibleSuites, null);
+    }
 
     public SkillSummaryResponse(
             Long id, String slug, String displayName, String summary, String visibility, String status,
@@ -57,7 +73,7 @@ public record SkillSummaryResponse(
         return new SkillSummaryResponse(id, slug, displayName, summary, visibility, status, downloadCount,
                 starCount, ratingAvg, ratingCount, namespace, updatedAt, ownerId, ownerDisplayName,
                 canSubmitPromotion, headlineVersion, publishedVersion, ownerPreviewVersion,
-                resolutionMode, complianceSnapshot, labels, avatarUrl, managementState, hasVisibleSuites);
+                resolutionMode, complianceSnapshot, labels, avatarUrl, managementState, hasVisibleSuites, source);
     }
 
     /** Owner workspace projection, never populated by public discovery or social lists. */
@@ -88,7 +104,7 @@ public record SkillSummaryResponse(
         return new SkillSummaryResponse(id, slug, displayName, summary, visibility, status, downloadCount,
                 starCount, ratingAvg, ratingCount, namespace, updatedAt, ownerId, ownerDisplayName,
                 canSubmitPromotion && (state == null || !state.ownerReadOnly()), headlineVersion, publishedVersion, ownerPreviewVersion,
-                resolutionMode, complianceSnapshot, labels, avatarUrl, state, hasVisibleSuites);
+                resolutionMode, complianceSnapshot, labels, avatarUrl, state, hasVisibleSuites, source);
     }
 
     public SkillSummaryResponse(
@@ -158,10 +174,17 @@ public record SkillSummaryResponse(
                 headlineVersion, publishedVersion, ownerPreviewVersion, resolutionMode, complianceSnapshot, null);
     }
 
+    public SkillSummaryResponse withSource(String source) {
+        return new SkillSummaryResponse(id, slug, displayName, summary, visibility, status, downloadCount,
+                starCount, ratingAvg, ratingCount, namespace, updatedAt, ownerId, ownerDisplayName,
+                canSubmitPromotion, headlineVersion, publishedVersion, ownerPreviewVersion,
+                resolutionMode, complianceSnapshot, labels, avatarUrl, managementState, hasVisibleSuites, source);
+    }
+
     public SkillSummaryResponse withLabels(List<SkillLabelDto> labels) {
         return new SkillSummaryResponse(id, slug, displayName, summary, visibility, status, downloadCount,
                 starCount, ratingAvg, ratingCount, namespace, updatedAt, ownerId, ownerDisplayName,
                 canSubmitPromotion, headlineVersion,
-                publishedVersion, ownerPreviewVersion, resolutionMode, complianceSnapshot, labels, avatarUrl, managementState, hasVisibleSuites);
+                publishedVersion, ownerPreviewVersion, resolutionMode, complianceSnapshot, labels, avatarUrl, managementState, hasVisibleSuites, source);
     }
 }

@@ -347,6 +347,17 @@
     }
   },
   "search": {
+    "source": {
+      "loadFailed": "스킬을 불러오지 못했습니다. 다시 시도하세요.",
+      "retry": "다시 시도",
+      "label": "출처",
+      "platform": "플랫폼 스킬",
+      "github": "GitHub 동기화",
+      "all": "모든 출처",
+      "platformHint": "GitHub 동기화 항목을 제외한 플랫폼 스킬입니다.",
+      "githubHint": "현재 접근 권한으로 볼 수 있는 GitHub 동기화 스킬입니다.",
+      "allHint": "플랫폼 및 GitHub 스킬을 함께 표시합니다. 이름이 같아도 별도로 유지됩니다."
+    },
     "title": "스킬 검색",
     "placeholder": "스킬 검색...",
     "filters": {

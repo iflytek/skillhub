@@ -357,6 +357,17 @@
     }
   },
   "search": {
+    "source": {
+      "loadFailed": "Could not load skills. Please try again.",
+      "retry": "Retry",
+      "label": "Source",
+      "platform": "Platform",
+      "github": "GitHub synced",
+      "all": "All sources",
+      "platformHint": "Skills published on this platform, excluding GitHub imports.",
+      "githubHint": "Skills synced from GitHub, limited to your existing access.",
+      "allHint": "Platform and GitHub skills together. Same-name skills remain separate."
+    },
     "title": "Search Skills",
     "placeholder": "Search skills...",
     "filters": {

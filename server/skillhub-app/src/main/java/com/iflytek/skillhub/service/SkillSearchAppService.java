@@ -12,6 +12,7 @@ import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.search.SearchQuery;
+import com.iflytek.skillhub.search.SkillSearchSource;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
 import com.iflytek.skillhub.search.SearchVisibilityScope;
@@ -127,11 +128,16 @@ public class SkillSearchAppService {
             String userId,
             Map<Long, NamespaceRole> userNsRoles) {
 
+        return search(keyword, namespaceSlug, sortBy, page, size, labelSlugs, userId, userNsRoles, SkillSearchSource.ALL);
+    }
+
+    public SearchResponse search(
+            String keyword, String namespaceSlug, String sortBy, int page, int size,
+            List<String> labelSlugs, String userId, Map<Long, NamespaceRole> userNsRoles,
+            SkillSearchSource source) {
         Long namespaceId = resolveNamespaceId(namespaceSlug, userId, userNsRoles);
-
         SearchVisibilityScope scope = buildVisibilityScope(userId, userNsRoles);
-
-        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, labelSlugs, scope, false);
+        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, labelSlugs, scope, false, source);
     }
 
     public SearchResponse searchInstallableLatest(
@@ -144,7 +150,7 @@ public class SkillSearchAppService {
             Map<Long, NamespaceRole> userNsRoles) {
         Long namespaceId = resolveNamespaceId(namespaceSlug, userId, userNsRoles);
         SearchVisibilityScope scope = buildVisibilityScope(userId, userNsRoles);
-        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, List.of(), scope, true);
+        return searchVisibleSkills(keyword, namespaceId, sortBy != null ? sortBy : "newest", page, size, List.of(), scope, true, SkillSearchSource.ALL);
     }
 
     private Long resolveNamespaceId(String namespaceSlug, String userId, Map<Long, NamespaceRole> userNsRoles) {
@@ -193,7 +199,8 @@ public class SkillSearchAppService {
             int size,
             List<String> labelSlugs,
             SearchVisibilityScope scope,
-            boolean requireInstallableLatest) {
+            boolean requireInstallableLatest,
+            SkillSearchSource source) {
         SearchResult result = searchQueryService.search(new SearchQuery(
                 keyword,
                 namespaceId,
@@ -202,7 +209,8 @@ public class SkillSearchAppService {
                 page,
                 size,
                 normalizeLabelSlugs(labelSlugs),
-                requireInstallableLatest
+                requireInstallableLatest,
+                source
         ));
         List<SkillSummaryResponse> pageItems = mapVisibleSkillSummaries(result.skillIds(), scope.userId());
         if (suiteMembershipProjection != null) {
@@ -299,7 +307,7 @@ public class SkillSearchAppService {
                 null,
                 skill.getVisibility() == com.iflytek.skillhub.domain.skill.SkillVisibility.PRIVATE
                         && !skill.getOwnerId().equals(userId) ? null : SkillAvatarUrls.current(skill, namespaceSlug)
-        );
+        ).withSource(skill.isGithubSyncManaged() ? "github" : "platform");
     }
 
     private com.iflytek.skillhub.dto.SkillLifecycleVersionResponse toLifecycleVersion(

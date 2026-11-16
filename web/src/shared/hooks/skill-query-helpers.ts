@@ -19,6 +19,10 @@ export function buildSkillSearchUrl(params: SearchParams) {
     queryParams.append('label', params.label)
   }
 
+  if (params.source) {
+    queryParams.append('source', params.source)
+  }
+
   if (params.sort) {
     queryParams.append('sort', params.sort)
   }

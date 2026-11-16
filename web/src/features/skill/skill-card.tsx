@@ -8,7 +8,7 @@ import { SkillAvatar } from './skill-avatar'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { formatRelativeTime } from '@/shared/lib/format-relative-time'
-import { Bookmark, Boxes, ShieldCheck, User, Clock } from 'lucide-react'
+import { GitBranch, Bookmark, Boxes, ShieldCheck, User, Clock } from 'lucide-react'
 
 interface SkillCardProps {
   labels?: { slug: string; displayName: string }[]
@@ -71,6 +71,12 @@ export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId
                 name={`@${skill.namespace}`}
                 title={`@${skill.namespace}`}
               />
+              {skill.source === 'github' || skill.source === 'platform' ? (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  {skill.source === 'github' ? <GitBranch aria-hidden="true" className="h-3 w-3" /> : null}
+                  {t(`search.source.${skill.source}`)}
+                </span>
+              ) : null}
               {skill.hasVisibleSuites === true ? (
                 <span
                   className="inline-flex max-w-full shrink-0 items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-xs font-medium text-secondary-foreground"

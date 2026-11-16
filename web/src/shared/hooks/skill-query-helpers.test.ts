@@ -2,6 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { buildSkillSearchUrl, shouldEnableNamespaceMemberCandidates } from './skill-query-helpers'
 
 describe('buildSkillSearchUrl', () => {
+  it.each(['platform', 'github', 'all'] as const)('sends explicit source %s to the server', (source) => {
+    const url = new URL(buildSkillSearchUrl({ source, page: 2, size: 12 }), 'http://localhost')
+    expect(url.searchParams.get('source')).toBe(source)
+    expect(url.searchParams.get('page')).toBe('2')
+  })
+
   it('normalizes the query and strips the namespace prefix', () => {
     expect(buildSkillSearchUrl({
       q: '  hello world  ',

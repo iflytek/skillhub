@@ -8,6 +8,8 @@ import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.SkillLabelDto;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import com.iflytek.skillhub.search.SkillSearchSource;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.service.SkillLabelProjectionService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -46,6 +48,9 @@ public class SkillSearchController extends BaseApiController {
     public ApiResponse<SkillSearchAppService.SearchResponse> search(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String namespace,
+            @Parameter(description = "Skill origin; omitted means all sources",
+                    schema = @Schema(allowableValues = {"all", "platform", "github"}, defaultValue = "all"))
+            @RequestParam(required = false) String source,
             @RequestParam(name = "label", required = false) java.util.List<String> labels,
             @Parameter(description = "Optional response expansions. Supported value: labels")
             @RequestParam(name = "include", required = false) List<String> include,
@@ -67,7 +72,8 @@ public class SkillSearchController extends BaseApiController {
                 parsePositiveInt(size, DEFAULT_SIZE),
                 labels,
                 userId,
-                userNsRoles
+                userNsRoles,
+                parseSource(source)
         );
 
         return ok("response.success.read", includeLabels ? withLabels(response) : response);
@@ -82,6 +88,18 @@ public class SkillSearchController extends BaseApiController {
                 .toList();
 
         return new SkillSearchAppService.SearchResponse(items, response.total(), response.page(), response.size());
+    }
+
+    private SkillSearchSource parseSource(String source) {
+        if (source == null) {
+            return SkillSearchSource.ALL;
+        }
+        return switch (source) {
+            case "all" -> SkillSearchSource.ALL;
+            case "platform" -> SkillSearchSource.PLATFORM;
+            case "github" -> SkillSearchSource.GITHUB;
+            default -> throw new DomainBadRequestException("error.search.source.invalid");
+        };
     }
 
     private String normalizeSort(String sort) {

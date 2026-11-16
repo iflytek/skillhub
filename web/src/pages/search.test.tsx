@@ -150,6 +150,33 @@ describe('SearchPage', () => {
     })
   })
 
+  it('defaults the unscoped market to platform skills', () => {
+    useSearchMock.mockReturnValue({ q: '', sort: 'newest', page: 0 })
+    renderToStaticMarkup(<SearchPage />)
+    expect(searchSkillParams[0]).toMatchObject({ source: 'platform' })
+    expect(findButton('search.source.platform').variant).toBe('default')
+  })
+
+  it('keeps an explicit namespace link across all sources', () => {
+    renderToStaticMarkup(<SearchPage />)
+    expect(searchSkillParams[0]).toMatchObject({ namespace: 'team-ai', source: 'all' })
+  })
+
+  it('restores explicit source and resets paging on source changes', () => {
+    useSearchMock.mockReturnValue({ q: 'agent', source: 'platform', page: 3, sort: 'downloads' })
+    renderToStaticMarkup(<SearchPage />)
+    findButton('search.source.github').onClick?.()
+    expect(navigateMock).toHaveBeenCalledWith({ to: '/search', search: {
+      q: 'agent', namespace: '', label: '', source: 'github', sort: 'downloads', page: 0, starredOnly: false,
+    } })
+  })
+
+  it('does not expose source filtering in favorites', () => {
+    useSearchMock.mockReturnValue({ q: '', source: 'platform', starredOnly: true })
+    const html = renderToStaticMarkup(<SearchPage />)
+    expect(html).not.toContain('search.source.label')
+  })
+
   it('marks the selected label button as active on initial render', () => {
     const html = renderToStaticMarkup(<SearchPage />)
 
@@ -181,6 +208,7 @@ describe('SearchPage', () => {
       search: {
         q: 'agent',
         namespace: 'team-ai',
+        source: 'all',
         label: '',
         sort: 'downloads',
         page: 0,
@@ -199,6 +227,7 @@ describe('SearchPage', () => {
       search: {
         q: 'agent',
         namespace: 'team-ai',
+        source: 'all',
         label: 'code-generation',
         sort: 'newest',
         page: 0,
@@ -218,6 +247,7 @@ describe('SearchPage', () => {
       search: {
         q: 'agent',
         namespace: 'team-ai',
+        source: 'all',
         label: 'code-generation',
         sort: 'downloads',
         page: 2,
@@ -229,6 +259,7 @@ describe('SearchPage', () => {
       search: {
         q: 'agent',
         namespace: 'team-ai',
+        source: 'all',
         label: 'code-generation',
         sort: 'downloads',
         page: 0,
@@ -260,6 +291,7 @@ describe('SearchPage', () => {
       search: {
         q: 'onboarding',
         namespace: 'product-team',
+        source: 'all',
         label: 'code-generation',
         sort: 'downloads',
         page: 0,

@@ -2,7 +2,7 @@ import { startTransition, useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
-import type { SkillSummary } from '@/api/types'
+import type { SkillSource, SkillSummary } from '@/api/types'
 import { useAuth } from '@/features/auth/use-auth'
 import { SearchBar } from '@/features/search/search-bar'
 import { SkillCard } from '@/features/skill/skill-card'
@@ -93,6 +93,7 @@ export function SearchPage() {
 
   const q = normalizeSearchQuery(searchParams.q || '')
   const namespace = (searchParams.namespace || '').replace(/^@/, '')
+  const source = searchParams.source ?? (namespace ? 'all' : 'platform')
   const selectedLabel = searchParams.label || ''
   const sort = searchParams.sort || 'newest'
   const page = searchParams.page ?? 0
@@ -118,9 +119,10 @@ export function SearchPage() {
     previousPageRef.current = page
   }, [page])
 
-  const { data, isLoading, isFetching } = useSearchSkills({
+  const { data, isLoading, isFetching, isError, refetch } = useSearchSkills({
     q,
     namespace: namespace || undefined,
+    source,
     label: selectedLabel || undefined,
     sort,
     page,
@@ -137,26 +139,30 @@ export function SearchPage() {
     const parsedInput = parseNamespaceSearchInput(query)
     setQueryInput(query)
     startTransition(() => {
-      navigate({ to: '/search', search: { q: parsedInput.query, namespace: parsedInput.namespace, label: selectedLabel, sort, page: 0, starredOnly }, replace: true })
+      navigate({ to: '/search', search: { q: parsedInput.query, namespace: parsedInput.namespace, source: searchParams.source ?? (parsedInput.namespace ? 'all' : 'platform'), label: selectedLabel, sort, page: 0, starredOnly }, replace: true })
     })
   }
 
+  const handleSourceChange = (nextSource: SkillSource) => {
+    navigate({ to: '/search', search: { q, namespace, label: selectedLabel, source: nextSource, sort, page: 0, starredOnly } })
+  }
+
   const handleSortChange = (newSort: string) => {
-    navigate({ to: '/search', search: { q, namespace, label: selectedLabel, sort: newSort, page: 0, starredOnly } })
+    navigate({ to: '/search', search: { q, namespace, source, label: selectedLabel, sort: newSort, page: 0, starredOnly } })
   }
 
   const handlePageChange = (newPage: number) => {
     blurActiveElement()
-    navigate({ to: '/search', search: { q, namespace, label: selectedLabel, sort, page: newPage, starredOnly } })
+    navigate({ to: '/search', search: { q, namespace, source, label: selectedLabel, sort, page: newPage, starredOnly } })
   }
 
   const handleLabelToggle = (label: string) => {
     const nextLabel = selectedLabel === label ? '' : label
-    navigate({ to: '/search', search: { q, namespace, label: nextLabel, sort, page: 0, starredOnly } })
+    navigate({ to: '/search', search: { q, namespace, source, label: nextLabel, sort, page: 0, starredOnly } })
   }
 
   const handleNamespaceClear = () => {
-    navigate({ to: '/search', search: { q, namespace: '', label: selectedLabel, sort, page: 0, starredOnly } })
+    navigate({ to: '/search', search: { q, namespace: '', source: searchParams.source ?? 'platform', label: selectedLabel, sort, page: 0, starredOnly } })
   }
 
   const handleStarredToggle = () => {
@@ -170,7 +176,7 @@ export function SearchPage() {
       return
     }
 
-    navigate({ to: '/search', search: { q, namespace, label: selectedLabel, sort, page: 0, starredOnly: !starredOnly } })
+    navigate({ to: '/search', search: { q, namespace, source, label: selectedLabel, sort, page: 0, starredOnly: !starredOnly } })
   }
 
   const handleSkillClick = (namespace: string, slug: string) => {
@@ -213,6 +219,22 @@ export function SearchPage() {
           onSearch={handleSearch}
         />
       </div>
+
+      {!starredOnly && (
+        <div className="space-y-2">
+          <div role="group" aria-label={t('search.source.label')} className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-sm font-medium text-muted-foreground">{t('search.source.label')}</span>
+            {(['platform', 'github', 'all'] as const).map((value) => (
+              <Button key={value} size="sm" variant={source === value ? 'default' : 'outline'}
+                data-analytics-id="search.source.filter" aria-pressed={source === value}
+                onClick={() => handleSourceChange(value)}>
+                {t(`search.source.${value}`)}
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">{t(`search.source.${source}Hint`)}</p>
+        </div>
+      )}
 
       {/* Sort And Filters */}
       <div className="space-y-4">
@@ -292,6 +314,13 @@ export function SearchPage() {
       {/* Results */}
       {isPageLoading ? (
         <SkeletonList count={PAGE_SIZE} />
+      ) : !starredOnly && isError ? (
+        <div className="space-y-3 text-center" role="alert">
+          <EmptyState title={t('search.source.loadFailed')} />
+          <Button data-analytics-id="search.source.retry" variant="outline" onClick={() => void refetch()}>
+            {t('search.source.retry')}
+          </Button>
+        </div>
       ) : displayItems.length > 0 ? (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

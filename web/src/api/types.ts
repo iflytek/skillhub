@@ -253,7 +253,10 @@ export interface BatchMemberResponse {
 }
 
 // Skill types
+export type SkillSource = 'all' | 'platform' | 'github'
+
 export interface SkillSummary {
+  source?: components['schemas']['SkillSummaryResponse']['source']
   hasVisibleSuites?: boolean
   managementState?: components['schemas']['ManagementState'] | null
   id: number
@@ -508,6 +511,7 @@ export interface SkillTag {
 
 // Search and pagination
 export interface SearchParams {
+  source?: SkillSource
   q?: string
   namespace?: string
   label?: string

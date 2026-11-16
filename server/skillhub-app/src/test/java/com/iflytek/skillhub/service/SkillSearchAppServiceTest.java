@@ -16,6 +16,7 @@ import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.search.SearchQuery;
+import com.iflytek.skillhub.search.SkillSearchSource;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
 import com.iflytek.skillhub.search.SearchVisibilityScope;
@@ -81,6 +82,25 @@ class SkillSearchAppServiceTest {
     }
 
     @Test
+    void sourceFilterShouldRetainNamespaceLabelsAndScope() {
+        Namespace namespace = new Namespace("team", "Team", "owner");
+        setField(namespace, "id", 7L);
+        when(namespaceService.getNamespaceBySlugForRead("team", "member", Map.of(7L, NamespaceRole.MEMBER)))
+                .thenReturn(namespace);
+        when(rbacService.getUserRoleCodes("member")).thenReturn(Set.of());
+        when(searchQueryService.search(any())).thenReturn(new SearchResult(List.of(), 0, 2, 12));
+        service.search("needle", "team", "downloads", 2, 12, List.of("OFFICIAL"), "member",
+                Map.of(7L, NamespaceRole.MEMBER), SkillSearchSource.GITHUB);
+        ArgumentCaptor<SearchQuery> query = ArgumentCaptor.forClass(SearchQuery.class);
+        verify(searchQueryService).search(query.capture());
+        assertEquals(SkillSearchSource.GITHUB, query.getValue().source());
+        assertEquals(7L, query.getValue().namespaceId());
+        assertEquals(List.of("official"), query.getValue().labelSlugs());
+        assertEquals(Set.of(7L), query.getValue().visibilityScope().memberNamespaceIds());
+        assertEquals(2, query.getValue().page());
+    }
+
+    @Test
     void search_shouldExcludeArchivedNamespaceSkillsForAnonymousUsers() {
         when(searchQueryService.search(org.mockito.ArgumentMatchers.any()))
                 .thenReturn(new SearchResult(List.of(), 0, 0, 20));
@@ -117,6 +137,7 @@ class SkillSearchAppServiceTest {
                         .stream().map(item -> item.withVisibleSuites(true)).toList());
         SkillSearchAppService.SearchResponse response = service.search("skill", null, "newest", 0, 1, null, null);
         assertEquals(true, response.items().getFirst().hasVisibleSuites());
+        assertEquals("platform", response.items().getFirst().source());
         verify(suiteProjection, times(1)).enrich(anyList(), org.mockito.ArgumentMatchers.isNull());
 
         assertEquals(1, response.items().size());
