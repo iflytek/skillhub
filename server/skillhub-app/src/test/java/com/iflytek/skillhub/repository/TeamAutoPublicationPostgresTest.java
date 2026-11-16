@@ -65,6 +65,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
@@ -242,6 +244,36 @@ class TeamAutoPublicationPostgresTest {
                 WHERE table_name IN ('namespace', 'namespace_member', 'review_task')
                   AND column_name IN ('trusted_publish_enabled', 'review_exempt', 'auto_approve_on_safe_scan')
                 """, Integer.class)).isZero();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"SESSION,true", "SUBMIT,true", "READ_ONLY,false", "EMPTY,false"})
+    void acceptedSubmissionCapturesActualCapabilityCeiling(String source, boolean maySubmit) {
+        grant();
+        Set<String> capabilities = switch (source) {
+            case "SESSION" -> null;
+            case "SUBMIT" -> Set.of("skill:read", "skill:submit");
+            case "READ_ONLY" -> Set.of("skill:read");
+            default -> Set.of();
+        };
+        // Missing-capability cases deliberately bypass transport to test the persisted domain ceiling.
+        Submitted submitted = new TransactionTemplate(transactions).execute(status -> {
+            var result = publishing.publishCandidateFromEntries(slug, entries(skillMd("1.0.0")), publisher,
+                    SkillVisibility.NAMESPACE_ONLY, Set.of(), true, null, null, null, false, capabilities);
+            ReviewTask task = reviews.findBySkillVersionIdAndStatus(result.version().getId(), ReviewTaskStatus.PENDING)
+                    .orElseThrow();
+            SecurityAudit audit = audits.findLatestActiveByVersionIdAndScannerType(
+                    result.version().getId(), ScannerType.SKILL_SCANNER).orElseThrow();
+            return new Submitted(result.skillId(), result.version().getId(), task.getId(), audit.getTaskId());
+        });
+        ReviewTask task = reviews.findById(submitted.reviewId()).orElseThrow();
+        assertThat(task.isSubmissionMaySubmit()).isEqualTo(maySubmit);
+        assertThat(task.getAutoPublicationGrantId() != null).isEqualTo(maySubmit);
+        complete(submitted, SecurityVerdict.SAFE);
+        assertThat(version(submitted.versionId()).getStatus()).isEqualTo(maySubmit
+                ? SkillVersionStatus.PUBLISHED : SkillVersionStatus.PENDING_REVIEW);
+        assertThat(recorder.count(SkillPublishedEvent.class)).isEqualTo(maySubmit ? 1 : 0);
+        assertThat(recorder.count(ReviewSubmittedEvent.class)).isEqualTo(maySubmit ? 0 : 1);
     }
 
     @Test

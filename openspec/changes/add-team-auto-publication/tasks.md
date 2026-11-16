@@ -11,3 +11,9 @@
 - [x] 6.1 Classify failing gates against clean 683decad without network Git.
 - [x] 6.2 Prove empty-database Flyway/startup and HTTP journey with controlled scan callback; attempt real scanner.
 - [x] 6.3 Clean up owned services, record acceptance evidence and leave a clean committed worktree.
+
+## Maintainer follow-up after #1078
+
+- [x] 7. Capture the accepted request's real skill:submit ceiling instead of constant true; prove session/submit and missing-capability controls.
+- [x] 8. Prove accepted-token revoke/expiry, rejected new requests, and grant revoke/regrant/replay through authenticated filters and PostgreSQL; assert decisions, publication and fallback event counts.
+- [ ] 9. Revalidate migrations, runtime and member controls on current main; distinguish real scans from controlled callbacks and preserve evidence.

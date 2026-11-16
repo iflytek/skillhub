@@ -11,7 +11,7 @@ It grants no review, delete, ownership, management, PRIVATE confirmation or cros
 ## Data model and migration
 
 Rewrite unreleased V125 only. Remove the draft namespace flag and review-exempt boolean model.
-Use namespace_member.team_auto_publish_grant_id (nullable UUID). NULL is the default, including old members.
+Use namespace_member.team_auto_publication_grant_id (nullable UUID). NULL is the default, including old members.
 Generate a fresh UUID only when transitioning from ungranted to granted; repeated enable is idempotent.
 Revocation clears the active identity. A later grant always has a different identity, including after member rejoining.
 Role changes away from MEMBER, member removal and ownership transfer invalidate the active identity.
@@ -32,8 +32,9 @@ Never persist plaintext tokens, session secrets or token expiry in the review ta
 
 ## Submission and capability ceiling
 
-Transport/authentication accepts submissions through the existing route policy's submit capability (skill:publish).
-Keep this mapping centralized in the route policy so #1078 can substitute skill:submit; do not implement its scopes.
+Transport/authentication accepts submissions through the existing route policy's skill:submit capability.
+After #1078, the domain receives the accepted Token's effective capabilities; null denotes a browser session.
+Capture maySubmit from that snapshot, never a constant; legacy aliases remain expanded by the existing auth layer.
 Only a legally accepted ordinary submission can capture submission_may_submit=true.
 The background path never infers extra capability from worker, retry caller, platform role or refreshed credentials.
 Token revocation/expiry and logout affect new requests, not the captured capability of accepted work.
@@ -93,7 +94,7 @@ Published versions remain published after revocation/removal.
 ## API and UI
 
 Replace TrustedPublishPolicyController and both old routes with a thin session-only member-management endpoint:
-PUT /api/web/namespaces/{slug}/members/{memberId}/team-auto-publication, body {enabled: boolean}.
+PUT /api/web/namespaces/{slug}/members/{memberId}/team-auto-publication, body {granted: boolean}.
 Return the existing localized ApiResponse<MemberResponse> shape; expose teamAutoPublicationGranted in member listings.
 Declare the route explicitly in RouteSecurityPolicyRegistry authorization and session-only catalogs;
 all token scopes, including manage/token-manage, must fail before mutation.
@@ -115,4 +116,5 @@ Start an isolated backend with empty PostgreSQL/Redis bound to loopback and exer
 submission/scan outcomes, revocation/regrant and callback duplication through HTTP.
 Label local stub results controlled scan callback. A real scanner run, if runnable, is separate evidence.
 Sanitize credentials in the journey and remove owned containers/volumes afterward.
-#1078-specific read+submit without publish-private combinations remain explicitly pending its separate implementation.
+#1078 is now part of main. Validate read+submit without publish-private, accepted Token revocation/expiry,
+and grant revoke/regrant/replay on the merged implementation.

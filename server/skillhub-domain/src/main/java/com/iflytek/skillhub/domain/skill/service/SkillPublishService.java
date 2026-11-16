@@ -1022,12 +1022,14 @@ public class SkillPublishService {
                             syncTarget.ingestionId());
             // Only ordinary single-Skill submissions may capture team-only automatic eligibility.
             // Privileged direct publish, GitHub sync and Bundle orchestration keep their own rules.
+            boolean maySubmit = tokenCapabilities == null
+                    || tokenCapabilities.contains(SkillTokenCapabilityPolicy.SUBMIT);
             Optional<UUID> autoPublicationGrant = syncTarget == null && bundleTarget == null
                     && teamAutoPublicationPolicy != null
                     ? teamAutoPublicationPolicy.grantForSubmission(
-                            namespace, skill, newSkill, visibility, publisherId, true)
+                            namespace, skill, newSkill, visibility, publisherId, maySubmit)
                     : Optional.empty();
-            autoPublicationGrant.ifPresent(grantId -> reviewTask.captureAutoPublicationEligibility(grantId, true));
+            autoPublicationGrant.ifPresent(grantId -> reviewTask.captureAutoPublicationEligibility(grantId, maySubmit));
             ReviewTask savedReviewTask = reviewTaskRepository.save(reviewTask);
             // Eligible tasks announce themselves to reviewers only if they fall back to normal review.
             if (autoPublicationGrant.isEmpty()) {

@@ -16,7 +16,7 @@ A grant authorizes system approval after a current SAFE scan, not a new role or 
 - Bind automatic decisions to the current scan round and serialize competing lifecycle operations.
 - Preserve review tasks, structured SYSTEM_AUTOMATIC/HUMAN decisions, audit and normal fallback notifications.
 - Add member-management controls, localized review labels, generated API contracts and bilingual usage documentation.
-- Keep #1078 capability implementation separate; current submit capability remains skill:publish.
+- Keep #1078 capability implementation separate; accepted Token capability snapshots use skill:submit after #1078.
 
 ## Impact
 
