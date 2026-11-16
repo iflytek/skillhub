@@ -48,6 +48,22 @@ class ApiTokenServiceTest {
     }
 
     @Test
+    void listTokens_normalizesLiteralSearchAndScopesToAuthenticatedUser() {
+        service.listActiveTokens("user-1", -1, 10, "  CI_%  ", TokenListStatus.EXPIRED);
+
+        verify(tokenRepo).searchActiveTokens(eq("user-1"), eq("CI_%"), eq("EXPIRED"),
+                eq(clock.instant()), eq(org.springframework.data.domain.PageRequest.of(0, 10)));
+    }
+
+    @Test
+    void listTokens_preservesDefaultListingForExistingClients() {
+        service.listActiveTokens("user-1", 1, 10, "  ", TokenListStatus.ALL);
+
+        verify(tokenRepo).findByUserIdAndRevokedAtIsNullOrderByCreatedAtDesc("user-1",
+                org.springframework.data.domain.PageRequest.of(1, 10));
+    }
+
+    @Test
     void createToken_rejectsNamesLongerThan64Characters() {
         String longName = "a".repeat(65);
 

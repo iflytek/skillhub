@@ -343,6 +343,11 @@ Token 写入需 `skill:manage`，仍需维护权限。扩大范围走统一审�
 | DELETE | `/api/v1/tokens/{id}` | 吊销 Token |
 | PUT | `/api/v1/tokens/{id}/expiration` | 修改到期时间，仍受调用 Token 能力和到期时间上限约束 |
 
+列表只返回当前用户未撤销的凭证（包含已过期凭证），使用从 0 开始的 `page`、`size`，缺省为 0、10。
+可选 `query` 按名称做不区分大小写的字面包含搜索，忽略首尾空白，`%`、`_` 不作为通配符。
+可选 `status=ALL|ACTIVE|EXPIRED`，缺省 `ALL`；`ACTIVE` 包含永不过期或尚未到期的凭证，
+`EXPIRED` 为到期时间小于等于服务端当前时间。筛选先于分页，`total` 为筛选后的总数，非法状态返回 400。
+
 创建请求显式传 `scopes` 数组；同名创建轮换旧 Token，拒绝不会吊销旧凭据。
 能力在兼容别名展开后比较，创建／轮换／续期都不能越过调用 Token 的能力或到期时间。
 省略 scopes 暂保留 read + publish + delete，响应 `deprecatedDefault=true`，下一个次版本改为仅 read。

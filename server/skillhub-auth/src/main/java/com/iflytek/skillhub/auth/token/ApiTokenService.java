@@ -173,6 +173,17 @@ public class ApiTokenService {
         return tokenRepo.findByUserIdAndRevokedAtIsNullOrderByCreatedAtDesc(userId, PageRequest.of(resolvedPage, resolvedSize));
     }
 
+    public Page<ApiToken> listActiveTokens(String userId, int page, int size,
+                                          String query, TokenListStatus status) {
+        String normalizedQuery = query == null ? "" : query.strip();
+        TokenListStatus resolvedStatus = status == null ? TokenListStatus.ALL : status;
+        if (normalizedQuery.isEmpty() && resolvedStatus == TokenListStatus.ALL) {
+            return listActiveTokens(userId, page, size);
+        }
+        return tokenRepo.searchActiveTokens(userId, normalizedQuery, resolvedStatus.name(), currentTime(),
+                PageRequest.of(Math.max(page, 0), Math.max(size, 1)));
+    }
+
     @Transactional
     public void touchLastUsed(ApiToken token) {
         token.setLastUsedAt(currentTime());

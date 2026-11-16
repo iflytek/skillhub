@@ -8249,6 +8249,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SitePresentationResponse: {
             settings: components["schemas"]["SitePresentationSettings"];
@@ -9467,6 +9469,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         SitePresentationAssetResponse: {
             url: string;
@@ -19018,6 +19022,8 @@ export interface operations {
             query?: {
                 page?: number;
                 size?: number;
+                query?: string;
+                status?: "ALL" | "ACTIVE" | "EXPIRED";
             };
             header?: never;
             path?: never;

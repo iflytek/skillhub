@@ -7,6 +7,8 @@ interface PaginationProps {
   page: number
   totalPages: number
   onPageChange: (page: number) => void
+  disabled?: boolean
+  mobileCompact?: boolean
   compact?: boolean
 }
 
@@ -17,7 +19,10 @@ type PageItem = number | 'ellipsis'
  * the current page, and one neighbour on each side, collapsing the rest into
  * ellipsis markers. Pages are 0-indexed internally; labels are 1-indexed.
  */
-export function buildPageItems(current: number, totalPages: number): PageItem[] {
+export function buildPageItems(
+  current: number,
+  totalPages: number,
+): PageItem[] {
   if (totalPages <= 7) {
     return Array.from({ length: totalPages }, (_, i) => i)
   }
@@ -43,29 +48,64 @@ export function buildPageItems(current: number, totalPages: number): PageItem[] 
   return items
 }
 
-export function Pagination({ page, totalPages, onPageChange, compact = false, analyticsId }: PaginationProps) {
+export function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+  compact = false,
+  disabled = false,
+  mobileCompact = false,
+  analyticsId,
+}: PaginationProps) {
   const { t } = useTranslation()
   const pageItems = buildPageItems(page, totalPages)
 
   return (
-    <nav aria-label={t('pagination.label')} className={cn('flex flex-wrap items-center justify-center', compact ? 'gap-1 py-2' : 'gap-2 py-4 sm:gap-3')}>
+    <nav
+      aria-label={t('pagination.label')}
+      className={cn(
+        'flex flex-wrap items-center justify-center',
+        compact ? 'gap-1 py-2' : 'gap-2 py-4 sm:gap-3',
+      )}
+    >
       <Button
         data-analytics-id={analyticsId}
         variant="outline"
         size="sm"
         onClick={() => onPageChange(page - 1)}
-        disabled={page <= 0}
-        className={compact ? 'shrink-0 gap-1.5 px-2' : 'min-w-0 flex-1 sm:flex-none sm:min-w-[90px]'}
+        disabled={disabled || page <= 0}
+        className={
+          compact
+            ? 'shrink-0 gap-1.5 px-2'
+            : 'min-w-0 flex-1 sm:flex-none sm:min-w-[90px]'
+        }
       >
         {t('pagination.prev')}
       </Button>
 
-      <div className={cn('flex items-center justify-center', compact ? 'gap-1' : 'order-3 w-full gap-1.5 sm:order-none sm:w-auto')}>
+      {mobileCompact && (
+        <span
+          className="px-2 text-xs tabular-nums text-muted-foreground sm:hidden"
+          aria-current="page"
+        >
+          {t('pagination.pageIndicator', { page: page + 1, total: totalPages })}
+        </span>
+      )}
+      <div
+        className={cn(
+          'flex items-center justify-center',
+          compact ? 'gap-2' : 'order-3 w-full gap-1.5 sm:order-none sm:w-auto',
+          mobileCompact && 'hidden sm:flex',
+        )}
+      >
         {pageItems.map((item, index) =>
           item === 'ellipsis' ? (
             <span
               key={`ellipsis-${index}`}
-              className={cn('text-muted-foreground select-none', compact ? 'px-1 text-xs' : 'px-2 text-sm')}
+              className={cn(
+                'text-muted-foreground select-none',
+                compact ? 'px-1 text-xs' : 'px-2 text-sm',
+              )}
               aria-hidden="true"
             >
               …
@@ -75,12 +115,17 @@ export function Pagination({ page, totalPages, onPageChange, compact = false, an
               data-analytics-id={analyticsId}
               key={item}
               type="button"
+              disabled={disabled}
               variant={item === page ? 'default' : 'ghost'}
               size="sm"
               onClick={() => onPageChange(item)}
               aria-label={t('pagination.goToPage', { page: item + 1 })}
               aria-current={item === page ? 'page' : undefined}
-              className={compact ? 'h-7 min-w-7 px-1.5 text-xs' : 'min-w-[2.25rem] h-9 px-2'}
+              className={
+                compact
+                  ? 'h-7 min-w-7 px-1.5 text-xs'
+                  : 'min-w-[2.25rem] h-9 px-2'
+              }
             >
               {item + 1}
             </Button>
@@ -93,8 +138,12 @@ export function Pagination({ page, totalPages, onPageChange, compact = false, an
         variant="outline"
         size="sm"
         onClick={() => onPageChange(page + 1)}
-        disabled={page >= totalPages - 1}
-        className={compact ? 'shrink-0 gap-1.5 px-2' : 'min-w-0 flex-1 sm:flex-none sm:min-w-[90px]'}
+        disabled={disabled || page >= totalPages - 1}
+        className={
+          compact
+            ? 'shrink-0 gap-1.5 px-2'
+            : 'min-w-0 flex-1 sm:flex-none sm:min-w-[90px]'
+        }
       >
         {t('pagination.next')}
       </Button>

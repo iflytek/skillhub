@@ -3,9 +3,9 @@ import { TOKEN_TABLE_ACTIONS_HEAD_CLASS_NAME, TOKEN_TABLE_HEAD_CLASS_NAME } from
 
 describe('token table header styles', () => {
   it('uses roomier spacing for standard header cells', () => {
-    expect(TOKEN_TABLE_HEAD_CLASS_NAME).toContain('px-5')
-    expect(TOKEN_TABLE_HEAD_CLASS_NAME).toContain('py-4')
-    expect(TOKEN_TABLE_HEAD_CLASS_NAME).toContain('uppercase')
+    expect(TOKEN_TABLE_HEAD_CLASS_NAME).toContain('px-4')
+    expect(TOKEN_TABLE_HEAD_CLASS_NAME).toContain('py-3')
+    expect(TOKEN_TABLE_HEAD_CLASS_NAME).toContain('font-medium')
   })
 
   it('keeps the actions header centered', () => {

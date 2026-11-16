@@ -6,6 +6,7 @@ import com.iflytek.skillhub.auth.entity.ApiToken;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.auth.token.ApiTokenScopeService;
 import com.iflytek.skillhub.auth.token.ApiTokenService;
+import com.iflytek.skillhub.auth.token.TokenListStatus;
 import com.iflytek.skillhub.auth.token.ApiTokenScopes;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.dto.ApiResponse;
@@ -77,8 +78,10 @@ public class TokenController extends BaseApiController {
     public ApiResponse<PageResponse<TokenSummaryResponse>> list(
             @AuthenticationPrincipal PlatformPrincipal principal,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
-        var tokens = apiTokenService.listActiveTokens(principal.userId(), page, size);
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String query,
+            @RequestParam(defaultValue = "ALL") TokenListStatus status) {
+        var tokens = apiTokenService.listActiveTokens(principal.userId(), page, size, query, status);
         var result = tokens.map(t -> new TokenSummaryResponse(
             t.getId(),
             t.getName(),

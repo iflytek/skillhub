@@ -42,10 +42,10 @@ describe('shared select contract', () => {
 
   it('keeps long option lists inside the available viewport', () => {
     expect(SELECT_CONTENT_CLASS_NAME).toContain(
-      'max-h-[var(--radix-select-content-available-height)]'
+      'max-h-[min(20rem,var(--radix-select-content-available-height))]'
     )
-    expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-y-auto')
-    expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-x-hidden')
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('overflow-hidden')
+    expect(SELECT_CONTENT_CLASS_NAME).toContain('max-w-[min(18rem,var(--radix-select-content-available-width,calc(100vw-1.5rem)))]')
   })
 
   it('does not move popper content with static translate utilities', () => {

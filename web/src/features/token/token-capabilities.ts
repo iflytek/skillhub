@@ -14,3 +14,12 @@ export const TOKEN_CAPABILITIES = [
   { scope: 'skill:delete', label: 'delete' },
   { scope: 'token:manage', label: 'tokenManage' },
 ] as const
+
+export function getTokenPreset(scopes?: readonly string[]): TokenPreset | undefined {
+  if (!scopes) return undefined
+  for (const preset of Object.keys(TOKEN_PRESETS) as (keyof typeof TOKEN_PRESETS)[]) {
+    const expected = TOKEN_PRESETS[preset]
+    if (scopes.length === expected.length && expected.every(scope => scopes.includes(scope))) return preset
+  }
+  return 'custom'
+}
