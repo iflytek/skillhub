@@ -1,7 +1,8 @@
 import { afterEach, expect, test } from 'bun:test';
 import { realpath, access, chmod, mkdir, stat, symlink, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
 // Node-only CI entry; keep its helpers importable without starting a Host or downloading dependencies.
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
 import { safeAvailabilityCheckpoint, summarizeNpmPreparation, prepareDownloadCache, scenarioProbes, assertHostNodeVersion, hostInstallManifest, selectDshVersion, testedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
@@ -25,6 +26,37 @@ async function removeFixture(path: string) {
   }
 }
 afterEach(async () => { await Promise.all(roots.splice(0).map(removeFixture)); });
+
+test('Node loads smoke with only CLI-declared dependencies and no plugin node_modules', async () => {
+  const directory = await root();
+  const scriptDirectory = join(directory, 'plugins/dsh/scripts');
+  const cliDirectory = join(directory, 'cli');
+  await mkdir(scriptDirectory, { recursive: true });
+  await mkdir(join(cliDirectory, 'node_modules'), { recursive: true });
+  const cliManifest = JSON.parse(await readFile(new URL('../../../cli/package.json', import.meta.url), 'utf8'));
+  await writeFile(join(cliDirectory, 'package.json'), JSON.stringify({
+    private: true, dependencies: { semver: cliManifest.dependencies.semver },
+  }));
+  const require = createRequire(new URL('../../../cli/package.json', import.meta.url));
+  await symlink(dirname(require.resolve('semver/package.json')), join(cliDirectory, 'node_modules/semver'),
+    process.platform === 'win32' ? 'junction' : 'dir');
+  await writeFile(join(scriptDirectory, 'smoke-native-host.mjs'), await readFile(new URL('../scripts/smoke-native-host.mjs', import.meta.url)));
+  await expect(access(join(directory, 'plugins/dsh/node_modules'))).rejects.toThrow();
+  await writeFile(join(directory, 'probe.mjs'), `
+import assert from 'node:assert/strict';
+import { selectDshVersion, assertHostNodeVersion } from './plugins/dsh/scripts/smoke-native-host.mjs';
+assert.equal(selectDshVersion('0.2.2-rc.3+desktop.1'), '0.2.2-rc.3+desktop.1');
+assertHostNodeVersion('0.2.2-rc.3', '24.9.0');
+console.log('smoke dependency layout verified');
+`);
+  const child = Bun.spawn(['node', 'probe.mjs'], { cwd: directory, stdout: 'pipe', stderr: 'pipe',
+    env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } });
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited,
+  ]);
+  expect(code, stderr).toBe(0);
+  expect(stdout.trim()).toBe('smoke dependency layout verified');
+}, 10000);
 
 test('isolates user configuration and strips model credentials and Node preload hooks', () => {
   const directory = join(tmpdir(), 'skillhub-environment');

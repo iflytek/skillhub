@@ -6,7 +6,10 @@ import { tmpdir } from 'node:os';
 import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import semver from 'semver';
+import { createRequire } from 'node:module';
+
+// Host-only CI lanes install CLI fixture dependencies, not the plugin development SDK.
+const semver = createRequire(new URL('../../../cli/package.json', import.meta.url))('semver');
 
 // Regression targets are evidence, not the admission policy for future Hosts.
 export const testedDshVersions = ['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5', '0.2.2-rc.1', '0.2.2-rc.3'];
