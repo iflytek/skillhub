@@ -32,7 +32,7 @@ import { LocalRuntime } from './local-runtime.js';
 import { FavoritesStore, FavoritesError, validateFavoriteSkill } from './favorites-store.js';
 import type { FavoriteList, FavoriteSkill, FavoriteVersion } from './types.js';
 import { assertRuntimeCompatibility } from './runtime-compatibility.js';
-import { supportedDshVersions } from './compatibility.js';
+import { dshRuntimeRange } from './compatibility.js';
 import type { HostCompatibility } from './types.js';
 import { InstallationTargets } from './installation-targets.js';
 import { ConfirmationPlans, UpgradePlans, RemovalPlans, TogglePlans } from './upgrade-plans.js';
@@ -196,6 +196,7 @@ export class SkillHubService extends TypertRemoteService {
     return assertRuntimeCompatibility({
       packageOf: (name, parentURL) => this.ctx.get('pluginPackages')?.packageOf(name, parentURL),
       clientPath: name => this.ctx.get('clientModules')?.clientPath(name),
+      hasAgentLookup: () => typeof this.ctx.get('agents')?.get === 'function',
     }, import.meta.url);
   }
 
@@ -205,7 +206,7 @@ export class SkillHubService extends TypertRemoteService {
       const candidateDshVersion = this.assertRuntimeBaseline();
       return { dependencyBaseline: 'matched', candidateDshVersion, localWritesAllowed: true };
     } catch {
-      return { dependencyBaseline: 'unverified', candidateDshVersion: supportedDshVersions.join(' / '), localWritesAllowed: false };
+      return { dependencyBaseline: 'unverified', candidateDshVersion: dshRuntimeRange, localWritesAllowed: false };
     }
   }
 

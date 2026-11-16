@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { runtimePackageBaseline } from '../src/host/runtime-compatibility.js';
+import { runtimePackageBaseline, clientPackageBaseline } from '../src/host/runtime-compatibility.js';
 import { readFile, realpath, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -63,6 +63,11 @@ for (const [name, version] of Object.entries(${JSON.stringify(baseline)})) {
   const manifestPath = join(directory, 'package.json');
   await writeFile(manifestPath, JSON.stringify({ name, version }));
   packageFixtures.set(name, { name, version, manifestPath });
+}
+for (const name of ${JSON.stringify(clientPackageBaseline)}) {
+  const manifestPath = fileURLToPath(import.meta.resolve(name + '/package.json'));
+  const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
+  packageFixtures.set(name, { name, version: manifest.version, manifestPath });
 }
 const removePackages = ctx.provide('pluginPackages', { packageOf: name => packageFixtures.get(name) });
 const removeClients = ctx.provide('clientModules', { clientPath: name => fileURLToPath(import.meta.resolve(name + '/client')) });

@@ -1,232 +1,112 @@
 import { expect, test } from 'bun:test';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { cordisFamilies, supportedDshVersions } from '../src/host/compatibility.js';
+import { testedDshVersions } from '../src/host/compatibility.js';
 import { assertNodeRuntime, nodeRuntimeRange, assertRuntimeCompatibility, clientPackageBaseline, runtimePackageBaseline } from '../src/host/runtime-compatibility.js';
 
-function fixture() {
-  const packages = new Map<string, { name: string; version: string; manifestPath: string }>(Object.entries(runtimePackageBaseline).map(([name, version]) => [name, { name, version, manifestPath: name }]));
-  const clients = new Map<string, unknown>(clientPackageBaseline.map(name => [name, { name, version: '0.2.0-rc.2' }]));
+type FixturePackage = { name: string; version: string; manifestPath: string; dependencies?: Record<string, string> };
+function fixture(release = '0.2.0-rc.2', root = '/fixture/packages') {
+  const packages = new Map<string, FixturePackage>(Object.entries(runtimePackageBaseline).map(([name, version]) => [name, {
+    name, version: name.startsWith('@deepseek-ai/dsh') ? release : version, manifestPath: join(root, name, 'package.json'),
+  }]));
+  for (const name of clientPackageBaseline) packages.set(name, { name, version: release, manifestPath: join(root, name, 'package.json') });
+  const rootManifest = packages.get('@deepseek-ai/dsh')!;
+  rootManifest.dependencies = Object.fromEntries([...packages].filter(([name]) => name !== rootManifest.name).map(([name, item]) => [name, item.version]));
+  const clients = new Map(clientPackageBaseline.map(name => [name, { name, version: release }]));
   const services = {
-    packageOf: (name: string, parentURL: string) => {
-      expect(parentURL.startsWith('file:')).toBe(true);
-      return packages.get(name);
-    },
-    clientPath: (name: string) => clients.has(name) ? `/client/${name}/lib/client.js` : undefined,
+    packageOf: (name: string) => packages.get(name),
+    clientPath: (name: string) => clients.has(name as typeof clientPackageBaseline[number]) ? join(root, name, 'lib/client.js') : undefined,
+    hasAgentLookup: () => true,
   };
-  const check = () => assertRuntimeCompatibility(services, 'file:///plugin/lib/index.js', (_file, name) => clients.get(name), file => packages.get(file));
-  return { packages, clients, services, check };
+  const readManifest = (path: string) => [...packages.values()].find(item => item.manifestPath === path);
+  const check = () => assertRuntimeCompatibility(services, 'file:///plugin/lib/index.js', (_file, name) => clients.get(name as typeof clientPackageBaseline[number]), readManifest);
+  return { packages, clients, services, readManifest, check };
 }
 
-test('runtime baseline covers every declared Client injection', async () => {
+function hasNewNodeFloor() { const [major, minor] = process.versions.node.split('.').map(Number); return major! > 24 || major === 24 && minor! >= 9; }
+
+test('runtime Client requirements match injected modules and missing capabilities reject writes', async () => {
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   expect(clientPackageBaseline).toEqual(manifest.dsh.client.inject);
-  expect(fixture().check).not.toThrow();
+  const { services, readManifest } = fixture();
+  expect(() => assertRuntimeCompatibility({ ...services, hasAgentLookup: () => false }, 'file:///plugin/index.js', () => ({}), readManifest)).toThrow('local writes are disabled');
+  expect(fixture().check()).toBe('0.2.0-rc.2');
 });
 
-test('each missing or mixed runtime package blocks writes; replacing resolution is rechecked', () => {
-  for (const name of Object.keys(runtimePackageBaseline)) {
-    const { packages, check } = fixture();
-    const original = packages.get(name)!;
-    packages.delete(name);
-    expect(check).toThrow('local writes are disabled');
-    packages.set(name, { name, version: '0.2.1', manifestPath: name });
-    expect(check).toThrow('local writes are disabled');
-    packages.set(name, original);
-    expect(check).not.toThrow();
+for (const release of [...testedDshVersions, '0.2.2-rc.4', '0.2.2-rc.5', '0.2.3-alpha.1', '1.0.0', '0.2.2-rc.3+desktop.1']) {
+  test(`coherent ${release} graph is not rejected merely because it is unlisted`, () => {
+    const { check } = fixture(release);
+    if (!hasNewNodeFloor() && !release.startsWith('0.2.0') && !release.startsWith('0.2.1')) expect(check).toThrow('local writes are disabled');
+    else expect(check()).toBe(release);
+  });
+}
+
+test('required packages remain present, parseable and above minimum; manifest errors stay private', () => {
+  const { packages, check } = fixture();
+  for (const [name, value] of [...packages]) {
+    packages.delete(name); expect(check).toThrow('local writes are disabled'); packages.set(name, value);
+    const old = value.version; value.version = 'invalid'; expect(check).toThrow('local writes are disabled'); value.version = old;
+    expect(check()).toBe('0.2.0-rc.2');
   }
+  const { services } = fixture();
+  expect(() => assertRuntimeCompatibility(services, 'file:///plugin/index.js', () => { throw new Error('/private/path'); })).toThrow('Host runtime baseline could not be verified; local writes are disabled.');
 });
 
-test('each Client must be active with its exact owning manifest, including after graph changes', () => {
-  for (const name of clientPackageBaseline) {
-    const { clients, check } = fixture();
-    clients.delete(name);
-    expect(check).toThrow('local writes are disabled');
-    for (const bad of [null, {}, { name, version: '0.2.1', manifestPath: name }, { name: 'other', version: '0.2.0-rc.2' }]) {
-      clients.set(name, bad);
-      expect(check).toThrow('local writes are disabled');
-    }
-    clients.set(name, { name, version: '0.2.0-rc.2' });
-    expect(check).not.toThrow();
-  }
+test('Host anchors cannot resolve nested plugin peer copies, even at the same version', () => {
+  const { services, readManifest, packages, clients } = fixture();
+  const name = '@deepseek-ai/dsh-fs';
+  const check = () => assertRuntimeCompatibility({ ...services, packageOf: (candidate, parent) => {
+    const value = services.packageOf(candidate);
+    return candidate === name && parent !== 'file:///plugin/index.js' ? { ...value!, manifestPath: '/nested/package.json' } : value;
+  } }, 'file:///plugin/index.js', (_file, name) => clients.get(name as typeof clientPackageBaseline[number]), path => path === '/nested/package.json' ? packages.get(name) : readManifest(path));
+  expect(check).toThrow('local writes are disabled');
 });
 
-test('loader and filesystem diagnostics are not exposed to Client', () => {
-  const { services, packages } = fixture();
-  expect(() => assertRuntimeCompatibility(services, 'file:///plugin/lib/index.js', () => {
-    throw new Error('/private/runtime/path');
-  }, file => packages.get(file))).toThrow('Host runtime baseline could not be verified; local writes are disabled.');
-  expect(() => assertRuntimeCompatibility({ ...services, packageOf: () => undefined }, 'file:///plugin/lib/index.js'))
-    .toThrow('local writes are disabled');
+test('declared dependencies detect mixed packages without demanding every module equal the Host version', () => {
+  const { packages, check } = fixture();
+  const name = '@deepseek-ai/dsh-fs';
+  packages.get(name)!.version = '0.2.1-rc.5';
+  expect(check).toThrow('local writes are disabled');
+  packages.get('@deepseek-ai/dsh')!.dependencies![name] = '0.2.1-rc.5';
+  expect(check()).toBe('0.2.0-rc.2');
+  packages.get('@deepseek-ai/cordis-plugin-loader')!.version = '1.1.1';
+  expect(check).toThrow('local writes are disabled');
+  packages.get('@deepseek-ai/dsh')!.dependencies!['@deepseek-ai/cordis-plugin-loader'] = '^1.1.0';
+  expect(check()).toBe('0.2.0-rc.2');
 });
 
-test('real Client manifests fail closed on unreadable JSON or absent ownership and recover after repair', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-client-baseline-'));
+test('Client ownership, versions and active entry paths are checked against actual Host resolution', () => {
+  const { services, readManifest, clients, check } = fixture();
+  const name = clientPackageBaseline[0];
+  clients.set(name, { name, version: '0.2.1-rc.5' }); expect(check).toThrow('local writes are disabled');
+  clients.set(name, { name, version: '0.2.0-rc.2' }); expect(check()).toBe('0.2.0-rc.2');
+  expect(() => assertRuntimeCompatibility({ ...services, clientPath: () => '/foreign/lib/client.js' }, 'file:///plugin/index.js', (_file, name) => clients.get(name as typeof clientPackageBaseline[number]), readManifest)).toThrow('local writes are disabled');
+});
+
+test('current manifests are read again after accepted operations', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'skillhub-runtime-manifests-'));
   try {
-    const { services } = fixture();
-    for (const name of clientPackageBaseline) {
-      await mkdir(join(root, name, 'lib'), { recursive: true });
-      await writeFile(join(root, name, 'package.json'), JSON.stringify({ name, version: '0.2.0-rc.2' }));
+    const { packages, services } = fixture('0.2.0-rc.2', root);
+    for (const item of packages.values()) { await mkdir(dirname(item.manifestPath), { recursive: true }); await writeFile(item.manifestPath, JSON.stringify(item)); await mkdir(join(dirname(item.manifestPath), 'lib'), { recursive: true }); await writeFile(join(dirname(item.manifestPath), 'lib/client.js'), ''); }
+    const check = () => assertRuntimeCompatibility(services, 'file:///plugin/index.js');
+    expect(check()).toBe('0.2.0-rc.2');
+    const item = packages.get('@deepseek-ai/dsh-fs')!;
+    for (const contents of ['{broken', JSON.stringify({ name: item.name, version: '0.2.1-rc.5' }), JSON.stringify({ name: 'other', version: item.version })]) {
+      await writeFile(item.manifestPath, contents); expect(check).toThrow('local writes are disabled');
+      await writeFile(item.manifestPath, JSON.stringify(item)); expect(check()).toBe('0.2.0-rc.2');
     }
-    const runtime = { ...services, clientPath: (name: string) => join(root, name, 'lib/client.js') };
-    const check = () => assertRuntimeCompatibility(runtime, 'file:///plugin/lib/index.js', undefined, file => ({ name: file, version: runtimePackageBaseline[file as keyof typeof runtimePackageBaseline] }));
-    expect(check).not.toThrow();
-    const name = clientPackageBaseline[0];
-    const manifest = join(root, name, 'package.json');
-    await writeFile(manifest, '{broken');
-    expect(check).toThrow('local writes are disabled');
-    await writeFile(manifest, JSON.stringify({ name: 'unrelated', version: '0.2.0-rc.2' }));
-    expect(check).toThrow('local writes are disabled');
-    await rm(manifest);
-    expect(check).toThrow('local writes are disabled');
-    await writeFile(manifest, JSON.stringify({ name, version: '0.2.0-rc.2' }));
-    expect(check).not.toThrow();
+    await rm(item.manifestPath); expect(check).toThrow('local writes are disabled');
   } finally { await rm(root, { recursive: true, force: true }); }
 });
 
-test('Node candidate range rejects old, future-major and malformed runtimes', async () => {
+test('Node uses the DSH family floor without a future-major upper bound', async () => {
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
   expect(manifest.engines.node).toBe(nodeRuntimeRange);
-  for (const version of ['24.2.0', '24.2.1', '24.17.0']) expect(() => assertNodeRuntime(version)).not.toThrow();
-  for (const version of ['22.18.0', '23.0.0', '24.0.0', '24.1.9', '25.0.0', '26.0.0',
-    '24.2.0-rc.1', '24.2', 'v24.2.0', '24.02.0', '', 'not-a-version']) {
-    expect(() => assertNodeRuntime(version)).toThrow('local writes are disabled');
+  for (const version of ['24.2.0', '24.9.0', '25.0.0', '26.0.0']) expect(() => assertNodeRuntime(version, '0.2.0-rc.2')).not.toThrow();
+  for (const release of ['0.2.2-rc.3', '0.2.2-rc.4', '0.2.3-alpha.1', '1.0.0', '0.2.2-rc.3+desktop.1']) {
+    for (const version of ['24.9.0', '25.0.0', '26.0.0', '24.9.0+desktop.1']) expect(() => assertNodeRuntime(version, release)).not.toThrow();
+    for (const version of ['24.2.0', '24.8.9', '22.18.0']) expect(() => assertNodeRuntime(version, release)).toThrow('local writes are disabled');
   }
-});
-
-test('cached Host metadata cannot hide changed, malformed or removed manifests', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'skillhub-host-baseline-'));
-  try {
-    const { packages, clients, services } = fixture();
-    for (const [name, value] of packages) {
-      const directory = join(root, name);
-      await mkdir(directory, { recursive: true });
-      value.manifestPath = join(directory, 'package.json');
-      await writeFile(value.manifestPath, JSON.stringify(value));
-    }
-    const check = () => assertRuntimeCompatibility(services, 'file:///plugin/lib/index.js', (_file, name) => clients.get(name));
-    expect(check).not.toThrow();
-    for (const [name, cached] of packages) {
-      for (const content of [JSON.stringify({ name, version: '0.2.1' }), '{broken', JSON.stringify({ name: 'other', version: cached.version })]) {
-        await writeFile(cached.manifestPath, content);
-        expect(check).toThrow('local writes are disabled');
-      }
-      await rm(cached.manifestPath);
-      expect(check).toThrow('local writes are disabled');
-      await writeFile(cached.manifestPath, JSON.stringify(cached));
-      expect(check).not.toThrow();
-    }
-  } finally { await rm(root, { recursive: true, force: true }); }
-});
-
-test('only complete validated Cordis families are accepted and unknown or mixed pairs block writes', () => {
-  const { packages, check } = fixture();
-  packages.get('@deepseek-ai/cordis')!.version = '4.0.5';
-  expect(check).toThrow('local writes are disabled');
-  packages.get('@deepseek-ai/cordis-plugin-loader')!.version = '1.0.6';
-  expect(check).toThrow('local writes are disabled');
-  packages.get('@deepseek-ai/cordis-plugin-include')!.version = '1.0.10';
-  expect(check).toThrow('local writes are disabled');
-  packages.get('@deepseek-ai/cordis-plugin-timer')!.version = '1.1.7';
-  expect(check).not.toThrow();
-  packages.get('@deepseek-ai/cordis-plugin-loader')!.version = '1.0.7';
-  expect(check).toThrow('local writes are disabled');
-});
-
-test('plugin peer copies cannot mask mismatched or absent Host dependency resolutions', () => {
-  const { packages, clients } = fixture();
-  for (const target of ['@deepseek-ai/cordis', '@deepseek-ai/cordis-plugin-loader', '@deepseek-ai/dsh-session']) {
-    for (const anchor of ['@deepseek-ai/dsh', '@deepseek-ai/dsh-app-boot']) {
-      for (const invalid of [undefined, { ...packages.get(target)!, version: '0.0.0-unsupported' }]) {
-        const services = {
-          packageOf: (name: string, parentURL: string) => name === target && parentURL.endsWith(anchor)
-            ? invalid : packages.get(name),
-          clientPath: (name: string) => `/client/${name}/lib/client.js`,
-        };
-        expect(() => assertRuntimeCompatibility(services, 'file:///plugin/lib/index.js',
-          (_file, name) => clients.get(name), file => packages.get(file))).toThrow('local writes are disabled');
-      }
-    }
-  }
-});
-
-for (const release of supportedDshVersions) {
-  test(`complete ${release} Host and Client graph matches; every mixed release is rejected`, () => {
-    const { packages, clients, check } = fixture();
-    for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
-    const family = cordisFamilies[release === '0.2.2-rc.1' ? 2 : 1];
-    for (const [name, version] of Object.entries(family)) packages.get(name)!.version = version;
-    for (const name of clients.keys()) clients.set(name, { name, version: release });
-    if (release === '0.2.2-rc.1' && Number(process.versions.node.split('.')[1]) < 9) {
-      expect(check).toThrow('local writes are disabled'); return;
-    }
-    expect(check()).toBe(release);
-    for (const other of supportedDshVersions.filter(candidate => candidate !== release)) {
-      for (const value of packages.values()) {
-        if (!value.name.startsWith('@deepseek-ai/dsh')) continue;
-        value.version = other;
-        expect(check).toThrow('local writes are disabled');
-        value.version = release;
-        expect(check()).toBe(release);
-      }
-      for (const name of clients.keys()) {
-        clients.set(name, { name, version: other });
-        expect(check).toThrow('local writes are disabled');
-        clients.set(name, { name, version: release });
-      }
-    }
-  });
-}
-
-for (const release of ['0.2.1-rc.2', '0.2.1-rc.5']) {
-  test(`${release} rejects a complete retained Cordis family below its official minimum`, () => {
-    const { packages, clients, check } = fixture();
-    for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
-    for (const name of clients.keys()) clients.set(name, { name, version: release });
-    expect(check).toThrow('local writes are disabled');
-  });
-}
-
-test('coherent but unvalidated intermediate RCs are not implicitly supported', () => {
-  const { packages, clients, check } = fixture();
-  packages.get('@deepseek-ai/cordis')!.version = '4.0.5';
-  packages.get('@deepseek-ai/cordis-plugin-loader')!.version = '1.0.6';
-  packages.get('@deepseek-ai/cordis-plugin-include')!.version = '1.0.10';
-  packages.get('@deepseek-ai/cordis-plugin-timer')!.version = '1.1.7';
-  for (const release of ['0.2.1-rc.3', '0.2.1-rc.4', '0.2.2-alpha.3']) {
-    for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
-    for (const name of clients.keys()) clients.set(name, { name, version: release });
-    expect(check).toThrow('local writes are disabled');
-  }
-});
-
-
-test('DSH 0.2.2-rc.1 requires Node 24.9 while retained releases keep the Node 24.2 floor', () => {
-  for (const release of supportedDshVersions) {
-    for (const version of ['24.2.0', '24.8.9', '24.9.0', '24.17.0']) {
-      if (release === '0.2.2-rc.1' && Number(version.split('.')[1]) < 9) expect(() => assertNodeRuntime(version, release)).toThrow('local writes are disabled');
-      else expect(() => assertNodeRuntime(version, release)).not.toThrow();
-    }
-    for (const version of ['22.18.0', '25.0.0', '24.9.0-rc.1']) expect(() => assertNodeRuntime(version, release)).toThrow('local writes are disabled');
-  }
-});
-
-test('every Cordis family and member remains bound to its exact DSH release', () => {
-  for (const release of supportedDshVersions) {
-    const { packages, clients, check } = fixture();
-    for (const value of packages.values()) if (value.name.startsWith('@deepseek-ai/dsh')) value.version = release;
-    for (const name of clients.keys()) clients.set(name, { name, version: release });
-    const expected = cordisFamilies[release === '0.2.2-rc.1' ? 2 : 1];
-    for (const [name, version] of Object.entries(expected)) packages.get(name)!.version = version;
-    for (const other of cordisFamilies) {
-      if (other === expected || release === '0.2.0-rc.2' && other === cordisFamilies[0]) continue;
-      for (const [name, version] of Object.entries(other)) {
-        const original = packages.get(name)!.version;
-        packages.get(name)!.version = version;
-        expect(check).toThrow('local writes are disabled');
-        packages.get(name)!.version = original;
-      }
-    }
-  }
+  for (const version of ['24.1.9', '24.2.0-rc.1', '25.0.0-rc.1', '26.0.0-nightly.1', 'v24.9.0', '24.9.0 ', ' 24.9.0', '', 'not-a-version']) expect(() => assertNodeRuntime(version)).toThrow('local writes are disabled');
 });

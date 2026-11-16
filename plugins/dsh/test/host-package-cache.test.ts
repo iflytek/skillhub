@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { assertRuntimeCompatibility, runtimePackageBaseline } from '../src/host/runtime-compatibility.js';
+import { assertRuntimeCompatibility, runtimePackageBaseline, clientPackageBaseline } from '../src/host/runtime-compatibility.js';
 
 test('official package service caches metadata while disk verification rejects replacement', async () => {
   const root = await mkdtemp(join(tmpdir(), 'skillhub-official-package-cache-'));
@@ -14,18 +14,19 @@ test('official package service caches metadata while disk verification rejects r
   try {
     await fiber;
     const parent = pathToFileURL(join(root, 'plugin.js')).href;
-    for (const [name, version] of Object.entries(runtimePackageBaseline)) {
+    for (const [name, version] of Object.entries({ ...runtimePackageBaseline, ...Object.fromEntries(clientPackageBaseline.map(name => [name, '0.2.0-rc.2'])) })) {
       const directory = join(root, 'node_modules', name);
       await mkdir(directory, { recursive: true });
       await writeFile(join(directory, 'package.json'), JSON.stringify({ name, version }));
     }
     const services = {
       packageOf: (name: string, parentURL: string) => ctx.pluginPackages.packageOf(name, parentURL),
-      clientPath: (name: string) => `/fixture/${name}/client.js`,
+      clientPath: (name: string) => join(root, 'node_modules', name, 'lib/client.js'),
+      hasAgentLookup: () => true,
     };
     const check = () => assertRuntimeCompatibility(services, parent, (_file, name) => ({ name, version: '0.2.0-rc.2' }));
     expect(check).not.toThrow();
-    for (const [name, version] of Object.entries(runtimePackageBaseline)) {
+    for (const [name, version] of Object.entries({ ...runtimePackageBaseline, ...Object.fromEntries(clientPackageBaseline.map(name => [name, '0.2.0-rc.2'])) })) {
       const original = ctx.pluginPackages.packageOf(name, parent)!;
       const path = join(root, 'node_modules', name, 'package.json');
       await writeFile(path, JSON.stringify({ name, version: '0.0.0-test-mismatch' }));
@@ -50,7 +51,7 @@ test('official Host lookup rejects a supported plugin peer masking a different n
   try {
     await fiber;
     const parent = pathToFileURL(join(root, 'plugin.js')).href;
-    for (const [name, version] of Object.entries(runtimePackageBaseline)) {
+    for (const [name, version] of Object.entries({ ...runtimePackageBaseline, ...Object.fromEntries(clientPackageBaseline.map(name => [name, '0.2.0-rc.2'])) })) {
       const directory = join(root, 'node_modules', name);
       await mkdir(directory, { recursive: true });
       await writeFile(join(directory, 'package.json'), JSON.stringify({ name, version }));
@@ -60,7 +61,8 @@ test('official Host lookup rejects a supported plugin peer masking a different n
     await writeFile(join(nested, 'package.json'), JSON.stringify({ name: '@deepseek-ai/cordis', version: '4.0.5' }));
     const services = {
       packageOf: (name: string, parentURL: string) => ctx.pluginPackages.packageOf(name, parentURL),
-      clientPath: (name: string) => `/fixture/${name}/client.js`,
+      clientPath: (name: string) => join(root, 'node_modules', name, 'lib/client.js'),
+      hasAgentLookup: () => true,
     };
     expect(ctx.pluginPackages.packageOf('@deepseek-ai/cordis', parent)?.version).toBe('4.0.4');
     const hostURL = pathToFileURL(join(root, 'node_modules/@deepseek-ai/dsh/package.json')).href;

@@ -6,20 +6,29 @@ import { tmpdir } from 'node:os';
 import { delimiter, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
+import semver from 'semver';
 
-export const supportedDshVersions = ['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5', '0.2.2-rc.1'];
+// Regression targets are evidence, not the admission policy for future Hosts.
+export const testedDshVersions = ['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5', '0.2.2-rc.1', '0.2.2-rc.3'];
+export const minimumDshVersion = '0.2.0-rc.2';
+function isExactVersion(version) {
+  return typeof version === 'string' && /^[0-9]/.test(version) && !/\s/.test(version) && semver.valid(version) !== null;
+}
 export function selectDshVersion(version, family = 'fresh') {
-  if (!supportedDshVersions.includes(version)) throw new Error('Unsupported DSH release.');
-  if (version !== '0.2.0-rc.2' && family === 'retained') throw new Error(`DSH ${version} requires the current Cordis family.`);
+  if (!isExactVersion(version) || semver.lt(version, minimumDshVersion)) {
+    throw new Error('Specify an exact DSH release at or above ' + minimumDshVersion + '.');
+  }
+  if (!['fresh', 'retained'].includes(family)) throw new Error('Unknown Cordis family.');
+  if (!semver.eq(version, minimumDshVersion) && family === 'retained') throw new Error(`DSH ${version} requires the current Cordis family.`);
   return version;
 }
-/** Match the official release engine without dropping older RC minimum-Node coverage. */
+/** Match the release-series Node floor without rejecting newer Node majors. */
 export function assertHostNodeVersion(dshVersion, nodeVersion = process.versions.node) {
   selectDshVersion(dshVersion);
-  const version = /^(\d+)\.(\d+)\.(\d+)$/.exec(nodeVersion);
-  const minimumMinor = dshVersion === '0.2.2-rc.1' ? 9 : 2;
-  if (!version || Number(version[1]) !== 24 || Number(version[2]) < minimumMinor) {
-    throw new Error(`DSH ${dshVersion} smoke requires Node >=24.${minimumMinor}.0 <25.`);
+  const minimum = semver.gte(dshVersion, '0.2.2-0') ? '24.9.0' : '24.2.0';
+  if (!isExactVersion(nodeVersion)
+    || semver.prerelease(nodeVersion) !== null || semver.lt(nodeVersion, minimum)) {
+    throw new Error(`DSH ${dshVersion} smoke requires Node >=${minimum}.`);
   }
 }
 
@@ -338,7 +347,7 @@ async function findNpm() {
 async function main() {
   const { values } = parseArgs({ options: { 'download-cache': { type: 'string' }, 'dsh-version': { type: 'string', default: '0.2.0-rc.2' }, artifact: { type: 'string' }, report: { type: 'string' }, help: { type: 'boolean' }, 'cordis-family': { type: 'string', default: 'fresh' }, scenario: { type: 'string', default: 'smoke' } } });
   if (values.help) {
-    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--download-cache <temporary-directory>] [--scenario smoke|skill-toggle|skill-toggle-watch-off] [--cordis-family fresh|retained] [--dsh-version 0.2.0-rc.2|0.2.1-rc.2|0.2.1-rc.5|0.2.2-rc.1]');
+    console.log('node scripts/smoke-native-host.mjs --artifact <candidate.tgz|directory> --report <summary.json> [--download-cache <temporary-directory>] [--scenario smoke|skill-toggle|skill-toggle-watch-off] [--cordis-family fresh|retained] [--dsh-version <exact-release-at-or-above-0.2.0-rc.2>]');
     return;
   }
   if (!values.artifact || !values.report) throw new Error('Specify --artifact and --report; see --help.');

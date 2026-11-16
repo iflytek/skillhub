@@ -1,9 +1,22 @@
 # SkillHub DSH 原生插件发布说明
 
+## 0.6.4 补丁候选：最低宿主版本准入
 
-## 0.6.3 补丁候选：新版DSH兼容、紧凑工作台与只读文件树
+候选包`@astron-team/skillhub-dsh@0.6.4`，独立标签`dsh-v0.6.4`。发布前不宣称npm已可安装；仅DSH，不发布CLI或SkillHub应用。
 
-本轮仅准备 `@astron-team/skillhub-dsh@0.6.3`，使用独立标签 `dsh-v0.6.3`，增量来自 [#1080](https://github.com/iflytek/skillhub/pull/1080) 和 [#1082](https://github.com/iflytek/skillhub/pull/1082)。当前仍为候选；发布工作流、最终 tarball、公开字节与干净安装通过前不宣称已发布。不重复发布 CLI，不创建 SkillHub 服务端 Release、不发布镜像或部署 SaaS。
+- 修复DSH0.2.2-rc.3被旧精确版本声明阻止安装的问题。
+- 宿主最低版本为0.2.0-rc.2，不设DSH上限；已实测清单仅用于证据和回归，不再阻止更新的RC。
+- 保留真实Host/Client解析归属、当前清单、最低能力和写入保护；支持合法版本构建标识，Node最低要求按发行系列判断。未来版本准入不等于未来全部功能已经验证。
+- 保留旧RC回归目标，增加rc.3跨平台检查与每日latest/next/alpha隔离预警，不自动发布。
+- 页面、公共Registry API、技能数据和共享库存格式不变，无需同步升级CLI。
+
+**插件增量**：[dsh-v0.6.3...dsh-v0.6.4](https://github.com/iflytek/skillhub/compare/dsh-v0.6.3...dsh-v0.6.4)。标签以最终实际发布为准。
+
+
+
+## 0.6.3：新版DSH兼容、紧凑工作台与只读文件树（已发布）
+
+历史版本 `@astron-team/skillhub-dsh@0.6.3`，使用独立标签 `dsh-v0.6.3`，增量来自 [#1080](https://github.com/iflytek/skillhub/pull/1080) 和 [#1082](https://github.com/iflytek/skillhub/pull/1082)。该版本已公开；以下保留其交付范围，不重复计入0.6.4。不重复发布 CLI，不创建 SkillHub 服务端 Release、不发布镜像或部署 SaaS。
 
 - **紧凑全页面**：统一发现、我的技能、详情、设置及操作面板的控件、间距和明暗主题；详情保留官网、只读评论、安全审核与全部安装管理入口，去除冗余来源卡片。技能卡片增加轻量悬停及键盘焦点反馈。
 - **受限只读文件树**：详情文件页使用完整阅读宽度，展示真实目录层级、路径、行号、复制和独立滚动；在当前详情引用内保留文件选择与目录折叠。仅新增插件本机 `listSkillFiles` / `readSkillFile` RPC，复用 Registry 既有文件 GET，不新增 SaaS HTTP API。清单最多 500 项、文本最多 256 KiB，验证路径和 UTF-8，区分二进制、过大、无权限、失败和失效；不执行文件内容、不提供语言语法高亮。

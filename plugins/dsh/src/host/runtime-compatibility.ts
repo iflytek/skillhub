@@ -1,14 +1,14 @@
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { readFileSync, realpathSync } from 'node:fs';
+import { dirname, isAbsolute, join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { assertHostDependencies, cordisFamilies, hostDependencyBaseline, supportedDshVersions, supportsCordis, type SupportedDshVersion } from './compatibility.js';
+import { gte, prerelease, satisfies } from 'semver';
+import { admitsDshVersion, assertHostDependencies, hostDependencyBaseline, isSemanticVersion } from './compatibility.js';
 
-/** Package-wide floor for retained RCs; DSH 0.2.2-rc.1 additionally requires Node 24.9. */
-export const nodeRuntimeRange = '>=24.2.0 <25';
+export const nodeRuntimeRange = '>=24.2.0';
 
-export function assertNodeRuntime(version = process.versions.node, release?: SupportedDshVersion): void {
-  const match = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/.exec(version);
-  if (!match || Number(match[1]) !== 24 || Number(match[2]) < (release === '0.2.2-rc.1' ? 9 : 2)) {
+export function assertNodeRuntime(version = process.versions.node, release?: string): void {
+  const minimum = release && admitsDshVersion(release) && gte(release, '0.2.2-0') ? '24.9.0' : '24.2.0';
+  if (!isSemanticVersion(version) || prerelease(version) !== null || !gte(version, minimum)) {
     throw new Error('Node runtime baseline does not match; local writes are disabled.');
   }
 }
@@ -36,9 +36,11 @@ export const clientPackageBaseline = [
   '@deepseek-ai/dsh-client-ui-workspace',
 ] as const;
 
+type PackageRecord = { name: string; version?: string; manifestPath?: string };
 interface RuntimeServices {
-  packageOf(name: string, parentURL: string): { name: string; version?: string; manifestPath?: string } | undefined;
+  packageOf(name: string, parentURL: string): PackageRecord | undefined;
   clientPath(name: string): string | undefined;
+  hasAgentLookup(): boolean;
 }
 
 function clientManifest(file: string, name: string): unknown {
@@ -57,51 +59,75 @@ function clientManifest(file: string, name: string): unknown {
   throw new Error('Client owning manifest unavailable');
 }
 
-/** Read the current Host resolution and Client graph on each new write; never cache acceptance. */
+function manifestIdentity(value: unknown, name: string): value is { name: string; version: string; dependencies?: Record<string, string>; peerDependencies?: Record<string, string> } {
+  return !!value && typeof value === 'object' && 'name' in value && value.name === name
+    && 'version' in value && isSemanticVersion(value.version);
+}
+
+/** Read actual resolution and current manifests for every mutation; tested versions are not a gate. */
 export function assertRuntimeCompatibility(
   services: RuntimeServices,
   parentURL: string,
   readClientManifest: (file: string, name: string) => unknown = clientManifest,
   readHostManifest: (file: string) => unknown = file => JSON.parse(readFileSync(file, 'utf8')),
-): SupportedDshVersion {
+): string {
   try {
     assertNodeRuntime();
+    if (!services.hasAgentLookup()) throw new Error('Agent lookup capability unavailable');
+    const manifests = new Map<string, ReturnType<typeof readHostManifest>>();
     const readPackage = (name: string, parent: string) => {
       const actual = services.packageOf(name, parent);
-      if (actual?.name !== name || !actual.manifestPath) throw new Error('Runtime package mismatch');
-      // packageOf caches metadata until a resolution generation is replaced.
+      if (actual?.name !== name || !actual.manifestPath || typeof actual.version !== 'string') throw new Error('Runtime package mismatch');
+      // packageOf may cache metadata until its resolution generation changes.
       const current = readHostManifest(actual.manifestPath);
-      if (!current || typeof current !== 'object' || !('name' in current) || !('version' in current)
-        || current.name !== name || current.version !== actual.version) throw new Error('Runtime manifest mismatch');
-      return actual;
+      if (!manifestIdentity(current, name) || current.version !== actual.version) throw new Error('Runtime manifest mismatch');
+      manifests.set(name, current);
+      return actual as PackageRecord & { version: string; manifestPath: string };
     };
     const packages = new Map(Object.keys(runtimePackageBaseline).map(name => [name, readPackage(name, parentURL)]));
-    const family = cordisFamilies.find(candidate => Object.entries(candidate).every(([name, version]) => packages.get(name)?.version === version));
-    const release = packages.get('@deepseek-ai/dsh')?.version;
-    if (typeof release !== 'string' || !supportedDshVersions.some(version => version === release)) throw new Error('Unsupported DSH release');
-    assertNodeRuntime(process.versions.node, release as SupportedDshVersion);
-    if (!family || !supportsCordis(release, family['@deepseek-ai/cordis'])) throw new Error('Runtime Cordis family mismatch');
-    for (const [name, version] of Object.entries({ ...runtimePackageBaseline, ...family })) {
-      const expected = name.startsWith('@deepseek-ai/dsh') ? release : version;
-      if (packages.get(name)?.version !== expected) throw new Error('Runtime package mismatch');
-    }
-    // Check the Host's own dependency lookup, not just the plugin's peer copies.
-    // A nested peer can otherwise hide an unsupported Host dependency graph.
-    for (const anchor of ['@deepseek-ai/dsh', '@deepseek-ai/dsh-app-boot']) {
-      const anchorURL = pathToFileURL(packages.get(anchor)!.manifestPath!).href;
+    const release = packages.get('@deepseek-ai/dsh')!.version;
+    if (!admitsDshVersion(release)) throw new Error('Host is below minimum version');
+    assertNodeRuntime(process.versions.node, release);
+    assertHostDependencies(name => packages.get(name));
+
+    // Compare against the Host's resolution, not a stale/nested plugin peer copy.
+    const anchors = ['@deepseek-ai/dsh', '@deepseek-ai/dsh-app-boot'].map(name => pathToFileURL(packages.get(name)!.manifestPath).href);
+    for (const anchor of anchors) {
       for (const [name, expected] of packages) {
-        if (readPackage(name, anchorURL).version !== expected.version) throw new Error('Host dependency graph mismatch');
+        const actual = readPackage(name, anchor);
+        if (actual.version !== expected.version || actual.manifestPath !== expected.manifestPath) throw new Error('Host dependency graph mismatch');
       }
     }
-    assertHostDependencies(name => packages.get(name));
     for (const name of clientPackageBaseline) {
       const file = services.clientPath(name);
       if (!file) throw new Error('Client module unavailable');
+      const owner = readPackage(name, anchors[0]!);
+      const other = readPackage(name, anchors[1]!);
+      const path = relative(dirname(owner.manifestPath), file);
+      if (readClientManifest === clientManifest) {
+        const canonical = relative(realpathSync(dirname(owner.manifestPath)), realpathSync(file));
+        if (isAbsolute(canonical) || canonical === '..' || canonical.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)) throw new Error('Client entry escapes owning package');
+      }
+      if (other.version !== owner.version || other.manifestPath !== owner.manifestPath
+        || isAbsolute(path) || path === '..' || path.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)) throw new Error('Client owning package mismatch');
       const manifest = readClientManifest(file, name);
-      if (!manifest || typeof manifest !== 'object' || !('name' in manifest) || !('version' in manifest)
-        || manifest.name !== name || manifest.version !== release) throw new Error('Client package mismatch');
+      if (!manifestIdentity(manifest, name) || manifest.version !== owner.version) throw new Error('Client package mismatch');
+      packages.set(name, owner);
     }
-    return release as SupportedDshVersion;
+    // Legitimate module versions may differ from the root release. Validate what the Host declares.
+    for (const [name, value] of manifests) {
+      if (!manifestIdentity(value, name)) throw new Error('Invalid Host manifest');
+      for (const dependencies of [value.dependencies, value.peerDependencies]) {
+        if (dependencies === undefined) continue;
+        if (!dependencies || typeof dependencies !== 'object' || Array.isArray(dependencies)) throw new Error('Invalid Host dependencies');
+        for (const [dependency, range] of Object.entries(dependencies)) {
+          const actual = packages.get(dependency);
+          if (!actual) continue;
+          if (typeof range !== 'string' || !satisfies(actual.version, range, { includePrerelease: true })) throw new Error('Host declared dependency mismatch');
+        }
+      }
+    }
+    return release;
   } catch {
     throw new Error('Host runtime baseline could not be verified; local writes are disabled.');
   }
