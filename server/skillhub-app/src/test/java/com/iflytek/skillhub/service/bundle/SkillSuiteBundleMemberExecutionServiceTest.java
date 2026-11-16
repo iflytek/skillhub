@@ -26,6 +26,8 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.UncheckedIOException;
@@ -50,8 +52,9 @@ import static org.mockito.Mockito.when;
 
 class SkillSuiteBundleMemberExecutionServiceTest {
 
-    @Test
-    void exactPublishedReferenceCompletesWithoutStorageOrPublishSideEffects() {
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void publishedReferenceRequiresRecordedAuthorityBeforeCompleting(boolean authorized) {
         Instant now = Instant.parse("2026-09-11T08:00:00Z");
         SkillSuiteBundleExecutionOperationRepository operationRepository =
                 mock(SkillSuiteBundleExecutionOperationRepository.class);
@@ -69,6 +72,7 @@ class SkillSuiteBundleMemberExecutionServiceTest {
                 "operation", "preview", "request", "actor", SkillSuiteBundleMode.CREATE,
                 1L, "suite", null, null, "1.0.0", "archive", "a".repeat(64),
                 Map.of("plan", "value"), "digest", now.minusSeconds(1));
+        if (authorized) operation.captureAuthorization(false, null);
         SkillSuiteBundleMemberResult member = new SkillSuiteBundleMemberResult(
                 "operation", 0, new SkillSuiteBundleCoordinate("global", "member"),
                 SkillSuiteBundleMemberSourceType.REFERENCE, null, SkillVisibility.PUBLIC, "1.0.0",
@@ -112,8 +116,15 @@ class SkillSuiteBundleMemberExecutionServiceTest {
                 skillRepository, versionRepository, visibilityChecker, publishService,
                 reviewSubmitService, storage, objectMapper, Clock.fixed(now, ZoneOffset.UTC));
 
-        assertThat(service.executeNext("operation"))
-                .isEqualTo(SkillSuiteBundleMemberExecutionService.ExecutionOutcome.PROGRESSED);
+        var outcome = service.executeNext("operation");
+        if (!authorized) {
+            assertThat(outcome).isEqualTo(SkillSuiteBundleMemberExecutionService.ExecutionOutcome.NONE);
+            assertThat(operation.getFailureCode()).isEqualTo("AUTHORIZATION_PROVENANCE_UNKNOWN");
+            assertThat(member.getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.PLANNED);
+            org.mockito.Mockito.verifyNoInteractions(publishService, reviewSubmitService, storage, actorContextService);
+            return;
+        }
+        assertThat(outcome).isEqualTo(SkillSuiteBundleMemberExecutionService.ExecutionOutcome.PROGRESSED);
 
         assertThat(member.getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.COMPLETED);
         verify(publishService, never()).publishBundleMemberFromEntries(
@@ -148,6 +159,7 @@ class SkillSuiteBundleMemberExecutionServiceTest {
                 "operation", "preview", "request", "actor", SkillSuiteBundleMode.CREATE,
                 1L, "suite", null, null, "1.0.0", "archive", "a".repeat(64),
                 Map.of("plan", "value"), "digest", now.minusSeconds(1));
+        operation.captureAuthorization(false, null);
         SkillSuiteBundleCoordinate coordinate = new SkillSuiteBundleCoordinate("global", "member");
         SkillSuiteBundleMemberResult member = new SkillSuiteBundleMemberResult(
                 "operation", 0, coordinate, SkillSuiteBundleMemberSourceType.PACKAGE, "members/member",
@@ -182,7 +194,7 @@ class SkillSuiteBundleMemberExecutionServiceTest {
                 org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.anyMap(),
                 org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(),
                 org.mockito.ArgumentMatchers.anyMap(), org.mockito.ArgumentMatchers.anySet(),
-                org.mockito.ArgumentMatchers.anyBoolean(), org.mockito.ArgumentMatchers.anySet())).thenAnswer(invocation -> {
+                org.mockito.ArgumentMatchers.anyBoolean(), org.mockito.ArgumentMatchers.isNull())).thenAnswer(invocation -> {
                     List<com.iflytek.skillhub.domain.skill.validation.PackageEntry> entries = invocation.getArgument(4);
                     capturedEntries.set(entries);
                     assertThat(entries.getFirst().content()).isEqualTo(content);

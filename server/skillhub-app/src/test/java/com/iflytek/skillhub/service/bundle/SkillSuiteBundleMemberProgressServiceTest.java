@@ -24,6 +24,8 @@ import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundlePublishAction;
 import com.iflytek.skillhub.domain.suite.bundle.SkillSuiteBundleRelationshipChange;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -108,7 +110,6 @@ class SkillSuiteBundleMemberProgressServiceTest {
     @Test
     void privateUploadedMemberUsesExistingConfirmationBoundary() {
         Fixture fixture = fixture(SkillVersionStatus.UPLOADED, SkillVisibility.PRIVATE);
-        fixture.operation().captureAuthorization(false, null);
 
         assertThat(service.reconcile("operation"))
                 .isEqualTo(SkillSuiteBundleMemberProgressService.ProgressOutcome.READY_FOR_DRAFT);
@@ -142,17 +143,17 @@ class SkillSuiteBundleMemberProgressServiceTest {
 
     @Test
     void unknownHistoricalProvenanceCannotInheritWorkerAuthority() {
-        Fixture fixture = fixture(SkillVersionStatus.UPLOADED, SkillVisibility.PRIVATE);
+        Fixture fixture = fixture(SkillVersionStatus.UPLOADED, SkillVisibility.PRIVATE, false);
         assertThat(service.reconcile("operation"))
                 .isEqualTo(SkillSuiteBundleMemberProgressService.ProgressOutcome.TERMINAL);
         assertThat(fixture.operation().getFailureCode()).isEqualTo("AUTHORIZATION_PROVENANCE_UNKNOWN");
-        assertThat(fixture.member().getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.BLOCKED_RETRYABLE);
+        assertThat(fixture.member().getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.WAITING_FOR_MEMBER);
         org.mockito.Mockito.verifyNoInteractions(reviewSubmitService);
     }
 
     @Test
     void candidateSnapshotBlocksAndPreservesItsOriginalCapabilities() {
-        Fixture fixture = fixture(SkillVersionStatus.UPLOADED, SkillVisibility.PRIVATE);
+        Fixture fixture = fixture(SkillVersionStatus.UPLOADED, SkillVisibility.PRIVATE, false);
         fixture.operation().captureAuthorization(true, Set.of("skill:read", "skill:submit"));
         service.reconcile("operation");
         assertThat(fixture.operation().getFailureCode()).isEqualTo("TOKEN_CAPABILITY_MISSING");
@@ -163,7 +164,7 @@ class SkillSuiteBundleMemberProgressServiceTest {
 
     @Test
     void explicitlyStoredLegacyAuthorizationCanConfirmAfterRecovery() {
-        Fixture fixture = fixture(SkillVersionStatus.UPLOADED, SkillVisibility.PRIVATE);
+        Fixture fixture = fixture(SkillVersionStatus.UPLOADED, SkillVisibility.PRIVATE, false);
         Set<String> capabilities = Set.of("skill:submit", "skill:publish-private", "skill:manage", "suite:legacy-write");
         fixture.operation().captureAuthorization(true, capabilities);
         assertThat(service.reconcile("operation"))
@@ -171,11 +172,44 @@ class SkillSuiteBundleMemberProgressServiceTest {
         verify(reviewSubmitService).confirmPublish(11L, 12L, "actor", Map.of(), Set.of(), capabilities);
     }
 
+    @ParameterizedTest
+    @EnumSource(value = SkillVisibility.class, names = {"PUBLIC", "NAMESPACE_ONLY"})
+    void publishedHistoricalMemberWithUnknownAuthorityCannotAdvanceToDraft(SkillVisibility visibility) {
+        Fixture fixture = fixture(SkillVersionStatus.PUBLISHED, visibility, false);
+        when(fixture.version().isDownloadReady()).thenReturn(true);
+
+        assertThat(service.reconcile("operation"))
+                .isEqualTo(SkillSuiteBundleMemberProgressService.ProgressOutcome.TERMINAL);
+
+        assertThat(fixture.operation().getStatus()).isEqualTo(SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE);
+        assertThat(fixture.operation().getFailureCode()).isEqualTo("AUTHORIZATION_PROVENANCE_UNKNOWN");
+        assertThat(fixture.member().getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.WAITING_FOR_MEMBER);
+        org.mockito.Mockito.verifyNoInteractions(reviewSubmitService);
+    }
+
+    @Test
+    void completedHistoricalMembersDoNotBypassUnknownAuthorityOrGetRewritten() {
+        Fixture fixture = fixture(SkillVersionStatus.PUBLISHED, SkillVisibility.PUBLIC, false);
+        fixture.member().markCompleted(NOW.minusMillis(100));
+
+        assertThat(service.reconcile("operation"))
+                .isEqualTo(SkillSuiteBundleMemberProgressService.ProgressOutcome.TERMINAL);
+
+        assertThat(fixture.operation().getFailureCode()).isEqualTo("AUTHORIZATION_PROVENANCE_UNKNOWN");
+        assertThat(fixture.member().getStatus()).isEqualTo(SkillSuiteBundleMemberResultStatus.COMPLETED);
+        org.mockito.Mockito.verifyNoInteractions(reviewSubmitService);
+    }
+
     private Fixture fixture(SkillVersionStatus status, SkillVisibility visibility) {
+        return fixture(status, visibility, true);
+    }
+
+    private Fixture fixture(SkillVersionStatus status, SkillVisibility visibility, boolean session) {
         SkillSuiteBundleExecutionOperation operation = new SkillSuiteBundleExecutionOperation(
                 "operation", "preview", "request", "actor", SkillSuiteBundleMode.CREATE,
                 1L, "suite", null, null, "1.0.0", "archive", "a".repeat(64),
                 Map.of(), "digest", NOW.minusSeconds(1));
+        if (session) operation.captureAuthorization(false, null);
         SkillSuiteBundleMemberResult member = new SkillSuiteBundleMemberResult(
                 "operation", 0, new SkillSuiteBundleCoordinate("global", "member"),
                 SkillSuiteBundleMemberSourceType.PACKAGE, "skills/member", visibility, "1.0.0",

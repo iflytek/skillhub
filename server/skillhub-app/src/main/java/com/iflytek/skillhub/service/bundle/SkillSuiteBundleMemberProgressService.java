@@ -71,11 +71,15 @@ public class SkillSuiteBundleMemberProgressService {
                 || operation.getStatus() == SkillSuiteBundleOperationStatus.BLOCKED_RETRYABLE) {
             return ProgressOutcome.TERMINAL;
         }
+        Instant now = clock.instant();
+        if (operation.blockIfAuthorizationUnknown(now)) {
+            operationRepository.save(operation);
+            return ProgressOutcome.TERMINAL;
+        }
         SkillSuiteBundleActorContextService.ActorContext actor =
                 actorContextService.requireCurrent(operation.getActorId());
         List<SkillSuiteBundleMemberResult> members =
                 memberRepository.findByOperationIdOrderByPositionForUpdate(operationId);
-        Instant now = clock.instant();
         boolean waiting = false;
         for (SkillSuiteBundleMemberResult member : members) {
             if (member.getStatus() == SkillSuiteBundleMemberResultStatus.PLANNED

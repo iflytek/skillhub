@@ -94,6 +94,11 @@ public class SkillSuiteBundleMemberExecutionService {
         if (operation == null || operation.getStatus() != SkillSuiteBundleOperationStatus.RUNNING) {
             return ExecutionOutcome.NONE;
         }
+        Instant now = clock.instant();
+        if (operation.blockIfAuthorizationUnknown(now)) {
+            operationRepository.save(operation);
+            return ExecutionOutcome.NONE;
+        }
         List<SkillSuiteBundleMemberResult> members =
                 memberRepository.findByOperationIdOrderByPositionForUpdate(operationId);
         SkillSuiteBundleMemberResult member = members.stream()
@@ -104,7 +109,6 @@ public class SkillSuiteBundleMemberExecutionService {
         if (member == null) {
             return ExecutionOutcome.NONE;
         }
-        Instant now = clock.instant();
         if (member.getRequestedVisibility() == com.iflytek.skillhub.domain.skill.SkillVisibility.PRIVATE
                 && (member.getPublishAction() == SkillSuiteBundlePublishAction.CREATE_SKILL
                     || member.getPublishAction() == SkillSuiteBundlePublishAction.CREATE_VERSION)

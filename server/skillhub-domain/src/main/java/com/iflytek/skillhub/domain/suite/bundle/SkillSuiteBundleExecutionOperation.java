@@ -147,11 +147,26 @@ public class SkillSuiteBundleExecutionOperation {
         tokenCapabilities = tokenCall ? Set.copyOf(capabilities) : null;
     }
 
+    /** Gate every resumable write, including reference-only Bundles and final draft creation. */
+    public boolean blockIfAuthorizationUnknown(Instant now) {
+        if (hasKnownAuthorizationProvenance()) {
+            return false;
+        }
+        markBlockedRetryable("AUTHORIZATION_PROVENANCE_UNKNOWN",
+                "error.suite.bundle.authorization.provenanceUnknown", now);
+        return true;
+    }
+
+    private boolean hasKnownAuthorizationProvenance() {
+        return "SESSION".equals(initiatorType)
+                || ("TOKEN".equals(initiatorType) && tokenCapabilities != null && !tokenCapabilities.isEmpty());
+    }
+
     public String privatePublishBlockCode() {
         if ("SESSION".equals(initiatorType)) {
             return null;
         }
-        if (!"TOKEN".equals(initiatorType) || tokenCapabilities == null || tokenCapabilities.isEmpty()) {
+        if (!hasKnownAuthorizationProvenance()) {
             return "AUTHORIZATION_PROVENANCE_UNKNOWN";
         }
         return tokenCapabilities.contains("skill:publish-private") ? null : "TOKEN_CAPABILITY_MISSING";
