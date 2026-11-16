@@ -15,7 +15,7 @@ Team-only automatic publication is a permission granted to an individual ordinar
 | GitHub synchronization, Skill Suite and Bundle import orchestration | No; existing rules apply |
 | `GLOBAL` or personal namespaces | No |
 
-The permission covers the member's browser submissions in this namespace and every API token the member holds with submit capability. Browser and token submissions follow the same policy. A token still needs submit capability (currently `skill:publish`); read-only tokens cannot upload. This feature does not mean that any token preset never needs human review.
+The permission covers the member's browser submissions in this namespace and every API token the member holds with submit capability. Browser and token submissions follow the same policy. A token still needs `skill:submit`. Historical `skill:publish` tokens retain their existing capability expansion without being recreated; read-only tokens cannot upload. This feature does not mean that any token preset never needs human review.
 
 ## Grant and Revoke
 
@@ -57,6 +57,14 @@ The review list, the Review History of review details and My Review Progress sho
 - Human review: shows the actual reviewer.
 
 Tasks that fall back to normal review appear in the review center like any other pending task; reviewers handle them as described in [Review Skills and Suites](./review.html).
+
+## Upgrade and Rollback
+
+- Back up the database and retain object-storage and deployment-version information before upgrading. Flyway applies V125 on application startup. This migration adds columns and indexes; it does not rewrite historical token scopes or existing Skills, versions and review decisions.
+- Existing members have no grant by default. Previously accepted pending tasks do not gain automatic eligibility. Historical review records may have a null decision method; their original reviewer and result remain intact and must not be interpreted as system approval.
+- Upgrade every backend instance, including scan-result consumers, and confirm health before granting permissions through the new web console. The old frontend has no grant controls, and the new frontend against an old backend is unsupported. Do not enable grants while old and new backends coexist: an old process does not understand automatic eligibility and may leave a task pending for human review without the expected fallback notification.
+- Before rollback, revoke grants while the new backend is still available, hand pending work back to normal review, and inspect in-flight scans and the review queue. Do not drop the added columns or alter Flyway history. Additive columns do not prove that an old application can be rolled back directly: first verify the exact target version's Flyway validation, startup and data reads in isolation. A backup restore requires a separate assessment of post-upgrade writes and object-storage consistency; it is not a lossless rollback by default.
+- If an earlier draft of this PR was manually deployed with different V125 contents, upgrading may fail checksum validation. Preserve the data and migration history, compare the versions and prepare a migration plan; do not blindly run Flyway repair or delete migration history to bypass validation.
 
 ## Completion Criteria and Troubleshooting
 
