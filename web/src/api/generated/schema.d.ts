@@ -8136,6 +8136,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ComplianceEvidenceResponse: {
             type?: string;
@@ -11601,6 +11603,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         RecommendationPublicResponse: {
             topics: components["schemas"]["RecommendationTopicResponse"][];
@@ -11625,6 +11629,8 @@ export interface components {
             /** Format: date-time */
             timestamp?: string;
             requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ClawHubSearchResponse: {
             results?: components["schemas"]["ClawHubSearchResult"][];
