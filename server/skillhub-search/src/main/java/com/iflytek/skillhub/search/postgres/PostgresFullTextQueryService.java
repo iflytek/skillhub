@@ -4,6 +4,7 @@ import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentEntity;
 import com.iflytek.skillhub.infra.jpa.SkillSearchDocumentJpaRepository;
 import com.iflytek.skillhub.search.SearchEmbeddingService;
 import com.iflytek.skillhub.search.SearchQuery;
+import com.iflytek.skillhub.search.SkillSearchSource;
 import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
 import com.iflytek.skillhub.search.SearchTextTokenizer;
@@ -123,6 +124,11 @@ public class PostgresFullTextQueryService implements SearchQueryService {
         sql.append("AND d.status = 'ACTIVE' ");
         sql.append("AND s.status = 'ACTIVE' ");
         sql.append("AND s.hidden = FALSE ");
+        if (query.source() == SkillSearchSource.PLATFORM) {
+            sql.append("AND s.github_sync_managed = FALSE ");
+        } else if (query.source() == SkillSearchSource.GITHUB) {
+            sql.append("AND s.github_sync_managed = TRUE ");
+        }
         if (query.requireInstallableLatest()) {
             sql.append("AND latest.status = 'PUBLISHED' ");
             sql.append("AND latest.download_ready = TRUE ");

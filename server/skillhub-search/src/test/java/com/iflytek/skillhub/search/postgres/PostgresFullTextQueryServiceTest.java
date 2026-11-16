@@ -6,9 +6,12 @@ import com.iflytek.skillhub.search.HashingSearchEmbeddingService;
 import com.iflytek.skillhub.search.SearchQuery;
 import com.iflytek.skillhub.search.SearchTextTokenizer;
 import com.iflytek.skillhub.search.SearchVisibilityScope;
+import com.iflytek.skillhub.search.SkillSearchSource;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.Query;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 
 import java.util.List;
@@ -22,6 +25,42 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class PostgresFullTextQueryServiceTest {
+
+    @ParameterizedTest
+    @EnumSource(SkillSearchSource.class)
+    void sourceFilterAppliesToResultsAndTotalBeforePagination(SkillSearchSource source) {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query rows = mock(Query.class);
+        Query total = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString())).thenReturn(rows, total);
+        when(rows.getResultList()).thenReturn(List.of(7L));
+        when(total.getSingleResult()).thenReturn(3L);
+
+        var result = new PostgresFullTextQueryService(entityManager).search(new SearchQuery(
+                null, null, SearchVisibilityScope.anonymous(), "newest", 1, 1,
+                List.of(), false, source));
+
+        var sql = ArgumentCaptor.forClass(String.class);
+        verify(entityManager, org.mockito.Mockito.times(2)).createNativeQuery(sql.capture());
+        for (String statement : sql.getAllValues()) {
+            assertThat(statement).contains("s.visibility = 'PUBLIC'", "s.hidden = FALSE");
+            if (source == SkillSearchSource.ALL) {
+                assertThat(statement).doesNotContain("s.github_sync_managed =");
+            } else {
+                assertThat(statement).contains("s.github_sync_managed = "
+                        + (source == SkillSearchSource.GITHUB ? "TRUE" : "FALSE"));
+            }
+        }
+        assertThat(sql.getAllValues().get(1)).doesNotContain("LIMIT", "OFFSET", "ORDER BY");
+        assertThat(result.total()).isEqualTo(3L);
+        assertThat(result.skillIds()).containsExactly(7L);
+    }
+
+    @Test
+    void existingQueryConstructorsKeepAllSources() {
+        assertThat(new SearchQuery(null, null, SearchVisibilityScope.anonymous(),
+                "newest", 0, 20).source()).isEqualTo(SkillSearchSource.ALL);
+    }
 
     @Test
     void shortKeywordsShouldUsePrefixTsQuery() {
