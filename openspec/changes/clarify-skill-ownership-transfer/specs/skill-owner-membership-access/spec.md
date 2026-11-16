@@ -1,3 +1,5 @@
+> **Update 2026-11-16:** REQ-OWN-01, REQ-OWN-02, REQ-OWN-04 and REQ-OWN-07 are replaced in part by `team-member-departure` (REQ-DEP-01, REQ-DEP-02, REQ-DEP-04, REQ-DEP-06). Each of those requirements names the part it replaces. The rest of this file is unchanged.
+
 ## ADDED Requirements
 
 ### Requirement: REQ-OWN-01 成员移除 SHALL 保留技能归属和内容

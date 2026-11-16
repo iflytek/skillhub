@@ -1,3 +1,38 @@
+## 0. Contract (2026-11-16)
+
+- [x] Record the ownership, maintenance and handover contract from the PR #1060 discussion.
+- [ ] Settle the open questions in `proposal.md`.
+
+## 1. Delivery 1: TEAM access-rule fix
+
+- [ ] Require current membership for internal reads by the owner (REQ-DEP-01), for sessions and Tokens.
+- [ ] Update the read-only UI message and add a release note on the behavior change.
+- [ ] Tests: departed owner denied on old and new records; public content still readable; admin paths unchanged.
+
+## 2. Delivery 2: ownership model, exact addressing and handover
+
+- [ ] Migration: `ownership_type`, nullable `owner_id`, `maintainer_id`, `ownership_revision`, and the `skill_handover_request` table.
+- [ ] Responsible-user authorization helper; move all owner checks to it (REQ-OM-04).
+- [ ] Exact addressing in the resolver, all slug routes, the API selector and the CLI option (REQ-ADDR-02, REQ-ADDR-03).
+- [ ] Handover service: start, accept, reject, cancel, expire, invalidate (REQ-HO-01 to REQ-HO-06).
+- [ ] Lock the source Skill in promotion approval and when pending work is created.
+- [ ] Notifications (`OWNERSHIP`) and audit actions (REQ-HO-07).
+- [ ] UI: handover dialog with recipient search, My Skills requests tab, Skill detail panel.
+- [ ] Enable same-slug handover only after exact addressing is complete (REQ-ADDR-04).
+- [ ] Tests: unit, controller, real-database concurrency, E2E and populated-database upgrade.
+
+## 3. Delivery 3: removal conversion and historical remediation
+
+- [ ] Convert Skills and clear maintainer assignments on new member removal (REQ-DEP-02).
+- [ ] Re-check submitter authority when reviews are decided; no automatic approval for removed submitters (REQ-DEP-03).
+- [ ] Remediation list and actions for historical records (REQ-DEP-05).
+- [ ] Remove-member dialog, namespace "no maintainer" list, and messages for old links (REQ-DEP-06).
+- [ ] Tests: removal not blocked by pending work, no repeat conversion, audit operator, historical access denial.
+
+---
+
+## Earlier tasks for #974 (unchanged)
+
 ## 1. 实施前收敛
 
 - [x] 刷新目标分支，确认当前需求与实施范围，用户已授权实施并创建 Issue #974。
