@@ -388,12 +388,29 @@ class TokenCapabilityFlowIntegrationTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"UNKNOWN", "CANDIDATE"})
-    void unknownBundleAuthorizationMustExplainRecoveryInTheRequestedLocale(String source) throws Exception {
+    void bundleAuthorizationFailuresRespectOperationAndMemberScopes(String source) throws Exception {
         bundleRecoveryUsesOnlyPersistedAuthorityAndPrivilegedRetryCannotRepairIt(source);
         String operationId = database.queryForObject(
                 "SELECT operation_id FROM skill_suite_bundle_operation WHERE actor_id = ?", String.class, actor);
-        String expectedKey = source.equals("UNKNOWN") ? "error.suite.bundle.authorization.provenanceUnknown"
-                : "error.suite.bundle.authorization.capabilityMissing: skill:publish-private";
+        if (source.equals("UNKNOWN")) {
+            // Provenance is checked before touching any member; the UI explains this operation-level code.
+            var operation = operations.findById(operationId).orElseThrow();
+            assertThat(operation.getFailureCode()).isEqualTo("AUTHORIZATION_PROVENANCE_UNKNOWN");
+            assertThat(operation.getFailureDetail()).isEqualTo("error.suite.bundle.authorization.provenanceUnknown");
+            var member = members.findByOperationIdOrderByPosition(operationId).getFirst();
+            assertThat(member.getStatus().name()).isEqualTo("WAITING_FOR_MEMBER");
+            assertThat(member.getErrors()).isEmpty();
+            for (String language : List.of("zh", "ru")) {
+                http.perform(get("/api/v1/suite-bundles/operations/" + operationId)
+                                .header("Authorization", bearer(token("skill:publish")))
+                                .header("Accept-Language", language))
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.data.failureCode").value("AUTHORIZATION_PROVENANCE_UNKNOWN"))
+                        .andExpect(jsonPath("$.data.members[0].errors").isEmpty());
+            }
+            return;
+        }
+        String expectedKey = "error.suite.bundle.authorization.capabilityMissing: skill:publish-private";
         assertThat(members.findByOperationIdOrderByPosition(operationId).getFirst().getErrors()).containsExactly(expectedKey);
         var localized = new org.assertj.core.api.SoftAssertions();
         for (String language : List.of("zh", "ru")) {
