@@ -1,0 +1,102 @@
+name: Watch DSH Compatibility
+
+on:
+  schedule:
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dsh-compatibility-watch-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  candidate:
+    name: Build compatibility candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24.2.0'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Install fixed development dependencies
+        run: |
+          cd cli
+          bun install --frozen-lockfile
+          cd ../plugins/dsh
+          bun install --frozen-lockfile
+      - name: Build and pack the current source without publishing
+        working-directory: plugins/dsh
+        run: |
+          bun run build
+          mkdir -p artifacts
+          npm pack --ignore-scripts --pack-destination artifacts
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skillhub-dsh-compatibility-candidate
+          path: plugins/dsh/artifacts/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  channel:
+    name: Official Host channel ${{ matrix.channel }}
+    needs: candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Preview channels are observable early warnings, not release/merge gates.
+    continue-on-error: ${{ matrix.channel != 'latest' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        channel: [latest, next, alpha]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.3.13'
+      - name: Install fixture and smoke dependencies
+        run: |
+          cd cli
+          bun install --frozen-lockfile
+          cd ../plugins/dsh
+          bun install --frozen-lockfile
+      - uses: actions/download-artifact@v4
+        with:
+          name: skillhub-dsh-compatibility-candidate
+          path: plugins/dsh/artifacts
+      - name: Resolve and validate the channel's exact official release
+        id: release
+        working-directory: plugins/dsh
+        env:
+          DSH_CHANNEL: ${{ matrix.channel }}
+        run: |
+          npm view "@deepseek-ai/dsh@$DSH_CHANNEL" version --json --registry=https://registry.npmjs.org > "$RUNNER_TEMP/dsh-channel.json"
+          node --input-type=module <<'NODE'
+          import { readFileSync, appendFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { selectDshVersion } from './scripts/smoke-native-host.mjs';
+          const version = selectDshVersion(JSON.parse(readFileSync(join(process.env.RUNNER_TEMP, 'dsh-channel.json'), 'utf8')));
+          appendFileSync(process.env.GITHUB_OUTPUT, `version=${version}\n`);
+          NODE
+      - name: Run isolated official Host smoke
+        working-directory: plugins/dsh
+        env:
+          DSH_VERSION: ${{ steps.release.outputs.version }}
+        run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-channel-summary.json --dsh-version "$DSH_VERSION"
+      - name: Upload the exact release and sanitized result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillhub-dsh-channel-${{ matrix.channel }}-${{ steps.release.outputs.version || 'unresolved' }}
+          path: plugins/dsh/host-channel-summary.json
+          if-no-files-found: warn
+          retention-days: 7

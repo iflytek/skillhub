@@ -16,7 +16,9 @@ Version `0.4.0` uses the independent `dsh-v0.4.0` tag. It adds versioned example
 
 `0.6.2` is publicly released and includes source-isolated updates, release-change previews and local-file handling, single-skill ZIP transfer, local favorites, and DSH `0.2.1-rc.5` compatibility. Shared inventory remains v2 without a coordinated CLI upgrade.
 
-`0.6.3` is the current patch candidate, delivering the compact workbench, bounded read-only file tree, local-change entry fixes and upgraded-detail return from [#1080](https://github.com/iflytek/skillhub/pull/1080). It preserves the source and inventory semantics of `0.6.2` and adds exact DSH `0.2.2-rc.1` compatibility with its own Node/Cordis family. Candidate and public-package acceptance remain separate; npm availability is not claimed before publication.
+`0.6.3` is publicly released, delivering the compact workbench, bounded read-only file tree, local-change entry fixes and upgraded-detail return from [#1080](https://github.com/iflytek/skillhub/pull/1080). It preserves the source and inventory semantics of `0.6.2` and adds exact DSH `0.2.2-rc.1` compatibility with its own Node/Cordis family.
+
+`0.6.4` is the current patch candidate, fixing installation rejection caused solely by an unlisted DSH RC. It uses minimum-version DSH admission without an upper DSH bound, while retaining actual dependency-graph, required-capability, permission and filesystem transaction checks. Development dependencies and regression targets remain separately pinned. The interface and inventory format are unchanged. Candidate and public-package acceptance remain separate; npm availability is not claimed before publication.
 
 ## Compact interface and file preview (0.6.3)
 
@@ -45,17 +47,19 @@ In the detail's installation management panel, each location's Manage menu expor
 
 | Component | Requirement or scope |
 | --- | --- |
-| DSH | `0.6.3` candidate targets `0.2.0-rc.2`, `0.2.1-rc.2`, `0.2.1-rc.5`, and `0.2.2-rc.1`; Host, app-boot and injected Client modules must share the exact release |
-| Cordis | Old RC: both families below; `0.2.1-rc.2` and `0.2.1-rc.5`: only `4.0.5 / 1.0.6 / 1.0.10 / 1.1.7`; `0.2.2-rc.1`: only `4.1.0 / 1.1.0 / 1.1.0 / 1.2.0` |
-| Host Node | Retained RCs: `>=24.2.0 <25`; `0.2.2-rc.1`: `>=24.9.0 <25` |
+| DSH | The `0.6.4` candidate admits `>=0.2.0-rc.2` without an upper DSH bound; actual Host/Client ownership and required capabilities are still checked |
+| Cordis | `>=4.0.4`; Loader/Include/Timer follow the real Host declarations and resolution graph, not a historical patch-family allowlist |
+| Host Node | DSH 0.2.0/0.2.1: `>=24.2.0`; DSH 0.2.2 and later: `>=24.9.0`; the Host may impose a higher minimum |
 | Build package manager | Bun `1.3.13`, using frozen lockfiles |
 | UI | Chinese, DSH light/dark themes and narrow layouts |
-| Verified environments | See existing records for `0.6.2` and earlier compatibility acceptance; final `0.6.3` candidate, platform and public-package results are recorded separately |
+| Verified environments | See existing records for `0.6.3` and earlier compatibility acceptance; `0.6.4` candidate, platform and public-package results are recorded separately |
 | Validation boundary | Historical feature evidence does not replace final-package acceptance; CI, native Host, browser, real-model and SaaS results are recorded separately |
+
+This is the unreleased `0.6.4` candidate policy; published `0.6.3` retains its original exact version declarations. `testedDshVersions` records regression targets/evidence, not an admission allowlist. A future RC is not rejected merely because it is unlisted, and admission is not an acceptance claim. Missing required capabilities, inconsistent or changed manifests, and insufficient permissions still stop the relevant operation. Development dependencies remain pinned; plugin peer copies must not mask the actual Host graph.
 
 Windows browser acceptance does not establish complete native Windows Host filesystem support. CI results do not replace desktop, model, or target-instance acceptance. See the repository's [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and [acceptance criteria](../../openspec/changes/add-dsh-native-plugin/acceptance.md).
 
-Version `0.3.1` includes the merged [Issue #981 compatibility fix](https://github.com/iflytek/skillhub/pull/988). Published plugin `0.3.0` does not include it. Unknown releases and mixed Host/Client graphs reject new writes. Optional `userQuestions` is enabled by Host service availability; it is not part of the mandatory write-version gate. Its existing API remains compatible across the enumerated RCs, each of which the peer declaration permits. An absent service falls back to the plugin confirmation dialog.
+Version `0.3.1` includes the merged [Issue #981 compatibility fix](https://github.com/iflytek/skillhub/pull/988). Published plugin `0.3.0` does not include it. Those historical releases reject unlisted runtimes and mixed Host/Client graphs; current source instead uses the minimum-version and actual-graph checks above. Optional `userQuestions` is enabled by Host service availability; it is not part of the mandatory write-version gate. Historical acceptance covered its existing API across the enumerated RCs; that evidence does not establish acceptance of current source on a newer Host. An absent service falls back to the plugin confirmation dialog.
 
 Starting with `0.6.2`, the plugin supports `0.2.1-rc.5`; compatibility and acceptance are tracked in the [compatibility design](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) and task 53 verification. This does not extend the published npm `0.6.1` support declaration. `0.6.3` additionally targets `0.2.2-rc.1` with its own Node/Cordis family; platform, Node boundary, browser, model and this release acceptance remain separate.
 
@@ -84,7 +88,7 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 A dry run does not produce an installable package. Retain each candidate and its checksum; do not overwrite packages used for acceptance or rollback.
 
-This candidate validates the following complete combinations per Host release, rejecting mixed or unlisted patch versions. Pinning the DSH main package does not lock its transitive `~` dependencies; the actual Host resolution is checked.
+The following combinations are historical acceptance records for `0.6.3` and earlier, not the `0.6.4` runtime allowlist. The new candidate does not reject an unlisted patch solely by version; it still checks Host declarations against the actual resolution graph and rejects inconsistent copies. Pinning the DSH main package does not lock its transitive `~` dependencies.
 
 | Combination | Cordis | Loader | Include | Timer |
 | --- | --- | --- | --- | --- |
@@ -96,13 +100,13 @@ Published `0.1.0` still requires the original Cordis `4.0.4` baseline and does n
 
 ## Install from npm
 
-This section targets `0.6.3`. First use `npm view` to confirm that the exact version is available; otherwise use a candidate tarball as described below. Use only the enumerated exact DSH releases with their corresponding Node/Cordis families; future versions are not automatically compatible.
+This section targets `0.6.4`. First use `npm view` to confirm that the exact version is available; use a local tarball while the candidate is unpublished. This candidate uses the minimum DSH version policy above; admission is not an acceptance claim for every future release.
 
-Query the exact npm version first and install only after confirming availability. Check DSH, Node and a complete Cordis combination listed above, stop the target Web Profile Host, then install the plugin. A verified local tarball can also be installed using the next section:
+Query the exact npm version first and install only after confirming availability. Check the DSH/Node minimum requirements and actual Host dependency graph, stop the target Web Profile Host, then install the plugin. A verified local tarball can also be installed using the next section:
 
 ```sh
-npm view @astron-team/skillhub-dsh@0.6.3 version
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.3 --ignore-scripts
+npm view @astron-team/skillhub-dsh@0.6.4 version
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.4 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 

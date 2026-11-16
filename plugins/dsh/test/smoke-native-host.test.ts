@@ -1,10 +1,11 @@
 import { afterEach, expect, test } from 'bun:test';
 import { realpath, access, chmod, mkdir, stat, symlink, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
 // Node-only CI entry; keep its helpers importable without starting a Host or downloading dependencies.
 // @ts-expect-error The development-only Node entry has no TypeScript declarations.
-import { safeAvailabilityCheckpoint, summarizeNpmPreparation, prepareDownloadCache, scenarioProbes, assertHostNodeVersion, hostInstallManifest, selectDshVersion, supportedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
+import { safeAvailabilityCheckpoint, summarizeNpmPreparation, prepareDownloadCache, scenarioProbes, assertHostNodeVersion, hostInstallManifest, selectDshVersion, testedDshVersions, isolatedEnvironment, profileInstallManifest, retainedCordisFamily, runBounded, selectTarball } from '../scripts/smoke-native-host.mjs';
 
 const roots: string[] = [];
 async function root() {
@@ -25,6 +26,37 @@ async function removeFixture(path: string) {
   }
 }
 afterEach(async () => { await Promise.all(roots.splice(0).map(removeFixture)); });
+
+test('Node loads smoke with only CLI-declared dependencies and no plugin node_modules', async () => {
+  const directory = await root();
+  const scriptDirectory = join(directory, 'plugins/dsh/scripts');
+  const cliDirectory = join(directory, 'cli');
+  await mkdir(scriptDirectory, { recursive: true });
+  await mkdir(join(cliDirectory, 'node_modules'), { recursive: true });
+  const cliManifest = JSON.parse(await readFile(new URL('../../../cli/package.json', import.meta.url), 'utf8'));
+  await writeFile(join(cliDirectory, 'package.json'), JSON.stringify({
+    private: true, dependencies: { semver: cliManifest.dependencies.semver },
+  }));
+  const require = createRequire(new URL('../../../cli/package.json', import.meta.url));
+  await symlink(dirname(require.resolve('semver/package.json')), join(cliDirectory, 'node_modules/semver'),
+    process.platform === 'win32' ? 'junction' : 'dir');
+  await writeFile(join(scriptDirectory, 'smoke-native-host.mjs'), await readFile(new URL('../scripts/smoke-native-host.mjs', import.meta.url)));
+  await expect(access(join(directory, 'plugins/dsh/node_modules'))).rejects.toThrow();
+  await writeFile(join(directory, 'probe.mjs'), `
+import assert from 'node:assert/strict';
+import { selectDshVersion, assertHostNodeVersion } from './plugins/dsh/scripts/smoke-native-host.mjs';
+assert.equal(selectDshVersion('0.2.2-rc.3+desktop.1'), '0.2.2-rc.3+desktop.1');
+assertHostNodeVersion('0.2.2-rc.3', '24.9.0');
+console.log('smoke dependency layout verified');
+`);
+  const child = Bun.spawn(['node', 'probe.mjs'], { cwd: directory, stdout: 'pipe', stderr: 'pipe',
+    env: { ...process.env, NODE_PATH: '', NODE_OPTIONS: '' } });
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited,
+  ]);
+  expect(code, stderr).toBe(0);
+  expect(stdout.trim()).toBe('smoke dependency layout verified');
+}, 10000);
 
 test('isolates user configuration and strips model credentials and Node preload hooks', () => {
   const directory = join(tmpdir(), 'skillhub-environment');
@@ -164,17 +196,22 @@ test('retained profile pins pnpm separately while fresh profile preserves ordina
   expect(() => profileInstallManifest(profile, 'unknown')).toThrow('Unknown Cordis family');
 });
 
-test('native smoke accepts only explicit DSH releases and rejects incompatible retained families', async () => {
+test('native smoke uses a minimum release instead of a tested-version allowlist', async () => {
   const manifest = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
-  expect(manifest.peerDependencies['@deepseek-ai/dsh-fs']).toBe(supportedDshVersions.join(' || '));
-  for (const version of supportedDshVersions) expect(selectDshVersion(version)).toBe(version);
-  for (const version of ['latest', 'next', 'alpha', '0.2.1', '0.2.1-rc.3', '0.2.1-rc.4', '0.2.2-rc.2', '0.2.1-rc.2 --ignore-scripts', '0.2.1-rc.5 --ignore-scripts']) {
-    expect(() => selectDshVersion(version)).toThrow('Unsupported DSH release');
+  expect(manifest.engines.dsh).toBe('>=0.2.0-rc.2');
+  expect(testedDshVersions).toContain('0.2.2-rc.3');
+  for (const version of [...testedDshVersions, '0.2.1', '0.2.1-rc.3', '0.2.2-rc.4', '0.2.2-rc.5', '0.3.0-alpha.1', '1.0.0', '0.2.2-rc.3+desktop.1', '1.0.0+build.2']) {
+    expect(selectDshVersion(version)).toBe(version);
+  }
+  for (const version of ['latest', 'next', 'alpha', '0.1.9', '0.2.0-rc.1', 'v0.2.2-rc.3', ' 0.2.2-rc.3', '0.2.2-rc.3 ', '=0.2.2-rc.3', '0.2.1-rc.2 --ignore-scripts', '0.2.1-rc.5 --ignore-scripts']) {
+    expect(() => selectDshVersion(version)).toThrow('exact DSH release at or above');
   }
   expect(selectDshVersion('0.2.0-rc.2', 'retained')).toBe('0.2.0-rc.2');
-  for (const version of ['0.2.1-rc.2', '0.2.1-rc.5', '0.2.2-rc.1']) {
+  expect(selectDshVersion('0.2.0-rc.2+desktop.1', 'retained')).toBe('0.2.0-rc.2+desktop.1');
+  for (const version of ['0.2.1-rc.2', '0.2.1-rc.5', '0.2.2-rc.1', '0.2.2-rc.3', '0.2.2-rc.4']) {
     expect(() => selectDshVersion(version, 'retained')).toThrow('requires the current Cordis family');
   }
+  expect(() => selectDshVersion('0.2.2-rc.3', 'unknown')).toThrow('Unknown Cordis family');
 });
 
 
@@ -326,16 +363,16 @@ test('availability summary allows only fixed context reasons without messages or
 });
 
 
-test('official release Node floors fail before Host preparation without excluding old RCs', () => {
-  for (const release of supportedDshVersions) {
-    for (const node of ['24.9.0', '24.10.0', '24.20.1']) expect(() => assertHostNodeVersion(release, node)).not.toThrow();
-    for (const node of ['22.20.0', '24.1.9', '25.0.0', '24.9.0-rc.1', '24.invalid.0']) {
+test('release-series Node floors retain older Hosts and accept newer Node majors', () => {
+  for (const release of [...testedDshVersions, '0.2.2-rc.3+desktop.1', '0.2.2-rc.4', '0.2.2-rc.5', '0.2.3-alpha.1', '0.3.0', '1.0.0']) {
+    for (const node of ['24.9.0', '24.10.0', '24.20.1', '25.0.0', '26.1.0', '24.9.0+vendor.1']) expect(() => assertHostNodeVersion(release, node)).not.toThrow();
+    for (const node of ['22.20.0', '24.1.9', '24.9.0-rc.1', '24.invalid.0', 'v24.9.0', '24.9.0 ']) {
       expect(() => assertHostNodeVersion(release, node)).toThrow('smoke requires Node');
     }
     for (const node of ['24.2.0', '24.8.9']) {
-      if (release === '0.2.2-rc.1') expect(() => assertHostNodeVersion(release, node)).toThrow('>=24.9.0');
-      else expect(() => assertHostNodeVersion(release, node)).not.toThrow();
+      if (['0.2.0-rc.2', '0.2.1-rc.2', '0.2.1-rc.5'].includes(release)) expect(() => assertHostNodeVersion(release, node)).not.toThrow();
+      else expect(() => assertHostNodeVersion(release, node)).toThrow('>=24.9.0');
     }
   }
-  expect(() => assertHostNodeVersion('0.2.2-rc.2', '24.9.0')).toThrow('Unsupported DSH release');
+  expect(() => assertHostNodeVersion('0.2.0-rc.1', '24.9.0')).toThrow('exact DSH release at or above');
 });

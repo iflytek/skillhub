@@ -10,6 +10,7 @@ on:
       - 'plugins/dsh/**'
       - 'cli/**'
       - '.github/workflows/check-dsh-plugin.yml'
+      - '.github/workflows/check-dsh-compatibility.yml'
       - '.github/workflows/release-dsh-plugin.yml'
   workflow_dispatch:
 
@@ -145,6 +146,10 @@ jobs:
             node: '24.9.0'
           - dsh: '0.2.2-rc.1'
             node: '24'
+          - dsh: '0.2.2-rc.3'
+            node: '24.9.0'
+          - dsh: '0.2.2-rc.3'
+            node: '24'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -163,7 +168,7 @@ jobs:
           # Exercise the release candidate built at the retained minimum Node baseline.
           name: skillhub-dsh-development-package-ubuntu-latest-node-${{ matrix.node == '24.9.0' && '24.2.0' || matrix.node }}
           path: plugins/dsh/artifacts
-      - name: Verify latest supported official Host without dependency overrides
+      - name: Verify explicit regression Host without dependency overrides
         working-directory: plugins/dsh
         run: node scripts/smoke-native-host.mjs --artifact artifacts --report host-release-summary.json --dsh-version '${{ matrix.dsh }}'
       - name: Upload sanitized release Host smoke summary
@@ -203,6 +208,15 @@ jobs:
             node: '24.9.0'
           - os: windows-latest
             dsh: '0.2.2-rc.1'
+            node: '24.9.0'
+          - os: ubuntu-latest
+            dsh: '0.2.2-rc.3'
+            node: '24.9.0'
+          - os: macos-latest
+            dsh: '0.2.2-rc.3'
+            node: '24.9.0'
+          - os: windows-latest
+            dsh: '0.2.2-rc.3'
             node: '24.9.0'
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30

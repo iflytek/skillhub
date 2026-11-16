@@ -497,3 +497,17 @@ New lifecycle operations SHALL retain the strict v2 shared inventory format read
 - **WHEN** activation is interrupted or both entry names, neither entry, or untrusted entry contents are observed
 - **THEN** exact target identity, durable journal stages and verified files govern recovery under the existing lock domain
 - **AND** ambiguous contents are not reported as a usable installation or overwritten to make the state appear consistent
+
+
+### Requirement: Minimum-version Host admission is separate from tested releases
+The plugin SHALL admit DSH releases at or above 0.2.0-rc.2 without an upper DSH bound. Installation declarations and runtime checks SHALL NOT reject a release solely because it is absent from the tested-release list. Fixed development dependencies and tested releases SHALL remain evidence, not an exact runtime allowlist.
+
+#### Scenario: A newer coherent Host is not yet listed as tested
+- **WHEN** the Host meets the minimum version and Node requirements, supplies required capabilities and coherent Host/Client package ownership, and satisfies the current operation's existing permissions
+- **THEN** absence from the tested-release list alone does not prevent installation or the operation
+- **AND** this admission does not claim that the new release passed product acceptance
+
+#### Scenario: A Host is old, incomplete, inconsistent or unauthorized
+- **WHEN** the Host is below the minimum, has an invalid version, lacks required capabilities, exposes changed or inconsistent package manifests, or denies the current operation
+- **THEN** the operation remains rejected without weakening source identity, target protection, confirmation, locking or inventory compatibility
+- **AND** greater version numbers alone do not override those checks
