@@ -1,6 +1,6 @@
-## Design: ownership, maintenance and handover (2026-11-16)
+## Design: ownership, maintenance and handover (2026-11-17)
 
-This section is the technical approach for the requirements in `skill-ownership-model`, `skill-exact-addressing`, `skill-handover` and `team-member-departure`. Field and table names are suggestions until the implementation PRs. The earlier design for #974 follows unchanged at the end.
+This section is the technical approach for the requirements in `skill-ownership-model`, `skill-exact-addressing`, `skill-handover` and `team-member-departure`. It follows the maintainer decisions of 2026-11-17. Field and table names are suggestions until the implementation PRs. The earlier design for #974 follows unchanged at the end.
 
 ### Data model
 
@@ -8,39 +8,50 @@ On `skill`:
 
 - `ownership_type`: `USER` or `NAMESPACE`. Defaults to `USER` for existing rows.
 - `owner_id`: unchanged for user-owned rows; null for namespace-owned rows.
-- `maintainer_id`: nullable; used only for namespace-owned rows.
-- `ownership_revision`: an integer increased on every ownership or maintainer change. Handover requests record it, so a stale request is detected by comparing one number.
+- `maintainer_id`: nullable; used only for namespace-owned source rows.
+- `ownership_revision`: an integer increased on every ownership or maintainer change. Handover requests, conversion items and pending applications record it, so stale work is detected by comparing one number.
 
-The existing constraint `UNIQUE(namespace_id, slug, owner_id)` (V13) stays. PostgreSQL treats nulls as distinct, so namespace-owned rows with the same slug can coexist without changing the constraint. The rule of at most one published Skill per namespace and slug is unchanged.
+All schema changes are additive. Existing rows keep their ID, slug and owner. The existing constraint `UNIQUE(namespace_id, slug, owner_id)` (V13) stays. PostgreSQL treats nulls as distinct, so namespace-owned rows with the same slug can coexist without changing it. Publication-coordinate conflict rules are unchanged.
 
 New table `skill_handover_request`: `id, skill_id, namespace_id, kind, from_ownership_type, from_owner_id, from_maintainer_id, from_ownership_revision, to_user_id, initiated_by, reason, status, expires_at, decided_by, decided_at, decision_note, version, created_at, updated_at`. A partial unique index allows one `PENDING` row per Skill. State changes are conditional updates on `status` and `version`.
 
+### Global copies
+
+The copy's responsibility comes from its source through the existing `source_skill_id` link (REQ-OM-05, REQ-OM-09). Handover and conversion never write a responsibility field on the copy. One domain resolver returns the effective ownership and responsible user for any Skill, following `source_skill_id` for active global copies. The copy's stored `owner_id` is kept as provenance and is no longer read for authorization.
+
+Today some code reads the copy's own `owner_id`. Examples: the "team and global owner match" check in `PromotionService`, `VisibilityChecker`, `SkillQueryService` projections and My Skills listings. These callers move to the resolver. The call-site inventory (below) lists them all, and handover stays off until they are migrated. Public reads of the copy and platform governance (hide, unhide, revoke) keep their current, separate checks.
+
 ### Authorization
 
-One domain helper answers "who is responsible for this Skill": the owner for user-owned Skills, the maintainer for namespace-owned Skills. Today's `isOwner` checks, such as in `VisibilityChecker`, move to this helper and also require current membership for TEAM namespaces (delivery 1). Namespace OWNER/ADMIN and SUPER_ADMIN paths stay as they are. Authorization always reads the Skill row, never the search document.
+Every "is this the responsible user" check uses the resolver, and requires current membership for TEAM namespaces (delivery 1). Namespace OWNER/ADMIN and SUPER_ADMIN paths stay as they are. Authorization always reads the Skill row, never the search document. Hidden Skills keep today's rule: readable by the responsible user and namespace OWNER/ADMIN (`VisibilityChecker.canAccess`, `SkillQueryService.canManageRestrictedSkill`). Unhiding stays `SUPER_ADMIN` only (`AdminSkillController`).
 
-### Exact addressing
+### Exact addressing (delivery 2a)
 
-`SkillSlugResolutionService.resolve` currently prefers the caller's own Skill, then the first published one. It becomes:
+`SkillSlugResolutionService.resolve` is extended, not replaced:
 
-- **Reads:** the single published Skill, or the caller's one usable unpublished candidate. If there is more than one, return the ambiguity error.
-- **Writes:** the one Skill the caller may maintain for that slug. If there is more than one, return the ambiguity error.
-- **Explicit selector:** `skillId`. It is resolved first, then authorization is checked; the ID alone grants nothing.
+- **Optional `skillId`:** load by ID, check the namespace and slug match the path, then authorize. A mismatch or a missing right gives the same response as an unknown ID.
+- **Slug-only, legacy rule kept:** `CURRENT_USER` still prefers the caller's user-owned record, then the published visible record. `PUBLISHED` still prefers the published visible record, then the caller's own. A maintenance relationship is not part of the slug-only preference. A maintained record is picked only when the legacy rule finds nothing and it is the only record the caller may access.
+- **Selection required:** returned only when the legacy rule cannot decide, and for the upload case in REQ-ADDR-05. The error lists only candidates the caller may access (ID, owner or maintainer, visibility, status). The HTTP status (proposed: 409) is fixed in the inventory.
 
-Routes that call `findByNamespaceIdAndSlug(...)` directly and take the first match, for example `SkillAvatarAppService.findSkill` and `CompatSkillLookupService.findByLegacySlug`, are moved to the resolver. The CLI sends `skillId` when the user passes `--skill-id`. Older CLIs keep working when the slug is unambiguous.
+The Web app keeps `skillId` in routes and query keys from the moment a record is chosen. Mutations send it. The CLI adds `--skill-id`, and uses the stored install record to send it on update when available.
 
-### Handover completion
+**Delivered first, as reviewable files in this change:**
+
+1. **Call-site inventory.** Every place in the code that calls `findByNamespaceIdAndSlug` or reads `getOwnerId()`, by module, marked "must change" or "retest only", with the reason. Known "must change" examples: `SkillAvatarAppService.findSkill` and `CompatSkillLookupService.findByLegacySlug`, which take the first match.
+2. **Compatibility matrix.** Rows: historical data shapes (single record, user-owned same-slug pairs, published plus private drafts, global copies, departed owners). Columns: old CLI install, old CLI update and download, ClawHub-compatible routes, Web deep links, API with and without `skillId`. Each cell gives the expected result and how it is validated.
+
+### Handover completion (delivery 2b)
 
 Lock order follows the existing user-then-namespace order (`NamespaceMemberService`, `AdminUserAppService.updateUserStatus`):
 
 1. user rows of the previous responsible user and the recipient, ordered by ID;
 2. namespace row;
 3. request row;
-4. source Skill row, then its active global copy.
+4. source Skill row.
 
-Promotion approval (`PromotionService.approvePromotion`) and the creation of pending work (review submission, visibility change, avatar submission, new upload) lock the source Skill row before reading the owner or checking for pending work. Acceptance and these paths then run one after the other. Member removal and account status changes already lock the user row first.
+Review decisions, promotion approval and auto-approval also lock the source Skill row before they read responsibility. Under the lock, each one compares the application's recorded `ownership_revision` with the current one. If they differ, automatic approval is skipped and the application stays for a human (REQ-DEP-03, REQ-DEP-10). A human decision then checks current conditions. Handover completion does not check for pending work (REQ-HO-05).
 
-Under the locks, completion re-checks REQ-HO-04 and REQ-HO-05. It then updates the Skill and its copy, increases `ownership_revision`, marks the request `ACCEPTED` and writes audit records in one transaction. Notifications and search reindexing run after commit, using the existing `@TransactionalEventListener` pattern.
+Under the locks, completion re-checks REQ-HO-04. It then updates the source Skill, increases `ownership_revision`, marks the request `ACCEPTED` and writes audit records in one transaction. Notifications and search reindexing (source and copy) run after commit, using the existing `@TransactionalEventListener` pattern.
 
 ### Expiry and invalidation
 
@@ -48,37 +59,55 @@ Every action checks `expires_at` first. A scheduled job marks overdue requests `
 
 ### Removal conversion (delivery 3)
 
-`NamespaceMemberService.removeMember` already locks user, then namespace. In the same transaction it converts the removed user's Skills in that namespace (sources first, then their copies, by ID order), clears their maintainer assignments, increases `ownership_revision` on each, and invalidates their pending requests. Running in one transaction means there is no partial state to retry (open question 9). Audit records name the operator, with the trigger `MEMBER_REMOVED`.
+`NamespaceMemberService.removeMember` keeps its user-then-namespace locks. In the same short transaction it:
+
+1. deletes the membership, so access ends at commit (REQ-DEP-01);
+2. inserts a `skill_ownership_conversion` row: removal event, namespace, removed user, operator, time and status;
+3. inserts one `skill_ownership_conversion_item` per affected Skill (owned sources and maintainer assignments), with the `ownership_revision` seen at removal;
+4. invalidates the user's pending handover requests in that namespace.
+
+A worker processes items in bounded batches. For each item it locks the Skill and checks the revision still matches. It then converts the Skill, or clears the maintainer, increases the revision and marks the item `DONE`. If the revision no longer matches, the item is marked `SKIPPED_CHANGED`. Items are idempotent by status, so retries are safe. Newly created or later-changed Skills are never touched. Progress is visible in namespace management. Notifications go out after each batch commits.
+
+While an item is not `DONE`, the resolver treats the recorded user as having no maintenance right over that Skill. So rejoining before conversion finishes does not restore rights. Reassignment then goes through handover.
+
+### Download links
+
+New protected requests always check current authorization. Already-issued presigned URLs stay valid until `SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY` (default `PT10M`). No revocation mechanism is added.
 
 ### Notifications and audit
 
 - New in-app notification category `OWNERSHIP`. Email follows the existing per-category preference.
-- Audit actions: `SKILL_HANDOVER_REQUESTED`, `SKILL_HANDOVER_ACCEPTED`, `SKILL_HANDOVER_REJECTED`, `SKILL_HANDOVER_CANCELLED`, `SKILL_HANDOVER_EXPIRED`, `SKILL_HANDOVER_INVALIDATED`, `SKILL_OWNERSHIP_CONVERTED` (with the trigger: handover, member removal or remediation) and `SKILL_MAINTAINER_CHANGED`. Each one records the before and after state, the operator, the request and the reason.
+- Audit actions: `SKILL_HANDOVER_REQUESTED`, `SKILL_HANDOVER_ACCEPTED`, `SKILL_HANDOVER_REJECTED`, `SKILL_HANDOVER_CANCELLED`, `SKILL_HANDOVER_EXPIRED`, `SKILL_HANDOVER_INVALIDATED`, `SKILL_OWNERSHIP_CONVERTED` (trigger: handover, member removal with event ID, or remediation) and `SKILL_MAINTAINER_CHANGED`. Each records the before and after state, the operator, the request or event, and the reason.
 
-### Rollout
+### Rollout and rollback boundary
 
-1. Deploy the schema and code that understand namespace-owned rows. No conversion happens yet.
-2. Enable handover and removal conversion only after every backend and client in the deployment runs that version.
-3. After the first conversion, rolling back to an older application is not supported, because older code assumes `owner_id` is never null. Operators keep a backup and verify the upgrade on a populated database.
+1. **Schema.** Additive migration only. Rolling back to older binaries is safe.
+2. **Code that understands the new model.** Handover and removal conversion are behind switches that default to off. Rolling back to older binaries is safe while `SELECT count(*) FROM skill WHERE ownership_type = 'NAMESPACE'` is 0.
+3. **Enable.** Only after every backend instance and consumer runs step-2 code, and the compatibility matrix passes. Once a namespace-owned row exists, older binaries are not supported, because they assume `owner_id` is never null. The supported rollback is turning the switches off on current binaries. That stops new handovers and conversions and leaves existing records readable.
+4. **Validation of the boundary.** On a populated database copy: upgrade, enable, create namespace-owned rows, turn the switches off, and confirm reads, downloads and the old CLI still work. Separately, confirm an older binary refuses to start, or is documented as unsupported, when namespace-owned rows exist.
 
 ### Validation
 
 Real-database concurrency tests use the existing Testcontainers PostgreSQL setup, such as `GithubContentRevisionConcurrencyIntegrationTest`. Each pair runs in both orders:
 
 - accept vs. accept, cancel, recipient removal and recipient disabling;
-- accept vs. promotion approval, and vs. creating new pending work;
-- recovery accept vs. the original user rejoining;
-- removal conversion vs. a pending handover.
+- accept vs. review decision, promotion approval and auto-approval;
+- recovery accept vs. the original owner rejoining;
+- removal conversion vs. a pending handover, a governance reassignment and the user rejoining.
 
 Other tests:
 
-- same-slug handover with update, download and delete aimed at the exact record;
-- ambiguity errors for older clients;
+- same-slug read, update, download and delete on the exact record, with and without `skillId`;
+- the compatibility matrix, including old CLI install records;
+- source and copy consistency after handover and conversion;
+- responsibility change during review, including auto-approval;
+- conversion retry after a partial failure;
 - departed-user access denial on old and new records;
+- hidden and archived Skills keep their state;
 - expiry enforced at action time;
 - upgrade on a populated database.
 
-Results are reported as passed, failed and not run, separately from the proposed behavior.
+The maintainers offered to help with populated-database upgrade and legacy-client validation. Results are reported as passed, failed and not run, separately from the proposed behavior.
 
 ---
 

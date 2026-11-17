@@ -1,10 +1,8 @@
-## Status (2026-11-16)
+## Status (2026-11-17)
 
-This change now covers TEAM Skill ownership, maintenance handover and member departure. It follows the maintainer direction on PR #1060 (2026-11-16) and replaces the earlier "handover deferred" scope below. The current PR #1060 code (a direct `owner_id` swap) does not match this contract and will be reworked.
+This change covers TEAM Skill ownership, maintenance handover and member departure. The maintainers ruled on all eleven open questions on PR #1060 on 2026-11-17. Their rulings are recorded under [Decisions](#decisions-2026-11-17) and in the specs. The specs set product rules. They do not say the work is built or that compatibility has been checked.
 
 The parts already delivered for #974 (PR #975) stay in force, except where a requirement below says it replaces one of them.
-
-Items marked **Proposed default** are not agreed yet. They are collected in [Open questions](#open-questions).
 
 ## Why
 
@@ -20,64 +18,82 @@ Three concepts are kept apart:
 
 Changes:
 
-- **Access rule (delivery 1):** a user who is no longer a member of a TEAM namespace loses internal access to its Skills, including Skills they own and older records. Public content stays public. This replaces the read-only exception of REQ-OWN-02.
-- **Ownership model and exact addressing (delivery 2):** Skills can be namespace-owned with one maintainer. Every route that selects a Skill by namespace and slug must target the exact record. An ambiguous slug-only request fails safely instead of picking the first match.
-- **Handover workflow (delivery 2):** voluntary handover and recovery, with recipient acceptance, expiry, invalidation, notifications and audit. The accepted result is a namespace-owned Skill with the recipient as maintainer.
-- **Member removal and historical records (delivery 3):** a new removal converts the removed user's Skills in that namespace to namespace ownership and clears their maintainer assignments. Existing data is not converted on upgrade. A separate, audited flow handles historical records.
+- **Access rule (delivery 1):** a user who is no longer a member of a TEAM namespace loses internal access to its Skills, including Skills they own and older records. Public content stays public. This replaces the read-only exception of REQ-OWN-02 (confirmed by the maintainers).
+- **Exact addressing and compatibility (delivery 2a):** an optional `skillId` selects an exact record on existing routes and in the CLI. Old slug-only requests keep resolving the way they do today, and a new maintenance relationship never changes which record they pick. A selection is asked for only when the target really is unclear.
+- **Ownership model and handover (delivery 2b):** Skills can be namespace-owned with one maintainer. Every accepted handover gives the same result: the Skill becomes namespace-owned and the recipient becomes its maintainer. Scans and pending reviews do not block a handover.
+- **Member removal and historical records (delivery 3):** access ends at once when a member is removed. Converting their Skills to namespace ownership runs afterwards. It is recorded, can be retried, may run in batches, and only touches the records listed at removal time. Existing data is not converted on upgrade; a separate, audited flow handles historical records.
 
 ## Capabilities
 
 ### New capabilities
 
-- `skill-ownership-model`: user or namespace ownership, maintainer, attribution and authorization.
-- `skill-exact-addressing`: exact-record selection for same-slug Skills across Web, API and CLI.
+- `skill-ownership-model`: user or namespace ownership, maintainer, attribution, global copies and authorization.
+- `skill-exact-addressing`: exact-record selection, upload target selection and historical compatibility across Web, API and CLI.
 - `skill-handover`: handover requests, their states and completion.
-- `team-member-departure`: access after leaving, conversion on removal, historical remediation.
+- `team-member-departure`: access after leaving, reviews after responsibility changes, conversion on removal, historical remediation and the download-link boundary.
 
 ### Modified capabilities
 
-- `skill-owner-membership-access`: REQ-OWN-01, REQ-OWN-02, REQ-OWN-04 and REQ-OWN-07 are replaced in part. The replacing requirements say which parts.
+- `skill-owner-membership-access`: REQ-OWN-01, REQ-OWN-02, REQ-OWN-04, REQ-OWN-06 and REQ-OWN-07 are replaced in whole or in part. Each one has a note naming what replaces it.
 
 ## Scope
 
-In scope: ordinary TEAM Skills (PRIVATE, NAMESPACE_ONLY and PUBLIC) and their linked active global copies.
+In scope: ordinary TEAM Skills (PRIVATE, NAMESPACE_ONLY and PUBLIC), including Skills in auto-provisioned TEAM namespaces, and their linked active global copies.
 
-Out of scope: direct handover of GLOBAL Skills, personal-namespace lifecycle, system-owned and GitHub-sync-managed Skills, bulk or cross-namespace transfer, platform EMERGENCY takeover, multiple maintainers, and Token-based handover.
+Out of scope: direct handover of GLOBAL Skills, system-owned and GitHub-sync-managed Skills, bulk or cross-namespace transfer, platform emergency takeover, multiple maintainers, Token-based handover, account deletion, namespace dissolution and a separate personal-asset lifecycle.
 
 ## Delivery
 
-Three linked PRs, in this order. Each PR builds on the previous one.
+Linked PRs, in this order. Each PR builds on the previous one.
 
 1. **TEAM access-rule fix.** No schema change.
-2. **Ownership model, exact addressing and the #1060 handover workflow.** Same-slug handovers stay disabled until exact addressing is complete.
-3. **Conversion on member removal and historical remediation.** Reuses the transition services from delivery 2.
+2. **Ownership, maintenance and handover**, in two PRs:
+   - **2a. Exact addressing and compatibility.** Starts with a list of every place in the code that looks up a Skill by slug or reads its owner, marked "must change" or "retest only". Also includes a matrix of historical data and old clients. Handover cases that depend on exact addressing stay off until this is validated.
+   - **2b. Ownership model and handover workflow.**
+3. **Conversion on new member removal and explicit historical remediation.** Reuses the transition services from delivery 2b.
 
 ## Impact
 
-- **Database:** new columns on `skill` and a new handover request table. Existing rows stay user-owned. Once any Skill is namespace-owned, `owner_id` can be null, so rolling back to an older application version is not safe after that point.
-- **API:** new handover endpoints, an explicit Skill selector for ambiguous slugs, and new fields in skill responses. Generated OpenAPI types are updated.
-- **CLI:** an explicit selector for ambiguous updates and downloads. Unambiguous slug-only use keeps working.
-- **Behavior change:** departed users lose internal access that #975 allowed. This needs a release note and clear messages in the UI.
+- **Database:** additive columns on `skill`, a handover request table, and conversion tables. The upgrade is non-destructive and leaves existing rows user-owned. Historical Skills are not renamed, recreated or renumbered.
+- **Rollback boundary:** rolling back to older binaries is safe only while no namespace-owned Skill exists. After the first one exists, the supported rollback is turning the feature switches off on the current binaries. Rolling back to older binaries is not supported. `design.md` describes the checks.
+- **API:** an optional `skillId` on existing routes, handover endpoints and new response fields. A selection-required error is returned only when the target is genuinely unclear. Generated OpenAPI types are updated.
+- **CLI:** a `--skill-id` option. Old clients keep working where the target is clear. Existing installation records and later update and download calls are validated.
+- **Behavior change:** departed users lose the internal access that #975 allowed. Download links already issued keep working until they expire (`SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY`, default `PT10M`). Release notes and UI messages must say this accurately.
 
-## Open questions
+## Decisions (2026-11-17)
 
-Each question has a proposed answer. Please confirm or correct.
+Maintainer rulings on the eleven open questions, as written into the specs.
 
-1. **Uniform handover result.** Proposed default: every accepted handover makes the Skill namespace-owned with the recipient as maintainer, whether or not there is a slug conflict.
-2. **Who starts a handover of a namespace-owned Skill.** Proposed default: the current maintainer (voluntary), or a namespace OWNER or ADMIN (governance). The recipient always accepts, except when an OWNER or ADMIN assigns themselves, which needs one explicit confirmation with a reason.
-3. **Scan-only states.** Proposed default: a version in `SCANNING` blocks acceptance, because a scan result can trigger automatic steps. `DRAFT`, `UPLOADED` and `SCAN_FAILED` do not block, because nothing is waiting for a decision.
-4. **Archived and hidden Skills.** Proposed default: an `ARCHIVED` Skill can be handed over and stays archived. A `HIDDEN` Skill cannot, until governance un-hides it.
-5. **Global copy of a namespace-owned source.** Proposed default: the copy mirrors the source's ownership type and maintainer. Rights over the copy come from the source namespace through `source_skill_id`. The copy keeps the global namespace and its provenance.
-6. **Explicit selector form.** Proposed default: a `skillId` query parameter on existing slug routes, plus an ambiguity error (409) that lists only the candidates the caller may see. The CLI gets a matching `--skill-id` option.
-7. **Upload when the caller has two candidates.** Proposed default: if the caller both owns a personal Skill and maintains a namespace-owned Skill with the same slug, an upload without a selector fails with the ambiguity error.
-8. **Reviews submitted by a removed user.** Proposed default: approval re-checks the submitter's current right and is refused with a clear reason if it no longer holds. The reviewer can then reject, and the maintainer can resubmit. No new review state. Automatic approval after safe scans (#1069) must not run for a submitter who has lost the right.
-9. **Conversion on removal.** Proposed default: conversion runs in the same transaction as the removal, so there is no partial state to retry. Notifications run after commit. Is that acceptable for namespaces with many Skills?
-10. **Personal namespaces.** Proposed default: Skills in auto-provisioned personal namespaces are out of scope for handover and removal conversion.
-11. **Download links.** Proposed default: existing presigned download URLs expire after their configured lifetime (`SKILLHUB_STORAGE_S3_PRESIGN_EXPIRY`, default 10 minutes). That is the stated boundary. Files already downloaded cannot be recalled.
+1. **Uniform handover result.** Every accepted handover makes the Skill namespace-owned with the recipient as maintainer, whether or not there is a slug conflict. A later handover only changes the maintainer. The recipient's own same-slug Skill is not changed. (REQ-HO-06)
+2. **Who starts a handover of a namespace-owned Skill.** The current eligible maintainer (voluntary), or a namespace OWNER or ADMIN (governance, reason required). The recipient accepts. Self-assignment needs one explicit confirmation and a reason. An OWNER or ADMIN cannot take a user-owned Skill from an active member. Handover is available in browser sessions only. (REQ-HO-01, REQ-HO-09)
+3. **Scans and pending work.** They do not block handover. Scans continue against the exact version. Pending applications stay, and each later decision or publication re-checks current conditions. Member removal never waits. (REQ-HO-05, REQ-HO-11, REQ-DEP-02)
+4. **Archived and hidden Skills.** Both can be handed over and keep their state. Handover does not unhide, restore, publish or promote anything, and it grants no right to do so. (REQ-HO-08, REQ-HO-12, REQ-HO-13)
+5. **Global copies.** An active global copy follows its source's effective ownership and maintainer through the existing source link. It has no maintainer of its own. (REQ-OM-05, REQ-OM-09)
+6. **Exact addressing.** Optional `skillId`, checked against the namespace and slug. Old requests keep their established resolution. A selection is required only when the target is genuinely unclear. Historical compatibility is a release prerequisite. (REQ-ADDR-02, -03, -04, -06, -07, -08)
+7. **Upload target.** Creating a Skill and updating a particular Skill are separate. When the target is unclear, the Web UI offers a choice and the CLI requires a selector. The system never guesses. (REQ-ADDR-05)
+8. **Reviews after a responsibility change.** The application keeps its submitter, material and history. It loses automatic-approval eligibility and goes to normal human review. No new "continue" step. (REQ-DEP-03, REQ-DEP-10)
+9. **Conversion on removal.** Access ends at once. Conversion is observable, idempotent, retryable and may run in batches. Rejoining does not bypass a pending conversion. (REQ-DEP-02, REQ-DEP-08, REQ-DEP-09)
+10. **Auto-provisioned namespaces.** No exclusion. They are TEAM namespaces and follow TEAM rules. (REQ-OM-06)
+11. **Download links.** The configured presigned URL expiry (default 10 minutes) is the boundary. (REQ-DEP-07)
+
+The maintainers also confirmed that REQ-DEP-01 replaces the departed-owner read-only exception from #975. They also said this does not authorize automatic conversion of historical ownership (REQ-DEP-05).
+
+### Our reading, to confirm
+
+- **Slug-only upload by a maintainer with no personal record.** User B has no user-owned Skill with slug `x` but maintains namespace-owned Skill 202 with slug `x`. Today the same request from B creates a new Skill. Updating 202 instead would change what an old request does, so we treat this as unclear: the request is refused with a selection-required error that lists 202, and nothing is created. (REQ-ADDR-05)
 
 ---
 
-## Earlier record (unchanged)
+## Earlier record (superseded where noted)
+
+> **Superseded parts (2026-11-17).** The text below is the #974 record and is kept unchanged. These parts no longer describe the product contract:
+>
+> - "交接功能仍暂缓" in 状态, the 范围复核 deferral and the handover items in 暂缓事项: handover is now in scope (`skill-handover`).
+> - Q5 (recovery by namespace OWNER only, ADMIN excluded): still holds for user-owned Skills. For namespace-owned Skills, namespace OWNER or ADMIN may start governance reassignment (REQ-HO-01).
+> - Q10 and the Q10/Q12 link (read-only access for a removed owner): replaced by REQ-DEP-01.
+> - The first What Changes bullet (removed owner can view and download) and the state table after Q12: replaced by REQ-DEP-01 and REQ-DEP-02.
+> - Q13 (no change to admin rights in this round): still holds for existing admin rights. Namespace governance of namespace-owned Skills is added by REQ-OM-04 and REQ-HO-01.
+
 
 ## 状态
 
