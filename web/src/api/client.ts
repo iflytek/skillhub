@@ -1590,6 +1590,18 @@ export const suiteApi = {
 }
 
 export const reviewApi = {
+  batchPreview(request: import('./types').BatchReviewRequest): Promise<import('./types').BatchReviewResponse> {
+    return fetchJson(`${WEB_API_PREFIX}/reviews/batch-preview`, {
+      method: 'POST', headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(request), timeoutMs: 90000,
+    })
+  },
+  batchDecide(request: import('./types').BatchReviewRequest): Promise<import('./types').BatchReviewResponse> {
+    return fetchJson(`${WEB_API_PREFIX}/reviews/batch-decide`, {
+      method: 'POST', headers: getCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(request), timeoutMs: 90000,
+    })
+  },
   async scopes(): Promise<import('./types').ReviewScope[]> {
     return fetchJson<import('./types').ReviewScope[]>(`${WEB_API_PREFIX}/reviews/scopes`)
   },
