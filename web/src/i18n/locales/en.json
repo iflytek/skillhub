@@ -4530,6 +4530,7 @@
     "confirmReject": "Reject {{count}}",
     "selectPage": "Select eligible tasks on this page",
     "selectTask": "Select {{name}}",
-    "currentStatus": "Current status: {{status}}"
+    "currentStatus": "Current status: {{status}}",
+    "close": "Close"
   }
 }

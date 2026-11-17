@@ -4528,6 +4528,7 @@
     "confirmReject": "驳回 {{count}} 项",
     "selectPage": "选择本页可批量审核的任务",
     "selectTask": "选择 {{name}}",
-    "currentStatus": "当前状态：{{status}}"
+    "currentStatus": "当前状态：{{status}}",
+    "close": "关闭"
   }
 }
