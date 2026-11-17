@@ -357,6 +357,31 @@
     }
   },
   "search": {
+    "market": {
+      "appendFailed": "Could not load more. Your current results are kept.",
+      "loadingMore": "Loading more skills…",
+      "loadMore": "Load more",
+      "allLoaded": "All {{count}} skills displayed",
+      "cancel": "Cancel",
+      "reset": "Clear search and labels",
+      "githubEmpty": "No GitHub-synced skills yet",
+      "viewPlatform": "View platform skills",
+      "placeholder": "Search skills, descriptions or @namespace",
+      "filters": "Skill filters",
+      "findLabel": "Search labels",
+      "allLabels": "All labels",
+      "moreLabels": "More labels",
+      "labels": "Labels",
+      "all": "All",
+      "noLabels": "No matching labels",
+      "labelHelp": "Choose a label and apply it to update the skill list.",
+      "apply": "Apply filters",
+      "favorites": "Saved",
+      "onlyFavorites": "Saved only",
+      "favoriteScope": "My saved skills",
+      "currentSource": "Source: {{source}}",
+      "sort": "Sort"
+    },
     "source": {
       "loadFailed": "Could not load skills. Please try again.",
       "retry": "Retry",
@@ -2517,6 +2542,10 @@
     "subscribe": "Subscribe"
   },
   "skillCard": {
+    "source": {
+      "platform": "Platform",
+      "github": "GitHub"
+    },
     "relatedSuites": "Related suites",
     "relatedSuitesHint": "This skill is included in suites you can access. Open its details to explore related skills.",
     "downloads": "{{value}} downloads",

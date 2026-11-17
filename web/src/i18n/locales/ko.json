@@ -347,6 +347,31 @@
     }
   },
   "search": {
+    "market": {
+      "appendFailed": "추가 로드에 실패했습니다. 기존 목록은 유지됩니다.",
+      "loadingMore": "스킬을 추가로 불러오는 중…",
+      "loadMore": "더 불러오기",
+      "allLoaded": "스킬 {{count}}개를 모두 표시했습니다",
+      "cancel": "취소",
+      "reset": "검색과 태그 초기화",
+      "githubEmpty": "GitHub 동기화 스킬이 없습니다",
+      "viewPlatform": "플랫폼 스킬 보기",
+      "placeholder": "스킬, 설명 또는 @네임스페이스 검색",
+      "filters": "스킬 필터",
+      "findLabel": "태그 검색",
+      "allLabels": "모든 태그",
+      "moreLabels": "태그 더 보기",
+      "labels": "태그",
+      "all": "전체",
+      "noLabels": "일치하는 태그가 없습니다",
+      "labelHelp": "태그를 선택하고 적용하여 스킬 목록을 갱신하세요.",
+      "apply": "필터 적용",
+      "favorites": "즐겨찾기",
+      "onlyFavorites": "즐겨찾기만",
+      "favoriteScope": "내 즐겨찾기",
+      "currentSource": "출처: {{source}}",
+      "sort": "정렬"
+    },
     "source": {
       "loadFailed": "스킬을 불러오지 못했습니다. 다시 시도하세요.",
       "retry": "다시 시도",
@@ -2505,6 +2530,10 @@
     "subscribe": "구독"
   },
   "skillCard": {
+    "source": {
+      "platform": "플랫폼",
+      "github": "GitHub"
+    },
     "relatedSuites": "관련 스킬 모음",
     "relatedSuitesHint": "이 스킬은 접근할 수 있는 스킬 모음에 포함되어 있습니다. 상세 페이지에서 관련 스킬을 확인하세요.",
     "downloads": "다운로드 {{value}}회",

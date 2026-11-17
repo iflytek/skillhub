@@ -75,3 +75,54 @@ describe('SkillCard Suite membership hint', () => {
     expect(screen.getByText('skillCard.relatedSuites').className).toContain('shrink-0')
   })
 })
+
+
+describe('market skill cards', () => {
+  it('keeps the restored card metadata and existing keyboard navigation', () => {
+    const onClick = vi.fn()
+    const skill = {
+      ...baseSkill,
+      displayName: '技能'.repeat(80),
+      namespace: 'team-'.repeat(25),
+      source: 'platform',
+      ownerDisplayName: 'Former card owner row',
+      labels: [{ slug: 'writing', displayName: 'Writing' }],
+      hasVisibleSuites: true,
+    }
+    render(<SkillCard variant="market" skill={skill} labels={skill.labels} onClick={onClick} />)
+
+    expect(screen.getByTitle(skill.displayName).textContent).toBe(skill.displayName)
+    expect(screen.getByTitle(`@${skill.namespace}`).textContent).toBe(`@${skill.namespace}`)
+    expect(screen.getByRole('list').textContent).toBe('Writing')
+    expect(screen.getByText('skillCard.source.platform')).toBeDefined()
+    expect(screen.getByText('skillCard.relatedSuites')).toBeDefined()
+    expect(screen.queryByText(skill.ownerDisplayName)).toBeNull()
+    expect(screen.getByTitle(new Date(skill.updatedAt).toLocaleString('en'))).toBeDefined()
+    fireEvent.click(screen.getByText('Writing'))
+    fireEvent.keyDown(screen.getByRole('link'), { key: 'Enter' })
+    fireEvent.keyDown(screen.getByRole('link'), { key: ' ' })
+    expect(onClick).toHaveBeenCalledTimes(3)
+    expect(screen.getByRole('link').querySelectorAll('button, a')).toHaveLength(0)
+  })
+
+  it.each(['platform', 'github'])('shows the %s source alongside the update metadata', (source) => {
+    render(<SkillCard variant="market" skill={{ ...baseSkill, source }} />)
+    const sourceLabel = screen.getByText(`skillCard.source.${source}`)
+    expect(sourceLabel.getAttribute('title')).toBe(`search.source.${source}Hint`)
+    expect(sourceLabel.parentElement?.textContent).not.toContain('@team-a')
+    expect(sourceLabel.parentElement?.querySelector('svg.lucide-clock')).not.toBeNull()
+  })
+
+  it('does not invent labels or provenance when optional fields are absent', () => {
+    render(<SkillCard variant="market" skill={baseSkill} />)
+    expect(screen.queryByRole('list')).toBeNull()
+    expect(screen.queryByText('skillCard.source.platform')).toBeNull()
+    expect(screen.queryByText('skillCard.source.github')).toBeNull()
+  })
+
+  it('respects an explicit empty label override', () => {
+    const skill = { ...baseSkill, labels: [{ slug: 'writing', displayName: 'Writing' }] }
+    render(<SkillCard variant="market" skill={skill} labels={[]} />)
+    expect(screen.queryByText('Writing')).toBeNull()
+  })
+})
