@@ -1,61 +1,25 @@
-import { startTransition, useEffect, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
+import { useQueryClient, type InfiniteData } from '@tanstack/react-query'
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { Loader2 } from 'lucide-react'
-import type { SkillSummary } from '@/api/types'
+import { Check, Loader2 } from 'lucide-react'
+import type { PagedResponse, SkillSource, SkillSummary } from '@/api/types'
 import { useAuth } from '@/features/auth/use-auth'
-import { SearchBar } from '@/features/search/search-bar'
+import { MarketSearchControls } from '@/features/search/market-search-controls'
+import { flattenMarketSkills, getMarketSkillsKey, useMarketSkills, type MarketSearchParams } from '@/features/search/use-market-skills'
+import { clearMarketScroll, getMarketScroll, saveMarketScroll, useMarketScroll } from '@/features/search/market-scroll'
 import { SkillCard } from '@/features/skill/skill-card'
 import { SkeletonList } from '@/shared/components/skeleton-loader'
 import { EmptyState } from '@/shared/components/empty-state'
-import { Pagination } from '@/shared/components/pagination'
-import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { useVisibleLabels } from '@/shared/hooks/use-label-queries'
 import { useMyStars } from '@/shared/hooks/use-user-queries'
 import { toRouterPath } from '@/shared/lib/base-path'
 import { formatNamespaceSearchInput, normalizeSearchQuery, parseNamespaceSearchInput } from '@/shared/lib/search-query'
 import { Button } from '@/shared/ui/button'
-import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 
 const PAGE_SIZE = 12
+interface MarketFilters { q: string; namespace: string; source: SkillSource; label: string; sort: string; starredOnly: boolean }
 
-function blurActiveElement() {
-  if (typeof document === 'undefined' || typeof HTMLElement === 'undefined') {
-    return
-  }
-
-  if (document.activeElement instanceof HTMLElement) {
-    document.activeElement.blur()
-  }
-}
-
-function scrollToTopOnPageChange() {
-  if (typeof window === 'undefined') {
-    return () => {}
-  }
-
-  let secondFrame = 0
-  const firstFrame = window.requestAnimationFrame(() => {
-    window.scrollTo({ top: 0, behavior: 'auto' })
-    secondFrame = window.requestAnimationFrame(() => {
-      window.scrollTo({ top: 0, behavior: 'auto' })
-    })
-  })
-
-  return () => {
-    window.cancelAnimationFrame(firstFrame)
-    if (secondFrame) {
-      window.cancelAnimationFrame(secondFrame)
-    }
-  }
-}
-
-/**
- * Skill discovery page with synchronized URL state.
- *
- * Search text, sorting, pagination, and the starred-only filter are mirrored into router search
- * params so the page can be shared, restored, and revisited without losing state.
- */
 function filterStarredSkills(skills: SkillSummary[], query: string, namespace: string): SkillSummary[] {
   const normalizedQuery = query.trim().toLowerCase()
   const normalizedNamespace = namespace.trim().toLowerCase()
@@ -86,243 +50,114 @@ function sortStarredSkills(skills: SkillSummary[], sort: string): SkillSummary[]
 }
 
 export function SearchPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const searchParams = useSearch({ from: '/search' })
-  const { isAuthenticated } = useAuth()
-
+  const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth()
   const q = normalizeSearchQuery(searchParams.q || '')
   const namespace = (searchParams.namespace || '').replace(/^@/, '')
+  const source = searchParams.source ?? (namespace ? 'all' : 'platform')
   const selectedLabel = searchParams.label || ''
   const sort = searchParams.sort || 'newest'
-  const page = searchParams.page ?? 0
   const starredOnly = searchParams.starredOnly ?? false
+  const language = i18n.resolvedLanguage || i18n.language || 'en'
+  const viewer = user?.userId ?? null
+  const params: MarketSearchParams = { q, namespace: namespace || undefined, source, label: selectedLabel || undefined, sort, size: PAGE_SIZE }
+  const queryKey = getMarketSkillsKey(params, viewer, language)
+  const scrollKey = JSON.stringify([queryKey, starredOnly])
   const [queryInput, setQueryInput] = useState(formatNamespaceSearchInput(namespace, q))
-  const previousPageRef = useRef(page)
+  const [favoriteWindow, setFavoriteWindow] = useState(() => ({ key: scrollKey, count: getMarketScroll(scrollKey)?.favoritesVisible ?? PAGE_SIZE }))
+  const sentinel = useRef<HTMLDivElement>(null)
+  useEffect(() => { setQueryInput(formatNamespaceSearchInput(namespace, q)) }, [namespace, q])
 
-  useEffect(() => {
-    setQueryInput(formatNamespaceSearchInput(namespace, q))
-  }, [namespace, q])
-
-  useEffect(() => {
-    if (previousPageRef.current !== page) {
-      blurActiveElement()
-      const cleanupScroll = scrollToTopOnPageChange()
-
-      previousPageRef.current = page
-      return () => {
-        cleanupScroll()
-      }
-    }
-
-    previousPageRef.current = page
-  }, [page])
-
-  const { data, isLoading, isFetching } = useSearchSkills({
-    q,
-    namespace: namespace || undefined,
-    label: selectedLabel || undefined,
-    sort,
-    page,
-    size: PAGE_SIZE,
-    starredOnly,
-  }, !starredOnly)
+  const query = useMarketSkills(params, viewer, language, !starredOnly && !isAuthLoading)
   const { data: labels } = useVisibleLabels()
-  const {
-    data: starredSkills,
-    isLoading: isLoadingStarred,
-    isFetching: isFetchingStarred,
-  } = useMyStars(starredOnly && isAuthenticated)
-  const handleSearch = (query: string) => {
-    const parsedInput = parseNamespaceSearchInput(query)
-    setQueryInput(query)
-    startTransition(() => {
-      navigate({ to: '/search', search: { q: parsedInput.query, namespace: parsedInput.namespace, label: selectedLabel, sort, page: 0, starredOnly }, replace: true })
-    })
-  }
+  const favorites = useMyStars(starredOnly && isAuthenticated)
+  const filteredFavorites = starredOnly ? sortStarredSkills(filterStarredSkills(favorites.data ?? [], q, namespace), sort) : []
+  const favoritesVisible = favoriteWindow.key === scrollKey ? favoriteWindow.count : PAGE_SIZE
+  const displayItems = starredOnly ? filteredFavorites.slice(0, favoritesVisible) : flattenMarketSkills(query.data?.pages)
+  const resultCount = starredOnly ? filteredFavorites.length : query.data?.pages[0]?.total ?? 0
+  const isPageLoading = !!isAuthLoading || (starredOnly ? favorites.isLoading : query.isLoading)
+  const isFetchingMore = !starredOnly && query.isFetchingNextPage
+  const isUpdatingResults = starredOnly ? favorites.isFetching && !favorites.isLoading : query.isFetching && !query.isLoading && !query.isFetchingNextPage
+  const hasMore = starredOnly ? favoritesVisible < filteredFavorites.length : !!query.hasNextPage
+  const loadFailed = starredOnly ? favorites.isError : query.isError
+  const restoring = useMarketScroll(scrollKey, !isPageLoading && displayItems.length > 0)
 
-  const handleSortChange = (newSort: string) => {
-    navigate({ to: '/search', search: { q, namespace, label: selectedLabel, sort: newSort, page: 0, starredOnly } })
+  const applyFilters = (next: MarketFilters, replace = false) => {
+    const nextParams: MarketSearchParams = { q: next.q, namespace: next.namespace || undefined, source: next.source, label: next.label || undefined, sort: next.sort, size: PAGE_SIZE }
+    const nextKey = getMarketSkillsKey(nextParams, viewer, language)
+    const nextScrollKey = JSON.stringify([nextKey, next.starredOnly])
+    clearMarketScroll(nextScrollKey)
+    setFavoriteWindow({ key: nextScrollKey, count: PAGE_SIZE })
+    queryClient.setQueryData<InfiniteData<PagedResponse<SkillSummary>, number>>(nextKey, old => old ? { pages: old.pages.slice(0, 1), pageParams: old.pageParams.slice(0, 1) } : undefined)
+    if (JSON.stringify(nextKey) === JSON.stringify(queryKey) && !next.starredOnly) void query.refetch()
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'auto' })
+    navigate({ to: '/search', search: { ...next, page: 0 }, ...(replace ? { replace: true } : {}) })
   }
-
-  const handlePageChange = (newPage: number) => {
-    blurActiveElement()
-    navigate({ to: '/search', search: { q, namespace, label: selectedLabel, sort, page: newPage, starredOnly } })
+  const current: MarketFilters = { q, namespace, source, label: selectedLabel, sort, starredOnly }
+  const handleSearch = (text: string) => {
+    const parsed = parseNamespaceSearchInput(text)
+    setQueryInput(text)
+    startTransition(() => applyFilters({ ...current, q: parsed.query, namespace: parsed.namespace, source: searchParams.source ?? (parsed.namespace ? 'all' : 'platform') }, true))
   }
-
-  const handleLabelToggle = (label: string) => {
-    const nextLabel = selectedLabel === label ? '' : label
-    navigate({ to: '/search', search: { q, namespace, label: nextLabel, sort, page: 0, starredOnly } })
-  }
-
-  const handleNamespaceClear = () => {
-    navigate({ to: '/search', search: { q, namespace: '', label: selectedLabel, sort, page: 0, starredOnly } })
-  }
-
+  const handleSourceChange = (value: SkillSource) => applyFilters({ ...current, source: value })
   const handleStarredToggle = () => {
     if (!isAuthenticated) {
-      navigate({
-        to: '/login',
-        search: {
-          returnTo: toRouterPath(window.location.pathname, window.location.search, window.location.hash),
-        },
-      })
+      navigate({ to: '/login', search: { returnTo: toRouterPath(window.location.pathname, window.location.search, window.location.hash) } })
       return
     }
-
-    navigate({ to: '/search', search: { q, namespace, label: selectedLabel, sort, page: 0, starredOnly: !starredOnly } })
+    applyFilters({ ...current, starredOnly: !starredOnly })
   }
+  const fetchNextPage = query.fetchNextPage
+  const loadMore = useCallback(() => {
+    if (!hasMore || isFetchingMore || isUpdatingResults || restoring) return
+    if (starredOnly) setFavoriteWindow({ key: scrollKey, count: favoritesVisible + PAGE_SIZE })
+    else void fetchNextPage({ cancelRefetch: false })
+  }, [hasMore, isFetchingMore, isUpdatingResults, restoring, starredOnly, scrollKey, favoritesVisible, fetchNextPage])
+  useEffect(() => {
+    if (!hasMore || isFetchingMore || isUpdatingResults || loadFailed || restoring || !sentinel.current || typeof IntersectionObserver === 'undefined') return
+    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) loadMore() }, { rootMargin: '320px' })
+    observer.observe(sentinel.current)
+    return () => observer.disconnect()
+  }, [scrollKey, hasMore, isFetchingMore, isUpdatingResults, loadFailed, restoring, displayItems.length, loadMore])
 
-  const handleSkillClick = (namespace: string, slug: string) => {
-    navigate({
-      to: `/space/${namespace}/${encodeURIComponent(slug)}`,
-      search: { returnTo: toRouterPath(window.location.pathname, window.location.search) },
-    })
+  const retry = () => {
+    if (starredOnly) void favorites.refetch()
+    else if (query.isFetchNextPageError) void query.fetchNextPage({ cancelRefetch: false })
+    else void query.refetch()
   }
-
-  const filteredStarredSkills = starredOnly
-    ? sortStarredSkills(filterStarredSkills(starredSkills ?? [], q, namespace), sort)
-    : []
-  const starredPageItems = starredOnly
-    ? filteredStarredSkills.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-    : []
-  const totalPages = starredOnly
-    ? Math.ceil(filteredStarredSkills.length / PAGE_SIZE)
-    : data
-      ? Math.ceil(data.total / data.size)
-      : 0
-  const displayItems = starredOnly
-    ? starredPageItems
-    : (data?.items ?? [])
-  const isPageLoading = starredOnly ? isLoadingStarred : isLoading
-  const isUpdatingResults = starredOnly
-    ? isFetchingStarred && !isLoadingStarred
-    : isFetching && !isLoading
-  const resultCount = starredOnly
-    ? filteredStarredSkills.length
-    : (data?.total ?? 0)
 
   return (
-    <div className={APP_SHELL_PAGE_CLASS_NAME}>
-      {/* Search Bar */}
-      <div className="max-w-3xl mx-auto">
-        <SearchBar analyticsId="search.query.submit"
-          value={queryInput}
-          isSearching={isUpdatingResults}
-          onChange={setQueryInput}
-          onSearch={handleSearch}
-        />
-      </div>
-
-      {/* Sort And Filters */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-3">
-            <span className="text-sm font-medium text-muted-foreground">{t('search.sort.label')}</span>
-            <div className="flex max-w-full flex-wrap gap-2">
-              <Button data-analytics-id="search.sort.relevance"
-                variant={sort === 'relevance' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleSortChange('relevance')}
-              >
-                {t('search.sort.relevance')}
-              </Button>
-              <Button data-analytics-id="search.sort.downloads"
-                variant={sort === 'downloads' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleSortChange('downloads')}
-              >
-                {t('search.sort.downloads')}
-              </Button>
-              <Button data-analytics-id="search.sort.newest"
-                variant={sort === 'newest' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => handleSortChange('newest')}
-              >
-                {t('search.sort.newest')}
-              </Button>
-            </div>
-          </div>
-
-          {resultCount > 0 && (
-            <div className="text-sm text-muted-foreground">
-              {t('search.results', { count: resultCount })}
-            </div>
-          )}
-        </div>
-
-        {isUpdatingResults ? (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span>{t('search.loadingMore')}</span>
-          </div>
-        ) : null}
-
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="shrink-0 text-sm font-medium text-muted-foreground">{t('search.filters.label')}</span>
-          <Button data-analytics-id="search.starred.filter"
-            variant={starredOnly ? 'default' : 'outline'}
-            size="sm"
-            onClick={handleStarredToggle}
-          >
-            {t('search.filterStarred')}
-          </Button>
-          {!starredOnly && labels?.map((label) => (
-            <Button data-analytics-id="search.label.filter"
-              key={label.slug}
-              variant={selectedLabel === label.slug ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => handleLabelToggle(label.slug)}
-            >
-              {label.displayName}
-            </Button>
-          ))}
-          {namespace ? (
-            <Button data-analytics-id="search.namespace.clear"
-              variant="default"
-              size="sm"
-              onClick={handleNamespaceClear}
-            >
-              {t('search.namespaceFilter', { namespace })}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-
-      {/* Results */}
-      {isPageLoading ? (
-        <SkeletonList count={PAGE_SIZE} />
+    <div className="space-y-4 sm:space-y-6">
+      <MarketSearchControls query={queryInput} onQueryChange={setQueryInput} onSearch={handleSearch}
+        source={source} onSourceChange={handleSourceChange} labels={labels ?? []} selectedLabel={selectedLabel}
+        onLabelChange={label => applyFilters({ ...current, label: label === selectedLabel ? '' : label })}
+        starredOnly={starredOnly} onStarredToggle={handleStarredToggle} sort={sort} onSortChange={value => applyFilters({ ...current, sort: value })}
+        namespace={namespace} onNamespaceClear={() => applyFilters({ ...current, namespace: '', source: searchParams.source ?? 'platform' })}
+        resultCount={resultCount} isUpdating={isUpdatingResults} />
+      {isPageLoading ? <div role="status" aria-label={t('common.loading')}><SkeletonList count={PAGE_SIZE} /></div> : loadFailed && displayItems.length === 0 ? (
+        <div className="text-center" role="alert"><EmptyState title={t('search.source.loadFailed')} /><Button data-analytics-id="search.source.retry" variant="outline" onClick={retry}>{t('search.source.retry')}</Button></div>
       ) : displayItems.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {displayItems.map((skill, idx) => (
-              <div key={skill.id} className={`h-full animate-fade-up delay-${Math.min(idx % 6 + 1, 6)}`}>
-                <SkillCard analyticsId="skill.card.open"
-                  skill={skill}
-                  highlightStarred
-                  onClick={() => handleSkillClick(skill.namespace, skill.slug)}
-                />
-              </div>
-            ))}
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3" aria-busy={isFetchingMore}>
+            {displayItems.map(skill => <SkillCard key={skill.id} variant="market" analyticsId="skill.card.open" skill={skill} highlightStarred onClick={() => {
+              saveMarketScroll(scrollKey, favoritesVisible)
+              navigate({ to: `/space/${skill.namespace}/${encodeURIComponent(skill.slug)}`, search: { returnTo: toRouterPath(window.location.pathname, window.location.search) } })
+            }} />)}
           </div>
-          {totalPages > 1 && (
-            <Pagination analyticsId="search.results.paginate"
-              page={page}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
-          )}
+          <div ref={sentinel} className="flex min-h-16 flex-wrap items-center justify-center gap-3 py-4 text-sm text-muted-foreground">
+            {isFetchingMore ? <span role="status" className="inline-flex items-center gap-2"><Loader2 aria-hidden="true" className="h-4 w-4 animate-spin motion-reduce:animate-none" />{t('search.market.loadingMore')}</span>
+              : loadFailed ? <div role="alert" className="flex flex-wrap items-center justify-center gap-3"><span>{t('search.market.appendFailed')}</span><Button data-analytics-id="search.results.retry" variant="outline" size="sm" disabled={isUpdatingResults} onClick={retry}>{t('search.source.retry')}</Button></div>
+              : hasMore ? <Button data-analytics-id="search.results.more" variant="ghost" size="sm" disabled={isUpdatingResults || restoring} onClick={loadMore}>{t('search.market.loadMore')}</Button>
+              : <span role="status" className="inline-flex items-center gap-2"><Check aria-hidden="true" className="h-4 w-4" />{t('search.market.allLoaded', { count: displayItems.length })}</span>}
+          </div>
         </>
-      ) : (
-        <EmptyState
-          title={starredOnly ? t('search.noStarredResults') : t('search.noResults')}
-          description={
-            starredOnly
-              ? (q ? t('search.noStarredResultsFor', { q }) : t('search.noStarredSkills'))
-              : (q ? t('search.noResultsFor', { q }) : undefined)
-          }
-        />
-      )}
+      ) : <EmptyState title={starredOnly ? t('search.noStarredResults') : source === 'github' && !q && !namespace && !selectedLabel ? t('search.market.githubEmpty') : t('search.noResults')}
+        description={starredOnly ? (q ? t('search.noStarredResultsFor', { q }) : t('search.noStarredSkills')) : q ? t('search.noResultsFor', { q }) : undefined}
+        action={q || namespace || selectedLabel ? <Button onClick={() => { setQueryInput(''); applyFilters({ ...current, q: '', namespace: '', label: '' }) }}>{t('search.market.reset')}</Button>
+          : !starredOnly && source === 'github' ? <Button onClick={() => handleSourceChange('platform')}>{t('search.market.viewPlatform')}</Button> : undefined} />}
     </div>
   )
 }

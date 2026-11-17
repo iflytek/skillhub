@@ -4,8 +4,10 @@ import { Loader2, Search, X } from 'lucide-react'
 import { MAX_SEARCH_INPUT_LENGTH } from '@/shared/lib/search-query'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
+import { cn } from '@/shared/lib/utils'
 
 interface SearchBarProps {
+  variant?: 'default' | 'market'
   analyticsId?: string
   defaultValue?: string
   value?: string
@@ -21,8 +23,9 @@ interface SearchBarProps {
  * It supports both controlled and uncontrolled usage so page-level containers can decide whether
  * query text should be driven from URL state or local form state.
  */
-export function SearchBar({ defaultValue = '', value, placeholder, isSearching = false, onChange, onSearch, analyticsId }: SearchBarProps) {
+export function SearchBar({ defaultValue = '', value, placeholder, isSearching = false, onChange, onSearch, analyticsId, variant = 'default' }: SearchBarProps) {
   const { t } = useTranslation()
+  const isMarket = variant === 'market'
   const [query, setQuery] = useState(defaultValue)
   const isControlled = value !== undefined
   const currentQuery = isControlled ? value : query
@@ -52,16 +55,17 @@ export function SearchBar({ defaultValue = '', value, placeholder, isSearching =
   }
 
   return (
-    <form data-analytics-id={onSearch ? analyticsId : undefined} onSubmit={handleSubmit} className="flex gap-2 rounded-lg border border-border/60 bg-card p-1.5 shadow-[var(--shadow-card)]">
+    <form data-analytics-id={onSearch ? analyticsId : undefined} onSubmit={handleSubmit} className={cn('flex items-center gap-2 rounded-lg border border-border/60 bg-card', isMarket ? 'h-14 px-3 py-2 focus-within:border-ring sm:h-16 sm:px-4 sm:py-3' : 'p-1.5 shadow-[var(--shadow-card)]')}>
       <div className="relative min-w-0 flex-1">
-        <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Search aria-hidden="true" className={cn('absolute top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none', isMarket ? 'left-1 h-4 w-4 sm:h-5 sm:w-5' : 'left-3 h-5 w-5')} />
         <Input
           type="text"
           value={currentQuery}
           onChange={(e) => handleChange(e.target.value)}
           maxLength={MAX_SEARCH_INPUT_LENGTH}
           placeholder={placeholder || t('searchBar.placeholder')}
-          className="pl-10 pr-10 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-10"
+          aria-label={placeholder || t('searchBar.placeholder')}
+          className={cn('pr-10 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0', isMarket ? 'h-9 pl-8 text-sm sm:pl-10 sm:text-base' : 'h-10 pl-10')}
         />
         {currentQuery ? (
           <button data-analytics-id={analyticsId ? 'search.query.clear' : undefined}
@@ -75,8 +79,9 @@ export function SearchBar({ defaultValue = '', value, placeholder, isSearching =
           </button>
         ) : null}
       </div>
-      <Button type="submit" size="default" className="px-5 min-w-24 rounded-md" disabled={isSearching}>
-        {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : t('searchBar.button')}
+      <Button type="submit" size={isMarket ? 'lg' : 'default'} className={cn('rounded-md', isMarket ? 'h-8 min-w-[4.5rem] px-3 sm:h-9 sm:min-w-24' : 'px-5 min-w-24')} disabled={isSearching}>
+        {isSearching && <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />}
+        {t('searchBar.button')}
       </Button>
     </form>
   )

@@ -8,9 +8,10 @@ import { SkillAvatar } from './skill-avatar'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
 import { formatRelativeTime } from '@/shared/lib/format-relative-time'
-import { Bookmark, Boxes, ShieldCheck, User, Clock } from 'lucide-react'
+import { GitBranch, LayoutGrid, Bookmark, Boxes, ShieldCheck, User, Clock } from 'lucide-react'
 
 interface SkillCardProps {
+  variant?: 'default' | 'market'
   labels?: { slug: string; displayName: string }[]
   analyticsId?: string
   skill: SkillSummary
@@ -21,8 +22,9 @@ interface SkillCardProps {
 /**
  * Reusable card for displaying one skill in lists such as landing, namespace, search, and stars.
  */
-export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId, labels }: SkillCardProps) {
+export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId, labels, variant = 'default' }: SkillCardProps) {
   const { t, i18n } = useTranslation()
+  const isMarket = variant === 'market'
   const { isAuthenticated } = useAuth()
   // Batch highlight via shared ['skills','stars'] — never N× useStar per grid row.
   const { starredIds } = useStarredIdSet(highlightStarred && isAuthenticated)
@@ -54,39 +56,54 @@ export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId
       tabIndex={isInteractive ? 0 : undefined}
     >
       <div className="flex h-full flex-col">
-        <div className="mb-3 flex min-w-0 items-start gap-3">
-          <SkillAvatar name={skill.displayName} url={skill.avatarUrl} seed={`${skill.namespace}/${skill.slug}`} />
-          <div className="min-w-0 flex-1">
-            <h3
-              className="line-clamp-2 text-base font-semibold [overflow-wrap:anywhere] group-hover:text-primary transition-colors duration-150"
-              style={{ color: 'hsl(var(--foreground))' }}
-              title={skill.displayName}
-            >
+        {isMarket ? (
+          <div className="mb-4 flex min-w-0 items-start gap-3">
+            <h3 className="min-w-0 flex-1 line-clamp-2 text-base font-semibold [overflow-wrap:anywhere]" title={skill.displayName}>
               {skill.displayName}
             </h3>
-            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
-              <NamespaceBadge
-                className="block max-w-full truncate"
-                type="TEAM"
-                name={`@${skill.namespace}`}
-                title={`@${skill.namespace}`}
-              />
-              {skill.hasVisibleSuites === true ? (
-                <span
-                  className="inline-flex max-w-full shrink-0 items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-xs font-medium text-secondary-foreground"
-                  title={t('skillCard.relatedSuitesHint')}
-                >
-                  <Boxes aria-hidden="true" className="h-3 w-3 shrink-0" />
-                  {t('skillCard.relatedSuites')}
-                </span>
-              ) : null}
+            <NamespaceBadge className="block max-w-[35%] shrink-0 truncate" type="TEAM" name={`@${skill.namespace}`} title={`@${skill.namespace}`} />
+          </div>
+        ) : (
+          <div className="mb-3 flex min-w-0 items-start gap-3">
+            <SkillAvatar name={skill.displayName} url={skill.avatarUrl} seed={`${skill.namespace}/${skill.slug}`} />
+            <div className="min-w-0 flex-1">
+              <h3
+                className="line-clamp-2 text-base font-semibold [overflow-wrap:anywhere] group-hover:text-primary transition-colors duration-150"
+                style={{ color: 'hsl(var(--foreground))' }}
+                title={skill.displayName}
+              >
+                {skill.displayName}
+              </h3>
+              <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5">
+                <NamespaceBadge
+                  className="block max-w-full truncate"
+                  type="TEAM"
+                  name={`@${skill.namespace}`}
+                  title={`@${skill.namespace}`}
+                />
+                {skill.source === 'github' || skill.source === 'platform' ? (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    {skill.source === 'github' ? <GitBranch aria-hidden="true" className="h-3 w-3" /> : null}
+                    {t(`search.source.${skill.source}`)}
+                  </span>
+                ) : null}
+                {skill.hasVisibleSuites === true ? (
+                  <span
+                    className="inline-flex max-w-full shrink-0 items-center gap-1 rounded-full border border-border bg-secondary/60 px-2 py-0.5 text-xs font-medium text-secondary-foreground"
+                    title={t('skillCard.relatedSuitesHint')}
+                  >
+                    <Boxes aria-hidden="true" className="h-3 w-3 shrink-0" />
+                    {t('skillCard.relatedSuites')}
+                  </span>
+                ) : null}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {skill.summary && (
           <p
-            className="skill-card-summary mb-3 text-xs leading-5 text-muted-foreground [overflow-wrap:anywhere]"
+            className={`skill-card-summary mb-3 leading-5 text-muted-foreground [overflow-wrap:anywhere] ${isMarket ? 'text-sm' : 'text-xs'}`}
             title={skill.summary}
           >
             {skill.summary}
@@ -94,6 +111,13 @@ export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId
         )}
 
         {labels?.length ? <ul className="mb-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">{labels.map(label => <li key={label.slug}>{label.displayName}</li>)}</ul> : null}
+
+        {isMarket && skill.hasVisibleSuites === true && (
+          <span className="mb-3 inline-flex items-center gap-1 text-xs text-muted-foreground" title={t('skillCard.relatedSuitesHint')}>
+            <Boxes aria-hidden="true" className="h-3 w-3 shrink-0" />
+            {t('skillCard.relatedSuites')}
+          </span>
+        )}
 
         {complianceItems.length > 0 ? (
           <div className="mb-4 flex flex-wrap gap-1.5">
@@ -144,7 +168,22 @@ export function SkillCard({ skill, onClick, highlightStarred = true, analyticsId
             </span>
           )}
         </div>
-        {(skill.ownerDisplayName || skill.updatedAt) && (
+        {isMarket ? (
+          <div className="mt-2 flex min-w-0 items-center justify-between gap-3 border-t border-border/50 pt-2 text-xs text-muted-foreground">
+            {skill.updatedAt ? (
+              <span className="inline-flex min-w-0 items-center gap-1" title={new Date(skill.updatedAt).toLocaleString(i18n.language)}>
+                <Clock aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{formatRelativeTime(skill.updatedAt, i18n.language)}</span>
+              </span>
+            ) : null}
+            {skill.source === 'github' || skill.source === 'platform' ? (
+              <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 text-xs" title={t(`search.source.${skill.source}Hint`)}>
+                {skill.source === 'github' ? <GitBranch aria-hidden="true" className="h-3.5 w-3.5" /> : <LayoutGrid aria-hidden="true" className="h-3.5 w-3.5" />}
+                {t(`skillCard.source.${skill.source}`)}
+              </span>
+            ) : null}
+          </div>
+        ) : (skill.ownerDisplayName || skill.updatedAt) && (
           <div className="mt-2 pt-2 border-t border-border/50 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
             {skill.ownerDisplayName && (
               <span className="flex min-w-0 flex-1 items-center gap-1" title={skill.ownerDisplayName}>

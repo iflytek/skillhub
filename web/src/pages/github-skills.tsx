@@ -42,8 +42,8 @@ export function GithubSkillsPage() {
   const { q, sort, page } = useSearch({ from: '/github' })
   const [input, setInput] = useState(q)
   useEffect(() => setInput(q), [q])
-  const catalog = useSearchSkills({ namespace: 'github', sort: 'newest', page: 0, size: 1 })
-  const skills = useSearchSkills({ namespace: 'github', q, sort, page, size: PAGE_SIZE })
+  const catalog = useSearchSkills({ source: 'github', namespace: 'github', sort: 'newest', page: 0, size: 1 })
+  const skills = useSearchSkills({ source: 'github', namespace: 'github', q, sort, page, size: PAGE_SIZE })
   const submit = (event: FormEvent) => {
     event.preventDefault()
     navigate({ to: '/github', search: { q: input.trim(), sort, page: 0 } })
@@ -60,7 +60,7 @@ export function GithubSkillsPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Button data-analytics-id="github.catalog.explore" onClick={() => document.getElementById('github-skills-results')?.scrollIntoView({ behavior: 'smooth' })}>{t('githubCatalog.explore')}</Button>
-            <Button data-analytics-id="navigation.skills.open" variant="outline" onClick={() => navigate({ to: '/search', search: { q: '', sort: 'newest', page: 0, starredOnly: false } })}>{t('githubCatalog.allSkills')}</Button>
+            <Button data-analytics-id="navigation.skills.open" variant="outline" onClick={() => navigate({ to: '/search', search: { q: '', source: 'all', sort: 'newest', page: 0, starredOnly: false } })}>{t('githubCatalog.allSkills')}</Button>
           </div>
         </div>
         <div className="flex flex-col justify-between gap-8 border-t border-[var(--sync-line)] bg-[var(--sync-panel)] p-6 sm:p-9 lg:border-l lg:border-t-0 lg:p-8">

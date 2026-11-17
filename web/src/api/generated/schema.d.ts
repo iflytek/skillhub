@@ -8251,6 +8251,7 @@ export interface components {
             avatarUrl?: string;
             managementState?: components["schemas"]["ManagementState"];
             hasVisibleSuites?: boolean;
+            source?: string;
         };
         SitePresentationSection: {
             enabled: boolean;
@@ -21009,6 +21010,8 @@ export interface operations {
             query?: {
                 q?: string;
                 namespace?: string;
+                /** @description Skill origin; omitted means all sources */
+                source?: "all" | "platform" | "github";
                 label?: string[];
                 /** @description Optional response expansions. Supported value: labels */
                 include?: string[];

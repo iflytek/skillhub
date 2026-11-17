@@ -357,6 +357,42 @@
     }
   },
   "search": {
+    "market": {
+      "appendFailed": "加载失败，已显示的技能会保留。",
+      "loadingMore": "正在加载更多技能…",
+      "loadMore": "继续加载",
+      "allLoaded": "已展示全部 {{count}} 个技能",
+      "cancel": "取消",
+      "reset": "清空搜索与标签",
+      "githubEmpty": "暂无 GitHub 同步技能",
+      "viewPlatform": "查看平台技能",
+      "placeholder": "搜索技能名称、描述或 @命名空间",
+      "filters": "技能筛选",
+      "findLabel": "搜索标签",
+      "allLabels": "全部标签",
+      "moreLabels": "更多标签",
+      "labels": "标签",
+      "all": "全部",
+      "noLabels": "没有匹配的标签",
+      "labelHelp": "选择一个标签，应用后更新技能列表。",
+      "apply": "应用筛选",
+      "favorites": "收藏",
+      "onlyFavorites": "仅看收藏",
+      "favoriteScope": "我的收藏",
+      "currentSource": "当前来源：{{source}}",
+      "sort": "排序"
+    },
+    "source": {
+      "loadFailed": "技能加载失败，请重试",
+      "retry": "重试",
+      "label": "来源",
+      "platform": "平台技能",
+      "github": "GitHub 同步",
+      "all": "全部来源",
+      "platformHint": "浏览平台发布的技能，不包含 GitHub 同步内容。",
+      "githubHint": "浏览从 GitHub 同步的技能；仍按当前账号的访问权限展示。",
+      "allHint": "同时浏览平台与 GitHub 同步技能，同名内容独立展示。"
+    },
     "title": "搜索技能",
     "placeholder": "搜索技能...",
     "filters": {
@@ -2504,6 +2540,10 @@
     "subscribe": "订阅"
   },
   "skillCard": {
+    "source": {
+      "platform": "平台",
+      "github": "GitHub"
+    },
     "relatedSuites": "关联套件",
     "relatedSuitesHint": "此技能被你可见的套件收录，查看详情了解配套关系。",
     "downloads": "下载 {{value}}",

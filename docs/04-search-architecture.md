@@ -165,3 +165,20 @@ CREATE INDEX idx_search_vector ON skill_search_document USING GIN (search_vector
 - PostgreSQL 的 `tsvector` 支持权重（A/B/C/D），可对 title 赋予更高权重，提升搜索相关性
 
 已知局限：`simple` 分词对中文的精度不如专业搜索引擎。建议 Phase 2 完成后评估搜索效果，如不满足需求则在 Phase 3 提前引入 ES。
+
+
+### Market source selection
+
+`GET /api/web/skills` accepts optional `source=all|platform|github`. Omitting it keeps the
+existing all-source API behavior, including CLI and compatibility callers. Invalid explicit
+values return HTTP 400. Source filtering uses the current `skill.github_sync_managed` flag,
+not a namespace name or a label, and is applied before ranking, total counting and pagination.
+It does not grant access or alter publication rules. Same-name skills from different sources
+remain separate records. Search summaries expose `source` as `platform` or `github`.
+
+The web market defaults to platform skills. Source selection is stored in the URL, resets
+pagination and participates in the query cache key. Explicit namespace links without a source
+keep searching all sources. Favorites retain their existing accessible collection; source
+selection does not filter them. Automatic homepage popular/latest lists request platform skills,
+while explicitly curated recommendations are unchanged. The GitHub catalog keeps its existing
+namespace scope and explicitly requests GitHub content.
