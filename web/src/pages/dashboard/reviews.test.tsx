@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Children, isValidElement, type ReactNode } from 'react'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ManagedNamespace } from '@/api/types'
 
 const mocks = vi.hoisted(() => ({
@@ -11,7 +12,10 @@ vi.mock('@tanstack/react-router', () => ({
   useNavigate: () => mocks.navigate, useSearch: () => mocks.search,
   Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
 }))
-vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }) }))
+vi.mock('react-i18next', async (importOriginal) => ({
+  ...await importOriginal<typeof import('react-i18next')>(),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
+}))
 vi.mock('@/features/auth/use-auth', () => ({ useAuth: () => ({ hasRole: (role: string) => mocks.roles.includes(role) }) }))
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({
   useMyNamespaces: () => ({ data: mocks.namespaces, isLoading: false }),
@@ -41,7 +45,12 @@ import { ReviewsPage, reviewTaskKind } from './reviews'
 import type { ReviewTask } from '@/api/types'
 
 function lastFilters() { return mocks.list.mock.calls.at(-1) }
-function renderPage() { return render(<ReviewsPage />) }
+function renderPage() {
+  const client = new QueryClient()
+  return render(<ReviewsPage />, {
+    wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+  })
+}
 
 afterEach(cleanup)
 beforeEach(() => {

@@ -28,7 +28,8 @@ jobs:
   e2e-tests:
     name: E2E (Real Services)
     if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
-    runs-on: ubuntu-latest
+    # Keep the runner on a distribution supported by the locked Playwright version.
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
 
     steps:

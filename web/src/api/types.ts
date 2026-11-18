@@ -913,3 +913,6 @@ export type NamespaceInvitationHistory = Required<components['schemas']['Invitat
 export type NamespaceInvitationHistoryPage = Omit<Required<components['schemas']['InvitationHistoryPage']>, 'items'> & {
   items: NamespaceInvitationHistory[]
 }
+
+export type BatchReviewRequest = components['schemas']['BatchReviewRequest']
+export type BatchReviewResponse = components['schemas']['BatchReviewResponse']

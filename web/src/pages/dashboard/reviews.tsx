@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Eye } from 'lucide-react'
+import { useBatchReview, isBatchReviewTask } from '@/features/review/batch-review'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
@@ -32,7 +34,7 @@ export function ReviewsPage() {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const search = useSearch({ from: '/dashboard/reviews' })
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
   const namespacesQuery = useMyNamespaces()
   const namespaces = namespacesQuery.data ?? []
   const routeFilters = parseReviewCenterFilters(search)
@@ -41,6 +43,7 @@ export function ReviewsPage() {
   const [page, setPage] = useState(search.page ?? 0)
   const { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, sortDirection: routeSort } = routeFilters
   const routePage = search.page ?? 0
+  const batch = useBatchReview(JSON.stringify([user?.userId, routeFilters]))
 
   useEffect(() => {
     const next = { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, sortDirection: routeSort }
@@ -62,7 +65,7 @@ export function ReviewsPage() {
     { q: applied.q.trim(), reviewKind: applied.reviewKind, originType: applied.originType })
   const options = (scopes.data ?? []).map((item) => ({ value: item.slug, label: item.displayName || item.slug }))
 
-  const apply = (filters: ReviewCenterFilters, nextPage = 0) => {
+  const applyNow = (filters: ReviewCenterFilters, nextPage = 0) => {
     const normalized = { ...filters, q: filters.q.trim() }
     setApplied(normalized)
     setDraft(normalized)
@@ -70,6 +73,10 @@ export function ReviewsPage() {
     void navigate({ to: '/dashboard/reviews', search: reviewCenterSearch(normalized, nextPage) })
     // A repeated query or reset must refresh the same key rather than silently reuse a stale result.
     if (!scopePending && JSON.stringify(normalized) === JSON.stringify(applied) && nextPage === page) void query.refetch()
+  }
+  const apply = (filters: ReviewCenterFilters, nextPage = 0) => {
+    if (JSON.stringify(filters) !== JSON.stringify(applied)) batch.guardFilter(() => applyNow(filters, nextPage))
+    else applyNow(filters, nextPage)
   }
   const openReview = (review: ReviewTask) => {
     void navigate({ to: '/dashboard/reviews/$id', params: { id: String(review.id) }, search: reviewCenterSearch(applied, page) })
@@ -113,9 +120,12 @@ export function ReviewsPage() {
     {profileMode ? <ProfileReviewTable /> : <>
       <ReviewCenterFilterForm value={draft} namespaces={options} namespaceLoading={scopes.isLoading || scopes.isError} onChange={setDraft} onApply={() => apply(draft)} onReset={() => apply({ ...DEFAULT_REVIEW_FILTERS })} />
       {scopes.isError && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm"><p className="text-destructive">{t('reviewCenter.scopeFailed')}</p><Button type="button" size="sm" variant="outline" onClick={() => void scopes.refetch()}>{t('reviewCenter.retry')}</Button></div>}
+      {batch.toolbar}
+      {batch.dialogs}
       <div className="space-y-4" aria-busy={query.isFetching}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-sm font-medium">{query.isLoading || scopePending ? t('reviewCenter.loading') : query.isError ? t('reviewCenter.results') : t('reviewCenter.resultsCount', { count: query.data?.totalElements ?? 0 })}</h2>
+          <h2 id="review-results" tabIndex={-1} className="text-sm font-medium">{query.isLoading || scopePending ? t('reviewCenter.loading') : query.isError ? t('reviewCenter.results') : t('reviewCenter.resultsCount', { count: query.data?.totalElements ?? 0 })}</h2>
+          <Button variant="ghost" size="sm" className="md:hidden" disabled={batch.busy || !query.data?.items.some(isBatchReviewTask)} onClick={() => batch.selectPage(query.data?.items ?? [])}>{t('reviewBatch.selectPage')}</Button>
           <Select value={applied.sortDirection} onValueChange={(sortDirection) => apply({ ...applied, sortDirection: sortDirection === 'ASC' ? 'ASC' : 'DESC' })}>
             <SelectTrigger aria-label={t('reviewCenter.sortLabel')} className="h-9 w-36 border-0 bg-transparent text-xs shadow-none"><SelectValue /></SelectTrigger>
             <SelectContent className="min-w-0 w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)]"><SelectItem value="DESC">{t('reviewCenter.newest')}</SelectItem><SelectItem value="ASC">{t('reviewCenter.oldest')}</SelectItem></SelectContent>
@@ -128,11 +138,11 @@ export function ReviewsPage() {
                 : <>
                   <div className="hidden overflow-x-auto md:block">
                     <table className="w-full min-w-[700px] table-fixed text-left">
-                      <thead className="bg-secondary text-xs font-medium text-muted-foreground"><tr><th className="w-[41%] rounded-l-lg px-4 py-3">{t('reviewCenter.columns.object')}</th><th className="w-[16%] px-4 py-3">{t('reviewCenter.columns.kind')}</th><th className="w-[20%] px-4 py-3">{t('reviewCenter.columns.source')}</th><th className="w-[17%] px-4 py-3">{t('reviewCenter.columns.submitter')}</th><th className="w-[6%] rounded-r-lg px-2 py-3"><span className="sr-only">{t('reviewCenter.columns.action')}</span></th></tr></thead>
-                      <tbody className="divide-y divide-border/70">{query.data.items.map((review) => <tr key={review.id} className="hover:bg-secondary/70"><td className="px-4 py-5 align-top">{renderObject(review)}</td><td className="px-4 py-5 align-top">{renderMetadata(review)}</td><td className="px-4 py-5 align-top"><p className="text-sm">{t(`reviewCenter.origin.${review.originType || 'USER'}`)}</p><p className="mt-1 break-all text-xs text-muted-foreground">{review.namespace}</p></td><td className="px-4 py-5 align-top"><p className="break-words text-sm">{review.submittedByName || review.submittedBy}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(review.submittedAt)}</p></td><td className="px-2 py-5 align-top"><Button data-analytics-id="review.detail.open" variant="link" className="h-8 px-0 text-xs" onClick={() => openReview(review)}>{t('reviewCenter.open')}</Button></td></tr>)}</tbody>
+                      <thead className="bg-secondary text-xs font-medium text-muted-foreground"><tr><th className="w-10 rounded-l-lg px-3 py-3"><input type="checkbox" className="h-4 w-4 accent-primary" aria-label={t('reviewBatch.selectPage')} disabled={batch.busy || !query.data.items.some(isBatchReviewTask)} checked={query.data.items.some(isBatchReviewTask) && query.data.items.filter(isBatchReviewTask).every(task => batch.selected.some(item => item.id === task.id))} ref={input => { if (input) input.indeterminate = query.data.items.some(task => batch.selected.some(item => item.id === task.id)) && !query.data.items.filter(isBatchReviewTask).every(task => batch.selected.some(item => item.id === task.id)) }} onChange={() => batch.selectPage(query.data.items)} /></th><th className="w-[37%] px-4 py-3">{t('reviewCenter.columns.object')}</th><th className="w-[16%] px-4 py-3">{t('reviewCenter.columns.kind')}</th><th className="w-[20%] px-4 py-3">{t('reviewCenter.columns.source')}</th><th className="w-[17%] px-4 py-3">{t('reviewCenter.columns.submitter')}</th><th className="w-[6%] rounded-r-lg px-2 py-3"><span className="sr-only">{t('reviewCenter.columns.action')}</span></th></tr></thead>
+                      <tbody className="divide-y divide-border/70">{query.data.items.map((review) => <tr key={review.id} className={batch.selected.some(item => item.id === review.id) ? "bg-accent/70" : "hover:bg-secondary/70"}><td className="px-3 py-5 align-top">{batch.checkbox(review)}</td><td className="px-4 py-5 align-top">{renderObject(review)}</td><td className="px-4 py-5 align-top">{renderMetadata(review)}</td><td className="px-4 py-5 align-top"><p className="text-sm">{t(`reviewCenter.origin.${review.originType || 'USER'}`)}</p><p className="mt-1 break-all text-xs text-muted-foreground">{review.namespace}</p></td><td className="px-4 py-5 align-top"><p className="break-words text-sm">{review.submittedByName || review.submittedBy}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(review.submittedAt)}</p></td><td className="px-2 py-5 align-top"><Button data-analytics-id="review.detail.open" variant="ghost" size="icon" title={t('reviewCenter.open')} aria-label={t('reviewCenter.open')} onClick={() => openReview(review)}><Eye className="h-4 w-4" /></Button></td></tr>)}</tbody>
                     </table>
                   </div>
-                  <div className="divide-y divide-border md:hidden">{query.data.items.map((review) => <article key={review.id} className="space-y-4 py-5">{renderObject(review)}<div>{renderMetadata(review)}</div><div className="flex items-end justify-between gap-4"><p className="min-w-0 break-words text-xs text-muted-foreground">{review.submittedByName || review.submittedBy} · {t(`reviewCenter.origin.${review.originType || 'USER'}`)}<span className="mt-1 block">{formatDate(review.submittedAt)}</span></p><Button data-analytics-id="review.detail.open" variant="link" className="shrink-0" onClick={() => openReview(review)}>{t('reviewCenter.open')}</Button></div></article>)}</div>
+                  <div className="divide-y divide-border md:hidden">{query.data.items.map((review) => <article key={review.id} className="space-y-4 py-5"><div className="flex items-start gap-3"><label className="flex min-h-11 min-w-11 items-center justify-center">{batch.checkbox(review)}</label>{renderObject(review)}</div><div>{renderMetadata(review)}</div><div className="flex items-end justify-between gap-4"><p className="min-w-0 break-words text-xs text-muted-foreground">{review.submittedByName || review.submittedBy} · {t(`reviewCenter.origin.${review.originType || 'USER'}`)}<span className="mt-1 block">{formatDate(review.submittedAt)}</span></p><Button data-analytics-id="review.detail.open" variant="link" className="shrink-0" onClick={() => openReview(review)}>{t('reviewCenter.open')}</Button></div></article>)}</div>
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-3 text-xs text-muted-foreground"><p>{t('reviewCenter.pageSummary', { total: query.data.totalElements, page: page + 1 })}</p><Pagination analyticsId="review.list.paginate" page={page} totalPages={Math.max(query.data.totalPages, 1)} onPageChange={(nextPage) => apply(applied, nextPage)} /></div>
                 </>}
       </div>
