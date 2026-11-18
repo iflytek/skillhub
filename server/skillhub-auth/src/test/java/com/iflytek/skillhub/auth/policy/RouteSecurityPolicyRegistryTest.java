@@ -144,6 +144,15 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void githubRepositoryCatalog_allowsBrowsingWithoutAddingTokenRoutes() {
+        for (String path : List.of("/api/web/github-repositories", "/api/web/github-repositories/901",
+                "/api/web/github-repositories/901/snapshots/1/archive")) {
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL, registry.accessLevel("GET", path));
+            assertFalse(registry.authorizeApiToken("GET", path, Set.of("skill:read")).allowed());
+        }
+    }
+
+    @Test
     void suiteRoutes_keepDiscoveryPublicAndProtectMutations() {
         assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL,
                 registry.accessLevel("GET", "/api/v1/resources"));

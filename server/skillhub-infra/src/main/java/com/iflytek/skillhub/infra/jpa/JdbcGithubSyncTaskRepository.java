@@ -1133,6 +1133,7 @@ public class JdbcGithubSyncTaskRepository implements GithubSyncTaskRepository {
             if ("ACQUISITION_COMPLETE".equals(status)) {
                 if (lease.sourceId() != null) {
                     presence.reconcile(lease.sourceId(), taskId, commitSha, now);
+                    checkpoints.captureRepositorySnapshot(taskId, commitSha, now);
                 }
                 checkpoints.advanceIfComplete(taskId, commitSha, now);
             }

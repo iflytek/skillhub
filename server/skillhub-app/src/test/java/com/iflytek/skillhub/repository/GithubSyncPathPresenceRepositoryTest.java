@@ -52,6 +52,94 @@ class GithubSyncPathPresenceRepositoryTest {
     @Autowired private JdbcTemplate jdbc;
 
     @Test
+    void completedGithubScanPinsAnExactPublishedVersionAndIgnoresLaterLatestPointer() {
+        long namespaceId = jdbc.queryForObject("SELECT id FROM namespace WHERE slug = 'github'", Long.class);
+        long sourceId = jdbc.queryForObject("""
+                INSERT INTO github_source_binding (namespace_id, repository_id, owner_login, repository_name, visibility)
+                VALUES (?, 98001, 'snapshot-test', 'demo', 'PUBLIC') RETURNING id
+                """, Long.class, namespaceId);
+        long skillId = jdbc.queryForObject("""
+                INSERT INTO skill (namespace_id, slug, display_name, owner_id, visibility, github_sync_managed)
+                VALUES (?, 'snapshot-test', 'Snapshot Test', 'github-sync-publisher', 'PUBLIC', true) RETURNING id
+                """, Long.class, namespaceId);
+        Instant now = Instant.now();
+        UUID run = UUID.randomUUID();
+        jdbc.update("INSERT INTO github_sync_run(id, namespace_id, kind) VALUES (?, ?, 'REPOSITORY_SYNC')", run, namespaceId);
+        UUID task = UUID.randomUUID();
+        String leaseHash = "b".repeat(64);
+        jdbc.update("""
+                INSERT INTO github_sync_task
+                    (id, run_id, namespace_id, source_id, kind, mode, status, dedupe_key, fixed_commit_sha,
+                     snapshot_json, lease_generation, lease_token_hash, lease_expires_at, leased_by)
+                VALUES (?, ?, ?, ?, 'REPOSITORY_SYNC', 'FULL', 'LEASED', 'snapshot-test', ?, '{}', 1, ?, ?, 'snapshot-test')
+                """, task, run, namespaceId, sourceId, COMMIT, leaseHash, java.sql.Timestamp.from(now.plusSeconds(300)));
+        UUID admission = UUID.randomUUID();
+        UUID upload = UUID.randomUUID();
+        UUID ingestion = UUID.randomUUID();
+        String sha = "a".repeat(64);
+        jdbc.update("""
+                INSERT INTO github_sync_package_admission
+                    (id, task_id, namespace_id, repository_id, commit_sha, skill_path, lease_generation, status)
+                VALUES (?, ?, ?, 98001, ?, 'skill', 1, 'ACCEPTED')
+                """, admission, task, namespaceId, COMMIT);
+        jdbc.update("""
+                INSERT INTO github_sync_staged_upload(id, admission_id, object_key, mode, size_bytes, sha256, expires_at)
+                VALUES (?, ?, 'snapshot-test', 'S3_PRESIGNED_PUT', 1, ?, now())
+                """, upload, admission, sha);
+        jdbc.update("""
+                INSERT INTO github_sync_package_ingestion
+                    (id, task_id, admission_id, upload_id, namespace_id, repository_id, commit_sha, skill_path,
+                     object_key, size_bytes, sha256, status)
+                VALUES (?, ?, ?, ?, ?, 98001, ?, 'skill', 'snapshot-test', 1, ?, 'READY_FOR_REVIEW')
+                """, ingestion, task, admission, upload, namespaceId, COMMIT, sha);
+        jdbc.update("""
+                INSERT INTO github_sync_path_result (task_id, commit_sha, skill_path, outcome, ingestion_id, sha256)
+                VALUES (?, ?, 'skill', 'ACCEPTED', ?, ?)
+                """, task, COMMIT, ingestion, sha);
+        var ignores = new JdbcGithubSourceIgnoreRepository(jdbc, new ObjectMapper());
+        var checkpoints = new JdbcGithubSyncSourceCheckpointRepository(jdbc);
+        var tasks = new JdbcGithubSyncTaskRepository(jdbc, new ObjectMapper(), new JdbcGithubSyncCapacityGate(jdbc),
+                checkpoints, ignores, new JdbcGithubSyncPathPresenceRepository(jdbc, ignores));
+        assertThat(tasks.completeRepository(task, 1, leaseHash, COMMIT, true, null, List.of(),
+                List.of(new GithubRepositoryPathResult("skill", GithubRepositoryPathResult.Outcome.ACCEPTED, ingestion, null)),
+                null, null, now, now.plusSeconds(60))).isEqualTo(GithubRepositoryCompletionResult.ACQUISITION_COMPLETE);
+
+        // Replaying capture is safe, even before publication.
+        checkpoints.captureRepositorySnapshot(task, COMMIT, now);
+        var snapshots = new GithubRepositorySnapshotQueryRepository(
+                new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(jdbc));
+        var history = snapshots.list(98001, java.util.Set.of(-1L), null);
+        assertThat(history).singleElement().satisfies(item -> assertThat(item.status()).isEqualTo("PENDING"));
+        long snapshotId = Long.parseLong(history.getFirst().id());
+        assertThat(snapshots.archiveMembers(98001, snapshotId, java.util.Set.of(), 10)).isEmpty();
+
+        long pinned = jdbc.queryForObject("""
+                INSERT INTO skill_version (skill_id, version, status, download_ready, github_sync_ingestion_id)
+                VALUES (?, '1.0.0', 'PUBLISHED', true, ?) RETURNING id
+                """, Long.class, skillId, ingestion);
+        long latest = jdbc.queryForObject("""
+                INSERT INTO skill_version (skill_id, version, status, download_ready)
+                VALUES (?, '2.0.0', 'PUBLISHED', true) RETURNING id
+                """, Long.class, skillId);
+        jdbc.update("UPDATE skill SET latest_version_id = ? WHERE id = ?", latest, skillId);
+        jdbc.update("""
+                UPDATE github_sync_package_ingestion
+                SET status = 'APPROVED', published_skill_id = ?, published_version_id = ? WHERE id = ?
+                """, skillId, pinned, ingestion);
+        assertThat(snapshots.archiveMembers(98001, snapshotId, java.util.Set.of(), 10))
+                .singleElement().satisfies(item -> {
+                    assertThat(item.versionId()).isEqualTo(pinned);
+                    assertThat(item.version()).isEqualTo("1.0.0");
+                });
+
+        jdbc.update("UPDATE skill SET visibility = 'NAMESPACE_ONLY' WHERE id = ?", skillId);
+        assertThat(snapshots.archiveMembers(98001, snapshotId, java.util.Set.of(), 10)).isEmpty();
+        assertThat(snapshots.archiveMembers(98001, snapshotId, java.util.Set.of(namespaceId), 10)).hasSize(1);
+        jdbc.update("UPDATE skill_version SET yanked_at = now() WHERE id = ?", pinned);
+        assertThat(snapshots.archiveMembers(98001, snapshotId, java.util.Set.of(namespaceId), 10)).isEmpty();
+    }
+
+    @Test
     void completedPartialScanRecordsRevisionUntilIgnoreRulesChange() {
         Fixture fixture = fixture("presence-partial-checkpoint", "ACTIVE");
         UUID taskId = task(fixture, "QUEUED", List.of());

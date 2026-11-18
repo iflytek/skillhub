@@ -1,0 +1,18 @@
+.github-catalog-page { max-width: 75rem; min-height: calc(100dvh - 9rem); margin-inline: auto; }
+.github-repository-layout { display: grid; grid-template-columns: minmax(0, 1fr) 18rem; gap: 1.5rem; align-items: start; }
+.github-repository-body { min-width: 0; min-height: 34rem; overflow: hidden; border: 1px solid hsl(var(--border)); border-radius: .875rem; background: hsl(var(--card)); }
+.github-repository-sidebar { grid-column: 2; grid-row: 1; min-width: 0; }
+.github-repository-body > [role="tabpanel"] { border: 0; margin: 0; }
+.github-repository-body > [role="tablist"] { padding-inline: 1.25rem; }
+.github-history-item { display: flex; gap: .875rem; padding: 1.5rem 0; border-bottom: 1px solid hsl(var(--border)); }
+.github-history-item:first-child { padding-top: 0; }
+@media (max-width: 767px) {
+  .github-repository-layout { grid-template-columns: minmax(0, 1fr); }
+  .github-repository-sidebar { grid-column: 1; }
+  .github-repository-body { min-height: 27rem; }
+}
+.github-repository-sidebar > div:first-child { display: flex; flex-direction: column; align-items: stretch; gap: 1rem; }
+.github-repository-sidebar > div:first-child > div { align-items: center; }
+.github-repository-sidebar button[aria-haspopup="dialog"] { width: 100%; }
+.github-repository-sidebar > div:first-child > a { width: 100%; }
+.github-repository-sidebar > div:nth-child(2) { display: flex; flex-direction: column; align-items: stretch; }
