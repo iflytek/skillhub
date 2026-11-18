@@ -1,0 +1,33 @@
+.review-scope-menu [role='option'] {
+  padding-inline-end: 0.75rem;
+}
+
+/* Radix copies the selected label into the trigger. Scope layout to the menu. */
+.review-scope-menu [role='option'] > span:last-child {
+  min-width: 0;
+  flex: 1;
+}
+
+.review-scope-menu .review-scope-label {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .review-scope-menu[data-pointer] .review-scope-label,
+  .review-scope-menu [role='option']:not(:focus-visible) .review-scope-label {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .review-scope-menu[data-pointer] [role='option']:hover .review-scope-label[data-overflow] > span {
+    display: block;
+    width: max-content;
+    animation: review-scope-reveal var(--scope-label-duration) linear 400ms forwards;
+  }
+}
+
+@keyframes review-scope-reveal {
+  to { transform: translateX(var(--scope-label-offset)); }
+}
