@@ -324,11 +324,12 @@ const githubSkillsRoute = createRoute({
   path: 'github',
   component: GithubSkillsPage,
   validateSearch: (search: Record<string, unknown>): {
-    q: string; sort: string; page: number; view?: 'repositories'; repositoryId?: string; repositoryPage?: number; memberQuery?: string
+    q: string; sort: string; page: number; view?: 'repositories'; repositoryId?: string; repositoryPage?: number; memberQuery?: string; snapshotId?: string; repositoryTab?: 'history'
   } => {
     const page = Number(search.page)
     const repositoryPage = Number(search.repositoryPage)
     const repositoryId = String(search.repositoryId ?? '')
+    const snapshotId = String(search.snapshotId ?? '')
     const repositories = search.view === 'repositories'
     return {
       q: normalizeSearchQuery(typeof search.q === 'string' ? search.q : ''),
@@ -337,6 +338,8 @@ const githubSkillsRoute = createRoute({
       view: repositories ? 'repositories' : undefined,
       repositoryId: repositories && /^[1-9][0-9]{0,18}$/.test(repositoryId) ? repositoryId : undefined,
       repositoryPage: repositories && Number.isInteger(repositoryPage) && repositoryPage > 0 && repositoryPage <= 2147483647 ? repositoryPage : undefined,
+      snapshotId: repositories && /^[1-9][0-9]{0,18}$/.test(snapshotId) ? snapshotId : undefined,
+      repositoryTab: repositories && search.repositoryTab === 'history' ? 'history' : undefined,
       memberQuery: repositories && typeof search.memberQuery === 'string' ? normalizeSearchQuery(search.memberQuery) || undefined : undefined,
     }
   },

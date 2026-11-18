@@ -31,6 +31,8 @@ public class GithubRepositoryCatalogQueryRepository {
                 JOIN skill_version version ON version.id = skill.latest_version_id
                                           AND version.skill_id = skill.id
                 WHERE ns.slug = 'github' AND ns.status <> 'ARCHIVED'
+                  AND (source.visibility = 'PUBLIC'
+                       OR (source.visibility = 'NAMESPACE_ONLY' AND ns.id IN (:members)))
                   AND skill.github_sync_managed AND skill.status = 'ACTIVE' AND NOT skill.hidden
                   AND version.status = 'PUBLISHED' AND version.download_ready AND version.yanked_at IS NULL
                   AND (skill.visibility = 'PUBLIC'
@@ -58,9 +60,12 @@ public class GithubRepositoryCatalogQueryRepository {
     private static final String GROUP_BY = " GROUP BY repository_id, owner_login, repository_name";
 
     private final NamedParameterJdbcTemplate jdbc;
+    private final GithubRepositorySnapshotQueryRepository snapshots;
 
-    public GithubRepositoryCatalogQueryRepository(NamedParameterJdbcTemplate jdbc) {
+    public GithubRepositoryCatalogQueryRepository(NamedParameterJdbcTemplate jdbc,
+                                                  GithubRepositorySnapshotQueryRepository snapshots) {
         this.jdbc = jdbc;
+        this.snapshots = snapshots;
     }
 
     public GithubCatalogRepositoryPage list(String query, Set<Long> memberNamespaceIds, int page, int size) {
@@ -74,12 +79,32 @@ public class GithubRepositoryCatalogQueryRepository {
         return new GithubCatalogRepositoryPage(items, total, page, size);
     }
 
-    public Optional<GithubCatalogRepositoryDetail> detail(long repositoryId, String query, Set<Long> memberNamespaceIds, int page, int size) {
+    public Optional<GithubCatalogRepositoryDetail> detail(long repositoryId, Long snapshotId, String query, Set<Long> memberNamespaceIds, int page, int size) {
         var params = Map.of("members", nonEmpty(memberNamespaceIds), "repositoryId", repositoryId,
                 "query", query, "size", size, "offset", (long) page * size);
         var repository = jdbc.query(VISIBLE_MEMBERS + REPOSITORIES + " WHERE repository_id = :repositoryId" + GROUP_BY,
                 params, (row, index) -> readRepository(row)).stream().findFirst();
-        return repository.map(header -> {
+        return repository.flatMap(header -> {
+            var memberIds = nonEmpty(memberNamespaceIds);
+            var versions = snapshots.list(repositoryId, memberIds, snapshotId);
+            var selected = snapshotId == null
+                    ? versions.stream().filter(v -> "AVAILABLE".equals(v.status())).findFirst()
+                        .or(() -> versions.stream().findFirst())
+                    : versions.stream().filter(v -> Long.toString(snapshotId).equals(v.id())).findFirst();
+            if (snapshotId != null && selected.isEmpty()) {
+                return Optional.empty();
+            }
+            if (selected.isPresent()) {
+                var version = selected.get();
+                var pageMembers = snapshots.members(repositoryId, Long.parseLong(version.id()), memberIds, query, page, size);
+                var previous = versions.stream().skip(versions.indexOf(version) + 1L)
+                        .filter(v -> "AVAILABLE".equals(v.status())).findFirst();
+                var comparison = "AVAILABLE".equals(version.status())
+                        ? previous.map(base -> snapshots.compare(repositoryId, version, base, memberIds)).orElse(null)
+                        : null;
+                return Optional.of(new GithubCatalogRepositoryDetail(
+                        header, pageMembers.items(), pageMembers.total(), page, size, versions, version.id(), comparison));
+            }
             long total = query.isEmpty() ? header.memberCount() : jdbc.queryForObject(
                     VISIBLE_MEMBERS + "SELECT COUNT(*) FROM visible_members" + MEMBER_MATCH, params, Long.class);
             var members = jdbc.query(VISIBLE_MEMBERS + """
@@ -92,7 +117,7 @@ public class GithubRepositoryCatalogQueryRepository {
                     row.getLong("id"), row.getString("slug"), row.getString("display_name"),
                     row.getString("summary"), row.getString("version"),
                     row.getObject("github_sync_revision", Integer.class)));
-            return new GithubCatalogRepositoryDetail(header, members, total, page, size);
+            return Optional.of(new GithubCatalogRepositoryDetail(header, members, total, page, size, versions, null, null));
         });
     }
 

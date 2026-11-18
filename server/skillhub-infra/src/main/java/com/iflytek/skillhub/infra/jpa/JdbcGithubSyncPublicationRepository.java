@@ -275,7 +275,7 @@ public class JdbcGithubSyncPublicationRepository implements GithubSyncPublicatio
     @Override
     @Transactional
     public boolean noChange(ClaimedPublication claim, Instant now) {
-        return settle(claim, "NO_CHANGE", null, null, now);
+        return settleUnchanged(claim, null, now);
     }
 
     @Override
@@ -446,14 +446,33 @@ public class JdbcGithubSyncPublicationRepository implements GithubSyncPublicatio
         if (updated != 1) {
             throw new IllegalStateException("GitHub Skill path binding changed while moving");
         }
+        return settleUnchanged(claim, decision.skillId(), now);
+    }
+
+    private boolean settleUnchanged(ClaimedPublication claim, Long movedSkillId, Instant now) {
+        // Record the exact existing content target before a later sync can advance the binding.
         return jdbc.update("""
-                UPDATE github_sync_package_ingestion
-                SET status = 'NO_CHANGE', published_skill_id = ?, publication_token = NULL,
-                    publication_expires_at = NULL, publication_retry_at = NULL,
-                    last_error_code = NULL, updated_at = ?
-                WHERE id = ? AND status = 'VALIDATED' AND publication_token = ?
-                  AND publication_expires_at > ?
-                """, decision.skillId(), Timestamp.from(now), claim.id(), claim.token(),
+                UPDATE github_sync_package_ingestion acquired
+                SET status = 'NO_CHANGE', published_skill_id = ?,
+                    reused_version_ingestion_id = (
+                        SELECT reused.id
+                        FROM github_source_skill_binding binding
+                        JOIN github_sync_package_ingestion previous ON previous.id = binding.latest_ingestion_id
+                        JOIN github_sync_package_ingestion reused
+                          ON reused.id = COALESCE(previous.reused_version_ingestion_id, previous.id)
+                        WHERE binding.source_id = ? AND binding.namespace_id = acquired.namespace_id
+                          AND binding.repository_id = acquired.repository_id
+                          AND binding.skill_path = acquired.skill_path
+                          AND reused.namespace_id = acquired.namespace_id AND reused.repository_id = acquired.repository_id
+                          AND reused.published_skill_id = binding.skill_id
+                          AND reused.published_version_id IS NOT NULL
+                          AND reused.content_sha256 = acquired.content_sha256
+                    ),
+                    publication_token = NULL, publication_expires_at = NULL,
+                    publication_retry_at = NULL, last_error_code = NULL, updated_at = ?
+                WHERE acquired.id = ? AND acquired.status = 'VALIDATED' AND acquired.publication_token = ?
+                  AND acquired.publication_expires_at > ?
+                """, movedSkillId, claim.sourceId(), Timestamp.from(now), claim.id(), claim.token(),
                 Timestamp.from(now)) == 1;
     }
 

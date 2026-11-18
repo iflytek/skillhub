@@ -6,7 +6,7 @@ The open-source catalog lists synchronized Skills separately. Users who recogniz
 
 - Add an optional repository view and a shareable repository detail view to the existing open-source catalog.
 - Group available Skills by verified GitHub repository identity. Existing imports with a source binding appear without reimporting.
-- Deliver repository browsing as the first slice of #1094. Pinned installation and repository-level review are separate deliveries. Repository snapshots and their batch-install workflow are independent of Skill Suites.
+- Persist repository snapshots after verified full acquisition. Browse historical member versions, compare available snapshots, and download the exact published packages as one archive. CLI installation and upgrades require their own target and recovery contract. Repository delivery is independent of Skill Suites.
 
 ## Capabilities
 

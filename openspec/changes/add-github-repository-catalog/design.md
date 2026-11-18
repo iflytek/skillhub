@@ -5,7 +5,7 @@
 ## Goals / Non-Goals
 
 - Browse and paginate repositories and their available members. Support direct links and browser navigation.
-- Preserve current Skill search and detail links. No new installation or review actions in this delivery.
+- Preserve current Skill search and detail links. Add snapshot history, exact version links, available snapshot comparisons and ZIP download.
 
 ## Decisions
 
@@ -15,11 +15,13 @@
 - The repository page describes available members, which may come from different upstream commits. A repository snapshot binds one verified GitHub repository and commit to the exact versions of its independently usable Skills.
 - Repository snapshots have their own identity, availability rules and installation lifecycle. A future repository batch-install flow uses a repository-specific manifest, API, CLI entry point and local installation record. It does not create a Suite, select an Entry Skill, call Suite installation services or expose Suite commands.
 
-## Prerequisites for a future installation delivery
+## Snapshot publication and ZIP delivery
 
-- Persist an immutable snapshot for one source binding and commit only when a complete repository scan proves the eligible paths and their exact version IDs. For an unchanged path, link an earlier version only when the acquisition evidence confirms the same content.
+- Persist an immutable snapshot for one source binding and commit only when a complete repository scan proves the eligible paths and their path ingestion IDs, which resolve to exact approved version IDs. For an unchanged path, link an earlier version only when the acquisition evidence confirms the same content.
 - Acquisition completion and publication readiness are separate checks. Serve an installation plan only when all pinned members can be downloaded by the requester. Keep the previous eligible snapshot available while a new one awaits review. Recheck member availability when serving the plan or archive.
-- The sync history cleanup drops older path results when newer evidence exists. Historical backfill may create snapshots only from complete, still-verifiable evidence. Existing repository browsing remains available for older published Skills without such evidence.
+- Save membership evidence in its own tables in the acquisition completion transaction. Ignore partial, superseded and unverified legacy path sets. Historical browsing remains available for older published Skills without a snapshot.
+- Snapshot history shows the 12 most recent captures, plus the two most recent currently available snapshots and an explicitly requested historical snapshot. The comparison shows up to 20 exact-version changes against the nearest earlier available snapshot returned in history.
+- Generate each ZIP from the published bundles keyed by Skill ID and version ID. The manifest carries the repository ID, snapshot ID, Git commit, member coordinates and each package's SHA-256. Recheck membership after the archive is prepared and before sending it. Enforce a per-instance concurrency limit of two jobs and per-request limits of 250 members and 256 MiB of package data.
 
 ## Risks / Trade-offs
 

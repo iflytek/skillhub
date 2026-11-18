@@ -42,7 +42,7 @@ export function GithubCatalogSkillRow({ skill, onOpen }: { skill: SkillSummary; 
 export function GithubSkillsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { q, sort, page, view, repositoryId, repositoryPage, memberQuery } = useSearch({ from: '/github' })
+  const { q, sort, page, view, repositoryId, repositoryPage, memberQuery, snapshotId, repositoryTab } = useSearch({ from: '/github' })
   const [input, setInput] = useState(q)
   useEffect(() => setInput(q), [q])
   const skills = useSearchSkills({ source: 'github', namespace: 'github', q, sort, page, size: PAGE_SIZE }, !view)
@@ -54,7 +54,7 @@ export function GithubSkillsPage() {
   if (view && repositoryId) {
     return <div className={APP_SHELL_PAGE_CLASS_NAME}>
       <GithubRepositoryResults repositoryId={repositoryId} page={page} size={PAGE_SIZE}
-        q={q} sort={sort} repositoryPage={repositoryPage} memberQuery={memberQuery} />
+        q={q} sort={sort} repositoryPage={repositoryPage} memberQuery={memberQuery} snapshotId={snapshotId} repositoryTab={repositoryTab} />
     </div>
   }
 
