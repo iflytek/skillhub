@@ -88,7 +88,7 @@ public class GithubRepositorySnapshotQueryRepository {
                     JOIN evaluated ON evaluated.snapshot_id = snapshot.id
                     GROUP BY snapshot.id, snapshot.commit_sha, snapshot.captured_at, snapshot.current_rules
                 ), recent AS (
-                    SELECT id FROM summary ORDER BY captured_at DESC, id DESC LIMIT 22
+                    SELECT id FROM summary ORDER BY captured_at DESC, id DESC LIMIT 12
                 ), previous_available AS (
                     SELECT id FROM summary WHERE status = 'AVAILABLE'
                     ORDER BY captured_at DESC, id DESC LIMIT 2

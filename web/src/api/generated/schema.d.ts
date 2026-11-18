@@ -11454,6 +11454,16 @@ export interface components {
             errorCode?: string;
             errorArgs?: string[];
         };
+        GithubCatalogMember: {
+            /** Format: int64 */
+            id: number;
+            slug: string;
+            displayName: string;
+            summary?: string;
+            version: string;
+            /** Format: int32 */
+            syncRevision?: number;
+        };
         GithubCatalogRepositoryPage: {
             items: components["schemas"]["RepositorySummary"][];
             /** Format: int64 */
@@ -11469,6 +11479,7 @@ export interface components {
             name: string;
             /** Format: int64 */
             memberCount: number;
+            preview?: components["schemas"]["GithubCatalogMember"][];
         };
         ApiResponseGithubCatalogRepositoryDetail: {
             /** Format: int32 */
@@ -11480,16 +11491,6 @@ export interface components {
             requestId?: string;
             errorCode?: string;
             errorArgs?: string[];
-        };
-        GithubCatalogMember: {
-            /** Format: int64 */
-            id: number;
-            slug: string;
-            displayName: string;
-            summary?: string;
-            version: string;
-            /** Format: int32 */
-            syncRevision?: number;
         };
         GithubCatalogRepositoryDetail: {
             repository: components["schemas"]["RepositorySummary"];

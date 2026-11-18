@@ -8,7 +8,7 @@ public final class GithubRepositoryCatalogResponse {
     private GithubRepositoryCatalogResponse() {}
 
     @Schema(requiredProperties = {"repositoryId", "owner", "name", "memberCount"})
-    public record RepositorySummary(String repositoryId, String owner, String name, long memberCount) {}
+    public record RepositorySummary(String repositoryId, String owner, String name, long memberCount, List<GithubCatalogMember> preview) {}
 
     @Schema(requiredProperties = {"items", "total", "page", "size"})
     public record GithubCatalogRepositoryPage(List<RepositorySummary> items, long total, int page, int size) {}

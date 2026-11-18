@@ -28,3 +28,7 @@
 - Visibility drift could leak repository names and member counts. Exercise anonymous, member and non-member queries and verify unpublished and withdrawn members are excluded.
 - Renames or collisions may invalidate name-based links. Use ID-based navigation and deterministic pagination.
 - Repository batch installation owns exact-version validation, conflict handling and recovery on failure. Define and test these behaviors in the repository installation contract before implementation.
+
+## Confirmed V3 page composition
+
+The catalog places the Skill/repository switch and result count in a single toolbar below search. Repository cards include up to three visible published member previews, fetched in a batched query with the list. Detail uses a member/history workspace and a snapshot/download sidebar. Desktop content keeps a minimum height of 34rem, while narrow screens stack the sidebar above a minimum 27rem content area. URL parameters retain snapshot selection, filters and return paths.

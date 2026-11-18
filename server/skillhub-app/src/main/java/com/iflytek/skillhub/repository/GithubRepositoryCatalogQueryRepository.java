@@ -76,6 +76,25 @@ public class GithubRepositoryCatalogQueryRepository {
                  ORDER BY LOWER(owner_login), LOWER(repository_name), repository_id
                  LIMIT :size OFFSET :offset
                 """, params, (row, index) -> readRepository(row));
+        if (!items.isEmpty()) {
+            var previewParams = Map.of("members", nonEmpty(memberNamespaceIds),
+                    "repositoryIds", items.stream().map(item -> Long.parseLong(item.repositoryId())).toList());
+            var previews = new java.util.HashMap<String, java.util.List<GithubCatalogMember>>();
+            jdbc.query(VISIBLE_MEMBERS + """
+                    , ranked AS (
+                        SELECT *, row_number() OVER (PARTITION BY repository_id ORDER BY slug, id) AS position
+                        FROM visible_members WHERE repository_id IN (:repositoryIds)
+                    )
+                    SELECT * FROM ranked WHERE position <= 3 ORDER BY repository_id, position
+                    """, previewParams, row -> {
+                previews.computeIfAbsent(row.getString("repository_id"), key -> new java.util.ArrayList<>())
+                        .add(new GithubCatalogMember(row.getLong("id"), row.getString("slug"),
+                                row.getString("display_name"), row.getString("summary"),
+                                row.getString("version"), row.getObject("github_sync_revision", Integer.class)));
+            });
+            items = items.stream().map(item -> new RepositorySummary(item.repositoryId(), item.owner(),
+                    item.name(), item.memberCount(), previews.getOrDefault(item.repositoryId(), java.util.List.of()))).toList();
+        }
         return new GithubCatalogRepositoryPage(items, total, page, size);
     }
 
@@ -129,6 +148,6 @@ public class GithubRepositoryCatalogQueryRepository {
             throws SQLException {
         return new RepositorySummary(
                 row.getString("repository_id"), row.getString("owner_login"),
-                row.getString("repository_name"), row.getLong("member_count"));
+                row.getString("repository_name"), row.getLong("member_count"), java.util.List.of());
     }
 }

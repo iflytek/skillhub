@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link, useLocation, useNavigate } from '@tanstack/react-router'
-import { ArrowLeft, ArrowRight, ArrowUpRight, Clock3, GitCommitHorizontal, Github, History, Layers, Search } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ArrowUpRight, Clock3, GitCommitHorizontal, Github, History, Layers, Search, Package } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { fetchJson, WEB_API_PREFIX } from '@/api/client'
 import type { components } from '@/api/generated/schema'
@@ -17,6 +17,7 @@ import { MAX_SEARCH_QUERY_LENGTH } from '@/shared/lib/search-query'
 import { GithubSnapshotDownload } from './github-snapshot-download'
 
 interface Props {
+  navigation?: ReactNode
   repositoryId?: string
   repositoryPage?: number
   memberQuery?: string
@@ -28,7 +29,7 @@ interface Props {
   size: number
 }
 
-export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQuery, snapshotId, repositoryTab, q, sort, page, size }: Props) {
+export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQuery, snapshotId, repositoryTab, q, sort, page, size, navigation }: Props) {
   const { t, i18n } = useTranslation()
   const navigate = useNavigate()
   const { pathname, searchStr } = useLocation()
@@ -89,9 +90,9 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
   return <div className="space-y-4">
     {repositoryId ? <Link to="/github" search={listSearch} className={buttonVariants({ variant: 'ghost', size: 'sm', className: '-ml-2.5' })}>
       <ArrowLeft className="size-4" aria-hidden="true" />{t('githubCatalog.backToRepositories')}
-    </Link> : <div className="rounded-lg border border-border bg-muted/30 p-3">{searchForm}</div>}
-    {repository && <header className="flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
-      <div className="min-w-0 space-y-3">
+    </Link> : null}
+    {repository && <header className="flex flex-wrap items-end justify-between gap-3 pb-3">
+      <div className="min-w-0 space-y-2">
         <span className="badge-soft badge-soft-blue inline-flex items-center gap-1.5"><Github className="size-3.5" aria-hidden="true" />{t('githubCatalog.repositorySource')}</span>
         <div className="flex items-center gap-3">
           <SkillAvatar name={repository.name} seed={repository.repositoryId} />
@@ -106,8 +107,6 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
           href={`https://github.com/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.name)}`}>
           {t('githubCatalog.openSourceRepository')} <ArrowUpRight className="size-4" aria-hidden="true" />
         </a>
-        {selected?.status === 'AVAILABLE' ? <GithubSnapshotDownload key={selected.id}
-          repositoryId={repository.repositoryId} repositoryName={`${repository.owner}/${repository.name}`} snapshot={selected} /> : null}
       </div>
     </header>}
     {authLoading || query.isLoading ? <p role="status" className="py-10 text-center text-sm text-muted-foreground">{t('githubCatalog.repositoryLoading')}</p> : null}
@@ -115,17 +114,26 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
       {t(notFound ? 'githubCatalog.repositoryUnavailable' : 'githubCatalog.repositoryLoadFailed')}
       {!notFound && <Button variant="outline" size="sm" onClick={() => void query.refetch()}>{t('githubCatalog.repositoryRetry')}</Button>}
     </Card> : null}
+    {!repositoryId && <div className="flex flex-wrap items-center gap-4 border-t border-border pt-4">
+      {navigation}{query.isSuccess && <span className="text-xs text-muted-foreground">{t('githubCatalog.repositoryCount', { count: total })}</span>}
+    </div>}
     {!repositoryId && query.isSuccess ? <>
-      <p className="text-sm text-muted-foreground">{t('githubCatalog.repositoryCount', { count: total })}</p>
       {repositories.length ? <ul className="grid gap-4 md:grid-cols-2">
         {repositories.map(item => <li key={item.repositoryId} className="min-w-0">
-          <Card className="space-y-4 border-border p-4 sm:p-5">
+          <Card className="space-y-5 rounded-xl border-border p-5 sm:p-6">
             <div className="flex min-w-0 items-center gap-3">
               <SkillAvatar name={item.name} seed={item.repositoryId} />
               <div className="min-w-0">
-                <h2 className="break-words font-semibold [overflow-wrap:anywhere]">{item.name}</h2>
+                <h2 className="break-words text-base font-semibold [overflow-wrap:anywhere]">{item.name}</h2>
                 <p className="break-all font-mono text-xs text-muted-foreground">{item.owner}/{item.name}</p>
               </div>
+            </div>
+            <div className="min-h-20 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+              {item.preview?.map(member => <div key={member.id} className="flex min-w-0 items-center gap-2 py-1.5 text-xs">
+                <Package className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="min-w-0 truncate">{member.displayName}</span>
+                <code className="ml-auto shrink-0 text-muted-foreground">{member.version}</code>
+              </div>)}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
               <span className="text-xs text-muted-foreground">{t('githubCatalog.repositoryMemberCount', { count: item.memberCount })}</span>
@@ -138,10 +146,11 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
         </li>)}
       </ul> : null}
     </> : null}
-    {repository ? <Tabs value={repositoryTab ?? 'members'} className="space-y-4" onValueChange={tab => {
+    {repository ? <Tabs value={repositoryTab ?? 'members'} className="github-repository-layout" onValueChange={tab => {
       void navigate({ to: '/github', search: { ...currentSearch, repositoryTab: tab === 'history' ? 'history' : undefined } })
     }}>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-muted/40 px-4 py-2.5">
+      <aside className="github-repository-sidebar space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-5">
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
           <GitCommitHorizontal className="size-4" aria-hidden="true" />
           <h2 className="font-medium">{t('githubCatalog.repositorySnapshotCurrent')}</h2>
@@ -153,10 +162,10 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
             </span>
           </> : <p className="text-xs text-muted-foreground">{t('githubCatalog.repositorySnapshotMissing')}</p>}
         </div>
-        {snapshots.length > 0 && repositoryTab !== 'history' ? <Link to="/github"
-          search={{ ...currentSearch, repositoryTab: 'history' }} className={buttonVariants({ variant: 'outline', size: 'sm' })}>
-          {t('githubCatalog.repositorySnapshotHistory')} <ArrowRight className="size-4" aria-hidden="true" />
-        </Link> : null}
+        {selected && <time className="block w-full text-xs text-muted-foreground" dateTime={selected.capturedAt}>{dateFormat.format(new Date(selected.capturedAt))}</time>}
+        {selected?.status === 'AVAILABLE' ? <GithubSnapshotDownload key={selected.id}
+          repositoryId={repository.repositoryId} repositoryName={`${repository.owner}/${repository.name}`} snapshot={selected} /> : null}
+
       </div>
       {latest?.status === 'PENDING' ? <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/35 bg-amber-500/5 px-4 py-3">
         <div className="flex items-start gap-2.5">
@@ -178,14 +187,18 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
           {t('githubCatalog.repositorySnapshotReturn')}
         </Link> : null}
       </div> : null}
+      </aside>
+      <div className="github-repository-body">
       <TabsList className="flex gap-4 sm:gap-6">
         <TabsTrigger value="members" className="gap-1.5 sm:gap-2"><Layers className="hidden size-4 sm:block" aria-hidden="true" />{t('githubCatalog.repositoryMembers')} <span className="text-xs tabular-nums text-muted-foreground">{selected?.availableCount ?? repository.memberCount}</span></TabsTrigger>
         <TabsTrigger value="history" className="gap-1.5 sm:gap-2"><History className="hidden size-4 sm:block" aria-hidden="true" />{t('githubCatalog.repositorySnapshotHistory')} <span className="text-xs tabular-nums text-muted-foreground">{snapshots.length}</span></TabsTrigger>
       </TabsList>
-      <TabsContent value="history" className="space-y-3">
-        <Card className="overflow-hidden border-border">
-          {snapshots.length ? <ul className="divide-y divide-border">
-            {snapshots.map((item, index) => <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+      <TabsContent value="history" className="space-y-3 p-5">
+        <div>
+          {snapshots.length ? <ul>
+            {snapshots.map((item, index) => <li key={item.id} className="github-history-item">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-muted/30"><GitCommitHorizontal className="size-4 text-muted-foreground" aria-hidden="true" /></span>
+              <div className="flex min-w-0 flex-1 flex-col items-start gap-3">
               <div className="flex flex-wrap items-center gap-2 text-sm">
                 <code className="font-semibold">{item.commit.slice(0, 10)}</code>
                 {index === 0 && <span className="badge-soft badge-soft-blue">{t('githubCatalog.repositorySnapshotLatest')}</span>}
@@ -199,9 +212,10 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
                   {t('githubCatalog.repositorySnapshotView')} <ArrowRight className="size-4" aria-hidden="true" />
                 </Link>
               </div>
+              </div>
             </li>)}
           </ul> : <p className="p-4 text-sm text-muted-foreground">{t('githubCatalog.repositorySnapshotMissing')}</p>}
-        </Card>
+        </div>
         {comparison && selected ? <Card className="space-y-3 border-border p-4">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-sm font-semibold">{t('githubCatalog.repositorySnapshotChanges')}</h2>
@@ -220,7 +234,7 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
         </Card> : null}
       </TabsContent>
       <TabsContent value="members">
-        <Card className="overflow-hidden border-border">
+        <div>
           <div className="flex flex-col gap-3 border-b border-border bg-muted/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="font-semibold">{t('githubCatalog.repositoryMembers')}</h2>
@@ -232,29 +246,32 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
             {searchForm}
           </div>
           {members.length ? <ul className="divide-y divide-border">
-            {members.map(member => <li key={member.id} className="flex min-w-0 flex-wrap items-center gap-3 px-4 py-3">
+            {members.map(member => <li key={member.id} className="flex min-w-0 flex-wrap items-center gap-3 px-5 py-5">
               <SkillAvatar name={member.displayName} seed={member.slug} />
               <div className="min-w-0 flex-1">
                 <h3 className="break-words text-sm font-semibold [overflow-wrap:anywhere]">{member.displayName}</h3>
                 {member.summary ? <p className="line-clamp-2 text-xs leading-5 text-muted-foreground">{member.summary}</p> : null}
               </div>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex items-center gap-1">
                 <code className="rounded-md bg-secondary px-2 py-1 text-xs">{member.syncRevision
                   ? t('review.githubRevisionValue', { count: member.syncRevision })
                   : `v${member.version}`}</code>
                 <Link to="/space/$namespace/$slug" params={{ namespace: 'github', slug: member.slug }}
+                  aria-label={t('githubCatalog.viewSkill') + ' ' + member.displayName}
                   className={buttonVariants({ variant: 'ghost', size: 'sm' })}
                   search={{ returnTo: `${pathname}${searchStr}`, version: selected ? member.version : undefined }}>
-                  {t('githubCatalog.viewSkill')} <ArrowUpRight className="size-4" aria-hidden="true" />
+                  <span className="sr-only sm:not-sr-only">{t('githubCatalog.viewSkill')}</span> <ArrowUpRight className="size-4" aria-hidden="true" />
                 </Link>
               </div>
             </li>)}
           </ul> : null}
           {members.length === 0 && <p className="p-4 text-sm text-muted-foreground">{t('githubCatalog.repositoryEmpty')}</p>}
-        </Card>
+        </div>
       </TabsContent>
+      </div>
     </Tabs> : null}
-    {!repositoryId && query.isSuccess && repositories.length === 0 ? <Card className="space-y-3 p-5 text-sm text-muted-foreground">
+    {!repositoryId && query.isSuccess && repositories.length === 0 ? <Card className="flex min-h-64 flex-col items-center justify-center gap-3 p-5 text-sm text-muted-foreground">
+      <Search className="size-7" aria-hidden="true" />
       <p>{t('githubCatalog.repositoryEmpty')}</p>
       {activeQuery && <Button variant="outline" size="sm" onClick={() => submitSearch('')}>{t('githubCatalog.clearRepositorySearch')}</Button>}
     </Card> : null}
