@@ -43,6 +43,18 @@ public class GithubRepositoryCatalogQueryRepository {
             FROM visible_members
             """;
 
+    private static final String REPOSITORY_MATCH = """
+             WHERE strpos(LOWER(owner_login || '/' || repository_name), LOWER(:query)) > 0
+            """;
+
+    private static final String MEMBER_MATCH = """
+             WHERE repository_id = :repositoryId AND (
+               strpos(LOWER(slug), LOWER(:query)) > 0 OR
+               strpos(LOWER(display_name), LOWER(:query)) > 0 OR
+               strpos(LOWER(COALESCE(summary, '')), LOWER(:query)) > 0
+             )
+            """;
+
     private static final String GROUP_BY = " GROUP BY repository_id, owner_login, repository_name";
 
     private final NamedParameterJdbcTemplate jdbc;
@@ -51,33 +63,36 @@ public class GithubRepositoryCatalogQueryRepository {
         this.jdbc = jdbc;
     }
 
-    public GithubCatalogRepositoryPage list(Set<Long> memberNamespaceIds, int page, int size) {
-        var params = Map.of("members", nonEmpty(memberNamespaceIds), "size", size, "offset", (long) page * size);
-        var total = jdbc.queryForObject(VISIBLE_MEMBERS + "SELECT COUNT(DISTINCT repository_id) FROM visible_members",
+    public GithubCatalogRepositoryPage list(String query, Set<Long> memberNamespaceIds, int page, int size) {
+        var params = Map.of("members", nonEmpty(memberNamespaceIds), "query", query, "size", size, "offset", (long) page * size);
+        var total = jdbc.queryForObject(VISIBLE_MEMBERS + "SELECT COUNT(DISTINCT repository_id) FROM visible_members" + REPOSITORY_MATCH,
                 params, Long.class);
-        var items = jdbc.query(VISIBLE_MEMBERS + REPOSITORIES + GROUP_BY + """
+        var items = jdbc.query(VISIBLE_MEMBERS + REPOSITORIES + REPOSITORY_MATCH + GROUP_BY + """
                  ORDER BY LOWER(owner_login), LOWER(repository_name), repository_id
                  LIMIT :size OFFSET :offset
                 """, params, (row, index) -> readRepository(row));
         return new GithubCatalogRepositoryPage(items, total, page, size);
     }
 
-    public Optional<GithubCatalogRepositoryDetail> detail(long repositoryId, Set<Long> memberNamespaceIds, int page, int size) {
+    public Optional<GithubCatalogRepositoryDetail> detail(long repositoryId, String query, Set<Long> memberNamespaceIds, int page, int size) {
         var params = Map.of("members", nonEmpty(memberNamespaceIds), "repositoryId", repositoryId,
-                "size", size, "offset", (long) page * size);
+                "query", query, "size", size, "offset", (long) page * size);
         var repository = jdbc.query(VISIBLE_MEMBERS + REPOSITORIES + " WHERE repository_id = :repositoryId" + GROUP_BY,
                 params, (row, index) -> readRepository(row)).stream().findFirst();
         return repository.map(header -> {
+            long total = query.isEmpty() ? header.memberCount() : jdbc.queryForObject(
+                    VISIBLE_MEMBERS + "SELECT COUNT(*) FROM visible_members" + MEMBER_MATCH, params, Long.class);
             var members = jdbc.query(VISIBLE_MEMBERS + """
                     SELECT id, slug, display_name, summary, version, github_sync_revision
-                    FROM visible_members WHERE repository_id = :repositoryId
+                    FROM visible_members
+                    """ + MEMBER_MATCH + """
                     ORDER BY slug, id
                     LIMIT :size OFFSET :offset
                     """, params, (row, index) -> new GithubCatalogMember(
                     row.getLong("id"), row.getString("slug"), row.getString("display_name"),
                     row.getString("summary"), row.getString("version"),
                     row.getObject("github_sync_revision", Integer.class)));
-            return new GithubCatalogRepositoryDetail(header, members, page, size);
+            return new GithubCatalogRepositoryDetail(header, members, total, page, size);
         });
     }
 

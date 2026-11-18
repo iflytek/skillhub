@@ -36,6 +36,16 @@
     "login": "Login"
   },
   "githubCatalog": {
+    "catalogIntro": "Browse Skills synced from GitHub and explore their source repositories.",
+    "searchRepositories": "Search owner or repository",
+    "searchMembers": "Search skills in this repository",
+    "repositoryCount": "Repositories · {{count}}",
+    "repositoryMemberCount": "Published skills · {{count}}",
+    "repositorySource": "GitHub repository",
+    "openSourceRepository": "View on GitHub",
+    "viewRepository": "View repository",
+    "repositoryMembers": "Skills in this repository",
+    "clearRepositorySearch": "Clear search",
     "browseBy": "Browse by",
     "bySkill": "By skill",
     "byRepository": "By repository",

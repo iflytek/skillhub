@@ -33,11 +33,12 @@ public class GithubRepositoryCatalogController extends BaseApiController {
     @Operation(operationId = "listGithubCatalogRepositories")
     @RateLimit(category = "search", authenticated = 60, anonymous = 20)
     public ApiResponse<GithubCatalogRepositoryPage> list(
+            @RequestParam(defaultValue = "") String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles
     ) {
-        return ok("response.success.read", catalog.list(memberIds(roles), Math.max(0, page), boundedSize(size)));
+        return ok("response.success.read", catalog.list(normalizeQuery(q), memberIds(roles), Math.max(0, page), boundedSize(size)));
     }
 
     @GetMapping("/{repositoryId}")
@@ -45,17 +46,23 @@ public class GithubRepositoryCatalogController extends BaseApiController {
     @RateLimit(category = "search", authenticated = 60, anonymous = 20)
     public ApiResponse<GithubCatalogRepositoryDetail> detail(
             @PathVariable long repositoryId,
+            @RequestParam(defaultValue = "") String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles
     ) {
         return ok("response.success.read",
-                catalog.detail(repositoryId, memberIds(roles), Math.max(0, page), boundedSize(size))
+                catalog.detail(repositoryId, normalizeQuery(q), memberIds(roles), Math.max(0, page), boundedSize(size))
                         .orElseThrow(() -> new DomainNotFoundException("error.githubSync.source.notFound")));
     }
 
     private static Set<Long> memberIds(Map<Long, NamespaceRole> roles) {
         return roles == null ? Set.of() : roles.keySet();
+    }
+
+    private static String normalizeQuery(String query) {
+        String trimmed = query.strip();
+        return trimmed.substring(0, trimmed.offsetByCodePoints(0, Math.min(120, trimmed.codePointCount(0, trimmed.length()))));
     }
 
     private static int boundedSize(int size) {

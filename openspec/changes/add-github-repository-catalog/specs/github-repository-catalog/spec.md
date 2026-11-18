@@ -10,10 +10,26 @@ The open-source catalog SHALL provide repository browsing while retaining the ex
 - **THEN** repositories with available members are listed with their current names and visible member counts
 - **AND** opening a repository shows its available members with links to their existing Skill detail pages
 
+#### Scenario: Return to a repository search
+
+- **WHEN** a user searches for repositories, opens a result, filters its members and opens a Skill
+- **THEN** returning from the Skill preserves the member query and page
+- **AND** returning from the repository preserves the repository query and page
+
 #### Scenario: Follow a link after a repository rename
 
 - **WHEN** the viewer opens a saved repository ID after its display name changes
 - **THEN** the same repository is shown with the current name
+
+### Requirement: Preserve the repository as a distinct resource
+
+The catalog SHALL present a GitHub repository as a source grouping of independently usable Skills.
+
+#### Scenario: Open a repository whose members also belong to a Suite
+
+- **WHEN** the same Skill versions appear in a GitHub repository and a separately maintained Suite
+- **THEN** the repository view uses its own source identity and member list
+- **AND** viewing the repository does not create or modify a Suite, designate an Entry Skill, or offer Suite installation commands
 
 ### Requirement: Apply visibility before repository aggregation
 

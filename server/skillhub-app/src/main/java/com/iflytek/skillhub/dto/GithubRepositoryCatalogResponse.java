@@ -16,7 +16,7 @@ public final class GithubRepositoryCatalogResponse {
     public record GithubCatalogMember(long id, String slug, String displayName, String summary,
                                       String version, Integer syncRevision) {}
 
-    @Schema(requiredProperties = {"repository", "items", "page", "size"})
+    @Schema(requiredProperties = {"repository", "items", "total", "page", "size"})
     public record GithubCatalogRepositoryDetail(RepositorySummary repository, List<GithubCatalogMember> items,
-                                                 int page, int size) {}
+                                                 long total, int page, int size) {}
 }

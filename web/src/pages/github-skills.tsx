@@ -1,11 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowUpRight, Download, GitBranch, Search } from 'lucide-react'
+import { ArrowUpRight, Download, Search } from 'lucide-react'
 import type { SkillSummary } from '@/api/types'
 import { useSearchSkills } from '@/shared/hooks/use-skill-queries'
 import { Pagination } from '@/shared/components/pagination'
-import { Button, buttonVariants } from '@/shared/ui/button'
+import { Button } from '@/shared/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { cn } from '@/shared/lib/utils'
 import { Input } from '@/shared/ui/input'
 import { getHeadlineVersion } from '@/shared/lib/skill-lifecycle'
 import { formatCompactCount } from '@/shared/lib/number-format'
@@ -40,64 +42,53 @@ export function GithubCatalogSkillRow({ skill, onOpen }: { skill: SkillSummary; 
 export function GithubSkillsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const { q, sort, page, view, repositoryId } = useSearch({ from: '/github' })
+  const { q, sort, page, view, repositoryId, repositoryPage, memberQuery } = useSearch({ from: '/github' })
   const [input, setInput] = useState(q)
   useEffect(() => setInput(q), [q])
-  const catalog = useSearchSkills({ source: 'github', namespace: 'github', sort: 'newest', page: 0, size: 1 })
   const skills = useSearchSkills({ source: 'github', namespace: 'github', q, sort, page, size: PAGE_SIZE }, !view)
   const submit = (event: FormEvent) => {
     event.preventDefault()
     navigate({ to: '/github', search: { q: input.trim(), sort, page: 0 } })
   }
 
-  return <div className={`github-sync-surface ${APP_SHELL_PAGE_CLASS_NAME}`}>
-    <section className="overflow-hidden border border-[var(--sync-line)] bg-[var(--sync-canvas)]">
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_250px]">
-        <div className="space-y-6 p-6 sm:p-9 lg:p-11">
-          <p className="flex items-center gap-2 text-xs font-semibold tracking-[0.12em] text-[var(--sync-blue)]"><GitBranch className="h-4 w-4" aria-hidden="true" />{t('githubCatalog.sourceLabel')}</p>
-          <div className="max-w-3xl space-y-3">
-            <h1 className="text-3xl font-semibold tracking-tight text-[var(--sync-ink)] sm:text-4xl">{t('githubCatalog.title')}</h1>
-            <p className="text-sm leading-7 text-muted-foreground sm:text-base">{t('githubCatalog.description')}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button data-analytics-id="github.catalog.explore" onClick={() => document.getElementById('github-skills-results')?.scrollIntoView({ behavior: 'smooth' })}>{t('githubCatalog.explore')}</Button>
-            <Button data-analytics-id="navigation.skills.open" variant="outline" onClick={() => navigate({ to: '/search', search: { q: '', source: 'all', sort: 'newest', page: 0, starredOnly: false } })}>{t('githubCatalog.allSkills')}</Button>
-          </div>
-        </div>
-        <div className="flex flex-col justify-between gap-8 border-t border-[var(--sync-line)] bg-[var(--sync-panel)] p-6 sm:p-9 lg:border-l lg:border-t-0 lg:p-8">
-          <p className="text-xs font-semibold tracking-[0.12em] text-[var(--sync-subtle)]">@github</p>
-          <div>
-            <p className="text-5xl font-semibold tabular-nums text-[var(--sync-teal)]">{catalog.isLoading ? '—' : (catalog.data?.total ?? '—')}</p>
-            <p className="mt-2 text-sm font-medium text-[var(--sync-ink)]">{t('githubCatalog.publishedCount')}</p>
-            <p className="mt-3 text-xs leading-5 text-[var(--sync-subtle)]">{t('githubCatalog.countNote')}</p>
-          </div>
-        </div>
-      </div>
-    </section>
+  if (view && repositoryId) {
+    return <div className={APP_SHELL_PAGE_CLASS_NAME}>
+      <GithubRepositoryResults repositoryId={repositoryId} page={page} size={PAGE_SIZE}
+        q={q} sort={sort} repositoryPage={repositoryPage} memberQuery={memberQuery} />
+    </div>
+  }
 
-    <section id="github-skills-results" className="scroll-mt-24 space-y-5">
-      <nav aria-label={t('githubCatalog.browseBy')} className="flex flex-wrap gap-2">
-        <Link to="/github" search={{ q, sort, page: 0 }} aria-current={!view ? 'page' : undefined}
-          className={buttonVariants({ variant: view ? 'outline' : 'secondary' })}>
+  return <div className={cn(APP_SHELL_PAGE_CLASS_NAME, 'github-sync-surface space-y-6')}>
+    <header className="space-y-2">
+      <h1 className="font-heading text-3xl font-bold tracking-tight sm:text-4xl">{t('githubCatalog.title')}</h1>
+      <p className="max-w-xl text-sm text-muted-foreground">{t('githubCatalog.catalogIntro')}</p>
+    </header>
+    <section className="space-y-4">
+      <nav aria-label={t('githubCatalog.browseBy')} className="flex items-center gap-6 border-b border-border">
+        <Link to="/github" search={{ q: view ? '' : q, sort, page: 0 }} aria-current={!view ? 'page' : undefined}
+          className={cn('border-b-2 px-1 pb-3 text-sm font-medium', !view ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground')}>
           {t('githubCatalog.bySkill')}
         </Link>
-        <Link to="/github" search={{ q, sort, page: 0, view: 'repositories' }} aria-current={view ? 'page' : undefined}
-          className={buttonVariants({ variant: view ? 'secondary' : 'outline' })}>
-          <GitBranch className="h-4 w-4" aria-hidden="true" />{t('githubCatalog.byRepository')}
+        <Link to="/github" search={{ q: view ? q : '', sort, page: 0, view: 'repositories' }} aria-current={view ? 'page' : undefined}
+          className={cn('border-b-2 px-1 pb-3 text-sm font-medium', view ? 'border-foreground text-foreground' : 'border-transparent text-muted-foreground')}>
+          {t('githubCatalog.byRepository')}
         </Link>
       </nav>
       {view ? (
-        <GithubRepositoryResults repositoryId={repositoryId} page={page} size={PAGE_SIZE} />
+        <GithubRepositoryResults q={q} sort={sort} page={page} size={PAGE_SIZE} />
       ) : <>
-        <div className="flex flex-col gap-2 border-b border-[var(--sync-line)] pb-4 sm:flex-row sm:items-end sm:justify-between">
-          <div><h2 className="text-xl font-semibold text-[var(--sync-ink)]">{t('githubCatalog.resultsTitle')}</h2><p className="mt-1 text-sm text-muted-foreground">{t('githubCatalog.resultsDescription')}</p></div>
-          {skills.data ? <p className="text-sm tabular-nums text-muted-foreground">{t('githubCatalog.resultCount', { count: skills.data.total })}</p> : null}
-        </div>
-        <form data-analytics-id="github.catalog.search" onSubmit={submit} className="flex flex-col gap-3 sm:flex-row">
-          <div className="relative min-w-0 flex-1"><Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[var(--sync-blue)]" aria-hidden="true" /><Input className="pl-9" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t('githubCatalog.searchPlaceholder')} aria-label={t('githubCatalog.searchPlaceholder')} /></div>
+        <form data-analytics-id="github.catalog.search" onSubmit={submit} className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 p-3">
+          <div className="relative min-w-44 max-w-xl flex-1"><Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-[var(--sync-blue)]" aria-hidden="true" /><Input className="pl-9" value={input} onChange={(event) => setInput(event.target.value)} placeholder={t('githubCatalog.searchPlaceholder')} aria-label={t('githubCatalog.searchPlaceholder')} /></div>
           <Button type="submit">{t('githubCatalog.search')}</Button>
-          <select data-analytics-id="github.catalog.sort" aria-label={t('githubCatalog.sortLabel')} value={sort} onChange={(event) => navigate({ to: '/github', search: { q, sort: event.target.value, page: 0 } })} className="h-9 rounded-md border border-[var(--sync-line)] bg-background px-3 text-sm"><option value="newest">{t('githubCatalog.newest')}</option><option value="downloads">{t('githubCatalog.mostDownloaded')}</option></select>
+          <Select value={sort} onValueChange={value => void navigate({ to: '/github', search: { q, sort: value, page: 0 } })}>
+            <SelectTrigger data-analytics-id="github.catalog.sort" aria-label={t('githubCatalog.sortLabel')} className="w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="newest">{t('githubCatalog.newest')}</SelectItem>
+              <SelectItem value="downloads">{t('githubCatalog.mostDownloaded')}</SelectItem>
+            </SelectContent>
+          </Select>
         </form>
+        {skills.data ? <p className="text-sm tabular-nums text-muted-foreground">{t('githubCatalog.resultCount', { count: skills.data.total })}</p> : null}
         {skills.isLoading ? <p className="py-10 text-center text-sm text-muted-foreground">{t('githubCatalog.loading')}</p> : null}
         {skills.error ? <p role="alert" className="py-8 text-sm text-destructive">{t('githubCatalog.loadFailed')}: {skills.error.message}</p> : null}
         {!skills.isLoading && !skills.error && !skills.data?.items.length ? <div className="border-l-[3px] border-[var(--sync-amber)] bg-[var(--sync-panel)] p-6 text-sm text-muted-foreground">{t('githubCatalog.empty')}</div> : null}

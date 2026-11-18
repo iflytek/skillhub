@@ -26,6 +26,16 @@
     "login": "로그인"
   },
   "githubCatalog": {
+    "catalogIntro": "GitHub에서 동기화한 스킬과 원본 저장소를 둘러보세요.",
+    "searchRepositories": "소유자 또는 저장소 검색",
+    "searchMembers": "이 저장소의 스킬 검색",
+    "repositoryCount": "저장소 {{count}}개",
+    "repositoryMemberCount": "게시된 스킬 {{count}}개",
+    "repositorySource": "GitHub 저장소",
+    "openSourceRepository": "GitHub에서 보기",
+    "viewRepository": "저장소 보기",
+    "repositoryMembers": "이 저장소의 스킬",
+    "clearRepositorySearch": "검색 지우기",
     "browseBy": "탐색 방식",
     "bySkill": "스킬별",
     "byRepository": "저장소별",

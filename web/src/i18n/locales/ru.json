@@ -26,6 +26,16 @@
     "login": "Вход"
   },
   "githubCatalog": {
+    "catalogIntro": "Просматривайте навыки, синхронизированные с GitHub, и их исходные репозитории.",
+    "searchRepositories": "Поиск владельца или репозитория",
+    "searchMembers": "Поиск навыков в этом репозитории",
+    "repositoryCount": "Репозитории · {{count}}",
+    "repositoryMemberCount": "Опубликованные навыки · {{count}}",
+    "repositorySource": "Репозиторий GitHub",
+    "openSourceRepository": "Открыть на GitHub",
+    "viewRepository": "Открыть репозиторий",
+    "repositoryMembers": "Навыки в репозитории",
+    "clearRepositorySearch": "Очистить поиск",
     "browseBy": "Способ просмотра",
     "bySkill": "По навыкам",
     "byRepository": "По репозиториям",

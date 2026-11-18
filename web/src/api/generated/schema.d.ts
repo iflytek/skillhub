@@ -11478,6 +11478,8 @@ export interface components {
         GithubCatalogRepositoryDetail: {
             repository: components["schemas"]["RepositorySummary"];
             items: components["schemas"]["GithubCatalogMember"][];
+            /** Format: int64 */
+            total: number;
             /** Format: int32 */
             page: number;
             /** Format: int32 */
@@ -24308,6 +24310,7 @@ export interface operations {
     listGithubCatalogRepositories: {
         parameters: {
             query?: {
+                q?: string;
                 page?: number;
                 size?: number;
             };
@@ -24331,6 +24334,7 @@ export interface operations {
     getGithubCatalogRepository: {
         parameters: {
             query?: {
+                q?: string;
                 page?: number;
                 size?: number;
             };

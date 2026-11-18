@@ -324,9 +324,10 @@ const githubSkillsRoute = createRoute({
   path: 'github',
   component: GithubSkillsPage,
   validateSearch: (search: Record<string, unknown>): {
-    q: string; sort: string; page: number; view?: 'repositories'; repositoryId?: string
+    q: string; sort: string; page: number; view?: 'repositories'; repositoryId?: string; repositoryPage?: number; memberQuery?: string
   } => {
     const page = Number(search.page)
+    const repositoryPage = Number(search.repositoryPage)
     const repositoryId = String(search.repositoryId ?? '')
     const repositories = search.view === 'repositories'
     return {
@@ -335,6 +336,8 @@ const githubSkillsRoute = createRoute({
       page: Number.isInteger(page) && page >= 0 && page <= 2147483647 ? page : 0,
       view: repositories ? 'repositories' : undefined,
       repositoryId: repositories && /^[1-9][0-9]{0,18}$/.test(repositoryId) ? repositoryId : undefined,
+      repositoryPage: repositories && Number.isInteger(repositoryPage) && repositoryPage > 0 && repositoryPage <= 2147483647 ? repositoryPage : undefined,
+      memberQuery: repositories && typeof search.memberQuery === 'string' ? normalizeSearchQuery(search.memberQuery) || undefined : undefined,
     }
   },
 })
