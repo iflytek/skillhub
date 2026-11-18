@@ -43,6 +43,7 @@ class GithubRepositorySnapshotArchiveServiceTest {
     @Test
     void archivePinsContentAndChecksumAndRemovesTemporaryFile() throws Exception {
         var file = new AtomicReference<Path>();
+        String expectedChecksum = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payload));
         service.write(901, 7, Set.of(), path -> {
             file.set(path);
             try (var zip = new ZipFile(path.toFile())) {
@@ -55,7 +56,7 @@ class GithubRepositorySnapshotArchiveServiceTest {
                 var member = manifest.get("skills").get(0);
                 assertThat(member.get("version").asText()).isEqualTo("1.0.0");
                 assertThat(member.get("sha256").asText()).isEqualTo(
-                        HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payload)));
+                        expectedChecksum);
             }
         });
         assertThat(Files.exists(file.get())).isFalse();
