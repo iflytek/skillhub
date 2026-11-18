@@ -26,6 +26,17 @@
     "login": "Вход"
   },
   "githubCatalog": {
+    "browseBy": "Способ просмотра",
+    "bySkill": "По навыкам",
+    "byRepository": "По репозиториям",
+    "repositories": "Репозитории GitHub",
+    "backToRepositories": "К списку репозиториев",
+    "repositoryLoading": "Загрузка репозиториев…",
+    "repositoryUnavailable": "В этом репозитории нет доступных навыков.",
+    "repositoryLoadFailed": "Не удалось загрузить данные репозитория.",
+    "repositoryRetry": "Повторить",
+    "repositoryEmpty": "На этой странице нет результатов.",
+    "repositoryFirstPage": "На первую страницу",
     "title": "Навыки с открытым кодом",
     "sourceLabel": "ОТКРЫТЫЕ РЕПОЗИТОРИИ GITHUB",
     "description": "Изучайте навыки из общедоступных репозиториев GitHub, проверенные и опубликованные в SkillHub. Для каждого навыка доступны источник, путь, коммит и сведения о лицензии.",

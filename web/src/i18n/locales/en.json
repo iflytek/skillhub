@@ -36,6 +36,17 @@
     "login": "Login"
   },
   "githubCatalog": {
+    "browseBy": "Browse by",
+    "bySkill": "By skill",
+    "byRepository": "By repository",
+    "repositories": "GitHub repositories",
+    "backToRepositories": "Back to repositories",
+    "repositoryLoading": "Loading repositories…",
+    "repositoryUnavailable": "This repository has no available skills.",
+    "repositoryLoadFailed": "Could not load repository data.",
+    "repositoryRetry": "Try again",
+    "repositoryEmpty": "No results on this page.",
+    "repositoryFirstPage": "Go to first page",
     "title": "Open-source Skills",
     "sourceLabel": "PUBLIC GITHUB REPOSITORIES",
     "description": "Explore skills from public GitHub repositories, reviewed and published by SkillHub. Each skill page shows its source, path, pinned commit, and license details.",

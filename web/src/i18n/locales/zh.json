@@ -36,6 +36,17 @@
     "login": "登录"
   },
   "githubCatalog": {
+    "browseBy": "浏览方式",
+    "bySkill": "按技能",
+    "byRepository": "按仓库",
+    "repositories": "GitHub 仓库",
+    "backToRepositories": "返回仓库列表",
+    "repositoryLoading": "正在加载仓库…",
+    "repositoryUnavailable": "此仓库暂无可查看的技能。",
+    "repositoryLoadFailed": "仓库数据加载失败。",
+    "repositoryRetry": "重试",
+    "repositoryEmpty": "当前页面没有结果。",
+    "repositoryFirstPage": "返回第一页",
     "title": "开源技能",
     "sourceLabel": "GITHUB 公开仓库",
     "description": "浏览来自公开 GitHub 仓库、经过 SkillHub 审核发布的技能。每项技能均可查看来源仓库、路径、固定提交和许可证信息。",

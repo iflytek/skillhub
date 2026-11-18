@@ -323,11 +323,20 @@ const githubSkillsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'github',
   component: GithubSkillsPage,
-  validateSearch: (search: Record<string, unknown>): { q: string; sort: string; page: number } => ({
-    q: normalizeSearchQuery(typeof search.q === 'string' ? search.q : ''),
-    sort: search.sort === 'downloads' ? 'downloads' : 'newest',
-    page: Math.max(0, Number(search.page) || 0),
-  }),
+  validateSearch: (search: Record<string, unknown>): {
+    q: string; sort: string; page: number; view?: 'repositories'; repositoryId?: string
+  } => {
+    const page = Number(search.page)
+    const repositoryId = String(search.repositoryId ?? '')
+    const repositories = search.view === 'repositories'
+    return {
+      q: normalizeSearchQuery(typeof search.q === 'string' ? search.q : ''),
+      sort: search.sort === 'downloads' ? 'downloads' : 'newest',
+      page: Number.isInteger(page) && page >= 0 && page <= 2147483647 ? page : 0,
+      view: repositories ? 'repositories' : undefined,
+      repositoryId: repositories && /^[1-9][0-9]{0,18}$/.test(repositoryId) ? repositoryId : undefined,
+    }
+  },
 })
 
 const suitesRoute = createRoute({

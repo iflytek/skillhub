@@ -6369,6 +6369,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/github-repositories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listGithubCatalogRepositories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/github-repositories/{repositoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGithubCatalogRepository"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/web/authoring/runs/{runId}/findings": {
         parameters: {
             query?: never;
@@ -11394,6 +11426,62 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        ApiResponseGithubCatalogRepositoryPage: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["GithubCatalogRepositoryPage"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        GithubCatalogRepositoryPage: {
+            items: components["schemas"]["RepositorySummary"][];
+            /** Format: int64 */
+            total: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
+        };
+        RepositorySummary: {
+            repositoryId: string;
+            owner: string;
+            name: string;
+            /** Format: int64 */
+            memberCount: number;
+        };
+        ApiResponseGithubCatalogRepositoryDetail: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["GithubCatalogRepositoryDetail"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        GithubCatalogMember: {
+            /** Format: int64 */
+            id: number;
+            slug: string;
+            displayName: string;
+            summary?: string;
+            version: string;
+            /** Format: int32 */
+            syncRevision?: number;
+        };
+        GithubCatalogRepositoryDetail: {
+            repository: components["schemas"]["RepositorySummary"];
+            items: components["schemas"]["GithubCatalogMember"][];
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            size: number;
         };
         ApiResponseListValidationFindingResponse: {
             /** Format: int32 */
@@ -24213,6 +24301,54 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponsePageResponseGovernanceActivityItemResponse"];
+                };
+            };
+        };
+    };
+    listGithubCatalogRepositories: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGithubCatalogRepositoryPage"];
+                };
+            };
+        };
+    };
+    getGithubCatalogRepository: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                repositoryId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGithubCatalogRepositoryDetail"];
                 };
             };
         };

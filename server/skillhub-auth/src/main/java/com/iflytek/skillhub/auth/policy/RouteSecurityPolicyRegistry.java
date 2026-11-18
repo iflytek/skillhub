@@ -135,6 +135,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/web/suites/*/*/labels/*"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/suites/*/*/labels/*"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/resources"),
+            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/github-repositories"),
+            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/github-repositories/*"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/me/suites"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/suites/*/*/versions"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.POST, "/api/web/suites/*/*/install-plan"),
@@ -323,7 +325,7 @@ public class RouteSecurityPolicyRegistry {
      * {@code "<METHOD|ANY> <pattern>"} to match {@link #routeKey(HttpMethod, String)}.
      *
      * <p>These are browser-session surfaces: the interactive login flows, the admin console,
-     * team-only automatic publication grants, and skill deletion through the web surface, which goes through {@code /api/v1} or
+     * the GitHub repository catalog, team-only automatic publication grants, and skill deletion, which goes through {@code /api/v1} or
      * {@code /api/cli/v1} with the {@code skill:delete} scope instead. Bearer tokens are
      * deliberately rejected on exactly these routes and nowhere else &mdash; anything else the
      * authorization list opens must also be reachable with a token holding the required scope.</p>
@@ -333,6 +335,8 @@ public class RouteSecurityPolicyRegistry {
             "ANY /api/v1/auth/direct/login",
             "ANY /api/v1/auth/local/**",
             "ANY /api/v1/admin/**",
+            "GET /api/web/github-repositories",
+            "GET /api/web/github-repositories/*",
             "POST /api/v1/skills/avatar-uploads",
             "POST /api/web/skills/avatar-uploads",
             "POST /api/v1/suites/reviews/*/approve",
