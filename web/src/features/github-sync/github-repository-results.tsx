@@ -132,7 +132,9 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
               {item.preview?.map(member => <div key={member.id} className="flex min-w-0 items-center gap-2 py-1.5 text-xs">
                 <Package className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                 <span className="min-w-0 truncate">{member.displayName}</span>
-                <code className="ml-auto shrink-0 text-muted-foreground">{member.version}</code>
+                <code className="ml-auto max-w-28 shrink-0 truncate text-muted-foreground" title={member.version}>
+                  {member.syncRevision ? t('review.githubRevisionValue', { count: member.syncRevision }) : member.version}
+                </code>
               </div>)}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
@@ -189,7 +191,7 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
       </div> : null}
       </aside>
       <div className="github-repository-body">
-      <TabsList className="flex gap-4 sm:gap-6">
+      <TabsList className="flex gap-4 overflow-x-auto [scrollbar-width:none] sm:gap-6">
         <TabsTrigger value="members" className="gap-1.5 sm:gap-2"><Layers className="hidden size-4 sm:block" aria-hidden="true" />{t('githubCatalog.repositoryMembers')} <span className="text-xs tabular-nums text-muted-foreground">{selected?.availableCount ?? repository.memberCount}</span></TabsTrigger>
         <TabsTrigger value="history" className="gap-1.5 sm:gap-2"><History className="hidden size-4 sm:block" aria-hidden="true" />{t('githubCatalog.repositorySnapshotHistory')} <span className="text-xs tabular-nums text-muted-foreground">{snapshots.length}</span></TabsTrigger>
       </TabsList>
