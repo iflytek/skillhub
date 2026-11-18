@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate, useSearch } from '@tanstack/react-router'
+import { Link, useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { ArrowUpRight, Download, Search, Github, Layers, FolderGit2 } from 'lucide-react'
 import type { SkillSummary } from '@/api/types'
@@ -46,6 +46,7 @@ export function GithubCatalogSkillRow({ skill, onOpen }: { skill: SkillSummary; 
 export function GithubSkillsPage() {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const { pathname, searchStr } = useLocation()
   const { q, sort, page, view, repositoryId, repositoryPage, memberQuery, snapshotId, repositoryTab } = useSearch({ from: '/github' })
   const [input, setInput] = useState(q)
   useEffect(() => setInput(q), [q])
@@ -103,7 +104,7 @@ export function GithubSkillsPage() {
           <Search className="size-7" aria-hidden="true" /><p>{t('githubCatalog.empty')}</p>
           {q && <Button variant="outline" size="sm" onClick={() => void navigate({ to: '/github', search: { q: '', sort, page: 0 } })}>{t('githubCatalog.clearRepositorySearch')}</Button>}
         </div> : null}
-        {skills.data?.items.length ? <div className="grid gap-4 md:grid-cols-2">{skills.data.items.map((skill) => <GithubCatalogSkillRow key={skill.id} skill={skill} onOpen={() => navigate({ to: `/space/${skill.namespace}/${encodeURIComponent(skill.slug)}`, search: { returnTo: location.pathname + location.search } })} />)}</div> : null}
+        {skills.data?.items.length ? <div className="grid gap-4 md:grid-cols-2">{skills.data.items.map((skill) => <GithubCatalogSkillRow key={skill.id} skill={skill} onOpen={() => navigate({ to: `/space/${skill.namespace}/${encodeURIComponent(skill.slug)}`, search: { returnTo: pathname + searchStr } })} />)}</div> : null}
         {skills.data && skills.data.total > PAGE_SIZE ? <Pagination analyticsId="github.catalog.paginate" page={page} totalPages={Math.ceil(skills.data.total / PAGE_SIZE)} onPageChange={(next) => navigate({ to: '/github', search: { q, sort, page: next } })} /> : null}
       </>}
     </section>
