@@ -135,7 +135,11 @@ export function useBatchReview(filterKey: string) {
     <Dialog open={clearOpen} onOpenChange={setClearOpen}><DialogContent><DialogHeader><DialogTitle>{t('reviewBatch.changeFilters')}</DialogTitle><DialogDescription>{t('reviewBatch.clearWarning')}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setClearOpen(false)}>{t('reviewBatch.cancel')}</Button><Button onClick={() => { setSelected([]); setClearOpen(false); pendingFilter.current?.(); pendingFilter.current = null }}>{t('reviewBatch.continue')}</Button></DialogFooter></DialogContent></Dialog>
     <Dialog open={open} onOpenChange={next => { if (!decide.isPending && !reconcile.isPending) setOpen(next) }}>
       <DialogContent className="flex max-h-[min(48rem,calc(100dvh-2rem))] w-[min(calc(100vw-2rem),48rem)] flex-col gap-0 overflow-hidden p-0" hideClose
-        onCloseAutoFocus={event => { event.preventDefault(); if (returnFocus.current?.isConnected) returnFocus.current.focus(); document.getElementById('review-results')?.focus() }}>
+        onCloseAutoFocus={event => {
+          event.preventDefault()
+          if (returnFocus.current?.isConnected) returnFocus.current.focus()
+          if (document.activeElement !== returnFocus.current) document.getElementById('review-results')?.focus()
+        }}>
         {!decide.isPending && !reconcile.isPending && <Button variant="ghost" size="icon" className="absolute right-3 top-3 h-11 w-11 md:h-7 md:w-7" aria-label={t('reviewBatch.close')} onClick={() => setOpen(false)}><X className="h-4 w-4" /></Button>}
         <DialogHeader className="shrink-0 border-b px-6 py-5 pr-16 text-left md:pr-12">
           <DialogTitle className="flex items-center gap-2">{result ? <CheckCheck className="h-5 w-5" /> : action === 'APPROVE' ? <Check className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}{t(result ? 'reviewBatch.resultTitle' : action === 'APPROVE' ? 'reviewBatch.approveTitle' : 'reviewBatch.rejectTitle')}</DialogTitle>

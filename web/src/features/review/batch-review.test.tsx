@@ -15,11 +15,40 @@ const task = (id: number): ReviewTask => ({ id, skillVersionId: id, skillSlug: `
 function Harness({ page = 0 }: { page?: number }) {
   const b = useBatchReview('same-filter')
   const tasks = Array.from({length:20},(_,i)=>task(page*20+i+1))
-  return <><button onClick={()=>b.selectPage(tasks)}>select page</button><button onClick={()=>b.guardFilter(()=>{})}>change filter</button>{b.toolbar}{b.dialogs}</>
+  return <><h2 id="review-results" tabIndex={-1}>results</h2><button onClick={()=>b.selectPage(tasks)}>select page</button><button onClick={()=>b.guardFilter(()=>{})}>change filter</button>{b.toolbar}{b.dialogs}</>
 }
 function mount() { const client = new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}}); const view=render(<QueryClientProvider client={client}><Harness /></QueryClientProvider>); return {...view,setPage:(page:number)=>view.rerender(<QueryClientProvider client={client}><Harness page={page} /></QueryClientProvider>)} }
 afterEach(()=>{cleanup();vi.resetAllMocks()})
 describe('batch review flow',()=>{
+  it('returns focus to the initiating button when a batch is cancelled',async()=>{
+    vi.mocked(reviewApi.batchPreview).mockResolvedValue({items:[{id:1,outcome:'READY',reason:'ready',message:'ready'}]})
+    mount();fireEvent.click(screen.getByText('select page'))
+    const trigger=screen.getByRole('button',{name:'批量通过'});trigger.focus();fireEvent.click(trigger)
+    await screen.findByText('通过 1 项')
+    fireEvent.click(screen.getByRole('button',{name:'取消'}))
+    await waitFor(()=>expect(document.activeElement).toBe(trigger))
+  })
+  it('focuses the results heading after the completed batch removes its initiating button',async()=>{
+    const items=Array.from({length:20},(_,i)=>({id:i+1,outcome:'READY',reason:'ready',message:'ready'}))
+    vi.mocked(reviewApi.batchPreview).mockResolvedValue({items})
+    vi.mocked(reviewApi.batchDecide).mockResolvedValue({items:items.map(item=>({...item,outcome:'APPROVED'}))})
+    mount();fireEvent.click(screen.getByText('select page'))
+    const trigger=screen.getByRole('button',{name:'批量通过'});trigger.focus();fireEvent.click(trigger)
+    fireEvent.click(await screen.findByText('通过 20 项'))
+    fireEvent.click(await screen.findByRole('button',{name:'返回列表'}))
+    expect(trigger.isConnected).toBe(false)
+    await waitFor(()=>expect(document.activeElement).toBe(screen.getByRole('heading',{name:'results'})))
+  })
+  it('focuses the results heading when cancelling while preview keeps the initiating button disabled',async()=>{
+    let resolve!: (value: {items:[]})=>void
+    vi.mocked(reviewApi.batchPreview).mockImplementation(()=>new Promise(r=>{resolve=r}))
+    mount();fireEvent.click(screen.getByText('select page'))
+    const trigger=screen.getByRole('button',{name:'批量通过'});trigger.focus();fireEvent.click(trigger)
+    await screen.findByText(zh.reviewBatch.checking)
+    fireEvent.click(screen.getByRole('button',{name:'取消'}))
+    await waitFor(()=>expect(document.activeElement).toBe(screen.getByRole('heading',{name:'results'})))
+    await act(async()=>resolve({items:[]}))
+  })
   it('retains explicit selections across pages and caps a long queue at 50',()=>{
     const view=mount();fireEvent.click(screen.getByText('select page'));view.setPage(1);fireEvent.click(screen.getByText('select page'))
     expect(screen.getByText('已选 40 项')).toBeTruthy();view.setPage(2);fireEvent.click(screen.getByText('select page'))
