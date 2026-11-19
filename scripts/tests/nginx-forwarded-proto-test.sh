@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TEMPLATE="$REPO_ROOT/web/nginx.conf.template"
-NGINX_IMAGE="${NGINX_TEST_IMAGE:-nginx:alpine}"
+NGINX_IMAGE="${NGINX_TEST_IMAGE:-nginx:1.31.9-alpine}"
 TEST_ID="skillhub-nginx-forwarded-proto-$$"
 NETWORK="${TEST_ID}-network"
 BACKEND="${TEST_ID}-backend"

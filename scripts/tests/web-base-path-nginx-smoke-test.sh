@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Real container smoke test: runs the actual nginx:alpine entrypoint with the
+# Real container smoke test: runs the actual pinned Nginx entrypoint with the
 # repo's nginx template + 20-base-path.sh, then verifies over HTTP that a
 # sub-path deployment serves real assets (not the SPA fallback) and redirects
 # the bare prefix. This catches routing regressions that a text-only check
@@ -13,7 +13,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-NGINX_IMAGE="${NGINX_SMOKE_IMAGE:-nginx:alpine}"
+NGINX_IMAGE="${NGINX_SMOKE_IMAGE:-nginx:1.31.9-alpine}"
 name="skillhub-base-path-smoke-$$"
 
 tmp=$(mktemp -d)

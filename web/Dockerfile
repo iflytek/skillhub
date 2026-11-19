@@ -13,7 +13,7 @@ ARG VITE_BASE_PATH=/__SKILLHUB_WEB_BASE_PATH__/
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
 RUN pnpm build
 
-FROM nginx:alpine
+FROM nginx:1.31.9-alpine
 ENV SKILLHUB_TRUST_FORWARDED_PROTO=false
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 # Record a fixed build-time base so the entrypoint defaults SKILLHUB_WEB_BASE_PATH
