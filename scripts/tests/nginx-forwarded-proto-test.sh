@@ -3,7 +3,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TEMPLATE="$REPO_ROOT/web/nginx.conf.template"
-NGINX_IMAGE="${NGINX_TEST_IMAGE:-nginx:alpine}"
+NGINX_IMAGE="${NGINX_TEST_IMAGE:-nginx:1.30.7-trixie}"
 TEST_ID="skillhub-nginx-forwarded-proto-$$"
 NETWORK="${TEST_ID}-network"
 BACKEND="${TEST_ID}-backend"
@@ -31,7 +31,7 @@ wait_for_nginx() {
   local container="$1"
   local attempt
   for attempt in {1..30}; do
-    if docker exec "$container" wget -qO- http://127.0.0.1/nginx-health >/dev/null 2>&1; then
+    if docker exec "$container" curl -fsS http://127.0.0.1/nginx-health >/dev/null 2>&1; then
       return 0
     fi
     sleep 0.2
@@ -108,11 +108,11 @@ assert_proto() {
   local path="${4:-/api/proto}"
   local actual
   if [[ -n "$header" ]]; then
-    actual="$(docker exec "$container" wget -qO- \
-      --header="X-Forwarded-Proto: $header" \
+    actual="$(docker exec "$container" curl -fsS \
+      --header "X-Forwarded-Proto: $header" \
       "http://127.0.0.1$path")"
   else
-    actual="$(docker exec "$container" wget -qO- "http://127.0.0.1$path")"
+    actual="$(docker exec "$container" curl -fsS "http://127.0.0.1$path")"
   fi
   [[ "$actual" == "$expected" ]] \
     || fail "$container forwarded proto '$actual', expected '$expected' for $path with header '${header:-<none>}'"
@@ -229,7 +229,7 @@ start_proxy "$DNS_PROXY" false "$DNS_BACKEND"
 assert_dns_response() {
   local expected="$1"
   local actual
-  actual="$(docker exec "$DNS_PROXY" wget -qO- http://127.0.0.1/api/dns)" \
+  actual="$(docker exec "$DNS_PROXY" curl -fsS http://127.0.0.1/api/dns)" \
     || fail "DNS proxy request failed; expected '$expected'"
   [[ "$actual" == "$expected" ]] \
     || fail "DNS proxy returned '$actual', expected '$expected'"
@@ -247,7 +247,7 @@ refreshed=false
 saw_stale_response=false
 refresh_started=$SECONDS
 for attempt in {1..36}; do
-  if actual="$(docker exec "$DNS_PROXY" wget -qO- http://127.0.0.1/api/dns 2>/dev/null)"; then
+  if actual="$(docker exec "$DNS_PROXY" curl -fsS http://127.0.0.1/api/dns 2>/dev/null)"; then
     if [[ "$actual" == second ]]; then
       refreshed=true
       break

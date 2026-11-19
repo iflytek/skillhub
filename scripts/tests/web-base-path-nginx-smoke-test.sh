@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Real container smoke test: runs the actual nginx:alpine entrypoint with the
+# Real container smoke test: runs the actual pinned Nginx entrypoint with the
 # repo's nginx template + 20-base-path.sh, then verifies over HTTP that a
 # sub-path deployment serves real assets (not the SPA fallback) and redirects
 # the bare prefix. This catches routing regressions that a text-only check
@@ -13,7 +13,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-NGINX_IMAGE="${NGINX_SMOKE_IMAGE:-nginx:alpine}"
+NGINX_IMAGE="${NGINX_SMOKE_IMAGE:-nginx:1.30.7-trixie}"
 name="skillhub-base-path-smoke-$$"
 
 tmp=$(mktemp -d)
@@ -286,5 +286,31 @@ if [ "$fixed_asset" != 'FIXED_APP_JS_MARKER' ]; then
   echo "fixed-base asset must serve the real file, got: $fixed_asset" >&2
   exit 1
 fi
+
+# Compose overrides the Dockerfile HEALTHCHECK. Execute both deployment commands
+# in the actual base image so a missing executable cannot silently break rollout.
+python3 - "$ROOT_DIR" "$fixed_name" <<'PY'
+import json
+import os
+import subprocess
+import sys
+
+root, container = sys.argv[1:]
+for files in (("compose.release.yml",), ("docker-compose.yml", "docker-compose.staging.yml")):
+    filename = files[-1]
+    compose_files = [arg for file in files for arg in ("-f", f"{root}/{file}")]
+    rendered = subprocess.run(
+        ["docker", "compose", "--env-file", "/dev/null", *compose_files,
+         "config", "--format", "json"],
+        check=True, capture_output=True, text=True,
+        env={**os.environ, "SKILLHUB_DOWNLOAD_ANON_COOKIE_SECRET": "nginx-smoke-render-only"},
+    )
+    command = json.loads(rendered.stdout)["services"]["web"]["healthcheck"]["test"]
+    if command[0] != "CMD":
+        raise SystemExit(f"{filename}: expected an executable health check")
+    result = subprocess.run(["docker", "exec", container, *command[1:]], capture_output=True)
+    if result.returncode:
+        raise SystemExit(f"{filename}: Web health check failed in the Nginx image")
+PY
 
 printf '%s\n' 'web-base-path-nginx-smoke-test passed'

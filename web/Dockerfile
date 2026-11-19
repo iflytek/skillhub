@@ -13,7 +13,9 @@ ARG VITE_BASE_PATH=/__SKILLHUB_WEB_BASE_PATH__/
 ENV VITE_BASE_PATH=$VITE_BASE_PATH
 RUN pnpm build
 
-FROM nginx:alpine
+# The patched Debian stable image is also published for linux/riscv64.
+# Verify registry manifests: the new Alpine tags can lag the source tag list.
+FROM nginx:1.30.7-trixie
 ENV SKILLHUB_TRUST_FORWARDED_PROTO=false
 ENV NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1
 # Record a fixed build-time base so the entrypoint defaults SKILLHUB_WEB_BASE_PATH
@@ -34,4 +36,4 @@ COPY docker-entrypoint.d/40-analytics.sh /docker-entrypoint.d/40-analytics.sh
 RUN chmod +x /docker-entrypoint.d/20-base-path.sh /docker-entrypoint.d/30-runtime-config.sh /docker-entrypoint.d/40-analytics.sh
 EXPOSE 80
 HEALTHCHECK --interval=10s --timeout=3s \
-  CMD wget -qO- http://127.0.0.1/nginx-health || exit 1
+  CMD curl -fsS http://127.0.0.1/nginx-health || exit 1
