@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
+import { getSearchInput } from './helpers/search-seed'
 
 test.describe('Light and dark theme', () => {
   test.beforeEach(async ({ page }) => {
@@ -169,7 +170,7 @@ test.describe('Light and dark theme', () => {
     await page.getByRole('link', { name: 'Skill Marketplace', exact: true }).first().click()
     await expect(page).toHaveURL(/\/search(?:\?|$)/)
     await expect(page.locator('html')).toHaveClass(/dark/)
-    await expect(page.getByPlaceholder('Search skills...')).toBeVisible()
+    await expect(getSearchInput(page)).toBeVisible()
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
     await page.screenshot({ path: testInfo.outputPath('dark-desktop.png'), fullPage: true })
 
