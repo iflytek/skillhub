@@ -24,4 +24,4 @@ Local follow-up acceptance covers real uploads/scanning, authorized group reads,
 ## Review interaction consistency revision
 - [x] Update Figma: table-integrated selection actions and dedicated repository snapshot page
 - [x] Implement shared result surface, dedicated route and compatible return context
-- [ ] Verify navigation, selection, narrow screens and retained local preview
+- [x] Verify navigation, selection, narrow screens and retained local preview
