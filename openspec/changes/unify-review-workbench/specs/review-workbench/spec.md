@@ -106,3 +106,19 @@ The Web workbench SHALL present compact source capsules in the header for all su
 
 ### Requirement: Discoverable skill repository provenance
 GitHub skill detail SHALL reuse its existing provenance card and provide a source-repository action. Fixed commit/path/license information SHALL remain bound to the displayed source data. User-submitted skills SHALL not show a fabricated repository or description; missing repository descriptions SHALL remain omitted.
+### Requirement: Review actions belong to their result table
+The system SHALL place selection actions within the same result surface as its table rows and pagination, for ordinary review lists and repository member reviews.
+
+#### Scenario: Selection replaces the result toolbar in place
+- **WHEN** a reviewer selects one or more eligible tasks
+- **THEN** the table toolbar shows the selection count, clear, reject and approve actions in place of its normal result controls, without creating a separate page-level action panel
+- **AND** existing preview, confirmation, authorization and decision semantics remain unchanged
+
+### Requirement: Repository snapshot review has an independent page
+The system SHALL open a repository snapshot's review members on a dedicated authenticated route rather than expanding the review-center list.
+
+#### Scenario: Navigate through the review hierarchy
+- **WHEN** a reviewer opens a snapshot, opens a member review, and returns
+- **THEN** the member returns to the same snapshot page with its member filters, page, valid selection and reading position restored
+- **AND** returning from that page restores the original repository-list filters, page and reading position without replacing them with member filters
+- **AND** legacy snapshot query links resolve to the dedicated snapshot page

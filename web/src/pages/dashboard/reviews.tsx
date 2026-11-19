@@ -19,6 +19,7 @@ import { Pagination } from '@/shared/components/pagination'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
+import { ReviewResultsPanel } from '@/features/review/review-results-panel'
 import { ReviewRepositoryGroups } from '@/features/review/review-repository-groups'
 import { REVIEW_ORIGINS } from '@/features/review/review-center-filters'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -110,6 +111,10 @@ export function ReviewsPage() {
     queryClient.setQueryData(scrollKey, window.scrollY)
     void navigate({ to: '/dashboard/reviews/$id', params: { id: String(review.id) }, search: { ...reviewCenterSearch(applied, page), reviewView: search.reviewView, snapshotId: search.snapshotId, groupPage: search.groupPage, memberQ: search.memberQ } })
   }
+  // Keep previously shared snapshot URLs working after moving members to their own page.
+  useEffect(() => {
+    if (search.snapshotId) void navigate({ to: '/dashboard/reviews/repositories/$snapshotId', params: { snapshotId: String(search.snapshotId) }, search, replace: true })
+  }, [search.snapshotId, search, navigate])
   const formatDate = (value: string) => formatLocalDateTime(value, i18n.language)
   const renderObject = (review: ReviewTask) => {
     const slug = review.subjectSlug || review.skillSlug || ''
@@ -149,24 +154,24 @@ export function ReviewsPage() {
     {profileMode ? <ProfileReviewTable /> : <TabsContent value={applied.originType} className="mt-0 space-y-7">
       <ReviewCenterFilterForm value={draft} namespaces={options} namespaceLoading={scopes.isLoading || scopes.isError} onChange={setDraft} onApply={() => apply(draft)} onReset={() => apply({ ...DEFAULT_REVIEW_FILTERS })} />
       {scopes.isError && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm"><p className="text-destructive">{t('reviewCenter.scopeFailed')}</p><Button type="button" size="sm" variant="outline" onClick={() => void scopes.refetch()}>{t('reviewCenter.retry')}</Button></div>}
-      {batch.toolbar}
       {batch.dialogs}
       {applied.originType === 'GITHUB_SYNC' && <div className="flex justify-end gap-2 [&_button]:min-h-11 sm:[&_button]:min-h-8">
         {(['rows', 'snapshots'] as const).map(view => <Button key={view} variant={(grouped ? 'snapshots' : 'rows') === view ? 'secondary' : 'outline'} disabled={batch.busy} onClick={() => batch.guardFilter(() => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied), reviewView: view } }) })}>{t(`reviewGroups.${view}`)}</Button>)}
       </div>}
-      {grouped ? <ReviewRepositoryGroups filters={applied} namespaceId={scope?.id} enabled={!scopePending && !scopes.isError} page={page} snapshotId={search.snapshotId} batch={batch} memberQuery={search.memberQ ?? ''}
-        onMemberQuery={memberQ => batch.guardFilter(() => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied), reviewView: 'snapshots', snapshotId: search.snapshotId, groupPage: search.groupPage, memberQ: memberQ || undefined } }) })}
-        onGroup={snapshotId => batch.guardFilter(() => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied, snapshotId ? 0 : search.groupPage ?? 0), reviewView: 'snapshots', snapshotId, groupPage: snapshotId ? page : undefined } }) })}
-        onPage={nextPage => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied, nextPage), reviewView: 'snapshots', snapshotId: search.snapshotId, groupPage: search.groupPage, memberQ: search.memberQ } }) }}
-        onReview={openReview} onReady={restoreScroll} /> : <div className="space-y-4" aria-busy={query.isFetching}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 id="review-results" tabIndex={-1} className="text-sm font-medium">{query.isLoading || scopePending ? t('reviewCenter.loading') : query.isError ? t('reviewCenter.results') : t('reviewCenter.resultsCount', { count: query.data?.totalElements ?? 0 })}</h2>
+      {grouped ? <ReviewRepositoryGroups filters={applied} namespaceId={scope?.id} enabled={!scopePending && !scopes.isError} page={page}
+        onGroup={snapshotId => batch.guardFilter(() => {
+          queryClient.setQueryData(scrollKey, window.scrollY)
+          void navigate({ to: '/dashboard/reviews/repositories/$snapshotId', params: { snapshotId: String(snapshotId) }, search: { ...reviewCenterSearch(applied), reviewView: 'snapshots', groupPage: page } })
+        })}
+        onPage={nextPage => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied, nextPage), reviewView: 'snapshots' } }) }}
+        onReady={restoreScroll} /> : <ReviewResultsPanel selected={batch.selected.length > 0} busy={query.isFetching} header={batch.toolbar ?? <>
+          <h2 className="text-sm font-medium">{query.isLoading || scopePending ? t('reviewCenter.loading') : query.isError ? t('reviewCenter.results') : t('reviewCenter.resultsCount', { count: query.data?.totalElements ?? 0 })}</h2>
           <Button variant="ghost" size="sm" className="md:hidden" disabled={batch.busy || !query.data?.items.some(isBatchReviewTask)} onClick={() => batch.selectPage(query.data?.items ?? [])}>{t('reviewBatch.selectPage')}</Button>
           <Select value={applied.sortDirection} onValueChange={(sortDirection) => apply({ ...applied, sortDirection: sortDirection === 'ASC' ? 'ASC' : 'DESC' })}>
             <SelectTrigger aria-label={t('reviewCenter.sortLabel')} className="h-9 w-36 border-0 bg-transparent text-xs shadow-none"><SelectValue /></SelectTrigger>
             <SelectContent className="min-w-0 w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)]"><SelectItem value="DESC">{t('reviewCenter.newest')}</SelectItem><SelectItem value="ASC">{t('reviewCenter.oldest')}</SelectItem></SelectContent>
           </Select>
-        </div>
+        </>}>
         {!scopes.isLoading && !scopes.isError && applied.namespace !== 'ALL' && !scope ? <Card className="space-y-3 p-6" role="alert"><p>{t('reviewCenter.scopeFailed')}</p><Button type="button" variant="outline" onClick={() => void scopes.refetch()}>{t('reviewCenter.retry')}</Button></Card>
           : scopes.isError ? null : query.isError ? <Card className="space-y-3 p-6" role="alert"><p>{t('reviewCenter.loadFailed')}</p><Button type="button" variant="outline" onClick={() => void query.refetch()}>{t('reviewCenter.retry')}</Button></Card>
             : query.isLoading || scopePending ? <div className="space-y-3" aria-label={t('reviewCenter.loading')}>{Array.from({ length: 4 }, (_, index) => <div key={index} className="h-20 animate-shimmer rounded-lg" />)}</div>
@@ -174,14 +179,14 @@ export function ReviewsPage() {
                 : <>
                   <div className="hidden overflow-x-auto md:block">
                     <table className="w-full min-w-[700px] table-fixed text-left">
-                      <thead className="bg-secondary text-xs font-medium text-muted-foreground"><tr><th className="w-10 rounded-l-lg px-3 py-3"><input type="checkbox" className="h-4 w-4 accent-primary" aria-label={t('reviewBatch.selectPage')} disabled={batch.busy || !query.data.items.some(isBatchReviewTask)} checked={query.data.items.some(isBatchReviewTask) && query.data.items.filter(isBatchReviewTask).every(task => batch.selected.some(item => item.id === task.id))} ref={input => { if (input) input.indeterminate = query.data.items.some(task => batch.selected.some(item => item.id === task.id)) && !query.data.items.filter(isBatchReviewTask).every(task => batch.selected.some(item => item.id === task.id)) }} onChange={() => batch.selectPage(query.data.items)} /></th><th className="w-[37%] px-4 py-3">{t('reviewCenter.columns.object')}</th><th className="w-[16%] px-4 py-3">{t('reviewCenter.columns.kind')}</th><th className="w-[20%] px-4 py-3">{t('reviewCenter.columns.source')}</th><th className="w-[17%] px-4 py-3">{t('reviewCenter.columns.submitter')}</th><th className="w-[6%] rounded-r-lg px-2 py-3"><span className="sr-only">{t('reviewCenter.columns.action')}</span></th></tr></thead>
-                      <tbody className="divide-y divide-border/70">{query.data.items.map((review) => <tr key={review.id} className={batch.selected.some(item => item.id === review.id) ? "bg-accent/70" : "hover:bg-secondary/70"}><td className="px-3 py-5 align-top">{batch.checkbox(review)}</td><td className="px-4 py-5 align-top">{renderObject(review)}</td><td className="px-4 py-5 align-top">{renderMetadata(review)}</td><td className="px-4 py-5 align-top"><p className="text-sm">{t(`reviewCenter.origin.${review.originType || 'USER'}`)}</p><p className="mt-1 break-all text-xs text-muted-foreground">{review.namespace}</p></td><td className="px-4 py-5 align-top"><p className="break-words text-sm">{review.submittedByName || review.submittedBy}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(review.submittedAt)}</p></td><td className="px-2 py-5 align-top"><Button data-analytics-id="review.detail.open" variant="ghost" size="icon" title={t('reviewCenter.open')} aria-label={t('reviewCenter.open')} onClick={() => openReview(review)}><Eye className="h-4 w-4" /></Button></td></tr>)}</tbody>
+                      <thead className="bg-secondary text-xs font-medium text-muted-foreground"><tr><th className="w-10 px-3 py-3"><input type="checkbox" className="h-4 w-4 accent-primary" aria-label={t('reviewBatch.selectPage')} disabled={batch.busy || !query.data.items.some(isBatchReviewTask)} checked={query.data.items.some(isBatchReviewTask) && query.data.items.filter(isBatchReviewTask).every(task => batch.selected.some(item => item.id === task.id))} ref={input => { if (input) input.indeterminate = query.data.items.some(task => batch.selected.some(item => item.id === task.id)) && !query.data.items.filter(isBatchReviewTask).every(task => batch.selected.some(item => item.id === task.id)) }} onChange={() => batch.selectPage(query.data.items)} /></th><th className="w-[37%] px-4 py-3">{t('reviewCenter.columns.object')}</th><th className="w-[16%] px-4 py-3">{t('reviewCenter.columns.kind')}</th><th className="w-[20%] px-4 py-3">{t('reviewCenter.columns.source')}</th><th className="w-[17%] px-4 py-3">{t('reviewCenter.columns.submitter')}</th><th className="w-[6%] px-2 py-3"><span className="sr-only">{t('reviewCenter.columns.action')}</span></th></tr></thead>
+                      <tbody className="divide-y divide-border/70">{query.data.items.map((review) => <tr key={review.id} className={batch.selected.some(item => item.id === review.id) ? "bg-accent/70" : "hover:bg-secondary/70"}><td className="px-3 py-5 align-top">{batch.checkbox(review)}</td><td className="px-4 py-5 align-top">{renderObject(review)}</td><td className="px-4 py-5 align-top">{renderMetadata(review)}</td><td className="px-4 py-5 align-top"><p className="text-sm">{t(`reviewCenter.origin.${review.originType || 'USER'}`)}</p><p className="mt-1 break-all text-xs text-muted-foreground">{review.namespace}</p></td><td className="px-4 py-5 align-top"><p className="truncate text-sm" title={review.submittedByName || review.submittedBy}>{review.submittedByName || review.submittedBy}</p><p className="mt-1 text-xs text-muted-foreground">{formatDate(review.submittedAt)}</p></td><td className="px-2 py-5 align-top"><Button data-analytics-id="review.detail.open" variant="ghost" size="icon" title={t('reviewCenter.open')} aria-label={t('reviewCenter.open')} onClick={() => openReview(review)}><Eye className="h-4 w-4" /></Button></td></tr>)}</tbody>
                     </table>
                   </div>
-                  <div className="divide-y divide-border md:hidden">{query.data.items.map((review) => <article key={review.id} className="space-y-4 py-5"><div className="flex items-start gap-3"><label className="flex min-h-11 min-w-11 items-center justify-center">{batch.checkbox(review)}</label>{renderObject(review)}</div><div>{renderMetadata(review)}</div><div className="flex items-end justify-between gap-4"><p className="min-w-0 break-words text-xs text-muted-foreground">{review.submittedByName || review.submittedBy} · {t(`reviewCenter.origin.${review.originType || 'USER'}`)}<span className="mt-1 block">{formatDate(review.submittedAt)}</span></p><Button data-analytics-id="review.detail.open" variant="link" className="shrink-0" onClick={() => openReview(review)}>{t('reviewCenter.open')}</Button></div></article>)}</div>
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 text-xs text-muted-foreground"><p>{t('reviewCenter.pageSummary', { total: query.data.totalElements, page: page + 1 })}</p><Pagination analyticsId="review.list.paginate" page={page} totalPages={Math.max(query.data.totalPages, 1)} onPageChange={(nextPage) => apply(applied, nextPage)} /></div>
+                  <div className="divide-y divide-border px-4 md:hidden">{query.data.items.map((review) => <article key={review.id} className="space-y-4 py-5"><div className="flex items-start gap-3"><label className="flex min-h-11 min-w-11 items-center justify-center">{batch.checkbox(review)}</label>{renderObject(review)}</div><div>{renderMetadata(review)}</div><div className="flex items-end justify-between gap-4"><p className="min-w-0 break-words text-xs text-muted-foreground">{review.submittedByName || review.submittedBy} · {t(`reviewCenter.origin.${review.originType || 'USER'}`)}<span className="mt-1 block">{formatDate(review.submittedAt)}</span></p><Button data-analytics-id="review.detail.open" variant="link" className="shrink-0" onClick={() => openReview(review)}>{t('reviewCenter.open')}</Button></div></article>)}</div>
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-xs text-muted-foreground"><p>{t('reviewCenter.pageSummary', { total: query.data.totalElements, page: page + 1 })}</p><Pagination analyticsId="review.list.paginate" page={page} totalPages={Math.max(query.data.totalPages, 1)} onPageChange={(nextPage) => apply(applied, nextPage)} /></div>
                 </>}
-      </div>}
+      </ReviewResultsPanel>}
     </TabsContent>}
   </Tabs>
 }

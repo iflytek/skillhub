@@ -117,6 +117,24 @@ describe('unified review center', () => {
     expect(mocks.navigate).toHaveBeenLastCalledWith(expect.objectContaining({ search: expect.objectContaining({ originType: 'USER', page: undefined }) }))
   })
 
+  it('keeps batch actions inside the result table surface', async () => {
+    mocks.list.mockReturnValue({ data: { items: [{ id: 1, subjectType: 'SKILL_VERSION', status: 'PENDING', namespace: 'design', skillSlug: 'notes', displayName: 'Meeting notes', submittedAt: '2026-11-05T10:00:00Z' }], totalElements: 1, totalPages: 1 }, refetch: mocks.refetch })
+    renderPage()
+    fireEvent.click(screen.getAllByLabelText('reviewBatch.selectTask')[0])
+    const toolbar = await screen.findByRole('region', { name: 'reviewBatch.selection' })
+    expect(toolbar.closest('[data-review-results-panel]')).toBeTruthy()
+    expect(toolbar.closest('[data-review-results-toolbar]')).toBeTruthy()
+  })
+
+  it('opens a repository snapshot on its own route and preserves the list page', async () => {
+    mocks.search = { originType: 'GITHUB_SYNC', reviewView: 'snapshots', page: 3 }
+    vi.spyOn(reviewApi, 'syncGroups').mockResolvedValue({ items: [{ snapshotId: 42, namespaceId: 8, repositoryId: 100, scanPassed: 2, scanWaiting: 0, scanBlocked: 0, owner: 'upstream', repository: 'skills', namespace: 'team', commitSha: 'a'.repeat(40), capturedAt: '2026-11-19T00:00:00Z', total: 2 }], total: 1, page: 3, size: 20 })
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'reviewGroups.open' }))
+    expect(mocks.navigate).toHaveBeenLastCalledWith(expect.objectContaining({ to: '/dashboard/reviews/repositories/$snapshotId', params: { snapshotId: '42' }, search: expect.objectContaining({ groupPage: 3 }) }))
+    expect(screen.queryByText('reviewGroups.members')).toBeNull()
+  })
+
   it('keeps draft changes out of the query until Search then resets the page', () => {
     mocks.search = { page: 2 }
     renderPage()

@@ -4585,6 +4585,9 @@
     "close": "Закрыть"
   },
   "reviewGroups": {
+    "detailTitle": "Repository snapshot review",
+    "detailDescription": "Review skill requests from this fixed repository commit.",
+    "scanColumn": "Security scan",
     "title": "Repository snapshot reviews",
     "members": "Submitted members",
     "back": "Back to snapshots",

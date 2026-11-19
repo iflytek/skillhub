@@ -5,15 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { reviewApi } from '@/api/client'
 import { ReviewRepositoryGroups } from './review-repository-groups'
 import { DEFAULT_REVIEW_FILTERS } from './review-center-filters'
-import type { useBatchReview } from './batch-review'
 
 vi.mock('react-i18next', async (original) => ({ ...await original<typeof import('react-i18next')>(), useTranslation: () => ({ t: (key: string, args?: Record<string, unknown>) => args?.total ? `${key} ${args.total}` : key, i18n: { language: 'en' } }) }))
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 function setup(enabled = true) {
   const onGroup = vi.fn(), onPage = vi.fn()
-  const batch = { busy: false, selected: [], checkbox: () => null, selectPage: vi.fn() } as unknown as ReturnType<typeof useBatchReview>
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  render(<QueryClientProvider client={client}><ReviewRepositoryGroups filters={{ ...DEFAULT_REVIEW_FILTERS, originType: 'GITHUB_SYNC' }} page={0} enabled={enabled} batch={batch} onGroup={onGroup} onPage={onPage} onReview={vi.fn()} /></QueryClientProvider>)
+  render(<QueryClientProvider client={client}><ReviewRepositoryGroups filters={{ ...DEFAULT_REVIEW_FILTERS, originType: 'GITHUB_SYNC' }} page={0} enabled={enabled} onGroup={onGroup} onPage={onPage} /></QueryClientProvider>)
   return { onGroup, onPage }
 }
 describe('repository review groups', () => {

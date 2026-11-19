@@ -4579,6 +4579,9 @@
     "close": "关闭"
   },
   "reviewGroups": {
+    "detailTitle": "仓库快照审核",
+    "detailDescription": "核查本次固定提交中的技能申请。",
+    "scanColumn": "安全扫描",
     "title": "仓库快照审核",
     "members": "本次申请成员",
     "back": "返回快照列表",

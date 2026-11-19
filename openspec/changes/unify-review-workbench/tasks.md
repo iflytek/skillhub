@@ -20,3 +20,8 @@
 - [x] Local runtime and Ego desktop/mobile acceptance with evidence
 
 Local follow-up acceptance covers real uploads/scanning, authorized group reads, explicit batch decisions, return-state restoration and narrow-screen geometry. GitHub source/snapshot associations use controlled local fixtures; live GitHub acquisition, independent review and remote CI remain outside this completed local acceptance.
+
+## Review interaction consistency revision
+- [x] Update Figma: table-integrated selection actions and dedicated repository snapshot page
+- [x] Implement shared result surface, dedicated route and compatible return context
+- [ ] Verify navigation, selection, narrow screens and retained local preview
