@@ -1,3 +1,5 @@
+import { useQueries, useQueryClient } from '@tanstack/react-query'
+import { reviewApi } from '@/api/client'
 import { useEffect, useState } from 'react'
 import { Eye } from 'lucide-react'
 import { useBatchReview, isBatchReviewTask } from '@/features/review/batch-review'
@@ -16,6 +18,9 @@ import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
 import { Button } from '@/shared/ui/button'
 import { Card } from '@/shared/ui/card'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs'
+import { ReviewRepositoryGroups } from '@/features/review/review-repository-groups'
+import { REVIEW_ORIGINS } from '@/features/review/review-center-filters'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { formatLocalDateTime } from '@/shared/lib/date-time'
 import { ProfileReviewTable } from './profile-review-table'
@@ -32,6 +37,7 @@ export function reviewTaskKind(review: ReviewTask): string {
 /** One authorized queue, regardless of submission source or namespace entry point. */
 export function ReviewsPage() {
   const { t, i18n } = useTranslation()
+  const queryClient = useQueryClient()
   const navigate = useNavigate()
   const search = useSearch({ from: '/dashboard/reviews' })
   const { hasRole, user } = useAuth()
@@ -43,7 +49,7 @@ export function ReviewsPage() {
   const [page, setPage] = useState(search.page ?? 0)
   const { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, sortDirection: routeSort } = routeFilters
   const routePage = search.page ?? 0
-  const batch = useBatchReview(JSON.stringify([user?.userId, routeFilters]))
+  const batch = useBatchReview(JSON.stringify([user?.userId, routeFilters, search.snapshotId, search.reviewView, search.memberQ]))
 
   useEffect(() => {
     const next = { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, sortDirection: routeSort }
@@ -60,9 +66,17 @@ export function ReviewsPage() {
   const scopes = useReviewScopes(canReviewSkills && !profileMode)
   const scope = scopes.data?.find((item) => item.slug === applied.namespace)
   const scopePending = !scopes.data || (applied.namespace !== 'ALL' && !scope)
+  const grouped = applied.originType === 'GITHUB_SYNC' && search.reviewView !== 'rows'
   const query = useReviewList(applied.status, applied.namespace === 'ALL' ? undefined : scope?.id,
-    page, PAGE_SIZE, applied.sortDirection, canReviewSkills && !profileMode && !scopePending,
+    page, PAGE_SIZE, applied.sortDirection, canReviewSkills && !profileMode && !scopePending && !grouped,
     { q: applied.q.trim(), reviewKind: applied.reviewKind, originType: applied.originType })
+  const sourceCounts = useQueries({ queries: REVIEW_ORIGINS.map(originType => ({
+    queryKey: ['reviews', 'source-count', user?.userId, scope?.id, applied.status, applied.namespace, applied.q, applied.reviewKind, originType],
+    queryFn: async () => (await reviewApi.list({ status: applied.status, namespaceId: scope?.id,
+      q: applied.q.trim(), reviewKind: applied.reviewKind, originType, page: 0, size: 1 })).total,
+    enabled: canReviewSkills && !profileMode && !scopePending && !scopes.isError,
+    staleTime: 15000, retry: false,
+  })) })
   const options = (scopes.data ?? []).map((item) => ({ value: item.slug, label: item.displayName || item.slug }))
 
   const applyNow = (filters: ReviewCenterFilters, nextPage = 0) => {
@@ -70,16 +84,31 @@ export function ReviewsPage() {
     setApplied(normalized)
     setDraft(normalized)
     setPage(nextPage)
-    void navigate({ to: '/dashboard/reviews', search: reviewCenterSearch(normalized, nextPage) })
+    void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(normalized, nextPage), reviewView: normalized.originType === 'GITHUB_SYNC' ? (search.reviewView ?? 'snapshots') : undefined } })
     // A repeated query or reset must refresh the same key rather than silently reuse a stale result.
-    if (!scopePending && JSON.stringify(normalized) === JSON.stringify(applied) && nextPage === page) void query.refetch()
+    if (!scopePending && JSON.stringify(normalized) === JSON.stringify(applied) && nextPage === page) {
+      if (grouped) void queryClient.invalidateQueries({ queryKey: ['reviews'] })
+      else void query.refetch()
+    }
   }
   const apply = (filters: ReviewCenterFilters, nextPage = 0) => {
     if (JSON.stringify(filters) !== JSON.stringify(applied)) batch.guardFilter(() => applyNow(filters, nextPage))
     else applyNow(filters, nextPage)
   }
+  const scrollKey = ['reviews', 'scroll', user?.userId, routeFilters, search.reviewView, search.snapshotId, search.memberQ, page]
+  const restoreScroll = () => {
+    const top = queryClient.getQueryData<number>(scrollKey)
+    if (top !== undefined && document.getElementById('review-results')) {
+      queryClient.removeQueries({ queryKey: scrollKey, exact: true })
+      window.scrollTo({ top, behavior: 'instant' })
+    }
+  }
+  useEffect(() => {
+    if (!grouped && query.data && !query.isFetching) restoreScroll()
+  })
   const openReview = (review: ReviewTask) => {
-    void navigate({ to: '/dashboard/reviews/$id', params: { id: String(review.id) }, search: reviewCenterSearch(applied, page) })
+    queryClient.setQueryData(scrollKey, window.scrollY)
+    void navigate({ to: '/dashboard/reviews/$id', params: { id: String(review.id) }, search: { ...reviewCenterSearch(applied, page), reviewView: search.reviewView, snapshotId: search.snapshotId, groupPage: search.groupPage, memberQ: search.memberQ } })
   }
   const formatDate = (value: string) => formatLocalDateTime(value, i18n.language)
   const renderObject = (review: ReviewTask) => {
@@ -114,15 +143,22 @@ export function ReviewsPage() {
     return <div className="space-y-6"><DashboardPageHeader title={t('reviewCenter.title')} /><Card className="p-6" role="alert"><p>{t(namespacesQuery.isError ? 'reviewCenter.scopeFailed' : 'reviewCenter.noPermission')}</p>{namespacesQuery.isError && <Button type="button" variant="outline" className="mt-3" onClick={() => void namespacesQuery.refetch()}>{t('reviewCenter.retry')}</Button>}</Card></div>
   }
 
-  return <div className="space-y-7">
+  return <Tabs value={applied.originType} onValueChange={origin => apply({ ...applied, originType: origin as ReviewCenterFilters['originType'] })} className="space-y-7">
     <DashboardPageHeader title={t('reviewCenter.title')} subtitle={t(profileMode ? 'reviewCenter.profileDescription' : 'reviewCenter.description')}
-      actions={isUserAdmin && canReviewSkills ? <Link to="/dashboard/reviews" search={profileMode ? {} : { type: 'profile' }} className="inline-flex min-h-9 items-center rounded-lg border border-border/60 px-3 text-sm hover:bg-secondary">{t(profileMode ? 'reviewCenter.skillQueue' : 'reviewCenter.profileQueue')}</Link> : undefined} />
-    {profileMode ? <ProfileReviewTable /> : <>
+      actions={<div className="flex w-full flex-wrap items-center justify-end gap-3 sm:w-auto">{!profileMode && <div className="w-full sm:w-[440px]"><TabsList aria-label={t('reviewCenter.filters.originType')} className="grid h-11 w-full grid-cols-3 gap-1 rounded-xl border-0 bg-secondary p-1 sm:h-10">{REVIEW_ORIGINS.map((origin, index) => <TabsTrigger key={origin} value={origin} disabled={batch.busy} className="h-9 min-w-0 rounded-lg border-0 px-2 py-0 text-xs font-medium text-muted-foreground after:hidden aria-selected:bg-primary aria-selected:text-primary-foreground sm:h-8 sm:text-sm">{t(`reviewCenter.origin.${origin}`)}{sourceCounts[index].data !== undefined && <span className="ml-2 hidden text-xs opacity-65 sm:inline">{sourceCounts[index].data}</span>}</TabsTrigger>)}</TabsList></div>}{isUserAdmin && canReviewSkills ? <Link to="/dashboard/reviews" search={profileMode ? {} : { type: 'profile' }} className="inline-flex min-h-9 items-center rounded-lg border border-border/60 px-3 text-sm hover:bg-secondary">{t(profileMode ? 'reviewCenter.skillQueue' : 'reviewCenter.profileQueue')}</Link> : null}</div>} />
+    {profileMode ? <ProfileReviewTable /> : <TabsContent value={applied.originType} className="mt-0 space-y-7">
       <ReviewCenterFilterForm value={draft} namespaces={options} namespaceLoading={scopes.isLoading || scopes.isError} onChange={setDraft} onApply={() => apply(draft)} onReset={() => apply({ ...DEFAULT_REVIEW_FILTERS })} />
       {scopes.isError && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm"><p className="text-destructive">{t('reviewCenter.scopeFailed')}</p><Button type="button" size="sm" variant="outline" onClick={() => void scopes.refetch()}>{t('reviewCenter.retry')}</Button></div>}
       {batch.toolbar}
       {batch.dialogs}
-      <div className="space-y-4" aria-busy={query.isFetching}>
+      {applied.originType === 'GITHUB_SYNC' && <div className="flex justify-end gap-2">
+        {(['rows', 'snapshots'] as const).map(view => <Button key={view} variant={(grouped ? 'snapshots' : 'rows') === view ? 'secondary' : 'outline'} disabled={batch.busy} onClick={() => batch.guardFilter(() => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied), reviewView: view } }) })}>{t(`reviewGroups.${view}`)}</Button>)}
+      </div>}
+      {grouped ? <ReviewRepositoryGroups filters={applied} namespaceId={scope?.id} enabled={!scopePending && !scopes.isError} page={page} snapshotId={search.snapshotId} batch={batch} memberQuery={search.memberQ ?? ''}
+        onMemberQuery={memberQ => batch.guardFilter(() => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied), reviewView: 'snapshots', snapshotId: search.snapshotId, groupPage: search.groupPage, memberQ: memberQ || undefined } }) })}
+        onGroup={snapshotId => batch.guardFilter(() => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied, snapshotId ? 0 : search.groupPage ?? 0), reviewView: 'snapshots', snapshotId, groupPage: snapshotId ? page : undefined } }) })}
+        onPage={nextPage => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied, nextPage), reviewView: 'snapshots', snapshotId: search.snapshotId, groupPage: search.groupPage, memberQ: search.memberQ } }) }}
+        onReview={openReview} onReady={restoreScroll} /> : <div className="space-y-4" aria-busy={query.isFetching}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 id="review-results" tabIndex={-1} className="text-sm font-medium">{query.isLoading || scopePending ? t('reviewCenter.loading') : query.isError ? t('reviewCenter.results') : t('reviewCenter.resultsCount', { count: query.data?.totalElements ?? 0 })}</h2>
           <Button variant="ghost" size="sm" className="md:hidden" disabled={batch.busy || !query.data?.items.some(isBatchReviewTask)} onClick={() => batch.selectPage(query.data?.items ?? [])}>{t('reviewBatch.selectPage')}</Button>
@@ -145,7 +181,7 @@ export function ReviewsPage() {
                   <div className="divide-y divide-border md:hidden">{query.data.items.map((review) => <article key={review.id} className="space-y-4 py-5"><div className="flex items-start gap-3"><label className="flex min-h-11 min-w-11 items-center justify-center">{batch.checkbox(review)}</label>{renderObject(review)}</div><div>{renderMetadata(review)}</div><div className="flex items-end justify-between gap-4"><p className="min-w-0 break-words text-xs text-muted-foreground">{review.submittedByName || review.submittedBy} · {t(`reviewCenter.origin.${review.originType || 'USER'}`)}<span className="mt-1 block">{formatDate(review.submittedAt)}</span></p><Button data-analytics-id="review.detail.open" variant="link" className="shrink-0" onClick={() => openReview(review)}>{t('reviewCenter.open')}</Button></div></article>)}</div>
                   <div className="flex flex-wrap items-center justify-between gap-3 pt-3 text-xs text-muted-foreground"><p>{t('reviewCenter.pageSummary', { total: query.data.totalElements, page: page + 1 })}</p><Pagination analyticsId="review.list.paginate" page={page} totalPages={Math.max(query.data.totalPages, 1)} onPageChange={(nextPage) => apply(applied, nextPage)} /></div>
                 </>}
-      </div>
-    </>}
-  </div>
+      </div>}
+    </TabsContent>}
+  </Tabs>
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Check, CheckCheck, AlertCircle, Loader2, RefreshCw, X, XCircle } from 'lucide-react'
 import { reviewApi } from '@/api/client'
@@ -17,7 +17,20 @@ export function isBatchReviewTask(task: ReviewTask) {
 export function useBatchReview(filterKey: string) {
   const { t } = useTranslation()
   const client = useQueryClient()
+  const selectionRestore = useRef({ scope: filterKey, ids: (client.getQueryData<number[]>(['reviews', 'selection', filterKey]) ?? []).slice(0, BATCH_REVIEW_LIMIT), applied: false })
+  const restoredSelection = useQuery({
+    queryKey: ['review-selection-restore', filterKey, selectionRestore.current.ids],
+    queryFn: async () => Promise.all(selectionRestore.current.ids.map(id => reviewApi.get(id).catch(error => { if (typeof error === 'object' && error !== null && 'status' in error && (error.status === 403 || error.status === 404)) return null; throw error }))),
+    enabled: selectionRestore.current.scope === filterKey && selectionRestore.current.ids.length > 0 && !selectionRestore.current.applied,
+    retry: false, gcTime: 0,
+  })
   const [selected, setSelected] = useState<ReviewTask[]>([])
+  useEffect(() => {
+    if (restoredSelection.data && selectionRestore.current.scope === filterKey && !selectionRestore.current.applied) {
+      selectionRestore.current.applied = true
+      setSelected(restoredSelection.data.filter((task): task is ReviewTask => !!task && isBatchReviewTask(task)))
+    }
+  }, [filterKey, restoredSelection.data])
   const [action, setAction] = useState<BatchReviewRequest['action']>('APPROVE')
   const [open, setOpen] = useState(false)
   const [comment, setComment] = useState('')
@@ -35,13 +48,17 @@ export function useBatchReview(filterKey: string) {
   activeScope.current = filterKey
   useEffect(() => {
     if (previousFilter.current !== filterKey) {
+      client.removeQueries({ queryKey: ['reviews', 'selection', previousFilter.current], exact: true })
       previousFilter.current = filterKey
       setSelected([])
       setOpen(false)
       setResult(null)
       snapshot.current = []
+      return
     }
-  }, [filterKey])
+    if (selectionRestore.current.scope === filterKey && selectionRestore.current.ids.length && !selectionRestore.current.applied) return
+    client.setQueryData(['reviews', 'selection', filterKey], selected.map(task => task.id))
+  }, [client, filterKey, selected])
 
   const refresh = async () => {
     await Promise.all(['reviews', 'governance', 'skills', 'skill-avatar'].map(key =>
@@ -65,7 +82,7 @@ export function useBatchReview(filterKey: string) {
     onError: (_error, _request, scope) => { if (scope === activeScope.current) { setUncertain(true); void refresh() } },
     onSettled: () => { submitting.current = false },
   })
-  const busy = preview.isPending || decide.isPending
+  const busy = preview.isPending || decide.isPending || restoredSelection.isFetching || (restoredSelection.isError && !selectionRestore.current.applied)
   const items = snapshot.current
   const readyIds = preview.data?.items.filter(item => item.outcome === 'READY').map(item => item.id) ?? []
   const ready = new Set(readyIds)
@@ -123,7 +140,7 @@ export function useBatchReview(filterKey: string) {
     decide.mutate({ ids: readyIds, action, comment: comment.trim() || undefined })
   }
 
-  const toolbar = selected.length > 0 ? <div className="sticky top-[72px] z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/50 bg-accent px-4 py-3 shadow-sm [&_button]:min-h-11 md:[&_button]:min-h-0" role="region" aria-label={t('reviewBatch.selection')}>
+  const toolbar = restoredSelection.isError && !selectionRestore.current.applied ? <div role="alert" className="flex flex-wrap items-center gap-3 rounded-lg border p-4"><p className="text-sm">{t('reviewGroups.restoreFailed')}</p><Button variant="outline" onClick={() => void restoredSelection.refetch()}>{t('reviewCenter.retry')}</Button><Button variant="outline" onClick={() => { selectionRestore.current.applied = true; setSelected([]) }}>{t('reviewGroups.reselect')}</Button></div> : selected.length > 0 ? <div className="sticky top-[72px] z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/50 bg-accent px-4 py-3 shadow-sm [&_button]:min-h-11 md:[&_button]:min-h-0" role="region" aria-label={t('reviewBatch.selection')}>
     <p className="text-sm font-medium" aria-live="polite">{t('reviewBatch.selected', { count: selected.length })}<span className="ml-2 text-xs font-normal text-muted-foreground">{t('reviewBatch.limit', { count: BATCH_REVIEW_LIMIT })}</span></p>
     <div className="flex flex-wrap gap-2">
       <Button variant="ghost" size="sm" disabled={busy} onClick={() => setSelected([])}><X className="mr-1.5 h-4 w-4" />{t('reviewBatch.clear')}</Button>

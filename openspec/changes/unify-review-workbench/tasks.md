@@ -10,3 +10,11 @@
 - [x] Targeted server and UI behavior tests, typecheck/lint/build
 - [ ] Reviewed scenario matrix and real local image/auth/business/browser validation
 - [ ] Manual-preview handoff with verified boundaries
+
+## Issue #1096 Web repository review follow-up
+- [ ] Compact source capsules, selection confirmation and compatible filters
+- [ ] Authorized complete acquisition groups and independent member pagination
+- [ ] Group detail with existing explicit batch selection/decision flow
+- [ ] Repository navigation in the existing skill provenance card
+- [ ] API generation, targeted PostgreSQL and Web regression checks
+- [ ] Local runtime and Ego desktop/mobile acceptance with evidence

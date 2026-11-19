@@ -20,6 +20,25 @@ function Harness({ page = 0 }: { page?: number }) {
 function mount() { const client = new QueryClient({defaultOptions:{queries:{retry:false},mutations:{retry:false}}}); const view=render(<QueryClientProvider client={client}><Harness /></QueryClientProvider>); return {...view,setPage:(page:number)=>view.rerender(<QueryClientProvider client={client}><Harness page={page} /></QueryClientProvider>)} }
 afterEach(()=>{cleanup();vi.resetAllMocks()})
 describe('batch review flow',()=>{
+  it('restores only IDs that remain authorized and pending after returning from detail', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(['reviews', 'selection', 'same-filter'], [1, 2])
+    vi.mocked(reviewApi.get).mockImplementation(async id => { if (id === 2) throw { status: 403 }; return task(id) })
+    render(<QueryClientProvider client={client}><Harness /></QueryClientProvider>)
+    await waitFor(() => expect(client.getQueryData(['reviews', 'selection', 'same-filter'])).toEqual([1]))
+    expect(reviewApi.get).toHaveBeenCalledWith(1)
+    expect(reviewApi.get).toHaveBeenCalledWith(2)
+    expect(screen.getByRole('button', { name: '批量通过' })).toBeTruthy()
+  })
+  it('keeps cached IDs on a transient restore failure instead of silently losing selection', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    client.setQueryData(['reviews', 'selection', 'same-filter'], [1])
+    vi.mocked(reviewApi.get).mockRejectedValue(new Error('network unavailable'))
+    render(<QueryClientProvider client={client}><Harness /></QueryClientProvider>)
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(client.getQueryData(['reviews', 'selection', 'same-filter'])).toEqual([1])
+    expect(screen.queryByRole('button', { name: '批量通过' })).toBeNull()
+  })
   it('returns focus to the initiating button when a batch is cancelled',async()=>{
     vi.mocked(reviewApi.batchPreview).mockResolvedValue({items:[{id:1,outcome:'READY',reason:'ready',message:'ready'}]})
     mount();fireEvent.click(screen.getByText('select page'))

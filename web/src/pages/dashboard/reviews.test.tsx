@@ -41,6 +41,7 @@ vi.mock('@/shared/ui/select', () => {
     SelectValue: () => null,
   }
 })
+import { reviewApi } from '@/api/client'
 import { ReviewsPage, reviewTaskKind } from './reviews'
 import type { ReviewTask } from '@/api/types'
 
@@ -55,6 +56,7 @@ function renderPage() {
 afterEach(cleanup)
 beforeEach(() => {
   vi.clearAllMocks()
+  vi.spyOn(reviewApi, 'list').mockResolvedValue({ items: [], total: 21, page: 0, size: 1 })
   mocks.search = {}
   mocks.roles = ['SKILL_ADMIN']
   mocks.namespaces = []
@@ -99,25 +101,32 @@ describe('unified review center', () => {
     expect(screen.getByRole('alert')).toBeTruthy()
   })
 
-  it('uses one request queue with no status or source tabs', () => {
+  it('uses one request queue with three source tabs and no status tabs', () => {
     renderPage()
-    expect(screen.queryByRole('tab')).toBeNull()
+    expect(screen.getAllByRole('tab')).toHaveLength(3)
     expect(screen.getByRole('form', { name: 'reviewCenter.filters.title' })).toBeTruthy()
     expect(screen.getAllByText('Meeting notes')).toHaveLength(2)
     expect(lastFilters()?.slice(0, 6)).toEqual(['PENDING', undefined, 0, 20, 'DESC', true])
+  })
+
+  it('moves submission source into compact header tabs and resets pagination immediately', () => {
+    mocks.search = { page: 2 }
+    renderPage()
+    expect(screen.queryByLabelText('reviewCenter.filters.originType', { selector: 'select' })).toBeNull()
+    fireEvent.click(screen.getByRole('tab', { name: /reviewCenter.origin.USER/ }))
+    expect(mocks.navigate).toHaveBeenLastCalledWith(expect.objectContaining({ search: expect.objectContaining({ originType: 'USER', page: undefined }) }))
   })
 
   it('keeps draft changes out of the query until Search then resets the page', () => {
     mocks.search = { page: 2 }
     renderPage()
     fireEvent.change(screen.getByLabelText('reviewCenter.filters.q'), { target: { value: '  notes  ' } })
-    fireEvent.change(screen.getByLabelText('reviewCenter.filters.originType'), { target: { value: 'GITHUB_SYNC' } })
     expect(lastFilters()?.[2]).toBe(2)
     expect(lastFilters()?.[6]).toEqual({ q: '', reviewKind: 'ALL', originType: 'ALL' })
     fireEvent.click(screen.getByRole('button', { name: 'reviewCenter.filters.apply' }))
     expect(lastFilters()?.[2]).toBe(0)
-    expect(lastFilters()?.[6]).toEqual({ q: 'notes', reviewKind: 'ALL', originType: 'GITHUB_SYNC' })
-    expect(mocks.navigate).toHaveBeenLastCalledWith(expect.objectContaining({ search: expect.objectContaining({ q: 'notes', originType: 'GITHUB_SYNC', page: undefined }) }))
+    expect(lastFilters()?.[6]).toEqual({ q: 'notes', reviewKind: 'ALL', originType: 'ALL' })
+    expect(mocks.navigate).toHaveBeenLastCalledWith(expect.objectContaining({ search: expect.objectContaining({ q: 'notes', page: undefined }) }))
   })
 
   it('reset restores pending requests, clears conditions and refreshes identical queries', () => {

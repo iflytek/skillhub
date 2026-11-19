@@ -1605,6 +1605,17 @@ export const reviewApi = {
   async scopes(): Promise<import('./types').ReviewScope[]> {
     return fetchJson<import('./types').ReviewScope[]>(`${WEB_API_PREFIX}/reviews/scopes`)
   },
+  async syncGroup(snapshotId: number) {
+    return fetchJson<import('./types').GithubReviewGroup>(`${WEB_API_PREFIX}/reviews/sync/groups/${snapshotId}`)
+  },
+  async syncGroups(params: Record<string, string | number | undefined>) {
+    const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string | number] => entry[1] !== undefined).map(([key, value]) => [key, String(value)]))
+    return fetchJson<import('./types').PagedResponse<import('./types').GithubReviewGroup>>(`${WEB_API_PREFIX}/reviews/sync/groups?${query}`)
+  },
+  async syncGroupMembers(snapshotId: number, params: Record<string, string | number | undefined>) {
+    const query = new URLSearchParams(Object.entries(params).filter((entry): entry is [string, string | number] => entry[1] !== undefined).map(([key, value]) => [key, String(value)]))
+    return fetchJson<import('./types').PagedResponse<import('./types').GithubReviewGroupMember>>(`${WEB_API_PREFIX}/reviews/sync/groups/${snapshotId}/members?${query}`)
+  },
   async listSync(params: { status: string; namespaceId?: number; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
     const result = await client.GET('/api/v1/reviews/sync', {
       params: { query: { status: params.status, namespaceId: params.namespaceId,

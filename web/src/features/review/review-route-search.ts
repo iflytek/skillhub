@@ -1,6 +1,10 @@
 import { parseReviewCenterFilters, reviewCenterSearch, type ReviewCenterStatus, type ReviewCenterKind, type ReviewCenterOrigin } from './review-center-filters'
 
 export interface ReviewRouteSearch {
+  memberQ?: string
+  reviewView?: 'rows' | 'snapshots'
+  snapshotId?: number
+  groupPage?: number
   q?: string
   namespace?: string
   status?: ReviewCenterStatus
@@ -17,6 +21,10 @@ export function validateReviewSearch(search: Record<string, unknown>): ReviewRou
   const page = typeof candidate === 'number' && Number.isSafeInteger(candidate) && candidate > 0 ? candidate : 0
   return {
     ...reviewCenterSearch(parseReviewCenterFilters(search), page),
+    memberQ: typeof search.memberQ === 'string' ? search.memberQ.trim().slice(0, 200) || undefined : undefined,
+    reviewView: search.reviewView === 'rows' || search.reviewView === 'snapshots' ? search.reviewView : undefined,
+    snapshotId: Number.isSafeInteger(Number(search.snapshotId)) && Number(search.snapshotId) > 0 ? Number(search.snapshotId) : undefined,
+    groupPage: Number.isSafeInteger(Number(search.groupPage)) && Number(search.groupPage) >= 0 ? Number(search.groupPage) : undefined,
     type: search.type === 'skill' || search.type === 'profile' || search.type === 'sync' ? search.type : undefined,
   }
 }

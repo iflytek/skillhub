@@ -5233,6 +5233,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/reviews/sync/groups/{snapshotId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listGithubReviewGroupMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/sync/groups/{snapshotId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listGithubReviewGroupMembers_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/sync/groups/{snapshotId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGithubReviewGroup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/sync/groups/{snapshotId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGithubReviewGroup_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/web/reviews/sync/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listGithubReviewGroups"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reviews/sync/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listGithubReviewGroups_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reviews/sync": {
         parameters: {
             query?: never;
@@ -10581,6 +10677,83 @@ export interface components {
         LicenseEvidence: {
             status?: string;
             documents?: components["schemas"]["EvidenceDocument"][];
+        };
+        ApiResponsePageResponseGithubReviewGroupMemberResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseGithubReviewGroupMemberResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        GithubReviewGroupMemberResponse: {
+            review?: components["schemas"]["ReviewTaskResponse"];
+            scanStatus?: string;
+        };
+        PageResponseGithubReviewGroupMemberResponse: {
+            items?: components["schemas"]["GithubReviewGroupMemberResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
+        ApiResponseGithubReviewGroupResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["GithubReviewGroupResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        GithubReviewGroupResponse: {
+            /** Format: int64 */
+            snapshotId?: number;
+            /** Format: int64 */
+            namespaceId?: number;
+            namespace?: string;
+            /** Format: int64 */
+            repositoryId?: number;
+            owner?: string;
+            repository?: string;
+            commitSha?: string;
+            /** Format: date-time */
+            capturedAt?: string;
+            /** Format: int64 */
+            total?: number;
+            /** Format: int64 */
+            scanPassed?: number;
+            /** Format: int64 */
+            scanWaiting?: number;
+            /** Format: int64 */
+            scanBlocked?: number;
+        };
+        ApiResponsePageResponseGithubReviewGroupResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseGithubReviewGroupResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        PageResponseGithubReviewGroupResponse: {
+            items?: components["schemas"]["GithubReviewGroupResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
         };
         ApiResponsePageResponseGithubSyncReviewQueueItemResponse: {
             /** Format: int32 */
@@ -22724,6 +22897,166 @@ export interface operations {
                 };
                 content: {
                     "*/*": string;
+                };
+            };
+        };
+    };
+    listGithubReviewGroupMembers: {
+        parameters: {
+            query?: {
+                status?: string;
+                namespaceId?: number;
+                q?: string;
+                reviewKind?: string;
+                page?: number;
+                size?: number;
+                sortDirection?: string;
+            };
+            header?: never;
+            path: {
+                snapshotId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGithubReviewGroupMemberResponse"];
+                };
+            };
+        };
+    };
+    listGithubReviewGroupMembers_1: {
+        parameters: {
+            query?: {
+                status?: string;
+                namespaceId?: number;
+                q?: string;
+                reviewKind?: string;
+                page?: number;
+                size?: number;
+                sortDirection?: string;
+            };
+            header?: never;
+            path: {
+                snapshotId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGithubReviewGroupMemberResponse"];
+                };
+            };
+        };
+    };
+    getGithubReviewGroup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshotId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGithubReviewGroupResponse"];
+                };
+            };
+        };
+    };
+    getGithubReviewGroup_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                snapshotId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGithubReviewGroupResponse"];
+                };
+            };
+        };
+    };
+    listGithubReviewGroups: {
+        parameters: {
+            query?: {
+                status?: string;
+                namespaceId?: number;
+                q?: string;
+                reviewKind?: string;
+                page?: number;
+                size?: number;
+                sortDirection?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGithubReviewGroupResponse"];
+                };
+            };
+        };
+    };
+    listGithubReviewGroups_1: {
+        parameters: {
+            query?: {
+                status?: string;
+                namespaceId?: number;
+                q?: string;
+                reviewKind?: string;
+                page?: number;
+                size?: number;
+                sortDirection?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseGithubReviewGroupResponse"];
                 };
             };
         };

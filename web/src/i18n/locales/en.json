@@ -4579,5 +4579,26 @@
     "selectTask": "Select {{name}}",
     "currentStatus": "Current status: {{status}}",
     "close": "Close"
+  },
+  "reviewGroups": {
+    "title": "Repository snapshot reviews",
+    "members": "Submitted members",
+    "back": "Back to snapshots",
+    "rows": "Individual reviews",
+    "snapshots": "Repository snapshots",
+    "empty": "No review requests match these filters",
+    "historyHint": "Historical requests without a snapshot remain available in the individual list.",
+    "summary": "{{total}} requests · {{passed}} scan passed · {{waiting}} pending or failed scans · {{blocked}} risks",
+    "open": "View and review",
+    "decisionHint": "Only explicitly selected versions are processed, at most 50 per batch. Scan and permissions are rechecked before deciding. Partial approval does not make the complete snapshot downloadable.",
+    "sourceRepository": "View source repository",
+    "sourceDirectory": "Browse source files at this commit",
+    "scanPASSED": "Scan passed",
+    "scanWAITING": "Scan pending or failed",
+    "scanBLOCKED": "Scan risk",
+    "searchMembers": "Search submitted members",
+    "selectPassed": "Select scan-passed members on this page",
+    "restoreFailed": "Previous selections could not be restored. Retry or select again.",
+    "reselect": "Select again"
   }
 }
