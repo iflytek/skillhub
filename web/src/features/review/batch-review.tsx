@@ -130,6 +130,7 @@ export function useBatchReview(filterKey: string) {
       : [...old, ...candidates.filter(task => !old.some(item => item.id === task.id))].slice(0, BATCH_REVIEW_LIMIT))
   }
   const guardFilter = (callback: () => void) => {
+    if (busy) return
     if (!selected.length) callback()
     else { pendingFilter.current = callback; setClearOpen(true) }
   }

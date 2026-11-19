@@ -107,4 +107,16 @@ describe('batch review flow',()=>{
     expect(await screen.findByText('更改筛选条件会清空当前跨页选择。')).toBeTruthy()
     fireEvent.click(screen.getByText('取消'));expect(screen.getByText('已选 20 项')).toBeTruthy()
   })
+  it('does not change selection context while a batch preview is in flight', async () => {
+    let resolve!: (value: { items: [] }) => void
+    vi.mocked(reviewApi.batchPreview).mockImplementation(() => new Promise(done => { resolve = done }))
+    mount()
+    fireEvent.click(screen.getByText('select page'))
+    fireEvent.click(screen.getByRole('button', { name: '批量通过' }))
+    await screen.findByText(zh.reviewBatch.checking)
+    fireEvent.click(screen.getByText('change filter'))
+    expect(screen.queryByText(zh.reviewBatch.clearWarning)).toBeNull()
+    expect(screen.getByText('已选 20 项')).toBeTruthy()
+    await act(async () => resolve({ items: [] }))
+  })
 })
