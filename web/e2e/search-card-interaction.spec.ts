@@ -154,7 +154,8 @@ test.describe('Search Card Navigation (Real API)', () => {
     await expect(firstCard).toBeVisible({ timeout: 8_000 })
     await firstCard.click()
     await expect(page).toHaveURL(new RegExp(`/space/${current.skill.namespace}/${current.skill.slug}`))
-    await expect(page.getByRole('heading', { name: current.skillName, exact: true })).toBeVisible()
+    // The page title precedes the overview, whose Markdown can repeat the same heading.
+    await expect(page.getByRole('heading', { name: current.skillName, exact: true }).first()).toBeVisible()
   })
 
   // TC_SEARCH_INTERACT_009 P1 - Ctrl+click opens in new tab
