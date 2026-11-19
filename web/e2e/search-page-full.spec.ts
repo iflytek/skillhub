@@ -3,6 +3,8 @@ import { setEnglishLocale, setUniqueClientIp } from './helpers/auth-fixtures'
 import {
   DEFAULT_SEARCH_KEYWORD,
   getSearchCards,
+  getSearchInput,
+  selectSearchSort,
   prepareSearchSeed,
   type PreparedSearchSeed,
 } from './helpers/search-seed'
@@ -13,8 +15,6 @@ function searchUrl(query: string, sort = 'relevance', page = 0, starredOnly = fa
 }
 
 let basicSeed: PreparedSearchSeed | undefined
-
-test.setTimeout(300_000)
 
 // Independent browser scenarios must not exhaust one anonymous search quota.
 test.beforeEach(async ({ page }, testInfo) => {
@@ -53,8 +53,7 @@ test.describe('Search Input (Real API)', () => {
 
       const url = new URL(response.url())
       return response.status() === 200
-        && url.searchParams.has('q')
-        && url.searchParams.get('q') === ''
+        && !url.searchParams.get('q')
     })
 
     await page.goto(searchUrl(''))
@@ -66,7 +65,7 @@ test.describe('Search Input (Real API)', () => {
   // TC_SEARCH_INPUT_004 P0 - Enter key triggers search
   test('TC_SEARCH_INPUT_004: pressing Enter in search box triggers search', async ({ page }) => {
     await page.goto(searchUrl(''))
-    const searchInput = page.getByPlaceholder('Search skills...')
+    const searchInput = getSearchInput(page)
     await searchInput.fill(basicSeed!.keyword)
     await searchInput.press('Enter')
     await expect(page).toHaveURL(new RegExp(`q=${basicSeed!.keyword}`))
@@ -97,7 +96,7 @@ test.describe('Search Input (Real API)', () => {
   // TC_SEARCH_INPUT_011 P1 - leading/trailing spaces trimmed
   test('TC_SEARCH_INPUT_011: trims leading and trailing spaces from search query', async ({ page }) => {
     await page.goto(searchUrl(''))
-    const searchInput = page.getByPlaceholder('Search skills...')
+    const searchInput = getSearchInput(page)
     await searchInput.fill(`  ${basicSeed!.keyword}  `)
     await searchInput.press('Enter')
     await expect(page).toHaveURL(new RegExp(`q=${basicSeed!.keyword}`))
@@ -114,50 +113,50 @@ test.describe('Search Sort and Filter (Authenticated Real API)', () => {
   })
 
   // TC_SEARCH_SORT_001 P0 - default relevance tab selected
-  test('TC_SEARCH_SORT_001: relevance sort tab is selected by default', async ({ page }) => {
+  test('TC_SEARCH_SORT_001: relevance sort selector is selected by default', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'relevance'))
-    await expect(page.getByRole('button', { name: 'Relevance' })).toBeVisible()
+    await expect(page.getByRole('combobox', { name: 'Sort:', exact: true })).toHaveText('Relevance')
   })
 
   // TC_SEARCH_SORT_004 P0 - downloads sort
-  test('TC_SEARCH_SORT_004: clicking Downloads tab updates sort in URL', async ({ page }) => {
+  test('TC_SEARCH_SORT_004: clicking Downloads option updates sort in URL', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'relevance'))
-    await page.getByRole('button', { name: 'Downloads' }).click()
+    await selectSearchSort(page, 'Downloads')
     await expect(page).toHaveURL(/sort=downloads/)
   })
 
   // TC_SEARCH_SORT_005 P0 - newest sort
-  test('TC_SEARCH_SORT_005: clicking Newest tab updates sort in URL', async ({ page }) => {
+  test('TC_SEARCH_SORT_005: clicking Newest option updates sort in URL', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'relevance'))
-    await page.getByRole('button', { name: 'Newest' }).click()
+    await selectSearchSort(page, 'Newest')
     await expect(page).toHaveURL(/sort=newest|sort=created/)
   })
 
   // TC_SEARCH_SORT_006 P0 - switching sort preserves search keyword
-  test('TC_SEARCH_SORT_006: switching sort tab preserves the search keyword', async ({ page }) => {
+  test('TC_SEARCH_SORT_006: switching sort selector preserves the search keyword', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'relevance'))
-    await page.getByRole('button', { name: 'Downloads' }).click()
+    await selectSearchSort(page, 'Downloads')
     await expect(page).toHaveURL(new RegExp(`q=${basicSeed!.keyword}`))
     await expect(page).toHaveURL(/sort=downloads/)
   })
 
   // TC_SEARCH_SORT_007 P0 - switching sort resets page to 0
-  test('TC_SEARCH_SORT_007: switching sort tab resets page to 0', async ({ page }) => {
+  test('TC_SEARCH_SORT_007: switching sort selector resets page to 0', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'relevance', 1))
-    await page.getByRole('button', { name: 'Downloads' }).click()
-    await expect(page).toHaveURL(/page=0/)
+    await selectSearchSort(page, 'Downloads')
+    await expect(page).toHaveURL(url => (url.searchParams.get('page') ?? '0') === '0')
   })
 
   // TC_SEARCH_SORT_012 P1 - URL contains sort param
-  test('TC_SEARCH_SORT_012: URL contains sort parameter after switching tabs', async ({ page }) => {
+  test('TC_SEARCH_SORT_012: URL contains sort parameter after changing sort', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'relevance'))
-    await page.getByRole('button', { name: 'Downloads' }).click()
+    await selectSearchSort(page, 'Downloads')
     await expect(page).toHaveURL(/sort=/)
   })
 
   test('starred only filter stays on search page for authenticated user', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'relevance'))
-    await page.getByRole('button', { name: 'Starred only' }).click()
+    await page.getByRole('button', { name: 'Saved only', exact: true }).click()
     await expect(page).toHaveURL(/starredOnly=true/)
     await expect(page).not.toHaveURL(/\/login/)
   })
@@ -170,7 +169,7 @@ test.describe('Search Sort and Filter (Anonymous Real API)', () => {
 
   test('starred only filter redirects anonymous user to login', async ({ page }) => {
     await page.goto(searchUrl(DEFAULT_SEARCH_KEYWORD, 'relevance'))
-    await page.getByRole('button', { name: 'Starred only' }).click()
+    await page.getByRole('button', { name: 'Saved only', exact: true }).click()
     await expect(page).toHaveURL(/\/login\?returnTo=/)
   })
 })
@@ -191,7 +190,7 @@ test.describe('Search Skill Count Display (Real API)', () => {
   // TC_SEARCH_COUNT_007 P0 - count updates after search
   test('TC_SEARCH_COUNT_007: skill count updates after performing a search', async ({ page }) => {
     await page.goto(searchUrl(''))
-    const searchInput = page.getByPlaceholder('Search skills...')
+    const searchInput = getSearchInput(page)
     await searchInput.fill(basicSeed!.keyword)
     await searchInput.press('Enter')
     await expect(page.getByText(/\d+\s+skills found/i)).toBeVisible({ timeout: 10_000 })
@@ -204,11 +203,13 @@ test.describe('Search Skill Count Display (Real API)', () => {
   })
 
   // TC_SEARCH_COUNT_008 P0 - count stays same when switching sort
-  test('TC_SEARCH_COUNT_008: skill count remains the same after switching sort tab', async ({ page }) => {
+  test('TC_SEARCH_COUNT_008: skill count remains the same after switching sort selector', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword))
+    await expect(getSearchCards(page).first()).toBeVisible()
     const countText = await page.getByText(/\d+\s+skills found/i).textContent()
     const initialCount = Number(countText?.match(/\d+/)?.[0] ?? '0')
-    await page.getByRole('button', { name: 'Downloads' }).click()
+    await selectSearchSort(page, 'Downloads')
+    await expect(getSearchCards(page).first()).toBeVisible()
     const updatedCountText = await page.getByText(/\d+\s+skills found/i).textContent()
     const updatedCount = Number(updatedCountText?.match(/\d+/)?.[0] ?? '0')
     expect(updatedCount).toBe(initialCount)
@@ -255,50 +256,45 @@ test.describe('Search Results (Real API)', () => {
   })
 
   // TC_SEARCH_RESULT_009 P0 - downloads sort order
-  test('TC_SEARCH_RESULT_009: results are sorted by downloads when Downloads tab is selected', async ({ page }) => {
+  test('TC_SEARCH_RESULT_009: results are sorted by downloads when Downloads option is selected', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'downloads'))
     await expect(page).toHaveURL(/sort=downloads/)
     await expect(page.locator('body')).not.toContainText(/error|500/i)
   })
 
   // TC_SEARCH_RESULT_010 P0 - newest sort order
-  test('TC_SEARCH_RESULT_010: results are sorted by newest when Newest tab is selected', async ({ page }) => {
+  test('TC_SEARCH_RESULT_010: results are sorted by newest when Newest option is selected', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'newest'))
     await expect(page.locator('body')).not.toContainText(/error|500/i)
   })
 })
 
-// ─── Pagination ───────────────────────────────────────────────────────────────
+// ─── Incremental Loading ──────────────────────────────────────────────────────
 
-test.describe('Search Pagination (Real API)', () => {
+test.describe('Search Incremental Loading (Real API)', () => {
   test.beforeEach(async ({ page }) => {
     await setEnglishLocale(page)
   })
 
-  // TC_SEARCH_PAGE_011 P1 - URL contains page param
-  test('TC_SEARCH_PAGE_011: URL contains page parameter', async ({ page }) => {
-    await page.goto(searchUrl(basicSeed!.keyword, 'relevance', 0))
-    await expect(page).toHaveURL(/page=/)
+  test('TC_SEARCH_PAGE_011: legacy page links still open usable search results', async ({ page }) => {
+    await page.goto(searchUrl(basicSeed!.keyword, 'relevance', 1))
+    await expect(getSearchCards(page).first()).toBeVisible()
   })
 
-  // TC_SEARCH_PAGE_012 P0 - switching page preserves search and sort
-  test('TC_SEARCH_PAGE_012: switching page preserves search keyword and sort', async ({ page }) => {
+  test('TC_SEARCH_PAGE_012: loading more preserves the search keyword and sort', async ({ page }) => {
     await page.goto(searchUrl(basicSeed!.keyword, 'downloads', 0))
-    const nextBtn = page.getByRole('button', { name: /next|›|»/i })
-    await expect(nextBtn).toBeVisible({ timeout: 10_000 })
-    await nextBtn.click()
-    await expect(page).toHaveURL(new RegExp(`q=${basicSeed!.keyword}`))
-    await expect(page).toHaveURL(/sort=downloads/)
-    await expect(page).toHaveURL(/page=1/)
+    await expect(getSearchCards(page).first()).toBeVisible()
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+    await expect(getSearchCards(page)).toHaveCount(basicSeed!.skills.length)
+    await expect(page).toHaveURL(url => url.searchParams.get('q') === basicSeed!.keyword
+      && url.searchParams.get('sort') === 'downloads'
+      && (url.searchParams.get('page') ?? '0') === '0')
   })
 
-  // TC_SEARCH_PAGE_007 P0 - first page disables previous button
-  test('TC_SEARCH_PAGE_007: previous page button is disabled on first page', async ({ page }) => {
-    await page.goto(searchUrl(basicSeed!.keyword, 'relevance', 0))
-    const prevBtn = page.getByRole('button', { name: /prev|‹|«/i })
-    if (await prevBtn.isVisible()) {
-      await expect(prevBtn).toBeDisabled()
-    }
+  test('TC_SEARCH_PAGE_007: the market does not render previous or next page buttons', async ({ page }) => {
+    await page.goto(searchUrl(basicSeed!.keyword))
+    await expect(getSearchCards(page).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: /next|previous/i })).toHaveCount(0)
   })
 })
 
@@ -315,7 +311,7 @@ test.describe('Search Security (Real API)', () => {
     page.on('dialog', () => { alerted = true })
 
     await page.goto(searchUrl(''))
-    const searchInput = page.getByPlaceholder('Search skills...')
+    const searchInput = getSearchInput(page)
     await searchInput.fill("<script>alert('xss')</script>")
     await searchInput.press('Enter')
 

@@ -263,3 +263,12 @@ export function getSearchCards(page: Page): Locator {
     has: page.locator('h3'),
   })
 }
+
+export function getSearchInput(page: Page): Locator {
+  return page.getByRole('textbox', { name: 'Search skills, descriptions or @namespace', exact: true })
+}
+
+export async function selectSearchSort(page: Page, label: 'Relevance' | 'Downloads' | 'Newest') {
+  await page.getByRole('combobox', { name: 'Sort:', exact: true }).click()
+  await page.getByRole('option', { name: label, exact: true }).click()
+}

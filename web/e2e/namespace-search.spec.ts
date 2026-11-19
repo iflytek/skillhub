@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import { setEnglishLocale } from './helpers/auth-fixtures'
 import { E2eTestDataBuilder } from './helpers/test-data-builder'
+import { getSearchInput } from './helpers/search-seed'
 
 function waitForSkillSearch(page: Page, options: { namespace?: string; q?: string; sort?: string }) {
   return page.waitForResponse((response) => {
@@ -45,7 +46,7 @@ test.describe('Namespace Search (Real API)', () => {
       await builder.waitForSearchResults('roadmap', [namespaceSkill.slug, otherSkill.slug])
 
       await page.goto('/search')
-      await page.getByPlaceholder('Search skills...').fill(`@${namespace.slug} roadmap`)
+      await getSearchInput(page).fill(`@${namespace.slug} roadmap`)
 
       const filteredSearch = waitForSkillSearch(page, { namespace: namespace.slug, q: 'roadmap' })
       await page.getByRole('button', { name: 'Search', exact: true }).click()
@@ -89,7 +90,7 @@ test.describe('Namespace Search (Real API)', () => {
       await builder.waitForSearchResult('boundary', skill.slug)
 
       await page.goto('/search')
-      await page.getByPlaceholder('Search skills...').fill(`@${namespace.slug} boundary`)
+      await getSearchInput(page).fill(`@${namespace.slug} boundary`)
 
       const filteredSearch = waitForSkillSearch(page, { namespace: namespace.slug, q: 'boundary' })
       await page.getByRole('button', { name: 'Search', exact: true }).click()
