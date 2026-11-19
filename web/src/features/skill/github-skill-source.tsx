@@ -1,3 +1,4 @@
+import { GitFork, ExternalLink, FolderGit2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { GithubSkillSource } from '@/api/types'
 import { Card } from '@/shared/ui/card'
@@ -9,7 +10,11 @@ export function GithubSkillSourceCard({ source, version }: { source: GithubSkill
 
   return (
     <Card className="p-5 space-y-3">
-      <h2 className="text-sm font-semibold font-heading text-foreground">{t('skillDetail.githubSourceTitle')}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="flex items-center gap-2 text-sm font-semibold font-heading text-foreground"><GitFork aria-hidden="true" className="h-4 w-4" />{t('skillDetail.githubSourceTitle')}</h2>
+        <a href={repositoryUrl} target="_blank" rel="noopener noreferrer" data-analytics-id="github.repository.external" className="inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring sm:min-h-8">{t('reviewGroups.sourceRepository')}<ExternalLink aria-hidden="true" className="h-3.5 w-3.5" /></a>
+      </div>
+      <a href={`${repositoryUrl}/tree/${encodeURIComponent(source.commitSha)}/${source.skillPath.split('/').map(encodeURIComponent).join('/')}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-sm text-primary underline"><FolderGit2 aria-hidden="true" className="h-4 w-4" />{t('reviewGroups.sourceDirectory')}</a>
       <p className="text-sm font-medium">{t('review.githubRevisionValue', { count: source.syncRevision })}</p>
       <details className="text-xs text-muted-foreground">
         <summary className="cursor-pointer">{t('review.technicalDetails')}</summary>

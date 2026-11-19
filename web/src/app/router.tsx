@@ -176,6 +176,7 @@ const GithubSyncPage = createRoleProtectedRouteComponent(
   () => import('@/pages/dashboard/github-sync'), 'GithubSyncPage', ['SUPER_ADMIN'], dashboardRouteOptions,
 )
 const ReviewsPage = createLazyRouteComponent(() => import('@/pages/dashboard/reviews'), 'ReviewsPage', dashboardRouteOptions)
+const RepositoryReviewPage = createLazyRouteComponent(() => import('@/pages/dashboard/repository-review'), 'RepositoryReviewPage', dashboardRouteOptions)
 const ReviewProgressPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/review-progress'),
   'ReviewProgressPage',
@@ -621,6 +622,14 @@ const dashboardReviewsRoute = createRoute({
   component: ReviewsPage,
 })
 
+const dashboardRepositoryReviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/reviews/repositories/$snapshotId',
+  beforeLoad: requireAuth,
+  validateSearch: validateReviewSearch,
+  component: RepositoryReviewPage,
+})
+
 const dashboardReviewProgressRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/review-progress',
@@ -841,6 +850,7 @@ const routeTree = rootRoute.addChildren([
   dashboardGithubSyncRoute,
   dashboardGithubDeepDiscoveryRoute,
   dashboardReviewsRoute,
+  dashboardRepositoryReviewRoute,
   dashboardReviewProgressRoute,
   dashboardReportsRoute,
   dashboardReviewDetailRoute,

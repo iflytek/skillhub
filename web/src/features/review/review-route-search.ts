@@ -1,6 +1,11 @@
-import { parseReviewCenterFilters, reviewCenterSearch, type ReviewCenterStatus, type ReviewCenterKind, type ReviewCenterOrigin } from './review-center-filters'
+import { parseReviewCenterFilters, reviewCenterSearch, REVIEW_STATUSES, type ReviewCenterStatus, type ReviewCenterKind, type ReviewCenterOrigin } from './review-center-filters'
 
 export interface ReviewRouteSearch {
+  memberStatus?: ReviewCenterStatus
+  memberQ?: string
+  reviewView?: 'rows' | 'snapshots'
+  snapshotId?: number
+  groupPage?: number
   q?: string
   namespace?: string
   status?: ReviewCenterStatus
@@ -17,6 +22,11 @@ export function validateReviewSearch(search: Record<string, unknown>): ReviewRou
   const page = typeof candidate === 'number' && Number.isSafeInteger(candidate) && candidate > 0 ? candidate : 0
   return {
     ...reviewCenterSearch(parseReviewCenterFilters(search), page),
+    memberStatus: REVIEW_STATUSES.find(status => status === search.memberStatus),
+    memberQ: typeof search.memberQ === 'string' ? search.memberQ.trim().slice(0, 200) || undefined : undefined,
+    reviewView: search.reviewView === 'rows' || search.reviewView === 'snapshots' ? search.reviewView : undefined,
+    snapshotId: Number.isSafeInteger(Number(search.snapshotId)) && Number(search.snapshotId) > 0 ? Number(search.snapshotId) : undefined,
+    groupPage: Number.isSafeInteger(Number(search.groupPage)) && Number(search.groupPage) >= 0 ? Number(search.groupPage) : undefined,
     type: search.type === 'skill' || search.type === 'profile' || search.type === 'sync' ? search.type : undefined,
   }
 }
@@ -25,7 +35,8 @@ export function buildReviewReturnPath(search: Record<string, unknown>, namespace
   const normalized = validateReviewSearch({ ...search, namespace: search.namespace ?? namespaceSlug })
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(normalized)) {
-    if (value !== undefined) params.set(key, String(value))
+    if (value !== undefined && key !== 'snapshotId') params.set(key, String(value))
   }
-  return `/dashboard/reviews${params.size ? `?${params.toString()}` : ''}`
+  const path = normalized.snapshotId ? `/dashboard/reviews/repositories/${normalized.snapshotId}` : '/dashboard/reviews'
+  return `${path}${params.size ? `?${params.toString()}` : ''}`
 }

@@ -2,7 +2,7 @@ import { useId, type FormEvent } from 'react'
 import { Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { ReviewCenterFilters } from './review-center-filters'
-import { REVIEW_KINDS, REVIEW_ORIGINS, REVIEW_STATUSES } from './review-center-filters'
+import { REVIEW_KINDS, REVIEW_STATUSES } from './review-center-filters'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -62,7 +62,6 @@ export function ReviewCenterFilterForm({ value, namespaces, namespaceLoading, on
       </div>
       <div className="grid grid-cols-2 gap-4 md:flex md:flex-wrap md:items-end">
         {field('reviewKind', REVIEW_KINDS.map((kind) => ({ value: kind, label: t(`reviewCenter.kind.${kind}`) })))}
-        {field('originType', REVIEW_ORIGINS.map((origin) => ({ value: origin, label: t(`reviewCenter.origin.${origin}`) })))}
         <div className="col-span-2 mt-2 flex w-full gap-3 md:ml-auto md:mt-0 md:w-auto">
           <Button data-analytics-id="review.filter.reset" type="button" variant="outline" onClick={onReset} className="h-11 flex-1 bg-background md:h-8 md:w-20 md:flex-none">{t('reviewCenter.filters.reset')}</Button>
           <Button data-analytics-id="review.filter.apply" type="submit" className="h-11 flex-1 md:h-8 md:w-[100px] md:flex-none">{t('reviewCenter.filters.apply')}</Button>

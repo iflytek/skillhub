@@ -916,3 +916,7 @@ export type NamespaceInvitationHistoryPage = Omit<Required<components['schemas']
 
 export type BatchReviewRequest = components['schemas']['BatchReviewRequest']
 export type BatchReviewResponse = components['schemas']['BatchReviewResponse']
+
+/** Web review read models generated from the running Spring application contract. */
+export type GithubReviewGroup = RequiredGenerated<components['schemas']['GithubReviewGroupResponse']>
+export type GithubReviewGroupMember = Omit<RequiredGenerated<components['schemas']['GithubReviewGroupMemberResponse']>, 'review'> & { review: ReviewTask }
