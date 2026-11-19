@@ -4,20 +4,24 @@
 
 ## 1. 当前状态
 
-`web/e2e` 已完成 API mock 迁移，现状如下：
+核心业务用例使用真实请求，部分历史 UI 夹具仍待迁移，现状如下：
 
 - 不再使用 `helpers/route-mocks.ts`、`helpers/api-fixtures.ts`、`helpers/assertions.ts`
-- 不在 spec 内使用 `page.route('**/api/...')` 拦截 API
+- 业务验收用例不拦截关键 API；历史主题、认证入口等 UI 夹具仍有页面级响应替换
 - 通过 Playwright `request`（`page.context().request`）与后端进行真实认证与数据交互
 - 关键会话 helper：`web/e2e/helpers/session.ts`
 
+历史开发态身份和视觉夹具只证明 UI 行为，不能证明真实认证、权限或后端闭环。
+复现现有 CI 时使用其 `local` 开发配置；交付模式的真实请求验收单独执行，不能为了
+通过这些夹具而放宽交付配置。本次不新增 API mock，迁移缺口不应写成已完成。
+
 当前 Playwright 配置（`web/playwright.config.ts`）：
 
-- `baseURL`: `http://localhost:3000`
+- `baseURL`: `http://127.0.0.1:3000`；设置 `PLAYWRIGHT_BASE_URL` 可验证已有隔离环境
 - 浏览器：`chromium`
 - `workers`: `1`（真实请求模式下优先稳定性）
 - `fullyParallel`: `false`
-- `reporter`: `html`
+- `reporter`: `line` + `html`（不自动启动报告服务）
 - `trace: 'on-first-retry'`
 - `screenshot: 'on'`
 - `webServer.command`: `pnpm exec vite --host 127.0.0.1 --port 3000 --strictPort`
@@ -143,13 +147,19 @@ Smoke 只保留关键路径，目标是快且稳，不追求覆盖面最大。
 - `route-guard.spec.ts`
 - `dashboard-shell.spec.ts`
 
-## 7. 常见问题排查
+## 7. CI 进度与失败报告
+
+CI 同时输出逐用例进度并生成 HTML 报告。Playwright 总运行预算为 30 分钟，测试步骤上限 35 分钟，工作流上限 45 分钟；正常测试失败或 Playwright 总预算耗尽应先返回失败，再执行报告上传与环境清理，不等待整个工作流被取消。用户取消或新提交触发的并发取消仍可能没有完整报告。配置来源为 `web/playwright.config.ts` 和 `.github/workflows/pr-e2e.yml`。
+
+市场页用例按当前滚动加载交互验证：保留已有卡片、不重复追加、保持搜索和排序、兼容旧 page 链接，不再等待上一页／下一页按钮。搜索控件和排序下拉框的公共定位在 `web/e2e/helpers/search-seed.ts`。复杂夹具可单独设置 beforeAll 预算，不因此将每个界面用例都延长到五分钟。
+
+## 8. 常见问题排查
 
 - 认证失败：先确认后端可达（`http://localhost:8080`）且注册/登录接口正常
 - 用例偶发失败：优先检查选择器歧义和断言时机，不要用固定等待掩盖
 - 并发冲突：确认用例是否复用统一 helper，并避免共享可变测试数据
 
-## 8. 验收口径
+## 9. 验收口径
 
 满足以下条件视为迁移完成：
 

@@ -30,7 +30,7 @@ jobs:
     if: ${{ github.event_name != 'pull_request' || !github.event.pull_request.draft }}
     # Keep the runner on a distribution supported by the locked Playwright version.
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 45
 
     steps:
       - name: Check out repository
@@ -70,6 +70,8 @@ jobs:
         run: cd web && pnpm exec playwright install --with-deps chromium
 
       - name: Run frontend E2E tests
+        # Playwright's 30-minute budget leaves time for reports and cleanup.
+        timeout-minutes: 35
         run: make test-e2e-frontend
 
       - name: Upload Playwright HTML report

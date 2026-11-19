@@ -3,6 +3,8 @@ import { setEnglishLocale, setUniqueClientIp } from './helpers/auth-fixtures'
 import {
   getSearchCard,
   getSearchCards,
+  getSearchInput,
+  selectSearchSort,
   prepareSearchSeed,
   type PreparedSearchSeed,
 } from './helpers/search-seed'
@@ -19,80 +21,13 @@ function latestSeed(seed: PreparedSearchSeed) {
 }
 
 async function waitForCards(page: Page) {
+  await expect(getSearchInput(page)).toBeVisible()
   const cards = getSearchCards(page)
-
-  if (basicSeed) {
-    await basicSeed.builder.waitForSearchResults(
-      basicSeed.keyword,
-      basicSeed.skills.map((skill) => skill.slug),
-    )
-  }
-
-  const keyword = basicSeed?.keyword
-  const encodedKeyword = keyword ? encodeURIComponent(keyword) : null
-  let reloaded = false
-
-  const waitForMatchingResponse = async () => {
-    if (!encodedKeyword) {
-      return
-    }
-
-    await page.waitForResponse(async (response) => {
-      if (!response.url().includes('/api/web/skills?') || !response.url().includes(`q=${encodedKeyword}`)) {
-        return false
-      }
-      if (response.status() !== 200) {
-        return false
-      }
-
-      try {
-        const payload = await response.json() as { data?: { items?: Array<unknown> } }
-        return Array.isArray(payload.data?.items) && payload.data.items.length > 0
-      } catch {
-        return false
-      }
-    }, { timeout: 15_000 }).catch(() => null)
-  }
-
-  const waitForCardCount = async () => {
-    await expect.poll(
-      async () => cards.count(),
-      {
-        timeout: 20_000,
-        intervals: [250, 500, 1_000, 2_000],
-      },
-    ).toBeGreaterThan(0)
-  }
-
-  await page.waitForLoadState('networkidle')
-  await expect(page.getByRole('textbox', { name: 'Search skills...' })).toBeVisible({ timeout: 8_000 })
-
-  if (await cards.count() > 0) {
-    return cards
-  }
-
-  await waitForMatchingResponse()
-
-  try {
-    await waitForCardCount()
-  } catch {
-    if (reloaded) {
-      throw new Error('Timed out waiting for search cards after one reload fallback')
-    }
-
-    reloaded = true
-    await page.reload({ waitUntil: 'networkidle' })
-    await expect(page.getByRole('textbox', { name: 'Search skills...' })).toBeVisible({ timeout: 8_000 })
-    await waitForMatchingResponse()
-    await waitForCardCount()
-  }
-
+  await expect(cards.first()).toBeVisible()
   return cards
 }
 
 let basicSeed: PreparedSearchSeed | undefined
-
-test.setTimeout(300_000)
 
 // Independent browser scenarios must not exhaust one anonymous search quota.
 test.beforeEach(async ({ page }, testInfo) => {
@@ -154,11 +89,13 @@ test.describe('Search Card Display (Real API)', () => {
     await expect(page.getByRole('heading', { name: 'No results found' })).toBeVisible({ timeout: 8_000 })
   })
 
-  // TC_SEARCH_INTERACT_035 P0 - large results show pagination
-  test('TC_SEARCH_INTERACT_035: large result sets show pagination controls', async ({ page }) => {
+  // TC_SEARCH_INTERACT_035 P0 - large results append without pagination
+  test('TC_SEARCH_INTERACT_035: large result sets load by scrolling without pagination', async ({ page }) => {
     await page.goto(SEARCH_URL(basicSeed!.keyword))
-    await page.waitForLoadState('networkidle')
-    await expect(page.getByRole('button', { name: /next|›/i })).toBeVisible({ timeout: 10_000 })
+    await waitForCards(page)
+    await expect(page.getByRole('button', { name: /next|previous/i })).toHaveCount(0)
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+    await expect(getSearchCards(page)).toHaveCount(basicSeed!.skills.length)
   })
 })
 
@@ -172,7 +109,7 @@ test.describe('Search Card Content (Real API)', () => {
   // TC_SEARCH_INTERACT_003 P0 - card count matches count indicator
   test('TC_SEARCH_INTERACT_003: displayed card count is consistent with skill count indicator', async ({ page }) => {
     await page.goto(SEARCH_URL(basicSeed!.keyword))
-    const cards = getSearchCards(page)
+    const cards = await waitForCards(page)
     const cardCount = await cards.count()
     const countText = await page.getByText(/\d+\s+skills found/i).first().textContent()
     const totalMatch = countText?.match(/\d+/)
@@ -217,7 +154,8 @@ test.describe('Search Card Navigation (Real API)', () => {
     await expect(firstCard).toBeVisible({ timeout: 8_000 })
     await firstCard.click()
     await expect(page).toHaveURL(new RegExp(`/space/${current.skill.namespace}/${current.skill.slug}`))
-    await expect(page.getByRole('heading', { name: current.skillName, exact: true })).toBeVisible()
+    // The page title precedes the overview, whose Markdown can repeat the same heading.
+    await expect(page.getByRole('heading', { name: current.skillName, exact: true }).first()).toBeVisible()
   })
 
   // TC_SEARCH_INTERACT_009 P1 - Ctrl+click opens in new tab
@@ -246,11 +184,11 @@ test.describe('Search Card Sort Interaction (Real API)', () => {
   })
 
   // TC_SEARCH_INTERACT_021 P0 - switching sort updates cards
-  test('TC_SEARCH_INTERACT_021: switching sort tab re-renders card list', async ({ page }) => {
+  test('TC_SEARCH_INTERACT_021: switching sort selector re-renders card list', async ({ page }) => {
     await page.goto(SEARCH_URL(basicSeed!.keyword))
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
 
-    await page.getByRole('button', { name: 'Downloads' }).click()
+    await selectSearchSort(page, 'Downloads')
     await page.waitForLoadState('networkidle')
     await expect(page).toHaveURL(/sort=downloads/)
     await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
@@ -259,7 +197,7 @@ test.describe('Search Card Sort Interaction (Real API)', () => {
   // TC_SEARCH_INTERACT_026 P0 - re-search replaces cards
   test('TC_SEARCH_INTERACT_026: re-searching with new keyword replaces card list', async ({ page }) => {
     await page.goto(SEARCH_URL(''))
-    const searchInput = page.getByPlaceholder('Search skills...')
+    const searchInput = getSearchInput(page)
     await searchInput.fill(basicSeed!.keyword)
     await searchInput.press('Enter')
     await page.waitForLoadState('networkidle')
@@ -270,50 +208,38 @@ test.describe('Search Card Sort Interaction (Real API)', () => {
   // TC_SEARCH_INTERACT_027 P0 - re-search resets page to 0
   test('TC_SEARCH_INTERACT_027: re-searching resets page number to 0', async ({ page }) => {
     await page.goto(SEARCH_URL(basicSeed!.keyword, 'relevance', 1))
-    const searchInput = page.getByPlaceholder('Search skills...')
+    const searchInput = getSearchInput(page)
     await searchInput.fill(basicSeed!.keyword)
     await searchInput.press('Enter')
-    await expect(page).toHaveURL(/page=0/)
+    await expect(page).toHaveURL(url => (url.searchParams.get('page') ?? '0') === '0')
   })
 })
 
-// ─── Pagination Card Updates ──────────────────────────────────────────────────
+// ─── Incremental Card Loading ─────────────────────────────────────────────────
 
-test.describe('Search Card Pagination (Real API)', () => {
+test.describe('Search Card Incremental Loading (Real API)', () => {
   test.beforeEach(async ({ page }) => {
     await setEnglishLocale(page)
   })
 
-  // TC_SEARCH_INTERACT_023 P0 - switching page updates cards
-  test('TC_SEARCH_INTERACT_023: switching to next page shows different cards', async ({ page }) => {
+  test('TC_SEARCH_INTERACT_023: loading the next batch keeps existing cards without duplicates', async ({ page }) => {
     await page.goto(SEARCH_URL(basicSeed!.keyword))
-    await page.waitForLoadState('networkidle')
-
-    const nextBtn = page.getByRole('button', { name: /next|›/i })
-    const firstCardTitle = await getSearchCards(page).first().getByRole('heading').textContent()
-    await expect(nextBtn).toBeVisible({ timeout: 10_000 })
-    await nextBtn.click()
-    await page.waitForLoadState('networkidle')
-    await expect(page).toHaveURL(/page=1/)
-    await expect(getSearchCards(page).first()).toBeVisible({ timeout: 8_000 })
-    const secondPageFirstTitle = await getSearchCards(page).first().getByRole('heading').textContent()
-    expect(secondPageFirstTitle).not.toBe(firstCardTitle)
+    const cards = await waitForCards(page)
+    const firstTitle = await cards.first().getByRole('heading').textContent()
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
+    await expect(cards).toHaveCount(basicSeed!.skills.length)
+    expect(await cards.first().getByRole('heading').textContent()).toBe(firstTitle)
+    const titles = await cards.getByRole('heading').allTextContents()
+    expect(new Set(titles).size).toBe(titles.length)
+    await expect(page).toHaveURL(url => (url.searchParams.get('page') ?? '0') === '0')
   })
 
-  // TC_SEARCH_INTERACT_025 P1 - page switch scrolls to top
-  test('TC_SEARCH_INTERACT_025: switching page scrolls back to top of results', async ({ page }) => {
+  test('TC_SEARCH_INTERACT_025: scrolling for more cards retains the reading position', async ({ page }) => {
     await page.goto(SEARCH_URL(basicSeed!.keyword))
-    await page.waitForLoadState('networkidle')
-
-    const nextBtn = page.getByRole('button', { name: /next|›/i })
-    await expect(nextBtn).toBeVisible({ timeout: 10_000 })
+    await waitForCards(page)
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
-    await nextBtn.click()
-    await page.waitForLoadState('networkidle')
-    await expect.poll(
-      () => page.evaluate(() => window.scrollY),
-      { timeout: 5_000, intervals: [100, 250, 500, 1_000] },
-    ).toBeLessThan(300)
+    await expect(getSearchCards(page)).toHaveCount(basicSeed!.skills.length)
+    expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
   })
 })
 
