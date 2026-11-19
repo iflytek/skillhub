@@ -89,6 +89,22 @@ class SkillSearchSourcePostgresTest {
     }
 
     @Test
+    void largeOffsetsRemainEmptyWithoutChangingAuthorizedTotals() {
+        for (int page : List.of(107_374_183, Integer.MAX_VALUE)) {
+            for (String sort : List.of("newest", "downloads", "relevance")) {
+                for (SkillSearchSource source : SkillSearchSource.values()) {
+                    var result = query.search(new SearchQuery("shared", team.getId(),
+                            SearchVisibilityScope.anonymous(), sort, page, 20, List.of(), false, source));
+                    assertThat(result.skillIds()).isEmpty();
+                    assertThat(result.total()).isEqualTo(source == SkillSearchSource.PLATFORM ? 1
+                            : source == SkillSearchSource.GITHUB ? 2 : 3);
+                    assertThat(result.page()).isEqualTo(page);
+                }
+            }
+        }
+    }
+
+    @Test
     void currentSourceAndPermissionsOverrideStaleSearchDocuments() {
         var member = new SearchVisibilityScope("member", Set.of(team.getId()), Set.of(), false);
         assertThat(search(SkillSearchSource.GITHUB, "newest", 0, member).total()).isEqualTo(3);
