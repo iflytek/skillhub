@@ -4,12 +4,16 @@
 
 ## 1. 当前状态
 
-`web/e2e` 已完成 API mock 迁移，现状如下：
+核心业务用例使用真实请求，部分历史 UI 夹具仍待迁移，现状如下：
 
 - 不再使用 `helpers/route-mocks.ts`、`helpers/api-fixtures.ts`、`helpers/assertions.ts`
-- 不在 spec 内使用 `page.route('**/api/...')` 拦截 API
+- 业务验收用例不拦截关键 API；历史主题、认证入口等 UI 夹具仍有页面级响应替换
 - 通过 Playwright `request`（`page.context().request`）与后端进行真实认证与数据交互
 - 关键会话 helper：`web/e2e/helpers/session.ts`
+
+历史开发态身份和视觉夹具只证明 UI 行为，不能证明真实认证、权限或后端闭环。
+复现现有 CI 时使用其 `local` 开发配置；交付模式的真实请求验收单独执行，不能为了
+通过这些夹具而放宽交付配置。本次不新增 API mock，迁移缺口不应写成已完成。
 
 当前 Playwright 配置（`web/playwright.config.ts`）：
 

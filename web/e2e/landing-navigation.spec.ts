@@ -20,7 +20,7 @@ test.describe('Landing Navigation (Real API)', () => {
 
   test('redirects anonymous publish attempts to login', async ({ page }) => {
     await page.goto('/')
-    await page.getByRole('link', { name: 'Publish Skill' }).click()
+    await page.getByRole('link', { name: 'Publish Skill', exact: true }).click()
     await expect(page).toHaveURL(/\/login\?returnTo=%2Fdashboard%2Fpublish$/)
   })
 
