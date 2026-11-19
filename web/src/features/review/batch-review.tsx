@@ -149,7 +149,7 @@ export function useBatchReview(filterKey: string) {
     </div>
   </div> : null
   const dialogs = <>
-    <Dialog open={clearOpen} onOpenChange={setClearOpen}><DialogContent><DialogHeader><DialogTitle>{t('reviewBatch.changeFilters')}</DialogTitle><DialogDescription>{t('reviewBatch.clearWarning')}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setClearOpen(false)}>{t('reviewBatch.cancel')}</Button><Button onClick={() => { setSelected([]); setClearOpen(false); pendingFilter.current?.(); pendingFilter.current = null }}>{t('reviewBatch.continue')}</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={clearOpen} onOpenChange={setClearOpen}><DialogContent className="[&>button]:h-11 [&>button]:w-11 sm:[&>button]:h-7 sm:[&>button]:w-7"><DialogHeader><DialogTitle>{t('reviewBatch.changeFilters')}</DialogTitle><DialogDescription>{t('reviewBatch.clearWarning')}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" className="h-11 sm:h-8" onClick={() => setClearOpen(false)}>{t('reviewBatch.cancel')}</Button><Button className="h-11 sm:h-8" onClick={() => { setSelected([]); setClearOpen(false); pendingFilter.current?.(); pendingFilter.current = null }}>{t('reviewBatch.continue')}</Button></DialogFooter></DialogContent></Dialog>
     <Dialog open={open} onOpenChange={next => { if (!decide.isPending && !reconcile.isPending) setOpen(next) }}>
       <DialogContent className="flex max-h-[min(48rem,calc(100dvh-2rem))] w-[min(calc(100vw-2rem),48rem)] flex-col gap-0 overflow-hidden p-0" hideClose
         onCloseAutoFocus={event => {

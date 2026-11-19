@@ -43,14 +43,14 @@ export function ReviewRepositoryGroups({ filters, namespaceId, enabled, page, sn
   if (!enabled) return null
   const groups = snapshotId ? undefined : query.data as Awaited<ReturnType<typeof reviewApi.syncGroups>> | undefined
   const members = snapshotId ? query.data as Awaited<ReturnType<typeof reviewApi.syncGroupMembers>> | undefined : undefined
-  return <section className="space-y-4" aria-busy={query.isFetching} aria-label={t('reviewGroups.title')}>
+  return <section className="space-y-4 [&_button]:min-h-11 sm:[&_button]:min-h-8" aria-busy={query.isFetching} aria-label={t('reviewGroups.title')}>
     <div className="flex flex-wrap items-center justify-between gap-3">
       <h2 id="review-results" tabIndex={-1} className="text-lg font-semibold">{t(snapshotId ? 'reviewGroups.members' : 'reviewGroups.title')}</h2>
       {snapshotId && <Button variant="outline" disabled={batch.busy} onClick={() => onGroup()}><ArrowLeft className="mr-2 h-4 w-4" />{t('reviewGroups.back')}</Button>}
     </div>
     {snapshotId && context.data && <Card className="space-y-2 bg-secondary/50 p-5"><h3 className="break-all font-semibold">{context.data.owner}/{context.data.repository}</h3><p className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground"><span>@{context.data.namespace}</span><GitCommitHorizontal aria-hidden="true" className="h-4 w-4" /><code className="break-all">{context.data.commitSha}</code><span>{formatLocalDateTime(context.data.capturedAt, i18n.language)}</span></p></Card>}
     {snapshotId && context.isError && <p role="alert" className="text-sm text-destructive">{t('reviewCenter.loadFailed')}</p>}
-    {snapshotId && <form className="flex flex-wrap gap-3" onSubmit={event => { event.preventDefault(); onMemberQuery?.(memberDraft.trim()) }}><Input aria-label={t('reviewGroups.searchMembers')} placeholder={t('reviewGroups.searchMembers')} maxLength={200} value={memberDraft} onChange={event => setMemberDraft(event.target.value)} className="min-w-0 flex-1 sm:max-w-sm" /><Button type="submit" disabled={batch.busy}>{t('reviewCenter.filters.apply')}</Button></form>}
+    {snapshotId && <form className="flex flex-wrap gap-3" onSubmit={event => { event.preventDefault(); onMemberQuery?.(memberDraft.trim()) }}><Input aria-label={t('reviewGroups.searchMembers')} placeholder={t('reviewGroups.searchMembers')} maxLength={200} value={memberDraft} onChange={event => setMemberDraft(event.target.value)} className="h-11 min-w-0 flex-1 sm:h-8 sm:max-w-sm" /><Button type="submit" disabled={batch.busy}>{t('reviewCenter.filters.apply')}</Button></form>}
     {query.isLoading ? <div className="h-40 animate-shimmer rounded-lg" aria-label={t('reviewCenter.loading')} />
       : query.isError ? <Card className="space-y-3 p-6" role="alert"><p>{t('reviewCenter.loadFailed')}</p><Button variant="outline" onClick={() => void query.refetch()}>{t('reviewCenter.retry')}</Button></Card>
         : !query.data?.items.length ? <Card className="space-y-3 p-8 text-center"><p>{t('reviewGroups.empty')}</p><p className="text-sm text-muted-foreground">{t('reviewGroups.historyHint')}</p>{page > 0 && <Button variant="outline" onClick={() => onPage(0)}>{t('reviewCenter.firstPage')}</Button>}</Card>
