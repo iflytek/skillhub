@@ -13,7 +13,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 ROOT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-NGINX_IMAGE="${NGINX_SMOKE_IMAGE:-nginx:1.31.9-alpine}"
+NGINX_IMAGE="${NGINX_SMOKE_IMAGE:-nginx:1.30.7-trixie}"
 name="skillhub-base-path-smoke-$$"
 
 tmp=$(mktemp -d)

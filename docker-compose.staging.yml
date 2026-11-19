@@ -67,7 +67,7 @@ services:
       start_period: 60s
 
   web:
-    image: nginx:1.31.9-alpine
+    image: nginx:1.30.7-trixie
     ports:
       - "80:80"
     volumes:

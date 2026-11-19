@@ -42,6 +42,14 @@ The release workflow publishes `linux/amd64`, `linux/arm64`, and
 `linux/riscv64` variants for `skillhub-server` and `skillhub-web`. The scanner
 remains limited to its existing AMD64/ARM64 platform list.
 
+The Web runtime uses the patched stable `nginx:1.30.7-trixie` image, including
+for the other supported architectures. At the November 19, 2026 registry check,
+the new `nginx:1.31.9-alpine` tag did not yet contain a RISC-V manifest even
+though the upstream source tag list mentioned RISC-V. Check the actual registry
+platforms before changing this base; do not fall back to an unpatched image or
+remove RISC-V from the release matrix to bypass a failed build. Debian includes
+curl, which is used by the Web health check and proxy regression fixtures.
+
 ## Verification boundary
 
 The pull-request workflow builds both supported target images, checks their OCI
