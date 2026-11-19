@@ -90,12 +90,12 @@ public class PostgresFullTextQueryService implements SearchQueryService {
                 && "relevance".equals(query.sortBy())
                 && searchDocumentRepository != null
                 && searchEmbeddingService != null;
-        int requestedOffset = query.page() * query.size();
+        long requestedOffset = (long) query.page() * query.size();
         if (useSemanticRerank && requestedOffset + query.size() > maxCandidates) {
             useSemanticRerank = false;
         }
         int sqlLimit = query.size();
-        int sqlOffset = requestedOffset;
+        long sqlOffset = requestedOffset;
         if (useSemanticRerank) {
             sqlLimit = Math.min(Math.max((query.page() + 1) * query.size() * candidateMultiplier, query.size() * candidateMultiplier), maxCandidates);
             sqlOffset = 0;
@@ -272,7 +272,7 @@ public class PostgresFullTextQueryService implements SearchQueryService {
 
     private List<Long> rerankBySemanticSimilarity(List<Long> candidateSkillIds,
                                                   String normalizedKeyword,
-                                                  int requestedOffset,
+                                                  long requestedOffset,
                                                   int pageSize) {
         Map<Long, SkillSearchDocumentEntity> documentsBySkillId = new HashMap<>();
         for (SkillSearchDocumentEntity entity : searchDocumentRepository.findBySkillIdIn(candidateSkillIds)) {

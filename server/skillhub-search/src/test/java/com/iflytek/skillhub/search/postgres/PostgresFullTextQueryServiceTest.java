@@ -683,7 +683,7 @@ class PostgresFullTextQueryServiceTest {
         ));
 
         verify(nativeQuery).setParameter("limit", 16);
-        verify(nativeQuery).setParameter("offset", 0);
+        verify(nativeQuery).setParameter("offset", 0L);
         assertThat(result.skillIds()).containsExactly(1L, 2L);
     }
 
@@ -723,10 +723,31 @@ class PostgresFullTextQueryServiceTest {
         ));
 
         verify(nativeQuery).setParameter("limit", 10);
-        verify(nativeQuery).setParameter("offset", 200);
+        verify(nativeQuery).setParameter("offset", 200L);
         verify(repository, never()).findBySkillIdIn(org.mockito.ArgumentMatchers.anyList());
         assertThat(result.skillIds()).containsExactly(201L, 202L);
         assertThat(result.total()).isEqualTo(1000L);
+    }
+
+    @Test
+    void largePageOffsetShouldNotOverflowToNegativeDatabaseOffset() {
+        EntityManager entityManager = mock(EntityManager.class);
+        Query nativeQuery = mock(Query.class);
+        Query countQuery = mock(Query.class);
+        when(entityManager.createNativeQuery(anyString()))
+                .thenReturn(nativeQuery)
+                .thenReturn(countQuery);
+        when(nativeQuery.getResultList()).thenReturn(List.of());
+        when(countQuery.getSingleResult()).thenReturn(0L);
+
+        int page = 107_374_183;
+        int size = 20;
+        new PostgresFullTextQueryService(entityManager).search(new SearchQuery(
+                null, null, SearchVisibilityScope.anonymous(), "newest", page, size));
+
+        ArgumentCaptor<Object> offset = ArgumentCaptor.forClass(Object.class);
+        verify(nativeQuery).setParameter(org.mockito.ArgumentMatchers.eq("offset"), offset.capture());
+        assertThat(((Number) offset.getValue()).longValue()).isEqualTo((long) page * size);
     }
 
     @Test
