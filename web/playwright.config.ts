@@ -16,10 +16,11 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   timeout: process.env.CI ? 90_000 : 45_000,
+  globalTimeout: process.env.CI ? 30 * 60_000 : undefined,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: Number(process.env.PLAYWRIGHT_WORKERS ?? 1),
-  reporter: 'html',
+  reporter: [['line'], ['html', { open: 'never' }]],
   use: {
     baseURL,
     trace: 'on-first-retry',
