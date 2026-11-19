@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Check, CheckCheck, AlertCircle, Loader2, RefreshCw, X, XCircle } from 'lucide-react'
 import { reviewApi } from '@/api/client'
@@ -17,7 +17,20 @@ export function isBatchReviewTask(task: ReviewTask) {
 export function useBatchReview(filterKey: string) {
   const { t } = useTranslation()
   const client = useQueryClient()
+  const selectionRestore = useRef({ scope: filterKey, ids: (client.getQueryData<number[]>(['reviews', 'selection', filterKey]) ?? []).slice(0, BATCH_REVIEW_LIMIT), applied: false })
+  const restoredSelection = useQuery({
+    queryKey: ['review-selection-restore', filterKey, selectionRestore.current.ids],
+    queryFn: async () => Promise.all(selectionRestore.current.ids.map(id => reviewApi.get(id).catch(error => { if (typeof error === 'object' && error !== null && 'status' in error && (error.status === 403 || error.status === 404)) return null; throw error }))),
+    enabled: selectionRestore.current.scope === filterKey && selectionRestore.current.ids.length > 0 && !selectionRestore.current.applied,
+    retry: false, gcTime: 0,
+  })
   const [selected, setSelected] = useState<ReviewTask[]>([])
+  useEffect(() => {
+    if (restoredSelection.data && selectionRestore.current.scope === filterKey && !selectionRestore.current.applied) {
+      selectionRestore.current.applied = true
+      setSelected(restoredSelection.data.filter((task): task is ReviewTask => !!task && isBatchReviewTask(task)))
+    }
+  }, [filterKey, restoredSelection.data])
   const [action, setAction] = useState<BatchReviewRequest['action']>('APPROVE')
   const [open, setOpen] = useState(false)
   const [comment, setComment] = useState('')
@@ -35,13 +48,17 @@ export function useBatchReview(filterKey: string) {
   activeScope.current = filterKey
   useEffect(() => {
     if (previousFilter.current !== filterKey) {
+      client.removeQueries({ queryKey: ['reviews', 'selection', previousFilter.current], exact: true })
       previousFilter.current = filterKey
       setSelected([])
       setOpen(false)
       setResult(null)
       snapshot.current = []
+      return
     }
-  }, [filterKey])
+    if (selectionRestore.current.scope === filterKey && selectionRestore.current.ids.length && !selectionRestore.current.applied) return
+    client.setQueryData(['reviews', 'selection', filterKey], selected.map(task => task.id))
+  }, [client, filterKey, selected])
 
   const refresh = async () => {
     await Promise.all(['reviews', 'governance', 'skills', 'skill-avatar'].map(key =>
@@ -65,7 +82,7 @@ export function useBatchReview(filterKey: string) {
     onError: (_error, _request, scope) => { if (scope === activeScope.current) { setUncertain(true); void refresh() } },
     onSettled: () => { submitting.current = false },
   })
-  const busy = preview.isPending || decide.isPending
+  const busy = preview.isPending || decide.isPending || restoredSelection.isFetching || (restoredSelection.isError && !selectionRestore.current.applied)
   const items = snapshot.current
   const readyIds = preview.data?.items.filter(item => item.outcome === 'READY').map(item => item.id) ?? []
   const ready = new Set(readyIds)
@@ -113,6 +130,7 @@ export function useBatchReview(filterKey: string) {
       : [...old, ...candidates.filter(task => !old.some(item => item.id === task.id))].slice(0, BATCH_REVIEW_LIMIT))
   }
   const guardFilter = (callback: () => void) => {
+    if (busy) return
     if (!selected.length) callback()
     else { pendingFilter.current = callback; setClearOpen(true) }
   }
@@ -123,7 +141,7 @@ export function useBatchReview(filterKey: string) {
     decide.mutate({ ids: readyIds, action, comment: comment.trim() || undefined })
   }
 
-  const toolbar = selected.length > 0 ? <div className="sticky top-[72px] z-10 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/50 bg-accent px-4 py-3 shadow-sm [&_button]:min-h-11 md:[&_button]:min-h-0" role="region" aria-label={t('reviewBatch.selection')}>
+  const toolbar = restoredSelection.isError && !selectionRestore.current.applied ? <div role="alert" className="flex w-full flex-wrap items-center gap-3"><p className="text-sm">{t('reviewGroups.restoreFailed')}</p><Button variant="outline" onClick={() => void restoredSelection.refetch()}>{t('reviewCenter.retry')}</Button><Button variant="outline" onClick={() => { selectionRestore.current.applied = true; setSelected([]) }}>{t('reviewGroups.reselect')}</Button></div> : selected.length > 0 ? <div className="flex w-full flex-wrap items-center justify-between gap-3 [&_button]:min-h-11 sm:[&_button]:min-h-8" role="region" aria-label={t('reviewBatch.selection')}>
     <p className="text-sm font-medium" aria-live="polite">{t('reviewBatch.selected', { count: selected.length })}<span className="ml-2 text-xs font-normal text-muted-foreground">{t('reviewBatch.limit', { count: BATCH_REVIEW_LIMIT })}</span></p>
     <div className="flex flex-wrap gap-2">
       <Button variant="ghost" size="sm" disabled={busy} onClick={() => setSelected([])}><X className="mr-1.5 h-4 w-4" />{t('reviewBatch.clear')}</Button>
@@ -132,7 +150,7 @@ export function useBatchReview(filterKey: string) {
     </div>
   </div> : null
   const dialogs = <>
-    <Dialog open={clearOpen} onOpenChange={setClearOpen}><DialogContent><DialogHeader><DialogTitle>{t('reviewBatch.changeFilters')}</DialogTitle><DialogDescription>{t('reviewBatch.clearWarning')}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setClearOpen(false)}>{t('reviewBatch.cancel')}</Button><Button onClick={() => { setSelected([]); setClearOpen(false); pendingFilter.current?.(); pendingFilter.current = null }}>{t('reviewBatch.continue')}</Button></DialogFooter></DialogContent></Dialog>
+    <Dialog open={clearOpen} onOpenChange={setClearOpen}><DialogContent className="[&>button]:h-11 [&>button]:w-11 sm:[&>button]:h-7 sm:[&>button]:w-7"><DialogHeader><DialogTitle>{t('reviewBatch.changeFilters')}</DialogTitle><DialogDescription>{t('reviewBatch.clearWarning')}</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" className="h-11 sm:h-8" onClick={() => setClearOpen(false)}>{t('reviewBatch.cancel')}</Button><Button className="h-11 sm:h-8" onClick={() => { client.setQueryData(['reviews', 'selection', filterKey], []); setSelected([]); setClearOpen(false); pendingFilter.current?.(); pendingFilter.current = null }}>{t('reviewBatch.continue')}</Button></DialogFooter></DialogContent></Dialog>
     <Dialog open={open} onOpenChange={next => { if (!decide.isPending && !reconcile.isPending) setOpen(next) }}>
       <DialogContent className="flex max-h-[min(48rem,calc(100dvh-2rem))] w-[min(calc(100vw-2rem),48rem)] flex-col gap-0 overflow-hidden p-0" hideClose
         onCloseAutoFocus={event => {

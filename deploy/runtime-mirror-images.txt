@@ -4,7 +4,7 @@ redis:7-alpine redis:7-alpine
 docker.io/pgsty/silo:RELEASE.2026-09-16T00-00-00Z minio:latest
 prom/prometheus:latest prometheus:latest
 grafana/grafana:latest grafana:latest
-nginx:alpine nginx:alpine
+nginx:1.30.7-trixie nginx:1.30.7-trixie
 # Optional single-node storage overlays; do not reuse minio:latest for RustFS.
 docker.io/rustfs/rustfs:1.0.3@sha256:9ca9559533b537d10482fe923288b676ad08f92a7069d9a17327fbae3cab688b rustfs:1.0.3-9ca9559533b5
 docker.io/pgsty/silo:RELEASE.2026-10-18T00-00-00Z@sha256:2636fc4155d9a7e41ff58cdb65ddd13ba9304e67184e13c25bc5cb34016269d7 silo:20261018-2636fc4155d9

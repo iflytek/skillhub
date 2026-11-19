@@ -4577,5 +4577,29 @@
     "selectTask": "选择 {{name}}",
     "currentStatus": "当前状态：{{status}}",
     "close": "关闭"
+  },
+  "reviewGroups": {
+    "detailTitle": "仓库快照审核",
+    "detailDescription": "核查本次固定提交中的技能申请。",
+    "scanColumn": "安全扫描",
+    "title": "仓库快照审核",
+    "members": "本次申请成员",
+    "back": "返回快照列表",
+    "rows": "逐条查看",
+    "snapshots": "按仓库快照",
+    "empty": "当前筛选下没有审核申请",
+    "historyHint": "历史未关联快照的申请仍可通过逐条列表处理。",
+    "summary": "{{total}} 项申请 · 扫描通过 {{passed}} · 扫描中或异常 {{waiting}} · 风险 {{blocked}}",
+    "open": "查看并审核",
+    "decisionHint": "仅处理明确选择的版本，每批最多50项。扫描和权限将在提交前再次校核；部分通过不代表整个快照可下载。",
+    "sourceRepository": "查看源仓库",
+    "sourceDirectory": "浏览此版本源文件",
+    "scanPASSED": "扫描通过",
+    "scanWAITING": "扫描中或异常",
+    "scanBLOCKED": "存在风险",
+    "searchMembers": "搜索本次申请成员",
+    "selectPassed": "选择本页扫描通过项",
+    "restoreFailed": "暂时无法恢复之前的选择，请重试或重新选择。",
+    "reselect": "重新选择"
   }
 }
