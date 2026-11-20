@@ -36,6 +36,15 @@ describe('classifySkillVersionChange', () => {
     expect(classifySkillVersionChange('v1', '1.0.0')).toBe('unknown')
   })
 
+  test('does not infer chronology or change size from GitHub content hashes', () => {
+    const earlier = `0.0.0-g${'b'.repeat(40)}-${'1'.repeat(16)}`
+    const later = `0.0.0-g${'a'.repeat(40)}-${'2'.repeat(16)}`
+    expect(classifySkillVersionChange(earlier, later)).toBe('unknown')
+    expect(classifySkillVersionChange(later, earlier)).toBe('unknown')
+    expect(classifySkillVersionChange(earlier, earlier)).toBe('none')
+    expect(classifySkillVersionChange(`0.0.0-g${'a'.repeat(40)}`, later)).toBe('unknown')
+  })
+
   test('agrees with the version order used by upgrade', () => {
     const pairs: Array<[string, string]> = [['1.0.0', '1.0.1'], ['1.0.1', '1.0.0'], ['1.0.0', '1.0.0'], ['x', 'y']]
     for (const [installed, remote] of pairs) {

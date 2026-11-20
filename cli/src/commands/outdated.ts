@@ -2,6 +2,7 @@ import { ConfigStore } from '../stores/config-store'
 import { CredentialsStore } from '../stores/credentials-store'
 import { resolveRegistry, resolveToken } from '../services/registry-service'
 import { findOutdatedSkills, type OutdatedItem, type OutdatedReport } from '../services/outdated-service'
+import { CliError } from '../shared/errors'
 
 export interface OutdatedCommandOptions {
   namespace?: string | undefined
@@ -22,15 +23,23 @@ export async function outdatedCommand(options: OutdatedCommandOptions): Promise<
     dir: options.dir,
     tokenForRegistry: async (source: string) => resolveToken(options, process.env, await credentials.getToken(source))
   })
-  return renderOutdatedReport(report, Boolean(options.json))
+  const output = renderOutdatedReport(report, Boolean(options.json))
+  if (report.failure) {
+    process.stdout.write(`${output}\n`)
+    throw new CliError('outdated check is incomplete', report.failure.exitCode, {
+      ...report.failure.details,
+      failed: report.failed
+    })
+  }
+  return output
 }
 
 export function renderOutdatedReport(report: OutdatedReport, json: boolean): string {
   if (json) {
     return JSON.stringify({
-      ok: true,
+      ok: report.failed === 0,
       registry: report.registry,
-      summary: { checked: report.checked, outdated: report.outdated, unknown: report.unknown },
+      summary: { checked: report.checked, outdated: report.outdated, unknown: report.unknown, failed: report.failed },
       items: report.items
     })
   }
@@ -39,7 +48,7 @@ export function renderOutdatedReport(report: OutdatedReport, json: boolean): str
   if (report.items.length === 0) return `All ${report.checked} checked installations are up to date.`
 
   return [
-    `Outdated: ${report.outdated} with newer versions, ${report.unknown} unknown, ${report.checked} checked`,
+    `Outdated: ${report.outdated} with newer versions, ${report.unknown} unknown, ${report.failed} failed, ${report.checked} checked`,
     ...report.items.map(renderItem),
     'Run "skillhub upgrade <coordinate> --check" to review an upgrade; nothing was changed.'
   ].join('\n')

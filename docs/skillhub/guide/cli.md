@@ -8,6 +8,7 @@ SkillHub CLI 是 SkillHub 的第一方命令行工具，用于搜索、安装、
 | --- | --- | --- |
 | 安装单个远端 Skill | install | 选定 Agent / scope / 自定义目录 |
 | 更新已安装单个技能 | upgrade | 显式选择的坐标及目标，不隐式升级全部 |
+| 发现已安装技能的更新 | outdated | 只读检查当前生效 Registry 的安装记录 |
 | 管理固定版本集合 | suite | 套装安装记录及成员来源 |
 | 同步团队创作工作区 | sync | 非 global 空间与工作区，不等于套装管理 |
 | 更新 CLI 程序本身 | update | 本机 CLI 安装，不更新技能 |
@@ -259,6 +260,24 @@ DeepSeek Harness 从最近的 Git 仓库根目录解析项目技能，而 SkillH
   "installedAt": "2026-04-28T06:00:00.000Z"
 }
 ```
+
+## 只读检查技能更新
+
+`outdated` 需要包含此命令的 CLI 版本；仅升级服务端，不会给旧 CLI 增加该命令。
+
+```bash
+skillhub outdated --json
+skillhub outdated --namespace team --agent codex --registry https://skillhub.example.com
+```
+
+默认只检查当前生效 Registry 的已安装技能，不自动访问其他来源。命令不下载、不获取安装锁、
+不写本地文件、不迁移 inventory，也不执行升级。结果包含本地修改状态和版本编号变化标签；
+例如 `0.1.0 -> 0.2.0` 标记为 `minor`，不承诺实际兼容性。GitHub 内容哈希版本除完全相同外标记
+为 `unknown`，不会按哈希字母顺序判断新旧。
+
+完整检查以零退出，包括发现更新或无法判断版本顺序的情况。远端查询失败时保留已取得的结果，
+但返回非零退出码、`ok: false` 和 `summary.failed`；stdout 仍是单个 JSON 报告，stderr 输出错误。
+退出码沿用首个查询失败的既有 CLI 错误分类。实际更新仍需显式选择技能并使用 `upgrade --check`。
 
 ## 技能安装后的使用与套装
 

@@ -6,6 +6,8 @@ import { strToU8, zipSync } from 'fflate'
 import { createTempHome } from '../helpers/temp-env'
 import { startFakeRegistry, type FakeSkill } from '../helpers/fake-registry'
 import { runCli } from '../helpers/run-cli'
+import { CredentialsStore } from '../../src/stores/credentials-store'
+import { InventoryStore } from '../../src/stores/inventory-store'
 
 let registries: Array<Awaited<ReturnType<typeof startFakeRegistry>>> = []
 
@@ -38,7 +40,8 @@ async function snapshotTree(...roots: string[]): Promise<Record<string, string>>
 
 async function setup(skills: FakeSkill[]) {
   const env = await createTempHome()
-  const registry = await startFakeRegistry({ skills })
+  const registryOptions: NonNullable<Parameters<typeof startFakeRegistry>[0]> = { skills }
+  const registry = await startFakeRegistry(registryOptions)
   registries.push(registry)
   await mkdir(join(env.cwd, 'skills'), { recursive: true })
   const rootDir = await realpath(join(env.cwd, 'skills'))
@@ -49,7 +52,7 @@ async function setup(skills: FakeSkill[]) {
     ], cliEnv, { cwd: env.cwd })
     expect(installed.exitCode).toBe(0)
   }
-  return { env, registry, rootDir, cliEnv }
+  return { env, registry, rootDir, cliEnv, registryOptions }
 }
 
 function publish(skill: FakeSkill, version: string): void {
@@ -120,7 +123,7 @@ describe('outdated command', () => {
 
     const text = await runCli(['outdated', '--registry', registry.url], cliEnv, { cwd: env.cwd })
     expect(text.exitCode).toBe(0)
-    expect(text.stdout).toContain('Outdated: 4 with newer versions, 1 unknown, 6 checked')
+    expect(text.stdout).toContain('Outdated: 4 with newer versions, 1 unknown, 0 failed, 6 checked')
     expect(text.stdout).toContain(
       `patch      @team/code-review 1.0.0 -> 1.0.1  custom  ${join(rootDir, 'code-review')} [local changes: 1 file]`
     )
@@ -150,7 +153,7 @@ describe('outdated command', () => {
     expect(JSON.parse(json.stdout)).toEqual({
       ok: true,
       registry: registry.url,
-      summary: { checked: 1, outdated: 0, unknown: 0 },
+      summary: { checked: 1, outdated: 0, unknown: 0, failed: 0 },
       items: []
     })
 
@@ -170,9 +173,10 @@ describe('outdated command', () => {
     skills.splice(0, 1)
 
     const team = await runCli(['outdated', '--registry', registry.url, '--namespace', 'team', '--json'], cliEnv, { cwd: env.cwd })
-    expect(team.exitCode).toBe(0)
+    expect(team.exitCode).toBe(1)
     const teamOutput = JSON.parse(team.stdout)
-    expect(teamOutput.summary).toEqual({ checked: 1, outdated: 0, unknown: 1 })
+    expect(teamOutput.summary).toEqual({ checked: 1, outdated: 0, unknown: 1, failed: 1 })
+    expect(teamOutput.ok).toBe(false)
     expect(teamOutput.items[0]).toMatchObject({
       coordinate: '@team/code-review',
       remoteVersion: null,
@@ -183,12 +187,135 @@ describe('outdated command', () => {
 
     const otherAgent = await runCli(['outdated', '--registry', registry.url, '--agent', 'codex', '--json'], cliEnv, { cwd: env.cwd })
     expect(otherAgent.exitCode).toBe(0)
-    expect(JSON.parse(otherAgent.stdout).summary).toEqual({ checked: 0, outdated: 0, unknown: 0 })
+    expect(JSON.parse(otherAgent.stdout).summary).toEqual({ checked: 0, outdated: 0, unknown: 0, failed: 0 })
   })
 
   test('appears in help', async () => {
     const help = await runCli(['help', 'outdated'])
     expect(help.exitCode).toBe(0)
     expect(help.stdout).toContain('skillhub outdated')
+  })
+
+  test('does not silently hide a GitHub update because its hash sorts backwards', async () => {
+    const skill: FakeSkill = { namespace: 'github', slug: 'hash-skill',
+      version: `0.0.0-g${'b'.repeat(40)}-${'1'.repeat(16)}`, ...makeSkill('# hash skill') }
+    const { env, registry, cliEnv } = await setup([skill])
+    publish(skill, `0.0.0-g${'a'.repeat(40)}-${'2'.repeat(16)}`)
+    const before = await snapshotTree(env.home, env.cwd)
+    const downloads = registry.received.downloads
+    const result = await runCli(['outdated', '--registry', registry.url, '--json'], cliEnv, { cwd: env.cwd })
+    expect(result.exitCode).toBe(0)
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      ok: true, summary: { checked: 1, outdated: 0, unknown: 1, failed: 0 },
+      items: [{ coordinate: '@github/hash-skill', change: 'unknown', remoteVersion: skill.version }]
+    })
+    expect(await snapshotTree(env.home, env.cwd)).toEqual(before)
+    expect(registry.received.downloads).toBe(downloads)
+  })
+
+  test.each([['auth', 2], ['forbidden', 2], ['server_error', 1], ['rate_limited', 1]] as const)(
+    'reports an incomplete %s lookup with a nonzero exit and unchanged files', async (failure, exitCode) => {
+      const skill: FakeSkill = { namespace: 'team', slug: 'failed-skill', ...makeSkill('# skill') }
+      const { env, registry, cliEnv, registryOptions } = await setup([skill])
+      registryOptions.failures = { resolve: failure }
+      const before = await snapshotTree(env.home, env.cwd)
+      const downloads = registry.received.downloads
+      const result = await runCli(['outdated', '--registry', registry.url, '--json'], cliEnv, { cwd: env.cwd })
+      expect(result.exitCode).toBe(exitCode)
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        ok: false, summary: { checked: 1, outdated: 0, unknown: 1, failed: 1 },
+        items: [{ coordinate: '@team/failed-skill', remoteVersion: null, change: 'unknown' }]
+      })
+      expect(JSON.parse(result.stderr)).toMatchObject({ ok: false, exitCode })
+      expect(await snapshotTree(env.home, env.cwd)).toEqual(before)
+      expect(registry.received.downloads).toBe(downloads)
+    }
+  )
+
+  test('preserves successful results when another lookup fails', async () => {
+    const skills: FakeSkill[] = [
+      { namespace: 'team', slug: 'missing-skill', ...makeSkill('# missing') },
+      { namespace: 'team', slug: 'updated-skill', ...makeSkill('# updated') }
+    ]
+    const { env, registry, cliEnv } = await setup(skills)
+    publish(skills[1]!, '1.1.0')
+    skills.splice(0, 1)
+    const result = await runCli(['outdated', '--registry', registry.url, '--json'], cliEnv, { cwd: env.cwd })
+    expect(result.exitCode).not.toBe(0)
+    const output = JSON.parse(result.stdout)
+    expect(output).toMatchObject({ ok: false, summary: { checked: 2, outdated: 1, unknown: 1, failed: 1 } })
+    expect(output.items).toContainEqual(expect.objectContaining({ coordinate: '@team/updated-skill', change: 'minor' }))
+    expect(output.items).toContainEqual(expect.objectContaining({ coordinate: '@team/missing-skill', change: 'unknown' }))
+  })
+
+  test('checks only the effective registry and uses only its stored credential', async () => {
+    const first: FakeSkill = { namespace: 'team', slug: 'first-skill', ...makeSkill('# first') }
+    const second: FakeSkill = { namespace: 'team', slug: 'second-skill', ...makeSkill('# second') }
+    const { env, registry, cliEnv } = await setup([first])
+    const other = await startFakeRegistry({ skills: [second] })
+    registries.push(other)
+    expect((await runCli(['install', '@team/second-skill', '--dir', join(env.cwd, 'other-skills'),
+      '--registry', other.url], cliEnv, { cwd: env.cwd })).exitCode).toBe(0)
+    const credentials = new CredentialsStore(env.home)
+    await credentials.setToken(registry.url, 'test-read-token-first')
+    await credentials.setToken(other.url, 'test-read-token-second')
+    publish(first, '1.0.1')
+    publish(second, '1.1.0')
+    registry.received.resolve = null
+    other.received.resolve = null
+    const before = await snapshotTree(env.home, env.cwd)
+    const downloads = [registry.received.downloads, other.received.downloads]
+
+    const selected = { ...cliEnv, SKILLHUB_REGISTRY: registry.url }
+    const current = await runCli(['outdated', '--json'], selected, { cwd: env.cwd })
+    expect(current.exitCode).toBe(0)
+    expect(JSON.parse(current.stdout)).toMatchObject({ registry: registry.url,
+      summary: { checked: 1 }, items: [{ coordinate: '@team/first-skill' }] })
+    expect(registry.received.resolve).toMatchObject({ token: 'Bearer test-read-token-first' })
+    expect(other.received.resolve).toBeNull()
+
+    registry.received.resolve = null
+    const explicit = await runCli(['outdated', '--registry', other.url, '--json'], selected, { cwd: env.cwd })
+    expect(explicit.exitCode).toBe(0)
+    expect(JSON.parse(explicit.stdout)).toMatchObject({ registry: other.url,
+      summary: { checked: 1 }, items: [{ coordinate: '@team/second-skill' }] })
+    expect(other.received.resolve).toMatchObject({ token: 'Bearer test-read-token-second' })
+    expect(registry.received.resolve).toBeNull()
+    expect(await snapshotTree(env.home, env.cwd)).toEqual(before)
+    expect([registry.received.downloads, other.received.downloads]).toEqual(downloads)
+  })
+
+  test('reports a disconnected registry without changing local files', async () => {
+    const { env, registry, cliEnv } = await setup([
+      { namespace: 'team', slug: 'offline-skill', ...makeSkill('# offline') }
+    ])
+    const before = await snapshotTree(env.home, env.cwd)
+    registry.stop()
+    const result = await runCli(['outdated', '--registry', registry.url, '--json'], cliEnv, { cwd: env.cwd })
+    expect(result.exitCode).toBe(3)
+    expect(JSON.parse(result.stdout)).toMatchObject({ ok: false, summary: { checked: 1, failed: 1 } })
+    expect(JSON.parse(result.stderr)).toMatchObject({ ok: false, exitCode: 3 })
+    expect(await snapshotTree(env.home, env.cwd)).toEqual(before)
+  })
+
+  test('reads a legacy inventory without migrating or rewriting it', async () => {
+    const skill: FakeSkill = { namespace: 'team', slug: 'legacy-skill', ...makeSkill('# legacy') }
+    const { env, registry, cliEnv } = await setup([skill])
+    const store = new InventoryStore(env.home)
+    const current = await store.readPersisted()
+    const item = current.items[0]!
+    const target = item.targets[0]!
+    await writeFile(store.path, JSON.stringify({ items: [{ registry: item.registry,
+      namespace: item.namespace, slug: item.slug, version: target.version, fingerprint: target.fingerprint,
+      targets: [{ agent: target.agent, rootDir: target.rootDir, installDir: target.installDir,
+        installedAt: target.installedAt }] }] }))
+    publish(skill, '1.0.1')
+    const before = await snapshotTree(env.home, env.cwd)
+    const result = await runCli(['outdated', '--registry', registry.url, '--json'], cliEnv, { cwd: env.cwd })
+    expect(result.exitCode).toBe(0)
+    expect(JSON.parse(result.stdout)).toMatchObject({ ok: true,
+      items: [{ coordinate: '@team/legacy-skill', change: 'patch', localState: 'clean' }] })
+    expect(await snapshotTree(env.home, env.cwd)).toEqual(before)
+    expect(await store.diskVersion()).toBe(1)
   })
 })

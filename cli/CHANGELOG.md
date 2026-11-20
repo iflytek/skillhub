@@ -8,8 +8,10 @@ All notable CLI behavior changes are documented in this file.
 
 - Add read-only `skillhub outdated` to list SkillHub-managed installations whose registry has a newer
   version, classified as `major`, `minor`, `patch`, `prerelease` or `unknown`, with the local-change
-  state that `upgrade` would enforce. It never downloads, writes or upgrades and exits `0` whether or
-  not updates exist; `--json` reports `summary` counts and one item per installation position.
+  state that `upgrade` would enforce. It never downloads, writes or upgrades. Complete checks exit
+  `0` whether or not updates exist; incomplete lookups retain partial results and exit nonzero.
+  `--json` reports `summary` counts, including `failed`, and one item per installation position.
+  Version labels describe numeric changes, not compatibility; GitHub hash ordering stays unknown.
 
 ### Changed
 

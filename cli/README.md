@@ -357,7 +357,7 @@ skillhub outdated --json
 Example output:
 
 ```text
-Outdated: 2 with newer versions, 0 unknown, 3 checked
+Outdated: 2 with newer versions, 0 unknown, 0 failed, 3 checked
 patch      @team/code-review 1.0.0 -> 1.0.1  codex  /work/repo/.agents/skills/code-review [local changes: 1 file]
 major      @global/example-skill 1.4.2 -> 2.0.0  claude  /home/user/.claude/skills/example-skill
 Run "skillhub upgrade <coordinate> --check" to review an upgrade; nothing was changed.
@@ -371,11 +371,19 @@ Run "skillhub upgrade <coordinate> --check" to review an upgrade; nothing was ch
 | `prerelease` | The newer version is a prerelease, or only the prerelease part changed (for example `1.0.0-rc.1 -> 1.0.0`) |
 | `unknown` | A version is not valid semver, or the registry version could not be resolved (`reason` explains) |
 
+These labels describe version numbers, not a guarantee of compatibility. For example,
+`0.1.0 -> 0.2.0` is `minor`. Registry-generated GitHub hash versions have no SemVer chronology;
+different hash versions are reported as `unknown`, not ordered alphabetically. Use repository
+checks for ordering backed by verified source version IDs.
+
 Installations at the same or an older registry version are not listed. `localState` reuses the
 local-change inspection of `upgrade`: `clean`, `modified` (files differ from the installed baseline;
 `upgrade` would require `--force`) or `unverified` (no baseline, missing target, invalid metadata or
-source conflict; `localReason` explains). The command exits `0` whether or not updates exist; read the
-counts from the summary. Usage errors keep the usual exit codes.
+source conflict; `localReason` explains). A complete check exits `0` whether or not updates exist.
+Version-order uncertainty alone is an `unknown` result, not a failed lookup. If any registry lookup
+fails, the command still prints all available results, sets `ok: false`, reports `summary.failed`,
+and exits nonzero using the first lookup error's existing CLI exit code. Error details are written
+to stderr; stdout remains one JSON report. Usage errors keep the usual exit codes.
 
 JSON shape (`--json`):
 
@@ -383,7 +391,7 @@ JSON shape (`--json`):
 {
   "ok": true,
   "registry": "https://skillhub.example.com",
-  "summary": { "checked": 3, "outdated": 2, "unknown": 0 },
+  "summary": { "checked": 3, "outdated": 2, "unknown": 0, "failed": 0 },
   "items": [
     {
       "coordinate": "@team/code-review",
@@ -403,6 +411,7 @@ JSON shape (`--json`):
 `items` has one row per installation position. `remoteVersion` is `null` when the registry could not
 resolve the skill. `reason` and `localReason` are present only when they apply. `summary.checked`
 counts the installation positions examined after filters; `outdated` and `unknown` count `items`.
+`failed` counts positions whose remote lookup failed, and is a subset of `unknown`.
 
 ## 🔄 Namespace Workspaces
 

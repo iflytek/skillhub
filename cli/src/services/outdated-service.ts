@@ -2,6 +2,8 @@ import { SkillHubClient, type ResolveResponse } from '../clients/skillhub-client
 import { InventoryStore, type InventoryItem, type InventoryTarget } from '../stores/inventory-store'
 import { inspectTargets, matchesTargetFilters } from './upgrade-service'
 import { classifySkillVersionChange, type SkillVersionChange } from './skill-version-order'
+import { CliError } from '../shared/errors'
+import { EXIT } from '../shared/constants'
 
 export interface OutdatedOptions {
   /** Effective registry; only installations from this source are checked, as in `list`. */
@@ -37,10 +39,12 @@ export interface OutdatedReport {
   checked: number
   outdated: number
   unknown: number
+  failed: number
+  failure?: CliError
   items: OutdatedItem[]
 }
 
-type RemoteLookup = { resolved: ResolveResponse } | { error: string }
+type RemoteLookup = { resolved: ResolveResponse } | { error: CliError }
 
 /**
  * Read-only discovery of installations whose registry offers a newer version.
@@ -52,6 +56,7 @@ export async function findOutdatedSkills(options: OutdatedOptions): Promise<Outd
   const lookups = new Map<string, Promise<RemoteLookup>>()
   const items: OutdatedItem[] = []
   let checked = 0
+  let failure: CliError | undefined
 
   for (const item of inventory.items) {
     if (normalizeRegistry(item.registry) !== registry) continue
@@ -77,11 +82,12 @@ export async function findOutdatedSkills(options: OutdatedOptions): Promise<Outd
       }
 
       if ('error' in remote) {
+        failure ??= remote.error
         items.push({
           ...base,
           remoteVersion: null,
           change: 'unknown',
-          reason: remote.error,
+          reason: remote.error.message,
           ...(await inspectLocalState(item, target))
         })
         continue
@@ -104,6 +110,8 @@ export async function findOutdatedSkills(options: OutdatedOptions): Promise<Outd
     checked,
     outdated: items.filter(item => item.change !== 'unknown').length,
     unknown: items.filter(item => item.change === 'unknown').length,
+    failed: items.filter(item => item.remoteVersion === null).length,
+    ...(failure ? { failure } : {}),
     items
   }
 }
@@ -116,11 +124,11 @@ async function lookupRemote(
     const token = await tokenForRegistry(item.registry)
     const resolved = await new SkillHubClient(item.registry, token).resolve(item.namespace, item.slug)
     if (resolved.namespace !== item.namespace || resolved.slug !== item.slug) {
-      return { error: 'registry resolved a different skill identity' }
+      return { error: new CliError('registry resolved a different skill identity', EXIT.validation) }
     }
     return { resolved }
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'remote version unavailable' }
+    return { error: error instanceof CliError ? error : new CliError('remote version unavailable', EXIT.generic) }
   }
 }
 

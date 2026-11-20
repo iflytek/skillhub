@@ -8,6 +8,7 @@ SkillHub CLI is the official command-line tool for SkillHub, designed for search
 | --- | --- | --- |
 | Install a remote Skill | install | Selected Agent, scope or custom directory |
 | Update installed skills | upgrade | Explicit coordinates and targets; no implicit upgrade-all |
+| Discover installed skill updates | outdated | Read-only, scoped to the effective registry |
 | Manage pinned collections | suite | Suite inventory and member ownership |
 | Sync team authoring files | sync | Non-global namespace workspace, not Suite lifecycle |
 | Update the CLI executable | update | CLI installation, not installed skills |
@@ -270,6 +271,25 @@ DeepSeek Harness resolves project skills from the nearest Git repository root, w
 
 The CLI creates this file after extracting the registry package. It is not included in the downloaded
 ZIP, and `.skillhub/` is excluded when an installed directory is published again.
+
+## Check Installed Skills for Updates
+
+`outdated` requires a CLI version containing this command; upgrading the server does not add it to an older CLI.
+
+```bash
+skillhub outdated --json
+skillhub outdated --namespace team --agent codex --registry https://skillhub.example.com
+```
+
+The command checks installations in the effective registry only. It does not download, acquire
+installation locks, write local files, migrate inventory or apply updates. Results include local
+modification state and numeric version-change labels; `0.1.0 -> 0.2.0` is `minor`, without promising
+compatibility. GitHub content-hash versions are `unknown` unless unchanged; hash text is not chronology.
+
+A complete check exits zero, including when there are updates or unknown version ordering.
+Failed lookups preserve the available results but produce a nonzero exit, `ok: false`, and
+`summary.failed`; stdout remains a single JSON report and stderr contains the error. The first
+lookup failure supplies the existing CLI exit code. Use explicit `upgrade --check` to plan changes.
 
 ## Upgrade Installed Skills
 
