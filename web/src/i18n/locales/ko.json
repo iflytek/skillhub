@@ -106,7 +106,14 @@
     "installCommand": "터미널에서 실행",
     "installRegistryInvalid": "사이트 주소를 명령에 안전하게 포함할 수 없습니다. CLI에서 레지스트리를 직접 지정하세요.",
     "installCopyFailed": "복사하지 못했습니다. 명령을 직접 선택해 복사하세요.",
-    "installLocalHint": "SkillHub CLI가 필요합니다. 제한된 콘텐츠는 먼저 로그인하세요. CLI 실행 시 버전을 고정하고 Agent를 선택합니다. 이 페이지는 로컬 파일을 쓰지 않습니다."
+    "installLocalHint": "SkillHub CLI가 필요합니다. 제한된 콘텐츠는 먼저 로그인하세요. CLI 실행 시 버전을 고정하고 Agent를 선택합니다. 이 페이지는 로컬 파일을 쓰지 않습니다.",
+    "repositoryCommandAction": "로컬 작업",
+    "repositoryCommandActions": {
+      "install": "스킬 설치",
+      "check": "업데이트 확인",
+      "upgrade": "설치된 스킬 업그레이드"
+    },
+    "repositoryUpdateHint": "일치하는 로컬 스킬만 비교합니다. 새 항목을 추가하거나 로컬 파일을 삭제하지 않습니다. 수정되었거나 공유 중인 대상, 사용할 수 없는 대상은 보호하고 결과를 설명합니다."
   },
   "landing": {
     "hero": {
