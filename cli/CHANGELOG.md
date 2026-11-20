@@ -2,6 +2,23 @@
 
 All notable CLI behavior changes are documented in this file.
 
+## Unreleased — installed skill update discovery
+
+### Added
+
+- Add read-only `skillhub outdated` to list SkillHub-managed installations whose registry has a newer
+  version, classified as `major`, `minor`, `patch`, `prerelease` or `unknown`, with the local-change
+  state that `upgrade` would enforce. It never downloads, writes or upgrades. Complete checks exit
+  `0` whether or not updates exist; incomplete lookups retain partial results and exit nonzero.
+  `--json` reports `summary` counts, including `failed`, and one item per installation position.
+  Version labels describe numeric changes, not compatibility; GitHub hash ordering stays unknown.
+
+### Changed
+
+- `upgrade --check` and blocked-plan output add a per-row `change` classification (JSON field and
+  `[change]` text marker). Upgrade selection and execution are unchanged; upgrades still act only on
+  explicitly selected skills.
+
 ## Unreleased — token capability split (#1049)
 
 ### Changed

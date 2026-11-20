@@ -6,6 +6,7 @@ import { installCommand, type InstallCommandOptions } from './commands/install'
 import { listCommand, type ListCommandOptions } from './commands/list'
 import { loginCommand } from './commands/login'
 import { logoutCommand } from './commands/logout'
+import { outdatedCommand, type OutdatedCommandOptions } from './commands/outdated'
 import { publishCommand, type PublishCommandOptions } from './commands/publish'
 import { removeCommand, type RemoveCommandOptions } from './commands/remove'
 import { searchCommand } from './commands/search'
@@ -338,6 +339,21 @@ cli
   .action((coordinates: string[], options: UpgradeCommandOptions & { agent?: string | string[] }) => {
     return runCommand(
       () => upgradeCommand(coordinates, { ...options, agent: toArray(options.agent) }),
+      Boolean(options.json)
+    )
+  })
+
+cli
+  .command('outdated', 'List installed skills with newer registry versions (read-only)')
+  .option('--namespace <slug>', 'Filter by namespace')
+  .option('--agent <profile>', 'Filter installed targets by Agent (repeatable)')
+  .option('--dir <path>', 'Filter installed targets by directory')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token override')
+  .option('--json', 'Output JSON')
+  .action((options: OutdatedCommandOptions & { agent?: string | string[] }) => {
+    return runCommand(
+      () => outdatedCommand({ ...options, agent: toArray(options.agent) }),
       Boolean(options.json)
     )
   })
