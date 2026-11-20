@@ -15,6 +15,7 @@ export function GithubRepositoryInstall({ repositoryId }: { repositoryId: string
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [copyFailed, setCopyFailed] = useState(false)
+  const [commandAction, setCommandAction] = useState<'install' | 'check' | 'upgrade'>('install')
   const id = useId()
   const plan = useQuery({
     queryKey: ['skills', 'github-repository-install', user?.userId, repositoryId],
@@ -28,7 +29,7 @@ export function GithubRepositoryInstall({ repositoryId }: { repositoryId: string
   const registry = new URL(buildApiUrl('/'), window.location.origin).href.replace(/\/$/, '')
   // Do not emit shell metacharacters from runtime configuration into copied commands.
   const command = /^[a-zA-Z0-9:/._~-]+$/.test(registry)
-    ? `skillhub repository install ${repositoryId} --scope project --registry "${registry}"` : ''
+    ? `skillhub repository ${commandAction} ${repositoryId}${commandAction === 'install' ? ' --scope project' : ''} --registry "${registry}"` : ''
 
   return <section className="rounded-xl border border-border bg-card" aria-label={t('githubCatalog.installTitle')}>
     <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
@@ -71,6 +72,13 @@ export function GithubRepositoryInstall({ repositoryId }: { repositoryId: string
         </div>
         <div className="space-y-2">
           <h3 className="text-xs font-medium">{t('githubCatalog.installCommand')}</h3>
+          <div role="group" aria-label={t('githubCatalog.repositoryCommandAction')} className="flex flex-wrap gap-2">
+            {(['install', 'check', 'upgrade'] as const).map(action => <Button key={action} size="sm"
+              variant={commandAction === action ? 'secondary' : 'outline'} aria-pressed={commandAction === action}
+              onClick={() => { setCommandAction(action); setCopied(false); setCopyFailed(false) }}>
+              {t(`githubCatalog.repositoryCommandActions.${action}`)}
+            </Button>)}
+          </div>
           {command ? <div className="flex min-w-0 flex-wrap items-start gap-2 rounded-lg border border-border bg-muted/30 p-3">
             <code className="min-w-0 flex-1 break-all text-xs leading-5">{command}</code>
             <Button variant="outline" size="sm" onClick={() => {
@@ -84,6 +92,7 @@ export function GithubRepositoryInstall({ repositoryId }: { repositoryId: string
           {copied && <p role="status" className="sr-only">{t('copyButton.copied')}</p>}
           {copyFailed && <p role="alert" className="text-xs text-destructive">{t('githubCatalog.installCopyFailed')}</p>}
           <p className="text-xs leading-5 text-muted-foreground">{t('githubCatalog.installLocalHint')}</p>
+          {commandAction !== 'install' && <p className="text-xs leading-5 text-muted-foreground">{t('githubCatalog.repositoryUpdateHint')}</p>}
         </div>
       </>}
     </div>}

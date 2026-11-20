@@ -292,12 +292,13 @@ cli
   })
 
 cli
-  .command('repository <action> <repository-id>', 'Install published skills from a GitHub repository')
+  .command('repository <action> <repository-id>', 'Install, check or upgrade skills from a GitHub repository')
   .option('--scope <scope>', 'Install scope: user or project')
   .option('--agent <profile>', 'Agent profile (repeatable)')
   .option('--dir <path>', 'Install directory')
   .option('--registry <url>', 'Registry URL')
   .option('--token <token>', 'API token')
+  .option('--check', 'Show the repository upgrade plan without writing')
   .option('--json', 'Output JSON')
   .action((action: string, repositoryId: string, options: RepositoryCommandOptions & { agent?: string | string[] }) =>
     runCommand(() => repositoryCommand(action, repositoryId, { ...options, agent: toArray(options.agent) }), Boolean(options.json)))
