@@ -46,7 +46,7 @@ The CLI SHALL install the resolved members with existing per-skill target locks,
 - **THEN** existing locking and consistency checks preserve the other operation and prevent false successful inventory records.
 
 ### Requirement: REQ-4 Honest batch results
-The CLI SHALL report installed, skipped and failed member outcomes separately and keep JSON stdout parseable. An unexpected partial failure or zero installed members MUST return a nonzero exit code. Planned exclusions MUST be explained without reporting them as successful installations.
+The CLI SHALL report installed, skipped and failed member outcomes separately and keep JSON stdout parseable. An unexpected partial failure or zero installed members MUST return a nonzero exit code. Planned exclusions MUST be explained without reporting them as successful installations. Known indeterminate commits or incomplete rollbacks MUST preserve safe recovery details and stop further writes.
 
 #### Scenario: One member fails after another succeeds
 - **WHEN** A installs and B's download or target validation fails

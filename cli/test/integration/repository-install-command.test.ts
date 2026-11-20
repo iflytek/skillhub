@@ -115,3 +115,27 @@ test('batch force is deliberately unsupported and invalid repository IDs are rej
   expect(invalid.exitCode).toBe(5)
   expect(f.requests).toHaveLength(0)
 })
+
+test('mixed ASCII, Chinese and emoji members all install with exact encoded paths', async () => {
+  const f = await fixture()
+  const first = f.plan.members[0]!
+  f.plan.members = ['alpha', '技能包', '🚀-rocket'].map((slug, i) => ({ ...first,
+    slug, displayName: slug, skillId: i + 1, versionId: i + 11,
+    downloadUrl: `/api/cli/v1/skills/github/${encodeURIComponent(slug)}/versions/1.0.0/download` }))
+  const result = await f.run()
+  expect(result.exitCode).toBe(0)
+  expect(JSON.parse(result.stdout).summary.installed).toBe(3)
+  for (const slug of ['alpha', '技能包', '🚀-rocket']) {
+    expect(await Bun.file(join(f.target, slug, 'SKILL.md')).exists()).toBe(true)
+  }
+})
+
+test('Unicode support does not permit path traversal or separator slugs', async () => {
+  for (const slug of ['../escape', 'a/b', 'a\\b', '.skillhub']) {
+    const f = await fixture()
+    f.plan.members[0]!.slug = slug
+    f.plan.members[0]!.downloadUrl = `/api/cli/v1/skills/github/${encodeURIComponent(slug)}/versions/1.0.0/download`
+    expect((await f.run()).exitCode).toBe(6)
+    expect(f.requests).toHaveLength(1)
+  }
+})

@@ -30,7 +30,11 @@ export async function repositoryCommand(action: string, repositoryId: string, op
   const output = options.json
     ? JSON.stringify({ ok: result.summary.failed === 0, ...result, note })
     : [`Repository ${plan.owner}/${plan.name}: ${result.summary.installed} installed, ${result.summary.skipped} skipped, ${result.summary.failed} failed`,
-      ...result.items.map(item => `${item.action.padEnd(10)} ${item.coordinate}@${item.version}${item.reason ? ` (${item.reason})` : ''}${item.warnings?.length ? ` [${item.warnings.join('; ')}]` : ''}`), note].join('\n')
+      ...result.items.flatMap(item => [
+        `${item.action.padEnd(10)} ${item.coordinate}@${item.version}${item.reason ? ` (${item.reason})` : ''}${item.warnings?.length ? ` [${item.warnings.join('; ')}]` : ''}`,
+        ...(item.recovery ? [`  Recovery: ${item.recovery.status}`, ...item.recovery.targets.map(path => `  Target: ${path}`),
+          ...item.recovery.stagingPaths.map(path => `  Staging: ${path}`), ...item.recovery.retainedBackups.map(path => `  Retained backup: ${path}`), `  Next: ${item.recovery.next}`] : [])
+      ]), note].join('\n')
   if (result.summary.failed > 0 || result.summary.installed === 0) {
     process.stdout.write(`${output}\n`)
     throw new CliError('repository installation did not complete successfully',
