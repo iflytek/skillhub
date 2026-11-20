@@ -12,7 +12,7 @@ import { installSkill } from './install-service'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from './installed-skill-metadata'
 import { compareSkillVersions } from './skill-version-order'
 
-const MAX_UPGRADE_SELECTION = 50
+export const MAX_UPGRADE_SELECTION = 50
 
 export interface UpgradeSelectionOptions {
   coordinates: string[]
@@ -23,6 +23,8 @@ export interface UpgradeSelectionOptions {
   force: boolean
   home?: string
   tokenForRegistry: (registry: string) => Promise<string | undefined>
+  /** Internal source adapter; a repository invocation supplies its already pinned releases. */
+  resolveVersion?: (item: InventoryItem) => Promise<ResolveResponse>
 }
 
 export type UpgradePlanAction = 'upgrade' | 'unchanged' | 'blocked'
@@ -102,8 +104,8 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
     try {
       await assertDirectTargetOwnership(inventory, selection.targets.map(target => target.installDir))
       const token = await options.tokenForRegistry(selection.item.registry)
-      resolved = await new SkillHubClient(selection.item.registry, token)
-        .resolve(selection.item.namespace, selection.item.slug)
+      resolved = options.resolveVersion ? await options.resolveVersion(selection.item)
+        : await new SkillHubClient(selection.item.registry, token).resolve(selection.item.namespace, selection.item.slug)
     } catch (error) {
       items.push({
         ...base,
@@ -388,7 +390,7 @@ async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): 
   }
 }
 
-function matchesTargetFilters(target: InventoryTarget, agents?: string[], dir?: string): boolean {
+export function matchesTargetFilters(target: InventoryTarget, agents?: string[], dir?: string): boolean {
   if (agents?.length && !agents.includes(target.agent)) return false
   if (!dir) return true
   const filterPath = resolve(dir)
