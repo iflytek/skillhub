@@ -410,7 +410,12 @@ public class RouteSecurityPolicyRegistry {
         if (servletPath != null && !servletPath.isBlank()) {
             return servletPath;
         }
-        return request.getRequestURI();
+        String uri = request.getRequestURI();
+        String context = request.getContextPath();
+        if (context != null && !context.isEmpty() && uri.startsWith(context + "/")) {
+            return uri.substring(context.length());
+        }
+        return uri;
     }
 
     public ApiTokenAuthorizationDecision authorizeApiToken(String method, String path, Set<String> tokenScopes) {
