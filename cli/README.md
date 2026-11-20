@@ -665,3 +665,39 @@ CLI upgrade refuses disabled targets even with `--force`. Namespace sync retains
 installations without update/pruning, Suite cannot adopt them, and doctor preserves trusted
 records without claiming loose `.disabled` files. Standard publishing requires `SKILL.md`;
 restore the entry through the compatible manager before publishing a disabled installation.
+
+## GitHub repository batch installation
+
+Open a repository on the registry's **Open-source skills → Repositories** page and expand **Install repository skills**. Copy its stable repository ID from the command:
+
+```bash
+skillhub repository install 123456 --scope project --agent codex --registry https://skillhub.example.com
+# Or select an explicit installation root (cannot combine with --scope/--agent):
+skillhub repository install 123456 --dir ./skills --json
+```
+
+This requires a registry with the repository install-plan endpoint. Public repositories support anonymous reads; a supplied Token must have `skill:read`. Use `skillhub login --registry ...` for restricted content. Registry and credential precedence are the same as individual installation.
+
+The CLI resolves all currently accessible, published, download-ready members once (maximum 1000), then pins their exact versions and content fingerprints for that invocation. Members may come from different upstream commits. A newer pending revision does not block an older published version. Hidden, withdrawn, inaccessible or not-yet-published members are not included, and their private details/counts are not disclosed. The Web list is a preview; running the command obtains a fresh plan.
+
+Each member uses normal Skill installation locks, fingerprint checks, ownership protection and inventory. This creates neither a Suite nor a repository installation ledger. Existing directories are never overwritten by this batch command; no batch `--force` is accepted. Successful members remain installed if another fails. The output lists every attempted member, counts installed/skipped/failed, and returns nonzero on partial failure or no usable plan. In `--json` mode stdout is one result object; a nonzero command additionally writes its standard error object to stderr. Excluded private/unpublished members are not counted as successful or as a disclosed skip count.
+
+A complete historical snapshot ZIP is a separate download: every pinned snapshot member must be available. Batch installation does not promise that all members belong to one commit. Use the repository-scoped check and upgrade commands below for existing installations.
+
+If an inventory commit is indeterminate or rollback is incomplete, the batch stops further writes and reports a recovery state with retained target/staging/backup paths and a safe next step. It does not serialize arbitrary error details or credentials.
+
+## Check and upgrade installed repository skills
+
+```bash
+skillhub repository check 123456 --registry https://skillhub.example.com --json
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com --check
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com
+```
+
+`check` and `upgrade --check` are read-only. `--agent` and/or `--dir` filter existing targets; `--scope` applies only to installation. New upstream members are not automatically installed. Local files for removed, hidden or unavailable members are not deleted. A per-Skill provenance hint lets the CLI explain that a previously installed member no longer appears in the accessible published plan without guessing why it is hidden. Older metadata without this hint stays readable and can match verified current members.
+
+Checks compare exact versions and content fingerprints, not commit equality. Each invocation fetches the repository plan once and pins all selected releases. Existing source, ownership, local-change, disabled-state, lock and inventory protections remain in effect. No repository batch `--force` is offered. Protected targets remain unchanged while safe targets may upgrade; the overall result is nonzero if anything is protected or fails. A runtime failure preserves completed work and reports subsequent unattempted targets. The CLI does not claim a single transaction across every skill directory.
+
+The Web page offers these commands but cannot inspect installed local files or display an installed drift count. These operations create no Suite, repository installation ledger, server installation telemetry or lockstep commit policy. Existing registry download quotas still apply.
+
+GitHub sync release strings contain content hashes and ingestion IDs rather than sortable upstream SemVer. Repository checks use the validated same-source metadata version ID as the creation-order baseline. Exact matching versions/fingerprints are unchanged; older metadata lacking a reliable ordering ID is protected when a different release must be compared. No hash-lexical fallback or forced migration is used. Disabled targets requiring an update are protected during planning; enabled independent targets can proceed.

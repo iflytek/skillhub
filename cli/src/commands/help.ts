@@ -49,6 +49,16 @@ export const commands = {
       'skillhub install pdf-parser --scope project --agent codex'
     ]
   },
+  repository: {
+    summary: 'Install, check or upgrade skills from a GitHub repository',
+    usage: 'skillhub repository <install|check|upgrade> <repository-id> [--scope <user|project> (install only)] [--agent <profile>] [--dir <path>] [--registry <url>] [--token <token>] [--check (upgrade only)] [--json]',
+    examples: [
+      'skillhub repository install 123456 --scope project --agent codex',
+      'skillhub repository install 123456 --dir ./skills --json',
+      'skillhub repository check 123456 --json',
+      'skillhub repository upgrade 123456 --agent codex --check'
+    ]
+  },
   suite: {
     summary: 'Manage Skill Suites on compatible registries',
     usage: 'skillhub suite <install|check|upgrade|remove> <coordinate> [options]',

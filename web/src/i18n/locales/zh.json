@@ -102,7 +102,28 @@
     "mostDownloaded": "下载最多",
     "loading": "正在加载技能…",
     "loadFailed": "加载失败",
-    "empty": "暂无符合条件的已发布 GitHub 技能。"
+    "empty": "暂无符合条件的已发布 GitHub 技能。",
+    "installTitle": "安装仓库技能",
+    "installSubtitle": "按各技能当前可用版本安装，与完整快照 ZIP 分开。",
+    "installOpen": "查看安装清单",
+    "installCollapse": "收起",
+    "installExplanation": "仅包含你可访问、已发布且可下载的技能。待审或不可用的成员不纳入；各版本可能来自不同提交，并非同一仓库快照。",
+    "installLoading": "正在解析当前可用版本…",
+    "installEmpty": "当前没有可安装的已发布技能，或访问范围已改变。",
+    "installFailed": "安装清单读取失败，请稍后重试。",
+    "installMembers": "可安装技能 · {{count}} 项",
+    "installVersions": "本次参考版本",
+    "installCommand": "在终端运行",
+    "installRegistryInvalid": "站点地址无法安全生成为命令，请在 CLI 中手动指定 registry。",
+    "installCopyFailed": "复制失败，请手动选择命令复制。",
+    "installLocalHint": "需要已安装 SkillHub CLI。受限内容请先登录；CLI 执行时重新解析并固定版本，选择目标 Agent，本页不会写入本地文件。",
+    "repositoryCommandAction": "操作方式",
+    "repositoryCommandActions": {
+      "install": "安装技能",
+      "check": "检查更新",
+      "upgrade": "升级已有技能"
+    },
+    "repositoryUpdateHint": "只比较本地已有的对应技能，不补装新增成员、不删除本地文件。修改、共享归属或不可用项会保留并说明；部分完成不会显示为全部成功。"
   },
   "landing": {
     "hero": {

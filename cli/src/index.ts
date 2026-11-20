@@ -9,6 +9,7 @@ import { logoutCommand } from './commands/logout'
 import { publishCommand, type PublishCommandOptions } from './commands/publish'
 import { removeCommand, type RemoveCommandOptions } from './commands/remove'
 import { searchCommand } from './commands/search'
+import { repositoryCommand, type RepositoryCommandOptions } from './commands/repository'
 import { suiteCommand, type SuiteCommandOptions } from './commands/suite'
 import { syncDiffCommand, syncPullCommand, syncPushCommand, syncStatusCommand, type SyncCommonOptions, type SyncPullOptions, type SyncPushOptions } from './commands/sync'
 import { updateCommand } from './commands/update'
@@ -289,6 +290,18 @@ cli
       agent: toArray(options.agent)
     }), Boolean(options.json))
   })
+
+cli
+  .command('repository <action> <repository-id>', 'Install, check or upgrade skills from a GitHub repository')
+  .option('--scope <scope>', 'Install scope: user or project')
+  .option('--agent <profile>', 'Agent profile (repeatable)')
+  .option('--dir <path>', 'Install directory')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token')
+  .option('--check', 'Show the repository upgrade plan without writing')
+  .option('--json', 'Output JSON')
+  .action((action: string, repositoryId: string, options: RepositoryCommandOptions & { agent?: string | string[] }) =>
+    runCommand(() => repositoryCommand(action, repositoryId, { ...options, agent: toArray(options.agent) }), Boolean(options.json)))
 
 cli
   .command('suite <action> <coordinate>', 'Manage Skill Suites on compatible registries')
