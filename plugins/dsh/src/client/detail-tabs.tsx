@@ -1,3 +1,4 @@
+import { catalogError } from './catalog-error.js';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type RefObject } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent, Button, Dialog, DialogContent, DialogTitle, DialogDescription } from './ui.js';
 import { SkillAvatar, Icon } from './skill-card.js';
@@ -75,6 +76,7 @@ function ModulePage({ tab, token, remote, detail, onSelectVersion, versionAction
       const response = tab === 'versions' ? await remote.listVersions(token, page, signal) : await remote.listReviews(token, page, signal);
       if (!response.ok) {
         const error = response.error;
+        if (error.code === 'skillhub/registry-error' && error.details.reason === 'AUTH_REQUIRED') throw catalogError(error);
         if (error.code === 'skillhub/context-stale') throw new StaleModuleError('详情已过期，正在重新读取。');
         if (error.code === 'skillhub/registry-error') {
           if (error.details.reason === 'ANONYMOUS_DENIED') throw new Error('当前来源不允许匿名读取此项信息。');

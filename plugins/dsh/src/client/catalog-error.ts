@@ -42,6 +42,9 @@ export function catalogError(error: { code: string; details?: unknown }): Error 
   const result = new Error(catalogErrorMessage(error));
   const details = error.details;
   if (error.code === 'skillhub/registry-error' && details && typeof details === 'object'
-    && 'reason' in details && details.reason === 'AUTH_REQUIRED') result.name = 'AccountExpired';
+    && 'reason' in details) {
+    if (details.reason === 'AUTH_REQUIRED') result.name = 'AccountExpired';
+    if (details.reason === 'TARGET_CHANGED') result.name = 'UploadTargetChanged';
+  }
   return result;
 }

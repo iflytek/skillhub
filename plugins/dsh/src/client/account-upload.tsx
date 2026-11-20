@@ -34,7 +34,13 @@ export function UploadSkill({ remote, revision, spaces, initial, row, close }: {
     if (!target.data || target.isError || !available.some(ns => ns.slug === space)) throw new Error('请重新选择上传目标。');
     return valueOf(await remote.publishUpload(revision, space, target.data.archive, visibility, target.data.result, new AbortController().signal));
   }, onSuccess: result => { setReceipt(result); void client.invalidateQueries({ queryKey: ['account-owned', revision, space] }); },
-  onError: () => { setClosedWrite(true); setConfirm(false); } });
+  onError: error => {
+    setConfirm(false);
+    if (error.name === 'UploadTargetChanged') {
+      setChosen(undefined);
+      void target.refetch();
+    } else setClosedWrite(true);
+  } });
   const status = useQuery({ queryKey: ['account-version', revision, receipt?.namespace, receipt?.slug, receipt?.version],
     enabled: !!receipt, retry: false, queryFn: async ({ signal }) => valueOf(await remote.uploadStatus(revision, receipt!.namespace, receipt!.slug, receipt!.version, signal)) });
   return <AccountDialog title={receipt ? '已上传' : '上传技能'} busy={upload.isPending} close={close}

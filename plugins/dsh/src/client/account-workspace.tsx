@@ -1,3 +1,4 @@
+import { queryHasSource } from './read-cache.js';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -27,14 +28,14 @@ export function AccountWorkspace({ remote, revision, source, toolbar, primary, s
       if (!(error instanceof Error) || error.name !== 'AccountExpired') return;
       setModal(null);
       client.setQueryData(['account-identity', revision], null);
-      client.removeQueries({ predicate: q => q.queryKey[0] !== 'account-identity' && q.queryKey.includes(revision) });
+      client.removeQueries({ predicate: q => q.queryKey[0] !== 'account-identity' && queryHasSource(q.queryKey, revision) });
       void client.invalidateQueries({ queryKey: ['skillhub-context'] });
     };
     const queries = client.getQueryCache().subscribe(event => {
-      if (event.type === 'updated' && event.action.type === 'error' && event.query.queryKey.includes(revision)) clear(event.action.error);
+      if (event.type === 'updated' && event.action.type === 'error' && queryHasSource(event.query.queryKey, revision)) clear(event.action.error);
     });
     const mutations = client.getMutationCache().subscribe(event => {
-      if (event.type === 'updated' && event.action.type === 'error' && event.mutation.options.mutationKey?.includes(revision)) clear(event.action.error);
+      if (event.type === 'updated' && event.action.type === 'error' && queryHasSource(event.mutation.options.mutationKey ?? [], revision)) clear(event.action.error);
     });
     return () => { queries(); mutations(); };
   }, [client, revision]);
@@ -71,7 +72,7 @@ export function AccountWorkspace({ remote, revision, source, toolbar, primary, s
         valueOf(await remote.connectAccount(revision, raw, new AbortController().signal));
       } else { valueOf(await remote.disconnectAccount(revision)); navigate(null); }
       setModal(null);
-      client.removeQueries({ predicate: q => q.queryKey[0] !== 'skillhub-context' && q.queryKey.includes(revision) });
+      client.removeQueries({ predicate: q => q.queryKey[0] !== 'skillhub-context' && queryHasSource(q.queryKey, revision) });
       await client.invalidateQueries({ queryKey: ['skillhub-context'] });
     } catch (cause) { setError(cause instanceof Error ? cause : new Error('连接失败')); }
     finally { setBusy(false); }
