@@ -2,6 +2,8 @@
 
 ### Requirement: REQ-OWN-01 成员移除 SHALL 保留技能归属和内容
 
+> **Superseded in part:** for removals after the feature is enabled, "owner unchanged" is replaced by REQ-DEP-02. Content, address and history are still kept.
+
 移除 TEAM 空间成员时，系统 SHALL 保留其技能的空间、地址、当前所有者、版本、文件和历史记录，不因成员移除自动删除、迁移、转让或下架。此规则不限制既有管理员另行执行有权限的治理操作，不新增技能交接能力。
 
 #### Scenario: 移除拥有已发布技能的成员
@@ -10,6 +12,8 @@
 - **AND** 其他用户仍按既有可见性和治理状态访问内容
 
 ### Requirement: REQ-OWN-02 被移除的当前所有者 SHALL 保留只读访问
+
+> **Superseded:** replaced in full by REQ-DEP-01.
 
 账号正常但已不是目标 TEAM 空间成员的当前技能所有者 SHALL 能通过受控接口查看和下载自己的技能，包括私有内容、团队可见内容、历史版本、草稿及被拒绝版本。读取授权基于当前所有者，不基于历史提交者。原有文件安全、治理和账号限制继续适用，读取例外不得公开私有文件或开放其他所有者的内部内容。
 
@@ -46,6 +50,8 @@
 
 ### Requirement: REQ-OWN-04 停用和重新加入 SHALL 服从现有账号与成员状态
 
+> **Superseded in part:** regaining maintenance on rejoin applies only while the user is still the owner (REQ-DEP-04, REQ-DEP-02). The removed owner stays without access, not read-only, until they rejoin (REQ-DEP-01).
+
 停用账号 SHALL 不获得所有者读取例外，继续按既有认证规则拒绝身份请求；公开内容按既有匿名访问规则处理。重新启用不自动恢复已移除的空间成员关系。账号正常、重新加入且仍是当前所有者时，系统 SHALL 按既有成员规则恢复维护能力；若已不是当前所有者，不因重新加入自动取得技能。不得新增永久注销或修改现有 Token 撤销／有效期策略。
 
 #### Scenario: 停用账号尝试读取自己的私有技能
@@ -71,6 +77,8 @@
 
 ### Requirement: REQ-OWN-06 管理员及其他空间的既有授权 SHALL 保持不变
 
+> **Superseded in part:** "no Maintainer or ownership transfer" is replaced by `skill-ownership-model` and `skill-handover`. Existing admin rights are otherwise unchanged.
+
 本期 SHALL 不新增或收紧空间／平台管理员原有治理和审核权限，不新增成员覆盖开关、Maintainer 或所有权转让。用户另有有效平台管理员授权时，继续按原管理员路径处理；普通所有者不能仅凭 owner 身份绕过成员限制。移除某 TEAM 成员不得导致用户在其他空间的正常权限或公开读取能力一并丢失；GLOBAL 及不可变成员规则保持现状。
 
 #### Scenario: 原有管理员治理
@@ -82,6 +90,8 @@
 - **THEN** 空间 A 的只读边界不影响其维护空间 B 的技能
 
 ### Requirement: REQ-OWN-07 管理页面 SHALL 明确只读状态
+
+> **Superseded:** the read-only message is replaced by REQ-DEP-06.
 
 我的技能与详情等管理入口 SHALL 明确提示当前所有者“已不在该空间，只能查看和下载”，保留查看与下载入口，并依据服务端权限隐藏或禁用相关写动作。旧页面或缓存不得成为绕过服务端校验的依据。页面不新增自助加入、交接或管理员代传承诺，不把文档讨论记录展示成产品功能。
 
