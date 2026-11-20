@@ -127,7 +127,18 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       continue
     }
 
-    const inspection = await inspectTargets(selection.item, selection.targets)
+    let inspection: Awaited<ReturnType<typeof inspectTargets>>
+    try {
+      inspection = await inspectTargets(selection.item, selection.targets)
+    } catch {
+      items.push({
+        ...base,
+        remoteVersion: resolved.version,
+        action: 'blocked',
+        reason: 'installed target could not be safely verified; local files were kept'
+      })
+      continue
+    }
     const hardConflict = inspection.hardConflicts[0]
     if (hardConflict) {
       items.push({
