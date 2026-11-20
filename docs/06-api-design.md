@@ -660,3 +660,10 @@ Parts:
 生成两份独立的 OpenAPI spec：
 - `openapi-native.json`：skillhub Native API，用于前端 SDK 生成
 - `openapi-compat-clawhub.json`：ClawHub 兼容层 API，用于兼容性测试和文档
+
+
+### GitHub repository current-version installation plan
+
+`GET /api/cli/v1/github-repositories/{repositoryId}/install-plan` and its Web equivalent `GET /api/web/github-repositories/{repositoryId}/install-plan` return `{repositoryId, owner, name, members}` inside `ApiResponse`. Each member contains `skillId`, `namespace`, `slug`, `displayName`, `version`, `versionId`, `fingerprint` and an application-relative exact-version `downloadUrl`.
+
+The read-only plan selects the current eligible published pointers for the complete repository, independently of catalog pagination, filters or historical snapshots. A repeatable-read transaction fixes membership, version IDs and file hashes for this response. At most 1000 members are supported; an oversized plan is rejected with HTTP 400 rather than truncated. No eligible accessible members yields HTTP 404, without exposing inaccessible or unpublished names/counts. Public content allows anonymous reads; a supplied API Token explicitly requires `skill:read`. Namespace/source visibility, hidden/archived state and published/download-ready/non-yanked version checks still apply. Downloads recheck current authorization and version availability. This endpoint creates no installation task, Suite, installation ledger or database state.

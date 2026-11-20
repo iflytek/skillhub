@@ -36,6 +36,8 @@ export interface InstallOptions {
   force: boolean
   home?: string | undefined
   resolved?: ResolveResponse | undefined
+  /** Optional source hint in per-skill metadata, not a repository installation ledger. */
+  sourceRepositoryId?: string | undefined
   expectedTargetFiles?: Record<string, Record<string, string>> | undefined
   allowTargetDrift?: boolean | undefined
   requireExistingTargets?: boolean | undefined
@@ -193,6 +195,9 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
         const metaDir = join(tempDir, '.skillhub')
         await options.authorizeTargetMutation?.([metaDir], 'staging')
         await mkdir(metaDir, { recursive: true })
+        const previousMetadata = await readInstalledSkillMetadata(skillDir)
+        const sourceRepositoryId = options.sourceRepositoryId ?? (previousMetadata.status === 'valid'
+          && sameInstalledSkillSource(previousMetadata.metadata, identity) ? previousMetadata.metadata.sourceRepositoryId : undefined)
         await writeFile(join(metaDir, 'metadata.json'), JSON.stringify({
           schemaVersion: 1,
           registry: options.registry,
@@ -203,6 +208,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
           fingerprint: resolved.fingerprint,
           files: snapshot.files,
           source: options.metadataSource ?? 'skillhub',
+          ...(sourceRepositoryId ? { sourceRepositoryId } : {}),
           agent: target.agent,
           installedAt
         }, null, 2))

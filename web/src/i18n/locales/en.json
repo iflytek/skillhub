@@ -102,7 +102,21 @@
     "mostDownloaded": "Most downloaded",
     "loading": "Loading skills…",
     "loadFailed": "Could not load skills",
-    "empty": "No published GitHub skills match this search."
+    "empty": "No published GitHub skills match this search.",
+    "installTitle": "Install repository skills",
+    "installSubtitle": "Install current published versions, separately from complete snapshot ZIPs.",
+    "installOpen": "View install plan",
+    "installCollapse": "Collapse",
+    "installExplanation": "Only accessible, published and downloadable skills are included. Pending or unavailable members are excluded. Versions can come from different commits; this is not a complete repository snapshot.",
+    "installLoading": "Resolving available versions…",
+    "installEmpty": "No published skills are currently installable, or access has changed.",
+    "installFailed": "Could not load the install plan. Please retry.",
+    "installMembers": "Installable skills · {{count}}",
+    "installVersions": "Reference versions",
+    "installCommand": "Run in your terminal",
+    "installRegistryInvalid": "The site address cannot safely be embedded in a command. Set the CLI registry manually.",
+    "installCopyFailed": "Copy failed. Select and copy the command manually.",
+    "installLocalHint": "Requires SkillHub CLI. Log in first for restricted content. The CLI resolves and pins versions when it runs and asks you to choose an Agent. This page does not write local files."
   },
   "landing": {
     "hero": {
