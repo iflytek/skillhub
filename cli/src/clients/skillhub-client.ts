@@ -9,7 +9,9 @@ const repositoryInstallPlanSchema = z.object({
   members: z.array(z.object({
     skillId: z.number().int().positive().safe(),
     namespace: z.literal('github'),
-    slug: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
+    // Match the registry's Unicode identifier classes while rejecting path separators.
+    slug: z.string().min(2).max(64).regex(/^[\p{L}\p{N}\p{So}][\p{L}\p{N}\p{So}-]*[\p{L}\p{N}\p{So}]$/u)
+      .refine(slug => !/[A-Z]|--/.test(slug)),
     displayName: z.string(),
     version: z.string().min(1).max(255),
     versionId: z.number().int().positive().safe(),

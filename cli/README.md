@@ -684,6 +684,8 @@ Each member uses normal Skill installation locks, fingerprint checks, ownership 
 
 A complete historical snapshot ZIP is a separate download: every pinned snapshot member must be available. Batch installation does not promise that all members belong to one commit. Use the repository-scoped check and upgrade commands below for existing installations.
 
+If an inventory commit is indeterminate or rollback is incomplete, the batch stops further writes and reports a recovery state with retained target/staging/backup paths and a safe next step. It does not serialize arbitrary error details or credentials.
+
 ## Check and upgrade installed repository skills
 
 ```bash
