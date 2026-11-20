@@ -772,3 +772,27 @@ skillhub list
 Apache-2.0
 
 Copyright 2026 iFlytek Co., Ltd.
+
+## Install skills from a GitHub repository
+
+Open **Open-source skills → Repositories**, expand **Install repository skills**, and copy its stable repository ID:
+
+```bash
+skillhub repository install 123456 --scope project --agent codex --registry https://skillhub.example.com
+```
+
+Requires the repository install-plan API. Public content can be read anonymously; a supplied Token requires `skill:read` and remains subject to account and namespace permissions. A single plan pins all currently accessible, published, downloadable member versions and fingerprints (up to 1000). Versions may come from different commits; a newer pending revision does not block an older usable publication. Excluded private or unpublished details and counts are not disclosed. The Web list is a preview; the CLI resolves a fresh plan when run.
+
+No batch `--force` is supported. Existing directories remain protected, successful members survive partial failures, and a partial failure returns a nonzero exit code with per-member results. This reuses individual installation records without creating a Suite or repository installation ledger. Complete snapshot ZIP downloads remain separate and require every pinned snapshot member to be available.
+
+### Check and upgrade installed repository skills
+
+```bash
+skillhub repository check 123456 --registry https://skillhub.example.com --json
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com --check
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com
+```
+
+Checks are read-only. Use `--agent` and/or `--dir` to filter existing targets; `--scope` is installation-only. Compare exact versions and fingerprints rather than commit equality. Do not add new upstream members or delete local files for removed/unavailable members. Legacy metadata stays readable without a forced migration.
+
+Local edits, other owners, disabled state, source checks, locks and inventory consistency remain protected. Safe targets can upgrade independently while protected targets remain unchanged. Any protected or failed item makes the overall result nonzero, with explicit per-target results. Runtime failure retains completed work and reports later unattempted targets. No batch `--force`, cross-directory atomicity, new repository installation ledger or server installation telemetry is introduced. Existing download quotas apply. The Web offers commands only and cannot know local installation or drift counts.

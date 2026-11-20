@@ -62,7 +62,7 @@ export async function upgradeCommand(coordinates: string[], options: UpgradeComm
   return output
 }
 
-function renderUpgradePlan(
+export function renderUpgradePlan(
   plan: UpgradePlan,
   state: { check: boolean; executed: boolean },
   json: boolean
@@ -104,7 +104,7 @@ function planItemChange(item: UpgradePlan['items'][number]): SkillVersionChange 
   return item.remoteVersion ? classifySkillVersionChange(item.currentVersion, item.remoteVersion) : 'unknown'
 }
 
-export function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, json: boolean): string {
+export function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, json: boolean, blocked = 0): string {
   // Execution returns one row per plan position, in order. Coordinates can repeat at different versions.
   const items = plan.items.map((item, index) => ({
     coordinate: item.coordinate,
@@ -120,13 +120,14 @@ export function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionR
 
   if (json) {
     return JSON.stringify({
-      ok: result.failed === 0,
+      ok: result.failed === 0 && blocked === 0,
       check: false,
       summary: {
         upgraded: result.upgraded,
         unchanged: result.unchanged,
         failed: result.failed,
-        notAttempted: result.notAttempted
+        notAttempted: result.notAttempted,
+        ...(blocked ? { blocked } : {})
       },
       items
     })

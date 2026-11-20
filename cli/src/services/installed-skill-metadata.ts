@@ -15,6 +15,8 @@ export interface InstalledSkillMetadata extends InstalledSkillIdentity {
   fingerprint?: string
   files?: Record<string, string>
   source?: string
+  /** Discovery hint only; current repository membership is always checked on the server. */
+  sourceRepositoryId?: string
   agent?: string
   installedAt?: string
 }

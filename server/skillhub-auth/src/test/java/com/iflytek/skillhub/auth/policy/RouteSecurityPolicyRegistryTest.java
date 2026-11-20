@@ -22,6 +22,18 @@ class RouteSecurityPolicyRegistryTest {
     private final RouteSecurityPolicyRegistry registry = new RouteSecurityPolicyRegistry();
 
     @Test
+    void repositoryInstallPlansArePublicReadsButBearerTokensRequireReadCapability() {
+        for (String prefix : List.of("/api/web", "/api/cli/v1")) {
+            String route = prefix + "/github-repositories/42/install-plan";
+            assertEquals(RouteSecurityPolicyRegistry.AccessLevel.PERMIT_ALL, registry.accessLevel("GET", route));
+            assertTrue(registry.authorizeApiToken("GET", route, Set.of("skill:read")).allowed());
+            assertFalse(registry.authorizeApiToken("GET", route, Set.of("skill:submit")).allowed());
+            assertFalse(registry.authorizeApiToken("GET", route, Set.of()).allowed());
+            assertFalse(registry.authorizeApiToken("POST", route, ALL_SCOPES).allowed());
+        }
+    }
+
+    @Test
     void teamAutoPublicationGrantsAreSessionOnlyForEveryTokenScope() {
         Set<String> everyScope = Set.of("skill:read", "skill:publish", "skill:delete", "token:manage",
                 "skill:submit", "skill:publish-private", "skill:manage");
