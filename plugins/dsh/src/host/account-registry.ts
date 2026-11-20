@@ -29,15 +29,22 @@ export function uploadPackage(base64: string) {
   const bytes = Buffer.from(base64, 'base64');
   if (bytes.length > 8 * 1024 * 1024 || bytes.toString('base64') !== base64) throw new RegistryError('INVALID_INPUT', false);
   try {
-    let manifests = 0;
+    const manifests: string[] = [];
+    unzipSync(bytes, { filter: file => {
+      if (/^(?:[^/]+\/)?skill\.md$/iu.test(file.name)) manifests.push(file.name);
+      return false;
+    } });
+    const roots = manifests.filter(name => !name.includes('/'));
+    const candidates = roots.length ? roots : manifests;
+    if (candidates.length !== 1) throw new Error();
     const found = unzipSync(bytes, { filter: file => {
-      if (file.name !== 'SKILL.md' && !/^[^/]+\/SKILL\.md$/u.test(file.name)) return false;
-      if (++manifests !== 1 || file.originalSize > 256 * 1024) throw new Error();
+      if (file.name !== candidates[0]) return false;
+      if (file.originalSize > 256 * 1024) throw new Error();
       return true;
     } });
     const entry = Object.values(found)[0];
     if (!entry) throw new Error();
-    const front = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u.exec(new TextDecoder('utf-8', { fatal: true }).decode(entry));
+    const front = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u.exec(new TextDecoder('utf-8', { fatal: true }).decode(entry).trim());
     if (!front) throw new Error();
     const doc = parseDocument(front[1]!, { uniqueKeys: true });
     if (doc.errors.length) throw new Error();

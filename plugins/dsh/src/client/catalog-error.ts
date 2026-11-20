@@ -36,3 +36,12 @@ export function catalogErrorMessage(error: { code: string; details?: unknown }):
     default: return '无法读取 SkillHub，请检查来源地址或稍后重试。';
   }
 }
+
+/** Preserve the authentication signal so every Registry reader clears account state. */
+export function catalogError(error: { code: string; details?: unknown }): Error {
+  const result = new Error(catalogErrorMessage(error));
+  const details = error.details;
+  if (error.code === 'skillhub/registry-error' && details && typeof details === 'object'
+    && 'reason' in details && details.reason === 'AUTH_REQUIRED') result.name = 'AccountExpired';
+  return result;
+}

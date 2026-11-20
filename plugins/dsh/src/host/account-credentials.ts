@@ -1,7 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { resolveDshHome } from '@deepseek-ai/dsh-home-paths';
 import type { AccountIdentity } from './account-types.js';
 
 export interface Credential { token: string; identity: AccountIdentity }
@@ -13,11 +12,10 @@ export function secureRegistry(source: string) {
 /** Keep each source separate. Platforms without enforceable POSIX permissions use process memory. */
 export class AccountCredentials {
   private readonly memory = new Map<string, Credential>();
-  constructor(private readonly home?: string) {}
+  constructor(private readonly profileDirectory?: string) {}
   private file(source: string, create = false): string | undefined {
-    if (process.platform === 'win32' || !process.getuid) return;
-    const home = this.home ?? resolveDshHome();
-    const dir = join(home, 'skillhub-accounts');
+    if (!this.profileDirectory || process.platform === 'win32' || !process.getuid) return;
+    const dir = join(this.profileDirectory, 'skillhub-accounts');
     if (create) mkdirSync(dir, { recursive: true, mode: 0o700 });
     const stat = lstatSync(dir);
     if (!stat.isDirectory() || stat.uid !== process.getuid() || (stat.mode & 0o077)) return;

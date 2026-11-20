@@ -98,3 +98,44 @@ test('credentials stay bound to one source and profile, and logout forgets them'
     expect(new AccountCredentials(home).get(a)).toBeUndefined();
   } finally { rmSync(home, { recursive: true, force: true }); }
 });
+
+test.each([
+  ['lowercase', { 'skill.md': strToU8('---\nname: demo-skill\n---\n') }],
+  ['leading whitespace', { 'SKILL.md': strToU8('\n\n---\nname: demo-skill\n---\n') }],
+  ['auxiliary manifest', { 'SKILL.md': strToU8('---\nname: demo-skill\n---\n'), 'references/SKILL.md': strToU8('Reference documentation') }],
+  ['wrapped lowercase', { 'package/skill.md': strToU8('---\nname: demo-skill\n---\n') }],
+])('accepts the shared server manifest rules for %s', (_name, files) => {
+  expect(uploadPackage(Buffer.from(zipSync(files)).toString('base64')).slug).toBe('demo-skill');
+});
+
+test('ambiguous root manifests remain rejected', () => {
+  const bytes = zipSync({ 'SKILL.md': strToU8('---\nname: first\n---\n'), 'skill.md': strToU8('---\nname: second\n---\n') });
+  expect(() => uploadPackage(Buffer.from(bytes).toString('base64'))).toThrow();
+});
+
+test('two profiles sharing a home keep their accounts and logout independent', () => {
+  const home = mkdtempSync(join(tmpdir(), 'skillhub-profiles-'));
+  const source = 'https://registry.example';
+  const first = join(home, 'profiles', 'first');
+  const second = join(home, 'profiles', 'second');
+  const alice = { token: 'alice-fixture', identity: { handle: 'alice', displayName: 'Alice' } };
+  const bob = { token: 'bob-fixture', identity: { handle: 'bob', displayName: 'Bob' } };
+  try {
+    const a = new AccountCredentials(first);
+    const b = new AccountCredentials(second);
+    a.set(source, alice);
+    expect(b.get(source)).toBeUndefined();
+    b.set(source, bob);
+    expect(a.get(source)).toEqual(alice);
+    b.set(source);
+    expect(a.get(source)).toEqual(alice);
+    expect(b.get(source)).toBeUndefined();
+    if (process.platform !== 'win32') {
+      expect(new AccountCredentials(first).get(source)).toEqual(alice);
+      expect(new AccountCredentials(second).get(source)).toBeUndefined();
+    }
+    const transient = new AccountCredentials();
+    transient.set(source, bob);
+    expect(new AccountCredentials().get(source)).toBeUndefined();
+  } finally { rmSync(home, { recursive: true, force: true }); }
+});

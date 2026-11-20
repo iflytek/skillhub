@@ -12,7 +12,7 @@ import { CardSkeletons, CatalogSkeleton, DetailSkeleton } from './loading-layout
 import { UiAvailabilityNotice, type UiAvailability } from './ui-availability.js';
 import { WorkbenchStyles } from './installed-styles.js';
 import { NativeControlStyles } from './native-control-styles.js';
-import { catalogErrorMessage } from './catalog-error.js';
+import { catalogError } from './catalog-error.js';
 import { FavoriteButton } from './favorite-button.js';
 import { favoriteIdentity, favoriteSnapshot, filterFavorites, resolvedFavoriteItem } from './favorites.js';
 import { useFavorites } from './use-favorites.js';
@@ -55,7 +55,7 @@ export const createCatalogNavigation = (): CatalogNavigation => ({
 });
 function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { code: string; details?: unknown } }): T {
   if (result.ok) return result.value;
-  throw new Error(catalogErrorMessage(result.error));
+  throw catalogError(result.error);
 }
 export function CatalogPage({ remote, navigation, client, onReturn, onSettings, installation, installed, availability }: {
   remote: Remote; navigation: CatalogNavigation; client: QueryClient; onReturn: () => void; onSettings?: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability;

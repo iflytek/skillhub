@@ -22,7 +22,7 @@ Version `0.4.0` uses the independent `dsh-v0.4.0` tag. It adds versioned example
 
 ## Sign in and manage namespaces
 
-Open **Sign in** in the skill center and enter a personal API token issued by the configured SkillHub site. Use a personal DSH Host/profile. Each source has its own login. Signing out clears the local connection. Revoke the token on the issuing site to invalidate it.
+Open **Sign in** in the skill center and enter a personal API token issued by the configured SkillHub site. Use a personal DSH Host/profile. Each source has its own login. Saved credentials are isolated by the Host-provided Profile directory. Without trusted Profile context or enforceable file permissions, credentials stay in process memory. Users of the earlier candidate with global credential storage need to sign in again. Signing out clears the local connection. Revoke the token on the issuing site to invalidate it.
 
 Choose **Upload skill**, a namespace from your memberships, a ZIP file, and its visibility. Updates show the current visibility before confirmation. Refresh the version status after submitting. The plugin uses the registry’s CLI publish endpoint. The registry decides when others can access the version.
 

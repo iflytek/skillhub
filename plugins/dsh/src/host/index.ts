@@ -6,6 +6,7 @@ import type { InstallationContextReason } from './installation-context.js';
 import { Context, symbols } from '@deepseek-ai/cordis';
 import { Remote, RemoteError, RemoteScope, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type {} from '@deepseek-ai/dsh-agent';
+import type {} from '@deepseek-ai/dsh-app-boot';
 import type {} from '@deepseek-ai/dsh-user-questions';
 import type {} from '@deepseek-ai/dsh-session-query';
 import { historicalSearchCandidate } from './conversation-history.js';
@@ -76,7 +77,7 @@ export class SkillHubService extends TypertRemoteService {
   private sourceRevision = randomUUID();
   private registry?: RegistryAdapter;
   private sourceInput = '';
-  private readonly credentials = new AccountCredentials();
+  private readonly credentials: AccountCredentials;
   private account?: AccountIdentity;
   private accountEpoch = new AbortController();
   private readonly lifetime = new AbortController();
@@ -111,6 +112,7 @@ export class SkillHubService extends TypertRemoteService {
   constructor(ctx: Context, configuration: ReturnType<typeof Config> = Config({})) {
     super(ctx, 'skillhub', { namespace: 'skillhub' });
     this.configuration = configuration;
+    this.credentials = new AccountCredentials(ctx.get('profileContext')?.dir);
     ctx.inject(['sessions'], ctx => {
       ctx.effect(() => {
         const runtime = new LocalRuntime(() => openLocalRuntime(source => {

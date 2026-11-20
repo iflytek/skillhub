@@ -1,17 +1,12 @@
 import type { RemoteResult, TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol';
 import type { Visibility } from '../host/account-types.js';
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from './ui.js';
-import { catalogErrorMessage } from './catalog-error.js';
+import { catalogError } from './catalog-error.js';
 import { useState, type ReactNode } from 'react';
 
 export type AccountRemote = TypertRemoteNamespaceMap['skillhub'];
 export function valueOf<T>(result: RemoteResult<T>): T {
-  if (!result.ok) {
-    const error = new Error(catalogErrorMessage(result.error));
-    const details = result.error.details;
-    if (details && typeof details === 'object' && 'reason' in details && details.reason === 'AUTH_REQUIRED') error.name = 'AccountExpired';
-    throw error;
-  }
+  if (!result.ok) throw catalogError(result.error);
   return result.value;
 }
 export const visibilityLabels: Record<Visibility, string> = { PRIVATE: '私有', NAMESPACE_ONLY: '仅命名空间可见', PUBLIC: '公开' };
