@@ -74,6 +74,7 @@ export interface CatalogPageResult {
 
 /** Read-only fixed-version content; it is not an installation authorization. */
 export interface SkillDetail {
+  skillId?: number;
   webUrl?: string | null;
   detailToken: string;
   title: string;
@@ -253,3 +254,6 @@ export interface FileResetPlanView { planId: string; expiresAt: string; hostInst
 
 export interface PackageImportPreview { previewId: string; name: string; summary?: string; files: number; bytes: number; expiresAt: string }
 export interface PackageExport { filename: string; base64: string }
+
+export type { AccountIdentity, AccountMember, AccountNamespace, AccountPage, EditableRole, MemberCandidate,
+  MemberMutation, OwnedSkill, TeamRole, UploadReceipt, UploadTarget, Visibility, WorkspaceSkills } from './account-types.js';

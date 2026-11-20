@@ -32,8 +32,13 @@ public class ApiToken {
     private String tokenHash;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "scope_json", nullable = false, columnDefinition = "jsonb")
+    @Column(name = "scope_json", nullable = false, updatable = false, columnDefinition = "jsonb")
     private String scopeJson;
+
+    @Column(name = "namespace_scopes_issued", nullable = false, updatable = false)
+    private boolean namespaceScopesIssued;
+
+    public boolean isNamespaceScopesIssued() { return namespaceScopesIssued; }
 
     @Column(name = "expires_at")
     private Instant expiresAt;
@@ -57,6 +62,7 @@ public class ApiToken {
         this.tokenPrefix = tokenPrefix;
         this.tokenHash = tokenHash;
         this.scopeJson = scopeJson;
+        this.namespaceScopesIssued = true;
     }
 
     @PrePersist

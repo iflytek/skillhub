@@ -20,6 +20,14 @@ Version `0.4.0` uses the independent `dsh-v0.4.0` tag. It adds versioned example
 
 `0.6.4` is the current patch candidate, fixing installation rejection caused solely by an unlisted DSH RC. It uses minimum-version DSH admission without an upper DSH bound, while retaining actual dependency-graph, required-capability, permission and filesystem transaction checks. Development dependencies and regression targets remain separately pinned. The interface and inventory format are unchanged. Candidate and public-package acceptance remain separate; npm availability is not claimed before publication.
 
+## Sign in and manage namespaces
+
+Open **Sign in** in the skill center and enter a personal API token issued by the configured SkillHub site. Use a personal DSH Host/profile. Each source has its own login. Signing out clears the local connection. Revoke the token on the issuing site to invalidate it.
+
+Choose **Upload skill**, a namespace from your memberships, a ZIP file, and its visibility. Updates show the current visibility before confirmation. Refresh the version status after submitting. The plugin uses the registry’s CLI publish endpoint. The registry decides when others can access the version.
+
+Under **My namespaces**, view your uploads, installable team skills, and team members. Authors can delete their uploads. Team owners and admins can search for, add, remove, and change the roles of members. Viewing the roster requires `namespace:read`. Managing members requires the explicit `namespace:manage` grant. The server also checks the account’s role.
+
 ## Compact interface and file preview (0.6.3)
 
 Discovery, My skills, details and settings share compact controls and light/dark themes. The Files tab provides a collapsible directory tree and keeps its selection and folded state within the current detail reference. It uses the full content width; Manage installations returns to the existing overview management panel. Line numbers share the text scroll area, while Copy copies only the original file content. The Files tab reads a fixed-version directory, then loads only the selected body: at most 500 entries and 256 KiB per text preview. Oversized or binary files show metadata only. Text is read-only and copyable; HTML and remote resources in its body do not execute or load. Unsupported listings, anonymous denial and failures have distinct states. Switching sources invalidates old references. This reuses existing Registry GET endpoints and adds only local read-only Host RPC, without changing SaaS HTTP APIs or shared inventory.

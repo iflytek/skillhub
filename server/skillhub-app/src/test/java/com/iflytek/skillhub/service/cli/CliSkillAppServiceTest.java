@@ -234,7 +234,7 @@ class CliSkillAppServiceTest {
         given(skillQueryService.listInstallableSkillsByNamespace(
                 eq("team-a"), eq("user-1"), eq(Map.of()), eq(PageRequest.of(0, 100))))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 100), 1));
-        given(skillQueryService.resolveVersion("team-a", "demo", null, null, null, "user-1", Map.of()))
+        given(skillQueryService.resolveVersionById(42L, "user-1", Map.of(), java.util.Set.of()))
                 .willReturn(new SkillQueryService.ResolvedVersionDTO(
                         10L, "team-a", "demo", "1.0.0", 42L, "sha256:fingerprint", null,
                         "/api/v1/skills/team-a/demo/versions/1.0.0/download"));

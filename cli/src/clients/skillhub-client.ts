@@ -228,7 +228,7 @@ export class SkillHubClient {
     try {
       response = await this.fetchImpl(
         `${this.registry}/api/v1/suites/${encodeURIComponent(namespace)}/${encodeURIComponent(slug)}${params}`,
-        { headers: this.headers() }
+        { headers: this.headers(), ...(this.token ? { redirect: 'error' as const } : {}) }
       )
     } catch {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
@@ -247,12 +247,19 @@ export class SkillHubClient {
       // Keep the configured registry prefix, as direct download() does.
       const relativeUrl = downloadUrl.startsWith('/api/') ? downloadUrl.slice(1) : downloadUrl
       const registryBase = `${this.registry.replace(/\/+$/, '')}/`
-      const url = new URL(relativeUrl, registryBase)
+      let url = new URL(relativeUrl, registryBase)
       const registryApi = new URL('api/', registryBase)
-      const headers = url.origin === registryApi.origin && url.pathname.startsWith(registryApi.pathname)
-        ? this.headers()
-        : {}
-      response = await this.fetchImpl(url.toString(), { headers })
+      let trusted = true
+      for (let redirects = 0; ; redirects++) {
+        trusted = trusted && url.origin === registryApi.origin && url.pathname.startsWith(registryApi.pathname)
+        response = await this.fetchImpl(url.toString(), { headers: trusted ? this.headers() : {}, redirect: 'manual' })
+        if (![301, 302, 303, 307, 308].includes(response.status)) break
+        const location = response.headers.get('location')
+        await response.body?.cancel()
+        if (!location || redirects >= 10) throw new Error('Invalid package redirect')
+        url = new URL(location, url)
+        if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) throw new Error('Invalid download URL')
+      }
     } catch {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }
@@ -287,7 +294,7 @@ export class SkillHubClient {
     const url = await this.downloadUrl(namespace, slug, version)
     let response: Response
     try {
-      response = await this.fetchImpl(url, { headers: this.headers() })
+      response = await this.fetchImpl(url, { headers: this.headers(), ...(this.token ? { redirect: 'error' as const } : {}) })
     } catch {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }
@@ -375,7 +382,7 @@ export class SkillHubClient {
     let response: Response
     try {
       response = await this.fetchImpl(`${this.registry}/api/cli/v1${path}`, {
-        headers: this.headers()
+        headers: this.headers(), ...(this.token ? { redirect: 'error' as const } : {})
       })
     } catch (err) {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
@@ -478,7 +485,7 @@ export class SkillHubClient {
     try {
       response = await this.fetchImpl(`${this.registry}/api/cli/v1${path}`, {
         method: 'DELETE',
-        headers: this.headers()
+        headers: this.headers(), ...(this.token ? { redirect: 'error' as const } : {})
       })
     } catch {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })

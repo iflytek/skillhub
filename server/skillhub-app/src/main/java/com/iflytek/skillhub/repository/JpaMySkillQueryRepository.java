@@ -1,5 +1,9 @@
 package com.iflytek.skillhub.repository;
 
+import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
@@ -47,6 +51,31 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
         this.userAccountRepository = userAccountRepository;
+    }
+
+    @Override
+    public Page<Skill> findOwnedNamespaceSkills(String userId, String namespace, String keyword, Pageable page) {
+        var spaces = entityManager.createQuery("""
+                SELECT n.id FROM Namespace n, NamespaceMember m
+                WHERE m.namespaceId = n.id AND m.userId = :owner AND n.slug = :slug
+                """, Long.class).setParameter("owner", userId).setParameter("slug", namespace).getResultList();
+        if (spaces.isEmpty()) {
+            throw new DomainForbiddenException("error.namespace.membership.required");
+        }
+        String predicate = """
+                FROM Skill s WHERE s.ownerId = :owner AND s.namespaceId = :space AND s.hidden = false
+                  AND s.status NOT IN ('ARCHIVED')
+                  AND (locate(:q, lower(s.slug)) > 0 OR locate(:q, lower(s.displayName)) > 0
+                       OR locate(:q, lower(s.summary)) > 0 OR :q = '')
+                """;
+        long total = entityManager.createQuery("SELECT count(s) " + predicate, Long.class)
+                .setParameter("owner", userId).setParameter("space", spaces.getFirst())
+                .setParameter("q", keyword).getSingleResult();
+        if (page.getOffset() >= total) return new PageImpl<>(List.of(), page, total);
+        var skills = entityManager.createQuery("SELECT s " + predicate + " ORDER BY s.updatedAt DESC, s.id DESC", Skill.class)
+                .setParameter("owner", userId).setParameter("space", spaces.getFirst()).setParameter("q", keyword)
+                .setFirstResult(Math.toIntExact(page.getOffset())).setMaxResults(page.getPageSize()).getResultList();
+        return new PageImpl<>(skills, page, total);
     }
 
     @Override

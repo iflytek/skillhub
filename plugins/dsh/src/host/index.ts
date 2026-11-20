@@ -28,7 +28,7 @@ import { registerInstallTool } from './install-tool.js';
 import type { ConversationSearchContext, ConversationSearchResult } from './search-tool.js';
 import type { RegistryConnectionTest, CatalogContext, CatalogLabels, CatalogPageResult, CatalogSort, ModuleAvailability, ReviewPage, ConversationDetail, SkillDetail, SkillList, VersionPage } from './types.js';
 import { RegistryAdapter, RegistryError } from './registry-adapter.js';
-import { LocalRuntime } from './local-runtime.js';
+import { LocalRuntime, openLocalRuntime } from './local-runtime.js';
 import { FavoritesStore, FavoritesError, validateFavoriteSkill } from './favorites-store.js';
 import type { FavoriteList, FavoriteSkill, FavoriteVersion } from './types.js';
 import { assertRuntimeCompatibility } from './runtime-compatibility.js';
@@ -60,6 +60,11 @@ import type { ChangesView, ChangeDiffView, FileResetPlanView } from './types.js'
 import type { InstalledProjectionItem } from './generated/native-contract.js';
 import type { SkillFileEntry, SkillFileList, SkillFilePreview } from './types.js';
 
+import { AccountRegistry, uploadPackage } from './account-registry.js';
+import { AccountCredentials } from './account-credentials.js';
+import type { AccountIdentity, AccountMember, AccountNamespace, AccountPage, MemberCandidate, MemberMutation,
+  OwnedSkill, UploadReceipt, UploadTarget, Visibility, WorkspaceSkills } from './account-types.js';
+
 declare module '@deepseek-ai/cordis' {
   interface Context { skillhub: SkillHubService }
 }
@@ -71,6 +76,9 @@ export class SkillHubService extends TypertRemoteService {
   private sourceRevision = randomUUID();
   private registry?: RegistryAdapter;
   private sourceInput = '';
+  private readonly credentials = new AccountCredentials();
+  private account?: AccountIdentity;
+  private accountEpoch = new AbortController();
   private readonly lifetime = new AbortController();
   private localRuntime?: LocalRuntime;
   private readonly favorites = new FavoritesStore();
@@ -105,7 +113,11 @@ export class SkillHubService extends TypertRemoteService {
     this.configuration = configuration;
     ctx.inject(['sessions'], ctx => {
       ctx.effect(() => {
-        const runtime = new LocalRuntime(undefined, () => this.assertRuntimeBaseline());
+        const runtime = new LocalRuntime(() => openLocalRuntime(source => {
+          this.refreshSource();
+          if (!this.registry || source !== this.registry.source || !this.account) return undefined;
+          return this.credentials.get(source)?.token;
+        }), () => this.assertRuntimeBaseline());
         this.localRuntime = runtime;
         void runtime.start();
         return async () => {
@@ -147,12 +159,19 @@ export class SkillHubService extends TypertRemoteService {
     const source = this.configuration.get().registryUrl.trim();
     if (source === this.sourceInput) return;
     let registry: RegistryAdapter | undefined;
-    try { registry = source ? new RegistryAdapter(source) : undefined; }
+    try {
+      registry = source ? new RegistryAdapter(source) : undefined;
+      const credential = registry && this.credentials.get(registry.source);
+      this.account = credential?.identity;
+      if (registry && credential) registry = new RegistryAdapter(registry.source, fetch, 30_000, credential.token);
+    }
     catch {
       throw new RemoteError('skillhub/registry-error', 'Invalid SkillHub source address.', {
         reason: 'INVALID_SOURCE', retryable: false,
       });
     }
+    this.accountEpoch.abort();
+    this.accountEpoch = new AbortController();
     for (const scan of this.installedUpdateScans.values()) scan.close();
     this.details.clear();
     this.selections.clear();
@@ -221,6 +240,111 @@ export class SkillHubService extends TypertRemoteService {
     };
   }
 
+  private clearAccount() {
+    if (this.registry) this.credentials.set(this.registry.source);
+    this.sourceInput = '\0';
+    this.refreshSource();
+  }
+
+  @Remote
+  async connectAccount(revision: string, token: string, signal: AbortSignal): Promise<AccountIdentity> {
+    this.assertSource(revision);
+    if (!this.registry || typeof token !== 'string' || !/^\S{1,4096}$/u.test(token)) throw new RemoteError('skillhub/registry-error', 'Invalid token.', { reason: 'INVALID_INPUT', retryable: false });
+    const source = this.registry.source;
+    const combined = AbortSignal.any([signal, this.accountEpoch.signal, this.lifetime.signal]);
+    let identity: AccountIdentity;
+    try { identity = await new AccountRegistry(new RegistryAdapter(source, fetch, 30_000, token)).whoami(combined); }
+    catch (error) { throw new RemoteError('skillhub/registry-error', 'Account verification failed.', { reason: error instanceof RegistryError ? error.code : 'NETWORK_ERROR', retryable: false }); }
+    combined.throwIfAborted();
+    this.assertSource(revision);
+    this.credentials.set(source, { token, identity });
+    this.sourceInput = '\0';
+    this.refreshSource();
+    return identity;
+  }
+
+  @Remote
+  disconnectAccount(revision: string): boolean {
+    this.assertSource(revision);
+    this.clearAccount();
+    return true;
+  }
+
+  private async withAccount<T>(revision: string, signal: AbortSignal, write: boolean,
+    perform: (api: AccountRegistry, signal: AbortSignal) => Promise<T>): Promise<T> {
+    return this.readSource(revision, signal, async (registry, combined) => {
+      if (!this.account) throw new RegistryError('AUTH_REQUIRED', false);
+      const api = new AccountRegistry(registry);
+      if (write) {
+        const identity = await api.whoami(combined);
+        if (identity.handle !== this.account?.handle) throw new RegistryError('AUTH_REQUIRED', false);
+        this.assertSource(revision);
+      }
+      return perform(api, combined);
+    });
+  }
+
+  @Remote
+  async accountIdentity(revision: string, signal: AbortSignal): Promise<AccountIdentity | null> {
+    this.assertSource(revision);
+    if (!this.account) return null;
+    return this.withAccount(revision, signal, false, async (api, combined) => {
+      const identity = await api.whoami(combined);
+      if (identity.handle !== this.account?.handle) throw new RegistryError('AUTH_REQUIRED', false);
+      return identity;
+    });
+  }
+
+  @Remote
+  async accountNamespaces(revision: string, signal: AbortSignal): Promise<AccountNamespace[]> {
+    return this.withAccount(revision, signal, false, (api, s) => api.namespaces(s));
+  }
+
+  @Remote
+  async accountOwned(revision: string, ns: string, page: number, signal: AbortSignal): Promise<AccountPage<OwnedSkill>> {
+    return this.withAccount(revision, signal, false, (api, s) => api.owned(ns, page, '', s));
+  }
+
+  @Remote
+  async accountTeam(revision: string, ns: string, cursor: string, signal: AbortSignal): Promise<WorkspaceSkills> {
+    return this.withAccount(revision, signal, false, (api, s) => api.team(ns, cursor, s));
+  }
+
+  @Remote
+  async accountMembers(revision: string, ns: string, page: number, signal: AbortSignal): Promise<AccountPage<AccountMember>> {
+    return this.withAccount(revision, signal, false, (api, s) => api.members(ns, page, s));
+  }
+
+  @Remote
+  async accountCandidates(revision: string, ns: string, search: string, signal: AbortSignal): Promise<MemberCandidate[]> {
+    return this.withAccount(revision, signal, false, (api, s) => api.candidates(ns, search, s));
+  }
+
+  @Remote
+  async changeAccountMember(revision: string, ns: string, change: MemberMutation, signal: AbortSignal): Promise<boolean> {
+    return this.withAccount(revision, signal, true, (api, s) => api.changeMember(ns, change, s));
+  }
+
+  @Remote
+  async deleteAccountSkill(revision: string, ns: string, id: number, slug: string, signal: AbortSignal): Promise<boolean> {
+    return this.withAccount(revision, signal, true, (api, s) => api.deleteOwned(ns, id, slug, s));
+  }
+
+  @Remote
+  async inspectUpload(revision: string, ns: string, archive: string, signal: AbortSignal): Promise<UploadTarget> {
+    return this.withAccount(revision, signal, false, (api, s) => api.target(ns, uploadPackage(archive).slug, s));
+  }
+
+  @Remote
+  async publishUpload(revision: string, ns: string, archive: string, visibility: Visibility, expected: UploadTarget, signal: AbortSignal): Promise<UploadReceipt> {
+    return this.withAccount(revision, signal, true, (api, s) => api.publish(ns, archive, visibility, expected, s));
+  }
+
+  @Remote
+  async uploadStatus(revision: string, ns: string, slug: string, version: string, signal: AbortSignal): Promise<{ id: number; version: string; status: string }> {
+    return this.withAccount(revision, signal, false, (api, s) => api.status(ns, slug, version, s));
+  }
+
   @Remote
   async listFavorites(sourceRevision: string, signal: AbortSignal): Promise<FavoriteList> {
     return this.readSource(sourceRevision, signal, (registry, combined) => this.readFavorites(() =>
@@ -229,8 +353,16 @@ export class SkillHubService extends TypertRemoteService {
 
   @Remote
   async setFavorite(sourceRevision: string, item: FavoriteSkill, favorite: boolean, signal: AbortSignal): Promise<FavoriteList> {
-    return this.readSource(sourceRevision, signal, (registry, combined) => this.readFavorites(() =>
-      this.favorites.set(registry.source, item, favorite, () => { combined.throwIfAborted(); this.assertSource(sourceRevision); })));
+    return this.readSource(sourceRevision, signal, async (registry, combined) => {
+      let snapshot = item;
+      if (favorite && this.account) {
+        const publicItem = await new RegistryAdapter(registry.source).metadata(item.namespace, item.slug, combined);
+        snapshot = { namespace: publicItem.namespace, slug: publicItem.slug,
+          displayName: publicItem.displayName ?? undefined, summary: publicItem.summary ?? undefined };
+      }
+      return this.readFavorites(() => this.favorites.set(registry.source, snapshot, favorite,
+        () => { combined.throwIfAborted(); this.assertSource(sourceRevision); }));
+    });
   }
 
   @Remote
@@ -325,7 +457,7 @@ export class SkillHubService extends TypertRemoteService {
       if (this.details.size >= 100) this.details.delete(this.details.keys().next().value!);
       this.details.set(detailToken, { sourceRevision, namespace, slug, version: resolved.version,
         skillId: metadata.id, versionId: resolved.versionId, fingerprint: resolved.fingerprint });
-      return { detailToken, webUrl: metadata.webUrl, title: metadata.displayName?.trim() || slug, summary: metadata.summary ?? '',
+      return { detailToken, skillId: metadata.id, webUrl: metadata.webUrl, title: metadata.displayName?.trim() || slug, summary: metadata.summary ?? '',
         downloadCount: metadata.downloadCount, starCount: metadata.starCount,
         ratingAvg: metadata.ratingCount === 0 ? undefined : metadata.ratingAvg, ratingCount: metadata.ratingCount,
         namespace, slug, version: resolved.version, versionId: resolved.versionId, documentation,
@@ -1983,12 +2115,13 @@ export class SkillHubService extends TypertRemoteService {
       throw new RemoteError('skillhub/source-not-configured', 'Configure a SkillHub source first.', { retryable: false });
     }
     try {
-      const result = await read(this.registry, AbortSignal.any([signal, this.lifetime.signal]));
+      const result = await read(this.registry, AbortSignal.any([signal, this.lifetime.signal, this.accountEpoch.signal]));
       this.assertSource(sourceRevision);
       return result;
     } catch (error) {
       this.assertSource(sourceRevision);
       if (error instanceof RegistryError) {
+        if (error.code === 'AUTH_REQUIRED' && this.account && this.registry) this.clearAccount();
         throw new RemoteError('skillhub/registry-error', 'SkillHub request failed.', {
           reason: error.code, retryable: error.retryable,
           ...(error.status === undefined ? {} : { status: error.status }),

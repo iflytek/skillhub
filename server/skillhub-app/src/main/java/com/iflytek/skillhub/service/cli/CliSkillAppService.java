@@ -108,8 +108,11 @@ public class CliSkillAppService {
             String namespace,
             String userId,
             Map<Long, NamespaceRole> userNsRoles) {
-        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
-                namespace, skill.getSlug(), null, null, null, userId, userNsRoles);
+        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersionById(
+                skill.getLatestVersionId(), userId, userNsRoles, Set.of());
+        if (!skill.getId().equals(resolved.skillId())) {
+            throw new IllegalStateException("Published version does not belong to the listed skill");
+        }
         return new CliNamespaceSyncItemResponse(
                 namespace,
                 skill.getSlug(),

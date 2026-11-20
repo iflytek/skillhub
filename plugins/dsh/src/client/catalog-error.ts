@@ -13,6 +13,11 @@ export function catalogErrorMessage(error: { code: string; details?: unknown }):
   const reason = error.details && typeof error.details === 'object' && 'reason' in error.details
     ? error.details.reason : undefined;
   switch (reason) {
+    case 'AUTH_REQUIRED': return '个人 Token 已失效，请重新登录。';
+    case 'ACCESS_DENIED': return '当前 Token 权限或空间角色不足，请到来源网页核对授权。';
+    case 'TARGET_CHANGED': return '上传目标或可见性已变化，请重新核对。';
+    case 'WRITE_UNKNOWN': return '提交结果暂时无法确认，请先刷新列表或到来源网页核对。';
+    case 'INVALID_INPUT': return '请检查所选技能包、账号和输入内容。';
     case 'INVALID_SOURCE': return 'SkillHub 地址无效，请在插件配置中检查实例地址。';
     case 'ANONYMOUS_DENIED': return '当前来源不允许匿名读取此项信息，请联系实例管理员确认公开访问配置。';
     case 'NOT_FOUND': return '未找到请求的技能或接口，请检查来源地址或返回列表重新选择。';

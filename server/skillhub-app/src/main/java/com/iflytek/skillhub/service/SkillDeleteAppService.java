@@ -4,6 +4,8 @@ import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
 import com.iflytek.skillhub.domain.skill.Skill;
@@ -28,16 +30,18 @@ public class SkillDeleteAppService {
 
     private final SkillRepository skillRepository;
     private final NamespaceRepository namespaceRepository;
+    private final NamespaceMemberRepository members;
     private final SkillHardDeleteService skillHardDeleteService;
     private final SearchIndexService searchIndexService;
 
     public SkillDeleteAppService(SkillOwnerAccessPolicy ownerAccess, SkillRepository skillRepository,
-                                 NamespaceRepository namespaceRepository,
+                                 NamespaceRepository namespaceRepository, NamespaceMemberRepository members,
                                  SkillHardDeleteService skillHardDeleteService,
                                  SearchIndexService searchIndexService) {
         this.ownerAccess = ownerAccess;
         this.skillRepository = skillRepository;
         this.namespaceRepository = namespaceRepository;
+        this.members = members;
         this.skillHardDeleteService = skillHardDeleteService;
         this.searchIndexService = searchIndexService;
     }
@@ -70,6 +74,14 @@ public class SkillDeleteAppService {
                 .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
         Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
                 .orElseThrow(() -> new DomainNotFoundException("error.namespace.notFound", skill.getNamespaceId()));
+        if ("api_token".equals(principal.oauthProvider()) && namespace.getType() == NamespaceType.TEAM
+                && !principal.platformRoles().contains("SUPER_ADMIN")) {
+            namespaceRepository.findLockedById(skill.getNamespaceId())
+                    .orElseThrow(() -> new DomainForbiddenException("error.namespace.membership.required"));
+            if (members.findByNamespaceIdAndUserId(skill.getNamespaceId(), principal.userId()).isEmpty()) {
+                throw new DomainForbiddenException("error.namespace.membership.required");
+            }
+        }
         return deleteExistingSkill(
                 skill,
                 namespace.getSlug(),

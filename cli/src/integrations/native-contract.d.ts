@@ -210,7 +210,7 @@ export interface NativeInstallExecution {
 }
 
 export interface NativeCore {
-  openNativeRuntime(options: { stateDirectory: string; inventoryHome: string }): Promise<NativeRuntime>
+  openNativeRuntime(options: { stateDirectory: string; inventoryHome: string; getRegistryToken?: (registry: string) => string | undefined }): Promise<NativeRuntime>
 }
 
 export interface NativeUpgradeExecution extends Omit<NativeInstallExecution, 'root' | 'scope'> {

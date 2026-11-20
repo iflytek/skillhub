@@ -57,7 +57,8 @@ const terminal = (record: ResetRecord) => ['completed', 'failed'].includes(recor
 /** Separate directory and schema: older OperationStore builds never parse extended reset records. */
 export class FileResetStore {
   readonly root: string
-  constructor(private state: string, private hostInstanceId: string, private inventory: InventoryStore, private assertOtherOperations: () => Promise<void> = async () => {}) {
+  constructor(private state: string, private hostInstanceId: string, private inventory: InventoryStore, private assertOtherOperations: () => Promise<void> = async () => {},
+    private getRegistryToken?: (registry: string) => string | undefined) {
     this.root = join(dirname(state), 'file-reset-v1')
   }
   /** Internal filesystem seam; callers cannot choose a cleanup path through the Remote API. */
@@ -166,7 +167,7 @@ export class FileResetStore {
             await this.removeBackup(backup); await syncDirectory(snapshot.target.root)
             record.operation.phase = 'completed'; await this.save(record)
           }) } finally { await release() }
-        })
+        }, this.getRegistryToken?.(snapshot.selection.registry))
       } catch {
         const current = await this.get(record.operationId, record.ownerId)
         if (current?.intent) {
