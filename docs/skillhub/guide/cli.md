@@ -735,3 +735,17 @@ skillhub repository install 123456 --scope project --agent codex --registry http
 默认保护已有目录，不支持批量 `--force`。成员逐个安装：部分失败时已成功成员保留，结果逐项报告，并以非零退出码结束；不会伪报整仓成功。复用原有逐技能安装记录，不自动创建套件，也不增加仓库安装账本。
 
 完整快照 ZIP 仍是另一个入口，要求该快照内每个固定成员均可下载；它与可能混合提交的日常批量安装不同。
+
+### 检查和升级已安装的仓库技能
+
+```bash
+skillhub repository check 123456 --registry https://skillhub.example.com --json
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com --check
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com
+```
+
+`check` 和 `upgrade --check` 不写文件。`--agent`、`--dir` 筛选已有目标；`--scope` 仅用于首次安装。按版本和指纹比较，不要求成员来自同一提交。只升级已有成员，不补装上游新增技能，不删除已移除或不可用成员的本地文件。历史 metadata 缺少仓库来源提示仍可读取，不强制迁移；当前可用成员的资格来自服务端真实绑定。
+
+本地修改、共享/Suite 归属、禁用状态、来源冲突仍按现有保护规则处理。受保护项保留，其他安全项可以独立升级；有保护项或失败时整体非零退出并逐项解释。意外失败时保留已完成项并停止后续升级，不宣称整仓文件系统事务。批量操作不提供 `--force`，仍遵循现有下载限额。
+
+网页只提供命令，不知道你的本地安装情况，也不会显示推测的“落后 N 项”。

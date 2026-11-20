@@ -68,6 +68,25 @@ it('preserves command and visible error when clipboard access fails', async () =
   expect(screen.getByText(/skillhub repository install 42/)).toBeTruthy()
 })
 
+it('offers local-only check and upgrade commands without an installation scope or force flag', async () => {
+  mocks.fetch.mockResolvedValue(plan)
+  mocks.copy.mockResolvedValue(undefined)
+  setup()
+  fireEvent.click(screen.getByRole('button', { name: 'githubCatalog.installOpen' }))
+  await screen.findByText('Alpha')
+  for (const action of ['check', 'upgrade']) {
+    const choice = screen.getByRole('button', { name: `githubCatalog.repositoryCommandActions.${action}` })
+    fireEvent.click(choice)
+    expect(choice.getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText('githubCatalog.repositoryUpdateHint')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'copyButton.copy' }))
+    await waitFor(() => expect(mocks.copy).toHaveBeenLastCalledWith(expect.stringContaining(`repository ${action} 42`)))
+    const command = mocks.copy.mock.calls.at(-1)?.[0]
+    expect(command).not.toContain('--scope')
+    expect(command).not.toContain('--force')
+  }
+})
+
 it('shows pending state and ignores a late result while collapsed', async () => {
   let complete: (value: typeof plan) => void = () => {}
   mocks.fetch.mockReturnValue(new Promise(resolve => { complete = resolve }))

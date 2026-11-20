@@ -116,7 +116,14 @@
     "installCommand": "在终端运行",
     "installRegistryInvalid": "站点地址无法安全生成为命令，请在 CLI 中手动指定 registry。",
     "installCopyFailed": "复制失败，请手动选择命令复制。",
-    "installLocalHint": "需要已安装 SkillHub CLI。受限内容请先登录；CLI 执行时重新解析并固定版本，选择目标 Agent，本页不会写入本地文件。"
+    "installLocalHint": "需要已安装 SkillHub CLI。受限内容请先登录；CLI 执行时重新解析并固定版本，选择目标 Agent，本页不会写入本地文件。",
+    "repositoryCommandAction": "操作方式",
+    "repositoryCommandActions": {
+      "install": "安装技能",
+      "check": "检查更新",
+      "upgrade": "升级已有技能"
+    },
+    "repositoryUpdateHint": "只比较本地已有的对应技能，不补装新增成员、不删除本地文件。修改、共享归属或不可用项会保留并说明；部分完成不会显示为全部成功。"
   },
   "landing": {
     "hero": {

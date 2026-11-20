@@ -682,4 +682,18 @@ The CLI resolves all currently accessible, published, download-ready members onc
 
 Each member uses normal Skill installation locks, fingerprint checks, ownership protection and inventory. This creates neither a Suite nor a repository installation ledger. Existing directories are never overwritten by this batch command; no batch `--force` is accepted. Successful members remain installed if another fails. The output lists every attempted member, counts installed/skipped/failed, and returns nonzero on partial failure or no usable plan. In `--json` mode stdout is one result object; a nonzero command additionally writes its standard error object to stderr. Excluded private/unpublished members are not counted as successful or as a disclosed skip count.
 
-A complete historical snapshot ZIP is a separate download: every pinned snapshot member must be available. Batch installation does not promise that all members belong to one commit. Use individual upgrades for existing skills; repository-scoped update checks and upgrades are tracked separately in #1110.
+A complete historical snapshot ZIP is a separate download: every pinned snapshot member must be available. Batch installation does not promise that all members belong to one commit. Use the repository-scoped check and upgrade commands below for existing installations.
+
+## Check and upgrade installed repository skills
+
+```bash
+skillhub repository check 123456 --registry https://skillhub.example.com --json
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com --check
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com
+```
+
+`check` and `upgrade --check` are read-only. `--agent` and/or `--dir` filter existing targets; `--scope` applies only to installation. New upstream members are not automatically installed. Local files for removed, hidden or unavailable members are not deleted. A per-Skill provenance hint lets the CLI explain that a previously installed member no longer appears in the accessible published plan without guessing why it is hidden. Older metadata without this hint stays readable and can match verified current members.
+
+Checks compare exact versions and content fingerprints, not commit equality. Each invocation fetches the repository plan once and pins all selected releases. Existing source, ownership, local-change, disabled-state, lock and inventory protections remain in effect. No repository batch `--force` is offered. Protected targets remain unchanged while safe targets may upgrade; the overall result is nonzero if anything is protected or fails. A runtime failure preserves completed work and reports subsequent unattempted targets. The CLI does not claim a single transaction across every skill directory.
+
+The Web page offers these commands but cannot inspect installed local files or display an installed drift count. These operations create no Suite, repository installation ledger, server installation telemetry or lockstep commit policy. Existing registry download quotas still apply.

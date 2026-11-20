@@ -116,7 +116,14 @@
     "installCommand": "Run in your terminal",
     "installRegistryInvalid": "The site address cannot safely be embedded in a command. Set the CLI registry manually.",
     "installCopyFailed": "Copy failed. Select and copy the command manually.",
-    "installLocalHint": "Requires SkillHub CLI. Log in first for restricted content. The CLI resolves and pins versions when it runs and asks you to choose an Agent. This page does not write local files."
+    "installLocalHint": "Requires SkillHub CLI. Log in first for restricted content. The CLI resolves and pins versions when it runs and asks you to choose an Agent. This page does not write local files.",
+    "repositoryCommandAction": "Local operation",
+    "repositoryCommandActions": {
+      "install": "Install skills",
+      "check": "Check updates",
+      "upgrade": "Upgrade installed skills"
+    },
+    "repositoryUpdateHint": "Only matching installed skills are compared. New members are not added and local files are not deleted. Modified, shared or unavailable targets are protected and explained; partial completion is not reported as full success."
   },
   "landing": {
     "hero": {
