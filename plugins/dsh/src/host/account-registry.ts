@@ -10,7 +10,7 @@ const vis = z.enum(['PRIVATE', 'NAMESPACE_ONLY', 'PUBLIC']);
 const role = z.enum(['OWNER', 'ADMIN', 'MEMBER']);
 const identity = z.object({ handle: text, displayName: z.string().nullable().transform(v => v ?? '') });
 const namespace = z.object({ id, slug: text, displayName: text, type: text, status: text, currentUserRole: role });
-const version = z.object({ version: text });
+const version = z.object({ id, version: text });
 const owned = z.object({ id, slug: text, namespace: text, displayName: z.string().nullable().transform(v => v ?? ''), visibility: vis, status: text, publishedVersion: version.nullable().optional() });
 const member = z.object({ userId: text, displayName: z.string().nullable(), role });
 const candidate = z.object({ userId: text, displayName: z.string().nullable(), email: z.string().nullable() });

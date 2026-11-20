@@ -61,7 +61,7 @@ export function SpacePage({ source, remote, revision, space, handle, upload, ope
     <AccountError error={result.error} retry={() => { void result.refetch(); }} />
     {!result.isError && tab === 'owned' && owned.data?.items.map(skill => <article key={skill.id}>
       <div><strong>{skill.displayName || skill.slug}</strong><p>{skill.slug} · {visibilityLabels[skill.visibility]} · {skill.status}</p></div><div>
-      {skill.publishedVersion && <Button onClick={() => open(skill.slug, skill.publishedVersion!.version, skill.id)}>查看</Button>}
+      {skill.publishedVersion && <Button onClick={() => open(skill.slug, skill.publishedVersion!.version, skill.id, skill.publishedVersion!.id)}>查看</Button>}
       {space.status === 'ACTIVE' && <Button onClick={() => upload(skill)}>上传新版本</Button>}
       <Button onClick={() => show({ type: 'delete', skill })}>删除</Button></div></article>)}
     {!result.isError && tab === 'team' && skills.data?.items.map(skill => <article key={skill.versionId}><strong>{skill.slug}</strong><div>{skill.version} <Button onClick={() => open(skill.slug, skill.version, undefined, skill.versionId)}>查看技能</Button></div></article>)}

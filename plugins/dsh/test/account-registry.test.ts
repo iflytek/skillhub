@@ -47,6 +47,13 @@ test('upload uses one shared CLI publish request and status failures never resub
   expect(posts).toBe(1);
 });
 
+test('an owned row retains the exact published version ID used when opening a detail', async () => {
+  const row = { ...skill, publishedVersion: { id: 14, version: '1.0' } };
+  const api = registry(() => data({ items: [row], total: 1, page: 0, size: 20 }));
+  const page = await api.owned('design', 0, '', signal);
+  expect(page.items[0]?.publishedVersion).toEqual({ id: 14, version: '1.0' });
+});
+
 test('upload stops before writing when the target changed or matches on multiple pages', async () => {
   let pages = 0;
   let total = 1;

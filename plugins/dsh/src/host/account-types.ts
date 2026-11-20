@@ -6,7 +6,7 @@ export interface AccountNamespace {
 }
 export interface OwnedSkill {
   id: number; slug: string; namespace: string; displayName: string; visibility: Visibility; status: string;
-  publishedVersion?: { version: string } | null;
+  publishedVersion?: { id: number; version: string } | null;
 }
 export interface AccountMember { userId: string; displayName: string | null; role: TeamRole }
 export interface MemberCandidate { userId: string; displayName: string | null; email: string | null }
