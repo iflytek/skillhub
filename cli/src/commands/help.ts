@@ -68,6 +68,15 @@ export const commands = {
       'skillhub upgrade code-review --namespace team --agent codex'
     ]
   },
+  outdated: {
+    summary: 'List installed skills with newer registry versions (read-only)',
+    usage: 'skillhub outdated [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--token <token>] [--json]',
+    examples: [
+      'skillhub outdated',
+      'skillhub outdated --namespace team --agent codex',
+      'skillhub outdated --json'
+    ]
+  },
   sync: {
     summary: 'Synchronize and maintain namespace workspaces',
     usage: 'skillhub sync pull --namespace <slug> [--skill <slug>] [options] | skillhub sync <status|diff|push> --namespace <slug> [options]',

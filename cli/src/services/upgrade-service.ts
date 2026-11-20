@@ -331,7 +331,8 @@ function selectInventoryItems(
   return [...selected.values()]
 }
 
-async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): Promise<{
+/** Read-only local-change inspection; also used by `outdated` to report the same state. */
+export async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): Promise<{
   hardConflicts: string[]
   changedFiles: string[]
   baselineMissing: boolean
@@ -388,7 +389,7 @@ async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): 
   }
 }
 
-function matchesTargetFilters(target: InventoryTarget, agents?: string[], dir?: string): boolean {
+export function matchesTargetFilters(target: InventoryTarget, agents?: string[], dir?: string): boolean {
   if (agents?.length && !agents.includes(target.agent)) return false
   if (!dir) return true
   const filterPath = resolve(dir)

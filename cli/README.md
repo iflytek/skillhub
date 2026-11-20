@@ -332,6 +332,78 @@ as `upgraded`, `failed`, or `not-attempted`; a committed upgrade is never rolled
 New installations store absolute target paths. An older inventory entry with relative target paths
 must be reinstalled before upgrade because its original working directory cannot be recovered safely.
 
+`upgrade --check` (text and `--json`) also reports the version change of each planned row as
+`change`: `major`, `minor`, `patch`, `prerelease`, `none`, `downgrade` or `unknown` (see below).
+
+### Find Outdated Skills
+
+`outdated` is read-only discovery. It checks every SkillHub-managed installation that `list` shows
+for the effective registry, asks that registry for the current version, and prints the installations
+with a newer version. It never downloads packages, writes files or upgrades anything; applying an
+update stays an explicit `skillhub upgrade <coordinate>`.
+
+```bash
+# Installations with newer versions in the effective registry
+skillhub outdated
+
+# Narrow the check like list/upgrade
+skillhub outdated --namespace team --agent codex
+skillhub outdated --dir ./.agents/skills --registry https://skillhub.example.com
+
+# Machine-readable report, e.g. for an Agent session hook
+skillhub outdated --json
+```
+
+Example output:
+
+```text
+Outdated: 2 with newer versions, 0 unknown, 3 checked
+patch      @team/code-review 1.0.0 -> 1.0.1  codex  /work/repo/.agents/skills/code-review [local changes: 1 file]
+major      @global/example-skill 1.4.2 -> 2.0.0  claude  /home/user/.claude/skills/example-skill
+Run "skillhub upgrade <coordinate> --check" to review an upgrade; nothing was changed.
+```
+
+`change` compares the installed and registry versions with semver:
+
+| Value | Meaning |
+|-------|---------|
+| `major` / `minor` / `patch` | The first differing release component of a newer stable version |
+| `prerelease` | The newer version is a prerelease, or only the prerelease part changed (for example `1.0.0-rc.1 -> 1.0.0`) |
+| `unknown` | A version is not valid semver, or the registry version could not be resolved (`reason` explains) |
+
+Installations at the same or an older registry version are not listed. `localState` reuses the
+local-change inspection of `upgrade`: `clean`, `modified` (files differ from the installed baseline;
+`upgrade` would require `--force`) or `unverified` (no baseline, missing target, invalid metadata or
+source conflict; `localReason` explains). The command exits `0` whether or not updates exist; read the
+counts from the summary. Usage errors keep the usual exit codes.
+
+JSON shape (`--json`):
+
+```json
+{
+  "ok": true,
+  "registry": "https://skillhub.example.com",
+  "summary": { "checked": 3, "outdated": 2, "unknown": 0 },
+  "items": [
+    {
+      "coordinate": "@team/code-review",
+      "registry": "https://skillhub.example.com",
+      "agent": "codex",
+      "installDir": "/work/repo/.agents/skills/code-review",
+      "currentVersion": "1.0.0",
+      "remoteVersion": "1.0.1",
+      "change": "patch",
+      "localState": "modified",
+      "changedFiles": ["/work/repo/.agents/skills/code-review:SKILL.md"]
+    }
+  ]
+}
+```
+
+`items` has one row per installation position. `remoteVersion` is `null` when the registry could not
+resolve the skill. `reason` and `localReason` are present only when they apply. `summary.checked`
+counts the installation positions examined after filters; `outdated` and `unknown` count `items`.
+
 ## 🔄 Namespace Workspaces
 
 Use namespace synchronization to maintain explicitly selected skills from one team space. Every sync action requires
@@ -526,6 +598,7 @@ Update mechanism:
 | `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
 | `skillhub install <coordinate> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
 | `skillhub upgrade <coordinate...> [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--check] [--force] [--json]` | Upgrade explicitly selected installed skills |
+| `skillhub outdated [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--token <token>] [--json]` | List installed skills with newer registry versions (read-only) |
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
 | `skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
 | `skillhub doctor [--json]` | Scan project directory and rebuild local inventory |
