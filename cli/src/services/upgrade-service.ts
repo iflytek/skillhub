@@ -10,7 +10,7 @@ import { diffSkillFiles, snapshotSkillDirectory } from './skill-fingerprint'
 import { snapshotInstalledSkillDirectory } from './installed-skill-snapshot'
 import { installSkill } from './install-service'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from './installed-skill-metadata'
-import { compareSkillVersions } from './skill-version-order'
+import { compareSkillVersions, type SkillVersionOrder } from './skill-version-order'
 
 export const MAX_UPGRADE_SELECTION = 50
 
@@ -25,6 +25,8 @@ export interface UpgradeSelectionOptions {
   tokenForRegistry: (registry: string) => Promise<string | undefined>
   /** Internal source adapter; a repository invocation supplies its already pinned releases. */
   resolveVersion?: (item: InventoryItem) => Promise<ResolveResponse>
+  /** Source-specific ordering; ordinary upgrades retain the SemVer comparator. */
+  compareVersions?: (item: InventoryItem, resolved: ResolveResponse) => Promise<SkillVersionOrder>
 }
 
 export type UpgradePlanAction = 'upgrade' | 'unchanged' | 'blocked'
@@ -163,7 +165,8 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       continue
     }
 
-    const versionOrder = compareSkillVersions(selection.targets[0]!.version, resolved.version)
+    const versionOrder = options.compareVersions ? await options.compareVersions(selection.item, resolved)
+      : compareSkillVersions(selection.targets[0]!.version, resolved.version)
     if (versionOrder === 'remote-older') {
       items.push({
         ...base,

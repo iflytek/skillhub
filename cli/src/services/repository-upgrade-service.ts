@@ -6,7 +6,7 @@ import { readInstalledSkillMetadata, sameInstalledSkillSource } from './installe
 import { MAX_UPGRADE_SELECTION, matchesTargetFilters, planSkillUpgrades, executeSkillUpgradePlan,
   type UpgradeSelectionOptions, type UpgradePlan, type UpgradeExecutionResult } from './upgrade-service'
 
-type RepositoryUpgradeOptions = Omit<UpgradeSelectionOptions, 'coordinates' | 'namespace' | 'force' | 'resolveVersion'> & { registry: string }
+type RepositoryUpgradeOptions = Omit<UpgradeSelectionOptions, 'coordinates' | 'namespace' | 'force' | 'resolveVersion' | 'compareVersions'> & { registry: string }
 
 export async function planRepositoryUpgrades(remote: RepositoryInstallPlan, options: RepositoryUpgradeOptions): Promise<UpgradePlan> {
   const inventory = await new InventoryStore(options.home).read()
@@ -39,8 +39,20 @@ export async function planRepositoryUpgrades(remote: RepositoryInstallPlan, opti
         const member = members.get(item.slug)
         if (!member) throw new CliError('repository member is not in the pinned plan', EXIT.validation)
         return member
+      }, compareVersions: async (item, resolved) => {
+        const current = await readInstalledSkillMetadata(item.targets[0]!.installDir)
+        if (current.status !== 'valid' || !sameInstalledSkillSource(current.metadata, item)
+          || current.metadata.version !== item.targets[0]!.version
+          || current.metadata.fingerprint !== item.targets[0]!.fingerprint) return 'unknown'
+        if (current.metadata.version === resolved.version && current.metadata.fingerprint === resolved.fingerprint) return 'same'
+        // GitHub versions embed a content hash, not a sortable SemVer publication sequence.
+        // Within one verified source Skill, version IDs preserve creation order (including reverts).
+        const versionId = current.metadata.versionId
+        if (!Number.isSafeInteger(versionId) || !versionId || versionId <= 0) return 'unknown'
+        return resolved.versionId === versionId ? 'same' : resolved.versionId > versionId ? 'remote-newer' : 'remote-older'
       } })
-    items.push(...plan.items)
+    items.push(...plan.items.map(item => item.action === 'upgrade' && item.selectedTargets.some(target => target.installationState === 'disabled')
+      ? { ...item, action: 'blocked' as const, reason: 'disabled installation is protected; use the native transactional manager' } : item))
   }
   return { items, blocked: items.filter(item => item.action === 'blocked').length,
     upgrades: items.filter(item => item.action === 'upgrade').length, unchanged: items.filter(item => item.action === 'unchanged').length }

@@ -12,11 +12,15 @@ The CLI SHALL match the repository's current accessible published plan against e
 - **THEN** A is checked, B is not installed, and C remains untouched with an unavailable/no-longer-listed explanation based on local provenance without guessing its hidden server state.
 
 ### Requirement: REQ-2 Version and content comparison
-The CLI SHALL detect updates using exact version and content fingerprint with existing version ordering. Different upstream commit IDs alone MUST NOT generate an inconsistency warning. One invocation MUST reuse its resolved versions throughout execution.
+The CLI SHALL detect updates using exact version, content fingerprint and verified same-source release creation order for hash-based GitHub versions. Different upstream commit IDs alone MUST NOT generate an inconsistency warning. One invocation MUST reuse its resolved versions throughout execution.
 
 #### Scenario: Mixed commits with unchanged content
 - **WHEN** installed skills match the eligible versions and fingerprints but came from different commits
 - **THEN** they are reported unchanged rather than inconsistent.
+
+#### Scenario: Real GitHub hash versions and historical ordering evidence
+- **WHEN** a later same-source version ID has a hash that sorts lower, or an old local record has no reliable ordering ID
+- **THEN** the later known release remains upgradeable independently of hash order, and the unknown historical ordering is blocked without forced migration; exact matching version/fingerprint remains unchanged.
 
 ### Requirement: REQ-3 Protect local state and other owners
 The CLI SHALL retain existing target locks, ownership, baseline checks, compare-and-swap inventory and rollback protections. Repository upgrades MUST NOT implicitly force local modifications or bypass Suite/shared ownership, disabled-state or source-identity guards.
