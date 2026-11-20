@@ -99,11 +99,12 @@
     "@radix-ui/react-tabs": "1.2.1",
     "@tanstack/react-query": "5.90.21",
     "class-variance-authority": "0.7.1",
+    "fflate": "0.8.3",
     "react-markdown": "10.1.0",
     "rehype-sanitize": "6.0.0",
+    "semver": "7.8.5",
     "yaml": "2.9.1",
-    "zod": "4.6.6",
-    "semver": "7.8.5"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-agent": "0.2.1-rc.2",

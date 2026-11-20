@@ -55,6 +55,23 @@ class ApiTokenAuthenticationFilterTest {
     }
 
     @Test
+    void invalidBearerCannotUseAnExistingBrowserSession() throws Exception {
+        var session = new org.springframework.security.authentication.TestingAuthenticationToken("user", "", "ROLE_USER");
+        SecurityContextHolder.getContext().setAuthentication(session);
+        var request = new MockHttpServletRequest("GET", "/deployment/api/v1/me/namespaces");
+        request.setContextPath("/deployment");
+        request.addHeader("Authorization", "Bearer invalid");
+        var response = new MockHttpServletResponse();
+        var chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertEquals(401, response.getStatus());
+        assertNull(chain.getRequest());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
     void shouldPopulateRoleAndScopeAuthoritiesForActiveUser() throws Exception {
         ApiToken token = new ApiToken("user-1", "cli", "sk_test", "hash", "[\"skill:publish\",\"token:manage\"]");
         UserAccount user = new UserAccount("user-1", "Alice", "alice@example.com", "");

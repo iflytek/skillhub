@@ -1,5 +1,7 @@
 package com.iflytek.skillhub.service;
 
+import java.util.Optional;
+import java.util.Set;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
@@ -28,6 +30,7 @@ import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class SkillDeleteAppServiceTest {
+    @Mock private com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository members;
 
     @Mock
     private SkillRepository skillRepository;
@@ -42,7 +45,7 @@ class SkillDeleteAppServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new SkillDeleteAppService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skillRepository, namespaceRepository, skillHardDeleteService, searchIndexService);
+        service = new SkillDeleteAppService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), skillRepository, namespaceRepository, members, skillHardDeleteService, searchIndexService);
     }
 
     @Test
@@ -200,6 +203,20 @@ class SkillDeleteAppServiceTest {
 
         assertThatThrownBy(() -> service.deleteSkillById(11L, "super-1", new AuditRequestContext("127.0.0.1", "JUnit")))
                 .isInstanceOf(DomainNotFoundException.class);
+    }
+
+    @Test
+    void tokenCannotDeleteTeamSkillAfterAuthorLeavesEvenWhenSkillAdmin() {
+        var ns = new Namespace("team-a", "Team A", "author");
+        ns.setType(com.iflytek.skillhub.domain.namespace.NamespaceType.TEAM);
+        var skill = new Skill(7L, "demo", "author", SkillVisibility.NAMESPACE_ONLY);
+        org.mockito.Mockito.when(skillRepository.findById(11L)).thenReturn(Optional.of(skill));
+        org.mockito.Mockito.when(namespaceRepository.findById(7L)).thenReturn(Optional.of(ns));
+        org.mockito.Mockito.when(namespaceRepository.findLockedById(7L)).thenReturn(Optional.of(ns));
+        var principal = new PlatformPrincipal("author", "Author", null, null, "api_token", Set.of("SKILL_ADMIN"));
+        assertThatThrownBy(() -> service.deleteSkillByIdFromPortal(11L, principal, null))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException.class);
+        org.mockito.Mockito.verifyNoInteractions(skillHardDeleteService);
     }
 
     @Test

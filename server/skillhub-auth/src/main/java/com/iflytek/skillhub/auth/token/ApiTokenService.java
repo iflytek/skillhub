@@ -158,7 +158,7 @@ public class ApiTokenService {
                 .filter(existing -> existing.getUserId().equals(userId) && existing.getRevokedAt() == null)
                 .orElseThrow(() -> new DomainNotFoundException("error.token.notFound", tokenId));
         Instant expiration = parseExpiresAt(expiresAt);
-        requireIssuanceCeiling(token.getScopeJson(), expiration, caller);
+        requireCapabilities(scopeService.expandScopes(scopeService.issuedScopes(token)), expiration, caller);
         token.setExpiresAt(expiration);
         return tokenRepo.save(token);
     }
@@ -220,7 +220,10 @@ public class ApiTokenService {
     }
 
     private void requireIssuanceCeiling(String scopeJson, Instant expiresAt, PlatformPrincipal caller) {
-        var capabilities = scopeService.validateScopeJson(scopeJson);
+        requireCapabilities(scopeService.validateScopeJson(scopeJson), expiresAt, caller);
+    }
+
+    private void requireCapabilities(java.util.Set<String> capabilities, Instant expiresAt, PlatformPrincipal caller) {
         if (caller == null || caller.tokenCapabilities() == null) {
             return;
         }

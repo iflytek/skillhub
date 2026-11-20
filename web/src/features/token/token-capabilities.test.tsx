@@ -439,7 +439,7 @@ describe('revocation at a page boundary', () => {
 })
 
 describe('compact permission selection', () => {
-  it('keeps six toggles visible, derives presets and never implicitly grants sensitive capabilities', () => {
+  it('shows all scope toggles, derives presets and never implicitly grants sensitive capabilities', () => {
     mount(
       <CreateTokenDialog>
         <button>open</button>
@@ -449,7 +449,10 @@ describe('compact permission selection', () => {
     const tags = within(
       screen.getByRole('group', { name: 'token.permissionsTitle' }),
     ).getAllByRole('button')
-    expect(tags).toHaveLength(6)
+    expect(tags).toHaveLength(8)
+    for (const [label, scope] of [['namespaceRead', 'namespace:read'], ['namespaceManage', 'namespace:manage']]) {
+      expect(screen.getByLabelText(`token.capabilityLabels.${label} (${scope})`).getAttribute('aria-pressed')).toBe('false')
+    }
     fireEvent.click(
       screen.getByLabelText(
         'token.capabilityLabels.publishPrivate (skill:publish-private)',
@@ -483,7 +486,7 @@ describe('compact permission selection', () => {
       within(
         screen.getByRole('group', { name: 'token.permissionsTitle' }),
       ).getAllByRole('button'),
-    ).toHaveLength(6)
+    ).toHaveLength(8)
   })
 
   it('preserves name and expiry across permission changes and disables an empty selection', async () => {

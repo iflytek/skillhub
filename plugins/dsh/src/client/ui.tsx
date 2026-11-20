@@ -75,9 +75,14 @@ export function DialogContent({ container, children, className, ...props }: Reac
     if (!container) return;
     const node = document.createElement('div');
     node.className = 'skillhub-controls astron-sh-modal-layer';
+    const appearance = container.closest('.skillhub-controls') ?? container;
+    const syncAppearance = () => { node.style.colorScheme = getComputedStyle(appearance).colorScheme; };
+    syncAppearance();
+    const observer = new MutationObserver(syncAppearance);
+    observer.observe(appearance, { attributes: true, attributeFilter: ['data-skillhub-appearance', 'style', 'class'] });
     (container.closest('dialog') ?? document.body).append(node);
     setLayer(node);
-    return () => { node.remove(); };
+    return () => { observer.disconnect(); node.remove(); };
   }, [container]);
   if (!layer) return null;
   return <DialogPrimitive.Portal container={layer}>

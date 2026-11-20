@@ -20,7 +20,7 @@ public class ApiTokenScopeService {
     private static final Set<String> ISSUABLE_SCOPES = Set.of(
             ApiTokenScopes.READ, ApiTokenScopes.SUBMIT, ApiTokenScopes.PUBLISH_PRIVATE,
             ApiTokenScopes.MANAGE, ApiTokenScopes.DELETE, ApiTokenScopes.TOKEN_MANAGE,
-            ApiTokenScopes.LEGACY_PUBLISH);
+            ApiTokenScopes.LEGACY_PUBLISH, "namespace:read", "namespace:manage");
 
     private static final TypeReference<List<String>> STRING_LIST = new TypeReference<>() {
     };
@@ -32,6 +32,14 @@ public class ApiTokenScopeService {
                                 RouteSecurityPolicyRegistry routeSecurityPolicyRegistry) {
         this.objectMapper = objectMapper;
         this.routeSecurityPolicyRegistry = routeSecurityPolicyRegistry;
+    }
+
+    public Set<String> issuedScopes(com.iflytek.skillhub.auth.entity.ApiToken token) {
+        Set<String> scopes = parseScopes(token.getScopeJson());
+        if (token.isNamespaceScopesIssued()) return scopes;
+        Set<String> original = new LinkedHashSet<>(scopes);
+        original.removeAll(Set.of("namespace:read", "namespace:manage"));
+        return Set.copyOf(original);
     }
 
     public Set<String> parseScopes(String scopeJson) {
@@ -63,6 +71,7 @@ public class ApiTokenScopeService {
             capabilities.addAll(Set.of(ApiTokenScopes.SUBMIT, ApiTokenScopes.PUBLISH_PRIVATE,
                     ApiTokenScopes.MANAGE, ApiTokenScopes.SUITE_LEGACY_WRITE));
         }
+        if (capabilities.contains("namespace:manage")) capabilities.add("namespace:read");
         return Set.copyOf(capabilities);
     }
 

@@ -94,7 +94,7 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
                 .map(rb -> rb.getRole().getCode())
                 .collect(Collectors.toSet());
             roles = PlatformRoleDefaults.withDefaultUserRole(roles);
-            Set<String> scopes = apiTokenScopeService.parseScopes(apiToken.getScopeJson());
+            Set<String> scopes = apiTokenScopeService.issuedScopes(apiToken);
             PlatformPrincipal principal = new PlatformPrincipal(
                 userAccount.getId(), userAccount.getDisplayName(), userAccount.getEmail(),
                 userAccount.getAvatarUrl(), "api_token", roles, apiTokenScopeService.expandScopes(scopes),

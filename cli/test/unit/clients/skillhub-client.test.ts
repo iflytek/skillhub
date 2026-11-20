@@ -47,6 +47,17 @@ describe('SkillHubClient', () => {
     expect(requests).toEqual([{ url: new URL(downloadUrl, registry).toString(), authorization: null }])
   })
 
+  test('keeps the token within the bound API during package redirects', async () => {
+    const seen: (string | null)[] = []
+    const fetchImpl = (async (_url: string, init: RequestInit) => {
+      seen.push(new Headers(init.headers).get('Authorization'))
+      return seen.length === 1 ? Response.redirect('https://registry.test/storage/package.zip', 302) : new Response('zip')
+    }) as unknown as typeof fetch
+    const client = new SkillHubClient('https://registry.test/team', 'fixture-token', fetchImpl)
+    expect(await (await client.downloadFromUrl('/api/download')).text()).toBe('zip')
+    expect(seen).toEqual(['Bearer fixture-token', null])
+  })
+
   test('uses the provided multipart file name when publishing', async () => {
     const fetchImpl = (async (_input: URL | RequestInfo, init?: RequestInit) => {
       const formData = init?.body as FormData

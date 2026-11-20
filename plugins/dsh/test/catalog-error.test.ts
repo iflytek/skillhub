@@ -48,3 +48,18 @@ test('rate limit hints only interpolate a validated wait duration', () => {
       .toBe('SkillHub 来源暂时限流，请稍后重试。');
   }
 });
+
+test('authentication failures retain their classification across all browser readers', async () => {
+  const { catalogError } = await import('../src/client/catalog-error.js');
+  const expired = catalogError({ code: 'skillhub/registry-error', details: { reason: 'AUTH_REQUIRED' } });
+  expect(expired.name).toBe('AccountExpired');
+  expect(expired.message).toContain('重新登录');
+  expect(catalogError({ code: 'skillhub/registry-error', details: { reason: 'ACCESS_DENIED' } }).name).toBe('Error');
+  expect(catalogError({ code: 'other', details: { reason: 'AUTH_REQUIRED' } }).name).toBe('Error');
+});
+
+test('a changed upload target is a definite rejection that can be confirmed again', async () => {
+  const { catalogError } = await import('../src/client/catalog-error.js');
+  expect(catalogError({ code: 'skillhub/registry-error', details: { reason: 'TARGET_CHANGED' } }).name).toBe('UploadTargetChanged');
+  expect(catalogError({ code: 'skillhub/registry-error', details: { reason: 'WRITE_UNKNOWN' } }).name).toBe('Error');
+});

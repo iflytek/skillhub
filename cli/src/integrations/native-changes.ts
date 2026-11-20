@@ -70,12 +70,12 @@ export async function syncTree(path: string): Promise<void> {
 }
 /** Exact release only; temporary content is never trusted without hashes and full release identity. */
 export async function withRelease<T>(state: string, identity: UpgradeSelection & {versionId: number; fingerprint: string},
-  run: (directory: string, files: Record<string, string>) => Promise<T>): Promise<T> {
+  run: (directory: string, files: Record<string, string>) => Promise<T>, token?: string): Promise<T> {
   const parent = join(dirname(state), 'change-staging')
   await privateDirectory(parent)
   const directory = await mkdtemp(join(parent, 'release-'))
   try {
-    const client = new SkillHubClient(identity.registry)
+    const client = new SkillHubClient(identity.registry, token)
     const release = await client.resolve(identity.namespace, identity.slug, identity.version)
     if (release.namespace !== identity.namespace || release.slug !== identity.slug || release.version !== identity.version
       || release.versionId !== identity.versionId || release.fingerprint !== identity.fingerprint) throw new Error('Original release identity is unavailable')
@@ -86,13 +86,13 @@ export async function withRelease<T>(state: string, identity: UpgradeSelection &
     return await run(directory, snapshot.files)
   } finally { await rm(directory, { recursive: true, force: true }) }
 }
-export async function withOriginal<T>(state: string, snapshot: ReadyChanges, run: (directory: string) => Promise<T>): Promise<T> {
+export async function withOriginal<T>(state: string, snapshot: ReadyChanges, run: (directory: string) => Promise<T>, token?: string): Promise<T> {
   const metadata = snapshot.baseline.targets[0]!.metadata
   if (!metadata.versionId || !metadata.fingerprint || !metadata.files) throw new Error('Original release baseline is unavailable')
   return withRelease(state, { ...snapshot.selection, versionId: metadata.versionId, fingerprint: metadata.fingerprint }, async (directory, files) => {
     if (!isDeepStrictEqual(files, metadata.files)) throw new Error('Original release file map mismatch')
     return run(directory)
-  })
+  }, token)
 }
 export function boundedDiff(path: string, before: Buffer | undefined, after: Buffer | undefined): BoundedFileDiff {
   const result: BoundedFileDiff = { path, state: 'text', lines: [], truncated: false }
@@ -125,7 +125,7 @@ async function readOptional(directory: string, path: string, files: Record<strin
   if (createHash('sha256').update(content).digest('hex') !== files[logical]) throw new Error('Compared file changed')
   return content
 }
-export async function readChangeDiff(state: string, inventory: InventoryStore, snapshot: ReadyChanges | VersionChangesSnapshot, path: string): Promise<BoundedFileDiff> {
+export async function readChangeDiff(state: string, inventory: InventoryStore, snapshot: ReadyChanges | VersionChangesSnapshot, path: string, token?: string): Promise<BoundedFileDiff> {
   const local = snapshot.kind === 'local' ? snapshot : snapshot.local
   const physical = physicalPath(local, path)
   if (!snapshot.changes.some(file => file.path === path)) throw new Error('Path is not in the change snapshot')
@@ -137,13 +137,13 @@ export async function readChangeDiff(state: string, inventory: InventoryStore, s
     return withRelease(state, { ...local.selection, ...snapshot.candidate }, async (candidate, files) => {
       if (!isDeepStrictEqual(files, snapshot.files)) throw new Error('Candidate changed')
       return boundedDiff(path, before, await readOptional(candidate, path, files))
-    })
-  })
+    }, token)
+  }, token)
   await assertChanges(inventory, local)
   return result
 }
 export async function prepareVersionChanges(state: string, inventory: InventoryStore, selected: UpgradeSelection,
-  target: InstalledProjectionTarget, candidate: VersionChangesSnapshot['candidate']): Promise<VersionChangesSnapshot> {
+  target: InstalledProjectionTarget, candidate: VersionChangesSnapshot['candidate'], token?: string): Promise<VersionChangesSnapshot> {
   const local = await inspectChanges(inventory, selected, target)
   if (local.status !== 'ready') throw new Error('Installation cannot be compared')
   const assessment = (await import('./update-assessment')).assessSkillUpdate({ version: selected.version,
@@ -153,7 +153,7 @@ export async function prepareVersionChanges(state: string, inventory: InventoryS
     await assertChanges(inventory, local)
     return { status: 'ready', kind: 'version', local, candidate: { ...candidate }, files,
       changes: changeFiles(local.baseline.targets[0]!.metadata.files!, files) }
-  }))
+  }, token), token)
 }
 export async function rawSnapshot(directory: string): Promise<{files: Record<string, string>; metadata: string}> {
   await assertOwnedRegularTree(directory)

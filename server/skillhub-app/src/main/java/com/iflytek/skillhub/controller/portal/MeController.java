@@ -44,6 +44,11 @@ public class MeController extends BaseApiController {
             throw new UnauthorizedException("error.auth.required");
         }
 
+        if ("api_token".equals(principal.oauthProvider())) {
+            return ok("response.success.read", mySkillAppService.listTokenUploads(
+                    principal.userId(), page, size, filter, q, namespace));
+        }
+
         return ok(
                 "response.success.read",
                 mySkillAppService.listMySkills(principal.userId(), page, size, filter, q, namespace, principal.platformRoles())

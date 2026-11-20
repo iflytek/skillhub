@@ -1,3 +1,4 @@
+import { secureRegistry } from './account-credentials.js';
 import { z } from 'zod';
 import type { SkillFileEntry, SkillFileList, SkillFilePreview } from './types.js';
 import { isPreviewableText, isRegistryFilePath, MAX_SKILL_PREVIEW_BYTES, MAX_SKILL_PREVIEW_FILES } from './skill-files.js';
@@ -63,7 +64,7 @@ export type SearchResult = z.infer<typeof searchSchema>;
 export type ResolvedSkill = z.infer<typeof resolveSchema>;
 export type RegistryErrorCode = 'INVALID_SOURCE' | 'INVALID_INPUT' | 'ANONYMOUS_DENIED'
   | 'NOT_FOUND' | 'RATE_LIMITED' | 'REGISTRY_UNAVAILABLE' | 'HTTP_ERROR'
-  | 'INVALID_RESPONSE' | 'RESPONSE_TOO_LARGE' | 'CANCELLED' | 'NETWORK_ERROR';
+  | 'AUTH_REQUIRED' | 'ACCESS_DENIED' | 'TARGET_CHANGED' | 'WRITE_UNKNOWN' | 'INVALID_RESPONSE' | 'RESPONSE_TOO_LARGE' | 'CANCELLED' | 'NETWORK_ERROR';
 
 export class RegistryError extends Error {
   constructor(
@@ -91,7 +92,7 @@ export class RegistryAdapter {
   readonly source: string;
   private retryAt = 0;
 
-  constructor(source: string, private readonly fetchImpl: typeof fetch = fetch, private readonly timeoutMs = 30_000) {
+  constructor(source: string, private readonly fetchImpl: typeof fetch = fetch, private readonly timeoutMs = 30_000, private readonly token?: string) {
     if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) throw new RegistryError('INVALID_INPUT', false);
     let url: URL;
     try { url = new URL(source); }
@@ -99,6 +100,7 @@ export class RegistryAdapter {
     if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash) {
       throw new RegistryError('INVALID_SOURCE', false);
     }
+    if (token && !secureRegistry(url.href)) throw new RegistryError('INVALID_SOURCE', false);
     this.source = url.href.replace(/\/+$/u, '');
   }
 
@@ -231,6 +233,13 @@ export class RegistryAdapter {
     return result;
   }
 
+  async accountJson<T>(path: string, schema: z.ZodType<T>, signal: AbortSignal, options?: RequestInit): Promise<T> {
+    if (!this.token || !path.startsWith('/api/') || /[\\#]/u.test(path)) throw new RegistryError('AUTH_REQUIRED', false);
+    const body = await this.read(path, 'application/json', signal, 1024 * 1024, options);
+    try { return z.object({ data: schema }).parse(JSON.parse(body)).data; }
+    catch { throw new RegistryError(options ? 'WRITE_UNKNOWN' : 'INVALID_RESPONSE', false); }
+  }
+
   private async json<T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
     const body = await this.read(path, 'application/json', signal);
     try {
@@ -240,7 +249,7 @@ export class RegistryAdapter {
     }
   }
 
-  private async read(path: string, accept: string, signal?: AbortSignal, maxBytes = 1024 * 1024): Promise<string> {
+  private async read(path: string, accept: string, signal?: AbortSignal, maxBytes = 1024 * 1024, options?: RequestInit): Promise<string> {
     // Both JSON and SKILL.md are bounded; archive downloads use the install core.
     const deadline = new AbortController();
     const requestSignal = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
@@ -250,8 +259,8 @@ export class RegistryAdapter {
       const remaining = Math.ceil((this.retryAt - Date.now()) / 1000);
       if (remaining > 0) throw new RegistryError('RATE_LIMITED', true, 429, remaining);
       const response = await this.fetchImpl(`${this.source}${path}`, {
-        method: 'GET', credentials: 'omit', redirect: 'error', signal: requestSignal,
-        headers: { Accept: accept },
+        ...options, credentials: 'omit', redirect: 'error', signal: requestSignal,
+        headers: { ...options?.headers, Accept: accept, ...(this.token ? { Authorization: 'Bearer ' + this.token } : {}) },
       });
       if (!response.ok) {
         const status = response.status;
@@ -259,7 +268,7 @@ export class RegistryAdapter {
           this.retryAt = Math.max(this.retryAt, retryAfterDeadline(response.headers.get('retry-after'), Date.now()) ?? 0);
         }
         await response.body?.cancel().catch(() => undefined);
-        const code = status === 401 || status === 403 ? 'ANONYMOUS_DENIED'
+        const code = this.token && status === 401 ? 'AUTH_REQUIRED' : this.token && status === 403 ? 'ACCESS_DENIED' : status === 401 || status === 403 ? 'ANONYMOUS_DENIED'
           : status === 404 ? 'NOT_FOUND' : status === 429 ? 'RATE_LIMITED'
           : status >= 500 ? 'REGISTRY_UNAVAILABLE' : 'HTTP_ERROR';
         const seconds = status === 429 ? Math.ceil((this.retryAt - Date.now()) / 1000) : 0;
@@ -293,7 +302,7 @@ export class RegistryAdapter {
     } catch (error) {
       if (signal?.aborted) throw new RegistryError('CANCELLED', false);
       if (error instanceof RegistryError) throw error;
-      throw new RegistryError('NETWORK_ERROR', true);
+      throw new RegistryError(options ? 'WRITE_UNKNOWN' : 'NETWORK_ERROR', !options);
     } finally {
       clearTimeout(timer);
     }
