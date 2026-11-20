@@ -665,3 +665,21 @@ CLI upgrade refuses disabled targets even with `--force`. Namespace sync retains
 installations without update/pruning, Suite cannot adopt them, and doctor preserves trusted
 records without claiming loose `.disabled` files. Standard publishing requires `SKILL.md`;
 restore the entry through the compatible manager before publishing a disabled installation.
+
+## GitHub repository batch installation
+
+Open a repository on the registry's **Open-source skills → Repositories** page and expand **Install repository skills**. Copy its stable repository ID from the command:
+
+```bash
+skillhub repository install 123456 --scope project --agent codex --registry https://skillhub.example.com
+# Or select an explicit installation root (cannot combine with --scope/--agent):
+skillhub repository install 123456 --dir ./skills --json
+```
+
+This requires a registry with the repository install-plan endpoint. Public repositories support anonymous reads; a supplied Token must have `skill:read`. Use `skillhub login --registry ...` for restricted content. Registry and credential precedence are the same as individual installation.
+
+The CLI resolves all currently accessible, published, download-ready members once (maximum 1000), then pins their exact versions and content fingerprints for that invocation. Members may come from different upstream commits. A newer pending revision does not block an older published version. Hidden, withdrawn, inaccessible or not-yet-published members are not included, and their private details/counts are not disclosed. The Web list is a preview; running the command obtains a fresh plan.
+
+Each member uses normal Skill installation locks, fingerprint checks, ownership protection and inventory. This creates neither a Suite nor a repository installation ledger. Existing directories are never overwritten by this batch command; no batch `--force` is accepted. Successful members remain installed if another fails. The output lists every attempted member, counts installed/skipped/failed, and returns nonzero on partial failure or no usable plan. In `--json` mode stdout is one result object; a nonzero command additionally writes its standard error object to stderr. Excluded private/unpublished members are not counted as successful or as a disclosed skip count.
+
+A complete historical snapshot ZIP is a separate download: every pinned snapshot member must be available. Batch installation does not promise that all members belong to one commit. Use individual upgrades for existing skills; repository-scoped update checks and upgrades are tracked separately in #1110.

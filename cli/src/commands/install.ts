@@ -52,7 +52,7 @@ export async function resolveEffectiveScope(
   return undefined
 }
 
-async function defaultPromptScope(): Promise<'user' | 'project'> {
+export async function defaultPromptScope(): Promise<'user' | 'project'> {
   const prompts = await import('prompts')
   const { scope } = await prompts.default({
     type: 'select',

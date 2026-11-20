@@ -7639,6 +7639,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/github-repositories/{repositoryId}/install-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGithubRepositoryInstallPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/github-repositories/{repositoryId}/install-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGithubRepositoryInstallPlan_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cli/v1/auth/whoami": {
         parameters: {
             query?: never;
@@ -13072,6 +13104,35 @@ export interface components {
         CliNamespaceSyncResponse: {
             items?: components["schemas"]["CliNamespaceSyncItemResponse"][];
             nextCursor?: string;
+        };
+        ApiResponseGithubRepositoryInstallPlanResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["GithubRepositoryInstallPlanResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        GithubRepositoryInstallPlanResponse: {
+            repositoryId: string;
+            owner: string;
+            name: string;
+            members: components["schemas"]["Member"][];
+        };
+        Member: {
+            /** Format: int64 */
+            skillId: number;
+            namespace: string;
+            slug: string;
+            displayName: string;
+            version: string;
+            /** Format: int64 */
+            versionId: number;
+            fingerprint: string;
+            downloadUrl: string;
         };
         ApiResponseCliWhoAmIResponse: {
             /** Format: int32 */
@@ -26406,6 +26467,50 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseCliNamespaceSyncResponse"];
+                };
+            };
+        };
+    };
+    getGithubRepositoryInstallPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repositoryId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGithubRepositoryInstallPlanResponse"];
+                };
+            };
+        };
+    };
+    getGithubRepositoryInstallPlan_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repositoryId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGithubRepositoryInstallPlanResponse"];
                 };
             };
         };

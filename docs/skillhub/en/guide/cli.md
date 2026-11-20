@@ -772,3 +772,15 @@ skillhub list
 Apache-2.0
 
 Copyright 2026 iFlytek Co., Ltd.
+
+## Install skills from a GitHub repository
+
+Open **Open-source skills → Repositories**, expand **Install repository skills**, and copy its stable repository ID:
+
+```bash
+skillhub repository install 123456 --scope project --agent codex --registry https://skillhub.example.com
+```
+
+Requires the repository install-plan API. Public content can be read anonymously; a supplied Token requires `skill:read` and remains subject to account and namespace permissions. A single plan pins all currently accessible, published, downloadable member versions and fingerprints (up to 1000). Versions may come from different commits; a newer pending revision does not block an older usable publication. Excluded private or unpublished details and counts are not disclosed. The Web list is a preview; the CLI resolves a fresh plan when run.
+
+No batch `--force` is supported. Existing directories remain protected, successful members survive partial failures, and a partial failure returns a nonzero exit code with per-member results. This reuses individual installation records without creating a Suite or repository installation ledger. Complete snapshot ZIP downloads remain separate and require every pinned snapshot member to be available.

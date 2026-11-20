@@ -1,5 +1,24 @@
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
+import { z } from 'zod'
+
+const repositoryInstallPlanSchema = z.object({
+  repositoryId: z.string().regex(/^[1-9]\d*$/),
+  owner: z.string().min(1),
+  name: z.string().min(1),
+  members: z.array(z.object({
+    skillId: z.number().int().positive().safe(),
+    namespace: z.literal('github'),
+    slug: z.string().regex(/^[a-z0-9][a-z0-9-]*$/),
+    displayName: z.string(),
+    version: z.string().min(1).max(255),
+    versionId: z.number().int().positive().safe(),
+    fingerprint: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+    downloadUrl: z.string()
+  })).min(1).max(1000)
+})
+
+export type RepositoryInstallPlan = z.infer<typeof repositoryInstallPlanSchema>
 
 export interface WhoAmIResponse {
   handle: string
@@ -163,6 +182,22 @@ export class SkillHubClient {
 
   async whoami(): Promise<WhoAmIResponse> {
     return this.getJson('/auth/whoami')
+  }
+
+  async repositoryInstallPlan(repositoryId: string): Promise<RepositoryInstallPlan> {
+    const body = await this.getJson<unknown>(`/github-repositories/${encodeURIComponent(repositoryId)}/install-plan`)
+    const parsed = repositoryInstallPlanSchema.safeParse(body)
+    if (!parsed.success) throw new CliError('registry returned an invalid repository installation plan', EXIT.validation)
+    const plan = parsed.data
+    const ids = new Set<number>()
+    const slugs = new Set<string>()
+    if (plan.repositoryId !== repositoryId || plan.members.some(member => {
+      const duplicate = ids.has(member.skillId) || slugs.has(member.slug)
+      ids.add(member.skillId)
+      slugs.add(member.slug)
+      return duplicate || member.downloadUrl !== `/api/cli/v1/skills/github/${encodeURIComponent(member.slug)}/versions/${encodeURIComponent(member.version)}/download`
+    })) throw new CliError('registry returned an inconsistent repository installation plan', EXIT.validation)
+    return plan
   }
 
   async requestDeviceCode(): Promise<DeviceCodeResponse> {

@@ -1,0 +1,40 @@
+import { resolveInstallTargets } from '../agents/resolver'
+import { SkillHubClient } from '../clients/skillhub-client'
+import { installRepositoryPlan } from '../services/repository-install-service'
+import { resolveRegistry, resolveToken } from '../services/registry-service'
+import { ConfigStore } from '../stores/config-store'
+import { CredentialsStore } from '../stores/credentials-store'
+import { EXIT } from '../shared/constants'
+import { CliError } from '../shared/errors'
+import { computeStrictIsTTY } from '../shared/tty'
+import { resolveEffectiveScope, defaultPromptScope, type InstallCommandOptions } from './install'
+
+export type RepositoryCommandOptions = Omit<InstallCommandOptions, 'force' | 'version' | 'namespace'>
+
+export async function repositoryCommand(action: string, repositoryId: string, options: RepositoryCommandOptions): Promise<string> {
+  if (action !== 'install') throw new CliError('repository action must be "install"', EXIT.usage)
+  repositoryId = String(repositoryId)
+  if (!/^[1-9]\d*$/.test(repositoryId) || BigInt(repositoryId) > 9223372036854775807n) {
+    throw new CliError('repository ID must be a positive integer from the repository page', EXIT.usage)
+  }
+  const isTTY = computeStrictIsTTY({ stdinIsTTY: process.stdin.isTTY === true,
+    stdoutIsTTY: process.stdout.isTTY === true, json: Boolean(options.json) })
+  const scope = await resolveEffectiveScope(options, { isTTY, promptScope: defaultPromptScope })
+  const registry = resolveRegistry(options, process.env, await new ConfigStore().read())
+  const token = resolveToken(options, process.env, await new CredentialsStore().getToken(registry))
+  const plan = await new SkillHubClient(registry, token).repositoryInstallPlan(repositoryId)
+  const targets = await resolveInstallTargets({ cwd: process.cwd(), scope, dir: options.dir,
+    agents: options.agent ?? [], json: Boolean(options.json), interactive: isTTY })
+  const result = await installRepositoryPlan(plan, { registry, token, targets })
+  const note = 'Only accessible published skills are included. Pending or unavailable members are excluded; versions may come from different commits.'
+  const output = options.json
+    ? JSON.stringify({ ok: result.summary.failed === 0, ...result, note })
+    : [`Repository ${plan.owner}/${plan.name}: ${result.summary.installed} installed, ${result.summary.skipped} skipped, ${result.summary.failed} failed`,
+      ...result.items.map(item => `${item.action.padEnd(10)} ${item.coordinate}@${item.version}${item.reason ? ` (${item.reason})` : ''}${item.warnings?.length ? ` [${item.warnings.join('; ')}]` : ''}`), note].join('\n')
+  if (result.summary.failed > 0 || result.summary.installed === 0) {
+    process.stdout.write(`${output}\n`)
+    throw new CliError('repository installation did not complete successfully',
+      result.items.find(item => item.action === 'failed')?.exitCode ?? EXIT.validation)
+  }
+  return output
+}
