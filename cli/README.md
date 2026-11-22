@@ -86,7 +86,7 @@ retain that prefix when following application-relative download URLs.
 
 ## 🔐 Authentication
 
-`skillhub login` uses OAuth Device Flow only when no API token is resolved from arguments, environment variables, or saved credentials for the selected registry. An invalid resolved token does not automatically fall back to Device Flow. Token resolution priority for
+`skillhub login` resolves a token from arguments, environment variables, or saved credentials for the selected registry, and starts OAuth Device Flow when none is resolved. A saved credential that the registry rejects does not dead-end the command: `login` reports it and continues with Device Flow, leaving the saved credential on disk until a new login succeeds. A token supplied by `--token` or `SKILLHUB_TOKEN` is never replaced automatically: the CLI names the rejected input and explains how to retry without it. Token resolution priority for
 explicit token-based login and all other authenticated commands is:
 
 1. `--token <token>` command-line argument

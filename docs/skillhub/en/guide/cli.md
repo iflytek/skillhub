@@ -94,7 +94,7 @@ Token resolution priority:
 
 ### Login
 
-When no token is resolved from arguments, environment variables, or saved registry credentials, `skillhub login` uses OAuth Device Flow; an invalid resolved token does not automatically fall back: follow the verification URL and user code to authorize in a browser. Use `skillhub login --no-open` on headless terminals, or an API token for automation.
+`skillhub login` resolves a token from arguments, environment variables, or saved registry credentials, and starts OAuth Device Flow when none is resolved. A saved credential that the registry rejects is reported and followed by Device Flow, so the account can be recovered without a separate `logout`. A token supplied by `--token` or `SKILLHUB_TOKEN` is never replaced automatically: the CLI names the rejected input and explains how to retry without it. Follow the verification URL and user code to authorize in a browser. Use `skillhub login --no-open` on headless terminals, or an API token for automation.
 
 ```bash
 # Login with API token
