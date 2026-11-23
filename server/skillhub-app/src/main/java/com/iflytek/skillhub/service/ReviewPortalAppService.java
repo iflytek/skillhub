@@ -190,7 +190,7 @@ public class ReviewPortalAppService {
     }
 
     public PageResponse<ReviewTaskResponse> listReviewQueue(String status, Long namespaceId,
-            String query, String reviewKind, String originType, int page, int size,
+            String query, String reviewKind, String originType, String scanVerdict, int page, int size,
             String sortDirection, String userId, Map<Long, NamespaceRole> userNsRoles) {
         String normalizedStatus = normalizeFilter(status, Set.of("PENDING", "APPROVED", "REJECTED", "SUPERSEDED"));
         String normalizedOrigin = normalizeFilter(originType, Set.of("USER", "GITHUB_SYNC"));
@@ -220,13 +220,15 @@ public class ReviewPortalAppService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, "submittedAt").and(Sort.by(direction, "id")));
         Page<ReviewQueueQueryRepository.Entry> result = reviewQueueQueryRepository.list(
                 new ReviewQueueQueryRepository.Filter(normalizedStatus,
-                        namespaceId, query == null ? "" : query, normalizedKind, normalizedOrigin),
+                        namespaceId, query == null ? "" : query, normalizedKind, normalizedOrigin,
+                        normalizeFilter(scanVerdict, Set.of("SAFE", "SUSPICIOUS", "DANGEROUS", "BLOCKED"))),
                 platformReviewer, managed, pageable);
         List<ReviewTaskResponse> responses = governanceQueryRepository.getReviewTaskResponses(
                 result.getContent().stream().map(ReviewQueueQueryRepository.Entry::task).toList());
         List<ReviewTaskResponse> entries = java.util.stream.IntStream.range(0, responses.size())
                 .mapToObj(index -> responses.get(index).withPresentation(result.getContent().get(index).displayName(),
-                        result.getContent().get(index).summary(), result.getContent().get(index).reviewKind())).toList();
+                        result.getContent().get(index).summary(), result.getContent().get(index).reviewKind(),
+                        result.getContent().get(index).scanVerdict())).toList();
         return new PageResponse<>(entries, result.getTotalElements(), result.getNumber(), result.getSize());
     }
 

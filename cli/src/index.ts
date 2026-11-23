@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 import { cac } from 'cac'
 import { doctorCommand } from './commands/doctor'
+import { healthCommand, type HealthCommandOptions } from './commands/health'
 import { commands, formatCommandList, helpCommand } from './commands/help'
 import { installCommand, type InstallCommandOptions } from './commands/install'
 import { listCommand, type ListCommandOptions } from './commands/list'
 import { loginCommand } from './commands/login'
 import { logoutCommand } from './commands/logout'
+import { outdatedCommand, type OutdatedCommandOptions } from './commands/outdated'
 import { publishCommand, type PublishCommandOptions } from './commands/publish'
 import { removeCommand, type RemoveCommandOptions } from './commands/remove'
 import { searchCommand } from './commands/search'
@@ -225,7 +227,7 @@ cli
   })
 
 cli
-  .command('update', 'Update CLI to latest version')
+  .command('update', 'Check or update CLI itself')
   .option('--check', 'Check for updates without installing')
   .option('--json', 'Output JSON')
   .action((options: { check?: boolean; json?: boolean }) => {
@@ -292,7 +294,7 @@ cli
   })
 
 cli
-  .command('repository <action> <repository-id>', 'Install, check or upgrade skills from a GitHub repository')
+  .command('repository <action> <repository-id>', 'Install, check or upgrade GitHub repository skills on compatible registries')
   .option('--scope <scope>', 'Install scope: user or project')
   .option('--agent <profile>', 'Agent profile (repeatable)')
   .option('--dir <path>', 'Install directory')
@@ -338,6 +340,21 @@ cli
   .action((coordinates: string[], options: UpgradeCommandOptions & { agent?: string | string[] }) => {
     return runCommand(
       () => upgradeCommand(coordinates, { ...options, agent: toArray(options.agent) }),
+      Boolean(options.json)
+    )
+  })
+
+cli
+  .command('outdated', 'List installed skills with newer registry versions (read-only)')
+  .option('--namespace <slug>', 'Filter by namespace')
+  .option('--agent <profile>', 'Filter installed targets by Agent (repeatable)')
+  .option('--dir <path>', 'Filter installed targets by directory')
+  .option('--registry <url>', 'Registry URL')
+  .option('--token <token>', 'API token override')
+  .option('--json', 'Output JSON')
+  .action((options: OutdatedCommandOptions & { agent?: string | string[] }) => {
+    return runCommand(
+      () => outdatedCommand({ ...options, agent: toArray(options.agent) }),
       Boolean(options.json)
     )
   })
@@ -408,10 +425,32 @@ cli
   })
 
 cli
-  .command('doctor', 'Scan project and merge into local inventory')
+  .command('doctor', 'Scan project into inventory, or diagnose read-only with --health')
+  .option('--health', 'Run read-only health diagnosis instead of inventory maintenance')
+  .option('--offline', 'Skip all network checks (requires --health)')
+  .option('--registry <url>', 'Registry URL (requires --health)')
+  .option('--token <token>', 'API token override (requires --health)')
   .option('--json', 'Output JSON')
-  .action((options: { json?: boolean }) => {
-    return runCommand(() => doctorCommand(options), Boolean(options.json))
+  .action((options: HealthCommandOptions & { health?: boolean }) => {
+    return runCommand(async () => {
+      if (options.health !== undefined && options.health !== true) {
+        throw new CliError('Use --health to select read-only diagnosis, or omit it for inventory maintenance.', EXIT.usage)
+      }
+      if (!options.health) {
+        if (options.offline !== undefined || options.registry !== undefined || options.token !== undefined) {
+          throw new CliError('doctor --offline, --registry and --token require --health', EXIT.usage)
+        }
+        return doctorCommand(options)
+      }
+      if (options.offline !== undefined && typeof options.offline !== 'boolean'
+        || options.registry !== undefined && typeof options.registry !== 'string'
+        || options.token !== undefined && typeof options.token !== 'string') {
+        throw new CliError('Invalid doctor health options; use skillhub help doctor.', EXIT.usage)
+      }
+      const result = await healthCommand(options)
+      process.exitCode = result.exitCode
+      return result.output
+    }, Boolean(options.json))
   })
 
 cli

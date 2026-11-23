@@ -1,4 +1,4 @@
-import { parseReviewCenterFilters, reviewCenterSearch, REVIEW_STATUSES, type ReviewCenterStatus, type ReviewCenterKind, type ReviewCenterOrigin } from './review-center-filters'
+import { parseReviewCenterFilters, reviewCenterSearch, REVIEW_STATUSES, type ReviewCenterStatus, type ReviewCenterKind, type ReviewCenterOrigin, type ReviewCenterFilters } from './review-center-filters'
 
 export interface ReviewRouteSearch {
   memberStatus?: ReviewCenterStatus
@@ -10,6 +10,7 @@ export interface ReviewRouteSearch {
   namespace?: string
   status?: ReviewCenterStatus
   reviewKind?: ReviewCenterKind
+  scanVerdict?: ReviewCenterFilters['scanVerdict']
   originType?: ReviewCenterOrigin
   sortDirection?: 'ASC' | 'DESC'
   page?: number

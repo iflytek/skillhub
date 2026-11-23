@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { reviewApi } from '@/api/client'
 
-export interface ReviewListFilters { q?: string; reviewKind?: string; originType?: string }
+export interface ReviewListFilters { q?: string; reviewKind?: string; originType?: string; scanVerdict?: string }
 
 /**
  * Loads review tasks filtered by status and optional namespace scope.

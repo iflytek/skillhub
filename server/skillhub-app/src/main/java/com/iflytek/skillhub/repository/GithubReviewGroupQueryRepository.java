@@ -22,13 +22,7 @@ public class GithubReviewGroupQueryRepository {
                  AND snapshot.acquisition_task_id = ingestion.task_id AND snapshot.commit_sha = ingestion.commit_sha
             JOIN github_source_binding source ON source.id = snapshot.source_id
                  AND source.namespace_id = task.namespace_id AND source.repository_id = ingestion.repository_id
-            LEFT JOIN LATERAL (
-                SELECT audit.verdict, audit.is_safe, audit.scanned_at, audit.failure_reason
-                FROM security_audit audit WHERE audit.skill_version_id = version.id
-                  AND audit.scanner_type = 'SKILL_SCANNER' AND audit.deleted_at IS NULL
-                ORDER BY audit.created_at DESC, audit.id DESC LIMIT 1
-            ) scan ON TRUE
-            """;
+            """ + JpaReviewQueueQueryRepository.CURRENT_SCAN;
     private static final String SAFE = "scan.verdict = 'SAFE' AND scan.is_safe AND scan.scanned_at IS NOT NULL AND scan.failure_reason IS NULL";
     private final NamedParameterJdbcTemplate jdbc;
 
