@@ -62,6 +62,31 @@ function publish(skill: FakeSkill, version: string): void {
 }
 
 describe('outdated command', () => {
+  test('shows the upstream repository tag of a GitHub-synced remote version', async () => {
+    const synced: FakeSkill = { namespace: 'github', slug: 'tdd', version: '0.0.0-ga-1', ...makeSkill('# tdd') }
+    const plain: FakeSkill = { namespace: 'team', slug: 'plain', version: '1.0.0', ...makeSkill('# plain') }
+    const { registry, cliEnv, env } = await setup([synced, plain])
+    publish(synced, '0.0.0-gb-2')
+    publish(plain, '1.0.1')
+    synced.githubSource = {
+      ownerLogin: 'mattpocock', repositoryName: 'skills', skillPath: 'skills/tdd',
+      commitSha: '4ae2317ddb22b046e26455e4f9c9b3aaaf62212d', syncRevision: 2,
+      upstreamTag: { status: 'AFTER_TAG', scope: 'REPOSITORY', tag: 'v1.3.2',
+        tagCommitSha: 'd1478fcb140db0b93c0c8df17bcfd311844749d0', commitsAfterTag: 3 },
+      declaredVersion: null
+    }
+
+    const text = await runCli(['outdated', '--registry', registry.url], cliEnv, { cwd: env.cwd })
+    expect(text.exitCode).toBe(0)
+    expect(text.stdout).toContain('@github/tdd 0.0.0-ga-1 -> 0.0.0-gb-2  (upstream v1.3.2+3)  custom')
+    expect(text.stdout).toContain('@team/plain 1.0.0 -> 1.0.1  custom')
+
+    const json = await runCli(['outdated', '--registry', registry.url, '--json'], cliEnv, { cwd: env.cwd })
+    const items = JSON.parse(json.stdout).items as Array<{ coordinate: string; remoteSource?: unknown }>
+    expect(items.find(item => item.coordinate === '@github/tdd')?.remoteSource).toEqual(synced.githubSource)
+    expect(items.find(item => item.coordinate === '@team/plain')).not.toHaveProperty('remoteSource')
+  })
+
   test('classifies newer versions, flags local edits and changes no files', async () => {
     const skills: FakeSkill[] = [
       { namespace: 'team', slug: 'code-review', version: '1.0.0', ...makeSkill('# code-review') },

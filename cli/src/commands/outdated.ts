@@ -3,6 +3,7 @@ import { CredentialsStore } from '../stores/credentials-store'
 import { resolveRegistry, resolveToken } from '../services/registry-service'
 import { findOutdatedSkills, type OutdatedItem, type OutdatedReport } from '../services/outdated-service'
 import { CliError } from '../shared/errors'
+import { formatUpstreamTag } from '../shared/github-source'
 
 export interface OutdatedCommandOptions {
   namespace?: string | undefined
@@ -62,5 +63,7 @@ function renderItem(item: OutdatedItem): string {
     : item.localState === 'unverified'
       ? ` [local state unverified: ${item.localReason ?? 'unknown'}]`
       : ''
-  return `${item.change.padEnd(10)} ${item.coordinate} ${versions}  ${item.agent}  ${item.installDir}${reason}${local}`
+  const upstream = formatUpstreamTag(item.remoteSource)
+  const source = upstream ? `  (${upstream})` : ''
+  return `${item.change.padEnd(10)} ${item.coordinate} ${versions}${source}  ${item.agent}  ${item.installDir}${reason}${local}`
 }
