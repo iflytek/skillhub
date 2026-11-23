@@ -2,6 +2,7 @@ package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.config.SkillPublishProperties;
 import com.iflytek.skillhub.githubsync.GithubPackageReportResult;
+import com.iflytek.skillhub.githubsync.GithubSourceTag;
 import com.iflytek.skillhub.githubsync.GithubSyncUploadRepository;
 import com.iflytek.skillhub.storage.ObjectMetadata;
 import com.iflytek.skillhub.storage.ObjectStorageService;
@@ -104,12 +105,12 @@ class GithubSyncUploadAppServiceTest {
 
         assertThatThrownBy(() -> service(new SkillPublishProperties()).report(
                 UUID.randomUUID(), 1, TOKEN, UUID.randomUUID(), COMMIT, "skills/demo",
-                uploadId, 12, DIGEST))
+                uploadId, 12, DIGEST, null))
                 .isInstanceOf(StorageAccessException.class)
                 .hasMessageNotContaining(marker)
                 .hasNoCause();
         verify(uploads, never()).acceptReport(any(), anyLong(), any(), any(), any(),
-                any(), any(), anyLong(), any(), any());
+                any(), any(), anyLong(), any(), any(), any());
     }
 
     @Test
@@ -166,13 +167,37 @@ class GithubSyncUploadAppServiceTest {
         when(uploads.failUpload(eq(uploadId), any())).thenReturn(true);
 
         var result = service(policy).report(UUID.randomUUID(), 1, TOKEN, UUID.randomUUID(),
-                COMMIT, "skills/demo", uploadId, 12, DIGEST);
+                COMMIT, "skills/demo", uploadId, 12, DIGEST, null);
 
         assertThat(result.status()).isEqualTo(GithubPackageReportResult.Status.TOO_LARGE);
         verify(uploads).failUpload(eq(uploadId), any(Instant.class));
         verify(storage).deleteObject(OBJECT_KEY);
         verify(uploads, never()).acceptReport(any(), anyLong(), any(), any(), any(),
-                any(), any(), anyLong(), any(), any());
+                any(), any(), anyLong(), any(), any(), any());
+    }
+
+    @Test
+    void reportStoresNormalizedSourceTagAndNeverRejectsForIt() {
+        UUID uploadId = UUID.randomUUID();
+        when(uploads.lookupReport(any(), eq(1L), any(), any(), eq(COMMIT),
+                eq("skills/demo"), eq(uploadId), eq(12L), eq(DIGEST), any()))
+                .thenReturn(new GithubPackageReportResult(
+                        GithubPackageReportResult.Status.READY_TO_CHECK_OBJECT, null, OBJECT_KEY));
+        when(storage.exists(OBJECT_KEY)).thenReturn(true);
+        when(storage.getMetadata(OBJECT_KEY)).thenReturn(new ObjectMetadata(12, "application/zip", Instant.now()));
+        UUID ingestionId = UUID.randomUUID();
+        when(uploads.acceptReport(any(), eq(1L), any(), any(), eq(COMMIT), eq("skills/demo"),
+                eq(uploadId), eq(12L), eq(DIGEST), any(), any()))
+                .thenReturn(new GithubPackageReportResult(GithubPackageReportResult.Status.RECEIVED, ingestionId, null));
+
+        var result = service(new SkillPublishProperties()).report(UUID.randomUUID(), 1, TOKEN,
+                UUID.randomUUID(), COMMIT, "skills/demo", uploadId, 12, DIGEST,
+                new GithubSourceTag("AFTER_TAG", "v1.3.2 extra", "d".repeat(40), 3, null));
+
+        assertThat(result.ingestionId()).isEqualTo(ingestionId);
+        verify(uploads).acceptReport(any(), eq(1L), any(), any(), eq(COMMIT), eq("skills/demo"),
+                eq(uploadId), eq(12L), eq(DIGEST),
+                eq(new GithubSourceTag("UNKNOWN", null, null, null, "INVALID_REPORT")), any());
     }
 
     @Test
@@ -190,7 +215,7 @@ class GithubSyncUploadAppServiceTest {
                 new ObjectMetadata(12, "application/zip", Instant.now()));
 
         var result = service(policy).report(UUID.randomUUID(), 1, TOKEN, UUID.randomUUID(),
-                COMMIT, "skills/demo", uploadId, 8, DIGEST);
+                COMMIT, "skills/demo", uploadId, 8, DIGEST, null);
 
         assertThat(result.status()).isEqualTo(GithubPackageReportResult.Status.TOO_LARGE);
         verify(uploads).failUpload(eq(uploadId), any(Instant.class));
@@ -209,7 +234,7 @@ class GithubSyncUploadAppServiceTest {
                         GithubPackageReportResult.Status.RECEIVED, ingestionId, null));
 
         var result = service(policy).report(UUID.randomUUID(), 1, TOKEN, UUID.randomUUID(),
-                COMMIT, "skills/demo", uploadId, 12, DIGEST);
+                COMMIT, "skills/demo", uploadId, 12, DIGEST, null);
 
         assertThat(result.ingestionId()).isEqualTo(ingestionId);
         verifyNoInteractions(storage);
@@ -229,7 +254,7 @@ class GithubSyncUploadAppServiceTest {
                 .when(storage).deleteObject(OBJECT_KEY);
 
         var result = service(policy).report(UUID.randomUUID(), 1, TOKEN, UUID.randomUUID(),
-                COMMIT, "skills/demo", uploadId, 12, DIGEST);
+                COMMIT, "skills/demo", uploadId, 12, DIGEST, null);
 
         assertThat(result.status()).isEqualTo(GithubPackageReportResult.Status.TOO_LARGE);
         verify(uploads).failUpload(eq(uploadId), any(Instant.class));
@@ -246,7 +271,7 @@ class GithubSyncUploadAppServiceTest {
                         GithubPackageReportResult.Status.READY_TO_CHECK_OBJECT, null, OBJECT_KEY));
 
         var result = service(policy).report(UUID.randomUUID(), 1, TOKEN, UUID.randomUUID(),
-                COMMIT, "skills/demo", uploadId, 12, DIGEST);
+                COMMIT, "skills/demo", uploadId, 12, DIGEST, null);
 
         assertThat(result.status()).isEqualTo(GithubPackageReportResult.Status.TOO_LARGE);
         verify(uploads).failUpload(eq(uploadId), any(Instant.class));

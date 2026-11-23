@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.iflytek.skillhub.config.SkillPublishProperties;
 import com.iflytek.skillhub.githubsync.GithubSyncUploadRepository;
 import com.iflytek.skillhub.githubsync.GithubPackageReportResult;
+import com.iflytek.skillhub.githubsync.GithubSourceTag;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import com.iflytek.skillhub.storage.PresignedUpload;
 import com.iflytek.skillhub.storage.StorageAccessException;
@@ -151,7 +152,7 @@ public class GithubSyncUploadAppService {
 
     public GithubPackageReportResult report(UUID taskId, long generation, String leaseToken,
             UUID admissionId, String commitSha, String skillPath, UUID uploadId,
-            long sizeBytes, String sha256) {
+            long sizeBytes, String sha256, GithubSourceTag sourceTag) {
         if (taskId == null || admissionId == null || uploadId == null || generation < 1
                 || !isHex(leaseToken, 64) || !isHex(commitSha, 40)
                 || skillPath == null || skillPath.isBlank() || skillPath.length() > 1024
@@ -184,8 +185,10 @@ public class GithubSyncUploadAppService {
         if (actualSize != sizeBytes) {
             return GithubPackageReportResult.rejected(GithubPackageReportResult.Status.OBJECT_MISMATCH);
         }
+        // Source tag provenance is optional and never rejects a package.
         return uploads.acceptReport(taskId, generation, tokenHash, admissionId,
-                commitSha, skillPath, uploadId, sizeBytes, sha256, Instant.now());
+                commitSha, skillPath, uploadId, sizeBytes, sha256,
+                GithubSourceTag.fromReport(sourceTag), Instant.now());
     }
 
     private void discardOversizedUpload(UUID uploadId, String objectKey) {

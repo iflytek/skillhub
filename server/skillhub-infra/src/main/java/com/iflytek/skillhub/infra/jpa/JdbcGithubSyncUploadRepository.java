@@ -2,6 +2,7 @@ package com.iflytek.skillhub.infra.jpa;
 
 import com.iflytek.skillhub.githubsync.GithubSyncUploadRepository;
 import com.iflytek.skillhub.githubsync.GithubPackageReportResult;
+import com.iflytek.skillhub.githubsync.GithubSourceTag;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -166,7 +167,7 @@ public class JdbcGithubSyncUploadRepository implements GithubSyncUploadRepositor
     @Transactional
     public GithubPackageReportResult acceptReport(UUID taskId, long generation, String leaseTokenHash,
             UUID admissionId, String commitSha, String skillPath, UUID uploadId,
-            long sizeBytes, String sha256, Instant now) {
+            long sizeBytes, String sha256, GithubSourceTag sourceTag, Instant now) {
         GithubPackageReportResult checked = readReport(taskId, generation, leaseTokenHash,
                 admissionId, commitSha, skillPath, uploadId, sizeBytes, sha256, now, true);
         if (checked.status() != GithubPackageReportResult.Status.READY_TO_CHECK_OBJECT) {
@@ -181,13 +182,23 @@ public class JdbcGithubSyncUploadRepository implements GithubSyncUploadRepositor
             throw new IllegalStateException("GitHub sync package admission disappeared");
         }
         UUID ingestionId = UUID.randomUUID();
+        // A null source tag means "not recorded"; the stored value is never updated afterwards.
+        boolean recorded = sourceTag != null;
         jdbc.update("""
                 INSERT INTO github_sync_package_ingestion
                     (id, task_id, admission_id, upload_id, namespace_id, repository_id,
-                     commit_sha, skill_path, object_key, size_bytes, sha256)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     commit_sha, skill_path, object_key, size_bytes, sha256, source_tag_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        CASE WHEN ? THEN jsonb_strip_nulls(jsonb_build_object(
+                            'schemaVersion', ?::integer, 'status', ?::text, 'tag', ?::text,
+                            'tagCommitSha', ?::text, 'commitsAfterTag', ?::integer,
+                            'reason', ?::text)) END)
                 """, ingestionId, taskId, admissionId, uploadId, coordinate.namespaceId(),
-                coordinate.repositoryId(), commitSha, skillPath, checked.objectKey(), sizeBytes, sha256);
+                coordinate.repositoryId(), commitSha, skillPath, checked.objectKey(), sizeBytes, sha256,
+                recorded, GithubSourceTag.SCHEMA_VERSION,
+                recorded ? sourceTag.status() : null, recorded ? sourceTag.tag() : null,
+                recorded ? sourceTag.tagCommitSha() : null, recorded ? sourceTag.commitsAfterTag() : null,
+                recorded ? sourceTag.reason() : null);
         jdbc.update("""
                 UPDATE github_sync_package_admission SET status = 'ACCEPTED', updated_at = ? WHERE id = ?
                 """, Timestamp.from(now), admissionId);
