@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -19,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
  * batch fetch then restores the domain tasks for the existing response projection.
  */
 @Repository
-@Transactional(readOnly = true)
+// Count, page rows and their verdicts must observe the same scan/review snapshot.
+@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 public class JpaReviewQueueQueryRepository implements ReviewQueueQueryRepository {
     // Match SkillMetadata's String.strip, string-only package metadata and UTF-16 length limit.
     private static final String STRIP_CHARACTERS = "\t\n\u000b\f\r\u001c\u001d\u001e\u001f \u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2008\u2009\u200a\u2028\u2029\u205f\u3000";
