@@ -206,9 +206,10 @@ async function inspectRegistry(registry: string, token: string | undefined, sour
         code: !token ? 'NO_CREDENTIAL' : status === 401 ? 'CREDENTIAL_REJECTED' : 'ACCESS_DENIED',
         message: !token ? 'No credential could be supplied; anonymous usability was not tested.'
           : status === 401 ? 'The selected credential was rejected; stored credentials were left unchanged.' : 'Identity access was denied; this does not prove the credential has expired.',
-        ...(token ? { exitCode: EXIT.auth } : {}), next: source === 'argument' ? 'Retry skillhub whoami --registry <registry> without --token; replace <registry> with the selected URL.'
+        ...(token ? { exitCode: EXIT.auth } : {}), next: status === 403 && token ? 'Check the account permissions for the selected registry; access denial does not prove that the credential has expired.'
+          : source === 'argument' ? 'Retry skillhub whoami --registry <registry> without --token; replace <registry> with the selected URL.'
           : source === 'environment' ? 'Remove SKILLHUB_TOKEN from the environment, then run skillhub whoami --registry <registry>; replace <registry> with the selected URL.'
-            : source === 'stored' ? 'Run skillhub logout --registry <registry>, then skillhub login --registry <registry>; replace <registry> with the selected URL.'
+            : source === 'stored' ? 'Run skillhub login --registry <registry> to replace the rejected saved credential; replace <registry> with the selected URL.'
               : 'Run skillhub login --registry <registry> when you want to sign in; replace <registry> with the selected URL.' })
     } else {
       checks.push({ id: 'connectivity', status: 'fail', code: status >= 300 && status < 400 ? 'REDIRECT_REFUSED' : status >= 200 && status < 300 ? 'INVALID_RESPONSE' : 'HTTP_FAILURE',

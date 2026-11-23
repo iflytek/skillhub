@@ -2,8 +2,20 @@ import { describe, expect, test } from 'bun:test'
 import { SkillHubClient } from '../../../src/clients/skillhub-client'
 import { CliError } from '../../../src/shared/errors'
 import { EXIT } from '../../../src/shared/constants'
+import { renderError } from '../../../src/shared/output'
 
 describe('SkillHubClient', () => {
+  test.each([401, 403, 500])('keeps HTTP %i as internal metadata without changing error JSON', async status => {
+    const fetchImpl = (async () => Response.json({ msg: 'request denied', requestId: 'request-fixture' }, { status })) as unknown as typeof fetch
+    const client = new SkillHubClient('https://registry.test', 'fixture-token', fetchImpl)
+    const error = await client.whoami().catch((failure: unknown) => failure)
+    expect(error).toBeInstanceOf(CliError)
+    expect((error as CliError).httpStatus).toBe(status)
+    const json = JSON.parse(renderError(error, true))
+    expect(Object.keys(json).sort()).toEqual(['details', 'exitCode', 'message', 'ok'])
+    expect(json.details.httpStatus).toBeUndefined()
+    expect(json.details.requestId).toBe('request-fixture')
+  })
   test.each([
     ['https://registry.test', '/api/v1/skills/team/skill/versions/1.0.0/download', 'https://registry.test/api/v1/skills/team/skill/versions/1.0.0/download'],
     ['https://registry.test/skillhub', '/api/v1/skills/team/skill/versions/1.0.0/download', 'https://registry.test/skillhub/api/v1/skills/team/skill/versions/1.0.0/download'],

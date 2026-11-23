@@ -8,7 +8,7 @@
 
 `skillhub login --no-open --registry https://skills.example.com` 先按 `--token`、
 `SKILLHUB_TOKEN`、该 registry 已保存凭据的顺序解析 Token。未解析到 Token 时进入设备码授权；
-已保存凭据被注册中心拒绝时，CLI 会报告并继续进入设备码授权，新登录成功前不删除旧凭据。
+已保存凭据收到 HTTP 401 时，CLI 会报告并继续进入设备码授权，新登录成功前不删除旧凭据。
 显式提供的 Token 被拒绝时不会自动替换，CLI 会指出来源并说明如何去掉它后重试；`--no-open`
 只禁止自动打开浏览器，不会跳过 Token 解析。
 

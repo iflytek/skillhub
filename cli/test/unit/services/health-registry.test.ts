@@ -35,12 +35,14 @@ describe('bounded registry diagnosis', () => {
     expect(result.checks.find(x => x.id === 'identity')?.code).toBe(status === 401 ? 'CREDENTIAL_REJECTED' : 'ACCESS_DENIED')
     expect(await readFile(join(home, '.skillhub/credentials.json'), 'utf8')).toBe(bytes)
     expect(JSON.stringify(result)).not.toContain(token)
-    expect(result.checks.find(x => x.id === 'identity')?.next).toContain('logout --registry')
+    const next = result.checks.find(x => x.id === 'identity')?.next
+    expect(next).toContain(status === 401 ? 'login --registry' : 'permissions')
+    expect(next).not.toContain('logout')
   })
-  test('missing credential and a 401 are a warning, not a failure of anonymous usability', async () => {
+  test.each([401, 403])('missing credential and HTTP %i are a warning, not a failure of anonymous usability', async status => {
     const result = await runHealth({ registry }, { home: await fixture(), env: {}, fetch: async (_input, init) => {
       expect(new Headers(init?.headers).has('Authorization')).toBe(false)
-      return Response.json({ msg: 'not logged in' }, { status: 401 })
+      return Response.json({ msg: 'not logged in' }, { status })
     } })
     expect(result.ok).toBe(true); expect(result.checks.find(x => x.id === 'identity')?.status).toBe('warn')
   })

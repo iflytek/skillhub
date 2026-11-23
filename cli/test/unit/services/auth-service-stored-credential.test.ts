@@ -47,7 +47,7 @@ describe('AuthService stored credential login', () => {
     const setRegistry = mock(async () => {})
     const setToken = mock(async () => {})
     const clientFactory = mock((_registry: string, token?: string) => token === 'stored-token'
-      ? { whoami: async () => { throw new CliError('authentication failed', EXIT.auth) } }
+      ? { whoami: async () => { throw new CliError('authentication failed', EXIT.auth, {}, 401) } }
       : token
         ? { whoami: async () => ({ handle: 'recovered-user', displayName: 'Recovered User' }) }
         : deviceFlowClient())
@@ -78,23 +78,20 @@ describe('AuthService stored credential login', () => {
     expect(setToken).toHaveBeenCalledWith(REGISTRY, 'fresh-token')
   })
 
-  test('falls back to device flow for an authentication-class denial too', async () => {
+  test.each([403, undefined])('does not replace a credential for HTTP %s or an unclassified auth failure', async status => {
     const setToken = mock(async () => {})
-    const clientFactory = mock((_registry: string, token?: string) => token === 'stored-token'
-      ? { whoami: async () => { throw new CliError('access denied', EXIT.auth) } }
-      : token
-        ? { whoami: async () => ({ handle: 'recovered-user', displayName: 'Recovered User' }) }
-        : deviceFlowClient())
+    const onVerification = mock(async () => {})
+    const error = new CliError('access denied', EXIT.auth, {}, status)
+    const clientFactory = mock(() => ({ whoami: async () => { throw error } }))
     const service = new AuthService(
       { setRegistry: mock(async () => {}) } as never,
       { setToken } as never,
-      { clientFactory: clientFactory as never, sleep: async () => {}, now: () => 0 }
+      { clientFactory: clientFactory as never }
     )
-
-    const result = await service.loginWithStoredCredential(REGISTRY, 'stored-token', async () => {})
-
-    expect(result).toEqual({ handle: 'recovered-user' })
-    expect(setToken).toHaveBeenCalledWith(REGISTRY, 'fresh-token')
+    await expect(service.loginWithStoredCredential(REGISTRY, 'stored-token', onVerification)).rejects.toBe(error)
+    expect(clientFactory).toHaveBeenCalledTimes(1)
+    expect(onVerification).not.toHaveBeenCalled()
+    expect(setToken).not.toHaveBeenCalled()
   })
 
   test('propagates a network failure without starting device flow', async () => {
@@ -142,7 +139,7 @@ describe('AuthService stored credential login', () => {
     const deleteToken = mock(async () => {})
     const onCredentialRejected = mock(() => {})
     const clientFactory = mock((_registry: string, token?: string) => token
-      ? { whoami: async () => { throw new CliError('authentication failed', EXIT.auth) } }
+      ? { whoami: async () => { throw new CliError('authentication failed', EXIT.auth, {}, 401) } }
       : { requestDeviceCode: async () => { throw new CliError('registry unreachable', EXIT.network) } })
     const service = new AuthService(
       { setRegistry: mock(async () => {}) } as never,

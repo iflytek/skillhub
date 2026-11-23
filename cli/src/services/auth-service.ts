@@ -10,8 +10,8 @@ type DeviceVerificationHandler = (details: {
   expiresIn: number
 }) => Promise<void>
 
-function isAuthenticationFailure(error: unknown): boolean {
-  return error instanceof CliError && error.exitCode === EXIT.auth
+function isRejectedCredential(error: unknown): boolean {
+  return error instanceof CliError && error.exitCode === EXIT.auth && error.httpStatus === 401
 }
 
 export class AuthService {
@@ -35,6 +35,9 @@ export class AuthService {
 
   async login(registry: string, token: string): Promise<{ handle: string }> {
     const user = await this.clientFactory(registry, token).whoami()
+    if (!user || typeof user.handle !== 'string' || !user.handle.trim()) {
+      throw new CliError('registry returned invalid identity data', EXIT.generic, { registry })
+    }
     await this.configStore.setRegistry(registry)
     await this.credentialsStore.setToken(registry, token)
     return { handle: user.handle }
@@ -42,7 +45,7 @@ export class AuthService {
 
   /**
    * Validate the credential saved for this registry. A credential the server
-   * no longer accepts must not dead-end `login`: report it, then continue with
+   * rejects with HTTP 401 must not dead-end `login`: report it, then continue with
    * Device Flow so the account can be recovered without a separate `logout`.
    * The stored token is only replaced once the new login persists a token.
    */
@@ -55,7 +58,7 @@ export class AuthService {
     try {
       return await this.login(registry, storedToken)
     } catch (error) {
-      if (!isAuthenticationFailure(error)) throw error
+      if (!isRejectedCredential(error)) throw error
       await onCredentialRejected?.()
       return this.loginWithDeviceFlow(registry, onVerification)
     }

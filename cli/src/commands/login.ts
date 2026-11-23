@@ -45,7 +45,7 @@ export async function loginCommand(options: LoginCommandOptions): Promise<string
     try {
       result = await authService.login(registry, resolvedToken.token)
     } catch (error) {
-      throw describeRejectedTokenInput(error, registry, resolvedToken.source)
+      throw describeRejectedTokenInput(error, resolvedToken.source)
     }
   }
 
@@ -56,10 +56,10 @@ export async function loginCommand(options: LoginCommandOptions): Promise<string
 
 /** Name the input that supplied a token the registry rejected, instead of the
  * generic "run `skillhub login`" advice that repeats the failing command. */
-function describeRejectedTokenInput(error: unknown, registry: string, source: TokenSource): unknown {
-  if (!(error instanceof CliError) || error.exitCode !== EXIT.auth) return error
+function describeRejectedTokenInput(error: unknown, source: TokenSource): unknown {
+  if (!(error instanceof CliError) || error.exitCode !== EXIT.auth || error.httpStatus !== 401) return error
   const next = source === 'argument'
-    ? `the token from --token was rejected. Retry without --token to sign in with the browser: skillhub login --registry ${registry}`
-    : `the token from SKILLHUB_TOKEN was rejected. Unset SKILLHUB_TOKEN to sign in with the browser: skillhub login --registry ${registry}`
-  return new CliError(error.message, error.exitCode, { ...error.details, next })
+    ? 'the token from --token was rejected. Retry without --token to sign in with the browser: skillhub login --registry <registry>; replace <registry> with the selected URL.'
+    : 'the token from SKILLHUB_TOKEN was rejected. Unset SKILLHUB_TOKEN to sign in with the browser: skillhub login --registry <registry>; replace <registry> with the selected URL.'
+  return new CliError(error.message, error.exitCode, { ...error.details, next }, error.httpStatus)
 }
