@@ -239,3 +239,27 @@ func TestLiveSourceTagPublicRepositories(t *testing.T) {
 		}
 	}
 }
+
+func TestSourceTagOutputLimitIsUnknown(t *testing.T) {
+	fixture := newTagFixture(t)
+	commit := fixture.commit("base")
+	for index := 0; index < 40; index++ {
+		fixture.git("tag", "v1.0."+strconv.Itoa(index))
+	}
+	previousRemote, previousProtocol := sourceTagRemote, sourceTagAllowedProtocol
+	sourceTagRemote = func(string, string) (string, error) { return "file://" + fixture.dir, nil }
+	sourceTagAllowedProtocol = "file"
+	defer func() { sourceTagRemote, sourceTagAllowedProtocol = previousRemote, previousProtocol }()
+	git := sourceTagGit{ctx: context.Background(), repoDir: t.TempDir(), workDir: t.TempDir(),
+		maxBytes: 64 << 20}
+	if _, err := git.run(0, "init", "--quiet"); err != nil {
+		t.Fatal(err)
+	}
+	_, err := git.run(256, "ls-remote", "--tags", "file://"+fixture.dir)
+	if git.reason(err, "TAG_LIST_FAILED") != "TOO_MANY_TAGS" {
+		t.Fatalf("oversized tag listing must map to TOO_MANY_TAGS: %v", err)
+	}
+	if got := fixture.resolve(commit); got.Status != SourceTagExact || got.Tag != "v1.0.39" {
+		t.Fatalf("normal resolution must still pick the highest tag: %+v", got)
+	}
+}

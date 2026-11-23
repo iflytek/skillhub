@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -363,7 +364,7 @@ func (g sourceTagGit) run(maxOutput int64, args ...string) ([]byte, error) {
 	for {
 		select {
 		case err := <-done:
-			if output.exceeded {
+			if output.exceeded.Load() {
 				return nil, errSourceTagOutputTooLarge
 			}
 			if checkErr := checkWorkspace(g.workDir, g.maxBytes, g.minFreeBytes); checkErr != nil {
@@ -377,7 +378,7 @@ func (g sourceTagGit) run(maxOutput int64, args ...string) ([]byte, error) {
 			}
 			return output.Bytes(), nil
 		case <-ticker.C:
-			if err := checkWorkspace(g.workDir, g.maxBytes, g.minFreeBytes); err != nil || output.exceeded {
+			if err := checkWorkspace(g.workDir, g.maxBytes, g.minFreeBytes); err != nil || output.exceeded.Load() {
 				_ = syscall.Kill(-command.Process.Pid, syscall.SIGKILL)
 				<-done
 				if err != nil {
@@ -417,16 +418,23 @@ func sourceTagGitEnvironment() []string {
 	return environment
 }
 
+// limitedBuffer is written by the os/exec copy goroutine; the overflow flag is
+// polled concurrently, and the contents are read only after Wait returns. The
+// buffer is a named field so io.Copy cannot bypass Write through ReadFrom.
 type limitedBuffer struct {
-	bytes.Buffer
+	data     bytes.Buffer
 	limit    int64
-	exceeded bool
+	exceeded atomic.Bool
 }
 
 func (buffer *limitedBuffer) Write(data []byte) (int, error) {
-	if int64(buffer.Len()+len(data)) > buffer.limit {
-		buffer.exceeded = true
+	if int64(buffer.data.Len()+len(data)) > buffer.limit {
+		buffer.exceeded.Store(true)
 		return 0, errSourceTagOutputTooLarge
 	}
-	return buffer.Buffer.Write(data)
+	return buffer.data.Write(data)
+}
+
+func (buffer *limitedBuffer) Bytes() []byte {
+	return buffer.data.Bytes()
 }
