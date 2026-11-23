@@ -34,6 +34,21 @@ async function install(home: string, cwd: string, options: { modified?: boolean;
 const env = { SKILLHUB_REGISTRY: 'https://registry.example.com' }
 
 describe('read-only health diagnosis', () => {
+  test('an empty HOME falls back to USERPROFILE without creating state', async () => {
+    const { home, cwd } = await createTempHome(); homes.push(home, cwd)
+    const result = await runHealth({ offline: true }, { env: { ...env, HOME: '', USERPROFILE: home } })
+    expect(result.exitCode).toBe(0)
+    expect(result.paths.config).toBe(join(home, '.skillhub/config.json'))
+    expect(await readdir(home)).toEqual([])
+  })
+  test('an unavailable home reports skipped remote checks without any requests', async () => {
+    let calls = 0
+    const result = await runHealth({}, { env: {}, fetch: async () => { calls++; throw new Error('unexpected') } })
+    expect(result.exitCode).toBe(4)
+    expect(result.checks.find(x => x.id === 'home')?.code).toBe('HOME_UNAVAILABLE')
+    expect(result.checks.filter(x => x.status === 'skipped' && x.code === 'REGISTRY_UNRESOLVED')).toHaveLength(2)
+    expect(calls).toBe(0)
+  })
   test('empty home remains empty and offline performs zero network calls', async () => {
     const { home, cwd } = await createTempHome(); homes.push(home, cwd)
     let calls = 0

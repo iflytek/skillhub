@@ -45,7 +45,7 @@ function record(value: unknown): value is Record<string, unknown> {
 /** Observation only: never call state migration, mutation, login or installation-lock APIs. */
 export async function runHealth(options: HealthOptions, dependencies: HealthDependencies = {}): Promise<HealthReport> {
   const env = dependencies.env ?? process.env
-  const home = dependencies.home ?? env.HOME ?? env.USERPROFILE ?? ''
+  const home = dependencies.home ?? (env.HOME || env.USERPROFILE || '')
   const report: HealthReport = {
     schemaVersion: 1, mode: 'health', ok: true, registry: null, registrySource: null,
     credentialSource: 'none', paths: { config: null, credentials: null, inventory: null }, checks: [], exitCode: 0
@@ -82,6 +82,8 @@ export async function runHealth(options: HealthOptions, dependencies: HealthDepe
   const secrets = [options.token, env.SKILLHUB_TOKEN].filter((value): value is string => Boolean(value))
   if (!home) {
     add('home', 'fail', 'HOME_UNAVAILABLE', 'Cannot resolve the user state directory.', EXIT.filesystem)
+    add('connectivity', 'skipped', 'REGISTRY_UNRESOLVED', 'Remote connectivity was not checked.')
+    add('identity', 'skipped', 'REGISTRY_UNRESOLVED', 'Remote identity was not checked.')
   } else {
     report.paths = { config: new ConfigStore(home).path, credentials: new CredentialsStore(home).path, inventory: new InventoryStore(home).path }
     const config = await state('config', report.paths.config!, value => value.registry === undefined || typeof value.registry === 'string')
