@@ -200,11 +200,44 @@ func TestRepositoryDeliveryFailureIsIndependentOfSourceTag(t *testing.T) {
 }
 
 func TestOfficialCooldownSkipsSourceTagRequests(t *testing.T) {
-	calls := stubSourceTag(t, repository.SourceTag{Status: repository.SourceTagNoTag})
-	guard := &officialQuotaGuard{stopped: errors.New("cooldown")}
-	report := resolveTaskSourceTag(context.Background(), guard, github.Repository{}, strings.Repeat("c", 40),
-		RepositoryLimits{TempRoot: t.TempDir(), MaxWorkspaceBytes: 32 << 20})
-	if *calls != 0 || report.Status != "UNKNOWN" || report.Reason != "QUOTA_COOLDOWN" {
-		t.Fatalf("cooldown must skip tag requests: calls=%d report=%+v", *calls, report)
+	for _, testCase := range []struct {
+		name    string
+		control string
+		stopped bool
+		calls   int
+	}{
+		{"guard already stopped", `{"action":"CONTINUE","configurationVersion":1}`, true, 0},
+		{"deployment-wide cooldown", `{"action":"PAUSE","reason":"QUOTA_COOLDOWN","configurationVersion":1,"retryAt":"2999-01-01T00:00:00Z"}`, false, 0},
+		{"no cooldown", `{"action":"CONTINUE","configurationVersion":1}`, false, 1},
+	} {
+		t.Run(testCase.name, func(t *testing.T) {
+			resetOfficialQuota(t)
+			server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+				writer.Header().Set("Content-Type", "application/json")
+				_, _ = writer.Write([]byte(testCase.control))
+			}))
+			defer server.Close()
+			control, err := controlplane.NewClient(server.URL, strings.Repeat("t", 32))
+			if err != nil {
+				t.Fatal(err)
+			}
+			task, _ := sourceTagTask("skills/a")
+			guard := &officialQuotaGuard{control: control, task: task, resource: "CORE"}
+			if testCase.stopped {
+				guard.stopped = errors.New("cooldown")
+			}
+			calls := stubSourceTag(t, repository.SourceTag{Status: repository.SourceTagNoTag})
+			report := resolveTaskSourceTag(context.Background(), guard, github.Repository{}, strings.Repeat("c", 40),
+				RepositoryLimits{TempRoot: t.TempDir(), MaxWorkspaceBytes: 32 << 20})
+			if *calls != testCase.calls {
+				t.Fatalf("unexpected source tag requests: calls=%d report=%+v", *calls, report)
+			}
+			if testCase.calls == 0 && (report.Status != "UNKNOWN" || report.Reason != "QUOTA_COOLDOWN") {
+				t.Fatalf("cooldown must be reported as UNKNOWN/QUOTA_COOLDOWN: %+v", report)
+			}
+			if !testCase.stopped && guard.stopped != nil {
+				t.Fatalf("an optional source tag check must not stop the package guard: %v", guard.stopped)
+			}
+		})
 	}
 }

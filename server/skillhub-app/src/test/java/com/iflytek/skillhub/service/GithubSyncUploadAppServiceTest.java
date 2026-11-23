@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.config.SkillPublishProperties;
 import com.iflytek.skillhub.githubsync.GithubPackageReportResult;
 import com.iflytek.skillhub.githubsync.GithubSourceTag;
@@ -22,6 +23,7 @@ import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -177,7 +179,7 @@ class GithubSyncUploadAppServiceTest {
     }
 
     @Test
-    void reportStoresNormalizedSourceTagAndNeverRejectsForIt() {
+    void reportStoresNormalizedSourceTagAndNeverRejectsForIt() throws Exception {
         UUID uploadId = UUID.randomUUID();
         when(uploads.lookupReport(any(), eq(1L), any(), any(), eq(COMMIT),
                 eq("skills/demo"), eq(uploadId), eq(12L), eq(DIGEST), any()))
@@ -192,12 +194,32 @@ class GithubSyncUploadAppServiceTest {
 
         var result = service(new SkillPublishProperties()).report(UUID.randomUUID(), 1, TOKEN,
                 UUID.randomUUID(), COMMIT, "skills/demo", uploadId, 12, DIGEST,
-                new GithubSourceTag("AFTER_TAG", "v1.3.2 extra", "d".repeat(40), 3, null));
+                new ObjectMapper().readTree("""
+                        {"status":"AFTER_TAG","tag":"v1.3.2 extra","tagCommitSha":"%s","commitsAfterTag":3}
+                        """.formatted("d".repeat(40))));
 
         assertThat(result.ingestionId()).isEqualTo(ingestionId);
         verify(uploads).acceptReport(any(), eq(1L), any(), any(), eq(COMMIT), eq("skills/demo"),
                 eq(uploadId), eq(12L), eq(DIGEST),
                 eq(new GithubSourceTag("UNKNOWN", null, null, null, "INVALID_REPORT")), any());
+    }
+
+    @Test
+    void sourceTagShapesThatCannotBindAreKeptAsInvalidReports() throws Exception {
+        ObjectMapper json = new ObjectMapper();
+        GithubSourceTag invalid = new GithubSourceTag("UNKNOWN", null, null, null, "INVALID_REPORT");
+        assertThat(GithubSyncUploadAppService.sourceTag(null)).isNull();
+        assertThat(GithubSyncUploadAppService.sourceTag(json.readTree("null"))).isNull();
+        for (String reported : List.of("[]", "\"EXACT\"", "{\"status\":{\"nested\":true}}",
+                "{\"status\":\"AFTER_TAG\",\"tag\":\"v1.0.0\",\"tagCommitSha\":\"%s\",\"commitsAfterTag\":2147483648}",
+                "{\"status\":\"AFTER_TAG\",\"tag\":\"v1.0.0\",\"tagCommitSha\":\"%s\",\"commitsAfterTag\":\"3\"}",
+                "{\"status\":\"AFTER_TAG\",\"tag\":\"v1.0.0\",\"tagCommitSha\":\"%s\",\"commitsAfterTag\":1.5}",
+                "{\"status\":\"EXACT\",\"tag\":7,\"tagCommitSha\":\"%s\",\"commitsAfterTag\":0}")) {
+            assertThat(GithubSyncUploadAppService.sourceTag(json.readTree(reported.formatted("d".repeat(40)))))
+                    .as(reported).isEqualTo(invalid);
+        }
+        assertThat(GithubSyncUploadAppService.sourceTag(json.readTree("{\"status\":\"NO_TAG\"}")))
+                .isEqualTo(new GithubSourceTag("NO_TAG", null, null, null, null));
     }
 
     @Test

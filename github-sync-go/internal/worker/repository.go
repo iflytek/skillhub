@@ -337,7 +337,7 @@ var (
 func resolveTaskSourceTag(ctx context.Context, quotaGuard *officialQuotaGuard,
 	metadata github.Repository, commitSHA string, limits RepositoryLimits) *controlplane.SourceTag {
 	var resolved repository.SourceTag
-	if quotaGuard != nil && quotaGuard.before(ctx) != nil {
+	if quotaGuard != nil && !quotaGuard.allowsOptionalGit(ctx) {
 		resolved = repository.SourceTag{Status: repository.SourceTagUnknown, Reason: "QUOTA_COOLDOWN"}
 	} else {
 		resolved = resolveSourceTag(ctx, metadata.Owner.Login, metadata.Name, commitSHA,

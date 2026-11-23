@@ -51,6 +51,11 @@ public record GithubSourceTag(String status, String tag, String tagCommitSha,
                 return new GithubSourceTag(UNKNOWN, null, null, null, reported.reason());
             }
         }
+        return invalidReport();
+    }
+
+    /** Stored when a worker sends provenance that cannot be trusted. */
+    public static GithubSourceTag invalidReport() {
         return new GithubSourceTag(UNKNOWN, null, null, null, INVALID_REPORT);
     }
 

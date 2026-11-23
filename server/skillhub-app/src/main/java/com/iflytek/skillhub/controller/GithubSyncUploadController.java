@@ -1,7 +1,7 @@
 package com.iflytek.skillhub.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.iflytek.skillhub.githubsync.GithubPackageReportResult;
-import com.iflytek.skillhub.githubsync.GithubSourceTag;
 import com.iflytek.skillhub.service.GithubSyncUploadAppService;
 import io.swagger.v3.oas.annotations.Hidden;
 import jakarta.servlet.http.HttpServletRequest;
@@ -100,6 +100,6 @@ public class GithubSyncUploadController {
             UUID admissionId, String commitSha, String skillPath, long sizeBytes, String sha256) {}
     public record PackageReportRequest(GithubSyncInternalController.LeaseProof lease,
             UUID admissionId, String commitSha, String skillPath, UUID uploadId,
-            long sizeBytes, String sha256, GithubSourceTag sourceTag) {}
+            long sizeBytes, String sha256, JsonNode sourceTag) {}
     public record PackageReportResponse(UUID ingestionId, String status) {}
 }

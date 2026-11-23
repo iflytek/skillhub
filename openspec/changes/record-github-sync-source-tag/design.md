@@ -78,8 +78,9 @@ GitHub 同步的现状（main `ad9d70a5`）：
 ### D3：失败隔离
 
 来源 tag 判定的任何错误只体现为 `UNKNOWN`，Go 不因此改变包的 outcome、不延后任务、不上报凭证问题。
-官方深度探索任务的 Git 请求前置检查（配额冷却）同样适用于 tag 判定：冷却中直接记 `QUOTA_COOLDOWN`，不发请求；
-但 tag 判定的失败不调用后置的配额观测，避免一次 tag 失败触发整个进程的冷却。父进程取消（停机、租约丢失）仍按现有逻辑中止任务。
+官方深度探索任务在 tag 判定前做只读的冷却检查：进程内冷却或 Java 下发的部署级 `QUOTA_COOLDOWN` 生效时直接记
+`QUOTA_COOLDOWN`，不发请求；这项检查不会停下包采集的守门状态，包仍按原有规则决定。tag 判定的失败也不调用后置的配额观测，
+避免一次 tag 失败触发整个进程的冷却。父进程取消（停机、租约丢失）仍按现有逻辑中止任务。
 
 ### D4：保存与不可变
 
@@ -98,7 +99,8 @@ Flyway `V127` 给 `github_sync_package_ingestion` 增加可空列 `source_tag_js
 
 - 内部 `packages/report` 请求新增可选字段 `sourceTag`（形状同上，无 `schemaVersion`）。Java 校验：状态枚举；
   `EXACT`/`AFTER_TAG` 必须带合法 semver tag 名（≤128 字符）、40 位小写十六进制提交、距离（`EXACT` 为 0，`AFTER_TAG` ≥ 1）；
-  `NO_TAG` 不带 tag 字段；`UNKNOWN` 的原因码为 ≤48 位大写字母与下划线。不合法时存 `UNKNOWN/INVALID_REPORT`，**不拒收包**。
+  `NO_TAG` 不带 tag 字段；`UNKNOWN` 的原因码为 ≤48 位大写字母与下划线。不合法时存 `UNKNOWN/INVALID_REPORT`，**不拒收包**：
+请求体按未类型化的 JSON 接收该字段，类型不符、数字溢出、数组等无法绑定的形状也走这条路，不会让整个回报变成 400。
   缺省时存空，表示未记录。
 - 新 Go + 旧 Java：Spring Boot 默认的 Jackson 配置忽略未知字段，旧 Java 照常接收包，只是不保存来源 tag。
   旧 Go + 新 Java：请求没有 `sourceTag`，记录为未记录。两种组合都不影响同步。
