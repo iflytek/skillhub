@@ -347,7 +347,8 @@ function selectInventoryItems(
   return [...selected.values()]
 }
 
-async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): Promise<{
+/** Read-only local-change inspection; also used by `outdated` to report the same state. */
+export async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): Promise<{
   hardConflicts: string[]
   changedFiles: string[]
   baselineMissing: boolean
