@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createHash, randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { zipSync, strToU8 } from 'fflate';
@@ -38,7 +38,7 @@ test('the packaged DSH adapter authenticates concurrent Host installations indep
     } });
     return new Response(archive);
   } });
-  const home = await mkdtemp(join(tmpdir(), 'dsh-private-core-'));
+  const home = await realpath(await mkdtemp(join(tmpdir(), 'dsh-private-core-')));
   try {
     const core = await import(new URL('../lib/local-core.js', import.meta.url).href) as {
       openNativeRuntime(options: Parameters<NativeCore['openNativeRuntime']>[0] & { getRegistryToken(registry: string): string | undefined }): Promise<NativeRuntime>;
