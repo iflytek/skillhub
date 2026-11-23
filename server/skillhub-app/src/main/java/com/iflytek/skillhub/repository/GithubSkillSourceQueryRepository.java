@@ -56,6 +56,19 @@ public class GithubSkillSourceQueryRepository {
         }, versionId);
     }
 
+    /**
+     * Same as {@link #findPublishedVersion} for callers that resolve arbitrary versions
+     * (version detail, CLI resolve): most versions are not synced, so a portable
+     * primary-key lookup skips the provenance join for them.
+     */
+    public Optional<GithubSkillSourceResponse> findPublishedSyncedVersion(long versionId) {
+        Boolean synced = jdbc.query("""
+                SELECT github_sync_ingestion_id IS NOT NULL AS synced
+                FROM skill_version WHERE id = ? AND status = 'PUBLISHED'
+                """, result -> result.next() ? result.getBoolean("synced") : Boolean.FALSE, versionId);
+        return Boolean.TRUE.equals(synced) ? findPublishedVersion(versionId) : Optional.empty();
+    }
+
     private JsonNode evidence(String json) {
         try {
             return objectMapper.readTree(json);

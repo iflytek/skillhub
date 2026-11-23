@@ -81,6 +81,24 @@ class GithubSkillSourceTagRepositoryTest {
         assertThat(withVersion.declaredVersion()).isEqualTo("2.1.0");
         assertThat(withoutVersion.declaredVersion()).isNull();
         assertThat(withVersion.commitSha()).isEqualTo(COMMIT);
+        assertThat(query.findPublishedSyncedVersion(declared)).contains(withVersion);
+    }
+
+    @Test
+    void manuallyUploadedVersionHasNoGithubSource() {
+        long namespaceId = platformNamespaceId();
+        long skillId = jdbc.queryForObject("""
+                INSERT INTO skill (namespace_id, slug, owner_id, visibility, status)
+                VALUES (?, 'source-tag-manual', 'github-sync-publisher', 'PUBLIC', 'ACTIVE') RETURNING id
+                """, Long.class, namespaceId);
+        long versionId = jdbc.queryForObject("""
+                INSERT INTO skill_version (skill_id, version, status, published_at)
+                VALUES (?, '1.0.0', 'PUBLISHED', CURRENT_TIMESTAMP) RETURNING id
+                """, Long.class, skillId);
+
+        var query = new GithubSkillSourceQueryRepository(jdbc, new ObjectMapper());
+        assertThat(query.findPublishedSyncedVersion(versionId)).isEmpty();
+        assertThat(query.findPublishedSyncedVersion(Long.MAX_VALUE)).isEmpty();
     }
 
     @Test

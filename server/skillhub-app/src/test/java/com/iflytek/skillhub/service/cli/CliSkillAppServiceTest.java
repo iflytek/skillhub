@@ -241,8 +241,8 @@ class CliSkillAppServiceTest {
         given(skillQueryService.resolveVersion("global", "demo", null, null, null, "user-1", Map.of()))
                 .willReturn(new SkillQueryService.ResolvedVersionDTO(
                         11L, "global", "demo", "1.0.0", 43L, "sha256:g", null, "/download"));
-        given(sources.findPublishedVersion(42L)).willReturn(java.util.Optional.of(source));
-        given(sources.findPublishedVersion(43L)).willReturn(java.util.Optional.empty());
+        given(sources.findPublishedSyncedVersion(42L)).willReturn(java.util.Optional.of(source));
+        given(sources.findPublishedSyncedVersion(43L)).willReturn(java.util.Optional.empty());
 
         assertEquals(source, withSources.resolve("github", "tdd", null, "user-1", Map.of()).githubSource());
         assertNull(withSources.resolve("global", "demo", null, "user-1", Map.of()).githubSource());

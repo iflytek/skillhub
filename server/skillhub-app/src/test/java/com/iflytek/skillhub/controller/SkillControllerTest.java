@@ -240,7 +240,7 @@ class SkillControllerTest {
                 .thenReturn(new SkillQueryService.SkillVersionDetailDTO(
                         11L, "0.0.0-gabc", "PUBLISHED", null, 1, 10L,
                         Instant.parse("2026-11-01T00:00:00Z"), "{}", "[]"));
-        when(githubSkillSourceQueryRepository.findPublishedVersion(11L))
+        when(githubSkillSourceQueryRepository.findPublishedSyncedVersion(11L))
                 .thenReturn(Optional.of(new GithubSkillSourceResponse(
                         "obra", "superpowers", "skills/brainstorming", "2ce8aa15".repeat(5), 1,
                         "RECOGNIZED", List.of(),

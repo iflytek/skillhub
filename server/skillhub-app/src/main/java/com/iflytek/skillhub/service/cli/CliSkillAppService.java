@@ -101,7 +101,7 @@ public class CliSkillAppService {
                 resolved.downloadUrl(),
                 // resolveVersion has already authorized the viewer for this version.
                 githubSkillSourceQueryRepository == null || resolved.versionId() == null ? null
-                        : githubSkillSourceQueryRepository.findPublishedVersion(resolved.versionId()).orElse(null)
+                        : githubSkillSourceQueryRepository.findPublishedSyncedVersion(resolved.versionId()).orElse(null)
         );
     }
 
