@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }))
 vi.mock('@/api/client', () => ({
   fetchJson: vi.fn(),
-  getCsrfHeaders: () => ({ 'X-XSRF-TOKEN': 'test-csrf' }),
+  getCsrfHeaders: (headers: Record<string, string> = {}) => ({ ...headers, 'X-XSRF-TOKEN': 'test-csrf' }),
 }))
 
 import { fetchJson } from '@/api/client'
