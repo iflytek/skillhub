@@ -50,7 +50,7 @@ export const commands = {
     ]
   },
   repository: {
-    summary: 'Install, check or upgrade skills from a GitHub repository',
+    summary: 'Install, check or upgrade GitHub repository skills on compatible registries',
     usage: 'skillhub repository <install|check|upgrade> <repository-id> [--scope <user|project> (install only)] [--agent <profile>] [--dir <path>] [--registry <url>] [--token <token>] [--check (upgrade only)] [--json]',
     examples: [
       'skillhub repository install 123456 --scope project --agent codex',
