@@ -12,7 +12,8 @@ afterEach(async () => {
 })
 async function fixture() {
   const { home, cwd } = await createTempHome(); homes.push(home, cwd)
-  return { home, cwd, env: { HOME: home, USERPROFILE: home } }
+  // Keep Bun's runtime cache outside the observation contract on every OS.
+  return { home, cwd, env: { HOME: home, USERPROFILE: home, BUN_RUNTIME_TRANSPILER_CACHE_PATH: '0' } }
 }
 function registry(handler: (request: Request) => Response) {
   const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: handler }); servers.push(server)
@@ -21,12 +22,6 @@ function registry(handler: (request: Request) => Response) {
 async function save(home: string, name: string, value: unknown) {
   await mkdir(join(home, '.skillhub'), { recursive: true })
   await writeFile(join(home, '.skillhub', name + '.json'), JSON.stringify(value))
-}
-
-async function stateEntries(home: string) {
-  // The TypeScript subprocess runner may create Bun's own transpiler cache.
-  // The built Node artifact is checked separately without that runner side effect.
-  return (await readdir(home)).filter(name => name !== '.bun')
 }
 
 describe('doctor --health subprocess contract', () => {
@@ -38,7 +33,7 @@ describe('doctor --health subprocess contract', () => {
     const report = JSON.parse(result.stdout)
     expect(report.mode).toBe('health'); expect(report.schemaVersion).toBe(1); expect(report.exitCode).toBe(0)
     expect(report.checks.filter((x: { code: string }) => x.code === 'OFFLINE')).toHaveLength(2)
-    expect(calls).toBe(0); expect(await stateEntries(f.home)).toEqual([]); expect(await readdir(f.cwd)).toEqual([])
+    expect(calls).toBe(0); expect(await readdir(f.home)).toEqual([]); expect(await readdir(f.cwd)).toEqual([])
   })
   test('selected registry and token win, while state bytes remain unchanged', async () => {
     const f = await fixture(); const token = 'sk_health_subprocess_fixture'; let calls = 0
@@ -78,7 +73,7 @@ describe('doctor --health subprocess contract', () => {
     const result = await runCli(['doctor', '--health', '--registry', url], f.env, { cwd: f.cwd })
     expect(result.exitCode).toBe(0); expect(result.stderr).toBe('')
     expect(result.stdout).toContain('OK (with warnings)'); expect(result.stdout).toContain('NO_CREDENTIAL')
-    expect(result.stdout).toContain('Read-only diagnosis'); expect(await stateEntries(f.home)).toEqual([])
+    expect(result.stdout).toContain('Read-only diagnosis'); expect(await readdir(f.home)).toEqual([])
   })
   test('connection refusal produces a complete report and network exit3', async () => {
     const f = await fixture(); const probe = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch: () => new Response() })
@@ -111,6 +106,6 @@ describe('doctor --health subprocess contract', () => {
   test.each([{ args: ['--offline'] }, { args: ['--registry', 'https://registry.example.com'] }, { args: ['--token', 'sk_flag_fixture'] }, { args: ['--health=false'] }])('health-only flags %j fail before legacy inventory writes', async ({ args }) => {
     const f = await fixture(); const result = await runCli(['doctor', ...args, '--json'], f.env, { cwd: f.cwd })
     expect(result.exitCode).toBe(5); expect(result.stdout).toBe(''); expect(JSON.parse(result.stderr).ok).toBe(false)
-    expect(await stateEntries(f.home)).toEqual([])
+    expect(await readdir(f.home)).toEqual([])
   })
 })

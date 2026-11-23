@@ -17,5 +17,5 @@
 
 ## 4. Verification and handoff
 
-- [ ] 4.1 Run strict OpenSpec validation, focused and complete CLI tests with isolated HOME, lint, typecheck, production build and Node-built-artifact smoke checks; retain actual failures and boundaries.
-- [ ] 4.2 Review the complete diff directly in the main session, verify privacy and scope, update the Draft PR with actual evidence and leave merging/publication for explicit authorization.
+- [x] 4.1 Run strict OpenSpec validation, focused and complete CLI tests with isolated HOME, lint, typecheck, production build and Node-built-artifact smoke checks; retain actual failures and boundaries.
+- [x] 4.2 Review the complete diff directly in the main session, verify privacy and scope, update the Draft PR with actual evidence and leave merging/publication for explicit authorization.
