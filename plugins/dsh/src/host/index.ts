@@ -430,7 +430,7 @@ export class SkillHubService extends TypertRemoteService {
       try {
         documentation = { state: 'ready', content: await registry.documentation(namespace, slug, resolved.version, signal) };
       } catch (error) {
-        if (!(error instanceof RegistryError) || error.code === 'CANCELLED') throw error;
+        if (!(error instanceof RegistryError) || error.code === 'CANCELLED' || error.code === 'AUTH_REQUIRED') throw error;
         documentation = { state: 'error', reason: error.code, retryable: error.retryable };
       }
       const modes = this.configuration.get().detailTabs;
@@ -447,7 +447,7 @@ export class SkillHubService extends TypertRemoteService {
         };
         try { await read(); return remember('available'); }
         catch (error) {
-          if (!(error instanceof RegistryError) || error.code === 'CANCELLED') throw error;
+          if (!(error instanceof RegistryError) || error.code === 'CANCELLED' || error.code === 'AUTH_REQUIRED') throw error;
           return error.code === 'ANONYMOUS_DENIED' ? remember('anonymous-denied') : 'unknown';
         }
       };
