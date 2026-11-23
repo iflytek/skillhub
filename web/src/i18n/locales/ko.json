@@ -4063,6 +4063,8 @@
       "reviewKind": "신청 유형",
       "originType": "출처",
       "searchPlaceholder": "이름, 좌표 또는 제출자 검색",
+      "scanVerdict": "스캔 판정",
+      "allVerdicts": "모든 판정",
       "allScopes": "권한이 있는 모든 범위",
       "apply": "검색",
       "reset": "초기화"
