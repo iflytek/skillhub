@@ -4074,6 +4074,8 @@
       "reviewKind": "Request type",
       "originType": "Source",
       "searchPlaceholder": "Search name, coordinate or submitter",
+      "scanVerdict": "Scan verdict",
+      "allVerdicts": "All verdicts",
       "allScopes": "All authorized scopes",
       "apply": "Search",
       "reset": "Reset"

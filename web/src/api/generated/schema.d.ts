@@ -9235,6 +9235,7 @@ export interface components {
             decisionMethod?: string;
             decisionScanTaskId?: string;
             autoPublicationGrantId?: string;
+            scanVerdict?: string;
         };
         BatchReviewRequest: {
             ids: number[];
@@ -17779,6 +17780,7 @@ export interface operations {
                 q?: string;
                 reviewKind?: string;
                 originType?: string;
+                scanVerdict?: string;
                 page?: number;
                 size?: number;
                 sortDirection?: string;
@@ -17832,6 +17834,7 @@ export interface operations {
                 q?: string;
                 reviewKind?: string;
                 originType?: string;
+                scanVerdict?: string;
                 page?: number;
                 size?: number;
                 sortDirection?: string;

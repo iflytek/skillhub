@@ -134,11 +134,12 @@ describe('unified review filters', () => {
 it('encodes server-side filters without losing spaces, Unicode or namespace scope', async () => {
   const request = vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 0, msg: 'ok', data: { items: [], total: 0, page: 0, size: 20 } }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
   vi.stubGlobal('fetch', request)
-  await reviewApi.list({ status: 'ALL', namespaceId: 4, q: '  中文 / A&B  ', reviewKind: 'VISIBILITY_CHANGE', originType: 'GITHUB_SYNC' })
+  await reviewApi.list({ status: 'ALL', namespaceId: 4, q: '  中文 / A&B  ', reviewKind: 'VISIBILITY_CHANGE', originType: 'GITHUB_SYNC', scanVerdict: 'BLOCKED' })
   const url = new URL(String(request.mock.calls[0][0]), 'http://localhost')
   expect(url.searchParams.get('q')).toBe('中文 / A&B')
   expect(url.searchParams.get('status')).toBe('ALL')
   expect(url.searchParams.get('namespaceId')).toBe('4')
   expect(url.searchParams.get('reviewKind')).toBe('VISIBILITY_CHANGE')
   expect(url.searchParams.get('originType')).toBe('GITHUB_SYNC')
+  expect(url.searchParams.get('scanVerdict')).toBe('BLOCKED')
 })

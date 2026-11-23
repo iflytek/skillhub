@@ -114,7 +114,7 @@ class ReviewPortalAppServiceTest {
     @Test
     void userAdminDoesNotReceiveSkillReviewQueuePermission() {
         when(rbacService.getUserRoleCodes("user-admin")).thenReturn(Set.of("USER_ADMIN"));
-        assertThatThrownBy(() -> service.listReviewQueue("PENDING", null, "", null, null,
+        assertThatThrownBy(() -> service.listReviewQueue("PENDING", null, "", null, null, null,
                 0, 20, "DESC", "user-admin", Map.of()))
                 .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException.class);
         verify(reviewQueueQueryRepository, never()).list(org.mockito.ArgumentMatchers.any(),
@@ -129,10 +129,10 @@ class ReviewPortalAppServiceTest {
                 org.mockito.ArgumentMatchers.eq(false), org.mockito.ArgumentMatchers.eq(Set.of(7L, 9L)),
                 org.mockito.ArgumentMatchers.any())).thenReturn(org.springframework.data.domain.Page.empty());
         when(governanceQueryRepository.getReviewTaskResponses(java.util.List.of())).thenReturn(java.util.List.of());
-        service.listReviewQueue("ALL", null, "name", "ALL", "ALL", 0, 20, "ASC", "team-admin",
+        service.listReviewQueue("ALL", null, "name", "ALL", "ALL", "dangerous", 0, 20, "ASC", "team-admin",
                 Map.of(7L, NamespaceRole.OWNER, 9L, NamespaceRole.ADMIN, 11L, NamespaceRole.MEMBER));
         verify(reviewQueueQueryRepository).list(
-                new com.iflytek.skillhub.repository.ReviewQueueQueryRepository.Filter(null, null, "name", null, null),
+                new com.iflytek.skillhub.repository.ReviewQueueQueryRepository.Filter(null, null, "name", null, null, "DANGEROUS"),
                 false, Set.of(7L, 9L), org.springframework.data.domain.PageRequest.of(0, 20,
                         org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "submittedAt")
                                 .and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "id"))));

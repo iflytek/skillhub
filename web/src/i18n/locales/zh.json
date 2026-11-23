@@ -4072,6 +4072,8 @@
       "reviewKind": "申请事项",
       "originType": "申请来源",
       "searchPlaceholder": "搜索名称、坐标或提交人",
+      "scanVerdict": "扫描结论",
+      "allVerdicts": "全部结论",
       "allScopes": "全部可审核范围",
       "apply": "查询",
       "reset": "重置"

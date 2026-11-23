@@ -266,6 +266,47 @@ class JpaReviewQueueQueryRepositoryTest {
         assertThat(groups.list(filter, Set.of(), 0, 20, false).items()).isEmpty();
     }
 
+    @Test
+    void verdictMatchesOnlyTheCurrentSuccessfulRoundWithinTheAuthorizedPage() {
+        Namespace team = namespace("verdict-team", NamespaceType.TEAM);
+        Namespace foreign = namespace("verdict-foreign", NamespaceType.TEAM);
+        ReviewTask first = task(team, "versioned", "1.0.0", "2026-01-01T00:00:00Z");
+        SkillVersion second = entities.persistFlushFind(new SkillVersion(first.getSubjectId(), "2.0.0", "queue-owner"));
+        ReviewTask update = entities.persistFlushFind(new ReviewTask(second.getId(), first.getSubjectId(),
+                team.getId(), "2.0.0", "queue-author"));
+        ReviewTask other = task(team, "other", "1.0.0", "2026-01-02T00:00:00Z");
+        ReviewTask hidden = task(foreign, "hidden", "1.0.0", "2026-01-03T00:00:00Z");
+        audit(first, "SAFE", true, null);
+        audit(update, "DANGEROUS", true, null);
+        audit(other, "DANGEROUS", true, null);
+        audit(hidden, "DANGEROUS", true, null);
+        var risk = new ReviewQueueQueryRepository.Filter("PENDING", null, "", null, null, "DANGEROUS");
+        var managed = Set.of(team.getId());
+        var firstPage = repository.list(risk, false, managed, page(0, 1));
+        var secondPage = repository.list(risk, false, managed, page(1, 1));
+        assertThat(firstPage.getTotalElements()).isEqualTo(2);
+        assertThat(java.util.stream.Stream.concat(firstPage.stream(), secondPage.stream()))
+                .extracting(entry -> entry.task().getId()).containsExactlyInAnyOrder(update.getId(), other.getId());
+        audit(update, "SUSPICIOUS", false, null);
+        audit(other, "SUSPICIOUS", true, "timeout");
+        assertThat(repository.list(risk, false, managed, page(0, 20))).isEmpty();
+        assertThat(repository.list(new ReviewQueueQueryRepository.Filter("PENDING", null, "", null, null,
+                "SUSPICIOUS"), false, managed, page(0, 20))).isEmpty();
+        var all = repository.list(filter("PENDING", null, "", null, null), false, managed, page(0, 20));
+        assertThat(all.getContent()).extracting(ReviewQueueQueryRepository.Entry::scanVerdict)
+                .containsExactlyInAnyOrder("SAFE", null, null);
+    }
+
+    private void audit(ReviewTask task, String verdict, boolean finished, String failure) {
+        var audit = new com.iflytek.skillhub.domain.security.SecurityAudit(task.getSkillVersionId(),
+                com.iflytek.skillhub.domain.security.ScannerType.SKILL_SCANNER, java.util.UUID.randomUUID().toString());
+        audit.setVerdict(com.iflytek.skillhub.domain.security.SecurityVerdict.valueOf(verdict));
+        audit.setIsSafe("SAFE".equals(verdict));
+        if (finished) audit.setScannedAt(Instant.now());
+        if (failure != null) audit.markFailed(Instant.now(), failure);
+        entities.persistAndFlush(audit);
+    }
+
     private long scalar(String sql, Object... parameters) {
         var query = entities.getEntityManager().createNativeQuery(sql);
         for (int index = 0; index < parameters.length; index++) query.setParameter(index + 1, parameters[index]);

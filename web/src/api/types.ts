@@ -652,6 +652,7 @@ export interface ReviewTask {
   avatarRemoval?: boolean
   originType?: 'USER' | 'GITHUB_SYNC'
   decisionMethod?: ReviewDecisionMethod | null
+  scanVerdict?: import('@/features/security-audit/types').SecurityVerdict | null
   decisionScanTaskId?: string | null
   autoPublicationGrantId?: string | null
 }
