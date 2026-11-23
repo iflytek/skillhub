@@ -70,7 +70,7 @@ public class TokenController extends BaseApiController {
                 formatInstant(result.entity().getExpiresAt()),
                 capabilities(result.entity()),
                 legacyCompat(result.entity()),
-                request.scopes() == null
+                false
         ));
     }
 
