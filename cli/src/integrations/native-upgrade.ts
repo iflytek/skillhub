@@ -16,7 +16,7 @@ import { assertOwnedRegularTree } from './recovery-files'
 
 /** Execute only the complete confirmed snapshot; the shared core owns target locks and inventory CAS. */
 export async function executeNativeUpgrade(operations: OperationStore, inventory: InventoryStore,
-  input: NativeUpgradeExecution, token?: string): Promise<NativeRecoveryResult> {
+  input: NativeUpgradeExecution): Promise<NativeRecoveryResult> {
   const request = { ...input, baseline: structuredClone(input.baseline), ...(input.localChangesAuthorization ? { localChangesAuthorization: structuredClone(input.localChangesAuthorization) } : {}) }
   const { baseline } = request
   const record = await operations.get(request.operationId, request.ownerId)
@@ -50,7 +50,7 @@ export async function executeNativeUpgrade(operations: OperationStore, inventory
       await durableJson(join(directory, `${record.operationId}.json`), { ownerId: record.ownerId,
         authorization: request.localChangesAuthorization })
     }
-    const client = new SkillHubClient(request.registry, token)
+    const client = new SkillHubClient(request.registry)
     const resolved = await client.resolve(request.namespace, request.slug, request.version)
     if (resolved.namespace !== request.namespace || resolved.slug !== request.slug || resolved.version !== request.version
       || resolved.versionId !== request.versionId || resolved.fingerprint !== request.fingerprint) throw new Error('Upgrade release changed')

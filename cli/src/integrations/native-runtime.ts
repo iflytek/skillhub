@@ -25,14 +25,14 @@ import { recoverRemoval } from './removal-recovery'
 import { acquireSkillTargetLock } from '../services/skill-target-lock'
 
 /** Private native adapter. Paths must come from the Host, never a Remote request or tool argument. */
-export async function openNativeRuntime(options: { stateDirectory: string; inventoryHome: string; getRegistryToken?: (registry: string) => string | undefined }): Promise<NativeRuntime> {
+export async function openNativeRuntime(options: { stateDirectory: string; inventoryHome: string }): Promise<NativeRuntime> {
   const operations = await OperationStore.open(options.stateDirectory)
   const inventory = new InventoryStore(options.inventoryHome)
   const imports = new InventoryStore(join(options.stateDirectory, 'local-imports'))
   const storeFor = (registry: string) => registry === LOCAL_PACKAGE_REGISTRY ? imports : inventory
   const resets = new FileResetStore(options.stateDirectory, operations.hostInstanceId, inventory, async () => {
     if ((await operations.listForRecovery()).length) throw new Error('Operation recovery required')
-  }, options.getRegistryToken)
+  })
   const ensureCompatible = async () => {
     if (await inventory.diskVersion() === 3 && (await operations.listForRecovery()).length) {
       throw new OperationStoreError('TARGET_RECOVERY_REQUIRED')
@@ -65,8 +65,8 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
       return withOperationLease(operations, request.operationId, request.ownerId, () => executeNativeInstall(operations, imports, {...request, authorize}))
     },
     inspectChanges: (selected, target) => inspectChanges(inventory, selected, target),
-    readChangeDiff: (snapshot, path) => readChangeDiff(options.stateDirectory, inventory, snapshot, path, options.getRegistryToken?.((snapshot.kind === 'local' ? snapshot : snapshot.local).selection.registry)),
-    prepareVersionChanges: (selected, target, candidate) => prepareVersionChanges(options.stateDirectory, inventory, selected, target, candidate, options.getRegistryToken?.(selected.registry)),
+    readChangeDiff: (snapshot, path) => readChangeDiff(options.stateDirectory, inventory, snapshot, path),
+    prepareVersionChanges: (selected, target, candidate) => prepareVersionChanges(options.stateDirectory, inventory, selected, target, candidate),
     backupChanges: (snapshot, authorize) => backupChanges(options.stateDirectory, inventory, snapshot, authorize),
     acceptFileReset: async (request, validate) => {
       return resets.accept(request, async () => {
@@ -158,7 +158,7 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
       await ensureCompatible()
       const snapshot = { ...request, baseline: structuredClone(request.baseline), ...(request.localChangesAuthorization ? { localChangesAuthorization: structuredClone(request.localChangesAuthorization) } : {}) }
       return withOperationLease(operations, snapshot.operationId, snapshot.ownerId,
-        () => executeNativeUpgrade(operations, inventory, snapshot, options.getRegistryToken?.(snapshot.registry)))
+        () => executeNativeUpgrade(operations, inventory, snapshot))
     },
     acceptUpgrade: async (request, validateNew) => {
       const result = await operations.accept({ hostInstanceId: request.hostInstanceId, ownerId: request.ownerId,
@@ -178,7 +178,7 @@ export async function openNativeRuntime(options: { stateDirectory: string; inven
       await ensureCompatible()
       const snapshot = { ...request }
       return withOperationLease(operations, snapshot.operationId, snapshot.ownerId,
-        () => executeNativeInstall(operations, inventory, {...snapshot, authorize: guardForeignClaims(snapshot, imports)}, options.getRegistryToken?.(snapshot.registry)))
+        () => executeNativeInstall(operations, inventory, {...snapshot, authorize: guardForeignClaims(snapshot, imports)}))
     },
     acceptInstall: async (request, validateNew) => {
       const result = await operations.accept({ hostInstanceId: request.hostInstanceId, ownerId: request.ownerId,

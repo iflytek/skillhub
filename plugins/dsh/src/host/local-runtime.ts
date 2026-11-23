@@ -328,5 +328,6 @@ export async function openLocalRuntime(getRegistryToken?: (registry: string) => 
   const core: NativeCore = await import(new URL('./local-core.js', import.meta.url).href);
   if (typeof core.openNativeRuntime !== 'function') throw new Error('Native core is missing');
   const home = await canonicalizeWatchPath(resolveDshHome());
-  return core.openNativeRuntime({ stateDirectory: join(home, 'skillhub/operations'), inventoryHome: homedir(), getRegistryToken });
+  const options = { stateDirectory: join(home, 'skillhub/operations'), inventoryHome: homedir(), getRegistryToken };
+  return core.openNativeRuntime(options);
 }

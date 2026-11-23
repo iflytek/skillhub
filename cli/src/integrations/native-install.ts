@@ -10,7 +10,7 @@ import { createInstallTransactionObserver } from './transaction-journal'
 import { confirmExistingNativeInstall } from './native-installed'
 
 /** Claim an accepted operation exactly once before performing network or target writes. */
-export async function executeNativeInstall(operations: OperationStore, inventory: InventoryStore, request: NativeInstallExecution & { archive?: Uint8Array }, token?: string): Promise<NativeRecoveryResult> {
+export async function executeNativeInstall(operations: OperationStore, inventory: InventoryStore, request: NativeInstallExecution & { archive?: Uint8Array }): Promise<NativeRecoveryResult> {
   request = { ...request }
   const record = await operations.get(request.operationId, request.ownerId)
   if (!record || record.operation.kind !== 'install' || record.operation.status.phase !== 'accepted') throw new Error('Installation is not owned and accepted')
@@ -30,7 +30,7 @@ export async function executeNativeInstall(operations: OperationStore, inventory
     await request.authorize([root, target], 'staging')
     const existing = request.registry === 'local:import' ? undefined : await confirmExistingNativeInstall(operations, inventory, request)
     if (existing) return existing
-    const client = new SkillHubClient(request.registry, token)
+    const client = new SkillHubClient(request.registry)
     const imported = request.registry === 'local:import'
     if (imported !== !!request.archive || imported && (request.namespace !== 'local' || request.version !== 'local')) throw new Error('Invalid local package source')
     const resolved = imported ? { namespace: request.namespace, slug: request.slug, version: request.version, versionId: 1, fingerprint: request.fingerprint, downloadUrl: '' } : await client.resolve(request.namespace, request.slug, request.version)
