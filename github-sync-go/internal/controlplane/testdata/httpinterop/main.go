@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/iflytek/skillhub/github-sync-go/internal/controlplane"
@@ -116,13 +117,18 @@ func run() error {
 	if err := client.UploadPackage(ctx, authorization, archivePath, allowedS3Hosts); err != nil {
 		return err
 	}
+	// Java must keep the first report's source tag; the replay reports a different one.
+	distance := 3
+	sourceTag := &controlplane.SourceTag{Status: "AFTER_TAG", Tag: "v1.3.2",
+		TagCommitSHA: strings.Repeat("d", 40), CommitsAfterTag: &distance}
 	ingestionID, err := client.ReportPackage(ctx, taskID, task.Lease,
-		admission.AdmissionID, commitSHA, skillPath, authorization, info.Size(), digestHex)
+		admission.AdmissionID, commitSHA, skillPath, authorization, info.Size(), digestHex, sourceTag)
 	if err != nil {
 		return err
 	}
 	replayedID, err := client.ReportPackage(ctx, taskID, task.Lease,
-		admission.AdmissionID, commitSHA, skillPath, authorization, info.Size(), digestHex)
+		admission.AdmissionID, commitSHA, skillPath, authorization, info.Size(), digestHex,
+		&controlplane.SourceTag{Status: "NO_TAG"})
 	if err != nil || replayedID != ingestionID {
 		return errors.New("Java did not replay the same package receipt")
 	}
@@ -131,7 +137,7 @@ func run() error {
 		forgedDigest = digestHex[:63] + "1"
 	}
 	_, err = client.ReportPackage(ctx, taskID, task.Lease,
-		admission.AdmissionID, commitSHA, skillPath, authorization, info.Size(), forgedDigest)
+		admission.AdmissionID, commitSHA, skillPath, authorization, info.Size(), forgedDigest, nil)
 	var apiError *controlplane.APIError
 	if !errors.As(err, &apiError) || apiError.Code != "RESULT_CONFLICT" {
 		return errors.New("Java accepted a conflicting package report")
@@ -291,7 +297,7 @@ func verifyOversizedS3Object(ctx context.Context, client *controlplane.Client,
 		return errors.New("S3 did not accept the intentionally oversized object")
 	}
 	_, err = client.ReportPackage(ctx, taskID, task.Lease, admission.AdmissionID,
-		commitSHA, skillPath, authorization, size, digest)
+		commitSHA, skillPath, authorization, size, digest, nil)
 	var apiError *controlplane.APIError
 	if !errors.As(err, &apiError) || apiError.Status != http.StatusRequestEntityTooLarge ||
 		apiError.Code != "PACKAGE_TOO_LARGE" {

@@ -47,9 +47,18 @@ func (c *Client) AuthorizeUpload(ctx context.Context, taskID string, lease Lease
 	return authorization, nil
 }
 
+// SourceTag is optional read-only provenance; Java stores it with the ingestion.
+type SourceTag struct {
+	Status          string `json:"status"`
+	Tag             string `json:"tag,omitempty"`
+	TagCommitSHA    string `json:"tagCommitSha,omitempty"`
+	CommitsAfterTag *int   `json:"commitsAfterTag,omitempty"`
+	Reason          string `json:"reason,omitempty"`
+}
+
 func (c *Client) ReportPackage(ctx context.Context, taskID string, lease LeaseProof,
 	admissionID, commitSHA, skillPath string, authorization UploadAuthorization,
-	sizeBytes int64, digest string) (string, error) {
+	sizeBytes int64, digest string, sourceTag *SourceTag) (string, error) {
 	if taskID == "" || admissionID == "" || authorization.UploadID == "" ||
 		sizeBytes < 1 || len(digest) != 64 {
 		return "", errors.New("invalid package report")
@@ -58,11 +67,15 @@ func (c *Client) ReportPackage(ctx context.Context, taskID string, lease LeasePr
 		IngestionID string `json:"ingestionId"`
 		Status      string `json:"status"`
 	}
-	_, err := c.post(ctx, "/tasks/"+url.PathEscape(taskID)+"/packages/report", map[string]any{
+	request := map[string]any{
 		"lease": lease, "admissionId": admissionID, "commitSha": commitSHA,
 		"skillPath": skillPath, "uploadId": authorization.UploadID,
 		"sizeBytes": sizeBytes, "sha256": digest,
-	}, &response)
+	}
+	if sourceTag != nil {
+		request["sourceTag"] = sourceTag
+	}
+	_, err := c.post(ctx, "/tasks/"+url.PathEscape(taskID)+"/packages/report", request, &response)
 	if err != nil {
 		return "", err
 	}
