@@ -417,6 +417,39 @@ skillhub doctor
 
 Versions are tracked per target. Doctor reports recovery problems; it does not download or upgrade skills.
 
+### Read-only Health Diagnosis
+
+```bash
+skillhub doctor --health
+skillhub doctor --health --registry https://skillhub.example.com --json
+skillhub doctor --health --offline --json
+```
+
+`--health` explicitly selects diagnosis instead of inventory reconstruction. It checks actual state
+paths, configuration and credential sources, the selected registry, and its registered installations.
+It never repairs files, creates backups, acquires installation locks, deletes credentials or starts login.
+`--offline` makes no network requests and marks remote checks as skipped; saved-token validity remains unknown.
+
+Online mode sends one request to the existing CLI identity endpoint with a five-second limit and no
+redirect following. It distinguishes observed transport, HTTP and authentication failures without
+printing tokens or raw error bodies. Optional GitHub/Suite features and server internals are not probed.
+Accepted identity does not certify publish/delete permissions, and read access does not certify write access.
+
+Missing login, modified content and missing legacy integrity baselines are warnings. Unsafe, unreadable,
+missing or inconsistent installations are failures. Only selected-registry records are inspected;
+enabled/disabled state and all local content are preserved.
+
+Health JSON is one stdout object with `schemaVersion: 1`, `mode: "health"`, `ok`, selected registry and
+credential sources, state `paths`, `checks` and `exitCode`. Check statuses are `pass`, `warn`, `fail`
+or `skipped`, with stable identifiers/codes, safe messages and optional next steps. Failed runs still
+produce the full report on stdout without stderr chatter. Exit 0 permits warnings/skipped checks;
+failure priority is filesystem 4, authentication 2, network 3, then other HTTP/protocol failure 1.
+Usage errors remain 5. Legacy `doctor --json` is unchanged. Health-only options require `--health`.
+
+Rejected saved credentials get explicit registry-scoped logout/login guidance; override sources get
+separate instructions. No recovery action is performed. Use `whoami` for direct identity verification
+and `outdated` for installed-update discovery.
+
 ## Publishing
 
 ```bash
@@ -671,9 +704,11 @@ installations across all namespaces in the current registry.
 
 ```bash
 skillhub doctor [--json]
+skillhub doctor --health [--offline] [--registry <url>] [--token <token>] [--json]
 ```
 
 Scan project directory and rebuild local inventory.
+With `--health`, diagnose without inventory maintenance; `--offline` skips network access.
 
 ### publish
 

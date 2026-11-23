@@ -101,6 +101,15 @@ describe('read-only health diagnosis', () => {
     expect(result.ok).toBe(true); expect(result.checks.some(x => x.code === 'INTEGRITY_UNVERIFIED')).toBe(true)
     expect(await readFile(join(home, '.skillhub/inventory.json'))).toEqual(before)
   })
+  test('v3 recorded activation state must agree with its files', async () => {
+    const { home, cwd } = await fixture(); await install(home, cwd, { disabled: true })
+    const path = join(home, '.skillhub/inventory.json')
+    const inventory = JSON.parse(await readFile(path, 'utf8'))
+    inventory.schemaVersion = 3; inventory.records[0].targets[0].installationState = 'enabled'
+    await writeFile(path, JSON.stringify(inventory))
+    const result = await runHealth({ offline: true }, { home, env })
+    expect(result.exitCode).toBe(4); expect(result.checks.some(x => x.code === 'INSTALLATION_UNVERIFIED')).toBe(true)
+  })
   test('a missing installation is a filesystem failure', async () => {
     const { home, cwd } = await fixture(); const dir = await install(home, cwd); await rm(dir, { recursive: true })
     const result = await runHealth({ offline: true }, { home, env })

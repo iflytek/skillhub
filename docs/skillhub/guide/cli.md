@@ -379,6 +379,35 @@ skillhub doctor
 
 版本按安装目标记录。doctor 报告恢复问题，不会下载或升级技能。
 
+### 只读健康诊断
+
+```bash
+skillhub doctor --health
+skillhub doctor --health --registry https://skillhub.example.com --json
+skillhub doctor --health --offline --json
+```
+
+`--health` 明确选择只读诊断，检查实际配置、凭证与清单文件，以及当前服务地址、凭证来源、连接和已登记安装。
+原 `doctor` 的清单重建行为保持不变。诊断不会修复文件、生成备份、获取安装锁、删除凭证或自动登录。
+`--offline` 不发网络请求，远端检查显示为“未检查”，不能据此认定保存的凭证有效。
+
+在线模式仅向当前服务的既有 CLI 身份接口发起一次请求，最多等待 5 秒，不跟随跳转，不探测 GitHub、套件等可选功能或服务器内部组件。
+输出区分 DNS、连接、TLS、超时、HTTP 和身份失败；不展示 Token、服务端原始错误或内部异常。
+身份有效不代表拥有发布、删除等权限；文件可读不代表未来一定可写。
+
+未登录、内容被修改、历史安装缺少完整性基线均为提示，不自动修复；目录缺失、路径不安全、状态无法读取或不一致则报告失败。
+只检查当前服务对应的登记记录，启用或停用状态不变。
+
+健康模式 JSON 是 stdout 中的单个对象：`schemaVersion: 1`、`mode: "health"`、`ok`、`registry`、
+`registrySource`、`credentialSource`、`paths`、`checks` 和 `exitCode`。
+检查状态为 `pass`、`warn`、`fail`、`skipped`，每项包含稳定的 `id`、`code`、安全说明及可选的下一步。
+即使检查失败，也完整输出 JSON 报告，不向 stderr 混入提示。
+
+没有失败项时退出码为 0，仍可能有提示和未检查项。多个失败并存时依次优先返回文件错误 4、认证错误 2、网络错误 3、其他 HTTP/协议错误 1；参数错误仍为 5。
+原 `doctor --json` 的结构不变。`--offline`、`--registry`、`--token` 必须与 `--health` 同用，避免误触发清单写入。
+失效的保存凭证会提示对当前服务先执行 `logout` 再 `login`；命令行或环境变量覆盖会单独说明，诊断不代为执行。
+单独验证身份继续用 `whoami`，检查可用更新继续用 `outdated`。
+
 ## 发布
 
 ```bash
@@ -616,9 +645,11 @@ skillhub remove <coordinate> [options]
 
 ```bash
 skillhub doctor [--json]
+skillhub doctor --health [--offline] [--registry <url>] [--token <token>] [--json]
 ```
 
 扫描项目目录，重建本地清单。
+加 `--health` 则仅诊断，不进行清单维护；加 `--offline` 则不访问网络。
 
 ### publish
 

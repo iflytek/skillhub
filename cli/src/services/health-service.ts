@@ -125,6 +125,7 @@ export async function runHealth(options: HealthOptions, dependencies: HealthDepe
               || metadata.metadata.version !== target.version) throw new Error('Invalid metadata')
             const entryState = await readInstallationState(target.installDir)
             if (!entryState) throw new Error('Missing or ambiguous entry')
+            if (inventory.value.schemaVersion === 3 && target.installationState !== entryState) throw new Error('Activation state is inconsistent')
             if (!target.fingerprint || !metadata.metadata.files) {
               add(id, 'warn', 'INTEGRITY_UNVERIFIED', 'Registered installation has no complete integrity baseline; its contents were not certified.')
               continue

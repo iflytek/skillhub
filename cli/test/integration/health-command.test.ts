@@ -101,6 +101,13 @@ describe('doctor --health subprocess contract', () => {
     expect(result.exitCode).toBe(4); expect(result.stderr).toBe('')
     expect(JSON.parse(result.stdout).checks.find((x: { id: string }) => x.id === 'config').code).toBe('STATE_UNREADABLE')
   })
+  test('timeout also bounds an HTTP body that never finishes', async () => {
+    const f = await fixture()
+    const url = registry(() => new Response(new ReadableStream({ start(controller) { controller.enqueue(new TextEncoder().encode('{"data":')) } })))
+    const result = await runCli(['doctor', '--health', '--registry', url, '--json'], f.env, { cwd: f.cwd })
+    expect(result.exitCode).toBe(3)
+    expect(JSON.parse(result.stdout).checks.find((x: { id: string }) => x.id === 'connectivity').code).toBe('TIMEOUT')
+  }, 12000)
   test.each([{ args: ['--offline'] }, { args: ['--registry', 'https://registry.example.com'] }, { args: ['--token', 'sk_flag_fixture'] }, { args: ['--health=false'] }])('health-only flags %j fail before legacy inventory writes', async ({ args }) => {
     const f = await fixture(); const result = await runCli(['doctor', ...args, '--json'], f.env, { cwd: f.cwd })
     expect(result.exitCode).toBe(5); expect(result.stdout).toBe(''); expect(JSON.parse(result.stderr).ok).toBe(false)

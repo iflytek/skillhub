@@ -13,7 +13,7 @@
 
 - [x] 3.1 Wire doctor health options and stable human/JSON reports with documented exit priority; reject health-only options without the mode and preserve legacy doctor behavior.
 - [x] 3.2 Add subprocess tests against real local HTTP fixtures for selected-source precedence, rejected credentials, unavailable registry, unchanged disk state, JSON/nonzero exits and legacy doctor compatibility.
-- [ ] 3.3 Update command help, CLI README and English/Chinese user guides with the opt-in mode, warning/failure distinction, offline behavior and diagnostic limits.
+- [x] 3.3 Update command help, CLI README and English/Chinese user guides with the opt-in mode, warning/failure distinction, offline behavior and diagnostic limits.
 
 ## 4. Verification and handoff
 
