@@ -604,18 +604,42 @@ Update mechanism:
 | `skillhub login [--no-open] [--token <token>] [--registry <url>] [--json]` | Log in with OAuth Device Flow or an API token |
 | `skillhub logout [--registry <url>] [--json]` | Remove token for specified registry |
 | `skillhub whoami [--registry <url>] [--token <token>] [--json]` | Validate current token and display user information |
-| `skillhub search <query> [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
+| `skillhub search [query] [--registry <url>] [--token <token>] [--limit <n>] [--json]` | Search published skills |
 | `skillhub install <coordinate> [--scope <user\|project>] [--namespace <slug>] [--version <v>] [--agent <profile>] [--dir <path>] [--force] [--registry <url>] [--token <token>] [--json]` | Install a skill |
-| `skillhub upgrade <coordinate...> [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--check] [--force] [--json]` | Upgrade explicitly selected installed skills |
+| `skillhub upgrade <coordinate...> [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--token <token>] [--check] [--force] [--json]` | Upgrade explicitly selected installed skills |
 | `skillhub outdated [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--token <token>] [--json]` | List installed skills with newer registry versions (read-only) |
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
 | `skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
-| `skillhub doctor [--json]` | Scan project directory and rebuild local inventory |
+| `skillhub doctor [--json]` | Scan project metadata and merge into inventory, preserving entries outside the scan |
 | `skillhub publish <path> [--namespace <slug>] [--visibility <v>] [--registry <url>] [--token <token>] [--json]` | Publish a skill |
 | `skillhub sync pull --namespace <slug> [--skill <slug>]... [options]` | Pull explicitly selected skills from a non-global namespace |
 | `skillhub sync <status\|diff\|push> --namespace <slug> [options]` | Inspect or push a non-global namespace workspace |
 | `skillhub suite <install\|check\|upgrade\|remove> <coordinate> [options]` | Manage a pinned Skill Suite installation |
+| `skillhub repository <install\|check\|upgrade> <repository-id> [options]` | Manage GitHub repository skills on registries that expose a compatible installation plan |
 | `skillhub update [--check] [--json]` | Check or execute CLI self-update |
+
+### Choosing commands and preserving compatibility
+
+- `update` updates the CLI executable; `upgrade` updates explicitly selected installed skills.
+  `outdated` discovers possible updates in the effective Registry without installing anything;
+  `upgrade --check` previews the selected operation. Neither is a CLI self-update.
+- `repository` groups ordinary skills by their Registry repository ID. It does not clone arbitrary
+  GitHub URLs or configure server-side GitHub synchronization. `repository check` and
+  `repository upgrade --check` are compatible entry points to the same read-only plan; both remain supported.
+- `suite` manages a versioned Suite and its member ownership. `suite check` checks the installed
+  Suite's availability and member files; `suite upgrade --check` previews a remote Suite version's
+  member changes. They are not interchangeable with repository or individual-skill operations.
+- `sync` manages a non-global namespace authoring workspace, not GitHub ingestion. `status` lists
+  workspace states; `diff` shows changed entries; `pull --check` previews pulling the namespace.
+  `publish` uploads one local package, while `sync push` also supports workspace selection and review
+  submission. Server policy decides whether an upload is published or requires review.
+- `search` finds remote skills; `list` reads installed records; `doctor` scans local metadata and can
+  write inventory. `remove` is local by default; `--remote` explicitly selects remote deletion.
+  `login` stores a verified credential, `whoami` verifies the current identity, and `logout` removes
+  that Registry's credential. `help` and `version` remain available offline.
+
+Existing names, parameters, exit-code categories and compatibility entry points are retained.
+No automatic command substitution or new aliases are introduced.
 
 ## 🔒 Security Notes
 
@@ -759,6 +783,15 @@ skillhub repository install 123456 --dir ./skills --json
 ```
 
 This requires a registry with the repository install-plan endpoint. Public repositories support anonymous reads; a supplied Token must have `skill:read`. Use `skillhub login --registry ...` for restricted content. Registry and credential precedence are the same as individual installation.
+
+SaaS and self-hosted registries can expose different GitHub synchronization features. The CLI does
+not infer repository support from the hostname or from the presence of GitHub-synced skills.
+Only this optional command requires the compatible repository plan. An unavailable endpoint reports
+that repository batch operations are not available; an untyped 404 explains that the feature may not
+be enabled **or** the repository may be unavailable. A successful HTML fallback reports an incompatible
+plan. These errors are nonzero and do not write local state. Authentication, permission, network and
+structured repository-not-found errors keep their original meaning. Ordinary skill commands remain
+independent; use `install <coordinate>` for individually published skills where the Registry allows it.
 
 The CLI resolves all currently accessible, published, download-ready members once (maximum 1000), then pins their exact versions and content fingerprints for that invocation. Members may come from different upstream commits. A newer pending revision does not block an older published version. Hidden, withdrawn, inaccessible or not-yet-published members are not included, and their private details/counts are not disclosed. The Web list is a preview; running the command obtains a fresh plan.
 

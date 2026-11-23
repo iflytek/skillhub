@@ -9,10 +9,18 @@ SkillHub CLI is the official command-line tool for SkillHub, designed for search
 | Install a remote Skill | install | Selected Agent, scope or custom directory |
 | Update installed skills | upgrade | Explicit coordinates and targets; no implicit upgrade-all |
 | Discover installed skill updates | outdated | Read-only, scoped to the effective registry |
+| Install or update skills by GitHub repository | repository | Requires a compatible repository plan; separate from Suites and server-side GitHub synchronization |
 | Manage pinned collections | suite | Suite inventory and member ownership |
 | Sync team authoring files | sync | Non-global namespace workspace, not Suite lifecycle |
 | Update the CLI executable | update | CLI installation, not installed skills |
 | Recover local records | doctor | Project metadata and inventory, not remote upgrades |
+
+Existing command names and compatibility entry points remain supported. `repository check` and
+`repository upgrade --check` use the same read-only plan. `outdated` discovers updates, selected-skill
+`upgrade --check` previews an upgrade, and `update` updates the CLI itself. `suite check` inspects the
+installed Suite and member state; `suite upgrade --check` previews remote member changes. `sync`
+manages namespace authoring workspaces, not server-side GitHub synchronization; `status` lists all
+states and `diff` shows differences. See the [complete CLI command reference](https://github.com/iflytek/skillhub/blob/main/cli/README.md#-command-reference).
 
 ## Automation and failure handling
 
@@ -802,6 +810,14 @@ skillhub repository install 123456 --scope project --agent codex --registry http
 ```
 
 Requires the repository install-plan API. Public content can be read anonymously; a supplied Token requires `skill:read` and remains subject to account and namespace permissions. A single plan pins all currently accessible, published, downloadable member versions and fingerprints (up to 1000). Versions may come from different commits; a newer pending revision does not block an older usable publication. Excluded private or unpublished details and counts are not disclosed. The Web list is a preview; the CLI resolves a fresh plan when run.
+
+SaaS and self-hosted registries may expose different GitHub features. Synced skills do not imply
+repository batch support, and the CLI does not infer support from a hostname. An unavailable endpoint
+gets a feature-availability hint; an untyped 404 explicitly leaves both a disabled feature and an
+unavailable repository possible. HTML returned instead of a compatible plan gets a contract error.
+These failures return nonzero without changing local skills, credentials or inventory. Authentication,
+permission, network and structured repository-not-found errors retain their meaning. Ordinary skill
+commands do not require this repository endpoint and can still operate on accessible published skills.
 
 No batch `--force` is supported. Existing directories remain protected, successful members survive partial failures, and a partial failure returns a nonzero exit code with per-member results. This reuses individual installation records without creating a Suite or repository installation ledger. Complete snapshot ZIP downloads remain separate and require every pinned snapshot member to be available.
 

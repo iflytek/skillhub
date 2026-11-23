@@ -2,6 +2,17 @@
 
 All notable CLI behavior changes are documented in this file.
 
+## Unreleased — optional repository compatibility
+
+### Fixed
+
+- Explain unavailable repository batch endpoints and HTML fallback responses without requiring
+  SaaS and self-hosted GitHub synchronization to share an implementation. Untyped 404 responses
+  retain the possibility of a missing repository; authentication, permission, network and typed
+  business errors keep their original meaning. Ordinary skill commands remain independent.
+- Clarify command responsibilities in help and guides. Preserve `repository check` alongside
+  `repository upgrade --check`; neither command is renamed or removed.
+
 ## Unreleased — installed skill update discovery
 
 ### Added

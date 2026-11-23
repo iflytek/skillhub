@@ -9,10 +9,17 @@ SkillHub CLI 是 SkillHub 的第一方命令行工具，用于搜索、安装、
 | 安装单个远端 Skill | install | 选定 Agent / scope / 自定义目录 |
 | 更新已安装单个技能 | upgrade | 显式选择的坐标及目标，不隐式升级全部 |
 | 发现已安装技能的更新 | outdated | 只读检查当前生效 Registry 的安装记录 |
+| 按 GitHub 仓库安装或更新技能 | repository | 仅适用于提供兼容仓库安装清单的 Registry，不等于套装或 GitHub 同步管理 |
 | 管理固定版本集合 | suite | 套装安装记录及成员来源 |
 | 同步团队创作工作区 | sync | 非 global 空间与工作区，不等于套装管理 |
 | 更新 CLI 程序本身 | update | 本机 CLI 安装，不更新技能 |
-| 修复本地记录 | doctor | 扫描项目元数据并重建 inventory，不代替远端升级 |
+| 修复本地记录 | doctor | 扫描项目元数据并合并 inventory，保留扫描范围外的记录，不代替远端升级 |
+
+保留现有命令名与兼容入口，不要求改写历史脚本。`repository check` 与 `repository upgrade --check`
+使用同一只读计划；`outdated` 负责发现更新，`upgrade --check` 预览明确选择的技能更新，`update`
+更新 CLI 本身。`suite check` 检查已安装套装及成员状态，`suite upgrade --check` 预览新版成员变化，
+二者职责不同。`sync` 面向命名空间创作工作区，不负责服务端 GitHub 同步；`status` 展示全部状态，
+`diff` 展示差异。完整命令清单见 [CLI README](https://github.com/iflytek/skillhub/blob/main/cli/README.md#-command-reference)。
 
 ## 自动化和错误处理
 
@@ -748,6 +755,12 @@ skillhub repository install 123456 --scope project --agent codex --registry http
 ```
 
 命令中的数字是仓库稳定 ID，不会因仓库改名而变化。需要新版服务端的安装清单接口；公开内容可匿名读取，提供的 Token 必须具备 `skill:read`，受限内容还受账号和空间权限约束。
+
+SaaS 与开源部署的 GitHub 同步能力可能不同；已有 GitHub 同步技能不代表开放了仓库批量接口。
+CLI 不按域名判断，也不为普通技能操作增加仓库接口依赖。仓库接口不可用时会提示“当前服务未开放或不支持仓库批量操作”；
+仅返回无明确业务错误码的 404 时，则提示“功能可能未开放，或仓库不可用”，避免将资源不存在误判为缺少功能。
+返回网页而非兼容安装清单时会明确提示协议不兼容。均以非零退出，且不写入本地技能、凭证或安装记录。
+认证失败、无权限、网络异常和明确的仓库不存在错误保留原意。若有可访问的已发布技能，仍可使用单技能 `install`、`outdated`、`upgrade`。
 
 一次获取完整清单（最多 1000 个成员），固定本次各技能的已发布版本和指纹；各技能可以来自不同提交。新版本待审时，仍可安装其当前可用的已发布版本。不可访问、隐藏、撤回或没有可用已发布版本的成员不会纳入，也不会泄漏其名称或数量。网页展示为参考清单，执行命令时会重新解析。
 
