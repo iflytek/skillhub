@@ -101,7 +101,7 @@ export function DeviceAuthPage() {
               <h1 id="device-authorized-title" ref={successTitleRef} tabIndex={-1} className="text-3xl font-bold font-heading text-foreground">
                 {t('device.authorizedTitle')}
               </h1>
-              <p className="text-base leading-6 text-foreground">{t('device.success')}</p>
+              <p className="text-balance text-base leading-6 text-foreground">{t('device.success')}</p>
             </div>
           </section>
         </Card>
