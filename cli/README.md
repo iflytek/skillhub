@@ -541,6 +541,44 @@ skillhub doctor
 
 Versions are tracked per target. Doctor reports recovery problems; it does not download or upgrade skills.
 
+### Read-only Health Diagnosis
+
+```bash
+skillhub doctor --health
+skillhub doctor --health --registry https://skillhub.example.com --json
+skillhub doctor --health --offline --json
+```
+
+`--health` selects diagnosis instead of inventory maintenance. It reports the actual config,
+credential and inventory paths, registry/credential sources, selected-registry connectivity and
+registered installation findings. It never repairs files, creates inventory backups, locks an
+installation, removes credentials or starts login. `--offline` makes no network requests and
+marks connectivity and identity checks as skipped; it does not certify a saved token.
+
+Online diagnosis makes one identity request to the selected registry with a five-second limit.
+Redirects are refused, credentials and raw server error bodies are not printed, and no optional
+GitHub/Suite or server-internal health endpoints are probed. A successful identity check does not
+certify publish/delete permissions. Read access does not prove future write access.
+
+Missing login, modified content and legacy missing integrity baselines are warnings, not automatic
+repairs. Unsafe, unreadable or inconsistent installations are failures. Both enabled and disabled
+installations retain their state. Only records for the selected registry are inspected.
+
+Health JSON is one stdout object with `schemaVersion: 1`, `mode: "health"`, `ok`, `registry`,
+`registrySource`, `credentialSource`, `paths`, `checks` and `exitCode`. Checks use `pass`, `warn`,
+`fail` or `skipped`, with stable `id`/`code`, a safe message and an optional next step. Failed
+health runs still print the complete JSON report to stdout without stderr chatter.
+
+Exit 0 means no failed checks (warnings and skipped checks can remain). When failures coexist,
+the priority is filesystem 4, authentication 2, network 3, then other HTTP/protocol failures 1.
+Usage errors remain exit 5. Plain `doctor --json` retains its existing inventory schema; health-only
+options `--offline`, `--registry` and `--token` require `--health` so they cannot trigger maintenance.
+
+If a stored credential is rejected, the suggested explicit recovery is registry-scoped logout
+followed by login. Argument/environment overrides are identified separately. Diagnosis performs
+neither recovery action. `whoami` remains the direct identity command and `outdated` remains
+the installed-update check.
+
 ## 🚢 Publishing
 
 ```bash
@@ -611,6 +649,7 @@ Update mechanism:
 | `skillhub list [--agent <profile>] [--dir <path>] [--registry <url>] [--json]` | List installed skills |
 | `skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
 | `skillhub doctor [--json]` | Scan project metadata and merge into inventory, preserving entries outside the scan |
+| `skillhub doctor --health [--offline] [--registry <url>] [--token <token>] [--json]` | Read-only health diagnosis; does not repair inventory or start login |
 | `skillhub publish <path> [--namespace <slug>] [--visibility <v>] [--registry <url>] [--token <token>] [--json]` | Publish a skill |
 | `skillhub sync pull --namespace <slug> [--skill <slug>]... [options]` | Pull explicitly selected skills from a non-global namespace |
 | `skillhub sync <status\|diff\|push> --namespace <slug> [options]` | Inspect or push a non-global namespace workspace |

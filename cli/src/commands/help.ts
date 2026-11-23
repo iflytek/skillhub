@@ -112,9 +112,9 @@ export const commands = {
     ]
   },
   doctor: {
-    summary: 'Scan project and merge into local inventory (preserves entries outside scan scope)',
-    usage: 'skillhub doctor [--json]',
-    examples: ['skillhub doctor', 'skillhub doctor --json']
+    summary: 'Maintain inventory, or run explicit read-only health diagnosis',
+    usage: 'skillhub doctor [--json] | skillhub doctor --health [--offline] [--registry <url>] [--token <token>] [--json]',
+    examples: ['skillhub doctor', 'skillhub doctor --json', 'skillhub doctor --health', 'skillhub doctor --health --offline --json']
   },
   publish: {
     summary: 'Publish a local skill package',
