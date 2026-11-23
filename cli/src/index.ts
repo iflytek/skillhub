@@ -226,7 +226,7 @@ cli
   })
 
 cli
-  .command('update', 'Update CLI to latest version')
+  .command('update', 'Check or update CLI itself')
   .option('--check', 'Check for updates without installing')
   .option('--json', 'Output JSON')
   .action((options: { check?: boolean; json?: boolean }) => {
@@ -293,7 +293,7 @@ cli
   })
 
 cli
-  .command('repository <action> <repository-id>', 'Install, check or upgrade skills from a GitHub repository')
+  .command('repository <action> <repository-id>', 'Install, check or upgrade GitHub repository skills on compatible registries')
   .option('--scope <scope>', 'Install scope: user or project')
   .option('--agent <profile>', 'Agent profile (repeatable)')
   .option('--dir <path>', 'Install directory')
