@@ -44,6 +44,24 @@ describe('bounded registry diagnosis', () => {
     } })
     expect(result.ok).toBe(true); expect(result.checks.find(x => x.id === 'identity')?.status).toBe('warn')
   })
+  test.each(['argument', 'environment', 'stored', 'none'])('%s recovery guidance never interpolates a registry into shell commands', async source => {
+    const home = await fixture()
+    const selected = 'https://registry.example.com/$(uname)'
+    if (source === 'stored') {
+      await mkdir(join(home, '.skillhub'))
+      await writeFile(join(home, '.skillhub/credentials.json'), JSON.stringify({ tokens: { [selected]: token } }))
+    }
+    const result = await runHealth({ registry: selected, ...(source === 'argument' ? { token } : {}) }, {
+      home, env: source === 'environment' ? { SKILLHUB_TOKEN: token } : {}, fetch: async () => new Response(null, { status: 401 })
+    })
+    const next = result.checks.find(x => x.id === 'identity')?.next
+    expect(result.registry).toBe(selected)
+    expect(result.credentialSource).toBe(source)
+    expect(next).toBeDefined()
+    expect(next).not.toContain('$(uname)')
+    expect(next).not.toContain(selected)
+    expect(next).toContain('--registry')
+  })
   test.each([['argument', { token }, {}], ['environment', {}, { SKILLHUB_TOKEN: token }]] as const)('%s token failure identifies its override source', async (source, options, env) => {
     const result = await runHealth({ registry, ...options }, { home: await fixture(), env, fetch: async () => new Response(null, { status: 401 }) })
     expect(result.credentialSource).toBe(source); expect(result.exitCode).toBe(2)
