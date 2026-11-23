@@ -22,7 +22,7 @@
   与 `CliSkillAppService#resolve` 在既有授权之后填充。Controller 测试覆盖同步版本有、非同步版本无。
 - [x] 2.5 Postgres 集成测试：回报带来源 tag → 摄入列落库 → 发布后详情、版本详情、CLI resolve 返回一致；旧摄入为
   `UNRECORDED`；重放回报不改写。
-- [ ] 2.6 `make test-backend-app`（或含 `-am` 的等价 Maven）。
+- [x] 2.6 `make test-backend-app`（或含 `-am` 的等价 Maven）。
 
 ## 3. 生成类型与 Web
 
