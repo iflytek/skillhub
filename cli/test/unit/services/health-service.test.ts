@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdir, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, normalize } from 'node:path'
 import { createTempHome } from '../../helpers/temp-env'
 import { runHealth } from '../../../src/services/health-service'
 import { snapshotSkillDirectory } from '../../../src/services/skill-fingerprint'
@@ -38,7 +38,7 @@ describe('read-only health diagnosis', () => {
     const { home, cwd } = await createTempHome(); homes.push(home, cwd)
     const result = await runHealth({ offline: true }, { env: { ...env, HOME: '', USERPROFILE: home } })
     expect(result.exitCode).toBe(0)
-    expect(result.paths.config).toBe(join(home, '.skillhub/config.json'))
+    expect(normalize(result.paths.config ?? '')).toBe(join(home, '.skillhub/config.json'))
     expect(await readdir(home)).toEqual([])
   })
   test('an unavailable home reports skipped remote checks without any requests', async () => {
