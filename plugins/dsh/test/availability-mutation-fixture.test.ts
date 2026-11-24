@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
@@ -138,13 +139,13 @@ test('availability discovery wait preserves service errors and cancellation with
 
 
 test('availability fixture observes a delayed watcher refresh instead of asserting immediately after commit', async () => {
-  const started = Date.now();
+  const started = performance.now();
   let reads = 0;
   await waitForAvailabilityWinner(async () => {
     reads++;
-    return discoveredWinner(Date.now() - started >= 200 ? '/selected' : '/previous');
+    return discoveredWinner(performance.now() - started >= 200 ? '/selected' : '/previous');
   }, '/selected', new AbortController().signal, { timeoutMs: 2000, pollMs: 20 });
-  expect(Date.now() - started).toBeGreaterThanOrEqual(200);
+  expect(performance.now() - started).toBeGreaterThanOrEqual(200);
   expect(reads).toBeGreaterThan(1);
 });
 
@@ -214,8 +215,37 @@ test('availability success clears the deadline and detaches external cancellatio
 
 test('availability rejects a valid read that crosses the deadline before timers can run', async () => {
   await expect(waitForAvailabilityWinner(async () => {
-    const until = Date.now() + 20;
-    while (Date.now() < until) { /* Simulate a reader monopolizing the event loop. */ }
+    const until = performance.now() + 20;
+    while (performance.now() < until) { /* Simulate a reader monopolizing the event loop. */ }
     return discoveredWinner('/selected');
   }, '/selected', new AbortController().signal, { timeoutMs: 5 })).rejects.toHaveProperty('code', 'DISCOVERY_TIMEOUT');
+});
+
+
+test('fixture elapsed waits survive wall-clock changes in an isolated process', () => {
+  const module = new URL('./integration/skill-availability-fixture.mjs', import.meta.url).href;
+  const script = `
+    import assert from 'node:assert/strict';
+    import { join } from 'node:path';
+    import { waitForAvailabilityRuntime, waitForAvailabilityWinner } from ${JSON.stringify(module)};
+    const original = Date.now;
+    let offset = 0;
+    Date.now = () => original() + offset;
+    let reads = 0;
+    await waitForAvailabilityRuntime(() => {
+      offset += 60000;
+      return ++reads < 3 ? { state: 'starting' } : { state: 'ready', hostInstanceId: 'fixture' };
+    }, new AbortController().signal, { timeoutMs: 2000, pollMs: 1 });
+    assert.equal(reads, 3);
+    reads = 0;
+    offset = 0;
+    await waitForAvailabilityWinner(async () => {
+      offset += reads === 0 ? -60000 : 180000;
+      const path = ++reads < 3 ? '/previous' : '/selected';
+      return { snapshot: { complete: true, skills: [{ name: 'document-helper' }] }, winner: { name: 'document-helper', path: join(path, 'SKILL.md'), resourceBase: { kind: 'directory', path } } };
+    }, '/selected', new AbortController().signal, { timeoutMs: 2000, pollMs: 1 });
+    assert.equal(reads, 3);
+  `;
+  const result = spawnSync(process.execPath, ['--eval', script], { encoding: 'utf8', timeout: 10000 });
+  expect(result.status, result.stderr).toBe(0);
 });
