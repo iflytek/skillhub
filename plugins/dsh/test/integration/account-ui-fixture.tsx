@@ -13,8 +13,13 @@ import type { SkillHubConfig } from '../../src/host/types.js';
 
 // Isolated UI fixture: no real service, credentials, or filesystem writes.
 let identity: { handle: string; displayName: string } | null = null;
+let uploadsEmpty = false;
 const spaces = [{ id: 1, slug: 'design', displayName: '设计团队', type: 'TEAM', status: 'ACTIVE', currentUserRole: 'ADMIN' },
-  ...Array.from({ length: 11 }, (_, i) => ({ id: i + 2, slug: `team-${i + 2}`, displayName: `团队 ${i + 2}`, type: 'TEAM', status: 'ACTIVE', currentUserRole: 'MEMBER' }))];
+  ...Array.from({ length: 11 }, (_, i) => ({ id: i + 2, slug: `team-${i + 2}`, displayName: `团队 ${i + 2}`, type: 'TEAM', status: 'ACTIVE', currentUserRole: 'MEMBER' })),
+  { id: 13, slug: 'e2e-dsh-api-archived-fixture', displayName: 'DSH ownership retest · 示例归档空间', type: 'TEAM', status: 'ARCHIVED', currentUserRole: 'MEMBER' },
+  { id: 14, slug: 'global', displayName: '全局空间', type: 'GLOBAL', status: 'ACTIVE', currentUserRole: 'MEMBER' },
+  { id: 15, slug: 'frozen-team', displayName: '冻结团队', type: 'TEAM', status: 'FROZEN', currentUserRole: 'ADMIN' },
+  { id: 16, slug: 'catalog', displayName: '目录空间', type: 'CATALOG', status: 'ACTIVE', currentUserRole: 'ADMIN' }];
 const api = {
   accountIdentity: () => identity,
   connectAccount: async (_revision: string, token: string) => {
@@ -25,10 +30,12 @@ const api = {
   },
   disconnectAccount: () => { identity = null; return true; },
   accountNamespaces: async () => { await new Promise(resolve => setTimeout(resolve, 200)); return spaces; },
-  accountOwned: () => ({ items: [{ id: 1, slug: 'example', displayName: '示例技能', visibility: 'PRIVATE', status: 'ACTIVE' }], total: 1 }),
-  accountMembers: () => ({ items: [{ userId: 'member', displayName: '团队成员', role: 'MEMBER' }], total: 1 }),
+  accountOwned: (_revision: string, ns: string) => ns === 'global' || ns === 'design' && uploadsEmpty ? { items: [], total: 0 } : ({ items: [{ id: 1, slug: 'example', displayName: '示例技能', visibility: 'PRIVATE', status: 'ACTIVE' }], total: 1 }),
+  accountTeam: () => ({ items: [{ namespace: 'design', slug: 'example', version: '1.0.0', versionId: 1 }], nextCursor: null }),
+  accountMembers: (_revision: string, ns: string) => ns === 'design' ? { items: [{ userId: 'usr_11111111-2222-4333-8444-555555555555', displayName: '空间所有者', role: 'OWNER' }, { userId: 'fixture-user', displayName: '演示用户', role: 'ADMIN' }, { userId: 'usr_66666666-7777-4888-9999-aaaaaaaaaaaa', displayName: '团队成员', role: 'MEMBER' }], total: 3 }
+    : { items: [{ userId: 'usr_11111111-2222-4333-8444-555555555555', displayName: '空间所有者', role: 'OWNER' }, { userId: 'fixture-user', displayName: '演示用户', role: ns === 'frozen-team' ? 'ADMIN' : 'MEMBER' }], total: 2 },
   accountCandidates: () => [{ userId: 'candidate', displayName: '候选用户', email: 'candidate@example.test' }],
-  changeAccountMember: async () => { await new Promise(resolve => setTimeout(resolve, 250)); return true; },
+  changeAccountMember: async () => { await new Promise(resolve => setTimeout(resolve, 250)); uploadsEmpty = true; return true; },
   deleteAccountSkill: () => true,
   inspectUpload: () => ({ slug: 'example', existing: null }),
   publishUpload: () => ({ namespace: 'design', slug: 'example', version: '1.0.0', visibility: 'PRIVATE' }),

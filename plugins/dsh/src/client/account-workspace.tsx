@@ -4,10 +4,10 @@ import { createPortal } from 'react-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import type { OwnedSkill } from '../host/account-types.js';
-import { AccountDialog, AccountError, valueOf, roleLabels, type AccountRemote } from './account-common.js';
+import { AccountDialog, AccountError, valueOf, roleLabels, namespaceStatusLabels, namespaceTypeLabels, type AccountRemote } from './account-common.js';
 import { SpacePage } from './account-space.js';
 import { UploadSkill } from './account-upload.js';
-import { Button, Input } from './ui.js';
+import { Badge, Button, Input } from './ui.js';
 import { SkillWebsiteLink } from './skill-website-link.js';
 import { AppearanceToggle } from './appearance-toggle.js';
 
@@ -80,15 +80,15 @@ export function AccountWorkspace({ remote, revision, source, toolbar, primary, s
     </>, toolbar)}
     {primary && createPortal(<Button variant="default" onClick={() => show(identity ? { upload: true } : 'login')}>上传技能</Button>, primary)}
     {error && !modal && <AccountError error={error} />}
-    {screen && <section className="astron-sh-account-page"><nav aria-label="当前位置"><Button onClick={() => navigate(null)}>技能广场</Button>
-      {screen.space && <Button onClick={() => navigate({})}>我的命名空间</Button>}</nav>
-      {screen.space ? <h2 ref={heading} tabIndex={-1}>@{screen.space}</h2> : <h1 ref={heading} tabIndex={-1}>我的命名空间</h1>}
+    {screen && <section className="astron-sh-account-page"><nav className="astron-sh-account-breadcrumbs" aria-label="当前位置"><Button variant="ghost" size="sm" onClick={() => navigate(null)}>技能广场</Button><span aria-hidden="true">/</span>
+      {screen.space ? <><Button variant="ghost" size="sm" onClick={() => navigate({})}>我的命名空间</Button><span aria-hidden="true">/</span><span aria-current="page">空间详情</span></> : <span aria-current="page">我的命名空间</span>}</nav>
+      {(!screen.space || !selected) && <header className="astron-sh-namespace-heading"><div><h1 ref={heading} tabIndex={-1}>{screen.space ? '命名空间' : '我的命名空间'}</h1><p>{screen.space ? '查看空间内的技能与成员。' : '查看所属空间，管理空间内的技能与成员。'}</p></div>{!screen.space && spaces.data && !spaces.isError && <Badge variant="neutral">{spaces.data.length} 个空间</Badge>}</header>}
       {!identity ? <Button onClick={() => show('login')}>登录后查看</Button> : <><AccountError error={spaces.error} retry={() => { void spaces.refetch(); }} />
         {spaces.isLoading ? <p>正在读取命名空间…</p> : spaces.isError ? null : screen.space ? selected
           ? <SpacePage source={source} key={selected.slug} space={selected} revision={revision} remote={remote} handle={identity.handle}
             upload={row => show({ upload: true, initial: selected.slug, row })} open={(slug, version, skillId, versionId) => open(selected.slug, slug, version, skillId, versionId)} /> : <p>当前账号无法访问该命名空间。</p>
-          : spaces.data?.length ? spaces.data.map(ns => <article key={ns.id}><div><strong>{ns.displayName}</strong><p>@{ns.slug} · {ns.status} · {roleLabels[ns.currentUserRole]}</p></div>
-            <Button onClick={() => navigate({ space: ns.slug })}>进入空间</Button></article>) : <p>当前账号还没有所属命名空间。</p>}</>}
+          : spaces.data?.length ? <ul className="astron-sh-namespace-list" aria-label="所属命名空间">{spaces.data.map(ns => <li key={ns.id} className="astron-sh-namespace-list-row"><div className="astron-sh-namespace-identity"><strong>{ns.displayName || ns.slug}</strong><p>@{ns.slug} · {namespaceTypeLabels[ns.type] ?? '命名空间'}</p></div>
+            <div className="astron-sh-account-row-actions"><Badge variant={ns.status === 'ACTIVE' ? 'neutral' : 'warning'}>{namespaceStatusLabels[ns.status] ?? '状态未知'}</Badge><span className="astron-sh-namespace-role">{roleLabels[ns.currentUserRole]}</span><Button size="sm" onClick={() => navigate({ space: ns.slug })}>进入空间</Button></div></li>)}</ul> : <p className="astron-sh-namespace-empty">当前账号还没有所属命名空间。</p>}</>}
     </section>}
     {(modal === 'login' || modal === 'settings') && <AccountDialog close={() => setModal(null)} returnFocus={accountMenu.current} busy={busy}
       title={modal === 'login' ? '登录 SkillHub' : '个人设置'} description={modal === 'login' ? '使用当前来源签发的个人 API Token 登录。' : '管理当前来源的个人连接。'} closeLabel={modal === 'settings' ? '完成' : undefined}

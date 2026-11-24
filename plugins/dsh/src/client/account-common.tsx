@@ -11,6 +11,8 @@ export function valueOf<T>(result: RemoteResult<T>): T {
 }
 export const visibilityLabels: Record<Visibility, string> = { PRIVATE: '私有', NAMESPACE_ONLY: '仅命名空间可见', PUBLIC: '公开' };
 export const roleLabels = { ADMIN: '管理员', MEMBER: '成员', OWNER: '所有者' };
+export const namespaceStatusLabels: Record<string, string> = { ACTIVE: '正常', FROZEN: '已冻结', ARCHIVED: '已归档' };
+export const namespaceTypeLabels: Record<string, string> = { TEAM: '团队空间', GLOBAL: '全局空间', CATALOG: '目录空间' };
 // Native selects avoid nested modal layers inside account dialogs.
 export function AccountSelect({ label, value, disabled, options, onValueChange }: {
   label: string; value: string; disabled?: boolean; options: { value: string; label: string }[]; onValueChange(value: string): void;
