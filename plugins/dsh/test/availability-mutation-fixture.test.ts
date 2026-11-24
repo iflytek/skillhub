@@ -4,11 +4,42 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error Development-only observer fixture has no TypeScript declarations.
-import { waitForAvailabilityWinner, withRenamedAvailabilityPath } from './integration/skill-availability-fixture.mjs';
+import { waitForAvailabilityRuntime, waitForAvailabilityWinner, withRenamedAvailabilityPath } from './integration/skill-availability-fixture.mjs';
 // @ts-expect-error Development-only Node script has no TypeScript declarations.
 import { safeAvailabilityCheckpoint } from '../scripts/smoke-native-host.mjs';
 
 function checkpoint(): { scenario: string; checkpoint: string; assertion: string; restoreOsCode?: string } { return { scenario: 'directory-missing', checkpoint: 'mutation', assertion: 'none' }; }
+
+test('availability fixture waits for a ready runtime with a Host identity before the single install', async () => {
+  const sequence = [null, { state: 'starting' }, { state: 'ready', hostInstanceId: null }, { state: 'ready', hostInstanceId: 'fixture-host' }];
+  let reads = 0;
+  await waitForAvailabilityRuntime(() => sequence[reads++], new AbortController().signal, { timeoutMs: 1000, pollMs: 1 });
+  expect(reads).toBe(4);
+});
+
+test('availability fixture fails immediately on a terminal runtime state', async () => {
+  for (const state of ['failed', 'closing', 'disposed']) {
+    let reads = 0;
+    await expect(waitForAvailabilityRuntime(() => { reads++; return { state }; }, new AbortController().signal)).rejects.toMatchObject({ code: 'RUNTIME_NOT_READY' });
+    expect(reads).toBe(1);
+  }
+});
+
+test('availability fixture bounds startup and observes cancellation without issuing an install', async () => {
+  await expect(waitForAvailabilityRuntime(() => ({ state: 'starting' }), new AbortController().signal, { timeoutMs: 10, pollMs: 1 })).rejects.toMatchObject({ code: 'RUNTIME_READY_TIMEOUT' });
+  const abort = new AbortController();
+  const work = waitForAvailabilityRuntime(() => { abort.abort(); return null; }, abort.signal, { pollMs: 1000 });
+  await expect(work).rejects.toMatchObject({ name: 'AbortError' });
+  const readyAbort = new AbortController();
+  const reason = new Error('fixture cancelled');
+  await expect(waitForAvailabilityRuntime(() => { readyAbort.abort(reason); return { state: 'ready', hostInstanceId: 'fixture-host' }; }, readyAbort.signal)).rejects.toBe(reason);
+});
+
+test('runtime startup diagnostics expose only a whitelisted state', () => {
+  const value = { scenario: 'user-install', checkpoint: 'runtime-ready', assertion: 'none', runtimeState: 'starting', hostInstanceId: '/private/sentinel' };
+  expect(safeAvailabilityCheckpoint(value)).toEqual({ scenario: 'user-install', checkpoint: 'runtime-ready', assertion: 'none', runtimeState: 'starting' });
+  expect(safeAvailabilityCheckpoint({ ...value, runtimeState: '/private/sentinel' })).toEqual({ scenario: 'user-install', checkpoint: 'runtime-ready', assertion: 'none' });
+});
 
 test('failed initial rename never restores an absent backup or replaces the original error', async () => {
   const state = checkpoint();

@@ -39,6 +39,24 @@ export async function withRenamedAvailabilityPath(checkpoint, from, to, inspect,
   }
 }
 
+/** Each probe owns a fresh Host; a fixed startup delay cannot establish runtime readiness. */
+export async function waitForAvailabilityRuntime(read, signal, { timeoutMs = 20000, pollMs = 100 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    signal.throwIfAborted();
+    const status = read();
+    signal.throwIfAborted();
+    if (Date.now() >= deadline) {
+      throw Object.assign(new Error('Fixture local runtime did not become ready before the deadline.'), { code: 'RUNTIME_READY_TIMEOUT' });
+    }
+    if (status?.state === 'ready' && status.hostInstanceId) return;
+    if (status && !['starting', 'ready'].includes(status.state)) {
+      throw Object.assign(new Error('Fixture local runtime cannot become ready.'), { code: 'RUNTIME_NOT_READY' });
+    }
+    await delay(Math.min(pollMs, Math.max(1, deadline - Date.now())), undefined, { signal });
+  }
+}
+
 /** File commit and official watcher discovery are independent; wait only on read-only observations. */
 export async function waitForAvailabilityWinner(read, directory, signal, { timeoutMs = 15000, pollMs = 100 } = {}) {
   signal.throwIfAborted();
@@ -200,6 +218,13 @@ async function run(ctx, root, signal, checkpoint) {
     return { sourceRevision, itemKey: item.itemKey };
   }
   checkpoint.scenario = 'user-install';
+  mark('runtime-ready');
+  await waitForAvailabilityRuntime(() => {
+    const status = ctx.skillhub.getLocalRuntimeStatus();
+    checkpoint.runtimeState = status?.state ?? 'absent';
+    return status;
+  }, signal);
+  delete checkpoint.runtimeState;
   await install('user');
   checkpoint.scenario = 'user-winner';
   await check(await reference('user'), { association: 'managed-reference', scope: 'user', integrity: 'verified', discovery: 'winner', name: 'document-helper' });
