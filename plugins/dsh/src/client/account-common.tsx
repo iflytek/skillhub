@@ -22,7 +22,7 @@ export function AccountSelect({ label, value, disabled, options, onValueChange }
   </select>;
 }
 export function AccountDialog({ title, description, close, busy = false, children, actions, closeLabel, returnFocus }: {
-  title: string; description: string; close(): void; busy?: boolean; children: ReactNode; actions?: ReactNode; closeLabel?: string; returnFocus?: HTMLElement | null;
+  title: string; description: string; close(): void; busy?: boolean; children: ReactNode; actions?: ReactNode; closeLabel?: string; returnFocus?: HTMLElement | null | (() => HTMLElement | null);
 }) {
   const [anchor, setAnchor] = useState<HTMLSpanElement | null>(null);
   const [opener] = useState(() => typeof document === 'undefined' ? null : document.activeElement);
@@ -33,7 +33,7 @@ export function AccountDialog({ title, description, close, busy = false, childre
         ?? event.target.querySelector<HTMLElement>('[data-account-cancel]');
       if (field) { event.preventDefault(); field.focus(); }
     }} onCloseAutoFocus={event => {
-      const target = returnFocus ?? opener;
+      const target = (typeof returnFocus === 'function' ? returnFocus() : returnFocus) ?? opener;
       if (target instanceof HTMLElement && target.isConnected) { event.preventDefault(); target.focus(); }
     }}>
       <header className="astron-sh-account-dialog-header"><div><DialogTitle>{title}</DialogTitle><DialogDescription>{description}</DialogDescription></div>

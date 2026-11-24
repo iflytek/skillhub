@@ -146,7 +146,10 @@ try {
     await page.getByRole('button', { name: '删除', exact: true }).click();
     await layout('delete');
     await dialog.getByRole('button', { name: '取消' }).click();
-    await page.getByRole('tab', { name: '成员', exact: true }).click();
+    await page.getByRole('button', { name: '成员管理', exact: true }).focus();
+    await page.getByRole('button', { name: '成员管理', exact: true }).press('Enter');
+    assert.equal(await page.getByRole('tab', { name: '成员', exact: true }).getAttribute('aria-selected'), 'true', 'Space heading opens member management');
+    assert(await page.getByRole('tab', { name: '成员', exact: true }).evaluate(tab => document.activeElement === tab), 'Member management entry moves keyboard focus into the selected section');
     await page.getByText('3 位成员 · 按用户 ID 识别', { exact: true }).waitFor();
     await pageLayout('namespace-members-admin');
     if (width === 1280) {
@@ -183,17 +186,33 @@ try {
     assert(await dialog.getByRole('combobox').isDisabled(), 'Role locked during member write');
     assert(await dialog.getByRole('button', { name: /候选用户/ }).isDisabled(), 'Candidate locked during member write');
     await dialog.waitFor({ state: 'hidden' });
+    await page.getByText('4 位成员 · 按用户 ID 识别', { exact: true }).waitFor();
+    const candidateRow = page.locator('.astron-sh-namespace-member-row').filter({ hasText: '候选用户' });
+    assert(await candidateRow.getByText('成员', { exact: true }).isVisible(), 'Added user appears with the requested member role');
     await page.getByRole('tab', { name: '技能', exact: true }).click();
     await page.getByText('你还没有在此空间上传技能。', { exact: true }).waitFor();
     assert.equal(await page.getByText('已添加成员 candidate', { exact: true }).count(), 0, 'Member feedback does not mask skill empty state');
     await pageLayout('namespace-uploads-empty');
     await page.getByRole('tab', { name: '成员', exact: true }).click();
-    await page.getByRole('button', { name: '修改角色' }).first().click();
+    await candidateRow.getByRole('button', { name: '修改角色', exact: true }).click();
     await layout('member-role');
-    await page.keyboard.press('Escape');
-    await page.getByRole('button', { name: '移除', exact: true }).first().click();
+    await dialog.getByRole('combobox', { name: '成员角色' }).selectOption('ADMIN');
+    await dialog.getByRole('button', { name: '保存角色', exact: true }).click();
+    await dialog.waitFor({ state: 'hidden' });
+    await candidateRow.getByText('管理员', { exact: true }).waitFor();
+    await candidateRow.getByRole('button', { name: '移除', exact: true }).click();
     await layout('remove-member');
-    await dialog.getByRole('button', { name: '取消' }).click();
+    await dialog.getByRole('button', { name: '取消', exact: true }).click();
+    await dialog.waitFor({ state: 'hidden' });
+    await page.waitForFunction(button => document.activeElement === button, await candidateRow.getByRole('button', { name: '移除', exact: true }).elementHandle());
+    assert(await candidateRow.getByRole('button', { name: '移除', exact: true }).evaluate(button => document.activeElement === button), 'Cancel returns focus to the member action');
+    await candidateRow.getByRole('button', { name: '移除', exact: true }).click();
+    await dialog.getByRole('button', { name: '移除成员', exact: true }).click();
+    await dialog.waitFor({ state: 'hidden' });
+    await page.getByText('3 位成员 · 按用户 ID 识别', { exact: true }).waitFor();
+    assert.equal(await candidateRow.count(), 0, 'Removed member disappears after refetch');
+    await page.waitForFunction(() => document.activeElement?.getAttribute('role') === 'tab' && document.activeElement.textContent === '成员');
+    assert(await page.getByRole('tab', { name: '成员', exact: true }).evaluate(tab => document.activeElement === tab), 'Successful removal restores focus to the member section instead of the removed row');
     for (const [name, slug, section, notice] of [
       ['namespace-members-archived', 'e2e-dsh-api-archived-fixture', 'members', '已归档的命名空间'],
       ['namespace-members-readonly', 'team-2', 'members', '当前角色为成员'],
@@ -203,10 +222,18 @@ try {
       await page.getByRole('button', { name: '我的命名空间', exact: true }).click();
       await page.getByRole('list', { name: '所属命名空间' }).getByRole('listitem').filter({ hasText: `@${slug} ·` }).getByRole('button', { name: '进入空间' }).click();
       if (section === 'members') {
-        await page.getByRole('tab', { name: '成员', exact: true }).click();
+        await page.getByRole('button', { name: '成员管理', exact: true }).click();
         await page.getByRole('list', { name: '空间成员', exact: true }).waitFor();
-        assert.equal(await page.getByRole('button', { name: '添加成员', exact: true }).count(), 0, 'Restricted members page exposes no write controls');
-        assert.equal(await page.getByRole('button', { name: '修改角色', exact: true }).count(), 0);
+        const addMember = page.getByRole('button', { name: '添加成员', exact: true });
+        assert(await addMember.isDisabled(), 'Read-only member management remains discoverable but disabled');
+        const reasonId = await addMember.getAttribute('aria-describedby');
+        assert(reasonId && await page.locator(`[id="${reasonId}"]`).isVisible(), 'Disabled action is associated with its visible permission reason');
+        for (const name of ['修改角色', '移除']) {
+          const button = page.locator('.astron-sh-namespace-member-row').filter({ hasText: '演示用户' }).getByRole('button', { name, exact: true });
+          assert(await button.isVisible() && await button.isDisabled(), 'Read-only row action remains visible and disabled');
+        }
+        await addMember.evaluate(button => button.click());
+        assert.equal(await dialog.count(), 0, 'Disabled member action cannot open a mutation dialog');
         assert(await page.getByRole('note').filter({ hasText: notice }).isVisible(), 'Restriction is explained');
         if (slug !== 'team-2') assert.equal(await page.locator('.astron-sh-namespace-heading').getByRole('button', { name: '上传技能', exact: true }).count(), 0, 'Inactive space has no upload action');
       } else {

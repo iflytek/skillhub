@@ -26,7 +26,7 @@ Open **Sign in** in the skill center and enter a personal API token issued by th
 
 Choose **Upload skill**, a namespace from your memberships, a ZIP file, and its visibility. Updates show the current visibility before confirmation. Refresh the version status after submitting. The plugin uses the registry’s CLI publish endpoint. The registry decides when others can access the version.
 
-Under **My namespaces**, view your uploads, installable team skills, and team members. Authors can delete their uploads. Team owners and admins can search for, add, remove, and change the roles of members. Viewing the roster requires `namespace:read`. Managing members requires the explicit `namespace:manage` grant. The server also checks the account’s role.
+Under **My namespaces**, view your uploads, installable team skills, and team members. Use **Member management** beside the space heading to open the roster. Add, role-change, and remove controls remain visible but disabled with a reason for ordinary members and frozen or archived spaces; owners are protected. Restricted tokens may still cause the server to reject an admin's operation. Authors can delete their uploads. Owners and admins of active teams can search for registered users, add them directly, and change or remove memberships. The plugin does not generate invitation links. Managing members requires `namespace:manage`, which includes roster reading. New personal tokens include it by default without a scope selector; existing tokens retain their grants. The server also checks the account’s role.
 
 ## Compact interface and file preview (0.6.3)
 

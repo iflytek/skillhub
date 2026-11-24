@@ -10,10 +10,16 @@ import { ConfigPage } from '../../src/client/config-page.js';
 import { Button } from '../../src/client/ui.js';
 import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client';
 import type { SkillHubConfig } from '../../src/host/types.js';
+import type { AccountMember, MemberMutation } from '../../src/host/account-types.js';
 
 // Isolated UI fixture: no real service, credentials, or filesystem writes.
 let identity: { handle: string; displayName: string } | null = null;
 let uploadsEmpty = false;
+const designMembers: AccountMember[] = [
+  { userId: 'usr_11111111-2222-4333-8444-555555555555', displayName: '空间所有者', role: 'OWNER' },
+  { userId: 'fixture-user', displayName: '演示用户', role: 'ADMIN' },
+  { userId: 'usr_66666666-7777-4888-9999-aaaaaaaaaaaa', displayName: '团队成员', role: 'MEMBER' },
+];
 const spaces = [{ id: 1, slug: 'design', displayName: '设计团队', type: 'TEAM', status: 'ACTIVE', currentUserRole: 'ADMIN' },
   ...Array.from({ length: 11 }, (_, i) => ({ id: i + 2, slug: `team-${i + 2}`, displayName: `团队 ${i + 2}`, type: 'TEAM', status: 'ACTIVE', currentUserRole: 'MEMBER' })),
   { id: 13, slug: 'e2e-dsh-api-archived-fixture', displayName: 'DSH ownership retest · 示例归档空间', type: 'TEAM', status: 'ARCHIVED', currentUserRole: 'MEMBER' },
@@ -32,10 +38,22 @@ const api = {
   accountNamespaces: async () => { await new Promise(resolve => setTimeout(resolve, 200)); return spaces; },
   accountOwned: (_revision: string, ns: string) => ns === 'global' || ns === 'design' && uploadsEmpty ? { items: [], total: 0 } : ({ items: [{ id: 1, slug: 'example', displayName: '示例技能', visibility: 'PRIVATE', status: 'ACTIVE' }], total: 1 }),
   accountTeam: () => ({ items: [{ namespace: 'design', slug: 'example', version: '1.0.0', versionId: 1 }], nextCursor: null }),
-  accountMembers: (_revision: string, ns: string) => ns === 'design' ? { items: [{ userId: 'usr_11111111-2222-4333-8444-555555555555', displayName: '空间所有者', role: 'OWNER' }, { userId: 'fixture-user', displayName: '演示用户', role: 'ADMIN' }, { userId: 'usr_66666666-7777-4888-9999-aaaaaaaaaaaa', displayName: '团队成员', role: 'MEMBER' }], total: 3 }
+  accountMembers: (_revision: string, ns: string) => ns === 'design' ? { items: [...designMembers], total: designMembers.length }
     : { items: [{ userId: 'usr_11111111-2222-4333-8444-555555555555', displayName: '空间所有者', role: 'OWNER' }, { userId: 'fixture-user', displayName: '演示用户', role: ns === 'frozen-team' ? 'ADMIN' : 'MEMBER' }], total: 2 },
   accountCandidates: () => [{ userId: 'candidate', displayName: '候选用户', email: 'candidate@example.test' }],
-  changeAccountMember: async () => { await new Promise(resolve => setTimeout(resolve, 250)); uploadsEmpty = true; return true; },
+  changeAccountMember: async (_revision: string, ns: string, command: MemberMutation) => {
+    if (ns !== 'design') throw new Error('Read-only fixture namespace');
+    await new Promise(resolve => setTimeout(resolve, 250));
+    if (command.action === 'add') designMembers.push({ userId: command.userId, displayName: '候选用户', role: command.role });
+    else {
+      const index = designMembers.findIndex(member => member.userId === command.userId);
+      if (index < 0 || designMembers[index]!.role === 'OWNER') throw new Error('Invalid fixture member');
+      if (command.action === 'remove') designMembers.splice(index, 1);
+      else designMembers[index] = { ...designMembers[index]!, role: command.role };
+    }
+    uploadsEmpty = true;
+    return true;
+  },
   deleteAccountSkill: () => true,
   inspectUpload: () => ({ slug: 'example', existing: null }),
   publishUpload: () => ({ namespace: 'design', slug: 'example', version: '1.0.0', visibility: 'PRIVATE' }),
