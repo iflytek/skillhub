@@ -54,4 +54,14 @@ public class AuditLogService {
                 requestId,
                 Instant.now(clock)));
     }
+
+    @Transactional
+    public AuditLog recordOrganizationAdministration(String actorUserId,
+                                                     String action,
+                                                     String organizationId,
+                                                     String targetRef,
+                                                     String requestId) {
+        return auditLogRepository.save(AuditLog.organizationSuccess(
+                actorUserId, action, organizationId, targetRef, requestId, Instant.now(clock)));
+    }
 }

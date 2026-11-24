@@ -22,7 +22,7 @@ public class OrganizationAuthorizationService {
         this.authorizationPolicy = authorizationPolicy;
     }
 
-    public void requireAllowed(
+    public Set<OrganizationRole> requireAllowed(
             String organizationId,
             String userId,
             OrganizationAdministrativeAction action
@@ -38,5 +38,6 @@ public class OrganizationAuthorizationService {
                 .map(OrganizationRoleBinding::getRole)
                 .collect(Collectors.toUnmodifiableSet());
         authorizationPolicy.requireAllowed(roles, action);
+        return roles;
     }
 }
