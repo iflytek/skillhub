@@ -1,6 +1,7 @@
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 import { z } from 'zod'
+import type { GithubSource } from '../shared/github-source'
 
 const repositoryInstallPlanSchema = z.object({
   repositoryId: z.string().regex(/^[1-9]\d*$/),
@@ -65,6 +66,8 @@ export interface ResolveResponse {
   versionId: number
   fingerprint: string
   downloadUrl: string
+  /** Present only for GitHub-synced versions on registries that record provenance. */
+  githubSource?: GithubSource | null
 }
 
 export interface DeleteResponse {

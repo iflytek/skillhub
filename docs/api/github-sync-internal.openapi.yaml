@@ -382,6 +382,7 @@ paths:
                 uploadId: { type: string, format: uuid, description: Java 签发的暂存对象标识；Go 不回报下载 URL。 }
                 sizeBytes: { type: integer, format: int64, minimum: 1 }
                 sha256: { $ref: '#/components/schemas/Sha256' }
+                sourceTag: { $ref: '#/components/schemas/SourceTag' }
       responses:
         '202':
           description: 摄入记录已持久化；并非内容校验、审核或发布成功。相同业务键与摘要重放返回原 ingestionId。
@@ -794,6 +795,19 @@ components:
           enum: [AUTH_INVALID, INVALID_REQUEST, PROTOCOL_UNSUPPORTED, LEASE_EXPIRED, LEASE_STALE, COMMIT_MISMATCH, PATH_INVALID, PATH_IGNORED, OBJECT_INVALID, DIGEST_MISMATCH, PACKAGE_TOO_LARGE, RESULT_CONFLICT, CHECKPOINT_CONFLICT, CANDIDATE_BUDGET_EXCEEDED, COVERAGE_UNSUPPORTED, REPORT_UNSUPPORTED, BACKPRESSURE_ACTIVE, RETRYABLE_FAILURE, GITHUB_RATE_LIMITED, SOURCE_UNREADABLE]
         message: { type: string }
         retryAt: { type: string, format: date-time }
+    SourceTag:
+      type: object
+      description: >-
+        可选的只读来源信息：固定 commit 与仓库级 semver tag 的关系，每个仓库任务算一次并随每个包回报。
+        Java 只在创建摄入记录时保存，重放不改写；格式不合法时存为 UNKNOWN/INVALID_REPORT，不拒收包。
+        省略表示未记录（旧执行器）。判定规则见 openspec/changes/record-github-sync-source-tag。
+      required: [status]
+      properties:
+        status: { type: string, enum: [EXACT, AFTER_TAG, NO_TAG, UNKNOWN] }
+        tag: { type: string, maxLength: 128, description: 顶层 semver tag 名，仅 EXACT、AFTER_TAG。 }
+        tagCommitSha: { $ref: '#/components/schemas/CommitSha' }
+        commitsAfterTag: { type: integer, minimum: 0, description: EXACT 为 0，AFTER_TAG 至少为 1。 }
+        reason: { type: string, pattern: '^[A-Z][A-Z_]{0,47}$', description: 仅 UNKNOWN，受控原因码。 }
     LeaseProof:
       type: object
       required: [generation, token]

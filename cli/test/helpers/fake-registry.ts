@@ -78,6 +78,8 @@ export interface FakeSkill {
   fingerprint?: string
   /** Raw bytes served as the ZIP body. Defaults to a minimal valid ZIP. */
   zipBytes?: Uint8Array
+  /** GitHub provenance returned by resolve; omitted when undefined. */
+  githubSource?: Record<string, unknown>
 }
 
 function resolveSkillFingerprint(skill: FakeSkill): string {
@@ -415,7 +417,8 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
             version,
             versionId: skill.versionId ?? 1,
             fingerprint: resolveSkillFingerprint(skill),
-            downloadUrl: buildDownloadUrl(baseUrl, namespace, slug, version)
+            downloadUrl: buildDownloadUrl(baseUrl, namespace, slug, version),
+            ...(skill.githubSource ? { githubSource: skill.githubSource } : {})
           }
         })
       }

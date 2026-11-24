@@ -12,5 +12,7 @@ public record SkillVersionDetailResponse(
         Instant publishedAt,
         String parsedMetadataJson,
         String manifestJson,
-        ComplianceSnapshotResponse complianceSnapshot
+        ComplianceSnapshotResponse complianceSnapshot,
+        // Present only for published GitHub-synced versions.
+        GithubSkillSourceResponse githubSource
 ) {}

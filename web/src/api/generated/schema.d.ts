@@ -10323,6 +10323,24 @@ export interface components {
             errorCode?: string;
             errorArgs?: string[];
         };
+        GithubSkillSourceResponse: {
+            ownerLogin?: string;
+            repositoryName?: string;
+            skillPath?: string;
+            commitSha?: string;
+            /** Format: int32 */
+            syncRevision?: number;
+            licenseStatus?: string;
+            licenseDocuments?: components["schemas"]["LicenseDocument"][];
+            upstreamTag: components["schemas"]["UpstreamTag"];
+            /** @description Version declared in this Skill's SKILL.md, independent of repository tags */
+            declaredVersion?: string | null;
+        };
+        LicenseDocument: {
+            scope?: string;
+            path?: string;
+            bundled?: boolean;
+        };
         SkillVersionDetailResponse: {
             /** Format: int64 */
             id?: number;
@@ -10338,6 +10356,18 @@ export interface components {
             parsedMetadataJson?: string;
             manifestJson?: string;
             complianceSnapshot?: components["schemas"]["ComplianceSnapshotResponse"];
+            githubSource?: components["schemas"]["GithubSkillSourceResponse"];
+        };
+        UpstreamTag: {
+            /** @enum {string} */
+            status: "EXACT" | "AFTER_TAG" | "NO_TAG" | "UNKNOWN" | "UNRECORDED";
+            /** @enum {string} */
+            scope: "REPOSITORY";
+            tag?: string | null;
+            tagCommitSha?: string | null;
+            /** Format: int32 */
+            commitsAfterTag?: number | null;
+            reason?: string | null;
         };
         ApiResponseSkillVersionCompareResponse: {
             /** Format: int32 */
@@ -10527,21 +10557,6 @@ export interface components {
             requestId?: string;
             errorCode?: string;
             errorArgs?: string[];
-        };
-        GithubSkillSourceResponse: {
-            ownerLogin?: string;
-            repositoryName?: string;
-            skillPath?: string;
-            commitSha?: string;
-            /** Format: int32 */
-            syncRevision?: number;
-            licenseStatus?: string;
-            licenseDocuments?: components["schemas"]["LicenseDocument"][];
-        };
-        LicenseDocument: {
-            scope?: string;
-            path?: string;
-            bundled?: boolean;
         };
         SkillDetailResponse: {
             /** Format: int64 */
@@ -13054,6 +13069,7 @@ export interface components {
             versionId: number;
             fingerprint: string;
             downloadUrl: string;
+            githubSource?: components["schemas"]["GithubSkillSourceResponse"];
         };
         ApiResponseCliSearchResponse: {
             /** Format: int32 */

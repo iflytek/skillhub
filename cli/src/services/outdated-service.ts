@@ -4,6 +4,7 @@ import { inspectTargets, matchesTargetFilters } from './upgrade-service'
 import { classifySkillVersionChange, type SkillVersionChange } from './skill-version-order'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
+import type { GithubSource } from '../shared/github-source'
 
 export interface OutdatedOptions {
   /** Effective registry; only installations from this source are checked, as in `list`. */
@@ -32,6 +33,8 @@ export interface OutdatedItem {
   localState: OutdatedLocalState
   localReason?: string
   changedFiles: string[]
+  /** GitHub provenance of the remote version, when the registry records it. */
+  remoteSource?: GithubSource
 }
 
 export interface OutdatedReport {
@@ -100,6 +103,7 @@ export async function findOutdatedSkills(options: OutdatedOptions): Promise<Outd
         remoteVersion: remote.resolved.version,
         change,
         ...(change === 'unknown' ? { reason: 'cannot determine version order' } : {}),
+        ...(remote.resolved.githubSource ? { remoteSource: remote.resolved.githubSource } : {}),
         ...(await inspectLocalState(item, target))
       })
     }
@@ -136,6 +140,8 @@ async function inspectLocalState(item: InventoryItem, target: InventoryTarget): 
   localState: OutdatedLocalState
   localReason?: string
   changedFiles: string[]
+  /** GitHub provenance of the remote version, when the registry records it. */
+  remoteSource?: GithubSource
 }> {
   try {
     const inspection = await inspectTargets(item, [target])
