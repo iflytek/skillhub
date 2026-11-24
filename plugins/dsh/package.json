@@ -9,6 +9,7 @@
     "build": "bun run scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "test:account-ui": "bun test/integration/account-ui-browser.mjs",
     "probe:registry": "bun run scripts/probe-registry.ts",
     "check": "bun run build && bun run typecheck && bun run lint && bun test",
     "lint": "node ../../cli/node_modules/eslint/bin/eslint.js --resolve-plugins-relative-to ../../cli src scripts test --ext .ts,.tsx,.mjs"

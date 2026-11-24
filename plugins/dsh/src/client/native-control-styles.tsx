@@ -1,4 +1,5 @@
 /** Scoped shadcn component styles; never reset the DSH document or other plugins. */
+import { accountStyles } from './account-styles.js';
 export function NativeControlStyles() {
   return <style>{`
 .astron-sh-management-notice{position:fixed;top:20px;right:20px;z-index:1100;display:flex;align-items:flex-start;gap:12px;width:min(360px,calc(100vw - 32px));box-sizing:border-box;padding:14px;border:1px solid var(--astron-sh-border);border-radius:8px;background:var(--astron-sh-bg);color:var(--astron-sh-fg);box-shadow:0 4px 18px #0003;font-size:13px;overflow-wrap:anywhere}
@@ -337,5 +338,6 @@ export function NativeControlStyles() {
 @container(max-width:1119px){.skillhub-controls .astron-sh-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.skillhub-controls .astron-sh-detail-layout{grid-template-columns:minmax(0,1fr) 280px;gap:24px}}
 @container(max-width:839px){.skillhub-controls .astron-sh-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.skillhub-controls .astron-sh-detail-layout{display:flex;flex-direction:column}.skillhub-controls .astron-sh-detail-aside{position:static;order:-1}}
 @container(max-width:579px){.skillhub-controls .astron-sh-card-grid{grid-template-columns:1fr}.skillhub-controls .astron-sh-skill-card{min-height:172px}.skillhub-controls .astron-sh-skill-heading h3{font-size:14px}}
+${accountStyles}
 `}</style>;
 }

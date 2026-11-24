@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AccountDialog, AccountError, roleLabels, valueOf, visibilityLabels, type AccountRemote } from './account-common.js';
+import { AccountDialog, AccountError, AccountSelect, roleLabels, valueOf, visibilityLabels, type AccountRemote } from './account-common.js';
 import type { AccountMember, AccountNamespace, EditableRole, MemberCandidate, MemberMutation, OwnedSkill } from '../host/account-types.js';
-import { Button, Input, SelectField } from './ui.js';
+import { Button, Input } from './ui.js';
 
 type Action = { type: 'add' } | { type: 'role' | 'remove'; member: AccountMember } | { type: 'delete'; skill: OwnedSkill };
 interface Props { source: string; remote: AccountRemote; revision: string; space: AccountNamespace; handle: string; upload(skill?: OwnedSkill): void; open(slug: string, version: string, skillId?: number, versionId?: number): void }
@@ -60,30 +60,31 @@ export function SpacePage({ source, remote, revision, space, handle, upload, ope
     <p role="status">{notice || (result.isPending ? '正在读取…' : !result.isError && !result.data?.items.length ? '暂无记录' : '')}</p>
     <AccountError error={result.error} retry={() => { void result.refetch(); }} />
     {!result.isError && tab === 'owned' && owned.data?.items.map(skill => <article key={skill.id}>
-      <div><strong>{skill.displayName || skill.slug}</strong><p>{skill.slug} · {visibilityLabels[skill.visibility]} · {skill.status}</p></div><div>
+      <div><strong>{skill.displayName || skill.slug}</strong><p>{skill.slug} · {visibilityLabels[skill.visibility]} · {skill.status}</p></div><div className="astron-sh-account-row-actions">
       {skill.publishedVersion && <Button onClick={() => open(skill.slug, skill.publishedVersion!.version, skill.id, skill.publishedVersion!.id)}>查看</Button>}
       {space.status === 'ACTIVE' && <Button onClick={() => upload(skill)}>上传新版本</Button>}
       <Button onClick={() => show({ type: 'delete', skill })}>删除</Button></div></article>)}
     {!result.isError && tab === 'team' && skills.data?.items.map(skill => <article key={skill.versionId}><strong>{skill.slug}</strong><div>{skill.version} <Button onClick={() => open(skill.slug, skill.version, undefined, skill.versionId)}>查看技能</Button></div></article>)}
     {!result.isError && tab === 'members' && roster.data?.items.map(member => <article key={member.userId}><div><strong>{member.displayName || member.userId}{member.userId === handle && '（你）'}</strong><p>{member.userId}</p></div>
-      <div>{roleLabels[member.role]} {canManage && member.role !== 'OWNER' && <><Button onClick={() => show({ type: 'role', member })}>修改角色</Button><Button onClick={() => show({ type: 'remove', member })}>移除</Button></>}</div></article>)}
+      <div className="astron-sh-account-row-actions"><span>{roleLabels[member.role]}</span> {canManage && member.role !== 'OWNER' && <><Button onClick={() => show({ type: 'role', member })}>修改角色</Button><Button onClick={() => show({ type: 'remove', member })}>移除</Button></>}</div></article>)}
     {(page > 0 || more) && <nav aria-label="分页"><Button disabled={!page} onClick={() => setPage(page - 1)}>上一页</Button><span>第 {page + 1} 页</span><Button disabled={!more} onClick={() => {
       if (tab === 'team' && skills.data?.nextCursor) setCursors([...cursors.slice(0, page + 1), skills.data.nextCursor]); setPage(page + 1);
     }}>下一页</Button></nav>}
     {action && <AccountDialog close={() => setAction(undefined)} busy={change.isPending}
       title={{ add: '添加成员', role: '修改角色', remove: '移除成员', delete: '删除技能' }[action.type]}
+      actions={<Button variant={action.type === 'remove' || action.type === 'delete' ? 'destructive' : 'default'} disabled={change.isPending || change.isError || (action.type === 'add' && !selected) || (action.type === 'role' && action.member.role === role)} onClick={() => change.mutate()}>{change.isPending ? '正在提交…' : { add: '确认添加', role: '保存角色', remove: '移除成员', delete: '删除技能' }[action.type]}</Button>}
       description={action.type === 'delete' ? `从 ${source} 删除整个 @${ns}/${action.skill.slug}（ID ${action.skill.id}）？本机安装将保留，云端数据按来源服务规则处理。` : action.type === 'add' ? `将现有用户加入 @${ns}` : `@${ns} · ${action.member.displayName || action.member.userId}（${action.member.userId}）`}>
       {action.type === 'remove' && <p>移除后，该用户将失去此团队的成员权限。已上传技能、个人令牌和本机文件会保留。</p>}
-      {action.type === 'add' && <><form onSubmit={event => { event.preventDefault(); setKeyword(search.trim()); }}>
-        <label>昵称、邮箱或用户 ID<Input autoFocus value={search} onChange={event => { setSearch(event.target.value); setSelected(undefined); setKeyword(''); }} /></label>
-        <Button type="submit" disabled={search.trim().length < 2}>搜索</Button></form>
+      {action.type === 'add' && <><form className="astron-sh-account-search" onSubmit={event => { event.preventDefault(); setKeyword(search.trim()); }}>
+        <label>昵称、邮箱或用户 ID<Input autoFocus disabled={change.isPending} value={search} onChange={event => { setSearch(event.target.value); setSelected(undefined); setKeyword(''); }} /></label>
+        <Button type="submit" disabled={change.isPending || search.trim().length < 2}>搜索</Button></form>
         {!!keyword && <><AccountError error={candidates.error} retry={() => { void candidates.refetch(); }} />
           {candidates.isFetching ? <p>正在搜索…</p> : !candidates.isError && !candidates.data?.length && <p>未找到可添加的用户。</p>}
-          {candidates.data?.map(user => <Button key={user.userId} aria-pressed={selected?.userId === user.userId} onClick={() => setSelected(user)}>{user.displayName} · {user.userId} {user.email}</Button>)}</>}
+          {!!candidates.data?.length && <div className="astron-sh-account-candidates" role="group" aria-label="搜索结果">{candidates.data.map(user => <Button className="astron-sh-account-candidate" key={user.userId} disabled={change.isPending} aria-pressed={selected?.userId === user.userId} onClick={() => setSelected(user)}><strong>{user.displayName || user.userId}</strong><span>{user.userId}{user.email && ` · ${user.email}`}</span></Button>)}</div>}</>}
       </>}
-      {(action.type === 'add' || action.type === 'role') && <label>成员角色<SelectField label="成员角色" value={role} onValueChange={v => setRole(v as EditableRole)} options={[{ value: 'MEMBER', label: '成员' },{ value: 'ADMIN', label: '管理员' }]} /></label>}
+      {(action.type === 'add' || action.type === 'role') && <label>成员角色<AccountSelect label="成员角色" disabled={change.isPending} value={role} onValueChange={v => setRole(v as EditableRole)} options={[{ value: 'MEMBER', label: '成员' },{ value: 'ADMIN', label: '管理员' }]} /></label>}
       {action.type === 'role' && action.member.userId === handle && role === 'MEMBER' && <p>保存后你将失去成员管理权限。</p>}
-      <AccountError error={change.error} /><Button variant={action.type === 'remove' || action.type === 'delete' ? 'destructive' : 'default'} disabled={change.isPending || change.isError || (action.type === 'add' && !selected) || (action.type === 'role' && action.member.role === role)} onClick={() => change.mutate()}>{change.isPending ? '正在提交…' : '确认'}</Button>
+      <AccountError error={change.error} />
     </AccountDialog>}
   </section>;
 }

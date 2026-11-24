@@ -77,6 +77,12 @@ jobs:
       - name: Check plugin and isolated Node tarball
         working-directory: plugins/dsh
         run: bun run check
+      - name: Check account dialogs in Chromium
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '24.2.0'
+        working-directory: plugins/dsh
+        run: |
+          bunx playwright install --with-deps chromium
+          bun run test:account-ui
       - name: Package development artifact
         working-directory: plugins/dsh
         run: |

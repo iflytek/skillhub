@@ -88,6 +88,15 @@ npm pack --dry-run --ignore-scripts
 
 `check` 依次构建 Host、Client、Remote 绑定与类型声明，执行 typecheck、lint 和测试。插件 lint 使用 `cli/` 中锁定的工具。Bun 仅用于开发构建，包内 Host 在 Node 上运行；React/React DOM 由 DSH 提供。
 
+账户弹窗另有隔离的 Chromium 回归（模拟服务数据，不连接真实账户），覆盖登录、上传、成员操作、个人设置、键盘焦点及三种窗口宽度的浅深色布局：
+
+```sh
+bunx playwright install chromium
+bun run test:account-ui
+```
+
+可用 `DSH_PROBE_CHROMIUM` 指定已安装的 Chromium，`DSH_PROBE_OUTPUT` 指定已存在的截图及报告目录。该回归也在 Linux CI 执行，不能代替真实 DSH 和来源服务的联验。
+
 检查通过后，将候选包保存到仓库外的独立目录：
 
 ```sh
