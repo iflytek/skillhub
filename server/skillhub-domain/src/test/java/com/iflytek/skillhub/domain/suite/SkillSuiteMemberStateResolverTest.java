@@ -28,7 +28,7 @@ class SkillSuiteMemberStateResolverTest {
         SkillVersionRepository versionRepository = mock(SkillVersionRepository.class);
         NamespaceRepository namespaceRepository = mock(NamespaceRepository.class);
         SkillSuiteMemberStateResolver resolver = new SkillSuiteMemberStateResolver(
-                skillRepository, versionRepository, namespaceRepository, new VisibilityChecker());
+                skillRepository, versionRepository, namespaceRepository, new VisibilityChecker(skill -> true));
 
         Namespace namespace = new Namespace("team", "Team", "owner");
         Skill skill = new Skill(1L, "private-helper", "skill-owner", SkillVisibility.PRIVATE);

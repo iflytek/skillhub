@@ -42,4 +42,24 @@ class SkillOwnerAccessPolicyTest {
         assertFalse(policy.isReadOnly(skill, "owner", Set.of("SUPER_ADMIN")));
         verifyNoInteractions(namespaces, members);
     }
+
+    @Test
+    void teamOwnerRetainsOwnerAccessOnlyWhileAMember() {
+        Namespace namespace = mock(Namespace.class);
+        when(namespace.getType()).thenReturn(NamespaceType.TEAM);
+        when(namespaces.findById(1L)).thenReturn(Optional.of(namespace));
+        when(members.findByNamespaceIdAndUserId(1L, "owner")).thenReturn(Optional.empty());
+        assertFalse(policy.ownerRetainsAccess(skill));
+        when(members.findByNamespaceIdAndUserId(1L, "owner")).thenReturn(Optional.of(mock(NamespaceMember.class)));
+        assertTrue(policy.ownerRetainsAccess(skill));
+    }
+
+    @Test
+    void globalOwnerRetainsOwnerAccessWithoutMembership() {
+        Namespace namespace = mock(Namespace.class);
+        when(namespace.getType()).thenReturn(NamespaceType.GLOBAL);
+        when(namespaces.findById(1L)).thenReturn(Optional.of(namespace));
+        assertTrue(policy.ownerRetainsAccess(skill));
+        verifyNoInteractions(members);
+    }
 }

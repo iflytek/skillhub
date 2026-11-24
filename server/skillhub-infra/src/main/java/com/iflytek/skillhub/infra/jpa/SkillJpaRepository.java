@@ -73,12 +73,6 @@ public interface SkillJpaRepository extends JpaRepository<Skill, Long>, SkillRep
     List<Skill> findByNamespaceIdAndStatusOrderByCreatedAtDesc(Long namespaceId, SkillStatus status);
     Page<Skill> findByNamespaceIdAndStatus(Long namespaceId, SkillStatus status, Pageable pageable);
     List<Skill> findByOwnerId(String ownerId);
-    Page<Skill> findByOwnerIdAndHiddenFalseOrderByUpdatedAtDesc(String ownerId, Pageable pageable);
-
-    @Override
-    default Page<Skill> findVisibleByOwnerId(String ownerId, Pageable pageable) {
-        return findByOwnerIdAndHiddenFalseOrderByUpdatedAtDesc(ownerId, pageable);
-    }
 
     @Modifying
     @Transactional

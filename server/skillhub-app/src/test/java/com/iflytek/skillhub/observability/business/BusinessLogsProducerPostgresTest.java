@@ -87,7 +87,7 @@ class BusinessLogsProducerPostgresTest {
     static class Configuration {
         @Bean Clock clock() { return Clock.systemUTC(); }
         @Bean ObjectMapper objectMapper() { return new ObjectMapper(); }
-        @Bean VisibilityChecker visibilityChecker() { return new VisibilityChecker(); }
+        @Bean VisibilityChecker visibilityChecker() { return new VisibilityChecker(skill -> true); }
         @Bean BusinessLogsTransactionTest.CapturingExporter exporter() { return new BusinessLogsTransactionTest.CapturingExporter(); }
         @Bean BusinessLogsMetrics metrics() { return new BusinessLogsMetrics(new SimpleMeterRegistry()); }
         @Bean(destroyMethod = "close") BusinessLogsPipeline pipeline(BusinessLogsTransactionTest.CapturingExporter exporter, BusinessLogsMetrics metrics) {

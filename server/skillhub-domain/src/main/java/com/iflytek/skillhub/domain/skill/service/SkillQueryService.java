@@ -256,11 +256,11 @@ public class SkillQueryService {
         }
 
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
-            throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
+            throw VisibilityChecker.readDenied(skill, visibilityChecker.isDepartedOwner(skill, currentUserId));
         }
 
-        SkillLifecycleProjectionService.Projection projection =
-                skillLifecycleProjectionService.projectForViewer(skill, currentUserId, userNsRoles);
+        SkillLifecycleProjectionService.Projection projection = skillLifecycleProjectionService.projectForViewer(
+                skill, canManageRestrictedSkill(skill, currentUserId, userNsRoles));
         SkillLifecycleProjectionService.VersionProjection headlineVersion = projection.headlineVersion();
         SkillLifecycleProjectionService.VersionProjection publishedVersion = projection.publishedVersion();
         SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion = projection.ownerPreviewVersion();
@@ -610,7 +610,7 @@ public class SkillQueryService {
         }
         Skill skill = skillRepository.findById(version.getSkillId()).orElse(null);
         if (skill == null || skill.getStatus() != SkillStatus.ACTIVE
-                || !currentUserId.equals(skill.getOwnerId())) {
+                || !visibilityChecker.canReadAsOwner(skill, currentUserId)) {
             return false;
         }
         return switch (version.getStatus()) {
@@ -1014,13 +1014,13 @@ public class SkillQueryService {
             throw new DomainForbiddenException("error.namespace.archived", namespace.getSlug());
         }
         if (skill.getStatus() != SkillStatus.ACTIVE && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
-            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+            throw VisibilityChecker.readDenied(skill, visibilityChecker.isDepartedOwner(skill, currentUserId));
         }
         if (skill.isHidden() && !canManageRestrictedSkill(skill, currentUserId, userNsRoles)) {
-            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+            throw VisibilityChecker.readDenied(skill, visibilityChecker.isDepartedOwner(skill, currentUserId));
         }
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles, platformRoles)) {
-            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+            throw VisibilityChecker.readDenied(skill, visibilityChecker.isDepartedOwner(skill, currentUserId));
         }
     }
 
@@ -1029,9 +1029,9 @@ public class SkillQueryService {
             return false;
         }
         NamespaceRole role = userNsRoles.get(skill.getNamespaceId());
-        return skill.getOwnerId().equals(currentUserId)
-                || role == NamespaceRole.ADMIN
-                || role == NamespaceRole.OWNER;
+        return role == NamespaceRole.ADMIN
+                || role == NamespaceRole.OWNER
+                || visibilityChecker.canReadAsOwner(skill, currentUserId);
     }
 
     private boolean canSubmitPromotion(
@@ -1056,10 +1056,6 @@ public class SkillQueryService {
         }
         return canManageRestrictedSkill(skill, currentUserId, userNsRoles)
                 && !ownerAccess.isReadOnly(skill, currentUserId, platformRoles);
-    }
-
-    private boolean isOwner(Skill skill, String currentUserId) {
-        return currentUserId != null && skill.getOwnerId().equals(currentUserId);
     }
 
     private boolean isNamespaceMember(Long namespaceId, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {

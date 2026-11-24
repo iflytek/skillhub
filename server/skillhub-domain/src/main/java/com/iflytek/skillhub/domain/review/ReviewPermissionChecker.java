@@ -54,7 +54,12 @@ public class ReviewPermissionChecker {
                                  NamespaceType namespaceType,
                                  Map<Long, NamespaceRole> userNamespaceRoles,
                                  Set<String> platformRoles) {
-        if (task.getSubmittedBy().equals(userId)) {
+        // Submitting a Skill does not outlast TEAM membership: a departed submitter reads the task only through
+        // other authority. Suite reviews keep their existing submitter rule.
+        boolean skillSubject = task.getSubjectType() != ReviewSubjectType.SUITE_VERSION;
+        if (task.getSubmittedBy().equals(userId)
+                && (!skillSubject || namespaceType != NamespaceType.TEAM
+                        || userNamespaceRoles.containsKey(task.getNamespaceId()))) {
             return true;
         }
         return canReview(task, userId, namespaceType, userNamespaceRoles, platformRoles);

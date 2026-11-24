@@ -81,7 +81,7 @@ class SkillSuiteBundlePreviewPlannerTest {
         planner = new SkillSuiteBundlePreviewPlanner(
                 namespaceRepository, skillRepository, skillVersionRepository, skillFileRepository,
                 suiteRepository, suiteVersionRepository, suiteMemberRepository,
-                new VisibilityChecker(), securityScanService,
+                new VisibilityChecker(skill -> true), securityScanService,
                 Clock.fixed(Instant.parse("2026-09-11T06:00:00Z"), ZoneOffset.UTC));
     }
 

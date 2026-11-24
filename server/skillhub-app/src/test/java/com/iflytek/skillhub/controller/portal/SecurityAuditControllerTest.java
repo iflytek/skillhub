@@ -71,6 +71,13 @@ class SecurityAuditControllerTest {
     @MockBean
     private SecurityScanRetryAppService securityScanRetryAppService;
 
+    @org.junit.jupiter.api.BeforeEach
+    void reviewerAdministersTheSkillNamespace() {
+        // The auth filter rebuilds namespace roles from membership, so the ADMIN role must exist there too.
+        given(namespaceMemberRepository.findByUserId("reviewer-1"))
+                .willReturn(List.of(new NamespaceMember(5L, "reviewer-1", NamespaceRole.ADMIN)));
+    }
+
     @Test
     void retrySecurityScan_returnsScanningState() throws Exception {
         given(securityScanRetryAppService.retry(

@@ -93,11 +93,6 @@ public class JpaSkillRepositoryAdapter implements SkillRepository {
     }
 
     @Override
-    public Page<Skill> findVisibleByOwnerId(String ownerId, Pageable pageable) {
-        return delegate.findVisibleByOwnerId(ownerId, pageable);
-    }
-
-    @Override
     public void incrementDownloadCount(Long skillId) {
         delegate.incrementDownloadCount(skillId);
     }

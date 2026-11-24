@@ -66,7 +66,7 @@ class SubscriberNotificationSinkTest {
     @BeforeEach
     void setUp() {
         SubscriptionRecipientEligibility eligibility = new SubscriptionRecipientEligibility(
-                accountRepository, memberRepository, new SubscriptionMetadataAccessPolicy());
+                accountRepository, memberRepository, new SubscriptionMetadataAccessPolicy(new com.iflytek.skillhub.domain.skill.VisibilityChecker(skill -> true)));
         listener = new NotificationEventListener(skillRepository, skillVersionRepository, namespaceRepository,
                 recipientResolver, notificationService, subscriptionService, new ObjectMapper(), eligibility);
     }

@@ -1,13 +1,17 @@
 package com.iflytek.skillhub.repository;
 
+import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.social.SkillStar;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,7 +35,7 @@ public class JpaStarredSkillQueryRepository implements StarredSkillQueryReposito
         var query = builder.createQuery(Skill.class);
         var skill = query.from(Skill.class);
         var star = query.from(SkillStar.class);
-        query.select(skill).where(predicate(builder, skill, star, userId, namespaceRoles, platformRoles))
+        query.select(skill).where(predicate(builder, query, skill, star, userId, namespaceRoles, platformRoles))
                 .orderBy(builder.desc(star.get("createdAt")), builder.desc(star.get("id")));
         var result = entityManager.createQuery(query)
                 .setFirstResult(Math.toIntExact(pageable.getOffset()))
@@ -41,11 +45,11 @@ public class JpaStarredSkillQueryRepository implements StarredSkillQueryReposito
         var countSkill = countQuery.from(Skill.class);
         var countStar = countQuery.from(SkillStar.class);
         countQuery.select(builder.count(countSkill))
-                .where(predicate(builder, countSkill, countStar, userId, namespaceRoles, platformRoles));
+                .where(predicate(builder, countQuery, countSkill, countStar, userId, namespaceRoles, platformRoles));
         return new PageImpl<>(result, pageable, entityManager.createQuery(countQuery).getSingleResult());
     }
 
-    private Predicate predicate(CriteriaBuilder builder, Root<Skill> skill, Root<SkillStar> star,
+    private Predicate predicate(CriteriaBuilder builder, AbstractQuery<?> query, Root<Skill> skill, Root<SkillStar> star,
                                  String userId, Map<Long, NamespaceRole> namespaceRoles, Set<String> platformRoles) {
         Predicate relation = builder.and(builder.equal(star.get("userId"), userId),
                 builder.equal(star.get("skillId"), skill.get("id")));
@@ -56,9 +60,14 @@ public class JpaStarredSkillQueryRepository implements StarredSkillQueryReposito
         List<Long> adminNamespaces = roles.entrySet().stream()
                 .filter(entry -> entry.getValue() == NamespaceRole.ADMIN || entry.getValue() == NamespaceRole.OWNER)
                 .map(Map.Entry::getKey).toList();
-        Predicate owner = builder.equal(skill.get("ownerId"), userId);
         Predicate admin = adminNamespaces.isEmpty() ? builder.disjunction() : skill.get("namespaceId").in(adminNamespaces);
         Predicate member = roles.isEmpty() ? builder.disjunction() : skill.get("namespaceId").in(roles.keySet());
+        // Ownership counts outside TEAM namespaces, and inside one only while the owner is still a member.
+        Subquery<Long> nonTeamNamespaces = query.subquery(Long.class);
+        Root<Namespace> namespace = nonTeamNamespaces.from(Namespace.class);
+        nonTeamNamespaces.select(namespace.get("id")).where(builder.notEqual(namespace.get("type"), NamespaceType.TEAM));
+        Predicate owner = builder.and(builder.equal(skill.get("ownerId"), userId),
+                builder.or(member, skill.get("namespaceId").in(nonTeamNamespaces)));
         Predicate visibility = builder.or(
                 builder.equal(skill.get("visibility"), SkillVisibility.PUBLIC),
                 builder.and(builder.equal(skill.get("visibility"), SkillVisibility.NAMESPACE_ONLY), builder.or(owner, member)),

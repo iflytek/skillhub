@@ -53,7 +53,7 @@ class NotificationEventListenerTest {
         listener = new NotificationEventListener(skillRepository, skillVersionRepository, namespaceRepository,
                 recipientResolver, notificationService, skillSubscriptionService, objectMapper,
                 new SubscriptionRecipientEligibility(userAccountRepository, namespaceMemberRepository,
-                        new SubscriptionMetadataAccessPolicy()));
+                        new SubscriptionMetadataAccessPolicy(new com.iflytek.skillhub.domain.skill.VisibilityChecker(skill -> true))));
     }
 
     private Skill mockSkill(Long id) {

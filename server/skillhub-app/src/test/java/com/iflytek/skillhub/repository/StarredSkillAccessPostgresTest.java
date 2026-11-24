@@ -3,6 +3,7 @@ package com.iflytek.skillhub.repository;
 import com.iflytek.skillhub.support.PostgresTestImage;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
@@ -93,6 +94,7 @@ class StarredSkillAccessPostgresTest {
     void databasePolicyMatchesVisibilityCheckerForEveryLifecycleAndRole() {
         assertPolicy("viewer", Map.of(), Set.of());
         assertPolicy("owner", Map.of(), Set.of());
+        assertPolicy("owner", Map.of(namespaceId, NamespaceRole.MEMBER), Set.of());
         for (NamespaceRole role : NamespaceRole.values()) {
             assertPolicy("viewer", Map.of(namespaceId, role), Set.of());
         }
@@ -124,21 +126,27 @@ class StarredSkillAccessPostgresTest {
     }
 
     @Test
-    void removedOwnerRetainsInternalStarsWithoutExposingThemToOtherNonMembers() {
-        Skill internal = fixtures.stream()
-                .filter(skill -> skill.getVisibility() == SkillVisibility.NAMESPACE_ONLY)
-                .filter(skill -> skill.getLatestVersionId() != null && !skill.isHidden())
-                .findFirst().orElseThrow();
+    void ownerWhoLeftTheTeamKeepsOnlyStarsAnyoneCanSee() {
         var owner = query.findAccessible("owner", Map.of(), Set.of(), PageRequest.of(0, 50));
         var other = query.findAccessible("viewer", Map.of(), Set.of(), PageRequest.of(0, 50));
-        assertThat(owner.getContent()).extracting(Skill::getId).contains(internal.getId());
-        assertThat(owner.getTotalElements()).isEqualTo(12);
-        assertThat(other.getContent()).extracting(Skill::getId).doesNotContain(internal.getId());
-        assertThat(other.getTotalElements()).isEqualTo(1);
+        assertThat(owner.getTotalElements()).isEqualTo(1);
+        assertThat(owner.getContent()).extracting(Skill::getId)
+                .containsExactlyElementsOf(other.getContent().stream().map(Skill::getId).toList());
+        assertThat(query.findAccessible("owner", Map.of(namespaceId, NamespaceRole.MEMBER), Set.of(),
+                PageRequest.of(0, 50)).getTotalElements()).isEqualTo(12);
+    }
+
+    @Test
+    void ownerOutsideTeamNamespacesKeepsOwnerStarsWithoutMembership() {
+        em.find(Namespace.class, namespaceId).setType(NamespaceType.GLOBAL);
+        em.flush();
+        assertThat(query.findAccessible("owner", Map.of(), Set.of(), PageRequest.of(0, 50)).getTotalElements())
+                .isEqualTo(12);
     }
 
     private void assertPolicy(String user, Map<Long, NamespaceRole> roles, Set<String> platformRoles) {
-        var checker = new VisibilityChecker();
+        // Fixtures live in one TEAM namespace: the owner keeps owner reads only while a member.
+        var checker = new VisibilityChecker(skill -> roles.containsKey(skill.getNamespaceId()));
         List<Long> expected = fixtures.stream().filter(skill -> checker.canAccess(skill, user, roles, platformRoles))
                 .map(Skill::getId).toList();
         var result = query.findAccessible(user, roles, platformRoles, PageRequest.of(0, 50));

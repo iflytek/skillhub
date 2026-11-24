@@ -138,6 +138,7 @@ class SkillAvatarUploadPostgresTest {
         assertThat(candidates.findById(myCandidate).orElseThrow().getSkillId()).isEqualTo(mine.skillId());
         assertThat(avatars.ownerStatus(namespace, "skill", "owner").candidateId()).isEqualTo(myCandidate);
         assertThat(avatars.ownerStatus(namespace, "skill", "stranger").candidateId()).isNull();
+        when(visibility.canReadAsOwner(any(Skill.class), eq("owner"))).thenReturn(true);
         assertThat(avatars.readCandidate(namespace, "skill", myCandidate, "owner", java.util.Map.of(), Set.of())).isNotNull();
         var metadataTask = reviewRows.findByAvatarCandidateIdAndStatus(myCandidate,
                 com.iflytek.skillhub.domain.review.ReviewTaskStatus.PENDING).getFirst();

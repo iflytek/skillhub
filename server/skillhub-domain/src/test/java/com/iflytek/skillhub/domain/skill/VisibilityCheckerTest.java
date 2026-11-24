@@ -26,7 +26,7 @@ class VisibilityCheckerTest {
 
     @BeforeEach
     void setUp() {
-        checker = new VisibilityChecker();
+        checker = new VisibilityChecker(skill -> true);
 
         publicSkill = new Skill(NAMESPACE_ID, "public-skill", OWNER_ID, SkillVisibility.PUBLIC);
         publicSkill.setLatestVersionId(10L);
@@ -194,5 +194,32 @@ class VisibilityCheckerTest {
     void testEmptyPlatformRolesDoNotGrantAccess() {
         boolean canAccess = checker.canAccess(privateSkill, OTHER_USER_ID, Map.of(), Set.of());
         assertFalse(canAccess);
+    }
+
+    @Test
+    void ownerWhoLeftTheTeamNamespaceReadsOnlyWhatAnyoneCanRead() {
+        VisibilityChecker departed = new VisibilityChecker(skill -> false);
+
+        assertFalse(departed.canAccess(namespaceOnlySkill, OWNER_ID, Map.of()));
+        assertFalse(departed.canAccess(privateSkill, OWNER_ID, Map.of()));
+        assertFalse(departed.canAccess(unpublishedPublicSkill, OWNER_ID, Map.of()));
+        assertFalse(departed.canAccess(hiddenPublicSkill, OWNER_ID, Map.of()));
+        assertTrue(departed.canAccess(publicSkill, OWNER_ID, Map.of()));
+        assertTrue(departed.isDepartedOwner(privateSkill, OWNER_ID));
+        assertEquals("error.skill.owner.membershipEnded",
+                VisibilityChecker.readDenied(privateSkill, departed.isDepartedOwner(privateSkill, OWNER_ID)).messageCode());
+    }
+
+    @Test
+    void ownerMembershipDoesNotChangeOtherUsersOrAdministrators() {
+        VisibilityChecker departed = new VisibilityChecker(skill -> false);
+
+        assertTrue(departed.canAccess(privateSkill, ADMIN_USER_ID, Map.of(NAMESPACE_ID, NamespaceRole.ADMIN)));
+        assertTrue(departed.canAccess(hiddenPublicSkill, NAMESPACE_OWNER_ID, Map.of(NAMESPACE_ID, NamespaceRole.OWNER)));
+        assertTrue(departed.canAccess(namespaceOnlySkill, OTHER_USER_ID, Map.of(NAMESPACE_ID, NamespaceRole.MEMBER)));
+        assertTrue(departed.canAccess(privateSkill, OTHER_USER_ID, Map.of(), Set.of("SUPER_ADMIN")));
+        assertFalse(departed.isDepartedOwner(privateSkill, OTHER_USER_ID));
+        assertEquals("error.skill.access.denied",
+                VisibilityChecker.readDenied(privateSkill, departed.isDepartedOwner(privateSkill, OTHER_USER_ID)).messageCode());
     }
 }
