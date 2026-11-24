@@ -6,7 +6,7 @@ import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import {
   Star, Heart, Package, Boxes, Key, Shield, Flag, Globe,
-  UserCog, Lock, Bell, Clock, ChevronDown, ChevronRight, Github,
+  UserCog, Lock, Bell, Clock, ChevronDown, ChevronRight, Github, Building2,
 } from 'lucide-react'
 
 /**
@@ -49,6 +49,7 @@ export const SIDEBAR_GROUPS: SidebarGroup[] = [
       { key: 'skills', icon: Package, label: 'sidebar.mySkills', to: '/dashboard/skills', analyticsId: 'navigation.owned.skills' },
       { key: 'suites', icon: Boxes, label: 'sidebar.mySuites', to: '/dashboard/suites', analyticsId: 'navigation.owned.suites' },
       { key: 'namespaces', icon: Globe, label: 'sidebar.namespaces', to: '/dashboard/namespaces', analyticsId: 'namespace.list.open' },
+      { key: 'organizations', icon: Building2, label: 'sidebar.organizations', to: '/dashboard/organizations' },
       { key: 'stars', icon: Star, label: 'sidebar.stars', to: '/dashboard/stars', analyticsId: 'navigation.starred.open' },
       { key: 'subscriptions', icon: Heart, label: 'sidebar.subscriptions', to: '/dashboard/subscriptions', analyticsId: 'navigation.subscriptions.open' },
       { key: 'tokens', icon: Key, label: 'sidebar.tokens', to: '/dashboard/tokens', analyticsId: 'account.tokens.open' },

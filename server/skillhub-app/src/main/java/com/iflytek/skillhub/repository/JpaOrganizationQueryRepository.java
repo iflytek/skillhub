@@ -174,6 +174,64 @@ public class JpaOrganizationQueryRepository implements OrganizationQueryReposito
         );
     }
 
+    @Override
+    public Page<OrganizationMemberProjection> findCurrentMembers(
+            String organizationId,
+            Pageable pageable
+    ) {
+        long total = ((Number) entityManager.createNativeQuery("""
+                        SELECT COUNT(*) FROM organization_membership
+                        WHERE organization_id = :organizationId AND status <> 'DEPROVISIONED'
+                        """)
+                .setParameter("organizationId", organizationId)
+                .getSingleResult()).longValue();
+        @SuppressWarnings("unchecked")
+        List<Object[]> rows = entityManager.createNativeQuery("""
+                        SELECT id, user_id, display_name, status,
+                               authority_version, created_at
+                        FROM organization_membership
+                        WHERE organization_id = :organizationId AND status <> 'DEPROVISIONED'
+                        ORDER BY created_at DESC, id ASC
+                        """)
+                .setParameter("organizationId", organizationId)
+                .setFirstResult((int) pageable.getOffset())
+                .setMaxResults(pageable.getPageSize())
+                .getResultList();
+        return new PageImpl<>(rows.stream().map(row -> new OrganizationMemberProjection(
+                (String) row[0], (String) row[1], (String) row[2], (String) row[3],
+                ((Number) row[4]).longValue(), instant(row[5])
+        )).toList(), pageable, total);
+    }
+
+    @Override
+    public Map<String, List<OrganizationMemberRoleProjection>> findActiveMemberRoles(
+            String organizationId,
+            Collection<String> userIds
+    ) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        List<Object[]> rows = entityManager.createQuery("""
+                        SELECT binding.id, binding.userId, binding.role
+                        FROM OrganizationRoleBinding binding
+                        WHERE binding.organizationId = :organizationId
+                          AND binding.userId IN :userIds
+                          AND binding.status = :status
+                        ORDER BY binding.role ASC, binding.id ASC
+                        """, Object[].class)
+                .setParameter("organizationId", organizationId)
+                .setParameter("userIds", userIds)
+                .setParameter("status", OrganizationRoleBindingStatus.ACTIVE)
+                .getResultList();
+        return rows.stream().map(row -> new OrganizationMemberRoleProjection(
+                (String) row[0], (String) row[1], ((Enum<?>) row[2]).name()
+        )).collect(Collectors.groupingBy(
+                OrganizationMemberRoleProjection::userId,
+                LinkedHashMap::new,
+                Collectors.toList()
+        ));
+    }
+
     private OrganizationMembershipProjection toOrganizationMembership(Object[] row) {
         return new OrganizationMembershipProjection(
                 (String) row[0],

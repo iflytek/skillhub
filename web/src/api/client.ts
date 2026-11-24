@@ -1244,6 +1244,50 @@ export const labelApi = {
   },
 }
 
+export type OrganizationSummary = components['schemas']['OrganizationSummaryResponse']
+export type OrganizationDetail = components['schemas']['OrganizationDetailResponse']
+export type OrganizationMember = components['schemas']['OrganizationMemberResponse']
+export type OrganizationRole = components['schemas']['OrganizationRoleGrantRequest']['role']
+export type OrganizationRoleBinding = components['schemas']['OrganizationRoleBindingResponse']
+
+export const organizationApi = {
+  list(page = 0, size = 20) {
+    return fetchJson<PagedResponse<OrganizationSummary>>(`/api/v1/organizations?page=${page}&size=${size}`)
+  },
+  get(id: string) {
+    return fetchJson<OrganizationDetail>(`/api/v1/organizations/${encodeURIComponent(id)}`)
+  },
+  members(id: string, page = 0, size = 20) {
+    return fetchJson<PagedResponse<OrganizationMember>>(
+      `/api/v1/organizations/${encodeURIComponent(id)}/members?page=${page}&size=${size}`,
+    )
+  },
+  async addMember(id: string, userId: string) {
+    return fetchJson<OrganizationMember>(`/api/v1/organizations/${encodeURIComponent(id)}/members`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ userId: userId.trim() }),
+    })
+  },
+  async grantRole(id: string, userId: string, role: OrganizationRole) {
+    return fetchJson<OrganizationRoleBinding>(
+      `/api/v1/organizations/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}/roles`, {
+        method: 'POST',
+        headers: await ensureCsrfHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ role }),
+      },
+    )
+  },
+  async revokeRole(id: string, bindingId: string) {
+    return fetchJson<OrganizationRoleBinding>(
+      `/api/v1/organizations/${encodeURIComponent(id)}/role-bindings/${encodeURIComponent(bindingId)}`, {
+        method: 'DELETE',
+        headers: await ensureCsrfHeaders(),
+      },
+    )
+  },
+}
+
 export const namespaceApi = {
   async invitationHistory(slug: string, page = 0, size = 10): Promise<NamespaceInvitationHistoryPage> {
     const params = new URLSearchParams({ page: String(page), size: String(size) })

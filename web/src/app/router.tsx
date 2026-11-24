@@ -153,6 +153,12 @@ const MyNamespacesPage = createLazyRouteComponent(
 const NamespaceManagementPage = createLazyRouteComponent(() => import('@/pages/dashboard/namespace-management'), 'NamespaceManagementPage')
 const NamespaceSettingsPage = createLazyRouteComponent(() => import('@/pages/dashboard/namespace-settings'), 'NamespaceSettingsPage')
 
+const OrganizationsPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/organizations'), 'OrganizationsPage', dashboardRouteOptions,
+)
+const OrganizationMembersPage = createLazyRouteComponent(
+  () => import('@/pages/dashboard/organizations'), 'OrganizationMembersPage', dashboardRouteOptions,
+)
 const NamespaceMembersPage = createLazyRouteComponent(
   () => import('@/pages/dashboard/namespace-members'),
   'NamespaceMembersPage',
@@ -541,6 +547,20 @@ const dashboardNamespaceSettingsRoute = createRoute({
   component: NamespaceSettingsPage,
 })
 
+const dashboardOrganizationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/organizations',
+  beforeLoad: requireAuth,
+  component: OrganizationsPage,
+})
+
+const dashboardOrganizationMembersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: 'dashboard/organizations/$organizationId',
+  beforeLoad: requireAuth,
+  component: OrganizationMembersPage,
+})
+
 const dashboardNamespaceMembersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard/namespaces/$slug/members',
@@ -842,6 +862,8 @@ const routeTree = rootRoute.addChildren([
   dashboardNamespacesRoute,
   dashboardNamespaceManagementRoute,
   dashboardNamespaceSettingsRoute,
+  dashboardOrganizationsRoute,
+  dashboardOrganizationMembersRoute,
   dashboardNamespaceMembersRoute,
   dashboardNamespaceReviewsRoute,
   dashboardNamespaceGithubSourcesRoute,

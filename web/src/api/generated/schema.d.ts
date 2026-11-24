@@ -3315,6 +3315,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organizationId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOrganizationMembers"];
+        put?: never;
+        post: operations["addOrganizationMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/members/{userId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["grantOrganizationRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/device/authorize": {
         parameters: {
             query?: never;
@@ -7849,6 +7881,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organizationId}/role-bindings/{bindingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revokeOrganizationRole"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/namespaces/{slug}/members/{userId}": {
         parameters: {
             query?: never;
@@ -9670,6 +9718,52 @@ export interface components {
         };
         ClawHubDeleteResponse: {
             ok?: boolean;
+        };
+        OrganizationMemberRequest: {
+            userId: string;
+        };
+        ApiResponseOrganizationMemberResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["OrganizationMemberResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        OrganizationMemberResponse: {
+            id?: string;
+            userId?: string;
+            displayName?: string;
+            status?: string;
+            /** Format: int64 */
+            authorityVersion?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            roles?: components["schemas"]["OrganizationRoleBindingResponse"][];
+        };
+        OrganizationRoleBindingResponse: {
+            id?: string;
+            userId?: string;
+            role?: string;
+            status?: string;
+        };
+        OrganizationRoleGrantRequest: {
+            /** @enum {string} */
+            role: "ORG_OWNER" | "IDENTITY_ADMIN" | "LOGIN_SECRET_ADMIN" | "MEMBER_ADMIN" | "ORG_AUDITOR";
+        };
+        ApiResponseOrganizationRoleBindingResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["OrganizationRoleBindingResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         AuthorizeRequest: {
             userCode?: string;
@@ -12211,6 +12305,26 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
             permissions?: components["schemas"]["OrganizationPermissionsResponse"];
+        };
+        ApiResponsePageResponseOrganizationMemberResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseOrganizationMemberResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        PageResponseOrganizationMemberResponse: {
+            items?: components["schemas"]["OrganizationMemberResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
         };
         ApiResponsePageResponseLoginConnectionSummaryResponse: {
             /** Format: int32 */
@@ -19908,6 +20022,84 @@ export interface operations {
             };
         };
     };
+    listOrganizationMembers: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseOrganizationMemberResponse"];
+                };
+            };
+        };
+    };
+    addOrganizationMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationMemberResponse"];
+                };
+            };
+        };
+    };
+    grantOrganizationRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationRoleGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationRoleBindingResponse"];
+                };
+            };
+        };
+    };
     authorizeDevice: {
         parameters: {
             query?: never;
@@ -26770,6 +26962,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                };
+            };
+        };
+    };
+    revokeOrganizationRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                bindingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationRoleBindingResponse"];
                 };
             };
         };
