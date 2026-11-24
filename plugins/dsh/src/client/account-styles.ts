@@ -47,8 +47,10 @@ export const accountStyles = `
 .skillhub-controls .astron-sh-account-candidate span{font-size:12px;color:var(--astron-sh-secondary)}
 .skillhub-controls .astron-sh-account-candidate[aria-pressed=true]{border-color:var(--astron-sh-accent);background:var(--astron-sh-soft)}
 .skillhub-controls .astron-sh-account-form .astron-sh-account-error{margin:0;padding:10px 12px;border-radius:6px;background:var(--astron-sh-soft);color:light-dark(#b42318,#ffb4ab);overflow-wrap:anywhere}
-.skillhub-controls.astron-sh-catalog[data-skillhub-appearance=dark]{color-scheme:dark}
-.skillhub-controls.astron-sh-catalog[data-skillhub-appearance=light]{color-scheme:light}
+.skillhub-controls .astron-sh-account-source-row{position:relative;min-width:0}
+.skillhub-controls .astron-sh-account-source-row .astron-sh-account-source{padding-right:100px}
+.skillhub-controls .astron-sh-account-source-row>button{position:absolute;top:12px;right:12px}
+.skillhub-controls .astron-sh-toolbar-actions>span{display:inline-flex;align-items:center;gap:6px}
 .skillhub-controls .astron-sh-workbench-frame[hidden]{display:none}
 @media(max-width:480px){.skillhub-controls .astron-sh-account-dialog-header{padding:20px 20px 0}.skillhub-controls .astron-sh-account-dialog-body{padding:20px}.skillhub-controls .astron-sh-account-dialog-footer{padding:14px 20px}.skillhub-controls .astron-sh-account-dialog-footer button{flex:1;white-space:normal}}
 `;

@@ -1,4 +1,5 @@
 import { AccountWorkspace, type AccountPageName } from './account-workspace.js';
+import { AppearanceToggle } from './appearance-toggle.js';
 import { sameRegistry } from './registry-config.js';
 import { DetailMeta, sourceHost } from './detail-presentation.js';
 import { UpgradeControl } from './upgrade-control.js';
@@ -378,7 +379,7 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
           setInstalledView(value => value + 1);
         }
       }}>已安装技能</TabsTrigger></TabsList>
-      <div className="astron-sh-toolbar-actions"><span ref={setAccountToolbar} />{onSettings && <Button variant="ghost" size="sm" aria-label="SkillHub 设置" title="SkillHub 设置" onClick={() => { favoriteFeedbackGeneration.current++; setFavoriteUndo(null); cancelFavoriteOpen(); if (!selected && tab === 'browse') rememberScroll(); onSettings(); }}><Icon name="settings" />设置</Button>}<Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
+      <div className="astron-sh-toolbar-actions"><AppearanceToggle /><span ref={setAccountToolbar} />{onSettings && <Button variant="ghost" size="sm" aria-label="SkillHub 设置" title="SkillHub 设置" onClick={() => { favoriteFeedbackGeneration.current++; setFavoriteUndo(null); cancelFavoriteOpen(); if (!selected && tab === 'browse') rememberScroll(); onSettings(); }}><Icon name="settings" />设置</Button>}<Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
       {(installation || installed) && <Button variant="ghost" className="astron-sh-icon-button" aria-label="返回会话" title="关闭 SkillHub，返回会话" onClick={leaveCatalog}><Icon name="close" /></Button>}</div>
     </header>
     {revision && context.data?.configured && <AccountWorkspace key={revision} remote={remote} source={context.data.registryUrl} revision={revision}

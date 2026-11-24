@@ -13,12 +13,42 @@ const server = serve({ hostname: '127.0.0.1', port: 0, fetch: request => new URL
 const browser = await chromium.launch({ headless: true, ...(process.env.DSH_PROBE_CHROMIUM ? { executablePath: process.env.DSH_PROBE_CHROMIUM } : {}) });
 const errors = [];
 let checks = 0;
+function contrast(foreground, background) {
+  const luminance = color => color.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255).map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
+  const a = luminance(foreground), b = luminance(background);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
 try {
   for (const width of [1280, 563, 375]) for (const theme of ['light', 'dark']) {
     const page = await browser.newPage({ viewport: { width, height: 820 }, colorScheme: theme });
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(server.url.href);
     const dialog = page.getByRole('dialog');
+    const otherTheme = theme === 'dark' ? 'light' : 'dark';
+    await page.evaluate(mode => { document.documentElement.style.colorScheme = mode; }, otherTheme);
+    await page.getByRole('button', { name: '登录', exact: true }).click();
+    await page.waitForFunction(mode => getComputedStyle(document.querySelector('[role="dialog"]')).colorScheme === mode, otherTheme);
+    await page.evaluate(mode => { document.documentElement.style.colorScheme = mode; }, theme);
+    await page.waitForFunction(mode => getComputedStyle(document.querySelector('[role="dialog"]')).colorScheme === mode, theme);
+    await dialog.getByRole('button', { name: '更改来源' }).click();
+    const config = page.getByRole('form', { name: 'SkillHub 配置' });
+    await config.waitFor();
+    await page.waitForFunction(() => document.activeElement?.textContent === 'SkillHub 设置');
+    assert.equal(await config.evaluate(el => getComputedStyle(el).backgroundColor), theme === 'dark' ? 'rgb(16, 16, 16)' : 'rgb(255, 255, 255)', 'Source editor follows the theme');
+    await config.getByRole('radio', { name: '选择来源 2：另一来源' }).check();
+    await config.getByRole('button', { name: '保存配置', exact: true }).click();
+    await config.getByText('配置已保存。', { exact: true }).waitFor();
+    await page.getByRole('button', { name: '返回技能中心' }).click();
+    const toggleLabel = mode => mode === 'dark' ? '切换到浅色模式' : '切换到深色模式';
+    await page.getByRole('button', { name: toggleLabel(theme), exact: true }).click();
+    await page.waitForFunction(mode => getComputedStyle(document.querySelector('.astron-sh-catalog')).colorScheme === mode, otherTheme);
+    assert.equal(await page.locator('.astron-sh-catalog').evaluate(el => getComputedStyle(el).backgroundColor), otherTheme === 'dark' ? 'rgb(16, 16, 16)' : 'rgb(255, 255, 255)', 'Workbench background is opaque');
+    assert.equal(await page.getByLabel('主题测试通知').evaluate(el => getComputedStyle(el).colorScheme), otherTheme, 'Body portal follows the theme');
+    const embedded = await page.getByLabel('宿主会话').evaluate(el => ({ color: getComputedStyle(el.querySelector('p')).color, background: getComputedStyle(el).backgroundColor, scheme: getComputedStyle(el.querySelector('.skillhub-controls')).colorScheme }));
+    assert.equal(embedded.scheme, theme, 'Embedded conversation keeps the Host theme');
+    assert(contrast(embedded.color, embedded.background) >= 4.5, 'Embedded conversation text retains contrast');
+    assert.equal(await page.evaluate(() => document.documentElement.style.colorScheme), theme, 'Plugin toggle does not change DSH theme');
+    await page.getByRole('button', { name: toggleLabel(otherTheme), exact: true }).click();
     const layout = async name => {
       await dialog.waitFor();
       const box = await dialog.boundingBox();
@@ -36,6 +66,9 @@ try {
     };
     await page.getByRole('button', { name: '登录', exact: true }).click();
     await layout('login');
+    assert.equal(await dialog.locator('dd').innerText(), 'https://other.example.test', 'Login uses the saved source');
+    const sourceColors = await dialog.locator('dl').evaluate(el => ({ foreground: getComputedStyle(el.querySelector('dt')).color, background: getComputedStyle(el).backgroundColor }));
+    assert(contrast(sourceColors.foreground, sourceColors.background) >= 4.5, 'Muted source label retains contrast');
     assert.equal(await dialog.evaluate(el => getComputedStyle(el).backgroundColor), theme === 'dark' ? 'rgb(24, 24, 24)' : 'rgb(255, 255, 255)', 'Dialog inherits Host theme');
     const token = dialog.getByLabel('个人 API Token', { exact: true });
     assert(await token.evaluate(el => document.activeElement === el), 'Token receives initial focus');
@@ -51,6 +84,15 @@ try {
     await page.getByRole('menuitem', { name: '个人设置' }).click();
     await layout('settings');
     assert(await dialog.evaluate(el => el.contains(document.activeElement)), 'Settings traps focus');
+    await dialog.getByRole('button', { name: toggleLabel(theme), exact: true }).click();
+    await page.waitForFunction(mode => getComputedStyle(document.querySelector('[role="dialog"]')).colorScheme === mode, otherTheme);
+    await dialog.getByRole('button', { name: '管理来源' }).click();
+    await config.waitFor();
+    assert.equal(await config.evaluate(el => getComputedStyle(el).colorScheme), otherTheme, 'Settings source editor keeps the preference');
+    await page.getByRole('button', { name: '返回技能中心' }).click();
+    await page.getByRole('button', { name: toggleLabel(otherTheme), exact: true }).click();
+    await page.getByRole('button', { name: '账户菜单' }).click();
+    await page.getByRole('menuitem', { name: '个人设置' }).click();
     await dialog.getByRole('button', { name: '更换个人 Token' }).click();
     assert(await dialog.getByLabel('个人 API Token', { exact: true }).evaluate(el => document.activeElement === el), 'Changing token focuses the input');
     await page.keyboard.press('Escape');
@@ -112,10 +154,13 @@ try {
     await page.getByRole('button', { name: '移除', exact: true }).click();
     await layout('remove-member');
     await dialog.getByRole('button', { name: '取消' }).click();
+    await page.reload();
+    await page.getByRole('button', { name: toggleLabel(theme), exact: true }).waitFor();
+    assert.equal(await page.evaluate(() => localStorage.getItem('skillhub-appearance')), theme, 'Preference survives reload');
     await page.close();
   }
   assert.deepEqual(errors, [], 'No browser errors');
-  const report = { passed: true, checks, widths: [1280, 563, 375], themes: ['light', 'dark'], fixtureOnly: true };
+  const report = { passed: true, checks, widths: [1280, 563, 375], themes: ['light', 'dark'], sourceConfiguration: true, hostThemeChanges: true, themePersistence: true, portalAndEmbeddedContrast: true, fixtureOnly: true };
   if (process.env.DSH_PROBE_OUTPUT) await writeFile(`${process.env.DSH_PROBE_OUTPUT}/account-ui-result.json`, JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report));
 } finally { await browser.close(); server.stop(true); }
