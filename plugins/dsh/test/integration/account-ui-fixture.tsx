@@ -10,11 +10,20 @@ import { ConfigPage } from '../../src/client/config-page.js';
 import { Button } from '../../src/client/ui.js';
 import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client';
 import type { SkillHubConfig } from '../../src/host/types.js';
-import type { AccountMember, MemberMutation } from '../../src/host/account-types.js';
+import type { AccountMember, MemberMutation, Visibility } from '../../src/host/account-types.js';
 
 // Isolated UI fixture: no real service, credentials, or filesystem writes.
 let identity: { handle: string; displayName: string } | null = null;
 let uploadsEmpty = false;
+let finishUpload: (() => void) | undefined;
+let pauseInspection = false;
+let finishInspection: (() => void) | undefined;
+Object.assign(globalThis, {
+  finishAccountUpload: () => finishUpload?.(),
+  pauseNextAccountInspection: () => { pauseInspection = true; },
+  isAccountInspectionPaused: () => !!finishInspection,
+  finishAccountInspection: () => { const finish = finishInspection; finishInspection = undefined; finish?.(); },
+});
 const designMembers: AccountMember[] = [
   { userId: 'usr_11111111-2222-4333-8444-555555555555', displayName: '空间所有者', role: 'OWNER' },
   { userId: 'fixture-user', displayName: '演示用户', role: 'ADMIN' },
@@ -55,8 +64,14 @@ const api = {
     return true;
   },
   deleteAccountSkill: () => true,
-  inspectUpload: () => ({ slug: 'example', existing: null }),
-  publishUpload: () => ({ namespace: 'design', slug: 'example', version: '1.0.0', visibility: 'PRIVATE' }),
+  inspectUpload: async () => {
+    if (pauseInspection) { pauseInspection = false; await new Promise<void>(resolve => { finishInspection = resolve; }); }
+    return { slug: 'example', existing: null };
+  },
+  publishUpload: async (_revision: string, namespace: string, _archive: string, visibility: Visibility) => {
+    await new Promise<void>(resolve => { finishUpload = resolve; });
+    return { namespace, slug: 'example', version: '1.0.0', visibility };
+  },
   uploadStatus: () => ({ status: '待服务端处理' }),
 };
 const remote = Object.fromEntries(Object.entries(api).map(([name, fn]) => [name, async (...args: unknown[]) => {

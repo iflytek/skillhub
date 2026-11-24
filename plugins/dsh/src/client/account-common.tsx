@@ -29,7 +29,7 @@ export function AccountDialog({ title, description, close, busy = false, childre
   return <><span ref={setAnchor} /><Dialog open onOpenChange={open => { if (!open && !busy) close(); }}>
     <DialogContent container={anchor} className="astron-sh-account-form" aria-busy={busy} onOpenAutoFocus={event => {
       if (!(event.target instanceof HTMLElement)) return;
-      const field = event.target.querySelector<HTMLElement>('input:not([disabled]),[role="combobox"]:not([disabled])')
+      const field = event.target.querySelector('.astron-sh-account-dialog-body')?.querySelector<HTMLElement>('input:not([disabled]):not([hidden]):not([type="hidden"]),select:not([disabled]),button:not([disabled]),[role="combobox"]:not([disabled])')
         ?? event.target.querySelector<HTMLElement>('[data-account-cancel]');
       if (field) { event.preventDefault(); field.focus(); }
     }} onCloseAutoFocus={event => {

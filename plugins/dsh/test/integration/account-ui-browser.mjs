@@ -14,6 +14,20 @@ const browser = await chromium.launch({ headless: true, ...(process.env.DSH_PROB
 const errors = [];
 let checks = 0;
 let namespaceChecks = 0;
+async function fileTransfer(page, files) {
+  return page.evaluateHandle(files => {
+    const transfer = new DataTransfer();
+    for (const file of files) transfer.items.add(new File([file.size === undefined ? file.body ?? 'fixture-package' : new Uint8Array(file.size)], file.name, { type: file.type ?? 'application/zip' }));
+    return transfer;
+  }, files);
+}
+async function dropFiles(page, target, files) {
+  const transfer = await fileTransfer(page, files);
+  try {
+    await target.dispatchEvent('dragover', { dataTransfer: transfer });
+    await target.dispatchEvent('drop', { dataTransfer: transfer });
+  } finally { await transfer.dispose(); }
+}
 function contrast(foreground, background) {
   const luminance = color => color.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255).map(v => v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4).reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i], 0);
   const a = luminance(foreground), b = luminance(background);
@@ -116,11 +130,84 @@ try {
     await dialog.waitFor({ state: 'hidden' });
     await page.getByRole('button', { name: '上传技能', exact: true }).click();
     await dialog.getByRole('combobox', { name: '目标命名空间' }).waitFor();
-    await dialog.getByLabel('技能包', { exact: false }).setInputFiles({ name: 'fixture.zip', mimeType: 'application/zip', buffer: Buffer.from('fixture-package') });
+    const picker = dialog.getByRole('button', { name: '选择技能包文件', exact: true });
+    assert(await dialog.getByRole('combobox', { name: '目标命名空间' }).evaluate(select => document.activeElement === select), 'Upload focuses the visible namespace field instead of the hidden file input');
+    const transfer = await fileTransfer(page, [{ name: 'fixture.zip' }]);
+    await picker.dispatchEvent('dragenter', { dataTransfer: transfer });
+    await picker.locator('svg').dispatchEvent('dragenter', { dataTransfer: transfer });
+    await picker.locator('svg').dispatchEvent('dragleave', { dataTransfer: transfer });
+    assert.equal(await picker.getAttribute('data-dragging'), 'true', 'Moving across dropzone children preserves drag highlight');
+    await layout('upload-drag');
+    await picker.dispatchEvent('dragleave', { dataTransfer: transfer });
+    assert.equal(await picker.getAttribute('data-dragging'), 'false', 'Leaving the dropzone clears drag highlight');
+    await transfer.dispose();
+    const originalUrl = page.url();
+    await dropFiles(page, picker, [{ name: 'dragged.zip' }]);
+    const selectedFile = dialog.locator('.astron-sh-upload-file');
+    await selectedFile.getByText('dragged.zip', { exact: true }).waitFor();
+    await dialog.getByRole('button', { name: '核对上传信息' }).click();
+    await dialog.getByRole('region', { name: '确认上传目标' }).waitFor();
+    for (const [files, message] of [
+      [[{ name: 'wrong.txt', type: 'text/plain' }], '请选择 ZIP 格式的技能包。'],
+      [[{ name: 'first.zip' }, { name: 'second.zip' }], '一次只能选择一个 ZIP 技能包。'],
+      [[{ name: 'empty.zip', size: 0 }], '请选择非空且不超过 8 MiB 的 ZIP 文件。'],
+      [[{ name: 'oversized.zip', size: 8 * 1024 * 1024 + 1 }], '请选择非空且不超过 8 MiB 的 ZIP 文件。'],
+    ]) {
+      await dropFiles(page, dialog.locator('.astron-sh-upload-dropzone'), files);
+      await dialog.getByRole('alert').filter({ hasText: message }).waitFor();
+      assert.equal(await selectedFile.count(), 0, 'Rejected selection clears the previous package');
+      assert.equal(await dialog.getByRole('region', { name: '确认上传目标' }).count(), 0, 'Rejected selection invalidates the previous confirmation');
+      assert(await dialog.getByRole('button', { name: '核对上传信息' }).isDisabled(), 'Invalid files cannot be uploaded');
+    }
+    await layout('upload-file-error');
+    await dropFiles(page, picker, [{ name: 'removable.zip' }]);
+    await selectedFile.getByText('removable.zip', { exact: true }).waitFor();
+    await selectedFile.getByRole('button', { name: '移除文件', exact: true }).click();
+    assert(await picker.evaluate(button => document.activeElement === button), 'Removing the file returns focus to the picker');
+    assert.equal(await selectedFile.count(), 0);
+    assert(await dialog.getByRole('button', { name: '核对上传信息' }).isDisabled(), 'Removing a file clears its upload target');
+    const chooserPromise = page.waitForEvent('filechooser');
+    await picker.press('Enter');
+    const chooser = await chooserPromise;
+    assert.equal(chooser.isMultiple(), false, 'Picker accepts one file');
+    const longName = '文件名较长的技能包-'.repeat(12) + '.ZIP';
+    await chooser.setFiles({ name: longName, mimeType: 'application/octet-stream', buffer: Buffer.from('fixture-package') });
+    await selectedFile.getByText(longName, { exact: true }).waitFor();
+    assert.equal(await dialog.getByRole('alert').count(), 0, 'A valid picker selection clears file errors');
+    await layout('upload-selected');
+    await dialog.getByRole('button', { name: '核对上传信息' }).click();
+    await dialog.getByRole('region', { name: '确认上传目标' }).waitFor();
+    await dropFiles(page, dialog.locator('.astron-sh-upload-dropzone'), [{ name: 'replacement.zip' }]);
+    await selectedFile.getByText('replacement.zip', { exact: true }).waitFor();
+    assert.equal(await dialog.getByRole('region', { name: '确认上传目标' }).count(), 0, 'Replacing a valid file also clears confirmation');
+    const outsideTransfer = await fileTransfer(page, [{ name: 'outside.zip' }]);
+    const prevented = await dialog.evaluate((element, transfer) => {
+      const event = new DragEvent('drop', { dataTransfer: transfer, bubbles: true, cancelable: true });
+      element.dispatchEvent(event);
+      return event.defaultPrevented;
+    }, outsideTransfer);
+    await outsideTransfer.dispose();
+    assert(prevented && page.url() === originalUrl, 'Dropping outside the zone cannot navigate the dialog');
+    assert(await selectedFile.getByText('replacement.zip', { exact: true }).isVisible(), 'Outside drops do not replace a selected file');
+    await page.evaluate(() => window.pauseNextAccountInspection());
+    await dialog.getByRole('button', { name: '核对上传信息' }).click();
+    await page.waitForFunction(() => window.isAccountInspectionPaused());
+    await dialog.getByRole('combobox', { name: '可见性' }).selectOption('PUBLIC');
+    await page.evaluate(() => window.finishAccountInspection());
+    await dialog.getByText('正在核对目标技能…', { exact: true }).waitFor({ state: 'hidden' });
+    assert.equal(await dialog.getByRole('region', { name: '确认上传目标' }).count(), 0, 'An older verification cannot restore confirmation after visibility changes');
+    assert.equal(await dialog.getByRole('combobox', { name: '可见性' }).inputValue(), 'PUBLIC');
     await dialog.getByRole('button', { name: '核对上传信息' }).click();
     await dialog.getByRole('region', { name: '确认上传目标' }).waitFor();
     await layout('upload-confirm');
     await dialog.getByRole('button', { name: '确认上传' }).click();
+    await page.waitForFunction(() => document.querySelector('[role="dialog"]')?.getAttribute('aria-busy') === 'true');
+    assert(await dialog.getByRole('button', { name: '更换技能包文件', exact: true }).isDisabled(), 'Picker is locked during upload');
+    assert(await selectedFile.getByRole('button', { name: '移除文件', exact: true }).isDisabled(), 'Removal is locked during upload');
+    await dropFiles(page, dialog.locator('.astron-sh-upload-dropzone'), [{ name: 'busy-replacement.zip' }]);
+    assert(await selectedFile.getByText('replacement.zip', { exact: true }).isVisible(), 'Drops during upload cannot replace the submitted file');
+    await layout('upload-busy');
+    await page.evaluate(() => window.finishAccountUpload());
     await dialog.getByRole('heading', { name: '已上传' }).waitFor();
     await layout('upload-receipt');
     await dialog.getByRole('button', { name: '关闭', exact: true }).click();
@@ -143,6 +230,13 @@ try {
     await page.getByRole('button', { name: '我的上传', exact: true }).click();
     await page.getByRole('list', { name: '我的上传', exact: true }).waitFor();
     await pageLayout('namespace-uploads');
+    await page.getByRole('button', { name: '上传新版本', exact: true }).click();
+    await dialog.waitFor();
+    assert(await dialog.getByRole('combobox', { name: '目标命名空间' }).isDisabled(), 'Existing skill keeps its namespace');
+    assert(await dialog.getByRole('button', { name: '选择技能包文件', exact: true }).evaluate(button => document.activeElement === button), 'Update upload focuses the picker when its namespace is locked');
+    await layout('upload-update');
+    await dialog.getByRole('button', { name: '取消', exact: true }).click();
+    await dialog.waitFor({ state: 'hidden' });
     await page.getByRole('button', { name: '删除', exact: true }).click();
     await layout('delete');
     await dialog.getByRole('button', { name: '取消' }).click();

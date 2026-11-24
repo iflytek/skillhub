@@ -56,8 +56,18 @@ export const accountStyles = `
 .skillhub-controls .astron-sh-account-dialog-body select:focus,.skillhub-controls .astron-sh-account-dialog-body input:focus,.skillhub-controls .astron-sh-account-dialog-body .astron-sh-select-trigger:focus{outline:none;border-color:var(--astron-sh-accent)}
 .skillhub-controls .astron-sh-account-dialog-body input[type=password]{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 .skillhub-controls .astron-sh-account-dialog-body input[type=password]::placeholder{font-family:var(--dsw-font-family,system-ui,sans-serif)}
-.skillhub-controls .astron-sh-account-dialog-body input[type=file]{padding:6px;border:1px solid var(--astron-sh-border);border-radius:8px;background:var(--astron-sh-soft);font-weight:400;font-size:13px}
-.skillhub-controls .astron-sh-account-dialog-body input[type=file]::file-selector-button{margin-right:10px;padding:5px 10px;border:1px solid var(--astron-sh-border);border-radius:5px;background:var(--astron-sh-surface);color:var(--astron-sh-fg);font:inherit;cursor:pointer}
+.skillhub-controls .astron-sh-upload-field{display:grid;gap:10px;min-width:0}
+.skillhub-controls .astron-sh-account-dialog-body .astron-sh-upload-dropzone{display:flex;flex-direction:column;gap:12px;width:100%;height:auto;padding:24px 16px;border:1px dashed var(--astron-sh-border);border-radius:10px;background:var(--astron-sh-soft);color:var(--astron-sh-secondary);font-weight:400;white-space:normal;text-align:center}
+.skillhub-controls .astron-sh-account-dialog-body .astron-sh-upload-dropzone[data-dragging=true],.skillhub-controls .astron-sh-account-dialog-body .astron-sh-upload-dropzone:hover:not(:disabled){border-color:var(--astron-sh-accent)}
+.skillhub-controls .astron-sh-upload-dropzone>svg{width:24px;height:24px;color:var(--astron-sh-muted)}
+.skillhub-controls .astron-sh-upload-dropzone strong{font-size:13px;line-height:20px}
+.skillhub-controls .astron-sh-upload-picker-label{padding:6px 14px;border:1px solid var(--astron-sh-border);border-radius:6px;background:var(--astron-sh-surface);color:var(--astron-sh-fg);font-size:13px}
+.skillhub-controls .astron-sh-upload-file{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--astron-sh-border);border-radius:8px;background:var(--astron-sh-surface)}
+.skillhub-controls .astron-sh-upload-file>svg{flex:none;color:var(--astron-sh-muted)}
+.skillhub-controls .astron-sh-upload-file>div{display:grid;gap:4px;min-width:0;flex:1;overflow-wrap:anywhere;font-size:13px}
+.skillhub-controls .astron-sh-upload-file span{font-size:12px;color:var(--astron-sh-muted)}
+.skillhub-controls .astron-sh-upload-file>button{flex:none}
+@media(max-width:480px){.skillhub-controls .astron-sh-upload-file{flex-wrap:wrap;align-items:flex-start}.skillhub-controls .astron-sh-upload-file>div{flex-basis:calc(100% - 26px)}.skillhub-controls .astron-sh-upload-file>button{margin-left:auto}}
 .skillhub-controls .astron-sh-account-dialog-body .astron-sh-account-source{display:grid;gap:5px;margin:0;padding:12px 14px;border:1px solid var(--astron-sh-border-subtle);border-radius:8px;background:var(--astron-sh-soft)}
 .skillhub-controls .astron-sh-account-source dt{font-size:12px;color:var(--astron-sh-muted)}
 .skillhub-controls .astron-sh-account-source dd{margin:0;font-size:13px;line-height:20px;overflow-wrap:anywhere}
