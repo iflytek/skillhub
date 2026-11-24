@@ -15,6 +15,7 @@ import { Card } from '@/shared/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog'
 import { Input } from '@/shared/ui/input'
 import { Label } from '@/shared/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 
 const PAGE_SIZE = 20
 const DELEGABLE_ROLES: OrganizationRole[] = [
@@ -314,14 +315,17 @@ function OrganizationMembers({ viewerId, organizationId }: { viewerId: string; o
                   ) : (
                     <>
                       <Label htmlFor="organization-role">{t('organizations.selectRole')}</Label>
-                      <select id="organization-role" value={role} required disabled={grant.isPending}
-                        aria-invalid={!!grant.error} aria-describedby={grant.error ? 'organization-editor-error' : undefined}
-                        onChange={(event) => setRole(event.target.value as OrganizationRole | '')}
-                        className="h-[var(--control-height)] w-full rounded-[var(--control-radius)] border border-border bg-background px-2.5 text-sm text-foreground focus:border-ring focus:outline-none aria-[invalid=true]:border-destructive disabled:opacity-50"
-                      >
-                        <option value="" disabled>{t('organizations.selectRole')}</option>
-                        {visibleEditor.availableRoles.map((item) => <option key={item} value={item}>{t(`organizations.roles.${item}`)}</option>)}
-                      </select>
+                      <Select value={role} required disabled={grant.isPending} onValueChange={(value) => setRole(value as OrganizationRole)}>
+                        <SelectTrigger id="organization-role" aria-invalid={!!grant.error}
+                          aria-describedby={grant.error ? 'organization-editor-error' : undefined}>
+                          <SelectValue placeholder={t('organizations.selectRole')} />
+                        </SelectTrigger>
+                        <SelectContent className="max-w-[var(--radix-select-content-available-width)]">
+                          {visibleEditor.availableRoles.map((item) => (
+                            <SelectItem key={item} value={item}>{t(`organizations.roles.${item}`)}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </>
                   )}
                 </div>

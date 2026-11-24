@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
@@ -96,18 +96,31 @@ describe('OrganizationMembersPage permissions', () => {
     expect(dialog.getByText('organizations.addMemberHint')).toBeTruthy()
   })
 
-  it('asks the owner to select a role explicitly and excludes existing roles', () => {
+  it('lets the owner choose a role with the shared keyboard-accessible picker', async () => {
     state.owner = true
     state.canManageMembers = true
+    const restoreScroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView')
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
     render(<OrganizationMembersPage />)
-    fireEvent.click(screen.getByRole('button', { name: 'organizations.grantMemberRole' }))
-    const dialog = within(screen.getByRole('dialog', { name: 'organizations.grantRole' }))
-    const submit = dialog.getByRole<HTMLButtonElement>('button', { name: 'organizations.grantRole' })
-    expect(submit.disabled).toBe(true)
-    expect(dialog.queryByRole('option', { name: 'organizations.roles.ORG_AUDITOR' })).toBeNull()
-    fireEvent.change(dialog.getByRole('combobox'), { target: { value: 'LOGIN_SECRET_ADMIN' } })
-    fireEvent.click(submit)
-    expect(state.mutate).toHaveBeenCalledExactlyOnceWith({ targetUserId: 'user-a', role: 'LOGIN_SECRET_ADMIN' })
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'organizations.grantMemberRole' }))
+      const dialog = within(screen.getByRole('dialog', { name: 'organizations.grantRole' }))
+      const submit = dialog.getByRole<HTMLButtonElement>('button', { name: 'organizations.grantRole' })
+      const trigger = dialog.getByRole('combobox', { name: 'organizations.selectRole' })
+      expect(trigger.tagName).toBe('BUTTON')
+      expect(submit.disabled).toBe(true)
+      fireEvent.keyDown(trigger, { key: 'ArrowDown' })
+      const picker = within(await screen.findByRole('listbox'))
+      expect(picker.queryByRole('option', { name: 'organizations.roles.ORG_AUDITOR' })).toBeNull()
+      fireEvent.keyDown(picker.getByRole('option', { name: 'organizations.roles.LOGIN_SECRET_ADMIN' }), { key: 'Enter' })
+      await waitFor(() => expect(document.activeElement).toBe(trigger))
+      expect(submit.disabled).toBe(false)
+      fireEvent.click(submit)
+      expect(state.mutate).toHaveBeenCalledExactlyOnceWith({ targetUserId: 'user-a', role: 'LOGIN_SECRET_ADMIN' })
+    } finally {
+      if (restoreScroll) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', restoreScroll)
+      else delete (HTMLElement.prototype as Partial<HTMLElement>).scrollIntoView
+    }
   })
 
   it.each(['viewerId', 'organizationId'] as const)('discards the grant dialog when %s changes', (key) => {
