@@ -50,6 +50,21 @@ async function fixture(count = 2) {
   return { env, plan, requests, target, run, add, metadata, deny: (slug: string) => { denied = slug } }
 }
 
+test('repository check and upgrade --check remain compatible read-only entry points', async () => {
+  const f = await fixture(1)
+  expect((await f.run('install')).exitCode).toBe(0)
+  f.add('skill-0', '2.0.0')
+  const inventoryPath = join(f.env.home, '.skillhub', 'inventory.json')
+  const inventory = await readFile(inventoryPath, 'utf8')
+  const metadata = await f.metadata('skill-0')
+  const checks = [await f.run('check'), await f.run('upgrade', ['--check'])]
+  expect(checks[0]).toEqual(checks[1])
+  expect(checks[0]!.exitCode).toBe(0)
+  expect(JSON.parse(checks[0]!.stdout).summary.upgrades).toBe(1)
+  expect(await readFile(inventoryPath, 'utf8')).toBe(inventory)
+  expect(await f.metadata('skill-0')).toEqual(metadata)
+})
+
 test('check is read-only and upgrade pins only existing members, never new upstream skills', async () => {
   const f = await fixture(1)
   expect((await f.run('install')).exitCode).toBe(0)

@@ -1,6 +1,7 @@
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 import { z } from 'zod'
+import type { GithubSource } from '../shared/github-source'
 
 const repositoryInstallPlanSchema = z.object({
   repositoryId: z.string().regex(/^[1-9]\d*$/),
@@ -65,6 +66,8 @@ export interface ResolveResponse {
   versionId: number
   fingerprint: string
   downloadUrl: string
+  /** Present only for GitHub-synced versions on registries that record provenance. */
+  githubSource?: GithubSource | null
 }
 
 export interface DeleteResponse {
@@ -187,8 +190,34 @@ export class SkillHubClient {
   }
 
   async repositoryInstallPlan(repositoryId: string): Promise<RepositoryInstallPlan> {
-    const body = await this.getJson<unknown>(`/github-repositories/${encodeURIComponent(repositoryId)}/install-plan`)
-    const parsed = repositoryInstallPlanSchema.safeParse(body)
+    const response = await this.getResponse(`/github-repositories/${encodeURIComponent(repositoryId)}/install-plan`)
+    const next = 'Check whether this registry enables repository batch operations and verify the repository ID. '
+      + 'Use `skillhub install <coordinate>` for an individual published skill.'
+    if (!response.ok) {
+      const error = await this.createResponseError(response, 'json')
+      // An untyped 404 can mean a missing endpoint or an unavailable resource. Do not
+      // misreport a typed business error, authentication failure or outage as a missing feature.
+      if ([404, 405, 501].includes(response.status) && !error.details.errorCode) {
+        throw new CliError(response.status === 404
+          ? 'Repository batch operations may not be enabled on this registry, or the repository is unavailable.'
+          : 'Repository batch operations are not available on this registry.', error.exitCode, {
+          ...error.details, feature: 'repository', status: response.status, next
+        })
+      }
+      throw error
+    }
+    let body: unknown
+    try {
+      body = await response.json()
+    } catch {
+      // Some deployments return a landing page for routes they do not implement.
+      throw new CliError('This registry did not return a compatible repository installation plan. '
+        + 'Repository batch operations may not be enabled.', EXIT.validation, {
+        registry: this.registry, feature: 'repository', status: response.status, next
+      })
+    }
+    const data = typeof body === 'object' && body !== null && 'data' in body ? body.data : undefined
+    const parsed = repositoryInstallPlanSchema.safeParse(data)
     if (!parsed.success) throw new CliError('registry returned an invalid repository installation plan', EXIT.validation)
     const plan = parsed.data
     const ids = new Set<number>()
@@ -409,15 +438,17 @@ export class SkillHubClient {
   }
 
   private async getJson<T>(path: string): Promise<T> {
-    let response: Response
+    return this.handleJsonResponse<T>(await this.getResponse(path))
+  }
+
+  private async getResponse(path: string): Promise<Response> {
     try {
-      response = await this.fetchImpl(`${this.registry}/api/cli/v1${path}`, {
+      return await this.fetchImpl(`${this.registry}/api/cli/v1${path}`, {
         headers: this.headers()
       })
     } catch (err) {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }
-    return this.handleJsonResponse<T>(response)
   }
 
   private async postPublicJson<T>(path: string, body?: Record<string, unknown>): Promise<T> {

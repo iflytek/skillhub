@@ -13,10 +13,12 @@ import com.iflytek.skillhub.dto.cli.CliNamespaceSyncItemResponse;
 import com.iflytek.skillhub.dto.cli.CliNamespaceSyncResponse;
 import com.iflytek.skillhub.dto.cli.CliPublishResponse;
 import com.iflytek.skillhub.dto.cli.CliResolveResponse;
+import com.iflytek.skillhub.repository.GithubSkillSourceQueryRepository;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import com.iflytek.skillhub.service.SkillDeleteAppService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +39,7 @@ public class CliSkillAppService {
     private final SkillDownloadService skillDownloadService;
     private final SkillDeleteAppService skillDeleteAppService;
     private final SkillPublishService skillPublishService;
+    private final GithubSkillSourceQueryRepository githubSkillSourceQueryRepository;
 
     public CliSkillAppService(
             SkillSearchAppService skillSearchAppService,
@@ -44,11 +47,24 @@ public class CliSkillAppService {
             SkillDownloadService skillDownloadService,
             SkillDeleteAppService skillDeleteAppService,
             SkillPublishService skillPublishService) {
+        this(skillSearchAppService, skillQueryService, skillDownloadService, skillDeleteAppService,
+                skillPublishService, null);
+    }
+
+    @Autowired
+    public CliSkillAppService(
+            SkillSearchAppService skillSearchAppService,
+            SkillQueryService skillQueryService,
+            SkillDownloadService skillDownloadService,
+            SkillDeleteAppService skillDeleteAppService,
+            SkillPublishService skillPublishService,
+            GithubSkillSourceQueryRepository githubSkillSourceQueryRepository) {
         this.skillSearchAppService = skillSearchAppService;
         this.skillQueryService = skillQueryService;
         this.skillDownloadService = skillDownloadService;
         this.skillDeleteAppService = skillDeleteAppService;
         this.skillPublishService = skillPublishService;
+        this.githubSkillSourceQueryRepository = githubSkillSourceQueryRepository;
     }
 
     public record CliSearchItem(String namespace, String slug, String latestVersion, String summary) {}
@@ -82,7 +98,10 @@ public class CliSkillAppService {
                 resolved.version(),
                 resolved.versionId(),
                 resolved.fingerprint(),
-                resolved.downloadUrl()
+                resolved.downloadUrl(),
+                // resolveVersion has already authorized the viewer for this version.
+                githubSkillSourceQueryRepository == null || resolved.versionId() == null ? null
+                        : githubSkillSourceQueryRepository.findPublishedSyncedVersion(resolved.versionId()).orElse(null)
         );
     }
 

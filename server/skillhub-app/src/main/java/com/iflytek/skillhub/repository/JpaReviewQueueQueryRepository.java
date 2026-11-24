@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
@@ -19,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
  * batch fetch then restores the domain tasks for the existing response projection.
  */
 @Repository
-@Transactional(readOnly = true)
+// Count, page rows and their verdicts must observe the same scan/review snapshot.
+@Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
 public class JpaReviewQueueQueryRepository implements ReviewQueueQueryRepository {
     // Match SkillMetadata's String.strip, string-only package metadata and UTF-16 length limit.
     private static final String STRIP_CHARACTERS = "\t\n\u000b\f\r\u001c\u001d\u001e\u001f \u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2008\u2009\u200a\u2028\u2029\u205f\u3000";
@@ -56,6 +58,15 @@ public class JpaReviewQueueQueryRepository implements ReviewQueueQueryRepository
                   AND previous.published_at <= task.submitted_at) THEN 'VERSION_UPDATE'
               ELSE 'FIRST_PUBLISH' END
             """;
+    static final String CURRENT_SCAN = """
+            LEFT JOIN LATERAL (
+                SELECT audit.verdict, audit.is_safe, audit.scanned_at, audit.failure_reason
+                FROM security_audit audit WHERE audit.skill_version_id = version.id
+                  AND audit.scanner_type = 'SKILL_SCANNER' AND audit.deleted_at IS NULL
+                ORDER BY audit.created_at DESC, audit.id DESC LIMIT 1
+            ) scan ON TRUE
+            """;
+    private static final String VERDICT = "CASE WHEN scan.scanned_at IS NOT NULL AND scan.failure_reason IS NULL THEN scan.verdict END";
     static final String FROM = """
             FROM review_task task
             JOIN namespace ns ON ns.id = task.namespace_id
@@ -80,13 +91,14 @@ public class JpaReviewQueueQueryRepository implements ReviewQueueQueryRepository
         Condition condition = condition(filter, platformReviewer, managedNamespaceIds);
         Map<String, Object> parameters = condition.parameters();
         String where = condition.sql();
-        long total = ((Number) bind(entityManager.createNativeQuery("SELECT COUNT(*) " + FROM + where),
+        long total = ((Number) bind(entityManager.createNativeQuery("SELECT COUNT(*) " + FROM
+                        + (filter.scanVerdict() == null ? "" : CURRENT_SCAN) + where),
                 parameters).getSingleResult()).longValue();
         String direction = pageable.getSort().getOrderFor("submittedAt") != null
                 && pageable.getSort().getOrderFor("submittedAt").isAscending() ? "ASC" : "DESC";
         @SuppressWarnings("unchecked")
         List<Object[]> rows = bind(entityManager.createNativeQuery("SELECT task.id, " + NAME + ", "
-                        + SUMMARY + ", " + KIND + FROM + where
+                        + SUMMARY + ", " + KIND + ", " + VERDICT + " " + FROM + CURRENT_SCAN + where
                         + " ORDER BY task.submitted_at " + direction + ", task.id " + direction), parameters)
                 .setFirstResult(Math.toIntExact(pageable.getOffset())).setMaxResults(pageable.getPageSize())
                 .getResultList();
@@ -96,7 +108,7 @@ public class JpaReviewQueueQueryRepository implements ReviewQueueQueryRepository
         entityManager.createQuery("SELECT task FROM ReviewTask task WHERE task.id IN :ids", ReviewTask.class)
                 .setParameter("ids", ids).getResultList().forEach(task -> tasks.put(task.getId(), task));
         List<Entry> entries = rows.stream().map(row -> new Entry(tasks.get(((Number) row[0]).longValue()),
-                (String) row[1], (String) row[2], (String) row[3])).toList();
+                (String) row[1], (String) row[2], (String) row[3], (String) row[4])).toList();
         return new PageImpl<>(entries, pageable, total);
     }
 
@@ -120,6 +132,10 @@ public class JpaReviewQueueQueryRepository implements ReviewQueueQueryRepository
         if (filter.status() != null) {
             where.append(" AND task.status = :status");
             parameters.put("status", filter.status());
+        }
+        if (filter.scanVerdict() != null) {
+            where.append(" AND (").append(VERDICT).append(") = :scanVerdict");
+            parameters.put("scanVerdict", filter.scanVerdict());
         }
         if (filter.originType() != null) {
             where.append(" AND task.origin_type = :originType");

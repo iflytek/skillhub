@@ -183,6 +183,8 @@ func processRepository(ctx context.Context, control *controlplane.Client,
 	}
 	sort.Strings(paths)
 	completion.IncompleteSubtrees = append([]string(nil), roots.IncompleteSubtrees...)
+	// Resolved at most once, only when a package is actually delivered.
+	var sourceTag *controlplane.SourceTag
 	for _, path := range paths {
 		if ctx.Err() != nil {
 			return ctx.Err()
@@ -224,7 +226,10 @@ func processRepository(ctx context.Context, control *controlplane.Client,
 			}
 			return err
 		}
-		artifact, err := repository.AcquirePackage(ctx, metadata.Owner.Login, metadata.Name,
+		if sourceTag == nil {
+			sourceTag = resolveTaskSourceTag(ctx, quotaGuard, metadata, commitSHA, limits)
+		}
+		artifact, err := acquirePackage(ctx, metadata.Owner.Login, metadata.Name,
 			commitSHA, limits.TempRoot, plans[path], repository.AcquisitionLimits{
 				MaxWorkspaceBytes: limits.MaxWorkspaceBytes, MaxArchiveBytes: task.MaxUploadBytes,
 				MinFreeBytes: limits.MinFreeBytes,
@@ -257,7 +262,7 @@ func processRepository(ctx context.Context, control *controlplane.Client,
 			return err
 		}
 		err = deliverPackage(ctx, control, task, admission, commitSHA, path,
-			artifact, limits.AllowedS3Hosts)
+			artifact, limits.AllowedS3Hosts, sourceTag)
 		closeErr := artifact.Close()
 		endPlatformDelivery(ctx)
 		if ctx.Err() != nil {
@@ -305,7 +310,8 @@ func skipPersistedPath(path, checkpoint string, acceptedPaths, retryPaths map[st
 
 func deliverPackage(ctx context.Context, control *controlplane.Client,
 	task *controlplane.ClaimedTask, admission controlplane.PackageAdmission,
-	commitSHA, path string, artifact *repository.Artifact, allowedS3Hosts []string) error {
+	commitSHA, path string, artifact *repository.Artifact, allowedS3Hosts []string,
+	sourceTag *controlplane.SourceTag) error {
 	authorization, err := control.AuthorizeUpload(ctx, task.TaskID, task.Lease,
 		admission.AdmissionID, commitSHA, path, artifact.Size, artifact.SHA256)
 	if err != nil {
@@ -315,8 +321,35 @@ func deliverPackage(ctx context.Context, control *controlplane.Client,
 		return err
 	}
 	_, err = control.ReportPackage(ctx, task.TaskID, task.Lease, admission.AdmissionID,
-		commitSHA, path, authorization, artifact.Size, artifact.SHA256)
+		commitSHA, path, authorization, artifact.Size, artifact.SHA256, sourceTag)
 	return err
+}
+
+// Test seams; production acquires packages and resolves tags through public Git.
+var (
+	acquirePackage   = repository.AcquirePackage
+	resolveSourceTag = repository.ResolveSourceTag
+)
+
+// resolveTaskSourceTag never fails the task: every problem becomes UNKNOWN.
+// Official tasks honour an active quota cooldown before any extra request, but a
+// source tag failure is not reported as a quota observation.
+func resolveTaskSourceTag(ctx context.Context, quotaGuard *officialQuotaGuard,
+	metadata github.Repository, commitSHA string, limits RepositoryLimits) *controlplane.SourceTag {
+	var resolved repository.SourceTag
+	if quotaGuard != nil && !quotaGuard.allowsOptionalGit(ctx) {
+		resolved = repository.SourceTag{Status: repository.SourceTagUnknown, Reason: "QUOTA_COOLDOWN"}
+	} else {
+		resolved = resolveSourceTag(ctx, metadata.Owner.Login, metadata.Name, commitSHA,
+			limits.TempRoot, limits.MaxWorkspaceBytes, limits.MinFreeBytes)
+	}
+	report := &controlplane.SourceTag{Status: resolved.Status, Tag: resolved.Tag,
+		TagCommitSHA: resolved.TagCommitSHA, Reason: resolved.Reason}
+	if resolved.Status == repository.SourceTagExact || resolved.Status == repository.SourceTagAfterTag {
+		distance := resolved.CommitsAfterTag
+		report.CommitsAfterTag = &distance
+	}
+	return report
 }
 
 func advanceCheckpoint(completion *controlplane.RepositoryCompletion, path string) {

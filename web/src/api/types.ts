@@ -357,6 +357,7 @@ export type SkillSuiteReference = Omit<
 }
 
 type GeneratedSkillDetail = components['schemas']['SkillDetailResponse']
+export type GithubUpstreamTag = components['schemas']['UpstreamTag']
 export interface GithubSkillSource {
   ownerLogin: string
   repositoryName: string
@@ -365,6 +366,10 @@ export interface GithubSkillSource {
   syncRevision: number
   licenseStatus: string
   licenseDocuments: Array<{ scope: string; path: string; bundled: boolean }>
+  /** Repository-level tag relation captured at sync time; absent from older servers. */
+  upstreamTag?: GithubUpstreamTag
+  /** Version declared in this Skill's own SKILL.md. */
+  declaredVersion?: string | null
 }
 export type SkillDetail = Omit<
   RequiredGenerated<
@@ -652,6 +657,7 @@ export interface ReviewTask {
   avatarRemoval?: boolean
   originType?: 'USER' | 'GITHUB_SYNC'
   decisionMethod?: ReviewDecisionMethod | null
+  scanVerdict?: import('@/features/security-audit/types').SecurityVerdict | null
   decisionScanTaskId?: string | null
   autoPublicationGrantId?: string | null
 }

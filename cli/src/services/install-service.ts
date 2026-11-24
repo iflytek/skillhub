@@ -22,6 +22,7 @@ import type { AgentCandidate } from '../agents/types'
 import type { ResolveResponse } from '../clients/skillhub-client'
 import type { Inventory, InventoryItem } from '../stores/inventory-store'
 import { acquireSkillTargetLock, orderSkillTargetLocks } from './skill-target-lock'
+import type { GithubSource } from '../shared/github-source'
 
 export interface InstallOptions {
   /** Internal native import bytes; never read from CLI flags. */
@@ -57,6 +58,8 @@ export interface InstallOptions {
 
 export interface InstallResult {
   installed: Array<{ agent: string; dir: string }>
+  /** GitHub provenance of the installed version, when the registry records it. */
+  githubSource?: GithubSource
   warnings?: string[]
   transactionWarnings?: InstallTransactionWarning[]
 }
@@ -438,6 +441,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
 
     return {
       installed: staged.map(item => ({ agent: item.target.agent, dir: item.skillDir })),
+      ...(resolved.githubSource ? { githubSource: resolved.githubSource } : {}),
       warnings,
       transactionWarnings
     }

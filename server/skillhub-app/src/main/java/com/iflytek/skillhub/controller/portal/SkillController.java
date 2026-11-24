@@ -263,7 +263,8 @@ public class SkillController extends BaseApiController {
                 detail.publishedAt(),
                 detail.parsedMetadataJson(),
                 detail.manifestJson(),
-                complianceSnapshotProjectionService.fromParsedMetadataJson(detail.parsedMetadataJson())
+                complianceSnapshotProjectionService.fromParsedMetadataJson(detail.parsedMetadataJson()),
+                githubSkillSourceQueryRepository.findPublishedSyncedVersion(detail.id()).orElse(null)
         );
         return ok("response.success.read", response);
     }

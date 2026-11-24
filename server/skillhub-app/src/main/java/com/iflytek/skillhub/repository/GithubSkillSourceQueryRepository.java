@@ -21,13 +21,18 @@ public class GithubSkillSourceQueryRepository {
         this.objectMapper = objectMapper;
     }
 
-    /** Call only after SkillQueryService has authorized the viewer and selected the published version. */
+    /**
+     * Call only after SkillQueryService has authorized the viewer for this published version.
+     * Returns empty for versions that did not come from GitHub sync.
+     */
     public Optional<GithubSkillSourceResponse> findPublishedVersion(long versionId) {
         return jdbc.query("""
                 SELECT COALESCE(source.owner_login, task.snapshot_json ->> 'owner') AS owner_login,
                        COALESCE(source.repository_name, task.snapshot_json ->> 'name') AS repository_name,
                        ingestion.skill_path, ingestion.commit_sha, version.github_sync_revision,
-                       ingestion.license_evidence_json::text AS evidence_json
+                       ingestion.license_evidence_json::text AS evidence_json,
+                       ingestion.source_tag_json::text AS source_tag_json,
+                       version.parsed_metadata_json ->> 'upstreamVersion' AS declared_version
                 FROM skill_version version
                 JOIN github_sync_package_ingestion ingestion
                   ON ingestion.id = version.github_sync_ingestion_id
@@ -46,16 +51,48 @@ public class GithubSkillSourceQueryRepository {
                     result.getString("owner_login"), result.getString("repository_name"),
                     result.getString("skill_path"), result.getString("commit_sha"),
                     result.getInt("github_sync_revision"),
-                    evidence.path("status").asText("UNKNOWN"), licenseDocuments(evidence)));
+                    evidence.path("status").asText("UNKNOWN"), licenseDocuments(evidence),
+                    upstreamTag(result.getString("source_tag_json")), result.getString("declared_version")));
         }, versionId);
+    }
+
+    /**
+     * Same as {@link #findPublishedVersion} for callers that resolve arbitrary versions
+     * (version detail, CLI resolve): most versions are not synced, so a portable
+     * primary-key lookup skips the provenance join for them.
+     */
+    public Optional<GithubSkillSourceResponse> findPublishedSyncedVersion(long versionId) {
+        Boolean synced = jdbc.query("""
+                SELECT github_sync_ingestion_id IS NOT NULL AS synced
+                FROM skill_version WHERE id = ? AND status = 'PUBLISHED'
+                """, result -> result.next() ? result.getBoolean("synced") : Boolean.FALSE, versionId);
+        return Boolean.TRUE.equals(synced) ? findPublishedVersion(versionId) : Optional.empty();
     }
 
     private JsonNode evidence(String json) {
         try {
             return objectMapper.readTree(json);
         } catch (IOException exception) {
-            throw new IllegalStateException("Invalid stored GitHub license evidence", exception);
+            throw new IllegalStateException("Invalid stored GitHub source evidence", exception);
         }
+    }
+
+    /** Missing provenance (older ingestions or workers) is reported as UNRECORDED, never guessed. */
+    private GithubSkillSourceResponse.UpstreamTag upstreamTag(String json) {
+        if (json == null) {
+            return GithubSkillSourceResponse.UpstreamTag.unrecorded();
+        }
+        JsonNode stored = evidence(json);
+        return new GithubSkillSourceResponse.UpstreamTag(
+                stored.path("status").asText(GithubSkillSourceResponse.UpstreamTag.UNRECORDED),
+                GithubSkillSourceResponse.UpstreamTag.REPOSITORY,
+                text(stored, "tag"), text(stored, "tagCommitSha"),
+                stored.hasNonNull("commitsAfterTag") ? stored.get("commitsAfterTag").asInt() : null,
+                text(stored, "reason"));
+    }
+
+    private static String text(JsonNode node, String field) {
+        return node.hasNonNull(field) ? node.get(field).asText() : null;
     }
 
     private List<GithubSkillSourceResponse.LicenseDocument> licenseDocuments(JsonNode evidence) {

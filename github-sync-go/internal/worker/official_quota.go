@@ -88,6 +88,23 @@ func (g *officialQuotaGuard) beforeGit(ctx context.Context) error {
 	return g.stopped
 }
 
+// allowsOptionalGit is the read-only form of beforeGit for optional requests such
+// as source tag resolution: it honours process and deployment-wide cooldowns but
+// never stops the guard, so the package path decides exactly as before.
+func (g *officialQuotaGuard) allowsOptionalGit(ctx context.Context) bool {
+	if g.stopped != nil || ctx.Err() != nil {
+		return false
+	}
+	officialProcessQuota.Lock()
+	blocked := time.Now().Before(officialProcessQuota.globalUntil) || time.Now().Before(officialProcessQuota.resourceUntil[g.quotaKey(g.resource)]) || time.Now().Before(officialProcessQuota.resourceUntil[g.quotaKey("*")])
+	officialProcessQuota.Unlock()
+	if blocked {
+		return false
+	}
+	control, err := g.control.GetOfficialTaskControl(ctx, g.task.TaskID, g.task.Lease)
+	return err == nil && !(control.Action == "PAUSE" && control.Reason == "QUOTA_COOLDOWN")
+}
+
 func (g *officialQuotaGuard) observe(ctx context.Context, observed github.Quota, requestErr error, resource string) error {
 	now := time.Now().UTC()
 	observation := controlplane.OfficialQuotaObservation{Resource: resource, ObservedAt: now, State: "UNKNOWN"}

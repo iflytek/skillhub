@@ -16,11 +16,13 @@ import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
+import com.iflytek.skillhub.dto.GithubSkillSourceResponse;
 import com.iflytek.skillhub.dto.SkillLifecycleVersionResponse;
 import com.iflytek.skillhub.dto.SkillSummaryResponse;
 import com.iflytek.skillhub.dto.cli.CliDeleteResponse;
 import com.iflytek.skillhub.dto.cli.CliPublishResponse;
 import com.iflytek.skillhub.dto.cli.CliResolveResponse;
+import com.iflytek.skillhub.repository.GithubSkillSourceQueryRepository;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import com.iflytek.skillhub.service.SkillDeleteAppService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
@@ -222,6 +224,28 @@ class CliSkillAppServiceTest {
         assertEquals("2.0.0", response.version());
         assertEquals(42L, response.versionId());
         assertEquals("abc123", response.fingerprint());
+    }
+
+    @Test
+    void resolve_includesGithubSourceOnlyForSyncedVersions() {
+        var sources = org.mockito.Mockito.mock(GithubSkillSourceQueryRepository.class);
+        var withSources = new CliSkillAppService(skillSearchAppService, skillQueryService,
+                skillDownloadService, skillDeleteAppService, skillPublishService, sources);
+        var source = new GithubSkillSourceResponse("mattpocock", "skills", "skills/tdd", "a".repeat(40), 2,
+                "RECOGNIZED", List.of(),
+                new GithubSkillSourceResponse.UpstreamTag("AFTER_TAG", "REPOSITORY", "v1.3.2", "d".repeat(40), 3, null),
+                null);
+        given(skillQueryService.resolveVersion("github", "tdd", null, null, null, "user-1", Map.of()))
+                .willReturn(new SkillQueryService.ResolvedVersionDTO(
+                        10L, "github", "tdd", "0.0.0-gabc", 42L, "sha256:f", null, "/download"));
+        given(skillQueryService.resolveVersion("global", "demo", null, null, null, "user-1", Map.of()))
+                .willReturn(new SkillQueryService.ResolvedVersionDTO(
+                        11L, "global", "demo", "1.0.0", 43L, "sha256:g", null, "/download"));
+        given(sources.findPublishedSyncedVersion(42L)).willReturn(java.util.Optional.of(source));
+        given(sources.findPublishedSyncedVersion(43L)).willReturn(java.util.Optional.empty());
+
+        assertEquals(source, withSources.resolve("github", "tdd", null, "user-1", Map.of()).githubSource());
+        assertNull(withSources.resolve("global", "demo", null, "user-1", Map.of()).githubSource());
     }
 
     @Test
