@@ -59,16 +59,27 @@ Every action checks `expires_at` first. A scheduled job marks overdue requests `
 
 ### Removal conversion (delivery 3)
 
-`NamespaceMemberService.removeMember` keeps its user-then-namespace locks. In the same short transaction it:
+`NamespaceMemberService.removeMember` keeps its user-then-namespace locks. In one transaction it:
 
 1. deletes the membership, so access ends at commit (REQ-DEP-01);
 2. inserts a `skill_ownership_conversion` row: removal event, namespace, removed user, operator, time and status;
-3. inserts one `skill_ownership_conversion_item` per affected Skill (owned sources and maintainer assignments), with the `ownership_revision` seen at removal;
+3. registers the affected Skills with one set-based insert (`INSERT ... SELECT`) into `skill_ownership_conversion_item`: one row per owned source Skill and per maintainer assignment, with the responsibility it revokes (`OWNER` or `MAINTAINER`) and the `ownership_revision` seen at removal;
 4. invalidates the user's pending handover requests in that namespace.
 
-A worker processes items in bounded batches. For each item it locks the Skill and checks the revision still matches. It then converts the Skill, or clears the maintainer, increases the revision and marks the item `DONE`. If the revision no longer matches, the item is marked `SKIPPED_CHANGED`. Items are idempotent by status, so retries are safe. Newly created or later-changed Skills are never touched. Progress is visible in namespace management. Notifications go out after each batch commits.
+The transaction does not load each Skill or run its conversion workflow. Actual conversion, notifications and search reindexing run after commit. Registration still grows with the number of affected Skills, so removal is not constant-time; its scale is validated below. If any step fails, the whole transaction rolls back and the member is not removed.
 
-While an item is not `DONE`, the resolver treats the recorded user as having no maintenance right over that Skill. So rejoining before conversion finishes does not restore rights. Reassignment then goes through handover.
+A worker processes items in bounded batches. For each item it locks the Skill and checks the revision still matches. It then converts the Skill, or clears the maintainer, increases the revision and marks the item `DONE`. If the revision no longer matches, the item is marked `SKIPPED_CHANGED` and the Skill is not touched. Items are idempotent by status, so retries are safe. Newly created or later-changed Skills are never touched. Progress is visible in namespace management. Notifications go out after each batch commits.
+
+**Temporary restriction, bound to the removal event.** An item restricts only the responsibility it recorded, and only while two things hold: the item is `PENDING`, and the Skill's current `ownership_revision` equals the revision recorded at removal. While both hold, the resolver treats the recorded user as not holding that responsibility. Every valid handover, governance assignment and conversion increases the revision, so:
+
+- rejoining alone does not change the revision, and does not restore the old rights;
+- a later valid handover or governance assignment, even to the same user, ends the restriction; that user then has the rights of the new responsibility;
+- a retry of the old item sees the changed revision, marks it `SKIPPED_CHANGED` and leaves the new responsibility alone;
+- `DONE` and `SKIPPED_CHANGED` items never restrict anything.
+
+Access to internal content always follows current membership (REQ-DEP-01), independent of conversion items.
+
+**Scale validation.** Before enabling conversion, run representative large-data tests: a member who owns or maintains many Skills (for example thousands) in a populated namespace. Measure removal-transaction duration and lock waits, including against concurrent reads, uploads and reviews in the namespace. Inject a failure during registration and confirm full rollback: membership kept, no event or items written. A more complex capture or snapshot mechanism is introduced only if these results show it is needed.
 
 ### Download links
 

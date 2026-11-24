@@ -2,8 +2,9 @@
 
 - [x] Record the ownership, maintenance and handover contract from the PR #1060 discussion.
 - [x] Settle the open questions (maintainer decisions, 2026-11-17).
-- [ ] Maintainers confirm our reading of the slug-only upload case (REQ-ADDR-05).
-- [ ] DCO and CLA checks pass on the contract PR.
+- [x] Maintainers confirm the slug-only upload case (REQ-ADDR-05, confirmed 2026-11-18).
+- [x] DCO and CLA checks pass on the contract PR.
+- [x] Apply the 2026-11-23 clarifications: event-bound conversion restriction, set-based registration and scale validation.
 
 ## 1. Delivery 1: TEAM access-rule fix
 
@@ -14,7 +15,7 @@
 ## 2a. Delivery 2 prerequisite: exact addressing and compatibility
 
 - [ ] Call-site inventory: every slug lookup and owner read, marked "must change" or "retest only".
-- [ ] Compatibility matrix for historical data and legacy clients.
+- [ ] Compatibility matrix for historical data and legacy clients, including the REQ-ADDR-05 case (maintainer of 202, no personal record, slug-only upload: selection-required error listing 202, nothing updated or created).
 - [ ] Additive schema migration; no conversion.
 - [ ] Responsibility resolver, including global copies through `source_skill_id` (REQ-OM-04, REQ-OM-05, REQ-OM-07 to REQ-OM-09); migrate every "must change" owner read.
 - [ ] Extend `SkillSlugResolutionService` with optional `skillId` and the selection-required error (REQ-ADDR-02, REQ-ADDR-03, REQ-ADDR-07, REQ-ADDR-08).
@@ -36,12 +37,13 @@
 
 ## 3. Delivery 3: removal conversion and historical remediation
 
-- [ ] Record the removal event and affected items; end access at commit (REQ-DEP-01, REQ-DEP-02, REQ-DEP-08).
+- [ ] Record the removal event and register affected items with a set-based insert in the removal transaction; end access at commit (REQ-DEP-01, REQ-DEP-02, REQ-DEP-08).
 - [ ] Batched, idempotent, retryable conversion worker with progress shown in namespace management (REQ-DEP-09).
-- [ ] No maintenance rights for recorded users while their items are pending (rejoin case).
+- [ ] Restriction bound to the removal event: a pending item restricts only its recorded responsibility while the recorded `ownership_revision` is current (REQ-DEP-09).
+- [ ] Large-data validation: removal-transaction duration, lock waits and rollback on failure. Add a snapshot mechanism only if the results require it.
 - [ ] Remediation list and explicit audited actions for historical records (REQ-DEP-05).
 - [ ] Remove-member dialog, "no maintainer" list and messages for old links (REQ-DEP-06).
-- [ ] Tests: removal not blocked by pending work, retry after partial failure, rejoin while incomplete, source/copy consistency, audit operator, historical access denial.
+- [ ] Tests: removal not blocked by pending work, retry after partial failure, rejoin while incomplete, rejoin then valid reassignment then retry of the old item, source/copy consistency, audit operator, historical access denial.
 
 ---
 

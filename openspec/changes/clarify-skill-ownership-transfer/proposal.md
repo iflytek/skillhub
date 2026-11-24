@@ -1,6 +1,6 @@
-## Status (2026-11-17)
+## Status (2026-11-23)
 
-This change covers TEAM Skill ownership, maintenance handover and member departure. The maintainers ruled on all eleven open questions on PR #1060 on 2026-11-17. Their rulings are recorded under [Decisions](#decisions-2026-11-17) and in the specs. The specs set product rules. They do not say the work is built or that compatibility has been checked.
+This change covers TEAM Skill ownership, maintenance handover and member departure. The maintainers ruled on all eleven open questions on PR #1060 on 2026-11-17, confirmed REQ-ADDR-05 on 2026-11-18 and clarified two implementation rules on 2026-11-23. Their rulings are recorded under [Decisions](#decisions-2026-11-17) and in the specs. The specs set product rules. They do not say the work is built or that compatibility has been checked.
 
 The parts already delivered for #974 (PR #975) stay in force, except where a requirement below says it replaces one of them.
 
@@ -78,9 +78,14 @@ Maintainer rulings on the eleven open questions, as written into the specs.
 
 The maintainers also confirmed that REQ-DEP-01 replaces the departed-owner read-only exception from #975. They also said this does not authorize automatic conversion of historical ownership (REQ-DEP-05).
 
-### Our reading, to confirm
+### Confirmed (2026-11-18)
 
-- **Slug-only upload by a maintainer with no personal record.** User B has no user-owned Skill with slug `x` but maintains namespace-owned Skill 202 with slug `x`. Today the same request from B creates a new Skill. Updating 202 instead would change what an old request does, so we treat this as unclear: the request is refused with a selection-required error that lists 202, and nothing is created. (REQ-ADDR-05)
+- **Slug-only upload by a maintainer with no personal record.** User B has no user-owned Skill with slug `x` but maintains namespace-owned Skill 202 with slug `x`. A slug-only upload from B is refused with the selection-required error listing 202 as an eligible update target. It neither updates 202 nor creates a new Skill. An explicit update of 202 goes through the existing permission and publication checks. This case is part of the delivery 2a compatibility matrix. (REQ-ADDR-05)
+
+### Clarifications (2026-11-23)
+
+- **Old removal events do not override later assignments.** The temporary restriction during conversion is bound to the removal event and the responsibility and `ownership_revision` it recorded. Rejoining alone does not restore old rights. A later valid handover or governance assignment grants the rights of that new responsibility, and retrying the old item neither clears nor restricts it. (REQ-DEP-09, `design.md`)
+- **Conversion approach kept, scale to be validated.** Membership deletion, the removal event and set-based registration of affected records commit in one transaction. Conversion, notifications and reindexing run after commit in bounded batches. Removal is not constant-time. Large-data validation of transaction duration, lock waits and rollback comes first; a snapshot mechanism is added only if the results require it. (REQ-DEP-02, REQ-DEP-09, `design.md`)
 
 ---
 

@@ -30,7 +30,9 @@ The removal SHALL record the removal event and the affected records: Skills the 
 
 ### Requirement: REQ-DEP-09 Conversion SHALL be observable, idempotent and retryable
 
-Conversion MAY run in bounded batches. Its progress SHALL be visible. A retry SHALL touch only the records listed for that removal event, and only while they are still in the state recorded at removal. Failed or incomplete conversion SHALL NOT keep or restore the removed user's access or maintenance rights. Notifications SHALL be sent after each change commits.
+The membership deletion, the removal event and the registration of affected records SHALL commit together, or not at all. Conversion, notifications and reindexing SHALL run after that commit and MAY run in bounded batches. Its progress SHALL be visible. A retry SHALL touch only the records listed for that removal event, and only while they are still in the state recorded at removal. Failed or incomplete conversion SHALL NOT keep or restore the removed user's access or maintenance rights.
+
+The temporary restriction on maintenance rights SHALL be bound to the removal event and the responsibility it recorded. It SHALL end once that responsibility changes through a later valid handover or governance assignment, which SHALL then grant the rights of the new responsibility. Rejoining alone SHALL NOT end it. Retrying or skipping the old item SHALL neither clear the new responsibility nor restrict its rights. Notifications SHALL be sent after each change commits.
 
 #### Scenario: Retry after a partial failure
 - **WHEN** conversion stops after some Skills, and meanwhile another recorded Skill was reassigned through governance
@@ -39,6 +41,14 @@ Conversion MAY run in bounded batches. Its progress SHALL be visible. A retry SH
 #### Scenario: Rejoin while conversion is incomplete
 - **WHEN** the removed user rejoins before conversion of their Skills has finished
 - **THEN** they do not regain maintenance rights over the recorded Skills, conversion still completes, and any reassignment goes through handover
+
+#### Scenario: Rejoin, then a valid reassignment, then the old item is retried
+- **WHEN** A is removed while maintaining Skill 301, rejoins before the item for 301 is processed, and a namespace ADMIN then reassigns 301 to A through governance and A accepts
+- **THEN** A holds the maintenance rights of the new assignment at once, and a later retry of the old item marks it skipped without clearing A or restricting A's rights
+
+#### Scenario: Removal fails part-way
+- **WHEN** registering the affected records fails during a removal
+- **THEN** the member is not removed, and no removal event or record is kept
 
 ### Requirement: REQ-DEP-03 Applications SHALL survive responsibility changes
 

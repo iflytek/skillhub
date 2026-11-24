@@ -66,7 +66,7 @@ New management flows SHALL distinguish creating a Skill from updating a particul
 
 #### Scenario: Explicit update
 - **WHEN** B uploads with `skillId` 202
-- **THEN** only 202 gets the new version, subject to its normal review rules
+- **THEN** only 202 gets the new version, subject to the existing permission, publication and review checks
 
 ### Requirement: REQ-ADDR-06 Historical data and existing clients SHALL keep working
 
