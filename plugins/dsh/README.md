@@ -18,7 +18,9 @@ SkillHub 的 DSH 原生插件。在 DSH 侧栏打开 **技能中心**，匿名�
 
 `0.6.3` 已公开发布，交付 [#1080](https://github.com/iflytek/skillhub/pull/1080) 的紧凑工作台、受限只读文件树，以及详情修改入口和升级完成返回修复。保留 `0.6.2` 的来源与库存语义，并新增 DSH `0.2.2-rc.1` 精确兼容目标。
 
-`0.6.4` 为当前补丁候选，修复新 DSH 版本因精确 RC 白名单无法安装的问题。改用最低 DSH 版本准入、不设 DSH 上限，保留实际依赖图、必要能力、权限及文件事务保护；开发依赖和回归目标分别固定。页面与库存格式不变。候选与公开包分别验收，发布前不宣称 npm 已可用。
+`0.6.4` 已公开发布，修复新 DSH 版本因精确 RC 白名单无法安装的问题。改用最低 DSH 版本准入、不设 DSH 上限，保留实际依赖图、必要能力、权限及文件事务保护；开发依赖和回归目标分别固定。页面与库存格式不变。
+
+`0.7.0` 为当前发布版本，交付 [#1114](https://github.com/iflytek/skillhub/pull/1114) 的登录态：使用个人 API Token 连接账户，按 Profile 和来源保存并在重启后恢复（Windows 使用 DPAPI 加密），支持命名空间技能、成员管理和 ZIP 拖拽上传。命名空间管理需要 Token 的 `namespace:manage` 权限，并依赖已包含该权限的 SkillHub 服务端（SaaS 已具备）。共享库存保持 v2，不要求升级 CLI。公开可用状态以 npm 为准。
 
 ## 登录和管理命名空间
 
@@ -63,15 +65,15 @@ SkillHub 的 DSH 原生插件。在 DSH 侧栏打开 **技能中心**，匿名�
 
 | 项目 | 要求或范围 |
 | --- | --- |
-| DSH | `0.6.4` 候选采用 `>=0.2.0-rc.2` 最低版本准入，无 DSH 上限；真实 Host/Client 依赖归属及必需能力仍须核验 |
+| DSH | `0.6.4` 起（含 `0.7.0`）采用 `>=0.2.0-rc.2` 最低版本准入，无 DSH 上限；真实 Host/Client 依赖归属及必需能力仍须核验 |
 | Cordis | `>=4.0.4`，Loader/Include/Timer 以实际 Host 声明和解析图核验；不锁定历史补丁家族 |
 | Host Node | DSH 0.2.0/0.2.1：`>=24.2.0`；DSH 0.2.2 及更高系列：`>=24.9.0`；遵守宿主自身的更高要求 |
 | 开发包管理器 | Bun `1.3.13`，按锁文件安装 |
 | 当前 UI | 中文；支持 DSH 深浅主题和窄屏 |
-| 已验证环境 | `0.6.3` 及此前兼容验收见既有记录；`0.6.4` 候选、平台及公开包结果单独记录 |
+| 已验证环境 | `0.6.3` 及此前兼容验收见既有记录；`0.6.4`、`0.7.0`、平台及公开包结果单独记录 |
 | 验证边界 | 历史功能证据不能替代本次最终包验收；CI、原生 Host、浏览器、真实模型和 SaaS 分别记录，不互相替代 |
 
-以上为 `0.6.4` 候选的待发布兼容策略；公开 `0.6.3` 包仍使用原精确版本声明。`testedDshVersions` 是回归目标/证据清单，不是运行准入白名单。未来 RC 不会仅因未列入清单被拒绝，但准入不表示已完成该版本验收。必要接口缺失、依赖图矛盾、清单变化或权限不足仍停止相关操作。开发依赖保持精确锁定，不能用插件 peer 副本掩盖真实宿主依赖。
+以上为 `0.6.4` 起（含 `0.7.0`）的兼容策略；公开 `0.6.3` 包仍使用原精确版本声明。`testedDshVersions` 是回归目标/证据清单，不是运行准入白名单。未来 RC 不会仅因未列入清单被拒绝，但准入不表示已完成该版本验收。必要接口缺失、依赖图矛盾、清单变化或权限不足仍停止相关操作。开发依赖保持精确锁定，不能用插件 peer 副本掩盖真实宿主依赖。
 
 Windows 浏览器验证不等于 Windows 原生 Host 的全部文件操作已经验证。CI 的平台矩阵也不替代真实桌面、模型及目标实例验收。完整支持边界见仓库内的 [兼容设计](../../openspec/changes/add-dsh-native-plugin/compatibility-design.md) 和 [验收标准](../../openspec/changes/add-dsh-native-plugin/acceptance.md)。
 
@@ -113,7 +115,7 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 输出目录须先创建。`--dry-run` 不生成 tarball；实际安装使用生成的 `.tgz`。保留每次候选包及其校验值，不覆盖已经用于验收或回退的包。
 
-以下为 `0.6.3` 及此前的历史验收组合，不是 `0.6.4` 候选的运行白名单。新候选不因未列出的补丁版本拒绝操作，仍核对 Host 声明与实际解析图，拒绝矛盾的混装。DSH 主包中的 `~` 依赖不会因主包版本固定而自动锁定。
+以下为 `0.6.3` 及此前的历史验收组合，不是 `0.6.4` 及之后版本的运行白名单。新版本不因未列出的补丁版本拒绝操作，仍核对 Host 声明与实际解析图，拒绝矛盾的混装。DSH 主包中的 `~` 依赖不会因主包版本固定而自动锁定。
 
 | 组合 | Cordis | Loader | Include | Timer |
 | --- | --- | --- | --- | --- |
@@ -125,13 +127,13 @@ npm pack --ignore-scripts --pack-destination /absolute/path/to/candidate-output
 
 ## 从 npm 安装
 
-本节以 `0.6.4` 为安装目标，先用 `npm view` 确认精确版本可用；候选尚未公开时使用本地 tarball。该候选按上文的最低 DSH 版本准入；允许安装不等于已完成所有未来版本的验收。
+本节以 `0.7.0` 为安装目标，先用 `npm view` 确认精确版本可用；尚未公开时使用本地 tarball。该版本按上文的最低 DSH 版本准入；允许安装不等于已完成所有未来版本的验收。
 
 先查询 npm 上的精确版本，确认可用后安装。核对 DSH、Node 最低要求及实际 Host 依赖图，停止目标 Web Profile 的 Host，再执行插件安装；也可按下一节安装已验证的本地 tarball：
 
 ```sh
-npm view @astron-team/skillhub-dsh@0.6.4 version
-dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.6.4 --ignore-scripts
+npm view @astron-team/skillhub-dsh@0.7.0 version
+dsh plugin --profile skillhub-test add @astron-team/skillhub-dsh@0.7.0 --ignore-scripts
 dsh --profile skillhub-test --host 127.0.0.1 --port 0 --no-open
 ```
 

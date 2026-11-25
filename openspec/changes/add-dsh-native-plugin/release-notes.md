@@ -1,8 +1,20 @@
 # SkillHub DSH 原生插件发布说明
 
-## 0.6.4 补丁候选：最低宿主版本准入
+## 0.7.0：账号登录态与命名空间管理
 
-候选包`@astron-team/skillhub-dsh@0.6.4`，独立标签`dsh-v0.6.4`。发布前不宣称npm已可安装；仅DSH，不发布CLI或SkillHub应用。
+包`@astron-team/skillhub-dsh@0.7.0`，独立标签`dsh-v0.7.0`，增量来自[#1114](https://github.com/iflytek/skillhub/pull/1114)。仅发布DSH插件，不发布CLI、SkillHub应用Release或镜像；服务端使用已包含#1114的SaaS。发布前不宣称npm已可安装。
+
+- **账号连接**：使用个人API Token登录，按Profile与完整来源地址保存，重启后恢复并经`whoami`核验。Windows使用DPAPI当前用户加密，POSIX使用所有者独占权限；保存失败不降级为明文。403、网络故障不删除保存的凭据，401或身份不匹配清理连接。
+- **命名空间管理**：我的命名空间、团队技能、成员添加/改角色/移除，ZIP拖拽上传，作者可删除自己的上传。
+- **权限**：成员管理需要Token的`namespace:manage`；新建个人Token默认包含，旧Token不自动扩权。
+- **服务端依赖**：#1114同时包含服务端与web改动（迁移V129、个人Token默认权限、按ID删除技能、`/me`对Token的上传列表）。本版本依赖这些服务端能力；SaaS已具备，自建实例需使用包含#1114的服务端。
+- 沿用0.6.4的最低宿主版本准入，共享库存保持v2，不迁移数据，无需同步升级CLI。
+
+**插件增量**：[dsh-v0.6.4...dsh-v0.7.0](https://github.com/iflytek/skillhub/compare/dsh-v0.6.4...dsh-v0.7.0)。标签以最终实际发布为准。
+
+## 0.6.4 补丁：最低宿主版本准入（已发布）
+
+包`@astron-team/skillhub-dsh@0.6.4`，独立标签`dsh-v0.6.4`，已公开；以下保留其交付范围，不重复计入0.7.0。仅DSH，不发布CLI或SkillHub应用。
 
 - 修复DSH0.2.2-rc.3被旧精确版本声明阻止安装的问题。
 - 宿主最低版本为0.2.0-rc.2，不设DSH上限；已实测清单仅用于证据和回归，不再阻止更新的RC。
