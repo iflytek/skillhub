@@ -10,9 +10,18 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class EnterpriseIdentityRolloutProperties {
 
     private Set<String> organizationAllowlist = Set.of();
+    private boolean oidcLoginEnabled;
 
     public Set<String> getOrganizationAllowlist() {
         return organizationAllowlist;
+    }
+
+    public boolean isOidcLoginEnabled() {
+        return oidcLoginEnabled;
+    }
+
+    public void setOidcLoginEnabled(boolean oidcLoginEnabled) {
+        this.oidcLoginEnabled = oidcLoginEnabled;
     }
 
     public void setOrganizationAllowlist(Set<String> organizationAllowlist) {
