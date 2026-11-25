@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.connection.persistence.LoginConnection;
 import com.iflytek.skillhub.auth.connection.persistence.LoginConnectionRepository;
 import com.iflytek.skillhub.auth.connection.persistence.LoginConnectionStatus;
 import com.iflytek.skillhub.auth.federation.config.EnterpriseIdentityRolloutProperties;
+import com.iflytek.skillhub.auth.oauth.OAuthLoginRedirectSupport;
 import com.iflytek.skillhub.domain.organization.Organization;
 import com.iflytek.skillhub.domain.organization.OrganizationRepository;
 import com.iflytek.skillhub.domain.organization.OrganizationStatus;
@@ -80,8 +81,9 @@ public class EnterpriseLoginDiscoveryService {
 
     private static String startUrl(String handle, String returnTo) {
         String url = "/api/v1/auth/enterprise/" + handle + "/start";
-        if (returnTo != null && returnTo.startsWith("/")) {
-            url += "?returnTo=" + URLEncoder.encode(returnTo, StandardCharsets.UTF_8);
+        String safeReturnTo = OAuthLoginRedirectSupport.sanitizeReturnTo(returnTo);
+        if (safeReturnTo != null) {
+            url += "?returnTo=" + URLEncoder.encode(safeReturnTo, StandardCharsets.UTF_8);
         }
         return url;
     }

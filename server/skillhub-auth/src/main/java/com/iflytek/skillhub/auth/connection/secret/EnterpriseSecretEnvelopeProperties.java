@@ -34,8 +34,12 @@ public class EnterpriseSecretEnvelopeProperties {
     }
 
     byte[] activeKey() {
+        return key(activeKeyId);
+    }
+
+    byte[] key(String requestedKeyId) {
         Set<String> ids = new HashSet<>();
-        byte[] active = null;
+        byte[] requested = null;
         boolean success = false;
         try {
             for (String entry : keys) {
@@ -44,25 +48,25 @@ public class EnterpriseSecretEnvelopeProperties {
                     throw invalidKeyring();
                 }
                 byte[] key = Base64.getDecoder().decode(parts[1]);
-                if (key.length != KEY_BYTES || !parts[0].equals(activeKeyId)) {
+                if (key.length != KEY_BYTES || !parts[0].equals(requestedKeyId)) {
                     Arrays.fill(key, (byte) 0);
                     if (key.length != KEY_BYTES) {
                         throw invalidKeyring();
                     }
                 } else {
-                    active = key;
+                    requested = key;
                 }
             }
-            if (active == null) {
+            if (requested == null) {
                 throw invalidKeyring();
             }
             success = true;
-            return active;
+            return requested;
         } catch (IllegalArgumentException invalid) {
             throw invalidKeyring();
         } finally {
-            if (!success && active != null) {
-                Arrays.fill(active, (byte) 0);
+            if (!success && requested != null) {
+                Arrays.fill(requested, (byte) 0);
             }
         }
     }

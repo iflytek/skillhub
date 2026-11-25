@@ -15,6 +15,8 @@ public interface LoginConnectionRepository extends JpaRepository<LoginConnection
 
     Optional<LoginConnection> findByOrganizationIdAndId(String organizationId, String id);
 
+    Optional<LoginConnection> findByPublicHandle(String publicHandle);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
             select connection from LoginConnection connection
