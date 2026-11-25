@@ -14,6 +14,8 @@ import com.iflytek.skillhub.domain.skill.service.SkillHardDeleteService;
 import com.iflytek.skillhub.search.SearchIndexService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -217,6 +219,66 @@ class SkillDeleteAppServiceTest {
         assertThatThrownBy(() -> service.deleteSkillByIdFromPortal(11L, principal, null))
                 .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException.class);
         org.mockito.Mockito.verifyNoInteractions(skillHardDeleteService);
+    }
+
+    @Test
+    void tokenCannotDeleteTeamSkillByCoordinateAfterAuthorLeaves() {
+        var namespace = new Namespace("team-a", "Team A", "author");
+        namespace.setType(com.iflytek.skillhub.domain.namespace.NamespaceType.TEAM);
+        var skill = new Skill(7L, "demo", "author", SkillVisibility.NAMESPACE_ONLY);
+        setField(skill, "id", 11L);
+        given(skillRepository.findByNamespaceSlugAndSlug("team-a", "demo")).willReturn(List.of(skill));
+        given(namespaceRepository.findById(7L)).willReturn(Optional.of(namespace));
+        given(namespaceRepository.findLockedById(7L)).willReturn(Optional.of(namespace));
+        var principal = new PlatformPrincipal("author", "Author", null, null, "api_token", Set.of("SKILL_ADMIN"));
+
+        assertThatThrownBy(() -> service.deleteSkillFromPortal("team-a", "demo", null, principal, null))
+                .isInstanceOf(DomainForbiddenException.class);
+
+        org.mockito.Mockito.verifyNoInteractions(searchIndexService, skillHardDeleteService);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "id, api_token, USER, TEAM, true",
+            "coordinate, api_token, USER, TEAM, true",
+            "id, api_token, SUPER_ADMIN, TEAM, false",
+            "coordinate, api_token, SUPER_ADMIN, TEAM, false",
+            "id, session, SKILL_ADMIN, TEAM, false",
+            "coordinate, session, SKILL_ADMIN, TEAM, false",
+            "id, api_token, USER, GLOBAL, false",
+            "coordinate, api_token, USER, GLOBAL, false"
+    })
+    void portalDeletePreservesAllowedAuthorsAndAdministrators(String path, String provider, String role,
+                                                              String namespaceType, boolean currentMember) {
+        var namespace = new Namespace("team-a", "Team A", "author");
+        namespace.setType(com.iflytek.skillhub.domain.namespace.NamespaceType.valueOf(namespaceType));
+        var skill = new Skill(7L, "demo", "author", SkillVisibility.NAMESPACE_ONLY);
+        setField(skill, "id", 11L);
+        if (path.equals("id")) {
+            given(skillRepository.findById(11L)).willReturn(Optional.of(skill));
+        } else {
+            given(skillRepository.findByNamespaceSlugAndSlug("team-a", "demo")).willReturn(List.of(skill));
+        }
+        if (path.equals("id") || (provider.equals("api_token") && !role.equals("SUPER_ADMIN"))) {
+            given(namespaceRepository.findById(7L)).willReturn(Optional.of(namespace));
+        }
+        if (currentMember) {
+            given(namespaceRepository.findLockedById(7L)).willReturn(Optional.of(namespace));
+            given(members.findByNamespaceIdAndUserId(7L, "author")).willReturn(Optional.of(
+                    new com.iflytek.skillhub.domain.namespace.NamespaceMember(
+                            7L, "author", com.iflytek.skillhub.domain.namespace.NamespaceRole.MEMBER)));
+        }
+        String actor = role.equals("SUPER_ADMIN") ? "platform-admin" : "author";
+        var principal = new PlatformPrincipal(actor, actor, null, null, provider, Set.of(role));
+
+        SkillDeleteAppService.DeleteResult result = path.equals("id")
+                ? service.deleteSkillByIdFromPortal(11L, principal, null)
+                : service.deleteSkillFromPortal("team-a", "demo", null, principal, null);
+
+        assertThat(result.deleted()).isTrue();
+        verify(searchIndexService).remove(11L);
+        verify(skillHardDeleteService).hardDeleteSkill(skill, "team-a", actor, null, null);
     }
 
     @Test

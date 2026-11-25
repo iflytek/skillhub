@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service.cli;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
@@ -168,9 +169,9 @@ public class CliSkillAppService {
         return buildDownloadResponse(result);
     }
 
-    public CliDeleteResponse deleteRemote(String namespace, String slug, String actorUserId, AuditRequestContext auditContext) {
-        SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkill(
-                namespace, slug, null, actorUserId, auditContext
+    public CliDeleteResponse deleteRemote(String namespace, String slug, PlatformPrincipal principal, AuditRequestContext auditContext) {
+        SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkillFromPortal(
+                namespace, slug, null, principal, auditContext
         );
 
         return new CliDeleteResponse(

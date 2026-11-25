@@ -74,14 +74,6 @@ public class SkillDeleteAppService {
                 .orElseThrow(() -> new DomainNotFoundException("error.skill.notFound", skillId));
         Namespace namespace = namespaceRepository.findById(skill.getNamespaceId())
                 .orElseThrow(() -> new DomainNotFoundException("error.namespace.notFound", skill.getNamespaceId()));
-        if ("api_token".equals(principal.oauthProvider()) && namespace.getType() == NamespaceType.TEAM
-                && !principal.platformRoles().contains("SUPER_ADMIN")) {
-            namespaceRepository.findLockedById(skill.getNamespaceId())
-                    .orElseThrow(() -> new DomainForbiddenException("error.namespace.membership.required"));
-            if (members.findByNamespaceIdAndUserId(skill.getNamespaceId(), principal.userId()).isEmpty()) {
-                throw new DomainForbiddenException("error.namespace.membership.required");
-            }
-        }
         return deleteExistingSkill(
                 skill,
                 namespace.getSlug(),
@@ -127,6 +119,18 @@ public class SkillDeleteAppService {
                                              AuditRequestContext auditRequestContext,
                                              boolean enforcePortalOwnership,
                                              PlatformPrincipal principal) {
+        if (enforcePortalOwnership && principal != null && "api_token".equals(principal.oauthProvider())
+                && !principal.platformRoles().contains("SUPER_ADMIN")) {
+            Namespace targetNamespace = namespaceRepository.findById(skill.getNamespaceId())
+                    .orElseThrow(() -> new DomainNotFoundException("error.namespace.notFound", skill.getNamespaceId()));
+            if (targetNamespace.getType() == NamespaceType.TEAM) {
+                namespaceRepository.findLockedById(skill.getNamespaceId())
+                        .orElseThrow(() -> new DomainForbiddenException("error.namespace.membership.required"));
+                if (members.findByNamespaceIdAndUserId(skill.getNamespaceId(), principal.userId()).isEmpty()) {
+                    throw new DomainForbiddenException("error.namespace.membership.required");
+                }
+            }
+        }
         if (enforcePortalOwnership && !canDeleteFromPortal(skill, principal)) {
             throw new DomainForbiddenException("error.forbidden");
         }
