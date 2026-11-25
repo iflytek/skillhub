@@ -21,6 +21,8 @@
 4. DPAPI 的可选熵绑定用途版本、规范化 Profile 路径及完整来源。Windows 使用 `realpathSync.native` 获取真实拼写，不按输入路径大小写或简单转小写计算。解密后继续检查来源、Token 和身份字段。复制密文到另一个来源或 Profile 不能恢复账户。保护边界是当前 Windows 用户，不承诺防御同一用户权限下的恶意程序。
 5. 保留 POSIX 旧格式和权限规则，不读取或迁移 DSH 全局凭据仓库。目录/文件拒绝符号链接、非普通文件和超限数据；Windows 不依赖无效的 POSIX chmod 作为加密替代。
 6. 明文记录最多 8 KiB，密文封装最多 16 KiB；写入和读取均检查。临时文件采用唯一名称及独占创建，写入成功后原子替换，异常时移除本次临时文件。
+
+   正式和临时记录是单文件，删除使用 `unlinkSync` 并只忽略 `ENOENT`，避开 Node 24.2 在 Windows Unicode 路径上 `rmSync` 的问题。Windows 子进程测试的 stdin 使用 UTF-8 流解码，保留分片中的多字节字符；CI 同时验证最低支持 Node 与当前 Node。
 7. 首次成功读取后缓存到进程内存，安装和下载请求不重复启动解密子进程。重启后重新读取并由 `accountIdentity` 验证，不凭保存的昵称直接显示已登录。
 
 ## Windows DPAPI 边界

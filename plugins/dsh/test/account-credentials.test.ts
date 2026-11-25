@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { createHash } from 'node:crypto';
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -96,7 +96,7 @@ test.skipIf(process.platform !== 'win32')('real Windows Node processes restore D
     const build = await Bun.build({ entrypoints: [join(import.meta.dir, '../src/host/account-credentials.ts')], target: 'node', format: 'esm' });
     expect(build.success).toBe(true);
     writeFileSync(module, await build.outputs[0]!.text());
-    const child = `import { pathToFileURL } from 'node:url';let input='';for await(const chunk of process.stdin)input+=chunk;const r=JSON.parse(input);const {AccountCredentials}=await import(pathToFileURL(r.module).href);const store=new AccountCredentials(r.profile);try{if(r.action==='save')store.set(r.source,r.fixture);if(r.action==='clear')store.set(r.source);const value=store.get(r.source);console.log(JSON.stringify({matched:JSON.stringify(value)===JSON.stringify(r.fixture),absent:value===undefined}));}catch{console.log(JSON.stringify({rejected:true}));}`;
+    const child = `import { pathToFileURL } from 'node:url';process.stdin.setEncoding('utf8');let input='';for await(const chunk of process.stdin)input+=chunk;const r=JSON.parse(input);const {AccountCredentials}=await import(pathToFileURL(r.module).href);const store=new AccountCredentials(r.profile);try{if(r.action==='save')store.set(r.source,r.fixture);if(r.action==='clear')store.set(r.source);const value=store.get(r.source);console.log(JSON.stringify({matched:JSON.stringify(value)===JSON.stringify(r.fixture),absent:value===undefined}));}catch{console.log(JSON.stringify({rejected:true}));}`;
     const run = (action: string, directory = profile, registry = source, restricted = false) => {
       const result = spawnSync('node', [...(restricted ? ['--permission', '--allow-fs-read=*'] : []), '--input-type=module', '-e', child], {
         input: JSON.stringify({ module, profile: directory, source: registry, fixture, action }), encoding: 'utf8', timeout: 15000,
@@ -120,6 +120,7 @@ test.skipIf(process.platform !== 'win32')('real Windows Node processes restore D
     copyFileSync(file(profile), file(second));
     expect(run('read', second).rejected).toBe(true);
     expect(run('clear').absent).toBe(true);
+    expect(existsSync(file(profile))).toBe(false);
     expect(run('read').absent).toBe(true);
     expect(readdirSync(join(profile, 'skillhub-accounts'))).toEqual([file(profile, other).split(/[\\/]/u).at(-1)!]);
   } finally { rmSync(root, { recursive: true, force: true }); }

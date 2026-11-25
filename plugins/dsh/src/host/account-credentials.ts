@@ -1,10 +1,15 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { closeSync, constants, fstatSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { AccountIdentity } from './account-types.js';
 import { windowsAccountProtection } from './windows-account-protection.js';
 
 export interface Credential { token: string; identity: AccountIdentity }
+// Node 24.2 rmSync can silently retain files under Unicode Windows paths.
+function unlinkIfPresent(file: string): void {
+  try { unlinkSync(file); }
+  catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+}
 export class AccountStorageError extends Error {
   constructor(readonly reason: 'SAVE_FAILED' | 'RESTORE_FAILED' | 'CLEAR_FAILED') {
     super('The saved SkillHub account is unavailable.');
@@ -77,7 +82,7 @@ export class AccountCredentials {
     try {
       const file = this.file(source, !!credential);
       if (file) {
-        if (!credential) rmSync(file, { force: true });
+        if (!credential) unlinkIfPresent(file);
         else {
           const plain = Buffer.from(JSON.stringify({ source, ...credential }));
           if (plain.length > 8192) throw new Error('Account record is too large.');
@@ -89,7 +94,7 @@ export class AccountCredentials {
           try {
             writeFileSync(next, content, { mode: 0o600, flag: 'wx' });
             renameSync(next, file);
-          } finally { rmSync(next, { force: true }); }
+          } finally { unlinkIfPresent(next); }
         }
       }
     } catch (error) {
