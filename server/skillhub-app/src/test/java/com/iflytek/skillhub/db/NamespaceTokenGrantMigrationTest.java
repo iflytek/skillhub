@@ -25,7 +25,7 @@ class NamespaceTokenGrantMigrationTest {
                     INSERT INTO api_token VALUES (1, '["skill:read", " namespace:manage ", "namespace:read"]')
                     """);
             ScriptUtils.executeSqlScript(connection, new ClassPathResource(
-                    "db/migration/V128__explicit_namespace_token_grants.sql"));
+                    "db/migration/V129__explicit_namespace_token_grants.sql"));
             stmt.execute("""
                     INSERT INTO api_token (id, scope_json) VALUES (2, '["namespace:manage"]');
                     """);
