@@ -29,7 +29,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
         node: ['24.2.0', '24']
-    runs-on: ${{ matrix.os }}
+    # Retain artifact keys while pinning Linux to a Playwright-supported image.
+    runs-on: ${{ matrix.os == 'ubuntu-latest' && 'ubuntu-24.04' || matrix.os }}
     timeout-minutes: 30
     defaults:
       run:
@@ -77,6 +78,12 @@ jobs:
       - name: Check plugin and isolated Node tarball
         working-directory: plugins/dsh
         run: bun run check
+      - name: Check account dialogs in Chromium
+        if: matrix.os == 'ubuntu-latest' && matrix.node == '24.2.0'
+        working-directory: plugins/dsh
+        run: |
+          bunx playwright install --with-deps chromium
+          bun run test:account-ui
       - name: Package development artifact
         working-directory: plugins/dsh
         run: |

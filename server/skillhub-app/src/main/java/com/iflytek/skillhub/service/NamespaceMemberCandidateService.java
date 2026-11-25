@@ -2,13 +2,9 @@ package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceAccessPolicy;
-import com.iflytek.skillhub.domain.namespace.NamespaceMember;
-import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
-import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
-import com.iflytek.skillhub.domain.user.UserStatus;
 import com.iflytek.skillhub.dto.NamespaceCandidateUserResponse;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -16,8 +12,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Finds candidate users that can be invited into a namespace while excluding
@@ -31,16 +25,13 @@ public class NamespaceMemberCandidateService {
 
     private final NamespaceService namespaceService;
     private final NamespaceAccessPolicy namespaceAccessPolicy;
-    private final NamespaceMemberRepository namespaceMemberRepository;
     private final UserAccountRepository userAccountRepository;
 
     public NamespaceMemberCandidateService(NamespaceService namespaceService,
                                            NamespaceAccessPolicy namespaceAccessPolicy,
-                                           NamespaceMemberRepository namespaceMemberRepository,
                                            UserAccountRepository userAccountRepository) {
         this.namespaceService = namespaceService;
         this.namespaceAccessPolicy = namespaceAccessPolicy;
-        this.namespaceMemberRepository = namespaceMemberRepository;
         this.userAccountRepository = userAccountRepository;
     }
 
@@ -55,21 +46,7 @@ public class NamespaceMemberCandidateService {
             throw new DomainBadRequestException("error.namespace.readonly", namespace.getSlug());
         }
 
-        String keyword = normalizeSearch(search);
-        if (keyword == null) {
-            return List.of();
-        }
-
-        int pageSize = normalizeSize(size);
-        Set<String> existingMemberIds = namespaceMemberRepository.findByNamespaceId(namespace.getId(), PageRequest.of(0, 500))
-                .stream()
-                .map(NamespaceMember::getUserId)
-                .collect(Collectors.toSet());
-
-        return userAccountRepository.search(keyword, UserStatus.ACTIVE, PageRequest.of(0, pageSize)).stream()
-                .filter(user -> !existingMemberIds.contains(user.getId()))
-                .map(NamespaceCandidateUserResponse::from)
-                .toList();
+        return findCandidates(namespace, search, size);
     }
 
     @Transactional(readOnly = true)
@@ -92,13 +69,7 @@ public class NamespaceMemberCandidateService {
         }
 
         int pageSize = normalizeSize(size);
-        Set<String> existingMemberIds = namespaceMemberRepository.findByNamespaceId(namespace.getId(), PageRequest.of(0, 500))
-                .stream()
-                .map(NamespaceMember::getUserId)
-                .collect(Collectors.toSet());
-
-        return userAccountRepository.search(keyword, UserStatus.ACTIVE, PageRequest.of(0, pageSize)).stream()
-                .filter(user -> !existingMemberIds.contains(user.getId()))
+        return userAccountRepository.searchNonMembers(namespace.getId(), keyword, PageRequest.of(0, pageSize)).stream()
                 .map(NamespaceCandidateUserResponse::from)
                 .toList();
     }

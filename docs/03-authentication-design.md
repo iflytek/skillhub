@@ -470,8 +470,10 @@ API Token 仍保留，但定位从“CLI 唯一认证方式”调整为“平台
 - 失败闭合与身份优先级：共享认证过滤器只识别 Bearer scheme。有效 Bearer 覆盖已加载的 Web Session 身份；Bearer 为空、格式错误、未知、过期、已吊销、用户缺失或用户禁用时立即返回 401，即使存在有效 Session 也不得回退。缺少 `Authorization` 头或使用 Basic/其他非 Bearer scheme 时保留有效 Session；若无 Session，公共读接口按匿名访问，`whoami` 返回 401
 - 技能能力：`skill:read`、`skill:submit`、`skill:publish-private`、`skill:manage`、`skill:delete`；
   凭据管理另需 `token:manage`，不授予技能能力。
-- Web 创建预设：只读下载（read）、候选提交（read + submit，默认）、私有发布
-  （read + submit + publish-private）、自定义。删除与 Token 管理只在自定义中显式勾选。
+- Web 创建个人 Token 时只需名称和有效期，不再选择权限。省略 scopes 时默认签发
+  `skill:read`、`skill:publish`、`skill:delete`、`namespace:manage`，包含成员读取能力。
+  默认权限用于 DSH 技能与团队管理，操作仍受账号身份、空间角色和资源状态约束；
+  不默认授予 `token:manage`，API 调用者仍可显式申请更小的 scopes。
 - CLI Device Flow 与浏览器回跳登录只签发 `skill:read + skill:submit`。
 - 拒绝原因：保留数字 `code`、本地化 `msg` 和 `requestId`，Token 错误另返回稳定
   `errorCode` 与字符串数组 `errorArgs`，不要解析翻译文案来判断能力。
@@ -494,7 +496,9 @@ read + submit 可以完成 PRIVATE 上传、送审、版本状态查询，但不
 上传改变已有技能可见性时还需 manage，在版本写入前拒绝；PRIVATE 重新发版保持 `UPLOADED`。
 Token 调用上传 PRIVATE 不再触发 SUPER_ADMIN 直发，必须显式确认；会话保留原直发行为。
 
-存量 `scope_json` 不迁移。`skill:publish` 作为兼容别名展开为 submit、publish-private、manage
+保留存量 Token 的既有技能授权；迁移仅剔除旧签发器可写入但未授权的
+`namespace:read` / `namespace:manage` 占位值，不给旧 Token 自动增权。
+`skill:publish` 作为兼容别名展开为 submit、publish-private、manage
 及内部 `suite:legacy-write`，不包含 delete 或 token:manage。`legacyCompat=true` 标记该来源。
 Suite／Bundle 原要求 publish 的路由保持旧授权，Suite 删除仍需 delete；本期不细分 Suite 能力。
 内部 Suite 标记不能直接作为新 Token scope 请求，只能由旧 publish 别名展开。
@@ -504,14 +508,14 @@ Suite／Bundle 原要求 publish 的路由保持旧授权，Suite 删除仍需 d
 越权返回 403 `error.apiToken.scope.escalation`，不会吊销同名旧 Token。
 会话可请求合法能力组合；设备码不接受自定义 scope。
 
-兼容期省略 `scopes` 仍签发 read + publish + delete，响应 `deprecatedDefault=true`；
-显式空数组不授予能力。宽默认值已弃用，下一个次版本将收紧为仅 read，应立即显式传 scopes。
+省略 `scopes` 使用上述 DSH 默认权限，响应 `deprecatedDefault=false`；显式空数组不授予能力。
+历史 Token 保持原授权，默认策略只影响新签发或明确轮换的 Token。
 
 `GET /api/cli/v1/auth/whoami` 返回排序后的 `capabilities`、`legacyCompat`、`expiresAt`；
 会话的 capabilities 为 null，无需 token:manage。`GET /api/{v1,web}/me/namespaces` 及 `/page`
 返回现有空间和 `currentUserRole`，包括没有技能的空间，Token 需 read。
 
-CLI 重新登录不再获得 delete。需要远端删除时在 Web 自定义 Token 中显式勾选 delete，
+CLI 重新登录不再获得 delete。需要远端删除时可使用网页默认创建的个人 Token，
 再运行 `skillhub login --token <token>`；不会自动换发更宽 Token。已有旧凭据保留原能力。
 
 Bundle 在创建操作时持久化发起方式和能力快照；恢复与重试只沿用原授权，不继承 worker／重试者权限。

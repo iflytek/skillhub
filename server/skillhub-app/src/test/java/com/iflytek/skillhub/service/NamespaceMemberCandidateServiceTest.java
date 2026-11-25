@@ -2,20 +2,15 @@ package com.iflytek.skillhub.service;
 
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceAccessPolicy;
-import com.iflytek.skillhub.domain.namespace.NamespaceMember;
-import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
-import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceService;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
-import com.iflytek.skillhub.domain.user.UserStatus;
 import com.iflytek.skillhub.dto.NamespaceCandidateUserResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
@@ -36,9 +31,6 @@ class NamespaceMemberCandidateServiceTest {
     private NamespaceAccessPolicy namespaceAccessPolicy;
 
     @Mock
-    private NamespaceMemberRepository namespaceMemberRepository;
-
-    @Mock
     private UserAccountRepository userAccountRepository;
 
     @Test
@@ -49,20 +41,14 @@ class NamespaceMemberCandidateServiceTest {
         NamespaceMemberCandidateService service = new NamespaceMemberCandidateService(
                 namespaceService,
                 namespaceAccessPolicy,
-                namespaceMemberRepository,
                 userAccountRepository
         );
 
         when(namespaceService.getNamespaceBySlug("team-a")).thenReturn(namespace);
         doNothing().when(namespaceService).assertAdminOrOwner(1L, "owner-1");
         when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
-        when(namespaceMemberRepository.findByNamespaceId(1L, PageRequest.of(0, 500)))
-                .thenReturn(new PageImpl<>(List.of(new NamespaceMember(1L, "user-1", NamespaceRole.MEMBER))));
-        when(userAccountRepository.search("ali", UserStatus.ACTIVE, PageRequest.of(0, 10)))
-                .thenReturn(new PageImpl<>(List.of(
-                        new UserAccount("user-1", "alice", "alice@example.com", null),
-                        new UserAccount("user-2", "alina", "alina@example.com", null)
-                )));
+        when(userAccountRepository.searchNonMembers(1L, "ali", PageRequest.of(0, 10)))
+                .thenReturn(List.of(new UserAccount("user-2", "alina", "alina@example.com", null)));
 
         List<NamespaceCandidateUserResponse> result = service.searchCandidates("team-a", "ali", "owner-1", 10);
 
@@ -79,7 +65,6 @@ class NamespaceMemberCandidateServiceTest {
         NamespaceMemberCandidateService service = new NamespaceMemberCandidateService(
                 namespaceService,
                 namespaceAccessPolicy,
-                namespaceMemberRepository,
                 userAccountRepository
         );
 
@@ -101,7 +86,6 @@ class NamespaceMemberCandidateServiceTest {
         NamespaceMemberCandidateService service = new NamespaceMemberCandidateService(
                 namespaceService,
                 namespaceAccessPolicy,
-                namespaceMemberRepository,
                 userAccountRepository
         );
 

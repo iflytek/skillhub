@@ -119,19 +119,19 @@ class TokenControllerTest {
     }
 
     @Test
-    void create_passesExpirationToService() throws Exception {
+    void create_defaultsToDshPermissionsAndPassesExpirationToService() throws Exception {
         PlatformPrincipal principal = new PlatformPrincipal(
                 "user-42", "tester", "tester@example.com", "", "github", Set.of("USER")
         );
         var auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
-        var token = new com.iflytek.skillhub.auth.entity.ApiToken("user-42", "cli", "sk_123456", "hash-1", "[]");
+        var token = new com.iflytek.skillhub.auth.entity.ApiToken("user-42", "cli", "sk_123456", "hash-1", "[\"skill:read\",\"skill:publish\",\"skill:delete\",\"namespace:manage\"]");
         org.springframework.test.util.ReflectionTestUtils.setField(token, "id", 7L);
         org.springframework.test.util.ReflectionTestUtils.setField(token, "createdAt", java.time.Instant.parse("2026-03-15T12:00:00Z"));
         token.setExpiresAt(java.time.Instant.parse("2026-04-15T12:00:00Z"));
 
-        given(apiTokenService.rotateToken("user-42", "cli", "[\"skill:read\",\"skill:publish\",\"skill:delete\"]", "2026-04-15T12:00:00"))
+        given(apiTokenService.rotateToken("user-42", "cli", "[\"skill:read\",\"skill:publish\",\"skill:delete\",\"namespace:manage\"]", "2026-04-15T12:00:00"))
                 .willReturn(new ApiTokenService.TokenCreateResult("sk_raw", token));
 
         mockMvc.perform(post("/api/v1/tokens")
@@ -143,7 +143,10 @@ class TokenControllerTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.data.expiresAt").value("2026-04-15T12:00:00Z"));
+                .andExpect(jsonPath("$.data.expiresAt").value("2026-04-15T12:00:00Z"))
+                .andExpect(jsonPath("$.data.deprecatedDefault").value(false))
+                .andExpect(jsonPath("$.data.capabilities", org.hamcrest.Matchers.hasItems(
+                        "skill:read", "skill:delete", "namespace:manage", "namespace:read")));
     }
 
     @Test

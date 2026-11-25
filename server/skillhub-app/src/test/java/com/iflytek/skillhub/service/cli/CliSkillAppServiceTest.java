@@ -31,6 +31,8 @@ import com.iflytek.skillhub.search.SearchQueryService;
 import com.iflytek.skillhub.search.SearchResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -258,7 +260,7 @@ class CliSkillAppServiceTest {
         given(skillQueryService.listInstallableSkillsByNamespace(
                 eq("team-a"), eq("user-1"), eq(Map.of()), eq(PageRequest.of(0, 100))))
                 .willReturn(new PageImpl<>(List.of(skill), PageRequest.of(0, 100), 1));
-        given(skillQueryService.resolveVersion("team-a", "demo", null, null, null, "user-1", Map.of()))
+        given(skillQueryService.resolveVersionById(42L, "user-1", Map.of(), java.util.Set.of()))
                 .willReturn(new SkillQueryService.ResolvedVersionDTO(
                         10L, "team-a", "demo", "1.0.0", 42L, "sha256:fingerprint", null,
                         "/api/v1/skills/team-a/demo/versions/1.0.0/download"));
@@ -272,13 +274,60 @@ class CliSkillAppServiceTest {
         assertNull(result.nextCursor());
     }
 
+    @ParameterizedTest
+    @CsvSource({
+            "other-user, USER, true, false",
+            "author, SKILL_ADMIN, false, false",
+            "author, USER, true, true",
+            "platform-admin, SUPER_ADMIN, false, true"
+    })
+    void actualCliDeleteEnforcesOwnerAndCurrentTeamMembership(String actor, String role,
+                                                              boolean currentMember, boolean allowed) {
+        var members = org.mockito.Mockito.mock(com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository.class);
+        var hardDelete = org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.service.SkillHardDeleteService.class);
+        var searchIndex = org.mockito.Mockito.mock(com.iflytek.skillhub.search.SearchIndexService.class);
+        var namespace = new Namespace("team-a", "Team A", "author");
+        namespace.setType(com.iflytek.skillhub.domain.namespace.NamespaceType.TEAM);
+        var skill = new Skill(7L, "demo", "author", SkillVisibility.NAMESPACE_ONLY);
+        setField(skill, "id", 11L);
+        given(skillRepository.findByNamespaceSlugAndSlug("team-a", "demo")).willReturn(List.of(skill));
+        org.mockito.Mockito.lenient().when(namespaceRepository.findById(7L)).thenReturn(java.util.Optional.of(namespace));
+        org.mockito.Mockito.lenient().when(namespaceRepository.findLockedById(7L)).thenReturn(java.util.Optional.of(namespace));
+        org.mockito.Mockito.lenient().when(members.findByNamespaceIdAndUserId(7L, actor)).thenReturn(currentMember
+                ? java.util.Optional.of(new com.iflytek.skillhub.domain.namespace.NamespaceMember(7L, actor, NamespaceRole.MEMBER))
+                : java.util.Optional.empty());
+        var deleteService = new SkillDeleteAppService(
+                new com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy(namespaceRepository, members),
+                skillRepository, namespaceRepository, members, hardDelete, searchIndex);
+        var cli = new CliSkillAppService(skillSearchAppService, skillQueryService,
+                skillDownloadService, deleteService, skillPublishService);
+        var controller = new com.iflytek.skillhub.controller.cli.CliSkillController(cli,
+                org.mockito.Mockito.mock(com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor.class),
+                org.mockito.Mockito.mock(com.iflytek.skillhub.dto.ApiResponseFactory.class));
+        var principal = new com.iflytek.skillhub.auth.rbac.PlatformPrincipal(actor, actor, null, null,
+                "api_token", Set.of(role), Set.of("skill:delete"));
+        var request = new org.springframework.mock.web.MockHttpServletRequest("DELETE", "/api/cli/v1/skills/team-a/demo");
+        request.setRemoteAddr("127.0.0.1");
+
+        if (allowed) {
+            controller.deleteRemote("team-a", "demo", principal, request);
+            org.mockito.Mockito.verify(hardDelete).hardDeleteSkill(skill, "team-a", actor, "127.0.0.1", null);
+        } else {
+            assertThrows(com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException.class,
+                    () -> controller.deleteRemote("team-a", "demo", principal, request));
+            org.mockito.Mockito.verifyNoInteractions(searchIndex, hardDelete);
+        }
+    }
+
     @Test
     void deleteRemote_delegatesToDeleteAppService() {
         var auditContext = new AuditRequestContext("127.0.0.1", "CLI/1.0");
-        given(skillDeleteAppService.deleteSkill("global", "demo", null, "user-1", auditContext))
+        var principal = new com.iflytek.skillhub.auth.rbac.PlatformPrincipal(
+                "user-1", "User", null, null, "api_token", Set.of("USER"), Set.of("skill:delete"));
+        given(skillDeleteAppService.deleteSkillFromPortal("global", "demo", null, principal, auditContext))
                 .willReturn(new SkillDeleteAppService.DeleteResult(10L, "global", "demo", true));
 
-        CliDeleteResponse response = service.deleteRemote("global", "demo", "user-1", auditContext);
+        CliDeleteResponse response = service.deleteRemote("global", "demo", principal, auditContext);
 
         assertTrue(response.ok());
         assertEquals("remote", response.scope());

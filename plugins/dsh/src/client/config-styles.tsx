@@ -1,7 +1,7 @@
 /** Configuration-only layout composed from the shared shadcn components and DSH tokens. */
 export function ConfigStyles() {
   return <style>{`
-.skillhub-controls.astron-sh-config{width:100%;max-width:960px;min-width:0;padding:24px 0;overflow-wrap:anywhere}
+.skillhub-controls.astron-sh-config{width:100%;max-width:960px;min-width:0;padding:24px 0;overflow-wrap:anywhere;background:var(--astron-sh-bg);color:var(--astron-sh-fg)}
 .skillhub-controls .astron-sh-config-heading{margin-bottom:20px}
 .skillhub-controls.astron-sh-config h2{margin:0 0 6px;font-size:22px;line-height:30px;font-weight:600}
 .skillhub-controls .astron-sh-config-heading p{margin:0;font-size:13px;line-height:20px;color:var(--astron-sh-muted)}

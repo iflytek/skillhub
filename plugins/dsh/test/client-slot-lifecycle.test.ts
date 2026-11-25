@@ -1,5 +1,8 @@
 import { expect, test } from 'bun:test';
 import { Context } from '@deepseek-ai/cordis';
+import type { SidebarPanelIconOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client';
+import { createElement, type ComponentType } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { dirname, join } from 'node:path';
@@ -51,7 +54,14 @@ test('official slot declaration loss preserves catalog and independently removes
     await plugin; await flush();
     const catalog = slots.entriesOfSlot('main')[0]?.component;
     expect(catalog).toBeDefined();
-    expect(slots.entriesOfSlot('sidebar.panellist')).toHaveLength(1);
+    const sidebarEntries = slots.entriesOfSlot('sidebar.panellist');
+    expect(sidebarEntries).toHaveLength(1);
+    const SidebarIcon = sidebarEntries[0]!.component as ComponentType<SidebarPanelIconOwnerProps>;
+    for (const size of [16, 18]) {
+      const icon = renderToStaticMarkup(createElement(SidebarIcon, { size, active: false }));
+      expect(icon).toContain(`width="${size}"`);
+      expect(icon).toContain(`height="${size}"`);
+    }
     expect(slots.entriesOfSlot('tool.call.toolview')).toHaveLength(0);
     expect(slots.entriesOfSlot('plugins.bundle.config')).toHaveLength(0);
     for (let cycle = 0; cycle < 2; cycle++) {

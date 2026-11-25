@@ -92,7 +92,7 @@ public class CliSkillController extends BaseApiController {
             @AuthenticationPrincipal PlatformPrincipal principal,
             HttpServletRequest request) {
         return ok("response.success.deleted", cliSkillAppService.deleteRemote(
-                namespace, slug, principal.userId(), AuditRequestContext.from(request)));
+                namespace, slug, principal, AuditRequestContext.from(request)));
     }
 
     @PostMapping(value = "/{namespace}/publish/validate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

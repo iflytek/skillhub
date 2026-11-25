@@ -1,5 +1,6 @@
 import { cp, mkdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /** Private runtime artifact; bundle the CLI's own dependency graph, including its Zod major. */
 export async function buildLocalCore(root: string): Promise<void> {
@@ -8,8 +9,10 @@ export async function buildLocalCore(root: string): Promise<void> {
   if (await generated.exited !== 0) throw new Error('Shared core package metadata generation failed');
   const loaded: string[] = [];
   const result = await Bun.build({
-    entrypoints: [join(cli, 'src/integrations/local-skills.ts')], target: 'node', format: 'esm',
+    entrypoints: [join(root, 'scripts/account-local-core.mjs')], target: 'node', format: 'esm',
     plugins: [{ name: 'core-import-boundary', setup(build) {
+      build.onResolve({ filter: /\/clients\/skillhub-client$/u }, () => ({ path: join(root, 'scripts/core-registry-client.mjs') }));
+      build.onResolve({ filter: /^fflate$/u }, () => ({ path: fileURLToPath(import.meta.resolve('fflate')) }));
       build.onLoad({ filter: /\.[cm]?[jt]s$/ }, args => { loaded.push(args.path.replaceAll('\\', '/')); return undefined; });
     } }],
   });

@@ -36,6 +36,7 @@ export interface SkillHubConfig {
 
 export interface CatalogContext {
   sourceRevision: string;
+  accountClearFailed?: boolean;
   registryUrl: string;
   configured: boolean;
   detailTabs: { versions: TabMode; securityAudit: TabMode; reviews: TabMode };
@@ -74,6 +75,7 @@ export interface CatalogPageResult {
 
 /** Read-only fixed-version content; it is not an installation authorization. */
 export interface SkillDetail {
+  skillId?: number;
   webUrl?: string | null;
   detailToken: string;
   title: string;
@@ -175,6 +177,7 @@ export interface ReviewPage {
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
+    'skillhub/account-storage-error': { reason: 'SAVE_FAILED' | 'RESTORE_FAILED' | 'CLEAR_FAILED'; retryable: boolean };
     'skillhub/favorites-error': { reason: 'INVALID_INPUT' | 'UNAVAILABLE' | 'INVALID_STORE' | 'LIMIT_REACHED'; retryable: boolean };
     'skillhub/source-not-configured': { retryable: false };
     'skillhub/context-stale': { retryable: false };
@@ -253,3 +256,6 @@ export interface FileResetPlanView { planId: string; expiresAt: string; hostInst
 
 export interface PackageImportPreview { previewId: string; name: string; summary?: string; files: number; bytes: number; expiresAt: string }
 export interface PackageExport { filename: string; base64: string }
+
+export type { AccountIdentity, AccountMember, AccountNamespace, AccountPage, EditableRole, MemberCandidate,
+  MemberMutation, OwnedSkill, TeamRole, UploadReceipt, UploadTarget, Visibility, WorkspaceSkills } from './account-types.js';

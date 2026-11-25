@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * API-token-friendly hard-delete endpoint reserved for super administrators.
+ * Exact-ID deletion enforces author access. Coordinate-based deletion requires a platform administrator.
  */
 @RestController
 @RequestMapping("/api/v1/skills")
@@ -32,13 +32,12 @@ public class SkillDeleteController extends BaseApiController {
     }
 
     @DeleteMapping("/id/{skillId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ApiResponse<SkillDeleteResponse> deleteSkillById(@PathVariable Long skillId,
                                                             @AuthenticationPrincipal PlatformPrincipal principal,
                                                             HttpServletRequest request) {
-        SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkillById(
+        SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkillByIdFromPortal(
                 skillId,
-                principal.userId(),
+                principal,
                 AuditRequestContext.from(request)
         );
         return ok("response.success.deleted", new SkillDeleteResponse(

@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.entity.ApiToken;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,6 +17,14 @@ import java.util.Optional;
  */
 @Repository
 public interface ApiTokenRepository extends JpaRepository<ApiToken, Long> {
+    @Query(value = "SELECT * FROM api_token WHERE id = :id AND user_id = :userId AND revoked_at IS NULL FOR UPDATE",
+            nativeQuery = true)
+    Optional<ApiToken> findUnrevokedForUpdate(@Param("id") Long id, @Param("userId") String userId);
+
+    @Modifying
+    @Query("update ApiToken t set t.lastUsedAt = :at where t.id = :id")
+    void updateLastUsedAt(@Param("id") Long id, @Param("at") Instant at);
+
     Optional<ApiToken> findByTokenHash(String tokenHash);
     List<ApiToken> findByUserId(String userId);
     List<ApiToken> findByUserIdAndRevokedAtIsNullOrderByCreatedAtDesc(String userId);

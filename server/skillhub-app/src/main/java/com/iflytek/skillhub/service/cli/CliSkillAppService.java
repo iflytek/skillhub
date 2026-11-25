@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service.cli;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
@@ -127,8 +128,11 @@ public class CliSkillAppService {
             String namespace,
             String userId,
             Map<Long, NamespaceRole> userNsRoles) {
-        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
-                namespace, skill.getSlug(), null, null, null, userId, userNsRoles);
+        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersionById(
+                skill.getLatestVersionId(), userId, userNsRoles, Set.of());
+        if (!skill.getId().equals(resolved.skillId())) {
+            throw new IllegalStateException("Published version does not belong to the listed skill");
+        }
         return new CliNamespaceSyncItemResponse(
                 namespace,
                 skill.getSlug(),
@@ -165,9 +169,9 @@ public class CliSkillAppService {
         return buildDownloadResponse(result);
     }
 
-    public CliDeleteResponse deleteRemote(String namespace, String slug, String actorUserId, AuditRequestContext auditContext) {
-        SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkill(
-                namespace, slug, null, actorUserId, auditContext
+    public CliDeleteResponse deleteRemote(String namespace, String slug, PlatformPrincipal principal, AuditRequestContext auditContext) {
+        SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkillFromPortal(
+                namespace, slug, null, principal, auditContext
         );
 
         return new CliDeleteResponse(

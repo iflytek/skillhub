@@ -4,6 +4,7 @@ import com.iflytek.skillhub.domain.user.UserAccount;
 import com.iflytek.skillhub.domain.user.UserAccountRepository;
 import com.iflytek.skillhub.domain.user.UserStatus;
 import jakarta.persistence.LockModeType;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Lock;
@@ -42,4 +43,17 @@ public interface UserAccountJpaRepository
     Page<UserAccount> search(@Param("keyword") String keyword,
                              @Param("status") UserStatus status,
                              Pageable pageable);
+
+    @Override
+    @Query("""
+        SELECT u FROM UserAccount u
+        WHERE u.status = com.iflytek.skillhub.domain.user.UserStatus.ACTIVE
+          AND NOT EXISTS (SELECT m.id FROM NamespaceMember m WHERE m.namespaceId = :namespaceId AND m.userId = u.id)
+          AND (locate(lower(:keyword), lower(u.displayName)) > 0
+            OR locate(lower(:keyword), lower(coalesce(u.email, ''))) > 0
+            OR locate(lower(:keyword), lower(u.id)) > 0)
+        ORDER BY lower(u.displayName), u.id
+        """)
+    List<UserAccount> searchNonMembers(@Param("namespaceId") Long namespaceId,
+                                       @Param("keyword") String keyword, Pageable pageable);
 }

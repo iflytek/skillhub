@@ -70,7 +70,7 @@ public class TokenController extends BaseApiController {
                 formatInstant(result.entity().getExpiresAt()),
                 capabilities(result.entity()),
                 legacyCompat(result.entity()),
-                request.scopes() == null
+                false
         ));
     }
 
@@ -124,7 +124,7 @@ public class TokenController extends BaseApiController {
     }
 
     private List<String> capabilities(ApiToken token) {
-        return scopeService.effectiveCapabilities(token.getScopeJson()).stream().sorted().toList();
+        return scopeService.expandScopes(scopeService.issuedScopes(token)).stream().sorted().toList();
     }
 
     private boolean legacyCompat(ApiToken token) {

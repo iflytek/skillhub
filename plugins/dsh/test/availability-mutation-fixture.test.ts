@@ -1,14 +1,46 @@
 import { expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 // @ts-expect-error Development-only observer fixture has no TypeScript declarations.
-import { waitForAvailabilityWinner, withRenamedAvailabilityPath } from './integration/skill-availability-fixture.mjs';
+import { waitForAvailabilityRuntime, waitForAvailabilityWinner, withRenamedAvailabilityPath } from './integration/skill-availability-fixture.mjs';
 // @ts-expect-error Development-only Node script has no TypeScript declarations.
 import { safeAvailabilityCheckpoint } from '../scripts/smoke-native-host.mjs';
 
 function checkpoint(): { scenario: string; checkpoint: string; assertion: string; restoreOsCode?: string } { return { scenario: 'directory-missing', checkpoint: 'mutation', assertion: 'none' }; }
+
+test('availability fixture waits for a ready runtime with a Host identity before the single install', async () => {
+  const sequence = [null, { state: 'starting' }, { state: 'ready', hostInstanceId: null }, { state: 'ready', hostInstanceId: 'fixture-host' }];
+  let reads = 0;
+  await waitForAvailabilityRuntime(() => sequence[reads++], new AbortController().signal, { timeoutMs: 1000, pollMs: 1 });
+  expect(reads).toBe(4);
+});
+
+test('availability fixture fails immediately on a terminal runtime state', async () => {
+  for (const state of ['failed', 'closing', 'disposed']) {
+    let reads = 0;
+    await expect(waitForAvailabilityRuntime(() => { reads++; return { state }; }, new AbortController().signal)).rejects.toMatchObject({ code: 'RUNTIME_NOT_READY' });
+    expect(reads).toBe(1);
+  }
+});
+
+test('availability fixture bounds startup and observes cancellation without issuing an install', async () => {
+  await expect(waitForAvailabilityRuntime(() => ({ state: 'starting' }), new AbortController().signal, { timeoutMs: 10, pollMs: 1 })).rejects.toMatchObject({ code: 'RUNTIME_READY_TIMEOUT' });
+  const abort = new AbortController();
+  const work = waitForAvailabilityRuntime(() => { abort.abort(); return null; }, abort.signal, { pollMs: 1000 });
+  await expect(work).rejects.toMatchObject({ name: 'AbortError' });
+  const readyAbort = new AbortController();
+  const reason = new Error('fixture cancelled');
+  await expect(waitForAvailabilityRuntime(() => { readyAbort.abort(reason); return { state: 'ready', hostInstanceId: 'fixture-host' }; }, readyAbort.signal)).rejects.toBe(reason);
+});
+
+test('runtime startup diagnostics expose only a whitelisted state', () => {
+  const value = { scenario: 'user-install', checkpoint: 'runtime-ready', assertion: 'none', runtimeState: 'starting', hostInstanceId: '/private/sentinel' };
+  expect(safeAvailabilityCheckpoint(value)).toEqual({ scenario: 'user-install', checkpoint: 'runtime-ready', assertion: 'none', runtimeState: 'starting' });
+  expect(safeAvailabilityCheckpoint({ ...value, runtimeState: '/private/sentinel' })).toEqual({ scenario: 'user-install', checkpoint: 'runtime-ready', assertion: 'none' });
+});
 
 test('failed initial rename never restores an absent backup or replaces the original error', async () => {
   const state = checkpoint();
@@ -107,13 +139,13 @@ test('availability discovery wait preserves service errors and cancellation with
 
 
 test('availability fixture observes a delayed watcher refresh instead of asserting immediately after commit', async () => {
-  const started = Date.now();
+  const started = performance.now();
   let reads = 0;
   await waitForAvailabilityWinner(async () => {
     reads++;
-    return discoveredWinner(Date.now() - started >= 200 ? '/selected' : '/previous');
+    return discoveredWinner(performance.now() - started >= 200 ? '/selected' : '/previous');
   }, '/selected', new AbortController().signal, { timeoutMs: 2000, pollMs: 20 });
-  expect(Date.now() - started).toBeGreaterThanOrEqual(200);
+  expect(performance.now() - started).toBeGreaterThanOrEqual(200);
   expect(reads).toBeGreaterThan(1);
 });
 
@@ -183,8 +215,37 @@ test('availability success clears the deadline and detaches external cancellatio
 
 test('availability rejects a valid read that crosses the deadline before timers can run', async () => {
   await expect(waitForAvailabilityWinner(async () => {
-    const until = Date.now() + 20;
-    while (Date.now() < until) { /* Simulate a reader monopolizing the event loop. */ }
+    const until = performance.now() + 20;
+    while (performance.now() < until) { /* Simulate a reader monopolizing the event loop. */ }
     return discoveredWinner('/selected');
   }, '/selected', new AbortController().signal, { timeoutMs: 5 })).rejects.toHaveProperty('code', 'DISCOVERY_TIMEOUT');
+});
+
+
+test('fixture elapsed waits survive wall-clock changes in an isolated process', () => {
+  const module = new URL('./integration/skill-availability-fixture.mjs', import.meta.url).href;
+  const script = `
+    import assert from 'node:assert/strict';
+    import { join } from 'node:path';
+    import { waitForAvailabilityRuntime, waitForAvailabilityWinner } from ${JSON.stringify(module)};
+    const original = Date.now;
+    let offset = 0;
+    Date.now = () => original() + offset;
+    let reads = 0;
+    await waitForAvailabilityRuntime(() => {
+      offset += 60000;
+      return ++reads < 3 ? { state: 'starting' } : { state: 'ready', hostInstanceId: 'fixture' };
+    }, new AbortController().signal, { timeoutMs: 2000, pollMs: 1 });
+    assert.equal(reads, 3);
+    reads = 0;
+    offset = 0;
+    await waitForAvailabilityWinner(async () => {
+      offset += reads === 0 ? -60000 : 180000;
+      const path = ++reads < 3 ? '/previous' : '/selected';
+      return { snapshot: { complete: true, skills: [{ name: 'document-helper' }] }, winner: { name: 'document-helper', path: join(path, 'SKILL.md'), resourceBase: { kind: 'directory', path } } };
+    }, '/selected', new AbortController().signal, { timeoutMs: 2000, pollMs: 1 });
+    assert.equal(reads, 3);
+  `;
+  const result = spawnSync(process.execPath, ['--eval', script], { encoding: 'utf8', timeout: 10000 });
+  expect(result.status, result.stderr).toBe(0);
 });
