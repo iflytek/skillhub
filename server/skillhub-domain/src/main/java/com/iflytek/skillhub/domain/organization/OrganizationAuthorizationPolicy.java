@@ -74,7 +74,7 @@ public class OrganizationAuthorizationPolicy {
                     ),
                     Map.entry(
                             OrganizationAdministrativeAction.MANAGE_MEMBERS,
-                            Set.of(OrganizationRole.MEMBER_ADMIN)
+                            Set.of(OrganizationRole.ORG_OWNER, OrganizationRole.MEMBER_ADMIN)
                     ),
                     Map.entry(
                             OrganizationAdministrativeAction.VIEW_AUDIT,

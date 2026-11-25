@@ -658,6 +658,7 @@
     "mySuites": "我的套件",
     "publish": "技能发布",
     "namespaces": "命名空间",
+    "organizations": "我的组织",
     "stars": "我的收藏",
     "subscriptions": "我的订阅",
     "tokens": "Token 凭证",
@@ -1260,6 +1261,48 @@
       "RATE_LIMIT": "GitHub 请求额度已用尽",
       "SOURCE_NOT_BOUND": "仓库来源尚未绑定",
       "SOURCE_PAUSED": "仓库来源已暂停"
+    }
+  },
+  "organizations": {
+    "title": "我的组织",
+    "loading": "正在加载…",
+    "empty": "你目前尚未加入组织。",
+    "members": "组织成员",
+    "noMembers": "暂无成员。",
+    "noMemberAccess": "你没有查看组织成员的权限。",
+    "addMember": "添加成员",
+    "addMemberHint": "请让对方从个人设置复制用户 ID 给你。添加成员不会自动授予管理权限。",
+    "profileLink": "查看我的个人设置",
+    "userId": "用户 ID",
+    "memberAdded": "成员已添加",
+    "roleGranted": "角色已授予",
+    "roleRevoked": "角色已撤销",
+    "failed": "操作失败",
+    "selectRole": "选择角色",
+    "grantRole": "授予角色",
+    "revokeRole": "撤销 {{name}} 的{{role}}角色",
+    "revokeConfirm": "确定撤销此角色？",
+    "viewMembers": "查看成员",
+    "viewOrganizationMembers": "查看 {{name}} 的成员",
+    "retry": "重试",
+    "memberCount_other": "{{count}} 位成员",
+    "noRoles": "未分配角色",
+    "unnamedMember": "未命名成员",
+    "grantMemberRole": "为 {{name}} 授予角色",
+    "grantDescription": "选择要在本组织内授予 {{name}} 的角色。",
+    "revokeDescription": "{{name}} 将失去{{role}}角色所授予的权限。",
+    "memberStatus": {
+      "INVITED": "已邀请",
+      "PROVISIONED": "待激活",
+      "SUSPENDED": "已暂停",
+      "DEPROVISIONED": "已移除"
+    },
+    "roles": {
+      "ORG_OWNER": "组织所有者",
+      "IDENTITY_ADMIN": "身份管理员",
+      "LOGIN_SECRET_ADMIN": "登录密钥管理员",
+      "MEMBER_ADMIN": "成员管理员",
+      "ORG_AUDITOR": "组织审计员"
     }
   },
   "overview": {

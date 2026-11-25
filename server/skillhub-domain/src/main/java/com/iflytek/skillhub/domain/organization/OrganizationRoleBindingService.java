@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class OrganizationRoleBindingService {
 
+    /** Distinguishes an effective role transition from an idempotent retry for audit. */
+    public record RoleBindingChange(OrganizationRoleBinding binding, boolean changed) {}
+
     private final OrganizationRepository organizationRepository;
     private final OrganizationMembershipRepository membershipRepository;
     private final OrganizationRoleBindingRepository roleBindingRepository;
@@ -37,6 +40,17 @@ public class OrganizationRoleBindingService {
             String actorUserId,
             Instant occurredAt
     ) {
+        return grantWithResult(organizationId, targetUserId, role, actorUserId, occurredAt).binding();
+    }
+
+    @Transactional
+    public RoleBindingChange grantWithResult(
+            String organizationId,
+            String targetUserId,
+            OrganizationRole role,
+            String actorUserId,
+            Instant occurredAt
+    ) {
         String scopedOrganizationId = requireNonBlank(organizationId, "organizationId");
         String requiredTargetUserId = requireNonBlank(targetUserId, "targetUserId");
         String requiredActorUserId = requireNonBlank(actorUserId, "actorUserId");
@@ -49,7 +63,7 @@ public class OrganizationRoleBindingService {
                 requiredRole
         );
         if (existing.isPresent()) {
-            return existing.get();
+            return new RoleBindingChange(existing.get(), false);
         }
 
         Organization organization = getOrganization(scopedOrganizationId);
@@ -63,11 +77,21 @@ public class OrganizationRoleBindingService {
         organization.recordRoleBindingChange(occurredAt);
         OrganizationRoleBinding saved = roleBindingRepository.save(binding);
         organizationRepository.save(organization);
-        return saved;
+        return new RoleBindingChange(saved, true);
     }
 
     @Transactional
     public OrganizationRoleBinding revoke(
+            String organizationId,
+            String bindingId,
+            String actorUserId,
+            Instant occurredAt
+    ) {
+        return revokeWithResult(organizationId, bindingId, actorUserId, occurredAt).binding();
+    }
+
+    @Transactional
+    public RoleBindingChange revokeWithResult(
             String organizationId,
             String bindingId,
             String actorUserId,
@@ -83,7 +107,7 @@ public class OrganizationRoleBindingService {
                         "error.organization.role-binding.not-found"
                 ));
         if (binding.getStatus() == OrganizationRoleBindingStatus.REVOKED) {
-            return binding;
+            return new RoleBindingChange(binding, false);
         }
         if (binding.getRole() == OrganizationRole.ORG_OWNER
                 && roleBindingRepository.countActiveByOrganizationIdAndRole(
@@ -98,7 +122,7 @@ public class OrganizationRoleBindingService {
         organization.recordRoleBindingChange(occurredAt);
         OrganizationRoleBinding saved = roleBindingRepository.save(binding);
         organizationRepository.save(organization);
-        return saved;
+        return new RoleBindingChange(saved, true);
     }
 
     private void requireRoleAdministrator(String organizationId, String actorUserId) {

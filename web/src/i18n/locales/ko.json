@@ -648,6 +648,7 @@
     "mySuites": "내 스킬 모음",
     "publish": "게시",
     "namespaces": "네임스페이스",
+    "organizations": "내 조직",
     "stars": "내 즐겨찾기",
     "subscriptions": "구독",
     "tokens": "API 토큰",
@@ -1250,6 +1251,48 @@
       "RATE_LIMIT": "GitHub 요청 한도 도달",
       "SOURCE_NOT_BOUND": "저장소 소스가 연결되지 않음",
       "SOURCE_PAUSED": "저장소 소스 일시 중지됨"
+    }
+  },
+  "organizations": {
+    "title": "내 조직",
+    "loading": "불러오는 중…",
+    "empty": "아직 소속된 조직이 없습니다.",
+    "members": "조직 구성원",
+    "noMembers": "아직 구성원이 없습니다.",
+    "noMemberAccess": "이 조직의 구성원을 볼 권한이 없습니다.",
+    "addMember": "구성원 추가",
+    "addMemberHint": "추가할 사용자에게 프로필 설정의 사용자 ID를 보내 달라고 요청하세요. 관리 권한은 역할을 따로 부여해야 합니다.",
+    "profileLink": "내 프로필 설정 보기",
+    "userId": "사용자 ID",
+    "memberAdded": "구성원을 추가했습니다.",
+    "roleGranted": "역할을 부여했습니다.",
+    "roleRevoked": "역할을 회수했습니다.",
+    "failed": "작업을 완료하지 못했습니다.",
+    "selectRole": "역할 선택",
+    "grantRole": "역할 부여",
+    "revokeRole": "{{name}}의 {{role}} 역할 회수",
+    "revokeConfirm": "이 역할을 회수할까요?",
+    "viewMembers": "구성원 보기",
+    "viewOrganizationMembers": "{{name}}의 구성원 보기",
+    "retry": "다시 시도",
+    "memberCount_other": "구성원 {{count}}명",
+    "noRoles": "부여된 역할 없음",
+    "unnamedMember": "이름 없는 구성원",
+    "grantMemberRole": "{{name}}에게 역할 부여",
+    "grantDescription": "이 조직에서 {{name}}에게 부여할 역할을 선택하세요.",
+    "revokeDescription": "{{name}}의 {{role}} 역할에 부여된 권한이 사라집니다.",
+    "memberStatus": {
+      "INVITED": "초대됨",
+      "PROVISIONED": "활성화 대기 중",
+      "SUSPENDED": "일시 중지됨",
+      "DEPROVISIONED": "제거됨"
+    },
+    "roles": {
+      "ORG_OWNER": "조직 소유자",
+      "IDENTITY_ADMIN": "인증 관리자",
+      "LOGIN_SECRET_ADMIN": "로그인 비밀 정보 관리자",
+      "MEMBER_ADMIN": "구성원 관리자",
+      "ORG_AUDITOR": "조직 감사 담당자"
     }
   },
   "overview": {

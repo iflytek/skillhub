@@ -21,6 +21,12 @@ describe('clearSessionScopedQueries', () => {
     queryClient.setQueryData(['notifications', 'user-a', 'email', 'contact'], { email: 'a***@example.test' })
     queryClient.setQueryData(['notifications', 'user-a', 'email-batch', '23', 0], { items: [{ id: 1 }] })
     queryClient.setQueryData(['labels', 'visible'], [{ slug: 'official' }])
+    const organizationKeys = [
+      ['organizations', 'user-a', 'list', 0],
+      ['organizations', 'user-a', 'detail', 'org-a'],
+      ['organizations', 'user-a', 'detail', 'org-a', 'members', 0],
+    ]
+    organizationKeys.forEach((key) => queryClient.setQueryData(key, { privateOrganizationData: true }))
     queryClient.setQueryData(['skills', 'my', { page: 0, size: 12 }], { items: [] })
     queryClient.setQueryData(['skills', 'search', { q: '', sort: 'relevance', page: 0, size: 12, starredOnly: false }], { items: [] })
     queryClient.setQueryData(['skills', 'subscriptions'], [{ hasVisibleSuites: true }])
@@ -33,6 +39,7 @@ describe('clearSessionScopedQueries', () => {
     expect(queryClient.getQueryData(['notifications', 'user-a', 'email', 'contact'])).toBeUndefined()
     expect(queryClient.getQueryData(['notifications', 'user-a', 'email-batch', '23', 0])).toBeUndefined()
     expect(queryClient.getQueryData(['labels', 'visible'])).toBeUndefined()
+    organizationKeys.forEach((key) => expect(queryClient.getQueryData(key)).toBeUndefined())
     expect(queryClient.getQueryData(['skills', 'my', { page: 0, size: 12 }])).toBeUndefined()
     expect(queryClient.getQueryData(['skills', 'search', { q: '', sort: 'relevance', page: 0, size: 12, starredOnly: false }])).toBeUndefined()
     expect(queryClient.getQueryData(['skills', 'subscriptions'])).toBeUndefined()

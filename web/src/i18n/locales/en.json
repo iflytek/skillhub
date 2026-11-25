@@ -658,6 +658,7 @@
     "mySuites": "My Suites",
     "publish": "Publish",
     "namespaces": "Namespaces",
+    "organizations": "My organizations",
     "stars": "My Stars",
     "subscriptions": "Subscriptions",
     "tokens": "API Tokens",
@@ -1260,6 +1261,49 @@
       "RATE_LIMIT": "GitHub request limit reached",
       "SOURCE_NOT_BOUND": "Repository source not bound",
       "SOURCE_PAUSED": "Repository source paused"
+    }
+  },
+  "organizations": {
+    "title": "My organizations",
+    "loading": "Loading…",
+    "empty": "You do not belong to an organization yet.",
+    "members": "Organization members",
+    "noMembers": "No members yet.",
+    "noMemberAccess": "You cannot view this organization's members.",
+    "addMember": "Add member",
+    "addMemberHint": "Ask the person to copy their user ID from Profile settings. Adding a member does not grant management permissions.",
+    "profileLink": "View my profile settings",
+    "userId": "User ID",
+    "memberAdded": "Member added",
+    "roleGranted": "Role granted",
+    "roleRevoked": "Role revoked",
+    "failed": "Action failed",
+    "selectRole": "Select role",
+    "grantRole": "Grant role",
+    "revokeRole": "Revoke {{role}} from {{name}}",
+    "revokeConfirm": "Revoke this role?",
+    "viewMembers": "Members",
+    "viewOrganizationMembers": "View members of {{name}}",
+    "retry": "Retry",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "noRoles": "No roles assigned",
+    "unnamedMember": "Unnamed member",
+    "grantMemberRole": "Grant a role to {{name}}",
+    "grantDescription": "Choose a role to grant to {{name}} in this organization.",
+    "revokeDescription": "{{name}} will lose the permissions assigned by the {{role}} role.",
+    "memberStatus": {
+      "INVITED": "Invited",
+      "PROVISIONED": "Awaiting activation",
+      "SUSPENDED": "Suspended",
+      "DEPROVISIONED": "Removed"
+    },
+    "roles": {
+      "ORG_OWNER": "Organization owner",
+      "IDENTITY_ADMIN": "Identity administrator",
+      "LOGIN_SECRET_ADMIN": "Login secret administrator",
+      "MEMBER_ADMIN": "Member administrator",
+      "ORG_AUDITOR": "Organization auditor"
     }
   },
   "overview": {
