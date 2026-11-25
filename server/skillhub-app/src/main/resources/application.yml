@@ -213,6 +213,13 @@ skillhub:
   redis:
     sentinel:
       check-sentinels-list: ${SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST:true}
+  enterprise:
+    oidc:
+      enabled: ${SKILLHUB_ENTERPRISE_OIDC_ENABLED:false}
+      private-host-allowlist: ${SKILLHUB_ENTERPRISE_OIDC_PRIVATE_HOST_ALLOWLIST:}
+    secret-envelope:
+      active-key-id: ${SKILLHUB_ENTERPRISE_SECRET_ENVELOPE_ACTIVE_KEY_ID:}
+      keys: ${SKILLHUB_ENTERPRISE_SECRET_ENVELOPE_KEYS:}
   auth:
     initial-settings:
       password-login-enabled: ${SKILLHUB_AUTH_INITIAL_PASSWORD_LOGIN_ENABLED:true}

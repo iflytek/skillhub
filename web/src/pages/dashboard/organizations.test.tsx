@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   owner: false,
   canManageMembers: false,
   canViewMembers: true,
+  canViewLoginConnections: false,
   viewerId: 'viewer-a',
   routeViewerId: 'viewer-a',
   organizationId: 'org-a',
@@ -33,7 +34,7 @@ vi.mock('@tanstack/react-query', () => ({
   useQuery: ({ queryKey }: { queryKey: Array<string | number> }) => {
     if (queryKey[2] === 'list') {
       return { data: { items: [{ id: 'org-a', slug: 'team-a', displayName: 'Team A',
-        permissions: { canViewMembers: state.owner } }], total: 1 } }
+        permissions: { canViewMembers: state.owner, canViewLoginConnections: state.canViewLoginConnections } }], total: 1 } }
     }
     if (queryKey.length === 4) {
       return { data: {
@@ -62,6 +63,7 @@ describe('OrganizationMembersPage permissions', () => {
     state.owner = false
     state.canManageMembers = false
     state.canViewMembers = true
+    state.canViewLoginConnections = false
     state.viewerId = 'viewer-a'
     state.routeViewerId = 'viewer-a'
     state.organizationId = 'org-a'
@@ -82,6 +84,13 @@ describe('OrganizationMembersPage permissions', () => {
     state.owner = true
     rerender(<OrganizationsPage />)
     expect(screen.getByRole('link', { name: 'organizations.viewOrganizationMembers' }).getAttribute('href'))
+      .toBe('/dashboard/organizations/$organizationId')
+  })
+
+  it('makes the organization detail reachable for a connection-only administrator', () => {
+    state.canViewLoginConnections = true
+    render(<OrganizationsPage />)
+    expect(screen.getByRole('link', { name: 'organizationConnections.viewOrganization' }).getAttribute('href'))
       .toBe('/dashboard/organizations/$organizationId')
   })
 

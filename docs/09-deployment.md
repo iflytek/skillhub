@@ -651,6 +651,24 @@ override 或部署平台环境变量把上述 `SPRING_SECURITY_*` 变量注入 `
 容器。Kubernetes 部署同理，将这些变量放入 `backend-deployment.yaml` 的
 `server` 容器环境变量或统一的配置管理系统中。
 
+### 8.1 企业 OIDC 登录连接管理
+
+企业登录连接从组织管理页面配置。启用前，为所有后端实例从部署环境的密钥管理系统注入一套相同的加密配置：
+
+| 环境变量 | 用途 |
+|---|---|
+| `SKILLHUB_ENTERPRISE_OIDC_ENABLED` | 默认 `false`。设为 `true` 后，授权的组织管理员可以配置和测试连接。 |
+| `SKILLHUB_ENTERPRISE_SECRET_ENVELOPE_ACTIVE_KEY_ID` | 写入新密钥时使用的加密密钥标识。 |
+| `SKILLHUB_ENTERPRISE_SECRET_ENVELOPE_KEYS` | 逗号分隔的 `id:Base64` 项，每个值解码后必须为 32 字节。保留仍有关联密文的旧密钥。 |
+| `SKILLHUB_ENTERPRISE_OIDC_PRIVATE_HOST_ALLOWLIST` | 逗号分隔的私有身份源确切主机名。默认空，使用标准 TLS 校验。 |
+
+Compose 使用 override 注入这些后端环境变量。Kubernetes 可通过 Secret 引用注入加密密钥。
+管理开关开启后仍需通过一次密钥录入确认加密配置有效。配置缺失或格式无效时，服务拒绝写入密钥。
+
+组织所有者可以委派身份管理员和密钥管理员角色。身份管理员创建草稿，密钥管理员核对发行方（issuer）和客户端 ID 后录入客户端密钥。测试通过后，身份管理员可以激活该版本。连接探测校验 OIDC 元数据和 JWKS，凭据是否可用于授权码交换由后续员工登录验收确认。
+
+这一阶段的激活仅选定连接版本。匿名企业登录入口仍需后续登录功能启用。关闭管理开关会停止连接写入和探测，保留组织功能和已保存的版本。
+
 ## 9 裸金属上线清单
 
 推荐顺序：

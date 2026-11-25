@@ -3347,6 +3347,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organizationId}/login-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listLoginConnections"];
+        put?: never;
+        post: operations["createLoginConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspendLoginConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createLoginConnectionRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["testLoginConnectionRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["writeLoginConnectionSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeLoginConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activateLoginConnectionRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disableLoginConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/device/authorize": {
         parameters: {
             query?: never;
@@ -6979,14 +7107,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{organizationId}/login-connections": {
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listLoginConnections"];
+        get: operations["getLoginConnection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/management": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getLoginConnectionManagement"];
         put?: never;
         post?: never;
         delete?: never;
@@ -9765,6 +9909,81 @@ export interface components {
             errorCode?: string;
             errorArgs?: string[];
         };
+        LoginConnectionCreateRequest: {
+            displayName: string;
+            issuer: string;
+            clientId: string;
+        };
+        ApiResponseLoginConnectionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LoginConnectionResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        LoginConnectionHealthResponse: {
+            status?: string;
+            failureReason?: string;
+            /** Format: date-time */
+            checkedAt?: string;
+        };
+        LoginConnectionResponse: {
+            id?: string;
+            displayName?: string;
+            status?: string;
+            activeRevisionId?: string;
+            lastTestedRevisionId?: string;
+            activeRevision?: components["schemas"]["LoginConnectionRevisionResponse"];
+            latestRevision?: components["schemas"]["LoginConnectionRevisionResponse"];
+            health?: components["schemas"]["LoginConnectionHealthResponse"];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        LoginConnectionRevisionResponse: {
+            id?: string;
+            /** Format: int64 */
+            revision?: number;
+            issuer?: string;
+            clientId?: string;
+            secretConfigured?: boolean;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ConfirmedConnectionActionRequest: {
+            confirmed: boolean;
+        };
+        LoginConnectionRevisionCreateRequest: {
+            expectedRevisionId: string;
+            issuer: string;
+            clientId: string;
+        };
+        ApiResponseLoginConnectionTestResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LoginConnectionTestResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        LoginConnectionTestResponse: {
+            success?: boolean;
+            revisionId?: string;
+            failureReason?: string;
+            /** Format: date-time */
+            checkedAt?: string;
+        };
+        LoginConnectionSecretRequest: {
+            clientSecret: string;
+        };
         AuthorizeRequest: {
             userCode?: string;
         };
@@ -12360,6 +12579,20 @@ export interface components {
             page?: number;
             /** Format: int32 */
             size?: number;
+        };
+        ApiResponseLoginConnectionManagementResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LoginConnectionManagementResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        LoginConnectionManagementResponse: {
+            enabled?: boolean;
         };
         ApiResponseListAuthProviderResponse: {
             /** Format: int32 */
@@ -20100,6 +20333,246 @@ export interface operations {
             };
         };
     };
+    listLoginConnections: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseLoginConnectionSummaryResponse"];
+                };
+            };
+        };
+    };
+    createLoginConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginConnectionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    suspendLoginConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    createLoginConnectionRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginConnectionRevisionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    testLoginConnectionRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionTestResponse"];
+                };
+            };
+        };
+    };
+    writeLoginConnectionSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginConnectionSecretRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    resumeLoginConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    activateLoginConnectionRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    disableLoginConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
     authorizeDevice: {
         parameters: {
             query?: never;
@@ -25691,12 +26164,32 @@ export interface operations {
             };
         };
     };
-    listLoginConnections: {
+    getLoginConnection: {
         parameters: {
-            query?: {
-                page?: number;
-                size?: number;
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    getLoginConnectionManagement: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 organizationId: string;
@@ -25711,7 +26204,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseLoginConnectionSummaryResponse"];
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionManagementResponse"];
                 };
             };
         };
