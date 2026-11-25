@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AccountDialog, AccountError, AccountSelect, roleLabels, namespaceStatusLabels, namespaceTypeLabels, valueOf, visibilityLabels, type AccountRemote } from './account-common.js';
 import type { AccountMember, AccountNamespace, EditableRole, MemberCandidate, MemberMutation, OwnedSkill } from '../host/account-types.js';
+import { invalidateRegistrySkill } from './read-cache.js';
 import { Badge, Button, Input, Tabs, TabsList, TabsTrigger, TabsContent } from './ui.js';
 
 type Action = { type: 'add' } | { type: 'role' | 'remove'; member: AccountMember } | { type: 'delete'; skill: OwnedSkill };
@@ -31,6 +32,7 @@ export function SpacePage({ source, remote, revision, space, handle, upload, ope
   const [selected, setSelected] = useState<MemberCandidate>();
   const [role, setRole] = useState<EditableRole>('MEMBER');
   const client = useQueryClient();
+  const submitting = useRef(false);
   const ns = space.slug;
   const owned = useQuery({ queryKey: ['account-owned', revision, ns, page], enabled: tab === 'owned', retry: false,
     queryFn: async ({ signal }) => valueOf(await remote.accountOwned(revision, ns, page, signal)) });
@@ -40,7 +42,7 @@ export function SpacePage({ source, remote, revision, space, handle, upload, ope
     queryFn: async ({ signal }) => valueOf(await remote.accountTeam(revision, ns, cursors[page] ?? '', signal)) });
   const candidates = useQuery({ queryKey: ['account-candidates', revision, ns, keyword], enabled: canManage && action?.type === 'add' && keyword.length >= 2,
     retry: false, queryFn: async ({ signal }) => valueOf(await remote.accountCandidates(revision, ns, keyword, signal)) });
-  const change = useMutation({ mutationKey: ['account-write', revision], retry: false, mutationFn: async () => {
+  const change = useMutation({ mutationKey: ['account-write', revision], retry: false, networkMode: 'always', mutationFn: async () => {
     if (!action) throw new Error('请先选择操作。');
     const signal = new AbortController().signal;
     if (action.type === 'delete') return valueOf(await remote.deleteAccountSkill(revision, ns, action.skill.id, action.skill.slug, signal));
@@ -55,8 +57,14 @@ export function SpacePage({ source, remote, revision, space, handle, upload, ope
     afterChangeFocus.current = action?.type === 'delete' ? heading.current : membersTab.current;
     setNotice(action?.type === 'add' ? '已添加成员 ' + selected?.userId : '已保存变更');
     setAction(undefined);
-    void client.invalidateQueries({ predicate: q => String(q.queryKey[0]).startsWith('account-') && q.queryKey.includes(revision) });
-  } });
+    if (action?.type === 'delete') invalidateRegistrySkill(client, revision, ns, action.skill.slug);
+    else void client.invalidateQueries({ predicate: q => String(q.queryKey[0]).startsWith('account-') && q.queryKey.includes(revision) });
+  }, onSettled: () => { submitting.current = false; } });
+  function submitChange() {
+    if (submitting.current) return;
+    submitting.current = true;
+    change.mutate();
+  }
   function show(a: Action) {
     afterChangeFocus.current = null;
     change.reset(); setSearch(''); setKeyword(''); setSelected(undefined); setNotice('');
@@ -100,7 +108,7 @@ export function SpacePage({ source, remote, revision, space, handle, upload, ope
     </TabsContent></Tabs>
     {action && <AccountDialog close={() => setAction(undefined)} busy={change.isPending} returnFocus={() => afterChangeFocus.current}
       title={{ add: '添加成员', role: '修改角色', remove: '移除成员', delete: '删除技能' }[action.type]}
-      actions={<Button variant={action.type === 'remove' || action.type === 'delete' ? 'destructive' : 'default'} disabled={change.isPending || change.isError || (action.type === 'add' && !selected) || (action.type === 'role' && action.member.role === role)} onClick={() => change.mutate()}>{change.isPending ? '正在提交…' : { add: '确认添加', role: '保存角色', remove: '移除成员', delete: '删除技能' }[action.type]}</Button>}
+      actions={<Button variant={action.type === 'remove' || action.type === 'delete' ? 'destructive' : 'default'} disabled={change.isPending || change.isError || (action.type === 'add' && !selected) || (action.type === 'role' && action.member.role === role)} onClick={submitChange}>{change.isPending ? '正在提交…' : { add: '确认添加', role: '保存角色', remove: '移除成员', delete: '删除技能' }[action.type]}</Button>}
       description={action.type === 'delete' ? `从 ${source} 删除整个 @${ns}/${action.skill.slug}（ID ${action.skill.id}）？本机安装将保留，云端数据按来源服务规则处理。` : action.type === 'add' ? `搜索已注册用户，确认后直接加入 @${ns}` : `@${ns} · ${action.member.displayName || action.member.userId}（${action.member.userId}）`}>
       {action.type === 'remove' && <p>移除后，该用户将失去此团队的成员权限。已上传技能、个人令牌和本机文件会保留。</p>}
       {action.type === 'add' && <><form className="astron-sh-account-search" onSubmit={event => { event.preventDefault(); setKeyword(search.trim()); }}>

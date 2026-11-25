@@ -206,12 +206,13 @@ try {
     await dialog.getByRole('button', { name: '核对上传信息' }).click();
     await dialog.getByRole('region', { name: '确认上传目标' }).waitFor();
     await layout('upload-confirm');
-    await dialog.getByRole('button', { name: '确认上传' }).click();
+    await dialog.getByRole('button', { name: '确认上传' }).dblclick();
     await page.waitForFunction(() => document.querySelector('[role="dialog"]')?.getAttribute('aria-busy') === 'true');
     assert(await dialog.getByRole('button', { name: '更换技能包文件', exact: true }).isDisabled(), 'Picker is locked during upload');
     assert(await selectedFile.getByRole('button', { name: '移除文件', exact: true }).isDisabled(), 'Removal is locked during upload');
     await dropFiles(page, dialog.locator('.astron-sh-upload-dropzone'), [{ name: 'busy-replacement.zip' }]);
     assert(await selectedFile.getByText('replacement.zip', { exact: true }).isVisible(), 'Drops during upload cannot replace the submitted file');
+    assert.equal((await page.evaluate(() => window.accountWriteCounts())).upload, 1, 'Double click submits one upload');
     await layout('upload-busy');
     await page.evaluate(() => window.finishAccountUpload());
     await dialog.getByRole('heading', { name: '已上传' }).waitFor();
@@ -233,6 +234,41 @@ try {
     await page.getByRole('button', { name: '进入空间' }).first().click();
     await page.getByRole('list', { name: '可安装技能', exact: true }).waitFor();
     await pageLayout('namespace-skills');
+    if (width === 1280 && theme === 'light') {
+      const teamList = page.getByRole('list', { name: '可安装技能', exact: true });
+      const openUpload = async () => {
+        await page.locator('.astron-sh-namespace-heading').getByRole('button', { name: '上传技能' }).click();
+        await dialog.locator('input[type=file]').setInputFiles({ name: 'example.zip', mimeType: 'application/zip', buffer: Buffer.from('fixture-package') });
+        await dialog.getByRole('button', { name: '核对上传信息' }).click();
+        await dialog.getByRole('button', { name: '确认上传' }).waitFor();
+      };
+      for (const [publishImmediately, version] of [[true, '1.0.2'], [false, '1.0.3']]) {
+        await openUpload();
+        await dialog.getByRole('button', { name: '确认上传' }).click();
+        await page.waitForFunction(() => document.querySelector('[role="dialog"]')?.getAttribute('aria-busy') === 'true');
+        await page.evaluate(immediate => window.finishAccountUpload(immediate), publishImmediately);
+        if (!publishImmediately) {
+          await dialog.getByText('UPLOADED', { exact: true }).waitFor();
+          assert(!(await page.locator('.astron-sh-namespace-list').innerText()).includes(version), 'Receipt alone does not mark a pending version installable');
+          await page.evaluate(() => window.publishAccountVersion());
+          await dialog.getByRole('button', { name: '刷新版本状态' }).click();
+        }
+        await dialog.getByText('PUBLISHED', { exact: true }).waitFor();
+        await dialog.getByRole('button', { name: '关闭', exact: true }).click();
+        await teamList.getByText(`@design · v${version}`, { exact: true }).waitFor();
+      }
+      await openUpload();
+      const previous = (await page.evaluate(() => window.accountWriteCounts())).upload;
+      await page.context().setOffline(true);
+      await dialog.getByRole('button', { name: '确认上传' }).click();
+      await dialog.getByRole('alert').filter({ hasText: '无法连接' }).waitFor();
+      assert.equal((await page.evaluate(() => window.accountWriteCounts())).upload, previous + 1);
+      await dialog.getByRole('button', { name: '取消' }).click();
+      await page.context().setOffline(false);
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      assert.equal((await page.evaluate(() => window.accountWriteCounts())).upload, previous + 1, 'Reconnection does not replay a failed upload');
+    }
+
     await page.getByRole('button', { name: '我的上传', exact: true }).click();
     await page.getByRole('list', { name: '我的上传', exact: true }).waitFor();
     await pageLayout('namespace-uploads');
@@ -245,7 +281,19 @@ try {
     await dialog.waitFor({ state: 'hidden' });
     await page.getByRole('button', { name: '删除', exact: true }).click();
     await layout('delete');
-    await dialog.getByRole('button', { name: '取消' }).click();
+    const testOfflineDelete = width === 1280 && theme === 'light';
+    if (testOfflineDelete) {
+      await page.context().setOffline(true);
+      await dialog.getByRole('button', { name: '删除技能', exact: true }).click();
+      await dialog.getByRole('alert').filter({ hasText: '无法连接' }).waitFor();
+      await dialog.getByRole('button', { name: '取消' }).click();
+      await page.context().setOffline(false);
+      await page.getByRole('button', { name: '删除', exact: true }).click();
+      assert.equal((await page.evaluate(() => window.accountWriteCounts())).delete, 1, 'Failed delete is not replayed on reconnect');
+    }
+    await dialog.getByRole('button', { name: '删除技能', exact: true }).dblclick();
+    await dialog.waitFor({ state: 'hidden' });
+    assert.equal((await page.evaluate(() => window.accountWriteCounts())).delete, testOfflineDelete ? 2 : 1, 'Double click deletes a skill once');
     await page.getByRole('button', { name: '成员管理', exact: true }).focus();
     await page.getByRole('button', { name: '成员管理', exact: true }).press('Enter');
     assert.equal(await page.getByRole('tab', { name: '成员', exact: true }).getAttribute('aria-selected'), 'true', 'Space heading opens member management');
@@ -280,13 +328,14 @@ try {
     }), 'Candidate email remains inside the button');
     await layout('add-member');
     assert(await dialog.getByRole('button', { name: '确认添加' }).isEnabled(), 'Selected candidate can be added');
-    await dialog.getByRole('button', { name: '确认添加' }).click();
+    await dialog.getByRole('button', { name: '确认添加' }).dblclick();
     await page.waitForFunction(() => document.querySelector('[role="dialog"]')?.getAttribute('aria-busy') === 'true');
     assert(await search.isDisabled(), 'Search locked during member write');
     assert(await dialog.getByRole('combobox').isDisabled(), 'Role locked during member write');
     assert(await dialog.getByRole('button', { name: /候选用户/ }).isDisabled(), 'Candidate locked during member write');
     await dialog.waitFor({ state: 'hidden' });
     await page.getByText('4 位成员 · 按用户 ID 识别', { exact: true }).waitFor();
+    assert.equal((await page.evaluate(() => window.accountWriteCounts())).add, 1, 'Double click adds a member once');
     const candidateRow = page.locator('.astron-sh-namespace-member-row').filter({ hasText: '候选用户' });
     assert(await candidateRow.getByText('成员', { exact: true }).isVisible(), 'Added user appears with the requested member role');
     await page.getByRole('tab', { name: '技能', exact: true }).click();
@@ -297,9 +346,10 @@ try {
     await candidateRow.getByRole('button', { name: '修改角色', exact: true }).click();
     await layout('member-role');
     await dialog.getByRole('combobox', { name: '成员角色' }).selectOption('ADMIN');
-    await dialog.getByRole('button', { name: '保存角色', exact: true }).click();
+    await dialog.getByRole('button', { name: '保存角色', exact: true }).dblclick();
     await dialog.waitFor({ state: 'hidden' });
     await candidateRow.getByText('管理员', { exact: true }).waitFor();
+    assert.equal((await page.evaluate(() => window.accountWriteCounts())).role, 1, 'Double click changes a role once');
     await candidateRow.getByRole('button', { name: '移除', exact: true }).click();
     await layout('remove-member');
     await dialog.getByRole('button', { name: '取消', exact: true }).click();
@@ -307,9 +357,10 @@ try {
     await page.waitForFunction(button => document.activeElement === button, await candidateRow.getByRole('button', { name: '移除', exact: true }).elementHandle());
     assert(await candidateRow.getByRole('button', { name: '移除', exact: true }).evaluate(button => document.activeElement === button), 'Cancel returns focus to the member action');
     await candidateRow.getByRole('button', { name: '移除', exact: true }).click();
-    await dialog.getByRole('button', { name: '移除成员', exact: true }).click();
+    await dialog.getByRole('button', { name: '移除成员', exact: true }).dblclick();
     await dialog.waitFor({ state: 'hidden' });
     await page.getByText('3 位成员 · 按用户 ID 识别', { exact: true }).waitFor();
+    assert.equal((await page.evaluate(() => window.accountWriteCounts())).remove, 1, 'Double click removes a member once');
     assert.equal(await candidateRow.count(), 0, 'Removed member disappears after refetch');
     await page.waitForFunction(() => document.activeElement?.getAttribute('role') === 'tab' && document.activeElement.textContent === '成员');
     assert(await page.getByRole('tab', { name: '成员', exact: true }).evaluate(tab => document.activeElement === tab), 'Successful removal restores focus to the member section instead of the removed row');

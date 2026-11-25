@@ -1,9 +1,10 @@
-import { useId, useRef, useState, type DragEvent } from 'react';
+import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AccountNamespace, OwnedSkill, UploadReceipt, Visibility } from '../host/account-types.js';
 import { AccountDialog, AccountError, AccountSelect, valueOf, visibilityLabels, type AccountRemote } from './account-common.js';
 import { encodePackage, MAX_TRANSFER_BYTES } from './package-transfer.js';
 import { Button } from './ui.js';
+import { invalidateRegistrySkill } from './read-cache.js';
 import { Icon } from './skill-card.js';
 
 export function UploadSkill({ remote, revision, spaces, initial, row, close, spacesLoading, spacesError, retrySpaces }: {
@@ -25,6 +26,7 @@ export function UploadSkill({ remote, revision, spaces, initial, row, close, spa
   const [receipt, setReceipt] = useState<UploadReceipt>();
   const [confirm, setConfirm] = useState(false);
   const confirmationVersion = useRef(0);
+  const submitting = useRef(false);
   const [closedWrite, setClosedWrite] = useState(false);
   const client = useQueryClient();
   const target = useQuery({
@@ -40,19 +42,22 @@ export function UploadSkill({ remote, revision, spaces, initial, row, close, spa
     },
   });
   const visibility = chosen ?? target.data?.result.existing?.visibility ?? 'PRIVATE';
-  const upload = useMutation({ mutationKey: ['account-write', revision], retry: false, mutationFn: async () => {
+  const upload = useMutation({ mutationKey: ['account-write', revision], retry: false, networkMode: 'always', mutationFn: async () => {
     if (!target.data || target.isError || !available.some(ns => ns.slug === space)) throw new Error('请重新选择上传目标。');
     return valueOf(await remote.publishUpload(revision, space, target.data.archive, visibility, target.data.result, new AbortController().signal));
-  }, onSuccess: result => { setReceipt(result); void client.invalidateQueries({ queryKey: ['account-owned', revision, space] }); },
+  }, onSuccess: result => { setReceipt(result); invalidateRegistrySkill(client, revision, result.namespace, result.slug); },
   onError: error => {
     setConfirm(false);
     if (error.name === 'UploadTargetChanged') {
       setChosen(undefined);
       void target.refetch();
     } else setClosedWrite(true);
-  } });
+  }, onSettled: () => { submitting.current = false; } });
   const status = useQuery({ queryKey: ['account-version', revision, receipt?.namespace, receipt?.slug, receipt?.version],
     enabled: !!receipt, retry: false, queryFn: async ({ signal }) => valueOf(await remote.uploadStatus(revision, receipt!.namespace, receipt!.slug, receipt!.version, signal)) });
+  useEffect(() => {
+    if (receipt && status.data?.status === 'PUBLISHED') invalidateRegistrySkill(client, revision, receipt.namespace, receipt.slug);
+  }, [client, receipt, revision, status.data?.status]);
   function selectFiles(files?: File[]) {
     if (upload.isPending) return;
     const selected = files?.[0];
@@ -74,7 +79,10 @@ export function UploadSkill({ remote, revision, spaces, initial, row, close, spa
     description={receipt ? `@${receipt.namespace}/${receipt.slug} · ${receipt.version} · ${visibilityLabels[receipt.visibility]}` : '选择目标命名空间、技能包和可见性。'}
     actions={!spacesLoading && !spacesError && !receipt && <Button variant="default" disabled={!target.data || target.isFetching || target.isError || upload.isPending || closedWrite}
       onClick={async () => {
-        if (confirm) { upload.mutate(); return; }
+        if (confirm) {
+          if (!submitting.current) { submitting.current = true; upload.mutate(); }
+          return;
+        }
         const version = confirmationVersion.current;
         const current = await target.refetch();
         if (!current.isSuccess || version !== confirmationVersion.current) return;

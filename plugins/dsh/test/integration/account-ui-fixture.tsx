@@ -15,11 +15,20 @@ import type { AccountMember, MemberMutation, Visibility } from '../../src/host/a
 // Isolated UI fixture: no real service, credentials, or filesystem writes.
 let identity: { handle: string; displayName: string } | null = null;
 let uploadsEmpty = false;
-let finishUpload: (() => void) | undefined;
+let finishUpload: ((published: boolean) => void) | undefined;
+let uploadedPatch = 0;
+let publishedPatch = 0;
+const writes = { upload: 0, add: 0, role: 0, remove: 0, delete: 0 };
+function startWrite(action: keyof typeof writes) {
+  writes[action]++;
+  if (!navigator.onLine) throw new TypeError('Fixture Registry offline');
+}
 let pauseInspection = false;
 let finishInspection: (() => void) | undefined;
 Object.assign(globalThis, {
-  finishAccountUpload: () => finishUpload?.(),
+  finishAccountUpload: (published = false) => finishUpload?.(published),
+  publishAccountVersion: () => { publishedPatch = uploadedPatch; },
+  accountWriteCounts: () => ({ ...writes }),
   pauseNextAccountInspection: () => { pauseInspection = true; },
   isAccountInspectionPaused: () => !!finishInspection,
   finishAccountInspection: () => { const finish = finishInspection; finishInspection = undefined; finish?.(); },
@@ -46,11 +55,12 @@ const api = {
   disconnectAccount: () => { identity = null; return true; },
   accountNamespaces: async () => { await new Promise(resolve => setTimeout(resolve, 200)); return spaces; },
   accountOwned: (_revision: string, ns: string) => ns === 'global' || ns === 'design' && uploadsEmpty ? { items: [], total: 0 } : ({ items: [{ id: 1, slug: 'example', displayName: '示例技能', visibility: 'PRIVATE', status: 'ACTIVE' }], total: 1 }),
-  accountTeam: () => ({ items: [{ namespace: 'design', slug: 'example', version: '1.0.0', versionId: 1 }], nextCursor: null }),
+  accountTeam: () => ({ items: [{ namespace: 'design', slug: 'example', version: `1.0.${publishedPatch}`, versionId: publishedPatch + 1 }], nextCursor: null }),
   accountMembers: (_revision: string, ns: string) => ns === 'design' ? { items: [...designMembers], total: designMembers.length }
     : { items: [{ userId: 'usr_11111111-2222-4333-8444-555555555555', displayName: '空间所有者', role: 'OWNER' }, { userId: 'fixture-user', displayName: '演示用户', role: ns === 'frozen-team' ? 'ADMIN' : 'MEMBER' }], total: 2 },
   accountCandidates: () => [{ userId: 'candidate', displayName: '候选用户', email: 'candidate@example.test' }],
   changeAccountMember: async (_revision: string, ns: string, command: MemberMutation) => {
+    startWrite(command.action);
     if (ns !== 'design') throw new Error('Read-only fixture namespace');
     await new Promise(resolve => setTimeout(resolve, 250));
     if (command.action === 'add') designMembers.push({ userId: command.userId, displayName: '候选用户', role: command.role });
@@ -60,23 +70,32 @@ const api = {
       if (command.action === 'remove') designMembers.splice(index, 1);
       else designMembers[index] = { ...designMembers[index]!, role: command.role };
     }
+    return true;
+  },
+  deleteAccountSkill: async () => {
+    startWrite('delete');
+    await new Promise(resolve => setTimeout(resolve, 250));
     uploadsEmpty = true;
     return true;
   },
-  deleteAccountSkill: () => true,
   inspectUpload: async () => {
     if (pauseInspection) { pauseInspection = false; await new Promise<void>(resolve => { finishInspection = resolve; }); }
     return { slug: 'example', existing: null };
   },
   publishUpload: async (_revision: string, namespace: string, _archive: string, visibility: Visibility) => {
-    await new Promise<void>(resolve => { finishUpload = resolve; });
-    return { namespace, slug: 'example', version: '1.0.0', visibility };
+    startWrite('upload');
+    const published = await new Promise<boolean>(resolve => { finishUpload = resolve; });
+    uploadedPatch++;
+    if (published) publishedPatch = uploadedPatch;
+    return { namespace, slug: 'example', version: `1.0.${uploadedPatch}`, visibility };
   },
-  uploadStatus: () => ({ status: '待服务端处理' }),
+  uploadStatus: () => ({ status: publishedPatch === uploadedPatch ? 'PUBLISHED' : 'UPLOADED' }),
 };
 const remote = Object.fromEntries(Object.entries(api).map(([name, fn]) => [name, async (...args: unknown[]) => {
   try { return { ok: true, value: await Reflect.apply(fn, null, args) }; }
-  catch { return { ok: false, error: { code: 'AUTH_REQUIRED', message: 'Token 无效，请重新输入。' } }; }
+  catch (error) {
+    if (error instanceof TypeError) return { ok: false, error: { code: 'skillhub/registry-error', details: { reason: 'NETWORK_ERROR' } } };
+    return { ok: false, error: { code: 'AUTH_REQUIRED', message: 'Token 无效，请重新输入。' } }; }
 }])) as unknown as AccountRemote;
 const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
 let snapshot: ConfigFormSnapshot<SkillHubConfig> = { status: 'ready', revision: 1, writable: true, base: {}, user: {},
