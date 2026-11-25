@@ -154,8 +154,7 @@ public class ApiTokenService {
 
     @Transactional
     public ApiToken updateExpiration(Long tokenId, String userId, String expiresAt, PlatformPrincipal caller) {
-        ApiToken token = tokenRepo.findById(tokenId)
-                .filter(existing -> existing.getUserId().equals(userId) && existing.getRevokedAt() == null)
+        ApiToken token = tokenRepo.findUnrevokedForUpdate(tokenId, userId)
                 .orElseThrow(() -> new DomainNotFoundException("error.token.notFound", tokenId));
         Instant expiration = parseExpiresAt(expiresAt);
         requireCapabilities(scopeService.expandScopes(scopeService.issuedScopes(token)), expiration, caller);
@@ -186,8 +185,7 @@ public class ApiTokenService {
 
     @Transactional
     public void touchLastUsed(ApiToken token) {
-        token.setLastUsedAt(currentTime());
-        tokenRepo.save(token);
+        tokenRepo.updateLastUsedAt(token.getId(), currentTime());
     }
 
     private String sha256(String input) {

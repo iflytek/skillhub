@@ -496,7 +496,9 @@ read + submit 可以完成 PRIVATE 上传、送审、版本状态查询，但不
 上传改变已有技能可见性时还需 manage，在版本写入前拒绝；PRIVATE 重新发版保持 `UPLOADED`。
 Token 调用上传 PRIVATE 不再触发 SUPER_ADMIN 直发，必须显式确认；会话保留原直发行为。
 
-存量 `scope_json` 不迁移。`skill:publish` 作为兼容别名展开为 submit、publish-private、manage
+保留存量 Token 的既有技能授权；迁移仅剔除旧签发器可写入但未授权的
+`namespace:read` / `namespace:manage` 占位值，不给旧 Token 自动增权。
+`skill:publish` 作为兼容别名展开为 submit、publish-private、manage
 及内部 `suite:legacy-write`，不包含 delete 或 token:manage。`legacyCompat=true` 标记该来源。
 Suite／Bundle 原要求 publish 的路由保持旧授权，Suite 删除仍需 delete；本期不细分 Suite 能力。
 内部 Suite 标记不能直接作为新 Token scope 请求，只能由旧 publish 别名展开。
