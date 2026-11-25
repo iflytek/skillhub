@@ -31,14 +31,29 @@ export function LoginPage() {
   const [loginMode, setLoginMode] = useState<'personal' | 'organization'>('personal')
   const [fieldErrors, setFieldErrors] = useState<{ username?: string, password?: string }>({})
   const returnTo = resolveAuthReturnTo(search.returnTo)
-  const { data: authMethods, isLoading: authMethodsLoading } = useAuthMethods(returnTo)
-  const { data: localCapabilities, isError: localCapabilitiesError } = useLocalAuthCapabilities()
-  const passwordEnabled = localCapabilities?.passwordLoginEnabled === true
+  const {
+    data: authMethods, isLoading: authMethodsLoading, isError: authMethodsError,
+    isFetching: authMethodsFetching, refetch: refetchAuthMethods,
+  } = useAuthMethods(returnTo)
+  const {
+    data: localCapabilities, isLoading: localCapabilitiesLoading, isError: localCapabilitiesError,
+    isFetching: localCapabilitiesFetching, refetch: refetchLocalCapabilities,
+  } = useLocalAuthCapabilities()
+  const passwordEnabled = localCapabilities?.passwordLoginEnabled
+    ?? (localCapabilitiesError && !authMethodsError && authMethods?.some((method) => method.methodType === 'PASSWORD') === true)
   const effectiveLoginMode = passwordEnabled ? loginMode : 'organization'
   const disabledMessage = search.reason === 'accountDisabled' ? t('error.auth.local.accountDisabled') : null
   const bootstrapMethod = authMethods?.find((method) => method.methodType === 'SESSION_BOOTSTRAP')
   const hasOrganizationMethod = bootstrapConfig.enabled
   const hasExternalMethods = authMethods?.some((method) => method.methodType === 'OAUTH_REDIRECT')
+  const noLoginMethod = !passwordEnabled && !hasOrganizationMethod && !hasExternalMethods
+  const configUnavailable = noLoginMethod && (localCapabilitiesError || authMethodsError)
+    && !localCapabilitiesLoading && !authMethodsLoading
+
+  function retryLoginConfig() {
+    if (localCapabilitiesError) void refetchLocalCapabilities()
+    if (authMethodsError) void refetchAuthMethods()
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -166,10 +181,16 @@ export function LoginPage() {
         </form>
         </div> : null}
 
-        {localCapabilitiesError ? (
-          <p className="text-sm text-red-600">{t('systemConfig.capabilitiesUnavailable')}</p>
+        {configUnavailable ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+            <p role="alert" className="text-sm text-foreground">{t('login.configUnavailable')}</p>
+            <Button type="button" variant="outline" size="sm" disabled={authMethodsFetching || localCapabilitiesFetching}
+              onClick={retryLoginConfig}>
+              {t('login.retryConfig')}
+            </Button>
+          </div>
         ) : null}
-        {localCapabilities && !passwordEnabled && !bootstrapConfig.enabled && !hasExternalMethods ? (
+        {localCapabilities && noLoginMethod && !configUnavailable && !authMethodsLoading ? (
           <p className="text-sm text-muted-foreground">{t('systemConfig.passwordDisabled')}</p>
         ) : null}
 

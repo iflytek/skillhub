@@ -64,4 +64,14 @@ public class AuditLogService {
         return auditLogRepository.save(AuditLog.organizationSuccess(
                 actorUserId, action, organizationId, targetRef, requestId, Instant.now(clock)));
     }
+
+    @Transactional
+    public AuditLog recordOrganizationLoginConnection(
+            String actorUserId, String action, String organizationId, String connectionId,
+            String requestId, boolean success, String detailJson
+    ) {
+        return auditLogRepository.save(AuditLog.organizationLoginConnection(
+                actorUserId, action, organizationId, connectionId,
+                requestId, success, detailJson, Instant.now(clock)));
+    }
 }

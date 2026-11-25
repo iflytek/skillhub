@@ -494,6 +494,8 @@
     "title": "Login to SkillHub",
     "subtitle": "One account for better skill collaboration",
     "eyebrow": "Welcome back",
+    "configUnavailable": "Sign-in methods could not be loaded.",
+    "retryConfig": "Try again",
     "tabEnterprise": "Organization login",
     "tabPersonal": "Personal login",
     "loginMode": "Login method",
@@ -1304,6 +1306,65 @@
       "LOGIN_SECRET_ADMIN": "Login secret administrator",
       "MEMBER_ADMIN": "Member administrator",
       "ORG_AUDITOR": "Organization auditor"
+    }
+  },
+  "organizationConnections": {
+    "view": "Org details",
+    "viewOrganization": "View organization {{name}}",
+    "title": "Login connections",
+    "create": "Add OIDC connection",
+    "empty": "No login connections yet.",
+    "unnamed": "Unnamed connection",
+    "details": "Connection details",
+    "hideDetails": "Hide details",
+    "refresh": "Refresh status",
+    "activeRevision": "Active configuration · Version {{revision}}",
+    "previousRevision": "Previously active · Version {{revision}}",
+    "draftRevision": "Pending draft · Version {{revision}}",
+    "resumeImpact": "{{name}} will resume with its previously active version. The pending draft is kept.",
+    "disableImpact": "{{name}} cannot be enabled again after it is disabled.",
+    "probeFailure": {
+      "blocked": "Check the issuer URL and the outbound access policy for this identity provider.",
+      "timeout": "The identity provider took too long to respond. Check network connectivity and try again.",
+      "unavailable": "Could not reach the identity provider. Check the issuer URL and service availability.",
+      "invalidMetadata": "Check the issuer URL and the OIDC metadata and signing keys it publishes."
+    },
+    "name": "Connection name",
+    "issuer": "Issuer URL",
+    "clientId": "Client ID",
+    "secret": "Client secret",
+    "secretReady": "Configured",
+    "secretMissing": "Missing",
+    "edit": "Edit configuration",
+    "writeSecret": "Enter secret",
+    "saveDraft": "Save draft",
+    "draftHint": "A draft does not change the active configuration.",
+    "secretHint": "Check the issuer and Client ID before entering the secret for this version.",
+    "staleDraft": "This draft has changed. Close and reopen the editor.",
+    "saved": "Connection saved",
+    "managementUnavailable": "Could not reach connection management.",
+    "secretError": "Could not save the secret. Re-enter it and try again.",
+    "test": "Test connection",
+    "probePassed": "Connection test passed",
+    "probeFailed": "Connection test failed",
+    "probeRequired": "Test required",
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "SUSPENDED": "Paused",
+      "DISABLED": "Disabled"
+    },
+    "action": {
+      "activate": "Activate",
+      "suspend": "Pause",
+      "resume": "Resume",
+      "disable": "Disable"
+    },
+    "confirm": {
+      "activate": "Activate this version?",
+      "suspend": "Pause this connection?",
+      "resume": "Resume this connection?",
+      "disable": "Disable this connection?"
     }
   },
   "overview": {
