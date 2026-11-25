@@ -100,6 +100,18 @@ public class AuditLog {
         return log;
     }
 
+    static AuditLog organizationLoginConnection(
+            String actorUserId, String action, String organizationId, String connectionId,
+            String requestId, boolean success, String detailJson, Instant createdAt
+    ) {
+        AuditLog log = new AuditLog(actorUserId, action, "LOGIN_CONNECTION", null,
+                requestId, null, null, detailJson, createdAt);
+        log.organizationId = organizationId;
+        log.targetRef = connectionId;
+        log.result = success ? "SUCCESS" : "FAILED";
+        return log;
+    }
+
     public Long getId() { return id; }
     public String getActorUserId() { return actorUserId; }
     public String getAction() { return action; }

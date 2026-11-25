@@ -1249,6 +1249,14 @@ export type OrganizationDetail = components['schemas']['OrganizationDetailRespon
 export type OrganizationMember = components['schemas']['OrganizationMemberResponse']
 export type OrganizationRole = components['schemas']['OrganizationRoleGrantRequest']['role']
 export type OrganizationRoleBinding = components['schemas']['OrganizationRoleBindingResponse']
+type ConnectionSummary = components['schemas']['LoginConnectionSummaryResponse']
+type ConnectionManagement = components['schemas']['LoginConnectionManagementResponse']
+export type OrganizationLoginConnection = components['schemas']['LoginConnectionResponse']
+type ConnectionDraft = components['schemas']['LoginConnectionCreateRequest']
+type ConnectionRevision = components['schemas']['LoginConnectionRevisionCreateRequest']
+type ConnectionCredential = components['schemas']['LoginConnectionSecretRequest']
+type ConnectionProbe = components['schemas']['LoginConnectionTestResponse']
+type ConnectionConfirmation = components['schemas']['ConfirmedConnectionActionRequest']
 
 export const organizationApi = {
   list(page = 0, size = 20) {
@@ -1285,6 +1293,60 @@ export const organizationApi = {
         headers: await ensureCsrfHeaders(),
       },
     )
+  },
+}
+
+function connectionPath(organizationId: string, connectionId?: string, revisionId?: string): string {
+  const base = `/api/v1/organizations/${encodeURIComponent(organizationId)}/login-connections`
+  if (!connectionId) return base
+  const detail = `${base}/${encodeURIComponent(connectionId)}`
+  return revisionId ? `${detail}/revisions/${encodeURIComponent(revisionId)}` : detail
+}
+
+async function postConnection<T>(path: string, body?: object): Promise<T> {
+  return fetchJson<T>(path, {
+    method: 'POST',
+    headers: await ensureCsrfHeaders(body ? { 'Content-Type': 'application/json' } : undefined),
+    body: body ? JSON.stringify(body) : undefined,
+  })
+}
+
+export const organizationConnectionApi = {
+  list(organizationId: string, page: number, size: number) {
+    return fetchJson<PagedResponse<ConnectionSummary>>(`${connectionPath(organizationId)}?page=${page}&size=${size}`)
+  },
+  management(organizationId: string) {
+    return fetchJson<ConnectionManagement>(`${connectionPath(organizationId)}/management`)
+  },
+  get(organizationId: string, connectionId: string) {
+    return fetchJson<OrganizationLoginConnection>(connectionPath(organizationId, connectionId))
+  },
+  create(organizationId: string, draft: ConnectionDraft) {
+    return postConnection<OrganizationLoginConnection>(connectionPath(organizationId), draft)
+  },
+  revise(organizationId: string, connectionId: string, revision: ConnectionRevision) {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId)}/revisions`, revision)
+  },
+  writeSecret(organizationId: string, connectionId: string, revisionId: string, body: ConnectionCredential) {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId, revisionId)}/secret`, body)
+  },
+  test(organizationId: string, connectionId: string, revisionId: string) {
+    return postConnection<ConnectionProbe>(`${connectionPath(organizationId, connectionId, revisionId)}/test`)
+  },
+  activate(organizationId: string, connectionId: string, revisionId: string) {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId, revisionId)}/activate`, {
+      confirmed: true,
+    } satisfies ConnectionConfirmation)
+  },
+  resume(organizationId: string, connectionId: string, revisionId: string) {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId, revisionId)}/resume`, {
+      confirmed: true,
+    } satisfies ConnectionConfirmation)
+  },
+  changeStatus(organizationId: string, connectionId: string, action: 'suspend' | 'disable') {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId)}/${action}`, {
+      confirmed: true,
+    } satisfies ConnectionConfirmation)
   },
 }
 

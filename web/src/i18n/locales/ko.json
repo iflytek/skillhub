@@ -484,6 +484,8 @@
     "title": "SkillHub 로그인",
     "subtitle": "하나의 계정으로 더 나은 스킬 협업을 시작하세요",
     "eyebrow": "다시 오신 것을 환영합니다",
+    "configUnavailable": "로그인 방법을 불러오지 못했습니다.",
+    "retryConfig": "다시 시도",
     "tabEnterprise": "조직 로그인",
     "tabPersonal": "개인 로그인",
     "loginMode": "로그인 방식",
@@ -1293,6 +1295,65 @@
       "LOGIN_SECRET_ADMIN": "로그인 비밀 정보 관리자",
       "MEMBER_ADMIN": "구성원 관리자",
       "ORG_AUDITOR": "조직 감사 담당자"
+    }
+  },
+  "organizationConnections": {
+    "view": "조직 상세 정보",
+    "viewOrganization": "{{name}} 조직 보기",
+    "title": "로그인 연결",
+    "create": "OIDC 연결 추가",
+    "empty": "로그인 연결이 없습니다.",
+    "unnamed": "이름 없는 연결",
+    "details": "연결 상세 정보",
+    "hideDetails": "상세 정보 숨기기",
+    "refresh": "상태 새로고침",
+    "activeRevision": "현재 활성 구성 · 버전 {{revision}}",
+    "previousRevision": "이전에 활성화된 구성 · 버전 {{revision}}",
+    "draftRevision": "활성화 대기 중인 초안 · 버전 {{revision}}",
+    "resumeImpact": "{{name}}은 이전에 활성화된 버전으로 재개됩니다. 대기 중인 초안은 유지됩니다.",
+    "disableImpact": "{{name}}은 비활성화 후 다시 활성화할 수 없습니다.",
+    "probeFailure": {
+      "blocked": "발급자 URL과 이 ID 공급자의 아웃바운드 접근 정책을 확인하세요.",
+      "timeout": "ID 공급자의 응답 시간이 초과되었습니다. 네트워크 연결을 확인한 후 다시 시도하세요.",
+      "unavailable": "ID 공급자에 연결할 수 없습니다. 발급자 URL과 서비스 상태를 확인하세요.",
+      "invalidMetadata": "발급자 URL과 공급자가 게시한 OIDC 메타데이터 및 서명 키를 확인하세요."
+    },
+    "name": "연결 이름",
+    "issuer": "발급자 URL",
+    "clientId": "클라이언트 ID",
+    "secret": "클라이언트 보안 비밀",
+    "secretReady": "설정됨",
+    "secretMissing": "미설정",
+    "edit": "구성 편집",
+    "writeSecret": "보안 비밀 입력",
+    "saveDraft": "초안 저장",
+    "draftHint": "초안을 저장해도 현재 활성 구성은 변경되지 않습니다.",
+    "secretHint": "보안 비밀을 입력하기 전에 이 버전의 발급자와 클라이언트 ID를 확인하세요.",
+    "staleDraft": "초안이 변경되었습니다. 창을 닫고 다시 여세요.",
+    "saved": "연결이 저장되었습니다",
+    "managementUnavailable": "연결 관리 상태를 확인할 수 없습니다.",
+    "secretError": "보안 비밀을 저장하지 못했습니다. 다시 입력하고 시도하세요.",
+    "test": "연결 테스트",
+    "probePassed": "연결 테스트 성공",
+    "probeFailed": "연결 테스트 실패",
+    "probeRequired": "테스트 필요",
+    "status": {
+      "DRAFT": "초안",
+      "ACTIVE": "활성",
+      "SUSPENDED": "일시 중지됨",
+      "DISABLED": "비활성"
+    },
+    "action": {
+      "activate": "활성화",
+      "suspend": "일시 중지",
+      "resume": "연결 재개",
+      "disable": "비활성화"
+    },
+    "confirm": {
+      "activate": "이 버전을 활성화하시겠습니까?",
+      "suspend": "이 연결을 일시 중지하시겠습니까?",
+      "resume": "이 연결을 재개하시겠습니까?",
+      "disable": "이 연결을 비활성화하시겠습니까?"
     }
   },
   "overview": {

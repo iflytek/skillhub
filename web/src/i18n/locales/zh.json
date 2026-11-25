@@ -494,6 +494,8 @@
     "title": "登录 SkillHub",
     "subtitle": "一个账号，开启更高效的技能协作",
     "eyebrow": "欢迎回来",
+    "configUnavailable": "暂时无法获取登录方式。",
+    "retryConfig": "重试",
     "tabEnterprise": "组织登录",
     "tabPersonal": "个人登录",
     "loginMode": "登录方式",
@@ -1303,6 +1305,65 @@
       "LOGIN_SECRET_ADMIN": "登录密钥管理员",
       "MEMBER_ADMIN": "成员管理员",
       "ORG_AUDITOR": "组织审计员"
+    }
+  },
+  "organizationConnections": {
+    "view": "组织详情",
+    "viewOrganization": "查看 {{name}} 组织",
+    "title": "登录连接",
+    "create": "新增 OIDC 连接",
+    "empty": "暂无登录连接。",
+    "unnamed": "未命名连接",
+    "details": "连接详情",
+    "hideDetails": "收起详情",
+    "refresh": "刷新状态",
+    "activeRevision": "当前生效 · 版本 {{revision}}",
+    "previousRevision": "上次生效 · 版本 {{revision}}",
+    "draftRevision": "待启用草稿 · 版本 {{revision}}",
+    "resumeImpact": "「{{name}}」将恢复上次生效的配置，待启用草稿会保留。",
+    "disableImpact": "「{{name}}」禁用后无法重新启用。",
+    "probeFailure": {
+      "blocked": "请核对 Issuer 地址及身份源的出站访问策略。",
+      "timeout": "身份源响应超时，请检查网络连通性后重试。",
+      "unavailable": "无法访问身份源，请检查 Issuer 地址和服务状态。",
+      "invalidMetadata": "请核对 Issuer 地址及身份源发布的 OIDC 元数据和公钥。"
+    },
+    "name": "连接名称",
+    "issuer": "Issuer 地址",
+    "clientId": "Client ID",
+    "secret": "客户端密钥",
+    "secretReady": "已配置",
+    "secretMissing": "未配置",
+    "edit": "编辑配置",
+    "writeSecret": "录入密钥",
+    "saveDraft": "保存草稿",
+    "draftHint": "保存草稿不会影响当前生效的配置。",
+    "secretHint": "请先核对这个版本的 Issuer 和 Client ID，再录入密钥。",
+    "staleDraft": "草稿已更新。请关闭窗口后重新打开。",
+    "saved": "已保存连接",
+    "managementUnavailable": "暂时无法获取连接管理状态。",
+    "secretError": "密钥保存失败。请重新录入后重试。",
+    "test": "测试连接",
+    "probePassed": "连接测试通过",
+    "probeFailed": "连接测试失败",
+    "probeRequired": "等待测试",
+    "status": {
+      "DRAFT": "草稿",
+      "ACTIVE": "已启用",
+      "SUSPENDED": "已暂停",
+      "DISABLED": "已禁用"
+    },
+    "action": {
+      "activate": "启用",
+      "suspend": "暂停",
+      "resume": "恢复连接",
+      "disable": "禁用"
+    },
+    "confirm": {
+      "activate": "启用这个版本？",
+      "suspend": "暂停这个连接？",
+      "resume": "恢复这个连接？",
+      "disable": "禁用这个连接？"
     }
   },
   "overview": {

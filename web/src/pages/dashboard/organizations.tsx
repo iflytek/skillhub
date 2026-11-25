@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { organizationApi, type OrganizationRole } from '@/api/client'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { useAuth } from '@/features/auth/use-auth'
+import { OrganizationLoginConnections } from '@/features/organization/organization-login-connections'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
@@ -73,14 +74,17 @@ export function OrganizationsPage() {
                   <p className="mt-0.5 break-words text-xs text-muted-foreground">{organization.slug}</p>
                 ) : null}
               </div>
-              {organization.permissions?.canViewMembers && organization.id ? (
+              {organization.id && (organization.permissions?.canViewMembers || organization.permissions?.canViewLoginConnections) ? (
                 <Link
                   to="/dashboard/organizations/$organizationId"
                   params={{ organizationId: organization.id }}
-                  aria-label={t('organizations.viewOrganizationMembers', { name: organization.displayName || organization.slug })}
+                  aria-label={t(organization.permissions.canViewLoginConnections
+                    ? 'organizationConnections.viewOrganization' : 'organizations.viewOrganizationMembers', {
+                    name: organization.displayName || organization.slug,
+                  })}
                   className="inline-flex min-h-8 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium text-foreground hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
                 >
-                  {t('organizations.viewMembers')}
+                  {t(organization.permissions.canViewLoginConnections ? 'organizationConnections.view' : 'organizations.viewMembers')}
                   <ChevronRight className="size-3.5 text-muted-foreground" aria-hidden="true" />
                 </Link>
               ) : null}
@@ -202,7 +206,7 @@ function OrganizationMembers({ viewerId, organizationId }: { viewerId: string; o
           <p role="alert" className="break-words text-sm text-destructive">{detail.error.message}</p>
         </Card>
       ) : null}
-      {organization && !organization.permissions?.canViewMembers ? (
+      {organization && !organization.permissions?.canViewMembers && !organization.permissions?.canViewLoginConnections ? (
         <Card className="p-5 text-sm text-muted-foreground">{t('organizations.noMemberAccess')}</Card>
       ) : null}
       {organization?.permissions?.canViewMembers ? (
@@ -282,6 +286,11 @@ function OrganizationMembers({ viewerId, organizationId }: { viewerId: string; o
       ) : null}
       {memberPage && organization?.permissions?.canViewMembers && memberPage.total > PAGE_SIZE ? (
         <Pagination page={page} totalPages={Math.ceil(memberPage.total / PAGE_SIZE)} onPageChange={setPage} />
+      ) : null}
+      {organization?.permissions?.canViewLoginConnections ? (
+        <OrganizationLoginConnections viewerId={viewerId} organizationId={organizationId}
+          canManage={organization.permissions.canManageLoginConnections === true}
+          canWriteSecret={organization.permissions.canRotateLoginSecrets === true} />
       ) : null}
       <Dialog open={!!visibleEditor} onOpenChange={(open) => { if (!open && !editorMutation.isPending) setEditor(null) }}>
         <DialogContent hideClose={editorMutation.isPending} onCloseAutoFocus={(event) => restoreFocus(event, editorTrigger.current)}>
