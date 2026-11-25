@@ -62,7 +62,7 @@ import type { InstalledProjectionItem } from './generated/native-contract.js';
 import type { SkillFileEntry, SkillFileList, SkillFilePreview } from './types.js';
 
 import { AccountRegistry, uploadPackage } from './account-registry.js';
-import { AccountCredentials } from './account-credentials.js';
+import { AccountCredentials, AccountStorageError, type Credential } from './account-credentials.js';
 import type { AccountIdentity, AccountMember, AccountNamespace, AccountPage, MemberCandidate, MemberMutation,
   OwnedSkill, UploadReceipt, UploadTarget, Visibility, WorkspaceSkills } from './account-types.js';
 
@@ -79,6 +79,7 @@ export class SkillHubService extends TypertRemoteService {
   private sourceInput = '';
   private readonly credentials: AccountCredentials;
   private account?: AccountIdentity;
+  private accountRestoreFailed = false;
   private accountEpoch = new AbortController();
   private readonly lifetime = new AbortController();
   private localRuntime?: LocalRuntime;
@@ -161,10 +162,17 @@ export class SkillHubService extends TypertRemoteService {
     const source = this.configuration.get().registryUrl.trim();
     if (source === this.sourceInput) return;
     let registry: RegistryAdapter | undefined;
+    let account: AccountIdentity | undefined;
+    let restoreFailed = false;
     try {
       registry = source ? new RegistryAdapter(source) : undefined;
-      const credential = registry && this.credentials.get(registry.source);
-      this.account = credential?.identity;
+      let credential: Credential | undefined;
+      try { credential = registry && this.credentials.get(registry.source); }
+      catch (error) {
+        if (!(error instanceof AccountStorageError)) throw error;
+        restoreFailed = true;
+      }
+      account = credential?.identity;
       if (registry && credential) registry = new RegistryAdapter(registry.source, fetch, 30_000, credential.token);
     }
     catch {
@@ -172,6 +180,8 @@ export class SkillHubService extends TypertRemoteService {
         reason: 'INVALID_SOURCE', retryable: false,
       });
     }
+    this.account = account;
+    this.accountRestoreFailed = restoreFailed;
     this.accountEpoch.abort();
     this.accountEpoch = new AbortController();
     for (const scan of this.installedUpdateScans.values()) scan.close();
@@ -239,13 +249,17 @@ export class SkillHubService extends TypertRemoteService {
       registryUrl: this.registry?.source ?? '',
       configured: !!this.registry,
       detailTabs: { ...this.configuration.get().detailTabs },
+      ...(this.registry && this.credentials.hasRemovalFailure(this.registry.source) ? { accountClearFailed: true } : {}),
     };
   }
 
   private clearAccount() {
-    if (this.registry) this.credentials.set(this.registry.source);
-    this.sourceInput = '\0';
-    this.refreshSource();
+    try { if (this.registry) this.credentials.set(this.registry.source); }
+    finally { this.sourceInput = '\0'; this.refreshSource(); }
+  }
+
+  private accountStorageError(reason: AccountStorageError['reason']): RemoteError {
+    return new RemoteError('skillhub/account-storage-error', 'The saved SkillHub account is unavailable.', { reason, retryable: false });
   }
 
   @Remote
@@ -259,7 +273,8 @@ export class SkillHubService extends TypertRemoteService {
     catch (error) { throw new RemoteError('skillhub/registry-error', 'Account verification failed.', { reason: error instanceof RegistryError ? error.code : 'NETWORK_ERROR', retryable: false }); }
     combined.throwIfAborted();
     this.assertSource(revision);
-    this.credentials.set(source, { token, identity });
+    try { this.credentials.set(source, { token, identity }); }
+    catch { throw this.accountStorageError('SAVE_FAILED'); }
     this.sourceInput = '\0';
     this.refreshSource();
     return identity;
@@ -268,7 +283,8 @@ export class SkillHubService extends TypertRemoteService {
   @Remote
   disconnectAccount(revision: string): boolean {
     this.assertSource(revision);
-    this.clearAccount();
+    try { this.clearAccount(); }
+    catch { throw this.accountStorageError('CLEAR_FAILED'); }
     return true;
   }
 
@@ -289,6 +305,17 @@ export class SkillHubService extends TypertRemoteService {
   @Remote
   async accountIdentity(revision: string, signal: AbortSignal): Promise<AccountIdentity | null> {
     this.assertSource(revision);
+    if (this.accountRestoreFailed && this.registry) {
+      let credential: Credential | undefined;
+      try { credential = this.credentials.get(this.registry.source); }
+      catch { throw this.accountStorageError('RESTORE_FAILED'); }
+      this.accountRestoreFailed = false;
+      if (credential) {
+        this.sourceInput = '\0';
+        this.refreshSource();
+        this.assertSource(revision);
+      }
+    }
     if (!this.account) return null;
     return this.withAccount(revision, signal, false, async (api, combined) => {
       const identity = await api.whoami(combined);
@@ -2123,7 +2150,10 @@ export class SkillHubService extends TypertRemoteService {
     } catch (error) {
       this.assertSource(sourceRevision);
       if (error instanceof RegistryError) {
-        if (error.code === 'AUTH_REQUIRED' && this.account && this.registry) this.clearAccount();
+        if (error.code === 'AUTH_REQUIRED' && this.account && this.registry) {
+          // Disk cleanup failure must not suppress authentication expiry or retain a live session.
+          try { this.clearAccount(); } catch { /* getContext retains the source-bound cleanup warning. */ }
+        }
         throw new RemoteError('skillhub/registry-error', 'SkillHub request failed.', {
           reason: error.code, retryable: error.retryable,
           ...(error.status === undefined ? {} : { status: error.status }),

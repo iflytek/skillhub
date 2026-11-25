@@ -36,6 +36,7 @@ export interface SkillHubConfig {
 
 export interface CatalogContext {
   sourceRevision: string;
+  accountClearFailed?: boolean;
   registryUrl: string;
   configured: boolean;
   detailTabs: { versions: TabMode; securityAudit: TabMode; reviews: TabMode };
@@ -176,6 +177,7 @@ export interface ReviewPage {
 
 declare module '@deepseek-ai/dsh-typert-protocol' {
   interface RemoteErrorDetailsMap {
+    'skillhub/account-storage-error': { reason: 'SAVE_FAILED' | 'RESTORE_FAILED' | 'CLEAR_FAILED'; retryable: boolean };
     'skillhub/favorites-error': { reason: 'INVALID_INPUT' | 'UNAVAILABLE' | 'INVALID_STORE' | 'LIMIT_REACHED'; retryable: boolean };
     'skillhub/source-not-configured': { retryable: false };
     'skillhub/context-stale': { retryable: false };

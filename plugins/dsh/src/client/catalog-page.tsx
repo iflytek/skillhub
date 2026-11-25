@@ -120,7 +120,8 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
   const favoriteFilter = useRef<HTMLButtonElement>(null);
   const previousFavoriteOnly = useRef(favoriteOnly);
   const favoriteRequest = useRef<AbortController | null>(null);
-  const context = useQuery({ queryKey: ['skillhub-context'], queryFn: async () => unwrap(await remote.getContext()), retry: false });
+  // This is local Host state, including sign-out cleanup while the browser is offline.
+  const context = useQuery({ queryKey: ['skillhub-context'], queryFn: async () => unwrap(await remote.getContext()), retry: false, networkMode: 'always', refetchOnReconnect: true });
   const compatibility = useQuery({ queryKey: ['skillhub-compatibility'], queryFn: async () => unwrap(await remote.getCompatibility()), retry: false });
   const revision = context.data?.sourceRevision;
   const latestRevision = useRef(revision); latestRevision.current = revision;
@@ -383,7 +384,7 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
       {(installation || installed) && <Button variant="ghost" className="astron-sh-icon-button" aria-label="返回会话" title="关闭 SkillHub，返回会话" onClick={leaveCatalog}><Icon name="close" /></Button>}</div>
     </header>
     {revision && context.data?.configured && <AccountWorkspace key={revision} remote={remote} source={context.data.registryUrl} revision={revision}
-      toolbar={accountToolbar} primary={uploadSlot} screen={accountPage} navigate={navigateAccount} settings={onSettings}
+      toolbar={accountToolbar} primary={uploadSlot} screen={accountPage} navigate={navigateAccount} settings={onSettings} clearFailed={context.data.accountClearFailed}
       open={(namespace, slug, version, skillId, versionId) => { navigation.detailSpace = accountPage; navigateAccount(null); changeTab('browse'); openSkill({ namespace, slug, skillId, versionId, latestVersion: version, summary: '' }); }} />}
     <div className="astron-sh-workbench-frame" hidden={!!accountPage}>
     {sourceOpen && <p className="astron-sh-source-info" role="status">当前来源：{context.data?.registryUrl || '尚未配置来源'}</p>}

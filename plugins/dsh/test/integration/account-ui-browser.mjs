@@ -7,13 +7,19 @@ import { build as buildFixture, serve } from 'bun';
 const build = await buildFixture({ entrypoints: [new URL('./account-ui-fixture.tsx', import.meta.url).pathname], target: 'browser', define: { 'process.env.NODE_ENV': '"development"' } });
 assert(build.success, 'Fixture must build');
 const script = await build.outputs[0].text();
-const server = serve({ hostname: '127.0.0.1', port: 0, fetch: request => new URL(request.url).pathname === '/app.js'
-  ? new Response(script, { headers: { 'Content-Type': 'text/javascript' } })
-  : new Response('<!doctype html><html style="color-scheme:light dark"><meta name="viewport" content="width=device-width"><div id="root"></div><script type="module" src="/app.js"></script></html>', { headers: { 'Content-Type': 'text/html' } }) });
+const persistenceBuild = await buildFixture({ entrypoints: [new URL('./account-persistence-ui-fixture.tsx', import.meta.url).pathname], target: 'browser', define: { 'process.env.NODE_ENV': '"development"' } });
+assert(persistenceBuild.success, 'Persistence fixture must build');
+const persistenceScript = await persistenceBuild.outputs[0].text();
+const server = serve({ hostname: '127.0.0.1', port: 0, fetch: request => {
+  const path = new URL(request.url).pathname;
+  if (path === '/app.js' || path === '/persistence.js') return new Response(path === '/app.js' ? script : persistenceScript, { headers: { 'Content-Type': 'text/javascript' } });
+  return new Response(`<!doctype html><html style="color-scheme:light dark"><meta name="viewport" content="width=device-width"><div id="root"></div><script type="module" src="${path === '/persistence' ? '/persistence.js' : '/app.js'}"></script></html>`, { headers: { 'Content-Type': 'text/html' } });
+} });
 const browser = await chromium.launch({ headless: true, ...(process.env.DSH_PROBE_CHROMIUM ? { executablePath: process.env.DSH_PROBE_CHROMIUM } : {}) });
 const errors = [];
 let checks = 0;
 let namespaceChecks = 0;
+let persistenceChecks = 0;
 async function fileTransfer(page, files) {
   return page.evaluateHandle(files => {
     const transfer = new DataTransfer();
@@ -346,8 +352,102 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem('skillhub-appearance')), theme, 'Preference survives reload');
     await page.close();
   }
+  for (const width of [1280, 375]) for (const theme of ['light', 'dark']) {
+    const page = await browser.newPage({ viewport: { width, height: 820 }, colorScheme: theme });
+    page.on('pageerror', error => errors.push(error.message));
+    await page.goto(new URL('/persistence', server.url).href);
+    await page.getByRole('button', { name: '账户菜单' }).click();
+    await page.getByRole('menuitem', { name: '个人设置' }).click();
+    await page.getByRole('button', { name: '更换个人 Token' }).click();
+    await page.getByLabel('个人 API Token', { exact: true }).fill('invalid-storage-fixture');
+    await page.getByRole('dialog').getByRole('button', { name: '登录', exact: true }).click();
+    await page.getByRole('alert').filter({ hasText: '无法保存本机登录信息' }).waitFor();
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '账户菜单' }).waitFor();
+    assert((await page.evaluate(() => window.persistenceFixture.snapshot())).firstSaved, 'Failed replacement preserves the previous saved account');
+    persistenceChecks++;
+    await page.evaluate(() => window.persistenceFixture.seedPrivate());
+    await page.getByRole('button', { name: '账户菜单' }).click();
+    await page.getByRole('menuitem', { name: '断开连接', exact: true }).click();
+    const retry = page.getByRole('button', { name: '清除保存的登录', exact: true });
+    await retry.waitFor();
+    await page.getByRole('button', { name: '登录', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: '账户菜单' }).count(), 0);
+    assert.equal((await page.evaluate(() => window.persistenceFixture.snapshot())).privateCache, false, 'Failed logout clears old private cache after revision remount');
+    assert(await page.getByRole('alert').filter({ hasText: '重启后可能再次恢复' }).isVisible(), 'Cleanup warning survives the actual CatalogPage revision remount');
+    assert(await retry.evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), 'Cleanup retry fits narrow layouts');
+    persistenceChecks++;
+    await page.evaluate(() => window.persistenceFixture.switchSource(true));
+    await page.getByRole('button', { name: '账户菜单' }).waitFor();
+    assert.equal(await retry.count(), 0, 'A different source does not expose the previous source cleanup command');
+    assert((await page.evaluate(() => window.persistenceFixture.snapshot())).secondSaved);
+    await page.evaluate(() => window.persistenceFixture.switchSource(false));
+    await retry.waitFor();
+    await page.evaluate(() => window.persistenceFixture.allowRemoval());
+    await retry.click();
+    await retry.waitFor({ state: 'hidden' });
+    await page.getByRole('button', { name: '登录', exact: true }).waitFor();
+    const cleared = await page.evaluate(() => window.persistenceFixture.snapshot());
+    assert.equal(cleared.firstSaved, false); assert.equal(cleared.secondSaved, true);
+    await page.evaluate(() => window.persistenceFixture.restart());
+    await page.getByRole('button', { name: '登录', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: '账户菜单' }).count(), 0, 'Simulated Host restart cannot revive the cleared fixture record');
+    persistenceChecks++;
+    await page.goto(new URL('/persistence?restore=1', server.url).href);
+    await page.getByRole('alert').filter({ hasText: '暂时无法恢复本机登录信息' }).waitFor();
+    const before = (await page.evaluate(() => window.persistenceFixture.snapshot())).identityCalls;
+    await page.evaluate(() => { window.persistenceFixture.focus(false); window.persistenceFixture.focus(true); });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal((await page.evaluate(() => window.persistenceFixture.snapshot())).identityCalls, before, 'Window focus must not repeat failed decryption');
+    await page.evaluate(() => { window.dispatchEvent(new Event('offline')); window.dispatchEvent(new Event('online')); });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal((await page.evaluate(() => window.persistenceFixture.snapshot())).identityCalls, before, 'Network reconnection must not repeat failed decryption');
+    await page.evaluate(() => window.persistenceFixture.restoreAvailable());
+    await page.getByRole('button', { name: '重新连接', exact: true }).click();
+    await page.getByRole('button', { name: '账户菜单' }).waitFor();
+    const recovered = await page.evaluate(() => window.persistenceFixture.snapshot());
+    assert.notEqual(recovered.revision, 'fixture-1');
+    assert.equal(recovered.identityCalls, before + 2, 'Recovery rechecks identity under the new source revision');
+    persistenceChecks++;
+    for (const mode of ['restore', 'network']) {
+      await page.goto(new URL(`/persistence?${mode}=1`, server.url).href);
+      await page.getByRole('button', { name: '重新连接', exact: true }).waitFor();
+      const calls = (await page.evaluate(() => window.persistenceFixture.snapshot())).identityCalls;
+      if (mode === 'network') {
+        await page.evaluate(() => { window.dispatchEvent(new Event('offline')); window.dispatchEvent(new Event('online')); });
+        await page.waitForFunction(expected => window.persistenceFixture.snapshot().identityCalls > expected, calls);
+      }
+      await page.evaluate(() => window.persistenceFixture.allowRemoval());
+      await page.getByRole('button', { name: '清除保存的登录', exact: true }).click();
+      await page.getByRole('button', { name: '重新连接', exact: true }).waitFor({ state: 'hidden' });
+      await page.getByRole('button', { name: '登录', exact: true }).waitFor();
+      assert.equal((await page.evaluate(() => window.persistenceFixture.snapshot())).firstSaved, false, 'Failed identity verification must still allow local sign-out');
+      await page.evaluate(() => window.persistenceFixture.restart());
+      await page.getByRole('button', { name: '登录', exact: true }).waitFor();
+      assert.equal(await page.getByRole('button', { name: '账户菜单' }).count(), 0);
+      persistenceChecks++;
+    }
+    await page.goto(new URL('/persistence', server.url).href);
+    await page.getByRole('button', { name: '账户菜单' }).click();
+    await page.evaluate(() => window.persistenceFixture.seedPrivate());
+    await page.context().setOffline(true);
+    await page.getByRole('menuitem', { name: '断开连接', exact: true }).click();
+    await retry.waitFor();
+    assert.equal((await page.evaluate(() => window.persistenceFixture.snapshot())).privateCache, false);
+    await page.evaluate(() => window.persistenceFixture.allowRemoval());
+    await retry.click();
+    await retry.waitFor({ state: 'hidden' });
+    await page.getByRole('button', { name: '登录', exact: true }).waitFor();
+    assert.equal((await page.evaluate(() => window.persistenceFixture.snapshot())).firstSaved, false, 'Offline sign-out can retry disk cleanup without returning online');
+    await page.evaluate(() => window.persistenceFixture.restart());
+    await page.getByRole('button', { name: '登录', exact: true }).waitFor();
+    assert.equal(await page.getByRole('button', { name: '账户菜单' }).count(), 0);
+    persistenceChecks++;
+    await page.context().setOffline(false);
+    await page.close();
+  }
   assert.deepEqual(errors, [], 'No browser errors');
-  const report = { passed: true, checks, namespaceChecks, widths: [1280, 563, 375], themes: ['light', 'dark'], sourceConfiguration: true, hostThemeChanges: true, themePersistence: true, portalAndEmbeddedContrast: true, fixtureOnly: true };
+  const report = { passed: true, checks, namespaceChecks, persistenceChecks, widths: [1280, 563, 375], themes: ['light', 'dark'], sourceConfiguration: true, hostThemeChanges: true, themePersistence: true, portalAndEmbeddedContrast: true, fixtureOnly: true };
   if (process.env.DSH_PROBE_OUTPUT) await writeFile(`${process.env.DSH_PROBE_OUTPUT}/account-ui-result.json`, JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report));
 } finally { await browser.close(); server.stop(true); }

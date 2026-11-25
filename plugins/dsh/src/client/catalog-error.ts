@@ -2,6 +2,12 @@
 export function catalogErrorMessage(error: { code: string; details?: unknown }): string {
   if (error.code === 'skillhub/context-stale') return '来源已变化，请刷新后重试。';
   if (error.code === 'skillhub/source-not-configured') return '请先在插件配置中设置 SkillHub 地址。';
+  if (error.code === 'skillhub/account-storage-error') {
+    const reason = error.details && typeof error.details === 'object' && 'reason' in error.details ? error.details.reason : undefined;
+    if (reason === 'CLEAR_FAILED') return '连接已断开，但本机保存的登录信息未清除，请重试清除。';
+    if (reason === 'RESTORE_FAILED') return '暂时无法恢复本机登录信息，请重新连接或重新登录。';
+    return '无法保存本机登录信息，请检查 Host 存储后重试。';
+  }
   if (error.code === 'skillhub/favorites-error') {
     const reason = error.details && typeof error.details === 'object' && 'reason' in error.details ? error.details.reason : undefined;
     if (reason === 'INVALID_STORE') return '本地收藏文件无法读取，原有内容已保留。';
@@ -40,6 +46,7 @@ export function catalogErrorMessage(error: { code: string; details?: unknown }):
 /** Preserve the authentication signal so every Registry reader clears account state. */
 export function catalogError(error: { code: string; details?: unknown }): Error {
   const result = new Error(catalogErrorMessage(error));
+  if (error.code === 'skillhub/account-storage-error') result.name = 'AccountStorageError';
   const details = error.details;
   if (error.code === 'skillhub/registry-error' && details && typeof details === 'object'
     && 'reason' in details) {

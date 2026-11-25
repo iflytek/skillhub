@@ -92,12 +92,12 @@ test('credentials stay bound to one source and profile, and logout forgets them'
     credentials.set(a, value);
     expect(credentials.get(a)).toEqual(value);
     expect(credentials.get(b)).toBeUndefined();
-    if (process.platform !== 'win32') expect(new AccountCredentials(home).get(a)).toEqual(value);
+    expect(new AccountCredentials(home).get(a)).toEqual(value);
     credentials.set(a);
     expect(credentials.get(a)).toBeUndefined();
     expect(new AccountCredentials(home).get(a)).toBeUndefined();
   } finally { rmSync(home, { recursive: true, force: true }); }
-});
+}, 30000);
 
 test.each([
   ['lowercase', { 'skill.md': strToU8('---\nname: demo-skill\n---\n') }],
@@ -130,12 +130,10 @@ test('two profiles sharing a home keep their accounts and logout independent', (
     b.set(source);
     expect(a.get(source)).toEqual(alice);
     expect(b.get(source)).toBeUndefined();
-    if (process.platform !== 'win32') {
-      expect(new AccountCredentials(first).get(source)).toEqual(alice);
-      expect(new AccountCredentials(second).get(source)).toBeUndefined();
-    }
+    expect(new AccountCredentials(first).get(source)).toEqual(alice);
+    expect(new AccountCredentials(second).get(source)).toBeUndefined();
     const transient = new AccountCredentials();
     transient.set(source, bob);
     expect(new AccountCredentials().get(source)).toBeUndefined();
   } finally { rmSync(home, { recursive: true, force: true }); }
-});
+}, 60000);
