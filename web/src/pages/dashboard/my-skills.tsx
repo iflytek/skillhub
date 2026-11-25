@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Archive, ArrowUpRight, Copy, Download, Eye, GitCompareArrows, Globe, Info, LockKeyhole, MoreHorizontal, Package, Plus, RotateCcw, Search, Undo2, Upload, Users } from 'lucide-react'
+import { Archive, ArrowUpRight, Copy, Download, Eye, GitCompareArrows, Globe, Info, LockKeyhole, MoreHorizontal, Package, Plus, RotateCcw, Search, Trash2, Undo2, Upload, Users } from 'lucide-react'
 import styles from './my-skills.module.css'
 import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
@@ -17,7 +17,7 @@ import { EmptyState } from '@/shared/components/empty-state'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
-import { useArchiveSkill, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
+import { useArchiveSkill, useDeleteSkill, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { useMySkills, useSubmitPromotion } from '@/shared/hooks/use-user-queries'
 import { useRestoreHiddenSkill } from '@/features/admin/use-admin-skills'
@@ -81,6 +81,7 @@ export function MySkillsPage() {
   const [visibilityTarget, setVisibilityTarget] = useState<{ namespace: string; slug: string; visibility: string } | null>(null)
   const scrollKey = JSON.stringify([user?.userId, keyword, namespaceFilter, filter, page])
   const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [withdrawTarget, setWithdrawTarget] = useState<{ namespace: string; slug: string; name: string; version: string } | null>(null)
   const [promotionTarget, setPromotionTarget] = useState<{ skillId: number; versionId: number; name: string; version: string } | null>(null)
@@ -116,6 +117,7 @@ export function MySkillsPage() {
   const hasActiveFilters = hasActiveSearch || filter !== 'ALL'
   const emptyStateKey = getMySkillEmptyStateKey(filter)
   const archiveMutation = useArchiveSkill()
+  const deleteMutation = useDeleteSkill()
   const unarchiveMutation = useUnarchiveSkill()
   const withdrawMutation = useWithdrawSkillReview()
   const submitPromotionMutation = useSubmitPromotion()
@@ -249,6 +251,26 @@ export function MySkillsPage() {
       setArchiveTarget(null)
     } catch (error) {
       toast.error(t('mySkills.archiveErrorTitle'), error instanceof Error ? error.message : '')
+      throw error
+    }
+  }
+
+  const handleDeleteSkill = async () => {
+    if (!deleteTarget) {
+      return
+    }
+    try {
+      await deleteMutation.mutateAsync({
+        namespace: deleteTarget.namespace,
+        slug: deleteTarget.slug,
+      })
+      toast.success(
+        t('mySkills.deleteSuccessTitle'),
+        t('mySkills.deleteSuccessDescription', { skill: deleteTarget.name }),
+      )
+      setDeleteTarget(null)
+    } catch (error) {
+      toast.error(t('mySkills.deleteErrorTitle'), error instanceof Error ? error.message : '')
       throw error
     }
   }
@@ -453,6 +475,10 @@ export function MySkillsPage() {
                 ? skill.status : preview?.status ?? headlineVersion?.status ?? skill.status
               const writable = !hidden && !ownerReadOnly
               const canChangeVisibility = writable && skill.status === 'ACTIVE' && !!publishedVersion
+              // Permanent deletion is only offered where it is meaningful: archived skills
+              // and skills that never published a version. Active published skills must be
+              // archived first, matching docs/14-skill-lifecycle.md section 4.7.
+              const canHardDelete = writable && (skill.status === 'ARCHIVED' || !publishedVersion)
               const coordinate = `@${skill.namespace}/${skill.slug}`
               const visibilityLabel = t(`publish.visibilityOptions.${skill.visibility === 'PRIVATE' ? 'private' : skill.visibility === 'NAMESPACE_ONLY' ? 'namespaceOnly' : 'public'}`)
               const versionLabel = preview && publishedVersion
@@ -508,7 +534,7 @@ export function MySkillsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className={styles.moreMenu} onClick={event => event.stopPropagation()}
-                              onCloseAutoFocus={event => { if (compareTarget || visibilityTarget || archiveTarget || unarchiveTarget || withdrawTarget || promotionTarget || restoreHiddenTarget) event.preventDefault() }}>
+                              onCloseAutoFocus={event => { if (compareTarget || visibilityTarget || archiveTarget || deleteTarget || unarchiveTarget || withdrawTarget || promotionTarget || restoreHiddenTarget) event.preventDefault() }}>
                               {!hidden && <DropdownMenuItem onSelect={() => deferMenuNavigation(openDetail)}><Eye aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.viewDetail')}</DropdownMenuItem>}
                               <DropdownMenuItem onSelect={async () => {
                                 try { await copyToClipboard(coordinate); toast.success(t('mySkills.coordinateCopied')) }
@@ -539,6 +565,9 @@ export function MySkillsPage() {
                               </DropdownMenuItem></> : publishedVersion ? <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.archive.request" className={styles.dangerAction} onSelect={() => setArchiveTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })}>
                                 <Archive aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.archive')}
                               </DropdownMenuItem></> : null)}
+                              {canHardDelete && <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.delete.request" className={styles.dangerAction} onSelect={() => setDeleteTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })}>
+                                <Trash2 aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.deleteSkill')}
+                              </DropdownMenuItem></>}
                               {canRestoreHidden && <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.restore.request" onSelect={() => setRestoreHiddenTarget({ skillId: skill.id, name: displayName })}>
                                 <RotateCcw aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.restoreHidden')}
                               </DropdownMenuItem></>}
@@ -678,6 +707,20 @@ export function MySkillsPage() {
         description={unarchiveTarget ? t('mySkills.unarchiveConfirmDescription', { skill: unarchiveTarget.name }) : ''}
         confirmText={t('mySkills.unarchive')}
         onConfirm={handleUnarchiveSkill}
+      />
+
+      <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.delete.confirm" cancelAnalyticsId="skill.delete.cancel"
+        open={!!deleteTarget}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+          }
+        }}
+        title={t('mySkills.deleteConfirmTitle')}
+        description={deleteTarget ? t('mySkills.deleteConfirmDescription', { skill: deleteTarget.name }) : ''}
+        confirmText={t('mySkills.deleteSkill')}
+        variant="destructive"
+        onConfirm={handleDeleteSkill}
       />
 
       <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.review.withdraw.confirm" cancelAnalyticsId="skill.review.withdraw.cancel"

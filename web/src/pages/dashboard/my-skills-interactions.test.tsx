@@ -5,12 +5,17 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 
 const navigate = vi.fn()
 const copy = vi.fn()
+const deleteSkill = vi.fn()
 const retryVersions = vi.fn()
 const retryCompare = vi.fn()
 const useVersions = vi.fn()
 const useCompare = vi.fn()
 vi.hoisted(() => { vi.stubEnv('BASE_URL', '/skillhub/') })
-let skill: ReturnType<typeof makeSkill> & { ownerPreviewVersion?: { id: number; version: string; status: string } } = makeSkill()
+type TestSkill = Omit<ReturnType<typeof makeSkill>, 'publishedVersion'> & {
+  publishedVersion?: ReturnType<typeof makeSkill>['publishedVersion']
+  ownerPreviewVersion?: { id: number; version: string; status: string }
+}
+let skill: TestSkill = makeSkill()
 let showEmpty = false
 let superAdmin = false
 let search: { filter?: string; q?: string; namespace?: string; page?: number } = {}
@@ -41,6 +46,7 @@ vi.mock('@/shared/hooks/use-user-queries', () => ({
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({ useMyNamespaces: () => ({ data: [] }) }))
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useArchiveSkill: () => ({ mutateAsync: vi.fn() }),
+  useDeleteSkill: () => ({ mutateAsync: deleteSkill }),
   useUnarchiveSkill: () => ({ mutateAsync: vi.fn() }),
   useWithdrawSkillReview: () => ({ mutateAsync: vi.fn() }),
   useSkillVersions: (...args: unknown[]) => useVersions(...args),
@@ -69,6 +75,7 @@ beforeEach(() => {
   superAdmin = false
   navigate.mockReset()
   copy.mockReset()
+  deleteSkill.mockReset()
   retryVersions.mockReset()
   retryCompare.mockReset()
   useVersions.mockReturnValue({ data: [
@@ -165,6 +172,32 @@ describe('My Skills interactions with real menu and dialog', () => {
       expect(screen.queryByRole('menuitem', { name })).toBeNull()
     }
     expect(screen.getByRole('menuitem', { name: 'mySkills.viewDetail' })).toBeTruthy()
+  })
+
+  it('offers permanent deletion for archived skills and confirms before calling the delete endpoint', async () => {
+    skill = { ...makeSkill(), status: 'ARCHIVED' }
+    render(<MySkillsPage />)
+    await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.deleteSkill' }))
+    const dialog = await screen.findByRole('dialog', { name: 'mySkills.deleteConfirmTitle' })
+    expect(deleteSkill).not.toHaveBeenCalled()
+    fireEvent.click(within(dialog).getByRole('button', { name: 'mySkills.deleteSkill' }))
+    await waitFor(() => expect(deleteSkill).toHaveBeenCalledWith({ namespace: 'team', slug: 'demo' }))
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('never exposes permanent deletion for an active skill that still has a published version', async () => {
+    render(<MySkillsPage />)
+    await openMenu()
+    expect(screen.queryByRole('menuitem', { name: 'mySkills.deleteSkill' })).toBeNull()
+    expect(screen.getByRole('menuitem', { name: 'mySkills.archive' })).toBeTruthy()
+  })
+
+  it('offers permanent deletion for a skill that never published a version', async () => {
+    skill = { ...makeSkill(), status: 'REJECTED', publishedVersion: undefined }
+    render(<MySkillsPage />)
+    await openMenu()
+    expect(screen.getByRole('menuitem', { name: 'mySkills.deleteSkill' })).toBeTruthy()
   })
 
   it('preserves the separate hidden-governance restore action', async () => {
