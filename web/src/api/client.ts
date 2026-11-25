@@ -43,6 +43,7 @@ import type {
   ExternalRoleGrantRule,
   PlatformRole,
   OAuthProvider,
+  EnterpriseLoginDiscovery,
   User,
   ManagedNamespace,
   AdminNamespace,
@@ -84,6 +85,7 @@ type RuntimeConfig = {
   authSessionBootstrapEnabled?: string
   authSessionBootstrapProvider?: string
   authSessionBootstrapAuto?: string
+  authEnterpriseOidcEnabled?: string
   analytics?: unknown
 }
 
@@ -621,6 +623,10 @@ export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfi
   }
 }
 
+export function getEnterpriseOidcRuntimeConfig(): { enabled: boolean } {
+  return { enabled: parseBooleanFlag(getRuntimeConfig().authEnterpriseOidcEnabled) }
+}
+
 type ApiEnvelope<T> = {
   code: number
   msg: string
@@ -787,6 +793,14 @@ export const authApi = {
         displayName: method.displayName,
         actionUrl: method.actionUrl,
       }))
+  },
+
+  async discoverEnterprise(identifier: string, returnTo?: string): Promise<EnterpriseLoginDiscovery> {
+    return fetchJson<EnterpriseLoginDiscovery>('/api/v1/auth/enterprise/discovery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, returnTo }),
+    })
   },
 
   async localLogin(request: LocalLoginRequest): Promise<User> {

@@ -2,10 +2,11 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { ArrowRight, Eye, EyeOff, LockKeyhole, UserRound } from 'lucide-react'
-import { getSessionBootstrapRuntimeConfig } from '@/api/client'
+import { getEnterpriseOidcRuntimeConfig, getSessionBootstrapRuntimeConfig } from '@/api/client'
 import { AuthShell } from '@/features/auth/auth-shell'
 import { AuthMethodButtonList } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
+import { EnterpriseLoginEntry } from '@/features/auth/enterprise-login-entry'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
 import { useLocalAuthCapabilities } from '@/features/auth/use-local-auth-capabilities'
 import { usePasswordLogin } from '@/features/auth/use-password-login'
@@ -25,6 +26,7 @@ export function LoginPage() {
   const search = useSearch({ from: '/login' })
   const loginMutation = usePasswordLogin()
   const bootstrapConfig = getSessionBootstrapRuntimeConfig()
+  const enterpriseOidcConfig = getEnterpriseOidcRuntimeConfig()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -44,7 +46,7 @@ export function LoginPage() {
   const effectiveLoginMode = passwordEnabled ? loginMode : 'organization'
   const disabledMessage = search.reason === 'accountDisabled' ? t('error.auth.local.accountDisabled') : null
   const bootstrapMethod = authMethods?.find((method) => method.methodType === 'SESSION_BOOTSTRAP')
-  const hasOrganizationMethod = bootstrapConfig.enabled
+  const hasOrganizationMethod = bootstrapConfig.enabled || enterpriseOidcConfig.enabled
   const hasExternalMethods = authMethods?.some((method) => method.methodType === 'OAUTH_REDIRECT')
   const noLoginMethod = !passwordEnabled && !hasOrganizationMethod && !hasExternalMethods
   const configUnavailable = noLoginMethod && (localCapabilitiesError || authMethodsError)
@@ -202,6 +204,12 @@ export function LoginPage() {
               compact
             />
             <p className="text-sm text-muted-foreground">{t('login.orgLoginHint')}</p>
+          </div>
+        ) : null}
+
+        {enterpriseOidcConfig.enabled ? (
+          <div hidden={effectiveLoginMode !== 'organization'}>
+            <EnterpriseLoginEntry returnTo={returnTo} />
           </div>
         ) : null}
 

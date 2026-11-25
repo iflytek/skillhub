@@ -6,4 +6,5 @@ window.__SKILLHUB_RUNTIME_CONFIG__ = {
   authSessionBootstrapEnabled: 'false',
   authSessionBootstrapProvider: '',
   authSessionBootstrapAuto: 'false',
+  authEnterpriseOidcEnabled: 'false',
 }
