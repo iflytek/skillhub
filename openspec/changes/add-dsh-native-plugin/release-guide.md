@@ -10,7 +10,11 @@
 
 插件运行在 DSH 主机，不部署进 SkillHub 网站，也不要求网站嵌入插件 UI。插件内部 Remote 接口随插件版本交付；Registry API 随服务端交付。两者分别管理版本和发布节奏。
 
-### 1.1 当前候选：DSH 0.6.4 兼容补丁
+### 1.1 当前候选：DSH 0.7.0 登录态与命名空间管理
+
+当前公开包为`@astron-team/skillhub-dsh@0.6.4`；本轮候选为`0.7.0`，仅使用`dsh-v0.7.0`标签与DSH专属npm工作流，范围为[#1114](https://github.com/iflytek/skillhub/pull/1114)的账号登录态、命名空间技能与成员管理。该PR同时含服务端改动（迁移V129、个人Token默认`namespace:manage`、按ID删除技能、`/me`Token上传列表），本版本依赖这些能力：服务端使用已包含它们的SaaS，不发布开源服务端Release或镜像；自建实例须自行使用包含#1114的服务端。冻结精确main提交后打标签，先以publish=false验证候选tarball，再以publish=true发布，发布后核对npm字节一致性。不得移动旧标签或覆盖已有npm版本。验收结果、未验证维度和发布授权记录待发布时填写，不以0.6.4的证据代替。
+
+### 1.1.1 历史：DSH 0.6.4 兼容补丁
 
 当前公开包为`@astron-team/skillhub-dsh@0.6.3`；本轮候选为`0.6.4`，仅使用`dsh-v0.6.4`标签与DSH专属npm工作流。修复rc.3被精确白名单阻止安装的问题，改为最低DSH0.2.0-rc.2准入、无DSH上限；实测版本清单与运行准入分离，保留实际依赖图、Client归属、最低能力、来源/权限/事务和共享库存v2保护。不发布CLI、SkillHub应用Release、镜像或SaaS部署。
 
