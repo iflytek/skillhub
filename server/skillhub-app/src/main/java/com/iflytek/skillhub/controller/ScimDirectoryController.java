@@ -1,12 +1,14 @@
 package com.iflytek.skillhub.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.iflytek.skillhub.config.DirectoryProvisioningProperties;
 import com.iflytek.skillhub.dto.ScimListResponse;
 import com.iflytek.skillhub.dto.ScimUserRequest;
 import com.iflytek.skillhub.dto.ScimUserResource;
 import com.iflytek.skillhub.service.DirectoryScimAppService;
 import java.util.List;
 import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,9 +33,14 @@ public class ScimDirectoryController {
     private static final MediaType SCIM_JSON = MediaType.parseMediaType("application/scim+json");
 
     private final DirectoryScimAppService scim;
+    private final DirectoryProvisioningProperties properties;
 
-    public ScimDirectoryController(DirectoryScimAppService scim) {
+    public ScimDirectoryController(
+            DirectoryScimAppService scim,
+            DirectoryProvisioningProperties properties
+    ) {
         this.scim = scim;
+        this.properties = properties;
     }
 
     @GetMapping("/ServiceProviderConfig")
@@ -40,10 +48,10 @@ public class ScimDirectoryController {
         return ResponseEntity.ok().contentType(SCIM_JSON).body(Map.of(
                 "schemas", List.of("urn:ietf:params:scim:schemas:core:2.0:ServiceProviderConfig"),
                 "patch", Map.of("supported", true),
-                "filter", Map.of("supported", true, "maxResults", 100),
+                "filter", Map.of("supported", true, "maxResults", properties.getMaxPageCount()),
                 "changePassword", Map.of("supported", false),
                 "sort", Map.of("supported", false),
-                "etag", Map.of("supported", false),
+                "etag", Map.of("supported", true),
                 "authenticationSchemes", List.of(Map.of(
                         "name", "OAuth Bearer Token",
                         "description", "Organization-scoped bearer token",
@@ -98,18 +106,24 @@ public class ScimDirectoryController {
             @PathVariable String connectionId,
             @PathVariable String membershipId
     ) {
+        ScimUserResource resource = scim.get(organizationId, connectionId, membershipId);
         return ResponseEntity.ok().contentType(SCIM_JSON)
-                .body(scim.get(organizationId, connectionId, membershipId));
+                .eTag(resource.meta().version())
+                .body(resource);
     }
 
     @PostMapping(value = "/Users", consumes = {"application/scim+json", MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<ScimUserResource> createUser(
             @PathVariable String organizationId,
             @PathVariable String connectionId,
-            @RequestBody ScimUserRequest request
+            @RequestBody ScimUserRequest request,
+            HttpServletRequest httpRequest
     ) {
+        scim.validateRequestSize(httpRequest.getContentLengthLong());
+        ScimUserResource resource = scim.create(organizationId, connectionId, request);
         return ResponseEntity.status(201).contentType(SCIM_JSON)
-                .body(scim.create(organizationId, connectionId, request));
+                .eTag(resource.meta().version())
+                .body(resource);
     }
 
     @PutMapping(value = "/Users/{membershipId}", consumes = {"application/scim+json", MediaType.APPLICATION_JSON_VALUE})
@@ -117,10 +131,15 @@ public class ScimDirectoryController {
             @PathVariable String organizationId,
             @PathVariable String connectionId,
             @PathVariable String membershipId,
-            @RequestBody ScimUserRequest request
+            @RequestBody ScimUserRequest request,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+            HttpServletRequest httpRequest
     ) {
+        scim.validateRequestSize(httpRequest.getContentLengthLong());
+        ScimUserResource resource = scim.replace(organizationId, connectionId, membershipId, request, ifMatch);
         return ResponseEntity.ok().contentType(SCIM_JSON)
-                .body(scim.replace(organizationId, connectionId, membershipId, request));
+                .eTag(resource.meta().version())
+                .body(resource);
     }
 
     @PatchMapping(value = "/Users/{membershipId}", consumes = {"application/scim+json", MediaType.APPLICATION_JSON_VALUE})
@@ -128,19 +147,25 @@ public class ScimDirectoryController {
             @PathVariable String organizationId,
             @PathVariable String connectionId,
             @PathVariable String membershipId,
-            @RequestBody JsonNode request
+            @RequestBody JsonNode request,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch,
+            HttpServletRequest httpRequest
     ) {
+        scim.validateRequestSize(httpRequest.getContentLengthLong());
+        ScimUserResource resource = scim.patch(organizationId, connectionId, membershipId, request, ifMatch);
         return ResponseEntity.ok().contentType(SCIM_JSON)
-                .body(scim.patch(organizationId, connectionId, membershipId, request));
+                .eTag(resource.meta().version())
+                .body(resource);
     }
 
     @DeleteMapping("/Users/{membershipId}")
     public ResponseEntity<Void> deleteUser(
             @PathVariable String organizationId,
             @PathVariable String connectionId,
-            @PathVariable String membershipId
+            @PathVariable String membershipId,
+            @RequestHeader(value = "If-Match", required = false) String ifMatch
     ) {
-        scim.delete(organizationId, connectionId, membershipId);
+        scim.delete(organizationId, connectionId, membershipId, ifMatch);
         return ResponseEntity.noContent().build();
     }
 }

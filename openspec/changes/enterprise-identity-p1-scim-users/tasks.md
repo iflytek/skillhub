@@ -7,14 +7,14 @@
 ## 2. SCIM Users
 
 - [x] 2.1 实现 ServiceProviderConfig、ResourceTypes、Schemas 和组织限定 Users endpoint。
-- [ ] 2.2 实现 list/filter/get/create/replace/patch/deactivate，并限制资源字段与请求大小。
-- [ ] 2.3 实现 external resource coordinate、幂等重放、乱序更新和跨组织隔离。
+- [x] 2.2 实现 list/filter/get/create/replace/patch/deactivate，并限制资源字段与请求大小。
+- [x] 2.3 实现 external resource coordinate、幂等重放、乱序更新和跨组织隔离。
 - [x] 2.4 保持 membership/user/account/namespace 来源边界，不自动授予权限。
 
 ## 3. 管理与文档
 
 - [x] 3.1 在组织管理详情提供 Directory Connection 摘要、endpoint 复制和 token 轮换入口。
-- [ ] 3.2 更新 OpenAPI 类型、错误码、审计和部署文档。
+- [x] 3.2 更新 OpenAPI 类型、错误码、审计和部署文档。
 - [ ] 3.3 明确 Casdoor 参考点与不采用的实现点。
 
 ## 4. Verification

@@ -15662,7 +15662,9 @@ export interface operations {
     replaceUser: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string;
+            };
             path: {
                 organizationId: string;
                 connectionId: string;
@@ -15691,7 +15693,9 @@ export interface operations {
     deleteUser: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string;
+            };
             path: {
                 organizationId: string;
                 connectionId: string;
@@ -15713,7 +15717,9 @@ export interface operations {
     patchUser: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                "If-Match"?: string;
+            };
             path: {
                 organizationId: string;
                 connectionId: string;

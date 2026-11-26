@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.iflytek.skillhub.config.DirectoryProvisioningProperties;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.organization.DirectoryConnection;
 import com.iflytek.skillhub.domain.organization.MembershipSourceType;
@@ -33,27 +34,27 @@ public class DirectoryScimAppService {
     private static final String ENTERPRISE_SCHEMA = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User";
     private static final Pattern FILTER = Pattern.compile(
             "^(externalId|userName)\\s+eq\\s+\"([^\"]{1,256})\"$", Pattern.CASE_INSENSITIVE);
-    private static final int MAX_COUNT = 100;
-    private static final int MAX_START_INDEX = 10_000;
-
     private final DirectoryConnectionAppService connections;
     private final OrganizationMembershipRepository memberships;
     private final AuditLogService audit;
     private final RequestIdAccessor requestIds;
     private final Clock clock;
+    private final DirectoryProvisioningProperties properties;
 
     public DirectoryScimAppService(
             DirectoryConnectionAppService connections,
             OrganizationMembershipRepository memberships,
             AuditLogService audit,
             RequestIdAccessor requestIds,
-            Clock clock
+            Clock clock,
+            DirectoryProvisioningProperties properties
     ) {
         this.connections = connections;
         this.memberships = memberships;
         this.audit = audit;
         this.requestIds = requestIds;
         this.clock = clock;
+        this.properties = properties;
     }
 
     @Transactional(readOnly = true)
@@ -61,8 +62,12 @@ public class DirectoryScimAppService {
             String organizationId, String connectionId, int startIndex, int count, String filter
     ) {
         DirectoryConnection connection = requireConnection(organizationId, connectionId);
-        if (startIndex < 1 || startIndex > MAX_START_INDEX || count < 1 || count > MAX_COUNT) {
+        if (startIndex < 1 || startIndex > properties.getMaxStartIndex()
+                || count < 1 || count > properties.getMaxPageCount()) {
             throw badRequest("invalidValue", "Invalid SCIM pagination");
+        }
+        if (filter != null && filter.length() > properties.getMaxFilterLength()) {
+            throw badRequest("invalidFilter", "SCIM filter is too long");
         }
         Filter parsed = parseFilter(filter);
         List<OrganizationMembership> content;
@@ -81,7 +86,7 @@ public class DirectoryScimAppService {
                     connectionId,
                     parsed != null && parsed.field().equalsIgnoreCase("userName") ? parsed.value() : null,
                     null,
-                    PageRequest.of(0, Math.min(MAX_START_INDEX, startIndex - 1 + count),
+                    PageRequest.of(0, Math.min(properties.getMaxStartIndex(), startIndex - 1 + count),
                             Sort.by(Sort.Direction.ASC, "id")));
             total = Math.toIntExact(page.getTotalElements());
             int from = Math.min(startIndex - 1, page.getContent().size());
@@ -136,8 +141,17 @@ public class DirectoryScimAppService {
     public ScimUserResource replace(
             String organizationId, String connectionId, String membershipId, ScimUserRequest request
     ) {
+        return replace(organizationId, connectionId, membershipId, request, null);
+    }
+
+    @Transactional
+    public ScimUserResource replace(
+            String organizationId, String connectionId, String membershipId,
+            ScimUserRequest request, String ifMatch
+    ) {
         DirectoryConnection connection = requireConnection(organizationId, connectionId);
         OrganizationMembership membership = ownedMembership(organizationId, connection, membershipId);
+        requireVersion(membership, ifMatch);
         Profile profile = profile(request, true);
         if (!sourceId(connectionId, profile.externalId()).equals(membership.getSourceId())) {
             throw conflict("externalId cannot change for an existing SCIM resource");
@@ -154,10 +168,20 @@ public class DirectoryScimAppService {
     public ScimUserResource patch(
             String organizationId, String connectionId, String membershipId, JsonNode body
     ) {
+        return patch(organizationId, connectionId, membershipId, body, null);
+    }
+
+    @Transactional
+    public ScimUserResource patch(
+            String organizationId, String connectionId, String membershipId,
+            JsonNode body, String ifMatch
+    ) {
         DirectoryConnection connection = requireConnection(organizationId, connectionId);
         OrganizationMembership membership = ownedMembership(organizationId, connection, membershipId);
+        requireVersion(membership, ifMatch);
         JsonNode operations = body == null ? null : body.get("Operations");
-        if (operations == null || !operations.isArray() || operations.size() > 32) {
+        if (operations == null || !operations.isArray() || operations.isEmpty()
+                || operations.size() > properties.getMaxPatchOperations()) {
             throw badRequest("invalidValue", "SCIM PATCH Operations must be a non-empty array");
         }
         String userName = membership.getSourceUserName();
@@ -168,6 +192,9 @@ public class DirectoryScimAppService {
         Boolean active = membership.getStatus() != OrganizationMembershipStatus.SUSPENDED
                 && membership.getStatus() != OrganizationMembershipStatus.DEPROVISIONED;
         for (JsonNode operation : operations) {
+            if (!operation.isObject()) {
+                throw badRequest("invalidSyntax", "SCIM PATCH operation must be an object");
+            }
             String rawOp = text(operation, "op");
             if (rawOp == null || rawOp.isBlank()) {
                 throw badRequest("invalidSyntax", "SCIM PATCH operation is required");
@@ -180,13 +207,13 @@ public class DirectoryScimAppService {
             }
             switch (path) {
                 case "active" -> active = value != null && value.asBoolean();
-                case "userName" -> userName = value == null ? null : value.asText();
-                case "displayName" -> displayName = value == null ? null : value.asText();
-                case "emails" -> email = firstEmail(value);
+                case "userName" -> userName = bounded(value == null ? null : value.asText(), "userName");
+                case "displayName" -> displayName = bounded(value == null ? null : value.asText(), "displayName");
+                case "emails" -> email = bounded(firstEmail(value), "email");
                 case "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:department" ->
-                        department = value == null ? null : value.asText();
+                        department = bounded(value == null ? null : value.asText(), "department");
                 case "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User:employeeNumber" ->
-                        employeeNumber = value == null ? null : value.asText();
+                        employeeNumber = bounded(value == null ? null : value.asText(), "employeeNumber");
                 default -> throw badRequest("noTarget", "Unsupported SCIM PATCH path");
             }
             if (!(op.equals("ADD") || op.equals("REPLACE") || op.equals("REMOVE"))) {
@@ -201,8 +228,19 @@ public class DirectoryScimAppService {
 
     @Transactional
     public void delete(String organizationId, String connectionId, String membershipId) {
+        delete(organizationId, connectionId, membershipId, null);
+    }
+
+    @Transactional
+    public void delete(String organizationId, String connectionId, String membershipId, String ifMatch) {
         DirectoryConnection connection = requireConnection(organizationId, connectionId);
-        OrganizationMembership membership = ownedMembership(organizationId, connection, membershipId);
+        OrganizationMembership membership = memberships.findByOrganizationIdAndId(organizationId, membershipId)
+                .orElseThrow(() -> notFound(membershipId));
+        requireOwnedByConnection(connection, membership);
+        requireVersion(membership, ifMatch);
+        if (membership.getStatus() == OrganizationMembershipStatus.DEPROVISIONED) {
+            return;
+        }
         membership.deprovision(clock.instant());
         memberships.save(membership);
         audit.recordOrganizationAdministration(
@@ -265,17 +303,17 @@ public class DirectoryScimAppService {
         if (request == null) {
             throw badRequest("invalidValue", "SCIM User body is required");
         }
-        String externalId = trim(request.externalId());
-        String userName = trim(request.userName());
+        String externalId = bounded(request.externalId(), "externalId");
+        String userName = bounded(request.userName(), "userName");
         if (requireIdentity && (externalId == null || userName == null)) {
             throw badRequest("invalidValue", "SCIM externalId and userName are required");
         }
         String email = request.emails() == null || request.emails().isEmpty()
-                ? null : trim(request.emails().get(0).value());
-        String displayName = trim(request.displayName());
+                ? null : bounded(request.emails().get(0).value(), "email");
+        String displayName = bounded(request.displayName(), "displayName");
         if (displayName == null && request.name() != null) {
-            displayName = trim((request.name().givenName() == null ? "" : request.name().givenName())
-                    + " " + (request.name().familyName() == null ? "" : request.name().familyName()));
+            displayName = bounded((request.name().givenName() == null ? "" : request.name().givenName())
+                    + " " + (request.name().familyName() == null ? "" : request.name().familyName()), "displayName");
         }
         var enterprise = request.enterprise();
         return new Profile(
@@ -283,14 +321,17 @@ public class DirectoryScimAppService {
                 userName,
                 displayName,
                 email,
-                enterprise == null ? null : trim(enterprise.department()),
-                enterprise == null ? null : trim(enterprise.employeeNumber()),
+                enterprise == null ? null : bounded(enterprise.department(), "department"),
+                enterprise == null ? null : bounded(enterprise.employeeNumber(), "employeeNumber"),
                 request.active() == null || request.active());
     }
 
     private Filter parseFilter(String raw) {
         if (raw == null || raw.isBlank()) {
             return null;
+        }
+        if (raw.length() > properties.getMaxFilterLength()) {
+            throw badRequest("invalidFilter", "SCIM filter is too long");
         }
         Matcher matcher = FILTER.matcher(raw.trim());
         if (!matcher.matches()) {
@@ -315,6 +356,38 @@ public class DirectoryScimAppService {
         if (value == null) return null;
         String normalized = value.trim();
         return normalized.isEmpty() ? null : normalized;
+    }
+
+    private String bounded(String value, String field) {
+        String normalized = trim(value);
+        if (normalized != null && normalized.length() > properties.getMaxFieldLength()) {
+            throw badRequest("invalidValue", "SCIM " + field + " is too long");
+        }
+        return normalized;
+    }
+
+    public void validateRequestSize(long contentLength) {
+        if (contentLength > properties.getMaxRequestBytes()) {
+            throw new ScimProtocolException(
+                    HttpStatus.REQUEST_ENTITY_TOO_LARGE, "invalidValue", "SCIM request body is too large");
+        }
+    }
+
+    private void requireVersion(OrganizationMembership membership, String ifMatch) {
+        if (ifMatch == null || ifMatch.isBlank() || "*".equals(ifMatch.trim())) {
+            return;
+        }
+        String current = membership.getUpdatedAt().toString();
+        boolean matches = java.util.Arrays.stream(ifMatch.split(","))
+                .map(String::trim)
+                .map(value -> value.startsWith("W/") ? value.substring(2) : value)
+                .map(value -> value.startsWith("\"") && value.endsWith("\"")
+                        ? value.substring(1, value.length() - 1) : value)
+                .anyMatch(current::equals);
+        if (!matches) {
+            throw new ScimProtocolException(
+                    HttpStatus.PRECONDITION_FAILED, "invalidVers", "SCIM resource version is stale");
+        }
     }
 
     private String sourceId(String connectionId, String externalId) {

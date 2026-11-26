@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.iflytek.skillhub.domain.audit.AuditLogService;
+import com.iflytek.skillhub.config.DirectoryProvisioningProperties;
 import com.iflytek.skillhub.domain.organization.DirectoryConnection;
 import com.iflytek.skillhub.domain.organization.MembershipSourceType;
 import com.iflytek.skillhub.domain.organization.OrganizationMembership;
@@ -28,7 +29,8 @@ class DirectoryScimAppServiceTest {
     private final RequestIdAccessor requestIds = mock(RequestIdAccessor.class);
     private final DirectoryScimAppService service = new DirectoryScimAppService(
             connections, memberships, audit, requestIds,
-            Clock.fixed(Instant.parse("2026-11-26T00:00:00Z"), ZoneOffset.UTC));
+            Clock.fixed(Instant.parse("2026-11-26T00:00:00Z"), ZoneOffset.UTC),
+            new DirectoryProvisioningProperties());
 
     private DirectoryConnection connection;
 
@@ -73,6 +75,62 @@ class DirectoryScimAppServiceTest {
         verify(audit).recordOrganizationAdministration(
                 eq("scim:" + connection.getId()), eq("DIRECTORY_USER_DEPROVISIONED"),
                 eq("org-1"), eq(membership.getId()), eq("request-1"));
+    }
+
+    @Test
+    void rejectsStaleIfMatchBeforeSaving() {
+        OrganizationMembership membership = OrganizationMembership.directoryProvisioned(
+                "org-1", connection.getId() + ":external-1", "alice", "Alice", "alice@example.com",
+                null, null, Instant.parse("2026-11-26T00:00:00Z"));
+        when(memberships.findByOrganizationIdAndId("org-1", membership.getId()))
+                .thenReturn(Optional.of(membership));
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.iflytek.skillhub.exception.ScimProtocolException.class,
+                () -> service.replace("org-1", connection.getId(), membership.getId(), request("external-1", "alice"),
+                        "\"stale-version\""));
+        org.mockito.Mockito.verify(memberships, org.mockito.Mockito.never())
+                .save(any(OrganizationMembership.class));
+    }
+
+    @Test
+    void rejectsOversizedProfileField() {
+        when(memberships.findByOrganizationIdAndSource(
+                eq("org-1"), eq(MembershipSourceType.DIRECTORY), any(String.class)))
+                .thenReturn(Optional.empty());
+        var oversized = new com.iflytek.skillhub.dto.ScimUserRequest(
+                null, "external-1", "a".repeat(257), "Alice", true, null, null, null);
+
+        org.junit.jupiter.api.Assertions.assertThrows(
+                com.iflytek.skillhub.exception.ScimProtocolException.class,
+                () -> service.create("org-1", connection.getId(), oversized));
+        org.mockito.Mockito.verify(memberships, org.mockito.Mockito.never())
+                .save(any(OrganizationMembership.class));
+    }
+
+    @Test
+    void rejectsOversizedRequestBodyBeforeWrite() {
+        var failure = org.junit.jupiter.api.Assertions.assertThrows(
+                com.iflytek.skillhub.exception.ScimProtocolException.class,
+                () -> service.validateRequestSize(65_537));
+
+        assertThat(failure.getStatus()).isEqualTo(org.springframework.http.HttpStatus.REQUEST_ENTITY_TOO_LARGE);
+    }
+
+    @Test
+    void repeatedDeleteIsIdempotent() {
+        OrganizationMembership membership = OrganizationMembership.directoryProvisioned(
+                "org-1", connection.getId() + ":external-1", "alice", "Alice", "alice@example.com",
+                null, null, Instant.parse("2026-11-26T00:00:00Z"));
+        membership.deprovision(Instant.parse("2026-11-26T00:00:01Z"));
+        when(memberships.findByOrganizationIdAndId("org-1", membership.getId()))
+                .thenReturn(Optional.of(membership));
+
+        service.delete("org-1", connection.getId(), membership.getId());
+
+        assertThat(membership.getStatus().name()).isEqualTo("DEPROVISIONED");
+        org.mockito.Mockito.verify(memberships, org.mockito.Mockito.never())
+                .save(any(OrganizationMembership.class));
     }
 
     private com.iflytek.skillhub.dto.ScimUserRequest request(String externalId, String userName) {
