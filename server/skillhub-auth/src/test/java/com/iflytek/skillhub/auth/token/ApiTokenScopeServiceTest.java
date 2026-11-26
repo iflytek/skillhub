@@ -19,6 +19,17 @@ class ApiTokenScopeServiceTest {
             new ApiTokenScopeService(new ObjectMapper(), new RouteSecurityPolicyRegistry());
 
     @Test
+    void namespaceCapabilitiesRequireAnExplicitGrantFromTheNewIssuer() {
+        var oldToken = org.mockito.Mockito.mock(com.iflytek.skillhub.auth.entity.ApiToken.class);
+        String stored = "[\"skill:read\",\" namespace:manage \"]";
+        org.mockito.Mockito.when(oldToken.getScopeJson()).thenReturn(stored);
+        assertEquals(Set.of("skill:read"), scopeService.issuedScopes(oldToken));
+        var issued = new com.iflytek.skillhub.auth.entity.ApiToken("user", "DSH", "prefix", "hash", stored);
+        assertEquals(Set.of("skill:read", "namespace:read", "namespace:manage"),
+                scopeService.expandScopes(scopeService.issuedScopes(issued)));
+    }
+
+    @Test
     void legacyAliasExpandsAndDeduplicatesWithoutChangingRawScopes() {
         String json = "[\"skill:read\",\"skill:publish\",\"skill:submit\",\"skill:publish\"]";
         assertEquals(Set.of("skill:read", "skill:publish", "skill:submit"), scopeService.parseScopes(json));
@@ -118,15 +129,16 @@ class ApiTokenScopeServiceTest {
     }
 
     @Test
-    void authorizeShouldDenyUnsupportedAuthenticatedEndpoints() {
-        ApiTokenScopeService.AuthorizationDecision decision = scopeService.authorize(
-            "GET",
-            "/api/v1/me/skills",
-            Set.of("skill:read", "skill:publish")
-        );
-
-        assertFalse(decision.allowed());
-        assertEquals("API token cannot access endpoint: /api/v1/me/skills", decision.message());
+    void managementScopesApplyOnlyToTheNamedRoutes() {
+        assertTrue(scopeService.authorize("GET", "/api/v1/me/skills", Set.of("skill:read")).allowed());
+        assertFalse(scopeService.authorize("GET", "/api/v1/me/skills", Set.of()).allowed());
+        String path = "/api/v1/namespaces/team-a/members";
+        assertTrue(scopeService.authorize("GET", path, Set.of("namespace:manage")).allowed());
+        assertTrue(scopeService.authorize("POST", path, Set.of("namespace:manage")).allowed());
+        assertFalse(scopeService.authorize("POST", path, Set.of("namespace:read")).allowed());
+        assertFalse(scopeService.authorize("GET", path, Set.of("skill:publish")).allowed());
+        assertFalse(scopeService.authorize("POST", "/api/v1/namespaces/team-a/member-candidates/search",
+                Set.of("namespace:manage")).allowed());
     }
 
     @Test

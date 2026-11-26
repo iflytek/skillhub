@@ -39,8 +39,6 @@ import {
   resolveTokenExpiresAt,
   type TokenExpirationMode,
 } from './token-expiration'
-import { TOKEN_PRESETS } from './token-capabilities'
-import { TokenPermissionSelector } from './token-permission-selector'
 
 interface CreateTokenDialogProps {
   children: React.ReactNode
@@ -63,7 +61,6 @@ export function CreateTokenDialog({
     useState<TokenExpirationMode>('never')
   const [customExpiresAt, setCustomExpiresAt] = useState('')
   const [expiresAtError, setExpiresAtError] = useState<string | null>(null)
-  const [scopes, setScopes] = useState<string[]>([...TOKEN_PRESETS.candidate])
   const [copied, setCopied] = useState(false)
   const pendingRef = useRef(false)
   const successTitleRef = useRef<HTMLHeadingElement>(null)
@@ -92,7 +89,6 @@ export function CreateTokenDialog({
   }, [createdToken])
 
   const reset = () => {
-    setScopes([...TOKEN_PRESETS.candidate])
     setCreatedToken(null)
     setCopied(false)
     setName('')
@@ -127,7 +123,6 @@ export function CreateTokenDialog({
       )
       return
     }
-    if (scopes.length === 0) return
     if (
       expirationMode === 'custom' &&
       (!customExpiresAt ||
@@ -141,7 +136,7 @@ export function CreateTokenDialog({
     setNameError(null)
     setExpiresAtError(null)
     pendingRef.current = true
-    createMutation.mutate({ name: normalizedName, expiresAt, scopes })
+    createMutation.mutate({ name: normalizedName, expiresAt })
   }
   const handleCopyToken = async () => {
     if (!createdToken) return
@@ -345,11 +340,6 @@ export function CreateTokenDialog({
                     </p>
                   )}
                 </div>
-                <TokenPermissionSelector
-                  scopes={scopes}
-                  onChange={setScopes}
-                  disabled={busy}
-                />
                 <div className="space-y-2">
                   <Label htmlFor="token-expiration">
                     {t('createToken.expirationLabel')}
@@ -459,8 +449,7 @@ export function CreateTokenDialog({
                   disabled={
                     !normalizedName ||
                     hasDuplicateName ||
-                    busy ||
-                    scopes.length === 0
+                    busy
                   }
                   className="flex-1 sm:flex-none"
                 >

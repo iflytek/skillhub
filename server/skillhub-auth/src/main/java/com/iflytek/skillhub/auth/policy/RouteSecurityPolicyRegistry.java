@@ -164,7 +164,7 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/suite-bundles/operations/*"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.POST, "/api/web/suite-bundles/operations/*/cancel"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.POST, "/api/web/suite-bundles/operations/*/retry"),
-            RouteAuthorizationPolicy.roles(HttpMethod.DELETE, "/api/v1/skills/id/*", "SUPER_ADMIN"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/v1/skills/id/*"),
             RouteAuthorizationPolicy.roles(HttpMethod.DELETE, "/api/v1/skills/*/*", "SUPER_ADMIN"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/skills/id/*"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/skills/*/*"),
@@ -217,6 +217,12 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.allow(HttpMethod.PUT, "/api/web/skills/*/rating"),
             ApiTokenPolicy.allow(HttpMethod.PUT, "/api/web/skills/*/reviews/me"),
             ApiTokenPolicy.allow(HttpMethod.DELETE, "/api/web/skills/*/reviews/me"),
+            ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/me/skills", "skill:read"),
+            ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/namespaces/*/members", "namespace:read"),
+            ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/namespaces/*/member-candidates", "namespace:manage"),
+            ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/namespaces/*/members", "namespace:manage"),
+            ApiTokenPolicy.require(HttpMethod.DELETE, "/api/v1/namespaces/*/members/*", "namespace:manage"),
+            ApiTokenPolicy.require(HttpMethod.PUT, "/api/v1/namespaces/*/members/*/role", "namespace:manage"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/namespaces"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/namespaces/*"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/web/namespaces"),
@@ -410,7 +416,12 @@ public class RouteSecurityPolicyRegistry {
         if (servletPath != null && !servletPath.isBlank()) {
             return servletPath;
         }
-        return request.getRequestURI();
+        String uri = request.getRequestURI();
+        String context = request.getContextPath();
+        if (context != null && !context.isEmpty() && uri.startsWith(context + "/")) {
+            return uri.substring(context.length());
+        }
+        return uri;
     }
 
     public ApiTokenAuthorizationDecision authorizeApiToken(String method, String path, Set<String> tokenScopes) {

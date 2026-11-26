@@ -11,6 +11,8 @@ export const TOKEN_CAPABILITIES = [
   { scope: 'skill:submit', label: 'submit' },
   { scope: 'skill:publish-private', label: 'publishPrivate' },
   { scope: 'skill:manage', label: 'manage' },
+  { scope: 'namespace:read', label: 'namespaceRead' },
+  { scope: 'namespace:manage', label: 'namespaceManage' },
   { scope: 'skill:delete', label: 'delete' },
   { scope: 'token:manage', label: 'tokenManage' },
 ] as const

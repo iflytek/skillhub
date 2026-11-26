@@ -175,7 +175,8 @@ public class NamespaceController extends BaseApiController {
                                                                  @RequestAttribute("userId") String userId,
                                                                  @AuthenticationPrincipal PlatformPrincipal principal) {
         return ok("response.success.read",
-                namespacePortalQueryAppService.listMembers(slug, pageable, userId, platformRoles(principal)));
+                namespacePortalQueryAppService.listMembers(slug, pageable, userId,
+                        principal != null && "api_token".equals(principal.oauthProvider()) ? Set.of() : platformRoles(principal)));
     }
 
     private void requireBrowserSession(PlatformPrincipal principal, HttpServletRequest request) {
@@ -190,6 +191,7 @@ public class NamespaceController extends BaseApiController {
                 : Set.of();
     }
 
+    @com.iflytek.skillhub.ratelimit.RateLimit(category = "namespace-member-search", authenticated = 60, anonymous = 0)
     @GetMapping("/namespaces/{slug}/member-candidates")
     public ApiResponse<List<NamespaceCandidateUserResponse>> searchMemberCandidates(
             @PathVariable String slug,

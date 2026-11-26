@@ -137,15 +137,16 @@ Notes:
 
 First-party device-code and browser-callback login issue only `skill:read + skill:submit`.
 Existing legacy tokens keep their route authorization. After logging in again, remote removal
-requires explicit authorization: create a Custom token with `skill:delete` in Web, then run
+requires a personal token created with the Web defaults, then run
 `skillhub login --token <token>`. The CLI never automatically reissues a broader token.
 Local uninstall does not require remote delete authority. `skillhub whoami` displays capabilities,
 legacy compatibility and expiration without requiring `token:manage`.
 Account and namespace administrator roles cannot expand a token's capabilities.
 
-Older scripts calling the token API should send scopes explicitly. Omission still selects
-read + publish + delete for compatibility and returns `deprecatedDefault=true`; the next minor
-release will narrow omitted scopes to read only.
+API callers can explicitly request narrower scopes. Omitting scopes issues
+read + publish + delete + namespace:manage (including roster access), with `deprecatedDefault=false`.
+Web creation requires only a name and expiry. Account and namespace roles still constrain operations;
+token:manage is not granted by default.
 
 ## API Endpoints
 

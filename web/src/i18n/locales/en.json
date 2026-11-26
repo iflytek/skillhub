@@ -2714,6 +2714,8 @@
       "custom": "Select each required capability"
     },
     "capabilityDescriptions": {
+      "namespaceRead": "View the roster of a team you belong to.",
+      "namespaceManage": "Search for users, add or remove team members and change their roles. Includes roster access.",
       "read": "Read skills accessible to your account",
       "submit": "Upload skills and submit candidate versions",
       "publishPrivate": "Confirm publication of private skills only",
@@ -3231,6 +3233,8 @@
     "capabilitiesUnavailable": "Not reported by this server",
     "legacyCompat": "Legacy compatibility (skill:publish expanded)",
     "capabilityLabels": {
+      "namespaceRead": "View team members",
+      "namespaceManage": "Manage team members",
       "read": "Read and download",
       "submit": "Upload and submit for review",
       "publishPrivate": "Confirm private publication",

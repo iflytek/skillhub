@@ -63,8 +63,12 @@ public class NamespaceMemberService {
             throw new DomainBadRequestException("error.namespace.member.alreadyExists");
         }
 
-        NamespaceMember member = new NamespaceMember(namespaceId, userId, role);
-        return namespaceMemberRepository.save(member);
+        if (userAccountRepository.findById(userId).filter(account -> account.isActive()).isEmpty()) {
+            throw new DomainBadRequestException("error.namespace.member.user.notFound");
+        }
+        NamespaceMember member = namespaceMemberRepository.save(new NamespaceMember(namespaceId, userId, role));
+        recordMembership(operatorUserId, member, null, role);
+        return member;
     }
 
     /**
@@ -113,6 +117,7 @@ public class NamespaceMemberService {
 
         revokeForEligibilityLoss(member, operatorUserId, REASON_MEMBER_REMOVED);
         namespaceMemberRepository.deleteByNamespaceIdAndUserId(namespaceId, userId);
+        recordMembership(operatorUserId, member, member.getRole(), null);
     }
 
     @Transactional
@@ -128,11 +133,17 @@ public class NamespaceMemberService {
         NamespaceMember member = namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.member.notFound"));
 
+        NamespaceRole before = member.getRole();
+        if (before == NamespaceRole.OWNER) {
+            throw new DomainBadRequestException("error.namespace.member.owner.setDirect");
+        }
         if (newRole != NamespaceRole.MEMBER) {
             revokeForEligibilityLoss(member, operatorUserId, REASON_ROLE_CHANGED);
         }
         member.setRole(newRole);
-        return namespaceMemberRepository.save(member);
+        NamespaceMember saved = namespaceMemberRepository.save(member);
+        if (before != newRole) recordMembership(operatorUserId, member, before, newRole);
+        return saved;
     }
 
     @Transactional
@@ -213,6 +224,12 @@ public class NamespaceMemberService {
                         .put("afterGrantId", after == null ? null : after.toString())
                         .put("handedOffTasks", handedOffTasks)
                         .build());
+    }
+
+    private void recordMembership(String actor, NamespaceMember member, NamespaceRole before, NamespaceRole after) {
+        auditLogService.record(actor, "NAMESPACE_MEMBERSHIP_CHANGE", "NAMESPACE_MEMBER", member.getId(),
+                null, null, null, AuditDetail.builder().put("namespaceId", member.getNamespaceId())
+                        .put("userId", member.getUserId()).put("before", before).put("after", after).build());
     }
 
     private void assertMemberMutationAllowed(Long namespaceId) {

@@ -154,3 +154,62 @@ describe('optional detail modules', () => {
     } finally { await fiber.dispose(); await server.stop(true); }
   });
 });
+
+describe('account expiry during detail reading', () => {
+  for (const endpoint of ['file', 'versions', 'reviews'] as const) {
+    test.each([401, 403, 503])(`${endpoint} handles HTTP %s without hiding account expiry`, async status => {
+      let fail = false;
+      const requests: { path: string; authorization: string | null }[] = [];
+      const server = Bun.serve({ hostname: '127.0.0.1', port: 0, fetch(request) {
+        const path = new URL(request.url).pathname;
+        requests.push({ path, authorization: request.headers.get('authorization') });
+        if (path.endsWith('/whoami')) return Response.json({ data: { handle: 'alice', displayName: 'Alice' } });
+        if (fail && path.endsWith('/' + endpoint)) return new Response('private diagnostics', { status });
+        if (path.endsWith('/resolve')) return Response.json({ data: {
+          namespace: 'team', slug: path.includes('/other/') ? 'other' : 'writer', version: '1',
+          versionId: 7, fingerprint: 'f', downloadUrl: '/archive',
+        } });
+        if (path.endsWith('/file')) return new Response('# Private documentation');
+        if (path.endsWith('/versions') || path.endsWith('/reviews')) {
+          return Response.json({ data: { items: [], total: 0, page: 0, size: 1 } });
+        }
+        return Response.json({ data: { id: path.endsWith('/other') ? 43 : 42,
+          namespace: 'team', slug: path.endsWith('/other') ? 'other' : 'writer', displayName: 'Private skill', summary: '' } });
+      } });
+      const ctx = new Context();
+      const fiber = ctx.plugin(SkillHubService, { registryUrl: server.url.href,
+        detailTabs: { versions: 'auto', reviews: 'auto', securityAudit: 'hide' } });
+      try {
+        await fiber;
+        const api = ctx.skillhub;
+        const signal = new AbortController().signal;
+        await api.connectAccount(api.getContext().sourceRevision, 'fixture-token', signal);
+        const revision = api.getContext().sourceRevision;
+        const previous = await api.getSkillDetail(revision, 'team', 'writer', '1', signal);
+        fail = true;
+        const read = api.getSkillDetail(revision, 'team', 'other', '1', signal);
+        if (status === 401) {
+          await expect(read).rejects.toMatchObject({ code: 'skillhub/registry-error',
+            details: { reason: 'AUTH_REQUIRED', status: 401 } });
+          const next = api.getContext().sourceRevision;
+          expect(next).not.toBe(revision);
+          expect(await api.accountIdentity(next, signal)).toBeNull();
+          const count = requests.length;
+          await expect(api.listVersions(previous.detailToken, 0, signal)).rejects.toMatchObject({ code: 'skillhub/context-stale' });
+          expect(requests).toHaveLength(count);
+          fail = false;
+          await api.getSkillDetail(next, 'team', 'other', '1', signal);
+          expect(requests.slice(count).every(request => request.authorization === null)).toBe(true);
+        } else {
+          const detail = await read;
+          if (endpoint === 'file') expect(detail.documentation).toMatchObject({ state: 'error' });
+          else expect(detail.tabs[endpoint]).toBe('unknown');
+          expect(api.getContext().sourceRevision).toBe(revision);
+          expect(await api.accountIdentity(revision, signal)).toEqual({ handle: 'alice', displayName: 'Alice' });
+        }
+        expect(requests.some(request => request.path.endsWith('/' + endpoint)
+          && request.authorization === 'Bearer fixture-token')).toBe(true);
+      } finally { await fiber.dispose(); await server.stop(true); }
+    });
+  }
+});

@@ -42,6 +42,7 @@ import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.http.MediaType;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Propagation;
@@ -52,6 +53,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
 class OrganizationControllerTest {
 
     private static final Instant T0 = Instant.parse("2026-09-22T00:00:00Z");

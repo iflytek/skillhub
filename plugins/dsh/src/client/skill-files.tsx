@@ -1,3 +1,4 @@
+import { catalogError } from './catalog-error.js';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { TypertRemoteNamespaceMap, RemoteResult } from '@deepseek-ai/dsh-typert-protocol';
@@ -11,6 +12,7 @@ type Remote = TypertRemoteNamespaceMap['skillhub'];
 class StaleFilesError extends Error {}
 function value<T>(result: RemoteResult<T>): T {
   if (result.ok) return result.value;
+  if (result.error.code === 'skillhub/registry-error' && result.error.details.reason === 'AUTH_REQUIRED') throw catalogError(result.error);
   if (result.error.code === 'skillhub/context-stale') throw new StaleFilesError('详情已过期，正在重新读取。');
   if (result.error.code === 'skillhub/registry-error' && result.error.details.reason === 'ANONYMOUS_DENIED') {
     throw new Error('当前来源不允许匿名读取文件。');

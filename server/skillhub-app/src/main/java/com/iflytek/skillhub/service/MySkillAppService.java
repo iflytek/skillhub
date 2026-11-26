@@ -1,5 +1,8 @@
 package com.iflytek.skillhub.service;
 
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy;
 import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -85,6 +88,19 @@ public class MySkillAppService {
         this.hiddenSkillQueryRepository = hiddenSkillQueryRepository;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
         this.namespaceRepository = namespaceRepository;
+    }
+
+    @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
+    public PageResponse<SkillSummaryResponse> listTokenUploads(String userId, int page, int size,
+                                                               String filter, String keyword, String namespace) {
+        if (!"all".equals(filter) || namespace == null || namespace.isBlank() || page < 0 || size < 1
+                || size > 100 || (long) page * size > Integer.MAX_VALUE) {
+            throw new DomainBadRequestException("error.badRequest");
+        }
+        var selected = mySkillQueryRepository.findOwnedNamespaceSkills(userId, namespace,
+                keyword == null ? "" : keyword.strip().toLowerCase(java.util.Locale.ROOT), PageRequest.of(page, size));
+        return new PageResponse<>(mySkillQueryRepository.getSkillSummaries(selected.getContent(), userId),
+                selected.getTotalElements(), page, size);
     }
 
     public PageResponse<SkillSummaryResponse> listMySkills(String userId, int page, int size) {

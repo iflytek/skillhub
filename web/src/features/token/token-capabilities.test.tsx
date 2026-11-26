@@ -6,7 +6,6 @@ import {
   render,
   screen,
   waitFor,
-  within,
 } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -70,86 +69,21 @@ afterEach(() => {
 })
 
 describe('token capabilities UI', () => {
-  it.each([
-    ['readonly', ['skill:read']],
-    ['candidate', ['skill:read', 'skill:submit']],
-    ['private', ['skill:read', 'skill:submit', 'skill:publish-private']],
-  ])(
-    'submits explicit %s scopes without destructive permissions',
-    async (preset, scopes) => {
-      api.createToken.mockResolvedValue({
-        token: 'test-value',
-        name: 'test',
-        capabilities: scopes,
-      })
-      mount(
-        <CreateTokenDialog>
-          <button>open</button>
-        </CreateTokenDialog>,
-      )
-      fireEvent.click(screen.getByText('open'))
-      fireEvent.change(screen.getByLabelText('createToken.nameLabel'), {
-        target: { value: 'test' },
-      })
-      fireEvent.click(
-        screen.getByRole('button', { name: `createToken.presets.${preset}` }),
-      )
-      expect(screen.queryByRole('checkbox')).toBeNull()
-      fireEvent.click(screen.getByText('createToken.create'))
-      await waitFor(() =>
-        expect(api.createToken).toHaveBeenCalledWith({
-          name: 'test',
-          expiresAt: undefined,
-          scopes,
-        }),
-      )
-      expect(await screen.findByText(scopes.join(', '))).toBeDefined()
-    },
-  )
-
-  it('requires explicit custom selection for delete and token management and resets on reopen', async () => {
-    api.createToken.mockResolvedValue({
-      token: 'test-value',
-      name: 'test',
-      capabilities: ['skill:delete', 'token:manage'],
-    })
-    mount(
-      <CreateTokenDialog>
-        <button>open</button>
-      </CreateTokenDialog>,
-    )
+  it('uses server default permissions without a permission selection step', async () => {
+    const capabilities = ['skill:read', 'skill:delete', 'namespace:manage', 'namespace:read']
+    api.createToken.mockResolvedValue({ token: 'test-value', name: 'test', capabilities })
+    mount(<CreateTokenDialog><button>open</button></CreateTokenDialog>)
     fireEvent.click(screen.getByText('open'))
-    fireEvent.click(
-      screen.getByRole('button', { name: 'createToken.presets.readonly' }),
-    )
-    fireEvent.change(screen.getByLabelText('createToken.nameLabel'), {
-      target: { value: 'test' },
-    })
-    fireEvent.click(
-      screen.getByLabelText('token.capabilityLabels.read (skill:read)'),
-    )
-    fireEvent.click(
-      screen.getByLabelText('token.capabilityLabels.delete (skill:delete)'),
-    )
-    fireEvent.click(
-      screen.getByLabelText(
-        'token.capabilityLabels.tokenManage (token:manage)',
-      ),
-    )
-    fireEvent.click(screen.getByText('createToken.create'))
-    await waitFor(() =>
-      expect(api.createToken).toHaveBeenCalledWith({
-        name: 'test',
-        expiresAt: undefined,
-        scopes: ['skill:delete', 'token:manage'],
-      }),
-    )
-    fireEvent.click(await screen.findByText('createToken.savedClose'))
-    fireEvent.click(screen.getByText('open'))
-    expect(
-      screen.getByRole('button', { name: 'createToken.presets.candidate' }),
-    ).toBeDefined()
+    fireEvent.change(screen.getByLabelText('createToken.nameLabel'), { target: { value: 'test' } })
+    expect(screen.queryByRole('group', { name: 'token.permissionsTitle' })).toBeNull()
     expect(screen.queryByRole('checkbox')).toBeNull()
+    fireEvent.click(screen.getByText('createToken.create'))
+    await waitFor(() => expect(api.createToken).toHaveBeenCalledWith({ name: 'test', expiresAt: undefined }))
+    expect(await screen.findByText(capabilities.join(', '))).toBeDefined()
+    fireEvent.click(screen.getByText('createToken.savedClose'))
+    fireEvent.click(screen.getByText('open'))
+    expect(screen.queryByRole('group', { name: 'token.permissionsTitle' })).toBeNull()
+    expect((screen.getByLabelText('createToken.nameLabel') as HTMLInputElement).value).toBe('')
   })
 
   it('renders expanded capabilities and the legacy marker from the server', async () => {
@@ -248,9 +182,6 @@ describe('token creation recovery', () => {
       </CreateTokenDialog>,
     )
     fireEvent.click(screen.getByText('open'))
-    fireEvent.click(
-      screen.getByRole('button', { name: 'createToken.presets.readonly' }),
-    )
     fireEvent.change(screen.getByLabelText('createToken.nameLabel'), {
       target: { value: 'retry' },
     })
@@ -260,11 +191,7 @@ describe('token creation recovery', () => {
       (screen.getByLabelText('createToken.nameLabel') as HTMLInputElement)
         .value,
     ).toBe('retry')
-    expect(
-      screen
-        .getByLabelText('token.capabilityLabels.read (skill:read)')
-        .getAttribute('aria-pressed'),
-    ).toBe('true')
+    expect(screen.queryByRole('group', { name: 'token.permissionsTitle' })).toBeNull()
     fireEvent.click(screen.getByText('createToken.create'))
     expect(await screen.findByText('createToken.savedClose')).toBeDefined()
     expect(api.createToken).toHaveBeenCalledTimes(2)
@@ -438,141 +365,14 @@ describe('revocation at a page boundary', () => {
   )
 })
 
-describe('compact permission selection', () => {
-  it('keeps six toggles visible, derives presets and never implicitly grants sensitive capabilities', () => {
-    mount(
-      <CreateTokenDialog>
-        <button>open</button>
-      </CreateTokenDialog>,
-    )
+describe('default token expiry selection', () => {
+  it('preserves the chosen name and expiry while using server default permissions', async () => {
+    api.createToken.mockResolvedValue({ token: 'test-expiry-value', name: 'retained', capabilities: ['skill:read'] })
+    mount(<CreateTokenDialog><button>open</button></CreateTokenDialog>)
     fireEvent.click(screen.getByText('open'))
-    const tags = within(
-      screen.getByRole('group', { name: 'token.permissionsTitle' }),
-    ).getAllByRole('button')
-    expect(tags).toHaveLength(6)
-    fireEvent.click(
-      screen.getByLabelText(
-        'token.capabilityLabels.publishPrivate (skill:publish-private)',
-      ),
-    )
-    expect(
-      screen
-        .getByRole('button', { name: 'createToken.presets.private' })
-        .getAttribute('aria-pressed'),
-    ).toBe('true')
-    expect(
-      screen
-        .getByLabelText('token.capabilityLabels.delete (skill:delete)')
-        .getAttribute('aria-pressed'),
-    ).toBe('false')
-    fireEvent.click(
-      screen.getByLabelText('token.capabilityLabels.delete (skill:delete)'),
-    )
-    expect(
-      screen.getByText('createToken.presets.custom', { exact: false }),
-    ).toBeDefined()
-    fireEvent.click(
-      screen.getByRole('button', { name: 'createToken.presets.candidate' }),
-    )
-    expect(
-      screen
-        .getByLabelText('token.capabilityLabels.delete (skill:delete)')
-        .getAttribute('aria-pressed'),
-    ).toBe('false')
-    expect(
-      within(
-        screen.getByRole('group', { name: 'token.permissionsTitle' }),
-      ).getAllByRole('button'),
-    ).toHaveLength(6)
-  })
-
-  it('preserves name and expiry across permission changes and disables an empty selection', async () => {
-    api.createToken.mockResolvedValue({
-      token: 'test-expiry-value',
-      name: 'retained',
-      capabilities: ['skill:read', 'skill:submit'],
-    })
-    mount(
-      <CreateTokenDialog>
-        <button>open</button>
-      </CreateTokenDialog>,
-    )
-    fireEvent.click(screen.getByText('open'))
-    fireEvent.change(screen.getByLabelText('createToken.nameLabel'), {
-      target: { value: 'retained' },
-    })
-    fireEvent.change(screen.getByRole('combobox', { name: 'never' }), {
-      target: { value: '7d' },
-    })
-    fireEvent.click(
-      screen.getByRole('button', { name: 'createToken.presets.readonly' }),
-    )
-    fireEvent.click(
-      screen.getByLabelText('token.capabilityLabels.read (skill:read)'),
-    )
-    expect(
-      (screen.getByText('createToken.create') as HTMLButtonElement).disabled,
-    ).toBe(true)
-    fireEvent.click(
-      screen.getByRole('button', { name: 'createToken.presets.candidate' }),
-    )
-    expect(
-      (screen.getByLabelText('createToken.nameLabel') as HTMLInputElement)
-        .value,
-    ).toBe('retained')
-    expect(
-      (screen.getByRole('combobox', { name: '7d' }) as HTMLSelectElement).value,
-    ).toBe('7d')
+    fireEvent.change(screen.getByLabelText('createToken.nameLabel'), { target: { value: 'retained' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'never' }), { target: { value: '7d' } })
     fireEvent.click(screen.getByText('createToken.create'))
-    await waitFor(() =>
-      expect(api.createToken).toHaveBeenCalledWith({
-        name: 'retained',
-        expiresAt: expect.any(String),
-        scopes: ['skill:read', 'skill:submit'],
-      }),
-    )
-  })
-
-  it('opens read-only help without submitting, closes only the nested panel and returns focus', async () => {
-    mount(
-      <CreateTokenDialog>
-        <button>open</button>
-      </CreateTokenDialog>,
-    )
-    fireEvent.click(screen.getByText('open'))
-    fireEvent.change(screen.getByLabelText('createToken.nameLabel'), {
-      target: { value: 'kept' },
-    })
-    const trigger = screen.getByRole('button', {
-      name: 'token.permissionsHelp',
-    })
-    fireEvent.click(trigger)
-    const panel = screen.getByRole('dialog', { name: 'token.permissionsHelp' })
-    expect(
-      within(panel).getByText('createToken.capabilityDescriptions.delete'),
-    ).toBeDefined()
-    expect(api.createToken).not.toHaveBeenCalled()
-    expect(within(panel).queryByText('skill:delete')).toBeNull()
-    fireEvent.click(within(panel).getByText('token.showCapabilityIdentifiers'))
-    expect(within(panel).getByText('skill:delete')).toBeDefined()
-    fireEvent.keyDown(panel, { key: 'Escape' })
-    await waitFor(() =>
-      expect(
-        screen.queryByRole('dialog', { name: 'token.permissionsHelp' }),
-      ).toBeNull(),
-    )
-    expect(
-      screen.getByRole('dialog', { name: 'createToken.title' }),
-    ).toBeDefined()
-    expect(
-      (screen.getByLabelText('createToken.nameLabel') as HTMLInputElement)
-        .value,
-    ).toBe('kept')
-    await waitFor(() => expect(document.activeElement).toBe(trigger))
-    expect(
-      screen
-        .getByLabelText('token.capabilityLabels.delete (skill:delete)')
-        .getAttribute('aria-pressed'),
-    ).toBe('false')
+    await waitFor(() => expect(api.createToken).toHaveBeenCalledWith({ name: 'retained', expiresAt: expect.any(String) }))
   })
 })

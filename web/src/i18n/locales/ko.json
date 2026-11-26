@@ -2679,6 +2679,8 @@
     "copyFailed": "토큰을 복사하지 못했습니다. 다시 시도하세요.",
     "required": "필수",
     "capabilityDescriptions": {
+      "namespaceRead": "소속 팀의 구성원 목록을 봅니다.",
+      "namespaceManage": "사용자를 검색하고 팀원을 추가하거나 제거하고 역할을 변경합니다. 구성원 조회 권한을 포함합니다.",
       "read": "계정에서 접근할 수 있는 스킬 읽기",
       "tokenManage": "명시적 권한으로 토큰 생성 및 관리",
       "delete": "허용된 범위에서 스킬 삭제",
@@ -3217,6 +3219,8 @@
     "capabilitiesUnavailable": "서버가 권한 정보를 제공하지 않았습니다",
     "legacyCompat": "기존 토큰 호환 (skill:publish 확장)",
     "capabilityLabels": {
+      "namespaceRead": "팀 구성원 보기",
+      "namespaceManage": "팀 구성원 관리",
       "read": "읽기 및 다운로드",
       "submit": "업로드 및 검토 제출",
       "publishPrivate": "비공개 게시 확인",

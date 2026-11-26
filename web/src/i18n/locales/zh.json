@@ -2710,6 +2710,8 @@
       "custom": "分别选择需要的能力"
     },
     "capabilityDescriptions": {
+      "namespaceRead": "查看所属团队的成员列表。",
+      "namespaceManage": "搜索、添加、移除团队成员及修改角色，包含成员查看权限。",
       "read": "访问当前账号有权读取的技能",
       "submit": "上传技能并提交候选版本",
       "publishPrivate": "仅用于私有技能的确认发布",
@@ -3227,6 +3229,8 @@
     "capabilitiesUnavailable": "服务端未提供能力信息",
     "legacyCompat": "旧版兼容（已展开 skill:publish）",
     "capabilityLabels": {
+      "namespaceRead": "查看团队成员",
+      "namespaceManage": "管理团队成员",
       "read": "读取与下载",
       "submit": "上传与送审",
       "publishPrivate": "确认私有发布",

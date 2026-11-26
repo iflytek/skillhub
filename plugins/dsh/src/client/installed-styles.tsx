@@ -59,6 +59,8 @@ export function WorkbenchStyles() {
     .skillhub-controls.astron-sh-catalog .astron-sh-toolbar-actions>button{color:var(--astron-sh-link)}
     .skillhub-controls.astron-sh-catalog .astron-sh-toolbar-actions>button[aria-label="返回会话"]{color:var(--astron-sh-muted)}
     .skillhub-controls.astron-sh-catalog .astron-sh-workbench-heading{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px}
+    .skillhub-controls.astron-sh-catalog .astron-sh-workbench-heading>div{min-width:0}
+    .skillhub-controls.astron-sh-catalog .astron-sh-upload-slot{margin-left:auto;flex:none}
     .skillhub-controls.astron-sh-catalog .astron-sh-workbench-heading h1{font-size:20px;line-height:24px;margin:0;letter-spacing:-.3px}
     .skillhub-controls.astron-sh-catalog .astron-sh-workbench-heading p{font-size:13px;line-height:18px;color:var(--astron-sh-secondary);margin:4px 0 0}
     .skillhub-controls.astron-sh-catalog .astron-sh-catalog-source-label{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--astron-sh-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:35%}

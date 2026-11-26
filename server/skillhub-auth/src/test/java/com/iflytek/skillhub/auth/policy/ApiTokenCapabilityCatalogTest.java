@@ -51,7 +51,7 @@ class ApiTokenCapabilityCatalogTest {
             Policy original = baseline.get(key);
             if (original == null) {
                 assertTrue(additions.contains(key), "Unclassified new policy: " + key);
-                assertEquals("skill:read", policy.requiredScope(), key);
+                assertEquals(ACCOUNT_ROUTES.getOrDefault(key, "skill:read"), policy.requiredScope(), key);
             } else {
                 String expected = "skill:publish".equals(original.scope())
                         ? replacement(original) : original.scope();
@@ -81,7 +81,7 @@ class ApiTokenCapabilityCatalogTest {
     }
 
     @Test
-    void allLegacyScopeCombinationsPreserveTheAllowSetExceptExplicitReadAdditions() throws Exception {
+    void allLegacyScopeCombinationsPreserveTheAllowSetExceptExplicitAdditions() throws Exception {
         List<Policy> baseline = baseline();
         List<String> oldScopes = List.of("skill:read", "skill:publish", "skill:delete", "token:manage");
         Set<String> requests = new HashSet<>(additions());
@@ -105,7 +105,10 @@ class ApiTokenCapabilityCatalogTest {
                 boolean before = oldAllowed(baseline, parts[0], path, stored);
                 boolean after = scopes.authorize(parts[0], path, stored).allowed();
                 if (additions().stream().anyMatch(key -> matchesRequest(key, parts[0], path))) {
-                    assertEquals(stored.contains("skill:read"), after, request + " " + stored);
+                    String required = ACCOUNT_ROUTES.entrySet().stream()
+                            .filter(entry -> matchesRequest(entry.getKey(), parts[0], path))
+                            .map(Map.Entry::getValue).findFirst().orElse("skill:read");
+                    assertEquals(stored.contains(required), after, request + " " + stored);
                 } else {
                     assertEquals(before, after, request + " " + stored);
                 }
@@ -151,6 +154,14 @@ class ApiTokenCapabilityCatalogTest {
         return "skill:submit";
     }
 
+    private static final Map<String, String> ACCOUNT_ROUTES = Map.of(
+            "GET /api/v1/me/skills", "skill:read",
+            "GET /api/v1/namespaces/*/members", "namespace:read",
+            "GET /api/v1/namespaces/*/member-candidates", "namespace:manage",
+            "POST /api/v1/namespaces/*/members", "namespace:manage",
+            "DELETE /api/v1/namespaces/*/members/*", "namespace:manage",
+            "PUT /api/v1/namespaces/*/members/*/role", "namespace:manage");
+
     private Set<String> additions() {
         Set<String> keys = new HashSet<>();
         for (String prefix : List.of("/api/v1", "/api/web")) {
@@ -159,6 +170,7 @@ class ApiTokenCapabilityCatalogTest {
             keys.add("PUT " + prefix + "/skills/*/subscription");
             keys.add("DELETE " + prefix + "/skills/*/subscription");
         }
+        keys.addAll(ACCOUNT_ROUTES.keySet());
         keys.add("GET /api/cli/v1/github-repositories/*/install-plan");
         keys.add("GET /api/web/github-repositories/*/install-plan");
         return keys;

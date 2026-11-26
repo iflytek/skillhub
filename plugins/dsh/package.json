@@ -1,6 +1,6 @@
 {
   "name": "@astron-team/skillhub-dsh",
-  "version": "0.6.4",
+  "version": "0.7.0",
   "private": false,
   "type": "module",
   "license": "Apache-2.0",
@@ -9,6 +9,7 @@
     "build": "bun run scripts/build.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "test:account-ui": "bun test/integration/account-ui-browser.mjs",
     "probe:registry": "bun run scripts/probe-registry.ts",
     "check": "bun run build && bun run typecheck && bun run lint && bun test",
     "lint": "node ../../cli/node_modules/eslint/bin/eslint.js --resolve-plugins-relative-to ../../cli src scripts test --ext .ts,.tsx,.mjs"
@@ -99,11 +100,12 @@
     "@radix-ui/react-tabs": "1.2.1",
     "@tanstack/react-query": "5.90.21",
     "class-variance-authority": "0.7.1",
+    "fflate": "0.8.3",
     "react-markdown": "10.1.0",
     "rehype-sanitize": "6.0.0",
+    "semver": "7.8.5",
     "yaml": "2.9.1",
-    "zod": "4.6.6",
-    "semver": "7.8.5"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@deepseek-ai/dsh-agent": "0.2.1-rc.2",

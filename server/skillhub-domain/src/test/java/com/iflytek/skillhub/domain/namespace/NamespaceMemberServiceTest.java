@@ -43,6 +43,19 @@ class NamespaceMemberServiceTest {
     private NamespaceMemberService namespaceMemberService;
 
     @Test
+    void ownerCannotBeDemotedByOrdinaryRoleChange() {
+        Namespace ns = new Namespace("team-a", "Team A", "owner");
+        when(namespaceService.getNamespace(1L)).thenReturn(ns);
+        when(namespaceAccessPolicy.canManageMembers(ns)).thenReturn(true);
+        when(namespaceMemberRepository.findByNamespaceIdAndUserId(1L, "owner"))
+                .thenReturn(Optional.of(new NamespaceMember(1L, "owner", NamespaceRole.OWNER)));
+        assertThrows(DomainBadRequestException.class,
+                () -> namespaceMemberService.updateMemberRole(1L, "owner", NamespaceRole.MEMBER, "admin"));
+        verify(namespaceMemberRepository, never()).save(any());
+        verifyNoInteractions(auditLogService);
+    }
+
+    @Test
     void teamAutoPublicationIsAbsentByDefault() {
         NamespaceMember member = new NamespaceMember(1L, "publisher", NamespaceRole.MEMBER);
 
@@ -193,6 +206,8 @@ class NamespaceMemberServiceTest {
         when(namespaceAccessPolicy.canManageMembers(namespace)).thenReturn(true);
         when(namespaceMemberRepository.findByNamespaceIdAndUserId(namespaceId, userId))
                 .thenReturn(Optional.empty());
+        when(userAccountRepository.findById(userId)).thenReturn(Optional.of(
+                new com.iflytek.skillhub.domain.user.UserAccount(userId, "Alice", null, null)));
         when(namespaceMemberRepository.save(any(NamespaceMember.class)))
                 .thenReturn(new NamespaceMember(namespaceId, userId, role));
 
