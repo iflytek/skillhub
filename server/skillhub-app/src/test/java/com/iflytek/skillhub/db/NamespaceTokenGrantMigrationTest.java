@@ -34,7 +34,7 @@ class NamespaceTokenGrantMigrationTest {
                     """);
             try (var rows = stmt.executeQuery("SELECT scope_json, namespace_scopes_issued FROM api_token ORDER BY id")) {
                 assertThat(rows.next()).isTrue();
-                assertThat(rows.getString(1)).isEqualTo("[\"skill:read\"]");
+                assertThat(rows.getString(1)).isEqualTo("[\"skill:read\", \" namespace:manage \", \"namespace:read\"]");
                 assertThat(rows.getBoolean(2)).isFalse();
                 assertThat(rows.next()).isTrue();
                 assertThat(rows.getBoolean(2)).isFalse();
