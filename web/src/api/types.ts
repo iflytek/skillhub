@@ -23,6 +23,22 @@ export interface AuthMethod {
   actionUrl: string
 }
 
+export interface EnterpriseLoginOption {
+  displayName: string
+  actionUrl: string
+}
+
+export interface EnterpriseLoginOrganization {
+  slug: string
+  displayName: string
+  loginOptions: EnterpriseLoginOption[]
+}
+
+export interface EnterpriseLoginDiscovery {
+  publicMethods: AuthMethod[]
+  organizations: EnterpriseLoginOrganization[]
+}
+
 export interface LocalAuthCapabilities {
   passwordLoginEnabled: boolean
   selfRegistrationEnabled: boolean

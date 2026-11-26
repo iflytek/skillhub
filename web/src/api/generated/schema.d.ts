@@ -7219,6 +7219,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/enterprise/discovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["enterpriseDiscovery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/me": {
         parameters: {
             query?: never;
@@ -12627,6 +12643,34 @@ export interface components {
             provider?: string;
             displayName?: string;
             actionUrl?: string;
+        };
+        EnterpriseLoginDiscoveryRequest: {
+            identifier: string;
+            returnTo?: string;
+        };
+        EnterpriseLoginDiscoveryResponse: {
+            publicMethods?: components["schemas"]["AuthMethodResponse"][];
+            organizations?: components["schemas"]["EnterpriseLoginOrganization"][];
+        };
+        EnterpriseLoginOrganization: {
+            slug?: string;
+            displayName?: string;
+            loginOptions?: components["schemas"]["EnterpriseLoginOption"][];
+        };
+        EnterpriseLoginOption: {
+            displayName?: string;
+            actionUrl?: string;
+        };
+        ApiResponseEnterpriseLoginDiscoveryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["EnterpriseLoginDiscoveryResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
         };
         ApiResponseLocalAuthCapabilitiesResponse: {
             /** Format: int32 */
@@ -26312,6 +26356,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseListAuthMethodResponse"];
+                };
+            };
+        };
+    };
+    enterpriseDiscovery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnterpriseLoginDiscoveryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseEnterpriseLoginDiscoveryResponse"];
                 };
             };
         };

@@ -154,6 +154,10 @@ public class LoginConnection {
         return id;
     }
 
+    public String getPublicHandle() {
+        return publicHandle;
+    }
+
     public String getOrganizationId() {
         return organizationId;
     }

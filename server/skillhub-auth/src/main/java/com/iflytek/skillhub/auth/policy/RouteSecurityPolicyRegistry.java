@@ -34,6 +34,7 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/login/oauth2/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/local/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/device/**"),
+            RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/enterprise/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/check"),
             RouteAuthorizationPolicy.permitAll(null, "/actuator/health"),
             RouteAuthorizationPolicy.permitAll(null, "/v3/api-docs/**"),
@@ -345,6 +346,7 @@ public class RouteSecurityPolicyRegistry {
             "ANY /api/v1/auth/session/bootstrap",
             "ANY /api/v1/auth/direct/login",
             "ANY /api/v1/auth/local/**",
+            "ANY /api/v1/auth/enterprise/**",
             "ANY /api/v1/admin/**",
             "GET /api/web/github-repositories",
             "GET /api/web/github-repositories/*",
@@ -455,7 +457,8 @@ public class RouteSecurityPolicyRegistry {
             return false;
         }
         return "/api/v1/auth/device/code".equals(path)
-                || "/api/v1/auth/device/token".equals(path);
+                || "/api/v1/auth/device/token".equals(path)
+                || "/api/v1/auth/enterprise/discovery".equals(path);
     }
 
     public boolean shouldProjectRequestContext(String path) {

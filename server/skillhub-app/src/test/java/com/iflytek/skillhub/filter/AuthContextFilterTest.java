@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.session.IdentitySessionOriginGuard;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -44,6 +45,7 @@ class AuthContextFilterTest {
 
     private final NamespaceMemberRepository namespaceMemberRepository = mock(NamespaceMemberRepository.class);
     private final UserAccountRepository userAccountRepository = mock(UserAccountRepository.class);
+    private final IdentitySessionOriginGuard identitySessionOriginGuard = mock(IdentitySessionOriginGuard.class);
     private final AuthContextFilter filter;
 
     AuthContextFilterTest() {
@@ -58,8 +60,11 @@ class AuthContextFilterTest {
                 apiResponseFactory,
                 new ObjectMapper().registerModule(new JavaTimeModule()),
                 true,
-                new RouteSecurityPolicyRegistry()
+                new RouteSecurityPolicyRegistry(),
+                identitySessionOriginGuard
         );
+        when(identitySessionOriginGuard.isAllowed(org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any())).thenReturn(true);
     }
 
     @AfterEach

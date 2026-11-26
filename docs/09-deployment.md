@@ -367,11 +367,15 @@ services:
 - `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO`
   - 是否在登录页加载后自动尝试一次 bootstrap
   - 建议私有版初期保持 `false`
+- `SKILLHUB_WEB_AUTH_ENTERPRISE_OIDC_ENABLED`
+  - 是否在登录页显示组织标识查找和 OIDC 连接入口
+  - 只有在后端 `SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED=true` 且组织在 allowlist 中时才会实际跳转
 
 注意：
 
 - 前端密码兼容层打开之前，后端仍必须同步打开 `skillhub.auth.direct.enabled=true`
 - 前端开关打开之前，后端仍必须同步打开 `skillhub.auth.session-bootstrap.enabled=true`
+- 组织 OIDC 入口打开之前，后端必须同步打开 `SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED=true`，并配置回调地址、密钥和组织 allowlist
 - 前后端任一侧未开启，都不会破坏原有登录方式；只会使该兼容入口不可用或不显示
 
 开发环境：

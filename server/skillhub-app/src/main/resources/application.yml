@@ -214,6 +214,9 @@ skillhub:
     sentinel:
       check-sentinels-list: ${SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST:true}
   enterprise:
+    oidc-login-enabled: ${SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED:false}
+    oidc-callback-base-uri: ${SKILLHUB_ENTERPRISE_OIDC_CALLBACK_BASE_URI:}
+    organization-allowlist: ${SKILLHUB_ENTERPRISE_ORGANIZATION_ALLOWLIST:}
     oidc:
       enabled: ${SKILLHUB_ENTERPRISE_OIDC_ENABLED:false}
       private-host-allowlist: ${SKILLHUB_ENTERPRISE_OIDC_PRIVATE_HOST_ALLOWLIST:}
