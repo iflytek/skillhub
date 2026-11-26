@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { getBaseUrl, isPortableSkillVersion } from '@/features/skill/install-command'
+import { SuiteExplanation } from '@/features/suite/suite-explanation'
 import { SuiteMemberTable } from '@/features/suite/suite-member-table'
 import { SuiteVersionLedger } from '@/features/suite/suite-version-ledger'
 import { withoutDuplicateSuiteTitle } from '@/features/suite/suite-overview'
@@ -160,6 +161,7 @@ export function SuiteDetailPage() {
         <TabsContent value="overview" className="mt-4">
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_17rem]">
             <article className="min-w-0">
+              {suite.explanationAvailable && <SuiteExplanation suite={suite} />}
               {suite.overview ? (
                 <MarkdownRenderer content={withoutDuplicateSuiteTitle(suite.overview, suite.displayName)} />
               ) : (

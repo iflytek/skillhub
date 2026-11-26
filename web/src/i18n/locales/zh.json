@@ -3462,6 +3462,9 @@
     "restoreErrorTitle": "恢复命名空间失败"
   },
   "suite": {
+    "explainWithAi": "让 AI 解释这个套件",
+    "explanationLoading": "正在生成解释…",
+    "explanationFailed": "暂时无法生成解释，请稍后重试。",
     "workspace": {
       "description": "管理套件、查看版本与创建进度。",
       "searchLabel": "搜索我的套件",

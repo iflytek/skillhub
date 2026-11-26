@@ -3466,6 +3466,9 @@
     "restoreErrorTitle": "Failed to restore namespace"
   },
   "suite": {
+    "explainWithAi": "Explain this suite with AI",
+    "explanationLoading": "Generating explanation…",
+    "explanationFailed": "The explanation is unavailable. Try again later.",
     "workspace": {
       "description": "Manage suites, versions and creation progress.",
       "searchLabel": "Search my suites",

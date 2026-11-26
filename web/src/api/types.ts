@@ -563,7 +563,7 @@ type GeneratedSuite = components['schemas']['SkillSuiteResponse']
 export type SkillSuite = Omit<
   RequiredGenerated<
     GeneratedSuite,
-    'summary' | 'overview' | 'changelog' | 'createdByName' | 'publishedAt' | 'yankedAt'
+    'explanationAvailable' | 'summary' | 'overview' | 'changelog' | 'createdByName' | 'publishedAt' | 'yankedAt'
   >,
   'members'
 > & {
