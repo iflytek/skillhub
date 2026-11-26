@@ -4,7 +4,7 @@ import styles from './my-skills.module.css'
 import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { copyToClipboard } from '@/shared/lib/clipboard'
 import { SkillVersionCompareContent } from '@/features/skill/skill-version-compare-content'
@@ -27,6 +27,7 @@ import { toast } from '@/shared/lib/toast'
 import { withBasePath } from '@/shared/lib/base-path'
 import { buildReturnTo } from '@/shared/lib/auth-route'
 import { SkillVisibilityDialog } from '@/features/skill/skill-visibility-dialog'
+import { isDeleteSlugConfirmationValid } from '@/features/skill/skill-delete-flow'
 import { SkillAvatar } from '@/features/skill/skill-avatar'
 import { SkillAvatarManager } from '@/features/skill/skill-avatar-manager'
 import { ApiError } from '@/api/client'
@@ -82,6 +83,8 @@ export function MySkillsPage() {
   const scrollKey = JSON.stringify([user?.userId, keyword, namespaceFilter, filter, page])
   const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
+  const [deleteSlugInput, setDeleteSlugInput] = useState('')
+  const [deleteSlugDialogOpen, setDeleteSlugDialogOpen] = useState(false)
   const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [withdrawTarget, setWithdrawTarget] = useState<{ namespace: string; slug: string; name: string; version: string } | null>(null)
   const [promotionTarget, setPromotionTarget] = useState<{ skillId: number; versionId: number; name: string; version: string } | null>(null)
@@ -255,8 +258,13 @@ export function MySkillsPage() {
     }
   }
 
+  const openDeleteSlugDialog = () => {
+    setDeleteSlugInput('')
+    setDeleteSlugDialogOpen(true)
+  }
+
   const handleDeleteSkill = async () => {
-    if (!deleteTarget) {
+    if (!deleteTarget || !isDeleteSlugConfirmationValid(deleteTarget.slug, deleteSlugInput)) {
       return
     }
     try {
@@ -264,15 +272,17 @@ export function MySkillsPage() {
         namespace: deleteTarget.namespace,
         slug: deleteTarget.slug,
       })
-      toast.success(
-        t('mySkills.deleteSuccessTitle'),
-        t('mySkills.deleteSuccessDescription', { skill: deleteTarget.name }),
-      )
-      setDeleteTarget(null)
-    } catch (error) {
-      toast.error(t('mySkills.deleteErrorTitle'), error instanceof Error ? error.message : '')
-      throw error
+    } catch {
+      // MutationCache already reports the failure; consuming the rejection keeps the
+      // dialog open for a retry without a second toast or an unhandled rejection.
+      return
     }
+    toast.success(
+      t('mySkills.deleteSuccessTitle'),
+      t('mySkills.deleteSuccessDescription', { skill: deleteTarget.name }),
+    )
+    setDeleteSlugDialogOpen(false)
+    setDeleteTarget(null)
   }
 
   const handleUnarchiveSkill = async () => {
@@ -475,10 +485,12 @@ export function MySkillsPage() {
                 ? skill.status : preview?.status ?? headlineVersion?.status ?? skill.status
               const writable = !hidden && !ownerReadOnly
               const canChangeVisibility = writable && skill.status === 'ACTIVE' && !!publishedVersion
-              // Permanent deletion is only offered where it is meaningful: archived skills
-              // and skills that never published a version. Active published skills must be
-              // archived first, matching docs/14-skill-lifecycle.md section 4.7.
-              const canHardDelete = writable && (skill.status === 'ARCHIVED' || !publishedVersion)
+              // Permanent deletion is offered only where the backend will accept it: the skill is
+              // archived or never published, and it is not part of a global promotion chain.
+              // A global copy and a promoted source are both rejected with
+              // promotion.revocation.required until the revocation is approved.
+              const promotionRole = skill.managementState?.promotionRole
+              const canHardDelete = writable && !promotionRole && (skill.status === 'ARCHIVED' || !publishedVersion)
               const coordinate = `@${skill.namespace}/${skill.slug}`
               const visibilityLabel = t(`publish.visibilityOptions.${skill.visibility === 'PRIVATE' ? 'private' : skill.visibility === 'NAMESPACE_ONLY' ? 'namespaceOnly' : 'public'}`)
               const versionLabel = preview && publishedVersion
@@ -709,8 +721,8 @@ export function MySkillsPage() {
         onConfirm={handleUnarchiveSkill}
       />
 
-      <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.delete.confirm" cancelAnalyticsId="skill.delete.cancel"
-        open={!!deleteTarget}
+      <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.delete.continue" cancelAnalyticsId="skill.delete.cancel"
+        open={!!deleteTarget && !deleteSlugDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
             setDeleteTarget(null)
@@ -718,10 +730,51 @@ export function MySkillsPage() {
         }}
         title={t('mySkills.deleteConfirmTitle')}
         description={deleteTarget ? t('mySkills.deleteConfirmDescription', { skill: deleteTarget.name }) : ''}
-        confirmText={t('mySkills.deleteSkill')}
+        confirmText={t('mySkills.deleteSkillContinue')}
         variant="destructive"
-        onConfirm={handleDeleteSkill}
+        // Keep the shared target: the slug step reuses it, so close the first step ourselves.
+        onConfirm={() => {
+          openDeleteSlugDialog()
+          return false
+        }}
       />
+
+      <Dialog onOpenChange={(open) => {
+        setDeleteSlugDialogOpen(open)
+        if (!open) {
+          setDeleteSlugInput('')
+          setDeleteTarget(null)
+        }
+      }} open={deleteSlugDialogOpen}>
+        <DialogContent aria-label={t('mySkills.deleteSkillInputTitle')} closeAnalyticsId="skill.delete.cancel">
+          <DialogHeader>
+            <DialogTitle>{t('mySkills.deleteSkillInputTitle')}</DialogTitle>
+            <DialogDescription>{deleteTarget ? t('mySkills.deleteSkillInputDescription', { slug: deleteTarget.slug }) : ''}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-muted-foreground">
+              {t('mySkills.deleteSkillWarning')}
+            </div>
+            <Input
+              data-testid="delete-skill-slug-input"
+              onChange={(event) => setDeleteSlugInput(event.target.value)}
+              placeholder={t('mySkills.deleteSkillInputPlaceholder')}
+              value={deleteSlugInput}
+            />
+          </div>
+          <DialogFooter>
+            <Button data-analytics-id="skill.delete.cancel" onClick={() => setDeleteSlugDialogOpen(false)} variant="outline">
+              {t('dialog.cancel')}
+            </Button>
+            <Button data-analytics-id="skill.delete.confirm"
+              disabled={!deleteTarget || !isDeleteSlugConfirmationValid(deleteTarget.slug, deleteSlugInput) || deleteMutation.isPending}
+              onClick={handleDeleteSkill}
+              variant="destructive">
+              {deleteMutation.isPending ? t('dialog.processing') : t('mySkills.deleteSkillFinal')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.review.withdraw.confirm" cancelAnalyticsId="skill.review.withdraw.cancel"
         open={!!withdrawTarget}
