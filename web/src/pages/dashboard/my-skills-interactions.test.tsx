@@ -218,6 +218,20 @@ describe('My Skills interactions with real menu and dialog', () => {
     expect(screen.getByRole('dialog', { name: 'mySkills.deleteSkillInputTitle' })).toBeTruthy()
   })
 
+  it('closes the slug step without reopening the first confirmation', async () => {
+    skill = { ...makeSkill(), status: 'ARCHIVED' }
+    render(<MySkillsPage />)
+    await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.deleteSkill' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'mySkills.deleteConfirmTitle' })).getByRole('button', { name: 'mySkills.deleteSkillContinue' }))
+    const slugStep = await screen.findByRole('dialog', { name: 'mySkills.deleteSkillInputTitle' })
+    fireEvent.click(within(slugStep).getByRole('button', { name: 'dialog.cancel' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // The first step must not come back, and reopening the menu starts from scratch.
+    expect(screen.queryByRole('dialog', { name: 'mySkills.deleteConfirmTitle' })).toBeNull()
+    expect(deleteSkill).not.toHaveBeenCalled()
+  })
+
   it('never offers deletion for a global copy or a promoted source skill', async () => {
     for (const promotionRole of ['GLOBAL_COPY', 'TEAM_SOURCE']) {
       skill = { ...makeSkill({ ownerReadOnly: false, promotionRole }), status: 'ARCHIVED' }

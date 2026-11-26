@@ -1446,7 +1446,6 @@
     "deleteConfirmDescription": "\"{{skill}}\"의 모든 버전, 파일 및 다운로드 번들을 제거하며 되돌릴 수 없습니다.",
     "deleteSuccessTitle": "스킬이 삭제되었습니다",
     "deleteSuccessDescription": "\"{{skill}}\"이 영구 삭제되었습니다.",
-    "deleteErrorTitle": "스킬을 삭제하지 못했습니다",
     "deleteSkillContinue": "계속",
     "deleteSkillInputTitle": "확인하려면 스킬 슬러그를 입력하세요",
     "deleteSkillInputDescription": "계속하려면 스킬 슬러그 \"{{slug}}\"를 입력하세요.",

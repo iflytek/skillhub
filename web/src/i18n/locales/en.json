@@ -1458,7 +1458,6 @@
     "deleteConfirmDescription": "This removes every version, file and download bundle for \"{{skill}}\" and cannot be undone.",
     "deleteSuccessTitle": "Skill deleted",
     "deleteSuccessDescription": "\"{{skill}}\" has been permanently deleted.",
-    "deleteErrorTitle": "Failed to delete skill",
     "deleteSkillContinue": "Continue",
     "deleteSkillInputTitle": "Type the skill slug to confirm",
     "deleteSkillInputDescription": "Enter the skill slug \"{{slug}}\" to continue.",

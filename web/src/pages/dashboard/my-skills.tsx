@@ -263,6 +263,12 @@ export function MySkillsPage() {
     setDeleteSlugDialogOpen(true)
   }
 
+  const closeDeleteSlugDialog = () => {
+    setDeleteSlugDialogOpen(false)
+    setDeleteSlugInput('')
+    setDeleteTarget(null)
+  }
+
   const handleDeleteSkill = async () => {
     if (!deleteTarget || !isDeleteSlugConfirmationValid(deleteTarget.slug, deleteSlugInput)) {
       return
@@ -281,8 +287,7 @@ export function MySkillsPage() {
       t('mySkills.deleteSuccessTitle'),
       t('mySkills.deleteSuccessDescription', { skill: deleteTarget.name }),
     )
-    setDeleteSlugDialogOpen(false)
-    setDeleteTarget(null)
+    closeDeleteSlugDialog()
   }
 
   const handleUnarchiveSkill = async () => {
@@ -740,13 +745,13 @@ export function MySkillsPage() {
       />
 
       <Dialog onOpenChange={(open) => {
-        setDeleteSlugDialogOpen(open)
-        if (!open) {
-          setDeleteSlugInput('')
-          setDeleteTarget(null)
+        if (open) {
+          setDeleteSlugDialogOpen(true)
+        } else {
+          closeDeleteSlugDialog()
         }
       }} open={deleteSlugDialogOpen}>
-        <DialogContent aria-label={t('mySkills.deleteSkillInputTitle')} closeAnalyticsId="skill.delete.cancel">
+        <DialogContent aria-label={t('mySkills.deleteSkillInputTitle')} closeAnalyticsId="skill.delete.cancel" onCloseAutoFocus={restoreMoreFocus}>
           <DialogHeader>
             <DialogTitle>{t('mySkills.deleteSkillInputTitle')}</DialogTitle>
             <DialogDescription>{deleteTarget ? t('mySkills.deleteSkillInputDescription', { slug: deleteTarget.slug }) : ''}</DialogDescription>
@@ -763,7 +768,7 @@ export function MySkillsPage() {
             />
           </div>
           <DialogFooter>
-            <Button data-analytics-id="skill.delete.cancel" onClick={() => setDeleteSlugDialogOpen(false)} variant="outline">
+            <Button data-analytics-id="skill.delete.cancel" onClick={closeDeleteSlugDialog} variant="outline">
               {t('dialog.cancel')}
             </Button>
             <Button data-analytics-id="skill.delete.confirm"

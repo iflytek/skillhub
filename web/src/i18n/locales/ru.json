@@ -1452,7 +1452,6 @@
     "deleteConfirmDescription": "Это удалит все версии, файлы и пакеты загрузки для «{{skill}}». Действие нельзя отменить.",
     "deleteSuccessTitle": "Скилл удалён",
     "deleteSuccessDescription": "«{{skill}}» удалён безвозвратно.",
-    "deleteErrorTitle": "Не удалось удалить скилл",
     "deleteSkillContinue": "Продолжить",
     "deleteSkillInputTitle": "Введите slug скилла для подтверждения",
     "deleteSkillInputDescription": "Введите slug скилла «{{slug}}», чтобы продолжить.",

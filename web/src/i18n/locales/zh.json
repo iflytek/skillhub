@@ -1456,7 +1456,6 @@
     "deleteConfirmDescription": "这将移除“{{skill}}”的所有版本、文件与下载包，且不可恢复。",
     "deleteSuccessTitle": "技能已删除",
     "deleteSuccessDescription": "“{{skill}}”已被永久删除。",
-    "deleteErrorTitle": "删除技能失败",
     "deleteSkillContinue": "继续删除",
     "deleteSkillInputTitle": "输入技能标识以确认删除",
     "deleteSkillInputDescription": "请输入技能 slug“{{slug}}”后继续。",
