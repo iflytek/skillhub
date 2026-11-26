@@ -3452,6 +3452,9 @@
     "restoreErrorTitle": "네임스페이스를 복원하지 못했습니다"
   },
   "suite": {
+    "explainWithAi": "AI로 이 스위트 설명하기",
+    "explanationLoading": "설명 생성 중…",
+    "explanationFailed": "설명을 생성할 수 없습니다. 잠시 후 다시 시도하세요.",
     "workspace": {
       "description": "스킬 모음, 버전, 생성 진행 상황을 관리하세요.",
       "searchLabel": "내 스킬 모음 검색",

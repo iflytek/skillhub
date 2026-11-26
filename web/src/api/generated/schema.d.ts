@@ -1329,6 +1329,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/suites/{namespace}/{slug}/explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Explain a pinned suite using readable member instructions */
+        post: operations["explainSkillSuite"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/suites/reviews/{reviewTaskId}/reject": {
         parameters: {
             query?: never;
@@ -8152,6 +8169,7 @@ export interface components {
             hidden?: boolean;
             allowedActions?: ("EDIT" | "SUBMIT" | "PUBLISH_PRIVATE" | "REOPEN" | "CREATE_VERSION" | "YANK" | "HIDE" | "RESTORE" | "ARCHIVE" | "UNARCHIVE" | "DELETE")[];
             available?: boolean;
+            explanationAvailable?: boolean;
             members?: components["schemas"]["SkillSuiteMemberResponse"][];
         };
         ApiResponseSkillLabelDto: {
@@ -9113,6 +9131,30 @@ export interface components {
             version?: string;
             fingerprint?: string;
             members?: components["schemas"]["SkillSuiteInstallMemberResponse"][];
+        };
+        ApiResponseExplanation: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["Explanation"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        Explanation: {
+            statements?: components["schemas"]["Statement"][];
+        };
+        Source: {
+            namespace?: string;
+            slug?: string;
+            version?: string;
+            suite?: boolean;
+        };
+        Statement: {
+            text?: string;
+            sources?: components["schemas"]["Source"][];
         };
         SkillSuiteReviewRequest: {
             comment?: string;
@@ -16525,6 +16567,31 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseSkillSuiteInstallPlanResponse"];
+                };
+            };
+        };
+    };
+    explainSkillSuite: {
+        parameters: {
+            query: {
+                version: string;
+            };
+            header?: never;
+            path: {
+                namespace: string;
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseExplanation"];
                 };
             };
         };

@@ -62,6 +62,13 @@ import java.util.stream.Collectors;
 /** Application boundary for resolving Suite inputs and invoking domain workflows. */
 @Service
 public class SkillSuiteAppService {
+    @org.springframework.beans.factory.annotation.Value("${skillhub.suite-explanation.endpoint:}")
+    private String explanationEndpoint = "";
+    @org.springframework.beans.factory.annotation.Value("${skillhub.suite-explanation.model:}")
+    private String explanationModel = "";
+    @org.springframework.beans.factory.annotation.Value("${skillhub.suite-explanation.allow-private:false}")
+    private boolean allowPrivateExplanation;
+
 
     private static final Logger log = LoggerFactory.getLogger(SkillSuiteAppService.class);
 
@@ -393,7 +400,11 @@ public class SkillSuiteAppService {
                 detail.version().getCreatedAt(), detail.version().getPublishedAt(), detail.version().getYankedAt(),
                 detail.version().getVersion(), detail.version().getStatus().name(),
                 detail.version().getVisibility(), detail.suite().getStatus().name(),
-                detail.suite().isHidden(), allowedActions, detail.available(), members);
+                detail.suite().isHidden(), allowedActions, detail.available(),
+                userId != null && !explanationEndpoint.isBlank() && !explanationModel.isBlank()
+                        && (allowPrivateExplanation || (!detail.suite().isHidden()
+                            && detail.version().getVisibility() == SkillVisibility.PUBLIC
+                            && detail.version().getStatus().name().equals("PUBLISHED"))), members);
     }
 
     public SkillSuiteResponse create(
@@ -682,7 +693,7 @@ public class SkillSuiteAppService {
                 created.version().getCreatedAt(), created.version().getPublishedAt(), created.version().getYankedAt(),
                 created.version().getVersion(), created.version().getStatus().name(),
                 created.version().getVisibility(), created.suite().getStatus().name(),
-                created.suite().isHidden(), allowedActions, false, members);
+                created.suite().isHidden(), allowedActions, false, false, members);
     }
 
     private String creatorName(String userId) {

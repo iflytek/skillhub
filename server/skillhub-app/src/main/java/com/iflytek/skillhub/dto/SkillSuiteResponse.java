@@ -29,6 +29,7 @@ public record SkillSuiteResponse(
         boolean hidden,
         Set<SkillSuiteAllowedAction> allowedActions,
         boolean available,
+        boolean explanationAvailable,
         List<SkillSuiteMemberResponse> members
 ) {
 }

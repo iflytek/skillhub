@@ -95,3 +95,9 @@ skillhub suite remove @team/example-suite
 | 成员下架或权限收窄 | 套装快照仍保留，但安装计划会阻止安装；联系维护者发布可安装的新版本 |
 | 卸载显示 `Preserved` | 检查 shared、modified、missing 原因；保留成员不等于卸载失败 |
 | 指定 agent 检查/卸载被拒绝 | 这些选项仅属于 install；后续操作按本地套装记录执行 |
+
+## 解释所选版本
+
+管理员启用 AI 解释后，登录并在套件版本页点击「让 AI 解释这个套件」。每句话附有套件快照或可读成员的固定版本链接。成员指令可以描述交接建议，实际执行取决于宿主。
+
+后端配置 `SKILLHUB_SUITE_EXPLANATION_ENDPOINT`（完整的 OpenAI 兼容聊天补全 URL）、`SKILLHUB_SUITE_EXPLANATION_MODEL` 和服务商要求的 `SKILLHUB_SUITE_EXPLANATION_API_KEY`。远程服务使用 HTTPS。请求包含可见坐标和限长的 SKILL.md 摘录，默认仅发送匿名可读材料。只有当服务商获准处理当前用户可读的受限内容时，才设置 `SKILLHUB_SUITE_EXPLANATION_ALLOW_PRIVATE=true`。后端解析来源，浏览器以纯文本显示解释。

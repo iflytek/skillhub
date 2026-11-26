@@ -95,3 +95,9 @@ Install and upgrade download and verify all members before committing directorie
 | Member withdrawn or access narrowed | Historical pins remain, but the plan blocks installation; ask the maintainer for an installable release |
 | Removal says Preserved | Inspect shared, modified or missing reason; retention does not itself mean failure |
 | Agent option rejected for check/remove | Target options belong to install; later actions use the saved Suite record |
+
+## Explain a selected version
+
+When your administrator enables AI explanations, sign in and choose **Explain this suite with AI** on a suite version. The answer links to the suite snapshot and the readable pinned members that supplied each statement. Member instructions can describe suggested handoffs. Actual execution depends on the host.
+
+Configure the backend with `SKILLHUB_SUITE_EXPLANATION_ENDPOINT` (a full OpenAI-compatible chat completions URL), `SKILLHUB_SUITE_EXPLANATION_MODEL`, and, when required, `SKILLHUB_SUITE_EXPLANATION_API_KEY`. Use HTTPS for remote providers. Requests contain visible coordinates and bounded SKILL.md excerpts. By default the provider receives only anonymously readable evidence. Set `SKILLHUB_SUITE_EXPLANATION_ALLOW_PRIVATE=true` only for a provider approved to process the caller's restricted content. The backend resolves source links and the browser renders the answer as plain text.
