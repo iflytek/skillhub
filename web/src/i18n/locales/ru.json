@@ -1364,6 +1364,30 @@
       "disable": "Отключить это подключение?"
     }
   },
+  "organizationDirectoryConnections": {
+    "title": "Directory provisioning",
+    "description": "Sync organization members with SCIM 2.0.",
+    "create": "Add SCIM connection",
+    "empty": "No directory connections.",
+    "created": "Directory connection created",
+    "saved": "Directory connection updated",
+    "scim": "SCIM 2.0 user directory",
+    "endpoint": "SCIM endpoint",
+    "tokenHint": "The token is shown only after creation or rotation. Save it immediately.",
+    "tokenTitle": "Save the new SCIM token",
+    "copy": "Copy",
+    "secretVersion": "Secret version {{version}}",
+    "activate": "Activate",
+    "suspend": "Suspend",
+    "disable": "Disable",
+    "rotate": "Rotate token",
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "DISABLED": "Disabled"
+    }
+  },
   "overview": {
     "mySkills": "Мои скиллы",
     "mySkillsDesc": "Просмотр и управление опубликованными скиллами",

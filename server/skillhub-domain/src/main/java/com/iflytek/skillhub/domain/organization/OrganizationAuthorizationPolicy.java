@@ -69,6 +69,24 @@ public class OrganizationAuthorizationPolicy {
                             Set.of(OrganizationRole.LOGIN_SECRET_ADMIN)
                     ),
                     Map.entry(
+                            OrganizationAdministrativeAction.VIEW_DIRECTORY_CONNECTIONS,
+                            Set.of(
+                                    OrganizationRole.ORG_OWNER,
+                                    OrganizationRole.IDENTITY_ADMIN,
+                                    OrganizationRole.LOGIN_SECRET_ADMIN,
+                                    OrganizationRole.MEMBER_ADMIN,
+                                    OrganizationRole.ORG_AUDITOR
+                            )
+                    ),
+                    Map.entry(
+                            OrganizationAdministrativeAction.MANAGE_DIRECTORY_CONNECTIONS,
+                            Set.of(OrganizationRole.IDENTITY_ADMIN)
+                    ),
+                    Map.entry(
+                            OrganizationAdministrativeAction.ROTATE_DIRECTORY_SECRETS,
+                            Set.of(OrganizationRole.LOGIN_SECRET_ADMIN)
+                    ),
+                    Map.entry(
                             OrganizationAdministrativeAction.RESOLVE_IDENTITY_CONFLICTS,
                             Set.of(OrganizationRole.IDENTITY_ADMIN)
                     ),

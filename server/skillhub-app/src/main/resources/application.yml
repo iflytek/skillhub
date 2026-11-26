@@ -137,6 +137,10 @@ spring:
             enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
 
 skillhub:
+  identity:
+    directory:
+      enabled: ${SKILLHUB_IDENTITY_DIRECTORY_ENABLED:false}
+      organization-allowlist: ${SKILLHUB_IDENTITY_DIRECTORY_ORGANIZATION_ALLOWLIST:}
   notification:
     email:
       # Seed only when notification.email is absent; subsequent changes use the admin UI.
