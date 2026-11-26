@@ -132,7 +132,7 @@ public class MySkillAppService {
         } else if (normalizedFilter == MySkillFilter.ALL
                 && (keyword == null || keyword.isBlank())
                 && (namespace == null || namespace.isBlank())) {
-            skillPage = skillRepository.findVisibleByOwnerId(userId, PageRequest.of(page, size));
+            skillPage = mySkillQueryRepository.findOwnedReadableSkills(userId, PageRequest.of(page, size));
         } else {
             skillPage = filterSkills(userId, page, size, normalizedFilter, keyword, namespace, platformRoles);
         }
@@ -146,8 +146,9 @@ public class MySkillAppService {
             Map<Long, Skill> skillsById = skillPage.getContent().stream()
                     .collect(java.util.stream.Collectors.toMap(Skill::getId, skill -> skill));
             items = items.stream().map(item -> {
-                var state = managementStates.get(item.id());
                 boolean readOnly = ownerAccess.isReadOnly(skillsById.get(item.id()), userId, platformRoles);
+                // An owner who has left sees only what is public: no pending requests or promotion links.
+                var state = readOnly ? null : managementStates.get(item.id());
                 return item.withManagementState(new SkillSummaryResponse.ManagementState(
                         state == null ? null : state.requestedVisibility(),
                         state == null ? null : state.reviewTaskId(),
@@ -225,12 +226,21 @@ public class MySkillAppService {
         String normalizedKeyword = normalizeKeyword(keyword);
 
         List<Skill> filtered = skills.stream()
+                .filter(this::ownerMayStillRead)
                 .filter(skill -> matchesNamespace(skill, finalNamespaceId))
                 .filter(skill -> matchesKeyword(skill, normalizedKeyword))
                 .filter(skill -> matchesFilter(skill, filter, platformRoles))
                 .toList();
 
         return page(filtered, page, size);
+    }
+
+    /** Mirrors the owned-readable rule of {@link MySkillQueryRepository#findOwnedReadableSkills}. */
+    private boolean ownerMayStillRead(Skill skill) {
+        boolean publiclyReadable = skill.getVisibility() == com.iflytek.skillhub.domain.skill.SkillVisibility.PUBLIC
+                && skill.getStatus() == com.iflytek.skillhub.domain.skill.SkillStatus.ACTIVE
+                && skill.getLatestVersionId() != null;
+        return publiclyReadable || ownerAccess.ownerRetainsAccess(skill);
     }
 
     private Long resolveNamespaceId(String namespace) {
@@ -298,7 +308,8 @@ public class MySkillAppService {
             return false;
         }
 
-        SkillLifecycleProjectionService.Projection projection = skillLifecycleProjectionService.projectForOwnerSummary(skill);
+        SkillLifecycleProjectionService.Projection projection =
+                skillLifecycleProjectionService.projectForViewer(skill, ownerAccess.ownerRetainsAccess(skill));
         SkillLifecycleProjectionService.VersionProjection ownerPreviewVersion = projection.ownerPreviewVersion();
         SkillLifecycleProjectionService.VersionProjection publishedVersion = projection.publishedVersion();
 

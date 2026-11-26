@@ -175,14 +175,15 @@ public class SkillSuiteReferenceQueryRepository {
                                   OR skill_namespace.id IS NULL THEN FALSE
                             WHEN :superAdmin = TRUE THEN TRUE
                             WHEN skill.hidden = TRUE THEN (
-                                 skill.owner_id = :userId
+                                 (skill.owner_id = :userId AND (skill_namespace.type <> 'TEAM' OR skill.namespace_id IN (:memberNamespaceIds)))
                                  OR skill.namespace_id IN (:adminNamespaceIds))
-                            WHEN skill.latest_version_id IS NULL THEN skill.owner_id = :userId
+                            WHEN skill.latest_version_id IS NULL THEN
+                                 (skill.owner_id = :userId AND (skill_namespace.type <> 'TEAM' OR skill.namespace_id IN (:memberNamespaceIds)))
                             WHEN skill.visibility = 'PUBLIC' THEN TRUE
                             WHEN skill.visibility = 'NAMESPACE_ONLY' THEN
                                  skill.namespace_id IN (:memberNamespaceIds)
                             WHEN skill.visibility = 'PRIVATE' THEN (
-                                 skill.owner_id = :userId
+                                 (skill.owner_id = :userId AND (skill_namespace.type <> 'TEAM' OR skill.namespace_id IN (:memberNamespaceIds)))
                                  OR skill.namespace_id IN (:adminNamespaceIds))
                             ELSE FALSE
                        END AS visible,

@@ -1386,7 +1386,7 @@
     "noSummary": "暂无简介",
     "metadataDetails": "技能信息",
     "metadataDetailsFor": "查看“{{skill}}”的完整信息",
-    "ownerReadOnly": "你已不在该空间，只能查看和下载自己的技能，不能修改。",
+    "ownerReadOnly": "你已不在该空间，只能看到其中公开的技能，且不能修改。",
     "updateGlobalVersion": "更新全局版本",
     "viewGlobalCopy": "查看全局副本",
     "viewTeamSource": "查看团队来源",

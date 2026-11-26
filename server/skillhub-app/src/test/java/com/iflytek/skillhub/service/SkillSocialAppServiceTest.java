@@ -23,7 +23,7 @@ class SkillSocialAppServiceTest {
     private final SkillRepository skills = mock(SkillRepository.class);
     private final SkillStarService stars = mock(SkillStarService.class);
     private final SkillRatingService ratings = mock(SkillRatingService.class);
-    private final SkillSocialAppService service = new SkillSocialAppService(skills, new VisibilityChecker(), stars, ratings);
+    private final SkillSocialAppService service = new SkillSocialAppService(skills, new VisibilityChecker(skill -> true), stars, ratings);
     private Skill skill;
 
     @BeforeEach

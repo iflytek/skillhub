@@ -2,7 +2,10 @@ package com.iflytek.skillhub.controller.cli;
 
 import com.iflytek.skillhub.auth.token.ApiTokenService;
 import com.iflytek.skillhub.domain.namespace.Namespace;
+import com.iflytek.skillhub.domain.namespace.NamespaceMember;
+import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
+import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -42,6 +45,8 @@ class CliRestrictedReadAuthorizationIntegrationTest {
     @Autowired ApiTokenService apiTokenService;
     @Autowired UserAccountRepository userAccountRepository;
     @Autowired NamespaceRepository namespaceRepository;
+    @Autowired NamespaceMemberRepository namespaceMemberRepository;
+    @Autowired org.springframework.transaction.PlatformTransactionManager transactionManager;
     @Autowired SkillRepository skillRepository;
     @Autowired SkillVersionRepository skillVersionRepository;
     @Autowired SkillSearchDocumentJpaRepository skillSearchDocumentRepository;
@@ -52,11 +57,13 @@ class CliRestrictedReadAuthorizationIntegrationTest {
     private String version;
     private String ownerToken;
     private String outsiderToken;
+    private Long namespaceId;
+    private String ownerId;
 
     @BeforeEach
     void setUp() {
         String suffix = UUID.randomUUID().toString().replace("-", "");
-        String ownerId = "private-owner-" + suffix;
+        ownerId = "private-owner-" + suffix;
         String outsiderId = "private-outsider-" + suffix;
         namespaceSlug = "private-ns-" + suffix;
         skillSlug = Long.toUnsignedString(UUID.randomUUID().getMostSignificantBits());
@@ -74,6 +81,8 @@ class CliRestrictedReadAuthorizationIntegrationTest {
 
         Namespace namespace = namespaceRepository.save(
                 new Namespace(namespaceSlug, "Private Namespace", ownerId));
+        namespaceId = namespace.getId();
+        namespaceMemberRepository.save(new NamespaceMember(namespace.getId(), ownerId, NamespaceRole.OWNER));
         Skill skill = skillRepository.save(new Skill(
                 namespace.getId(), skillSlug, ownerId, SkillVisibility.PRIVATE));
         SkillVersion published = new SkillVersion(skill.getId(), version, ownerId);
@@ -177,6 +186,16 @@ class CliRestrictedReadAuthorizationIntegrationTest {
                         ownerToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.slug").value(skillSlug));
+    }
+
+    @Test
+    void ownerWhoLeftTheNamespaceCannotResolvePrivateSkillWithStillValidToken() throws Exception {
+        new org.springframework.transaction.support.TransactionTemplate(transactionManager).executeWithoutResult(
+                ignored -> namespaceMemberRepository.deleteByNamespaceIdAndUserId(namespaceId, ownerId));
+        mockMvc.perform(withBearer(
+                        get("/api/cli/v1/skills/{namespace}/{slug}/resolve", namespaceSlug, skillSlug),
+                        ownerToken))
+                .andExpect(status().isForbidden());
     }
 
     private MockHttpServletRequestBuilder withBearer(

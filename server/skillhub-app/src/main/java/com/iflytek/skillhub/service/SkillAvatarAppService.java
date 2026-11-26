@@ -363,9 +363,10 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
                                      Map<Long, NamespaceRole> namespaceRoles, Set<String> platformRoles) {
         SkillAvatarCandidate candidate = findCandidate(candidateId);
         Skill skill = findCandidateSkill(namespaceSlug, slug, candidate);
+        boolean ownerReads = visibility.canReadAsOwner(skill, actor);
         if (!skill.getId().equals(candidate.getSkillId()) || candidate.getObjectKey() == null
-                || candidate.getAudience() == SkillVisibility.PRIVATE && !skill.getOwnerId().equals(actor)
-                || !skill.getOwnerId().equals(actor) && !canReview(skill, actor, namespaceRoles, platformRoles)) {
+                || candidate.getAudience() == SkillVisibility.PRIVATE && !ownerReads
+                || !ownerReads && !canReview(skill, actor, namespaceRoles, platformRoles)) {
             throw notFound();
         }
         return storage.getObject(candidate.getObjectKey());

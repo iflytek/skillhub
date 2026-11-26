@@ -45,7 +45,9 @@ class JpaMySkillQueryRepositoryTest {
         repository = new JpaMySkillQueryRepository(
                 namespaceRepository,
                 promotionRequestRepository,
-                new SkillLifecycleProjectionService(skillVersionRepository)
+                new SkillLifecycleProjectionService(skillVersionRepository),
+                null,
+                skill -> true
         );
     }
 

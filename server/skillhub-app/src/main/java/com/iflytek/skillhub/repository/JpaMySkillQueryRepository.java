@@ -11,6 +11,7 @@ import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import com.iflytek.skillhub.domain.skill.Skill;
+import com.iflytek.skillhub.domain.skill.SkillOwnerAccess;
 import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.service.SkillLifecycleProjectionService;
 import com.iflytek.skillhub.domain.user.UserAccount;
@@ -35,22 +36,51 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
     private final PromotionRequestRepository promotionRequestRepository;
     private final SkillLifecycleProjectionService skillLifecycleProjectionService;
     private final UserAccountRepository userAccountRepository;
-
-    public JpaMySkillQueryRepository(NamespaceRepository namespaceRepository,
-                                     PromotionRequestRepository promotionRequestRepository,
-                                     SkillLifecycleProjectionService skillLifecycleProjectionService) {
-        this(namespaceRepository, promotionRequestRepository, skillLifecycleProjectionService, null);
-    }
+    private final SkillOwnerAccess ownerAccess;
 
     @Autowired
     public JpaMySkillQueryRepository(NamespaceRepository namespaceRepository,
                                      PromotionRequestRepository promotionRequestRepository,
                                      SkillLifecycleProjectionService skillLifecycleProjectionService,
-                                     UserAccountRepository userAccountRepository) {
+                                     UserAccountRepository userAccountRepository,
+                                     SkillOwnerAccess ownerAccess) {
         this.namespaceRepository = namespaceRepository;
         this.promotionRequestRepository = promotionRequestRepository;
         this.skillLifecycleProjectionService = skillLifecycleProjectionService;
         this.userAccountRepository = userAccountRepository;
+        this.ownerAccess = ownerAccess;
+    }
+
+    /** Internal work such as pending reviews is listed only while the owner may read it as the owner. */
+    private static final String OWNER_RETAINS_ACCESS = """
+            (n.type <> 'TEAM'
+             OR EXISTS (SELECT 1 FROM namespace_member m
+                        WHERE m.namespace_id = s.namespace_id AND m.user_id = s.owner_id))
+            """;
+
+    /**
+     * Owned skills the owner may still read. In a TEAM namespace the owner has left, only active public
+     * published skills remain, the same ones anyone can read.
+     */
+    private static final String OWNED_READABLE = "(" + OWNER_RETAINS_ACCESS
+            + " OR (s.visibility = 'PUBLIC' AND s.status = 'ACTIVE' AND s.latest_version_id IS NOT NULL))";
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public org.springframework.data.domain.Page<Skill> findOwnedReadableSkills(String ownerId,
+            org.springframework.data.domain.Pageable pageable) {
+        String from = " FROM skill s JOIN namespace n ON n.id = s.namespace_id"
+                + " WHERE s.owner_id = :ownerId AND s.hidden = FALSE AND " + OWNED_READABLE;
+        var rows = entityManager.createNativeQuery("SELECT s.*" + from + " ORDER BY s.updated_at DESC, s.id DESC",
+                Skill.class);
+        var count = entityManager.createNativeQuery("SELECT COUNT(*)" + from);
+        rows.setParameter("ownerId", ownerId);
+        count.setParameter("ownerId", ownerId);
+        @SuppressWarnings("unchecked")
+        List<Skill> items = rows.setFirstResult((int) pageable.getOffset()).setMaxResults(pageable.getPageSize())
+                .getResultList();
+        return new org.springframework.data.domain.PageImpl<>(items, pageable,
+                ((Number) count.getSingleResult()).longValue());
     }
 
     @Override
@@ -99,6 +129,7 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
     /** Page and count share this read-model predicate, including the existing owner-preview recency rule. */
     private static final String PENDING_FROM_WHERE = """
             FROM skill s
+            JOIN namespace n ON n.id = s.namespace_id
             LEFT JOIN LATERAL (
                 SELECT published.id, published.created_at FROM skill_version published
                 WHERE published.skill_id = s.id AND published.status = 'PUBLISHED'
@@ -113,6 +144,7 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
                 ORDER BY work.created_at DESC, work.id DESC LIMIT 1
             ) preview ON TRUE
             WHERE s.owner_id = :ownerId AND s.hidden = FALSE AND s.status <> 'ARCHIVED'
+              AND """ + OWNER_RETAINS_ACCESS + """
               AND (CAST(:namespaceId AS BIGINT) IS NULL OR s.namespace_id = :namespaceId)
               AND (:keyword = '' OR POSITION(:keyword IN LOWER(COALESCE(s.display_name, ''))) > 0
                    OR POSITION(:keyword IN LOWER(s.slug)) > 0
@@ -225,14 +257,9 @@ public class JpaMySkillQueryRepository implements MySkillQueryRepository {
                                                    Map<Long, Namespace> namespacesById,
                                                    Map<String, UserAccount> ownersById) {
         Namespace namespace = namespacesById.get(skill.getNamespaceId());
+        // Summaries carry no namespace roles, so only the owner, while still allowed, sees unpublished work.
         SkillLifecycleProjectionService.Projection projection = skillLifecycleProjectionService.projectForViewer(
-                skill,
-                currentUserId,
-                Map.of()
-        );
-        if (skill.getOwnerId().equals(currentUserId)) {
-            projection = skillLifecycleProjectionService.projectForOwnerSummary(skill);
-        }
+                skill, skill.getOwnerId().equals(currentUserId) && ownerAccess.ownerRetainsAccess(skill));
         return toSummaryResponse(
                 skill,
                 namespacesById,

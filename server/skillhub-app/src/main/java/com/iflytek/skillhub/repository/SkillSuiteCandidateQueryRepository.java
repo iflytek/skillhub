@@ -68,7 +68,8 @@ public class SkillSuiteCandidateQueryRepository {
                         OR s.visibility = 'PUBLIC'
                         OR (s.visibility = 'NAMESPACE_ONLY' AND s.namespace_id IN (:memberNamespaceIds))
                         OR (s.visibility = 'PRIVATE' AND (
-                            s.owner_id = :userId OR s.namespace_id IN (:adminNamespaceIds)
+                            (s.owner_id = :userId AND (n.type <> 'TEAM' OR s.namespace_id IN (:memberNamespaceIds)))
+                            OR s.namespace_id IN (:adminNamespaceIds)
                         ))
                   )
                   AND (

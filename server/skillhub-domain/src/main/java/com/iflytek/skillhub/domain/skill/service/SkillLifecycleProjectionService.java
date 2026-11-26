@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadata;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillInstallability;
 import com.iflytek.skillhub.domain.skill.SkillVersion;
@@ -75,17 +74,15 @@ public class SkillLifecycleProjectionService {
                 .without(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
     }
 
-    public Projection projectForViewer(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
+    /**
+     * Projects the versions a viewer sees. The newer unpublished preview is included only when the caller has
+     * already established that the viewer may read the skill's internal content.
+     */
+    public Projection projectForViewer(Skill skill, boolean includeOwnerPreview) {
         SkillVersion published = resolvePublishedVersion(skill);
-        SkillVersion preview = canManage(skill, currentUserId, userNsRoles)
+        SkillVersion preview = includeOwnerPreview
                 ? resolveNewerNonPublishedVersion(skill, published)
                 : null;
-        return buildProjection(published, preview);
-    }
-
-    public Projection projectForOwnerSummary(Skill skill) {
-        SkillVersion published = resolvePublishedVersion(skill);
-        SkillVersion preview = resolveNewerNonPublishedVersion(skill, published);
         return buildProjection(published, preview);
     }
 
@@ -155,16 +152,6 @@ public class SkillLifecycleProjectionService {
                 .filter(version -> publishedVersion == null || RECENCY.compare(version, publishedVersion) > 0)
                 .max(RECENCY)
                 .orElse(null);
-    }
-
-    private boolean canManage(Skill skill, String currentUserId, Map<Long, NamespaceRole> userNsRoles) {
-        if (currentUserId == null) {
-            return false;
-        }
-        NamespaceRole role = userNsRoles.get(skill.getNamespaceId());
-        return skill.getOwnerId().equals(currentUserId)
-                || role == NamespaceRole.ADMIN
-                || role == NamespaceRole.OWNER;
     }
 
     private Comparator<SkillVersion> versionComparator() {

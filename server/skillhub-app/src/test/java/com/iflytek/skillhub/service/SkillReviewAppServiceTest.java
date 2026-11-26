@@ -51,7 +51,7 @@ class SkillReviewAppServiceTest {
         service = new SkillReviewAppService(
                 skillRepository,
                 skillVersionRepository,
-                new VisibilityChecker(),
+                new VisibilityChecker(skill -> true),
                 ratingService,
                 queryRepository,
                 auditLogService,

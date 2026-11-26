@@ -30,7 +30,7 @@ class NotificationEmailEligibilityTest {
     NotificationEmailSuiteReviewEligibility suiteReviews = mock(NotificationEmailSuiteReviewEligibility.class);
     // The actual recipient resolver and metadata policy are used; only authoritative storage facts are mocked.
     NotificationEmailEligibility eligibility = new NotificationEmailEligibility(skills, namespaces, accounts, members,
-            subscriptions, new SubscriptionMetadataAccessPolicy(), new RecipientResolver(members, roles), suiteReviews);
+            subscriptions, new SubscriptionMetadataAccessPolicy(new com.iflytek.skillhub.domain.skill.VisibilityChecker(skill -> true)), new RecipientResolver(members, roles), suiteReviews);
     NotificationEmailItem item(String type) {
         var now = Instant.parse("2026-10-22T00:00:00Z");
         return new NotificationEmailItem(

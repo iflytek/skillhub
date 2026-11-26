@@ -83,11 +83,11 @@
   - 若 `hidden=true`：仅 skill owner 或该 namespace 的 `ADMIN` / `OWNER` 可读
   - 若 `latest_version_id is null`：仅 skill owner 可读；即使 `visibility=PUBLIC` 也不会对外公开
   - `PUBLIC`：任意人可读 skill 容器与已发布版本
-  - `NAMESPACE_ONLY`：该 namespace 任意成员及当前技能 owner 可读；owner 被移出 TEAM 空间后保留自己内容的只读访问
+  - `NAMESPACE_ONLY`：该 namespace 任意成员可读；owner 被移出 TEAM 空间后不再凭 owner 身份读取
   - `PRIVATE`：仅 skill owner 或该 namespace 的 `ADMIN` / `OWNER` 可读，普通 `MEMBER` 不可读
 - `owner_id` 表示当前技能所有者，空间角色与技能所有权分别参与授权：
   - 正常账号且仍为 TEAM 空间成员的 owner 按既有规则维护自己的 skill。
-  - 被移出 TEAM 空间但仍是当前 owner 时，可以查看、下载自己的内容，不能凭 owner 身份继续写入；不自动转移技能或所有权。
+  - 被移出 TEAM 空间但仍是当前 owner 时，不能再凭 owner 身份读取或写入：PRIVATE / NAMESPACE_ONLY 内容、未发布版本、草稿和受保护文件均不可访问，公开已发布内容按普通用户读取；不自动转移技能或所有权。
   - 账号正常、重新加入且仍为 owner 时恢复正常维护权限；停用账号继续服从认证层限制。
   - namespace ADMIN/OWNER 与平台角色的既有独立治理、审核权限保持不变，不因本条成为内容作者，也不新增全员覆盖能力。
   - 历史提交人不是当前 owner 时，按普通可见性与已有角色判断访问，不获得永久私有内容读取权。

@@ -293,7 +293,7 @@ class BusinessLogsTransactionTest {
             when(storage.getMetadata("packages/1/2/bundle.zip")).thenReturn(new ObjectMetadata(12, "application/zip", Instant.now()));
             when(storage.generatePresignedUrl(anyString(), any(), anyString())).thenReturn("https://secret-signed-url.invalid/?token=not-exported");
             var service = new SkillDownloadService(namespaces, skills, versions, mock(SkillVersionStatsRepository.class),
-                    mock(SkillFileRepository.class), mock(SkillTagRepository.class), storage, new VisibilityChecker(),
+                    mock(SkillFileRepository.class), mock(SkillTagRepository.class), storage, new VisibilityChecker(owned -> true),
                     context, new SkillSlugResolutionService(skills));
             var response = service.downloadLatest("test", skill.getSlug(), null, java.util.Map.of());
             assertThat(response.presignedUrl()).contains("secret-signed-url");

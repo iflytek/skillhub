@@ -146,6 +146,20 @@ class SkillAvatarAppServiceTest {
     }
 
     @Test
+    void ownerWhoLeftTheTeamCannotReadTheirAvatarCandidate() {
+        when(namespaces.findBySlug("team")).thenReturn(Optional.of(namespace));
+        when(((SkillRepository) skills).findById(11L)).thenReturn(Optional.of(skill));
+        SkillAvatarCandidate candidate = new SkillAvatarCandidate(11L, "owner", "avatar/team.png", "abc",
+                SkillVisibility.NAMESPACE_ONLY, false, false, null);
+        ReflectionTestUtils.setField(candidate, "id", 21L);
+        when(candidates.findById(21L)).thenReturn(Optional.of(candidate));
+        when(visibility.canReadAsOwner(skill, "owner")).thenReturn(false);
+        assertThatThrownBy(() -> service.readCandidate("team", "foo", 21L, "owner", Map.of(), Set.of()))
+                .isInstanceOf(DomainNotFoundException.class);
+        verifyNoInteractions(storage);
+    }
+
+    @Test
     void expandingVisibilityCreatesNewCandidateWithDistinctObjectKey() {
         skill.activateAvatar(21L, SkillVisibility.PRIVATE);
         skill.setLatestVersionId(4L);

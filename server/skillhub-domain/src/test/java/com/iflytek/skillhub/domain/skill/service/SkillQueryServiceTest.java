@@ -4,6 +4,7 @@ import com.iflytek.skillhub.domain.namespace.Namespace;
 import com.iflytek.skillhub.domain.namespace.NamespaceRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.namespace.NamespaceStatus;
+import com.iflytek.skillhub.domain.namespace.NamespaceType;
 import com.iflytek.skillhub.domain.review.PromotionRequestRepository;
 import com.iflytek.skillhub.domain.review.ReviewTask;
 import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
@@ -66,7 +67,7 @@ class SkillQueryServiceTest {
 
     @BeforeEach
     void setUp() {
-        visibilityChecker = new VisibilityChecker();
+        visibilityChecker = new VisibilityChecker(skill -> true);
         skillSlugResolutionService = new SkillSlugResolutionService(skillRepository);
         skillLifecycleProjectionService = new SkillLifecycleProjectionService(skillVersionRepository);
         service = new SkillQueryService(org.mockito.Mockito.mock(com.iflytek.skillhub.domain.skill.SkillOwnerAccessPolicy.class), namespaceRepository,
@@ -84,37 +85,114 @@ class SkillQueryServiceTest {
         );
     }
 
-    @Test
-    void removedOwnerSeesReadOnlyDetailAndRejoiningRestoresManagement() throws Exception {
-        var members = mock(com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository.class);
-        service = new SkillQueryService(new SkillOwnerAccessPolicy(namespaceRepository, members), namespaceRepository,
-                skillRepository, skillVersionRepository, skillFileRepository, skillTagRepository,
-                objectStorageService, visibilityChecker, promotionRequestRepository, reviewTaskRepository,
-                skillSlugResolutionService, skillLifecycleProjectionService, userAccountRepository);
+    private com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository members;
+
+    /** A service whose owner-based reads consult real TEAM membership, as in production. */
+    private SkillQueryService serviceCheckingMembership() {
+        members = mock(com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository.class);
+        var ownerAccess = new SkillOwnerAccessPolicy(namespaceRepository, members);
+        return new SkillQueryService(ownerAccess, namespaceRepository, skillRepository, skillVersionRepository,
+                skillFileRepository, skillTagRepository, objectStorageService, new VisibilityChecker(ownerAccess),
+                promotionRequestRepository, reviewTaskRepository, skillSlugResolutionService,
+                skillLifecycleProjectionService, userAccountRepository);
+    }
+
+    private Skill ownedSkillInNamespace(NamespaceType type, SkillVisibility visibility, boolean published,
+                                        boolean hidden) throws Exception {
         Namespace namespace = new Namespace("team", "Team", "admin");
+        namespace.setType(type);
         setId(namespace, 1L);
-        Skill skill = new Skill(1L, "owned", "owner", SkillVisibility.NAMESPACE_ONLY);
+        Skill skill = new Skill(1L, "owned", "owner", visibility);
         setId(skill, 9L);
-        skill.setLatestVersionId(10L);
+        skill.setHidden(hidden);
         SkillVersion version = new SkillVersion(9L, "1.0.0", "owner");
         setId(version, 10L);
-        version.setStatus(SkillVersionStatus.PUBLISHED);
-        when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
-        when(namespaceRepository.findById(1L)).thenReturn(Optional.of(namespace));
-        when(skillRepository.findByNamespaceIdAndSlug(1L, "owned")).thenReturn(List.of(skill));
-        when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
+        version.setStatus(published ? SkillVersionStatus.PUBLISHED : SkillVersionStatus.DRAFT);
+        if (published) {
+            skill.setLatestVersionId(10L);
+        }
+        lenient().when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
+        lenient().when(namespaceRepository.findById(1L)).thenReturn(Optional.of(namespace));
+        lenient().when(skillRepository.findByNamespaceIdAndSlug(1L, "owned")).thenReturn(List.of(skill));
+        lenient().when(skillVersionRepository.findById(10L)).thenReturn(Optional.of(version));
+        lenient().when(skillVersionRepository.findBySkillId(9L)).thenReturn(List.of(version));
+        lenient().when(skillVersionRepository.findBySkillIdAndStatus(9L, SkillVersionStatus.PUBLISHED))
+                .thenReturn(published ? List.of(version) : List.of());
+        return skill;
+    }
 
-        var removed = service.getSkillDetail("team", "owned", "owner", Map.of());
-        assertTrue(removed.ownerReadOnly());
-        assertFalse(removed.canManageLifecycle());
-        assertFalse(removed.canSubmitPromotion());
-        assertEquals("1.0.0", removed.headlineVersion().version());
+    static java.util.stream.Stream<org.junit.jupiter.params.provider.Arguments> internalSkillStates() {
+        return java.util.stream.Stream.of(
+                org.junit.jupiter.params.provider.Arguments.of(SkillVisibility.NAMESPACE_ONLY, true, false),
+                org.junit.jupiter.params.provider.Arguments.of(SkillVisibility.PRIVATE, true, false),
+                org.junit.jupiter.params.provider.Arguments.of(SkillVisibility.PUBLIC, false, false),
+                org.junit.jupiter.params.provider.Arguments.of(SkillVisibility.PUBLIC, true, true));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest(name = "{0}, published={1}, hidden={2}")
+    @org.junit.jupiter.params.provider.MethodSource("internalSkillStates")
+    void removedTeamOwnerLosesInternalReadsUntilRejoining(SkillVisibility visibility, boolean published,
+                                                          boolean hidden) throws Exception {
+        service = serviceCheckingMembership();
+        ownedSkillInNamespace(NamespaceType.TEAM, visibility, published, hidden);
+        when(members.findByNamespaceIdAndUserId(1L, "owner")).thenReturn(Optional.empty());
+
+        var detailDenied = assertThrows(DomainForbiddenException.class,
+                () -> service.getSkillDetail("team", "owned", "owner", Map.of()));
+        assertEquals("error.skill.owner.membershipEnded", detailDenied.messageCode());
+        var versionsDenied = assertThrows(DomainForbiddenException.class,
+                () -> service.listVersions("team", "owned", "owner", Map.of(), PageRequest.of(0, 10)));
+        assertEquals("error.skill.owner.membershipEnded", versionsDenied.messageCode());
+
         when(members.findByNamespaceIdAndUserId(1L, "owner"))
                 .thenReturn(Optional.of(mock(com.iflytek.skillhub.domain.namespace.NamespaceMember.class)));
         var rejoined = service.getSkillDetail("team", "owned", "owner", Map.of(1L, NamespaceRole.MEMBER));
         assertFalse(rejoined.ownerReadOnly());
         assertTrue(rejoined.canManageLifecycle());
-        assertTrue(rejoined.canSubmitPromotion());
+    }
+
+    @Test
+    void removedTeamOwnerReadsPublicPublishedVersionLikeAnyoneElse() throws Exception {
+        service = serviceCheckingMembership();
+        Skill skill = ownedSkillInNamespace(NamespaceType.TEAM, SkillVisibility.PUBLIC, true, false);
+        skill.setStatus(SkillStatus.ACTIVE);
+        SkillVersion published = skillVersionRepository.findById(10L).orElseThrow();
+        published.setDownloadReady(true);
+        setField(published, "createdAt", Instant.parse("2026-01-01T00:00:00Z"));
+        SkillVersion draft = new SkillVersion(9L, "1.1.0", "owner");
+        setId(draft, 11L);
+        draft.setStatus(SkillVersionStatus.DRAFT);
+        setField(draft, "createdAt", Instant.parse("2026-02-01T00:00:00Z"));
+        // Only a reader of internal content would list the draft.
+        lenient().when(skillVersionRepository.findBySkillId(9L)).thenReturn(List.of(published, draft));
+        when(members.findByNamespaceIdAndUserId(1L, "owner")).thenReturn(Optional.empty());
+        lenient().when(skillRepository.findById(9L)).thenReturn(Optional.of(skill));
+        lenient().when(objectStorageService.exists(anyString())).thenReturn(true);
+
+        var detail = service.getSkillDetail("team", "owned", "owner", Map.of());
+        assertTrue(detail.ownerReadOnly());
+        assertFalse(detail.canManageLifecycle());
+        assertNull(detail.ownerPreviewVersion());
+        assertEquals("1.0.0", detail.headlineVersion().version());
+        assertEquals(List.of("1.0.0"), service.listVersions("team", "owned", "owner", Map.of(), PageRequest.of(0, 10))
+                .getContent().stream().map(SkillVersion::getVersion).toList());
+        assertFalse(service.isDownloadAvailable(draft, "owner"));
+    }
+
+    @Test
+    void globalOwnerKeepsOwnerReadsWithoutNamespaceMembership() throws Exception {
+        service = serviceCheckingMembership();
+        ownedSkillInNamespace(NamespaceType.GLOBAL, SkillVisibility.PRIVATE, true, false);
+
+        var detail = service.getSkillDetail("team", "owned", "owner", Map.of());
+        assertFalse(detail.ownerReadOnly());
+        verifyNoInteractions(members);
+    }
+
+    private void setField(Object target, String name, Object value) throws Exception {
+        Field field = target.getClass().getDeclaredField(name);
+        field.setAccessible(true);
+        field.set(target, value);
     }
 
     @Test

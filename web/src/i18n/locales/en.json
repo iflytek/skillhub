@@ -1387,7 +1387,7 @@
     "noSummary": "No summary",
     "metadataDetails": "Skill info",
     "metadataDetailsFor": "View full information for {{skill}}",
-    "ownerReadOnly": "You are no longer a member of this space. You can view and download your skills, but cannot modify them.",
+    "ownerReadOnly": "You are no longer a member of this space. You can see only its public skills, and you cannot change them.",
     "updateGlobalVersion": "Update global version",
     "viewGlobalCopy": "View global copy",
     "viewTeamSource": "View team source",

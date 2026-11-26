@@ -17,10 +17,6 @@ import org.springframework.stereotype.Component;
 public class SubscriptionMetadataAccessPolicy {
     private final VisibilityChecker visibilityChecker;
 
-    public SubscriptionMetadataAccessPolicy() {
-        this(new VisibilityChecker());
-    }
-
     @Autowired
     public SubscriptionMetadataAccessPolicy(VisibilityChecker visibilityChecker) {
         this.visibilityChecker = visibilityChecker;
@@ -54,7 +50,7 @@ public class SubscriptionMetadataAccessPolicy {
         if (namespace.getStatus() == NamespaceStatus.ARCHIVED && role == null) {
             return false;
         }
-        boolean owner = skill.getOwnerId().equals(account.getId());
+        boolean owner = visibilityChecker.canReadAsOwner(skill, account.getId());
         boolean manager = role == NamespaceRole.ADMIN || role == NamespaceRole.OWNER;
         if (skill.isHidden()) {
             return owner || manager;
@@ -71,10 +67,8 @@ public class SubscriptionMetadataAccessPolicy {
 
     private boolean isOwnerOrManager(Skill skill, UserAccount account,
                                      Map<Long, NamespaceRole> namespaceRoles) {
-        if (skill.getOwnerId().equals(account.getId())) {
-            return true;
-        }
         NamespaceRole role = namespaceRoles == null ? null : namespaceRoles.get(skill.getNamespaceId());
-        return role == NamespaceRole.ADMIN || role == NamespaceRole.OWNER;
+        return role == NamespaceRole.ADMIN || role == NamespaceRole.OWNER
+                || visibilityChecker.canReadAsOwner(skill, account.getId());
     }
 }

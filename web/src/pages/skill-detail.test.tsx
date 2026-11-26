@@ -102,6 +102,8 @@ vi.mock('@/api/client', () => ({
   },
   ApiError: class ApiError extends Error {
     serverMessageKey?: string
+    serverMessage?: string
+    status?: number
   },
   buildApiUrl: (value: string) => value,
   WEB_API_PREFIX: '/api/web',
@@ -365,20 +367,25 @@ describe('SkillDetailPage', () => {
     expect(download.hasAttribute('disabled')).toBe(true)
   })
 
-  it('shows the removed owner read-only reason and keeps controlled draft download without write controls', () => {
+  it('shows a removed owner only the public release, with the reason and no write controls', () => {
     useSkillDetailMock.mockReturnValue({ data: createSkill({
       ownerReadOnly: true, canManageLifecycle: false, canSubmitPromotion: false,
-      resolutionMode: 'OWNER_PREVIEW', headlineVersion: { id: 11, version: '1.1.0', status: 'PENDING_REVIEW' },
-      ownerPreviewVersion: { id: 11, version: '1.1.0', status: 'PENDING_REVIEW' },
     }), isLoading: false, isFetching: false, error: null })
-    useSkillVersionsMock.mockReturnValue({ data: [{ id: 11, version: '1.1.0', status: 'PENDING_REVIEW', downloadAvailable: true }] })
     render(<SkillDetailPage />)
     expect(screen.getByText('mySkills.ownerReadOnly')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'skillDetail.download' }).hasAttribute('disabled')).toBe(false)
     expect(screen.queryByRole('button', { name: 'skillDetail.deleteSkill' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'skillDetail.rereleaseVersion' })).toBeNull()
-    expect(screen.getByRole('button', { name: 'skillDetail.withdrawReview' }).hasAttribute('disabled')).toBe(true)
     expect(screen.queryByText('skillDetail.lifecycle')).toBeNull()
+  })
+
+  it('explains that access ended when a removed owner opens an internal skill', () => {
+    const denied = new ApiError('HTTP 403', 403, 'Your access to skill demo-skill ended when you left its namespace.')
+    denied.status = 403
+    denied.serverMessage = 'Your access to skill demo-skill ended when you left its namespace.'
+    useSkillDetailMock.mockReturnValue({ data: undefined, isLoading: false, isFetching: false, error: denied })
+    render(<SkillDetailPage />)
+    expect(screen.getByText('skillDetail.accessDenied')).toBeTruthy()
+    expect(screen.getByText('Your access to skill demo-skill ended when you left its namespace.')).toBeTruthy()
   })
 
   it('consumes protected deletion failures at the actual button boundary and allows retry', async () => {

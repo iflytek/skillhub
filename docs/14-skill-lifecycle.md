@@ -69,7 +69,7 @@ Status: contract reference with documented implementation exception
 - 默认公开展示、安装与搜索以最新已发布版本为候选；显式版本或自定义标签可指向其他 `PUBLISHED` 版本，仍须通过入口授权与就绪检查
 - owner 详情页只有在不存在 `publishedVersion` 时，才允许 `headlineVersion = ownerPreviewVersion`
 - compat latest 和默认公开下载采用最新已发布版本语义；promotion 可选择来源 skill 的任一 `PUBLISHED` 版本，不要求等于 `publishedVersion`。原始指针与各入口解析差异见第 3.1 节
-- 管理者的授权预览下载与公开分发不同：owner 或 namespace ADMIN/OWNER 可下载 `UPLOADED` / `PENDING_REVIEW`，当前 owner 另可受控下载自己的 `DRAFT` / `REJECTED`，仍须通过 Skill 可见性、文件就绪及其他安全检查；不因此放行 `SCANNING` / `SCAN_FAILED` / `YANKED` 或公开分发未发布版本。常规 `downloadLatest` 读取原始指针后也使用相同版本授权判断，因此 PRIVATE 指针例外下，默认下载不一定是已发布版本；该行为不授予公众访问权。
+- 管理者的授权预览下载与公开分发不同：owner 或 namespace ADMIN/OWNER 可下载 `UPLOADED` / `PENDING_REVIEW`，当前 owner 另可受控下载自己的 `DRAFT` / `REJECTED`（TEAM 空间中仅限仍为成员时），仍须通过 Skill 可见性、文件就绪及其他安全检查；不因此放行 `SCANNING` / `SCAN_FAILED` / `YANKED` 或公开分发未发布版本。常规 `downloadLatest` 读取原始指针后也使用相同版本授权判断，因此 PRIVATE 指针例外下，默认下载不一定是已发布版本；该行为不授予公众访问权。
 - 已发布版本可安装还要求 `downloadReady=true`、`yankedAt=null`；下载要求容器为 `ACTIVE`，元数据可读不等于可下载
 
 ## 4. 代码实际链路
@@ -176,7 +176,7 @@ Status: contract reference with documented implementation exception
 
 ### TEAM 成员移除后的当前所有者
 
-账号正常但已不是 TEAM 成员的当前技能所有者，保留自己的技能、私有内容、草稿及历史版本的查看和受控下载权限，不能凭所有者身份执行以下写操作。成员移除不删除技能、不迁移地址、不改 owner、不自动撤回待审核申请；既有审核人继续按原安全与审核规则处理。重新加入且账号正常、所有权未变时恢复原有维护权限。
+已不是 TEAM 成员的当前技能所有者，不能再凭所有者身份读取该技能的内部内容（PRIVATE / NAMESPACE_ONLY 内容、未发布版本、草稿、受保护文件），也不能执行以下写操作；公开已发布内容按普通用户规则读取。拒绝时提示访问已随离开空间而结束。移除前已签发的预签名下载链接在其有效期（技能包下载固定为 10 分钟）内仍可能可用，已下载的文件无法收回。成员移除不删除技能、不迁移地址、不改 owner、不自动撤回待审核申请；既有审核人继续按原安全与审核规则处理。重新加入且账号正常、所有权未变时恢复原有维护权限。
 
 本条只收紧普通 owner 的成员边界，空间／平台管理员的原有独立权限不变；其他空间和 GLOBAL 原有规则不变。账号停用仍由原认证机制拒绝，不能通过 owner 匹配绕过。以下各行中的 owner 写权限均以这条成员边界为前提，不影响管理员独立路径。
 

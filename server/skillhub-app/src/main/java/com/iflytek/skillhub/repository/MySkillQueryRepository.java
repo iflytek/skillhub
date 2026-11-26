@@ -15,6 +15,10 @@ public interface MySkillQueryRepository {
 
     List<SkillSummaryResponse> getSkillSummaries(List<Skill> skills, String currentUserId);
 
+    /** The owner's non-hidden skills that the owner may still read, newest first. */
+    org.springframework.data.domain.Page<Skill> findOwnedReadableSkills(String ownerId,
+            org.springframework.data.domain.Pageable pageable);
+
     org.springframework.data.domain.Page<Skill> findPendingSkills(String ownerId, String keyword,
             Long namespaceId, org.springframework.data.domain.Pageable pageable);
 

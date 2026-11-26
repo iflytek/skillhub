@@ -182,10 +182,18 @@ class ReviewPermissionCheckerTest {
     }
 
     @Test
-    void submitterCanReadOwnReview() {
+    void submitterCanReadOwnReviewWhileAMember() {
         ReviewTask task = new ReviewTask(1L, 10L, "user-1");
         assertTrue(checker.canReadReview(task, "user-1",
-                NamespaceType.TEAM, Map.of(), Set.of()));
+                NamespaceType.TEAM, Map.of(10L, NamespaceRole.MEMBER), Set.of()));
+    }
+
+    @Test
+    void submitterWhoLeftTheTeamCannotReadOwnReview() {
+        ReviewTask task = new ReviewTask(1L, 10L, "user-1");
+        assertFalse(checker.canReadReview(task, "user-1", NamespaceType.TEAM, Map.of(), Set.of()));
+        assertTrue(checker.canReadReview(task, "user-1", NamespaceType.TEAM, Map.of(), Set.of("SUPER_ADMIN")));
+        assertTrue(checker.canReadReview(task, "user-1", NamespaceType.GLOBAL, Map.of(), Set.of()));
     }
 
     @Test

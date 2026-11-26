@@ -46,7 +46,7 @@ class MySkillManagementPostgresTest {
     Namespace global;
     @BeforeEach void setup() {
         query = new JpaMySkillQueryRepository(mock(NamespaceRepository.class), mock(PromotionRequestRepository.class),
-                mock(SkillLifecycleProjectionService.class));
+                mock(SkillLifecycleProjectionService.class), null, skill -> true);
         ReflectionTestUtils.setField(query, "entityManager", entities);
         entities.persist(new UserAccount("owner", "Owner", "owner@example.test", null));
         entities.persist(new UserAccount("other", "Other", "other@example.test", null));
@@ -127,6 +127,7 @@ class MySkillManagementPostgresTest {
         assertThat(hidden.relatedSlug()).isNull();
     }
     @Test void pendingFilterPagesAndCountsScopeAndContentOnceAndRespectsOwnership() {
+        entities.persist(new NamespaceMember(team.getId(), "owner", NamespaceRole.OWNER));
         Skill scope = skill(team, "scope-only");
         Skill content = skill(team, "content-only");
         Skill both = skill(team, "both-pending");
@@ -135,6 +136,7 @@ class MySkillManagementPostgresTest {
         Skill settled = skill(team, "settled");
         Namespace elsewhere = new Namespace("elsewhere", "Elsewhere", "owner");
         entities.persist(elsewhere);
+        entities.persist(new NamespaceMember(elsewhere.getId(), "owner", NamespaceRole.OWNER));
         Skill outside = skill(elsewhere, "outside-namespace");
         for (Skill skill : List.of(scope, content, both, foreign, settled, outside)) {
             ReflectionTestUtils.setField(skill, "updatedAt", java.time.Instant.parse("2026-10-15T00:00:00Z"));
@@ -174,7 +176,46 @@ class MySkillManagementPostgresTest {
         entities.flush();
         assertThat(query.findPendingSkills("owner", null, team.getId(), org.springframework.data.domain.PageRequest.of(0, 10)).getTotalElements()).isEqualTo(2);
     }
+    @Test void ownerWhoLeftATeamListsOnlyItsPublicPublishedSkillsAndNoPendingWork() {
+        Namespace left = new Namespace("management-left", "Left", "other");
+        entities.persist(left);
+        Skill privateSkill = published(skill(left, "left-private"));
+        Skill publicSkill = published(skill(left, "left-public"));
+        publicSkill.setVisibility(SkillVisibility.PUBLIC);
+        Skill publicWithoutRelease = skill(left, "left-public-unreleased");
+        publicWithoutRelease.setVisibility(SkillVisibility.PUBLIC);
+        SkillVersion pending = new SkillVersion(publicSkill.getId(), "2.0.0", "owner");
+        pending.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        entities.persist(pending);
+        entities.persist(ReviewTask.forVisibility(privateSkill, SkillVisibility.PUBLIC, "owner"));
+        entities.persist(new NamespaceMember(team.getId(), "owner", NamespaceRole.OWNER));
+        Skill stillMember = skill(team, "member-private");
+        Skill globalSkill = skill(global, "global-private");
+        entities.flush();
+        var page = org.springframework.data.domain.PageRequest.of(0, 20);
+
+        assertThat(query.findOwnedReadableSkills("owner", page).getContent()).extracting(Skill::getId)
+                .containsExactlyInAnyOrder(publicSkill.getId(), stillMember.getId(), globalSkill.getId());
+        assertThat(query.findOwnedReadableSkills("owner", page).getTotalElements()).isEqualTo(3);
+        assertThat(query.findPendingSkills("owner", null, left.getId(), page).getTotalElements()).isZero();
+
+        entities.persist(new NamespaceMember(left.getId(), "owner", NamespaceRole.MEMBER));
+        entities.flush();
+        assertThat(query.findOwnedReadableSkills("owner", page).getContent()).extracting(Skill::getId)
+                .containsExactlyInAnyOrder(privateSkill.getId(), publicSkill.getId(), publicWithoutRelease.getId(),
+                        stillMember.getId(), globalSkill.getId());
+        assertThat(query.findPendingSkills("owner", null, left.getId(), page).getTotalElements()).isEqualTo(2);
+    }
+    Skill published(Skill skill) {
+        SkillVersion version = new SkillVersion(skill.getId(), "1.0.0", "owner");
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        ReflectionTestUtils.setField(version, "createdAt", java.time.Instant.parse("2026-10-01T00:00:00Z"));
+        entities.persist(version);
+        skill.setLatestVersionId(version.getId());
+        return skill;
+    }
     @Test void pendingContentFilterPreservesOwnerPreviewRecencyRules() {
+        entities.persist(new NamespaceMember(team.getId(), "owner", NamespaceRole.OWNER));
         Skill skill = skill(team, "version-recency");
         SkillVersion oldPending = new SkillVersion(skill.getId(), "1.0.0", "owner");
         oldPending.setStatus(SkillVersionStatus.PENDING_REVIEW);

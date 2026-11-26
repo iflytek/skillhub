@@ -299,7 +299,7 @@ public class SkillDownloadService {
             throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
         }
         if (!visibilityChecker.canAccess(skill, currentUserId, userNsRoles)) {
-            throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+            throw VisibilityChecker.readDenied(skill, visibilityChecker.isDepartedOwner(skill, currentUserId));
         }
         if (namespace.getStatus() == NamespaceStatus.ARCHIVED
                 && !isNamespaceMember(namespace.getId(), currentUserId, userNsRoles)) {
@@ -345,13 +345,13 @@ public class SkillDownloadService {
                 }
             }
             case DRAFT, REJECTED -> {
-                if (!skill.getOwnerId().equals(currentUserId) || version.getYankedAt() != null) {
-                    throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+                if (!visibilityChecker.canReadAsOwner(skill, currentUserId) || version.getYankedAt() != null) {
+                    throw VisibilityChecker.readDenied(skill, visibilityChecker.isDepartedOwner(skill, currentUserId));
                 }
             }
             case UPLOADED, PENDING_REVIEW -> {
                 if (!canManageSkillDraft(skill, currentUserId, userNsRoles)) {
-                    throw new DomainForbiddenException("error.skill.access.denied", skill.getSlug());
+                    throw VisibilityChecker.readDenied(skill, visibilityChecker.isDepartedOwner(skill, currentUserId));
                 }
             }
             default -> throw new DomainBadRequestException("error.skill.version.notDownloadable", version.getVersion());
@@ -362,10 +362,8 @@ public class SkillDownloadService {
         if (currentUserId == null) {
             return false;
         }
-        if (skill.getOwnerId().equals(currentUserId)) {
-            return true;
-        }
         NamespaceRole role = userNsRoles == null ? null : userNsRoles.get(skill.getNamespaceId());
-        return role == NamespaceRole.OWNER || role == NamespaceRole.ADMIN;
+        return role == NamespaceRole.OWNER || role == NamespaceRole.ADMIN
+                || visibilityChecker.canReadAsOwner(skill, currentUserId);
     }
 }

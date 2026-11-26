@@ -868,7 +868,11 @@ export function SkillDetailPage() {
     return (
       <div className="text-center py-20 animate-fade-up">
         <h2 className="text-2xl font-bold font-heading mb-2">{t('skillDetail.accessDenied')}</h2>
-        <p className="text-muted-foreground">{t('skillDetail.accessDeniedDesc')}</p>
+        {/* The server explains the specific reason, e.g. that access ended when the owner left the namespace. */}
+        <p className="text-muted-foreground">
+          {(skillError instanceof ApiError && skillError.status === 403 && skillError.serverMessage)
+            || t('skillDetail.accessDeniedDesc')}
+        </p>
       </div>
     )
   }

@@ -634,35 +634,87 @@ class SkillDownloadServiceTest {
         verify(eventPublisher, never()).publishEvent(any(SkillDownloadedEvent.class));
     }
 
+    /** A service whose owner-based reads consult real TEAM membership; the owner here has left. */
+    private SkillDownloadService serviceForRemovedOwner(Namespace namespace) {
+        var members = mock(com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository.class);
+        lenient().when(members.findByNamespaceIdAndUserId(namespace.getId(), "removed-owner")).thenReturn(Optional.empty());
+        lenient().when(namespaceRepository.findById(namespace.getId())).thenReturn(Optional.of(namespace));
+        var ownerAccess = new SkillOwnerAccessPolicy(namespaceRepository, members);
+        return new SkillDownloadService(namespaceRepository, skillRepository, skillVersionRepository,
+                skillVersionStatsRepository, skillFileRepository, skillTagRepository, objectStorageService,
+                new VisibilityChecker(ownerAccess), eventPublisher, skillSlugResolutionService);
+    }
+
     @ParameterizedTest
     @EnumSource(value = SkillVersionStatus.class, names = {"DRAFT", "REJECTED", "PENDING_REVIEW", "UPLOADED"})
-    void removedCurrentOwnerCanDownloadInternalVersionsWithoutPublishingOrCounting(SkillVersionStatus status) throws Exception {
-        service = new SkillDownloadService(namespaceRepository, skillRepository, skillVersionRepository,
-                skillVersionStatsRepository, skillFileRepository, skillTagRepository, objectStorageService,
-                new VisibilityChecker(), eventPublisher, skillSlugResolutionService);
+    void removedTeamOwnerCannotDownloadInternalVersionsEvenOfPublicSkill(SkillVersionStatus status) throws Exception {
         Namespace namespace = new Namespace("team", "Team", "admin");
         setId(namespace, 1L);
-        Skill skill = new Skill(1L, "owned", "removed-owner", SkillVisibility.NAMESPACE_ONLY);
+        service = serviceForRemovedOwner(namespace);
+        Skill skill = new Skill(1L, "owned", "removed-owner", SkillVisibility.PUBLIC);
         setId(skill, 9L);
         skill.setStatus(SkillStatus.ACTIVE);
-        SkillVersion version = new SkillVersion(9L, "1.0.0", "removed-owner");
+        skill.setLatestVersionId(8L);
+        SkillVersion version = new SkillVersion(9L, "1.1.0", "removed-owner");
         setId(version, 10L);
         version.setStatus(status);
         when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
         when(skillRepository.findByNamespaceIdAndSlug(1L, "owned")).thenReturn(List.of(skill));
+        when(skillVersionRepository.findBySkillIdAndVersion(9L, "1.1.0")).thenReturn(Optional.of(version));
+
+        var denied = assertThrows(DomainForbiddenException.class,
+                () -> service.downloadVersion("team", "owned", "1.1.0", "removed-owner", Map.of()));
+        assertEquals("error.skill.owner.membershipEnded", denied.messageCode());
+        verifyNoInteractions(objectStorageService, eventPublisher);
+        verify(skillRepository, never()).incrementDownloadCount(anyLong());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SkillVisibility.class, names = {"NAMESPACE_ONLY", "PRIVATE"})
+    void removedTeamOwnerCannotDownloadPublishedInternalSkill(SkillVisibility visibility) throws Exception {
+        Namespace namespace = new Namespace("team", "Team", "admin");
+        setId(namespace, 1L);
+        service = serviceForRemovedOwner(namespace);
+        Skill skill = new Skill(1L, "owned", "removed-owner", visibility);
+        setId(skill, 9L);
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(10L);
+        when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "owned")).thenReturn(List.of(skill));
+
+        var denied = assertThrows(DomainForbiddenException.class,
+                () -> service.downloadVersion("team", "owned", "1.0.0", "removed-owner", Map.of()));
+        assertEquals("error.skill.owner.membershipEnded", denied.messageCode());
+        verifyNoInteractions(objectStorageService, eventPublisher);
+    }
+
+    @Test
+    void removedTeamOwnerDownloadsPublicPublishedVersionLikeAnyoneElse() throws Exception {
+        Namespace namespace = new Namespace("team", "Team", "admin");
+        setId(namespace, 1L);
+        service = serviceForRemovedOwner(namespace);
+        Skill skill = new Skill(1L, "owned", "removed-owner", SkillVisibility.PUBLIC);
+        setId(skill, 9L);
+        skill.setDisplayName("Owned");
+        skill.setStatus(SkillStatus.ACTIVE);
+        skill.setLatestVersionId(10L);
+        SkillVersion version = new SkillVersion(9L, "1.0.0", "removed-owner");
+        setId(version, 10L);
+        version.setStatus(SkillVersionStatus.PUBLISHED);
+        version.setDownloadReady(true);
+        when(namespaceRepository.findBySlug("team")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "owned")).thenReturn(List.of(skill));
         when(skillVersionRepository.findBySkillIdAndVersion(9L, "1.0.0")).thenReturn(Optional.of(version));
-        when(objectStorageService.exists("packages/9/10/bundle.zip")).thenReturn(true);
-        when(objectStorageService.getMetadata("packages/9/10/bundle.zip"))
-                .thenReturn(new ObjectMetadata(4L, "application/zip", Instant.now()));
-        when(objectStorageService.getObject("packages/9/10/bundle.zip"))
-                .thenReturn(new ByteArrayInputStream("safe".getBytes()));
+        when(objectStorageService.exists("packages/9/10/bundle.zip")).thenReturn(false);
+        when(skillFileRepository.findByVersionId(10L)).thenReturn(List.of(
+                new SkillFile(10L, "SKILL.md", 4L, "text/markdown", "hash", "skills/9/10/SKILL.md")));
+        when(objectStorageService.exists("skills/9/10/SKILL.md")).thenReturn(true);
+        when(objectStorageService.getObject("skills/9/10/SKILL.md")).thenReturn(new ByteArrayInputStream("test".getBytes()));
 
         var result = service.downloadVersion("team", "owned", "1.0.0", "removed-owner", Map.of());
-        assertArrayEquals("safe".getBytes(), result.openContent().readAllBytes());
-        assertEquals(status, version.getStatus());
-        verify(skillRepository, never()).incrementDownloadCount(anyLong());
-        verify(skillVersionStatsRepository, never()).incrementDownloadCount(anyLong(), anyLong());
-        verifyNoInteractions(eventPublisher);
+
+        assertEquals("Owned-1.0.0.zip", result.filename());
+        verify(skillRepository).incrementDownloadCount(9L);
     }
 
     @ParameterizedTest

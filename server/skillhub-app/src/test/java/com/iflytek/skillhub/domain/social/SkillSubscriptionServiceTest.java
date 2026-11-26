@@ -58,7 +58,7 @@ class SkillSubscriptionServiceTest {
     void setUp() {
         service = new SkillSubscriptionService(subscriptionRepository, skillRepository, eventPublisher,
                 namespaceRepository, namespaceMemberRepository, userAccountRepository,
-                new SubscriptionMetadataAccessPolicy());
+                new SubscriptionMetadataAccessPolicy(new com.iflytek.skillhub.domain.skill.VisibilityChecker(skill -> true)));
     }
 
     @Test

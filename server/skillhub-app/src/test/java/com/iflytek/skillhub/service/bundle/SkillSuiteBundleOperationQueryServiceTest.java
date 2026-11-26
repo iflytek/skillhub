@@ -71,7 +71,7 @@ class SkillSuiteBundleOperationQueryServiceTest {
         messages.setFallbackToSystemLocale(false);
         service = new SkillSuiteBundleOperationQueryService(
                 operationRepository, memberRepository, namespaceRepository,
-                skillRepository, suiteVersionRepository, new VisibilityChecker(), operationQueryRepository,
+                skillRepository, suiteVersionRepository, new VisibilityChecker(skill -> true), operationQueryRepository,
                 messages);
     }
 
