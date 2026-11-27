@@ -20,6 +20,7 @@ import com.iflytek.skillhub.domain.skill.SkillVersion;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService.Preference;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import com.iflytek.skillhub.domain.social.SkillStarService;
 import com.iflytek.skillhub.dto.SkillLabelDto;
@@ -108,18 +109,24 @@ public class ClawHubCompatAppService {
                                                  String hash,
                                                  String userId,
                                                  Map<Long, NamespaceRole> userNsRoles) {
+        return resolveByQuery(slug, version, hash, userId, userNsRoles, false);
+    }
+
+    public ClawHubResolveResponse resolveByQuery(String slug,
+                                                 String version,
+                                                 String hash,
+                                                 String userId,
+                                                 Map<Long, NamespaceRole> userNsRoles, boolean apiToken) {
         SkillCoordinate coord = resolveQueryCoordinate(slug, userId, userNsRoles);
         Map<Long, NamespaceRole> roles = normalizeRoles(userNsRoles);
 
-        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
-                coord.namespace(),
-                coord.slug(),
-                "latest".equals(version) ? null : version,
-                "latest".equals(version) ? "latest" : null,
-                hash,
-                userId,
-                roles
-        );
+        String exactVersion = "latest".equals(version) ? null : version;
+        String tag = "latest".equals(version) ? "latest" : null;
+        SkillQueryService.ResolvedVersionDTO resolved = apiToken
+                ? skillQueryService.resolveVersion(coord.namespace(), coord.slug(), exactVersion, tag, hash,
+                        userId, roles, Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.resolveVersion(coord.namespace(), coord.slug(), exactVersion, tag, hash,
+                        userId, roles);
         return toResolveResponse(resolved);
     }
 
@@ -127,16 +134,22 @@ public class ClawHubCompatAppService {
                                           String version,
                                           String userId,
                                           Map<Long, NamespaceRole> userNsRoles) {
+        return resolve(canonicalSlug, version, userId, userNsRoles, false);
+    }
+
+    public ClawHubResolveResponse resolve(String canonicalSlug,
+                                          String version,
+                                          String userId,
+                                          Map<Long, NamespaceRole> userNsRoles, boolean apiToken) {
         SkillCoordinate coord = mapper.fromCanonical(canonicalSlug);
-        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
-                coord.namespace(),
-                coord.slug(),
-                "latest".equals(version) ? null : version,
-                "latest".equals(version) ? "latest" : null,
-                null,
-                userId,
-                userNsRoles != null ? userNsRoles : Map.of()
-        );
+        Map<Long, NamespaceRole> roles = normalizeRoles(userNsRoles);
+        String exactVersion = "latest".equals(version) ? null : version;
+        String tag = "latest".equals(version) ? "latest" : null;
+        SkillQueryService.ResolvedVersionDTO resolved = apiToken
+                ? skillQueryService.resolveVersion(coord.namespace(), coord.slug(), exactVersion, tag, null,
+                        userId, roles, Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.resolveVersion(coord.namespace(), coord.slug(), exactVersion, tag, null,
+                        userId, roles);
         return toResolveResponse(resolved);
     }
 

@@ -18,9 +18,20 @@ export function catalogErrorMessage(error: { code: string; details?: unknown }):
   if (error.code !== 'skillhub/registry-error') return '请求失败，请稍后重试。';
   const reason = error.details && typeof error.details === 'object' && 'reason' in error.details
     ? error.details.reason : undefined;
+  const errorCode = error.details && typeof error.details === 'object' && 'errorCode' in error.details
+    ? error.details.errorCode : undefined;
+  if (reason === 'ACCESS_DENIED' && (errorCode === 'error.namespace.member.listForbidden'
+    || errorCode === 'error.namespace.global.members.platformAdmin.required')) {
+    return '系统空间不支持成员列表。请选择团队空间查看成员。';
+  }
   switch (reason) {
     case 'AUTH_REQUIRED': return '个人 Token 已失效，请重新登录。';
     case 'ACCESS_DENIED': return '当前 Token 权限或空间角色不足，请到来源网页核对授权。';
+    case 'TOKEN_SCOPE_REQUIRED': {
+      const scope = error.details && typeof error.details === 'object' && 'requiredScope' in error.details ? error.details.requiredScope : undefined;
+      const name = typeof scope === 'string' && /^[a-z]{1,16}:[a-z-]{1,32}$/u.test(scope) ? `（${scope}）` : '';
+      return `当前 Token 缺少所需权限${name}。请到来源网页新建个人 API Token，再到插件的个人设置中更换。`;
+    }
     case 'TARGET_CHANGED': return '上传目标或可见性已变化，请重新核对。';
     case 'WRITE_UNKNOWN': return '提交结果暂时无法确认，请先刷新列表或到来源网页核对。';
     case 'INVALID_INPUT': return '请检查所选技能包、账号和输入内容。';

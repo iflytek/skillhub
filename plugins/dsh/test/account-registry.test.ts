@@ -38,13 +38,37 @@ test('upload uses one shared CLI publish request and status failures never resub
       expect((req.body as FormData).get('visibility')).toBe('NAMESPACE_ONLY');
       expect((req.body as FormData).get('file')).toBeInstanceOf(Blob);
       posts++;
-      return data({ namespace: 'design', slug: target.slug, version: '1.0', visibility: 'NAMESPACE_ONLY' });
+      return data({ namespace: 'design', slug: target.slug, version: '1.0', visibility: 'NAMESPACE_ONLY', versionId: 14 });
     }
+    expect(url.pathname).toBe('/prefix/api/v1/me/skills/versions/14');
     return new Response(null, { status: 403 });
   });
   const result = await api.publish('design', archive, 'NAMESPACE_ONLY', target, signal);
-  await expect(api.status(result.namespace, result.slug, result.version, signal)).rejects.toMatchObject({ code: 'ACCESS_DENIED' });
+  expect(result.versionId).toBe(14);
+  await expect(api.status(14, result.version, signal)).rejects.toMatchObject({ code: 'ACCESS_DENIED' });
   expect(posts).toBe(1);
+});
+
+test('a legacy publish response is a successful receipt without a version ID', async () => {
+  const legacy = { namespace: 'design', slug: target.slug, version: '1.0', visibility: 'PRIVATE' } as const;
+  const api = registry((_url, req) => req.method === 'POST'
+    ? data(legacy) : data({ items: [], page: 0, size: 20, total: 0 }));
+  expect(await api.publish('design', archive, 'PRIVATE', target, signal)).toEqual(legacy);
+});
+
+test('upload status reads only the acknowledged version and rejects identity mismatches', async () => {
+  let response = { id: 14, version: '1.0', status: 'UPLOADED' };
+  const api = registry((url, req) => {
+    expect(url.pathname).toBe('/prefix/api/v1/me/skills/versions/14');
+    expect(req.method).toBeUndefined();
+    return data(response);
+  });
+  expect(await api.status(14, '1.0', signal)).toEqual(response);
+  response = { ...response, id: 15 };
+  await expect(api.status(14, '1.0', signal)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  response = { ...response, id: 14, version: '2.0' };
+  await expect(api.status(14, '1.0', signal)).rejects.toMatchObject({ code: 'INVALID_RESPONSE' });
+  await expect(api.status(0, '1.0', signal)).rejects.toMatchObject({ code: 'INVALID_INPUT' });
 });
 
 test('an owned row retains the exact published version ID used when opening a detail', async () => {
@@ -80,6 +104,44 @@ test('member changes use the selected user ID and propagate an expired credentia
   });
   expect(await api.changeMember('team', { action: 'add', userId: 'user-1', role: 'MEMBER' }, signal)).toBe(true);
   await expect(api.members('team', 0, signal)).rejects.toMatchObject({ code: 'AUTH_REQUIRED' });
+});
+
+test('member reads preserve the safe server error code for business guidance', async () => {
+  const api = registry(() => Response.json(
+    { code: 403, errorCode: 'error.namespace.member.listForbidden' },
+    { status: 403 },
+  ));
+  await expect(api.members('global', 0, signal)).rejects.toMatchObject({
+    code: 'ACCESS_DENIED', status: 403, errorCode: 'error.namespace.member.listForbidden',
+  });
+});
+
+test('member reads bound chunked 403 diagnostics and preserve the permission error', async () => {
+  let cancelled = false;
+  const body = new ReadableStream({
+    start(controller) { controller.enqueue(new Uint8Array(64 * 1024 + 1)); },
+    cancel() { cancelled = true; },
+  });
+  const api = registry(() => new Response(body, { status: 403 }));
+  await expect(api.members('team', 0, signal)).rejects.toMatchObject({ code: 'ACCESS_DENIED', status: 403 });
+  expect(cancelled).toBe(true);
+});
+
+test('member reads distinguish a missing bearer scope from a team role denial', async () => {
+  const path = '/prefix/api/v1/namespaces/team/members';
+  const headers = { 'WWW-Authenticate': 'Bearer error="insufficient_scope", scope="namespace:read"' };
+  const missing = registry(url => {
+    expect(url.pathname).toBe(path);
+    return new Response(null, { status: 403, headers });
+  });
+  await expect(missing.members('team', 0, signal)).rejects.toMatchObject({
+    code: 'TOKEN_SCOPE_REQUIRED', status: 403, requiredScope: 'namespace:read',
+  });
+  const denied = registry(() => new Response(null, { status: 403 }));
+  await expect(denied.members('team', 0, signal)).rejects.toMatchObject({ code: 'ACCESS_DENIED', status: 403 });
+  const member = { userId: 'user-1', displayName: null, role: 'MEMBER' };
+  const allowed = registry(() => data({ items: [member], total: 1, page: 0, size: 20 }));
+  await expect(allowed.members('team', 0, signal)).resolves.toMatchObject({ items: [member] });
 });
 
 test('credentials stay bound to one source and profile, and logout forgets them', () => {

@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.domain.skill.service;
 
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService.Preference;
 import com.iflytek.skillhub.domain.event.SkillDownloadedEvent;
 import com.iflytek.skillhub.domain.event.BusinessEventSnapshot;
 import com.iflytek.skillhub.domain.namespace.Namespace;
@@ -92,17 +93,36 @@ public class SkillDownloadService {
             String skillSlug,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return downloadLatest(namespaceSlug, skillSlug, currentUserId, userNsRoles, Preference.CURRENT_USER);
+    }
+
+    public DownloadResult downloadLatest(
+            String namespaceSlug,
+            String skillSlug,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Preference preference) {
 
         Namespace namespace = findNamespace(namespaceSlug);
-        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
+        Skill skill = skillSlugResolutionService.resolve(namespace.getId(), skillSlug, currentUserId, preference);
         assertCanDownload(namespace, skill, currentUserId, userNsRoles);
-
         if (skill.getLatestVersionId() == null) {
             throw new DomainBadRequestException("error.skill.version.latest.unavailable", skillSlug);
         }
 
         SkillVersion version = skillVersionRepository.findById(skill.getLatestVersionId())
                 .orElseThrow(() -> new DomainBadRequestException("error.skill.version.latest.notFound"));
+        String selectedVersion = version.getVersion();
+        Long selectedSkillId = skill.getId();
+        skill = skillSlugResolutionService.resolveForVersion(
+                namespace.getId(), skillSlug, selectedVersion, currentUserId, preference, skillVersionRepository);
+        if (!selectedSkillId.equals(skill.getId())) {
+            assertCanDownload(namespace, skill, currentUserId, userNsRoles);
+        }
+        if (!selectedSkillId.equals(skill.getId())) {
+            version = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), selectedVersion)
+                    .orElseThrow(() -> new DomainBadRequestException("error.skill.version.notFound", selectedVersion));
+        }
 
         return downloadVersion(skill, version, currentUserId, userNsRoles);
     }
@@ -117,9 +137,20 @@ public class SkillDownloadService {
             String versionStr,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return downloadVersion(namespaceSlug, skillSlug, versionStr, currentUserId, userNsRoles, Preference.CURRENT_USER);
+    }
+
+    public DownloadResult downloadVersion(
+            String namespaceSlug,
+            String skillSlug,
+            String versionStr,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Preference preference) {
 
         Namespace namespace = findNamespace(namespaceSlug);
-        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
+        Skill skill = skillSlugResolutionService.resolveForVersion(
+                namespace.getId(), skillSlug, versionStr, currentUserId, preference, skillVersionRepository);
         assertCanDownload(namespace, skill, currentUserId, userNsRoles);
 
         SkillVersion version = skillVersionRepository.findBySkillIdAndVersion(skill.getId(), versionStr)
@@ -137,9 +168,20 @@ public class SkillDownloadService {
             String tagName,
             String currentUserId,
             Map<Long, NamespaceRole> userNsRoles) {
+        return downloadByTag(namespaceSlug, skillSlug, tagName, currentUserId, userNsRoles, Preference.CURRENT_USER);
+    }
+
+    public DownloadResult downloadByTag(
+            String namespaceSlug,
+            String skillSlug,
+            String tagName,
+            String currentUserId,
+            Map<Long, NamespaceRole> userNsRoles,
+            Preference preference) {
 
         Namespace namespace = findNamespace(namespaceSlug);
-        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
+        Skill skill = skillSlugResolutionService.resolveForTag(
+                namespace.getId(), skillSlug, tagName, currentUserId, preference, skillTagRepository);
         assertCanDownload(namespace, skill, currentUserId, userNsRoles);
 
         SkillTag tag = skillTagRepository.findBySkillIdAndTagName(skill.getId(), tagName)
@@ -315,13 +357,6 @@ public class SkillDownloadService {
         return currentUserId != null && userNsRoles != null && userNsRoles.containsKey(namespaceId);
     }
 
-    private Skill resolveVisibleSkill(Long namespaceId, String slug, String currentUserId) {
-        return skillSlugResolutionService.resolve(
-                namespaceId,
-                slug,
-                currentUserId,
-                SkillSlugResolutionService.Preference.CURRENT_USER);
-    }
 
     private void assertPublishedAccessible(Skill skill) {
         if (skill.getStatus() != SkillStatus.ACTIVE) {

@@ -26,6 +26,7 @@ import com.iflytek.skillhub.domain.skill.SkillStatus;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.VisibilityChecker;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService.Preference;
 import com.iflytek.skillhub.dto.AvatarReviewSettingsResponse;
 import com.iflytek.skillhub.dto.SkillAvatarStatusResponse;
 import com.iflytek.skillhub.infra.jpa.SkillAvatarCandidateJpaRepository;
@@ -340,8 +341,17 @@ public class SkillAvatarAppService implements ReviewAvatarParticipant {
     @Transactional(readOnly = true)
     public InputStream readActive(String namespaceSlug, String slug, String actor,
                                   Map<Long, NamespaceRole> namespaceRoles, Set<String> platformRoles) {
-        SkillQueryService.SkillDetailDTO detail = skillQueries.getSkillDetail(namespaceSlug, slug, actor,
-                namespaceRoles == null ? Map.of() : namespaceRoles);
+        return readActive(namespaceSlug, slug, actor, namespaceRoles, platformRoles, Preference.CURRENT_USER);
+    }
+
+    @Transactional(readOnly = true)
+    public InputStream readActive(String namespaceSlug, String slug, String actor,
+                                  Map<Long, NamespaceRole> namespaceRoles, Set<String> platformRoles,
+                                  Preference preference) {
+        Map<Long, NamespaceRole> roles = namespaceRoles == null ? Map.of() : namespaceRoles;
+        SkillQueryService.SkillDetailDTO detail = preference == Preference.PUBLIC_PUBLISHED
+                ? skillQueries.getSkillDetail(namespaceSlug, slug, actor, roles, Set.of(), preference)
+                : skillQueries.getSkillDetail(namespaceSlug, slug, actor, roles);
         Skill skill = ((SkillRepository) skills).findById(detail.id()).orElseThrow(() -> notFound());
         if (skill.getStatus() != SkillStatus.ACTIVE) {
             throw notFound();

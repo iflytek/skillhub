@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller.portal;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.shared.exception.DomainNotFoundException;
@@ -16,6 +17,7 @@ import com.iflytek.skillhub.repository.GithubRepositoryCatalogQueryRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import java.util.Map;
 import java.util.Set;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestAttribute;
@@ -44,9 +46,10 @@ public class GithubRepositoryCatalogController extends BaseApiController {
             @RequestParam(defaultValue = "") String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles,
+            @AuthenticationPrincipal PlatformPrincipal principal
     ) {
-        return ok("response.success.read", catalog.list(normalizeQuery(q), memberIds(roles), Math.max(0, page), boundedSize(size)));
+        return ok("response.success.read", catalog.list(normalizeQuery(q), memberIds(roles, principal), Math.max(0, page), boundedSize(size)));
     }
 
     @GetMapping("/{repositoryId}")
@@ -58,10 +61,11 @@ public class GithubRepositoryCatalogController extends BaseApiController {
             @RequestParam(defaultValue = "") String q,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles,
+            @AuthenticationPrincipal PlatformPrincipal principal
     ) {
         return ok("response.success.read",
-                catalog.detail(repositoryId, snapshotId, normalizeQuery(q), memberIds(roles), Math.max(0, page), boundedSize(size))
+                catalog.detail(repositoryId, snapshotId, normalizeQuery(q), memberIds(roles, principal), Math.max(0, page), boundedSize(size))
                         .orElseThrow(() -> new DomainNotFoundException("error.githubSync.source.notFound")));
     }
 
@@ -73,8 +77,9 @@ public class GithubRepositoryCatalogController extends BaseApiController {
     @RateLimit(category = "download", authenticated = 10, anonymous = 3)
     public void archive(@PathVariable long repositoryId, @PathVariable long snapshotId,
                         @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles,
+                        @AuthenticationPrincipal PlatformPrincipal principal,
                         HttpServletResponse response) throws IOException {
-        archives.write(repositoryId, snapshotId, memberIds(roles), archive -> {
+        archives.write(repositoryId, snapshotId, memberIds(roles, principal), archive -> {
             response.setContentType("application/zip");
             response.setContentLengthLong(Files.size(archive));
             response.setHeader("Cache-Control", "private, no-store");
@@ -84,8 +89,10 @@ public class GithubRepositoryCatalogController extends BaseApiController {
         });
     }
 
-    private static Set<Long> memberIds(Map<Long, NamespaceRole> roles) {
-        return roles == null ? Set.of() : roles.keySet();
+    private static Set<Long> memberIds(Map<Long, NamespaceRole> roles, PlatformPrincipal principal) {
+        // The portal catalog has historically exposed team repositories only to sessions.
+        return roles == null || principal != null && principal.tokenCapabilities() != null
+                ? Set.of() : roles.keySet();
     }
 
     private static String normalizeQuery(String query) {

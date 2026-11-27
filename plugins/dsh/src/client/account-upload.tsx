@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type DragEvent } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { skipToken, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { AccountNamespace, OwnedSkill, UploadReceipt, Visibility } from '../host/account-types.js';
 import { AccountDialog, AccountError, AccountSelect, valueOf, visibilityLabels, type AccountRemote } from './account-common.js';
 import { encodePackage, MAX_TRANSFER_BYTES } from './package-transfer.js';
@@ -53,8 +53,10 @@ export function UploadSkill({ remote, revision, spaces, initial, row, close, spa
       void target.refetch();
     } else setClosedWrite(true);
   }, onSettled: () => { submitting.current = false; } });
-  const status = useQuery({ queryKey: ['account-version', revision, receipt?.namespace, receipt?.slug, receipt?.version],
-    enabled: !!receipt, retry: false, queryFn: async ({ signal }) => valueOf(await remote.uploadStatus(revision, receipt!.namespace, receipt!.slug, receipt!.version, signal)) });
+  const { versionId, version } = receipt ?? {};
+  const status = useQuery({ queryKey: ['account-version', revision, versionId, version], retry: false,
+    queryFn: versionId === undefined || version === undefined ? skipToken
+      : async ({ signal }) => valueOf(await remote.uploadStatus(revision, versionId, version, signal)) });
   useEffect(() => {
     if (receipt && status.data?.status === 'PUBLISHED') invalidateRegistrySkill(client, revision, receipt.namespace, receipt.slug);
   }, [client, receipt, revision, status.data?.status]);
@@ -89,8 +91,11 @@ export function UploadSkill({ remote, revision, spaces, initial, row, close, spa
         if (JSON.stringify(current.data.result) !== JSON.stringify(target.data?.result)) setChosen(undefined);
         setConfirm(true);
       }}>{upload.isPending ? '正在上传…' : confirm ? '确认上传' : '核对上传信息'}</Button>}>
-    {spacesLoading ? <p role="status">正在读取目标命名空间…</p> : spacesError ? <AccountError error={spacesError} retry={retrySpaces} /> : receipt ? <section className="astron-sh-account-summary"><p role="status">{status.isError ? '已上传，状态暂不可确认。' : status.data?.status ?? '正在读取版本状态…'}</p>
-      <Button onClick={() => { void status.refetch(); }}>刷新版本状态</Button></section> : <>
+    {spacesLoading ? <p role="status">正在读取目标命名空间…</p> : spacesError ? <AccountError error={spacesError} retry={retrySpaces} /> : receipt ? <section className="astron-sh-account-summary">
+      {versionId === undefined ? <p role="status">来源未返回版本 ID。请到来源网页确认审核或发布状态。</p> : <>
+        <p role="status">{status.isError ? '已上传，状态暂不可确认。' : status.data?.status ?? '正在读取版本状态…'}</p>
+        <Button onClick={() => { void status.refetch(); }}>刷新版本状态</Button>
+      </>}</section> : <>
       <label>目标命名空间<AccountSelect label="目标命名空间" disabled={!!row || upload.isPending} value={space} options={available.map(ns => ({ value: ns.slug, label: ns.displayName + ' · @' + ns.slug }))}
         onValueChange={v => { setSpace(v); setChosen(undefined); resetConfirmation(); }} /></label>
       {!available.length && <p>当前账号没有可上传的命名空间。</p>}

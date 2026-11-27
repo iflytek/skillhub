@@ -3,6 +3,7 @@ package com.iflytek.skillhub.controller.portal;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService.Preference;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
@@ -78,7 +79,9 @@ public class SkillAvatarController extends BaseApiController {
     public ResponseEntity<InputStreamResource> current(@PathVariable String namespace, @PathVariable String slug,
             @AuthenticationPrincipal PlatformPrincipal principal,
             @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> roles) {
-        InputStream image = service.readActive(namespace, slug, userId(principal), roles, platformRoles(principal));
+        InputStream image = principal != null && principal.tokenCapabilities() != null
+                ? service.readActive(namespace, slug, userId(principal), roles, platformRoles(principal), Preference.PUBLIC_PUBLISHED)
+                : service.readActive(namespace, slug, userId(principal), roles, platformRoles(principal));
         return png(image);
     }
 

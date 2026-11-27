@@ -14,7 +14,7 @@ const version = z.object({ id, version: text });
 const owned = z.object({ id, slug: text, namespace: text, displayName: z.string().nullable().transform(v => v ?? ''), visibility: vis, status: text, publishedVersion: version.nullable().optional() });
 const member = z.object({ userId: text, displayName: z.string().nullable(), role });
 const candidate = z.object({ userId: text, displayName: z.string().nullable(), email: z.string().nullable() });
-const receipt = z.object({ namespace: text, slug: text, version: text, visibility: vis });
+const receipt = z.object({ namespace: text, slug: text, version: text, visibility: vis, versionId: id.optional() });
 const segment = (s: string) => {
   if (!s || s === '.' || s === '..' || s.length > 256 || /[\\/]/u.test(s)) throw new RegistryError('INVALID_INPUT', false);
   return encodeURIComponent(s);
@@ -121,8 +121,9 @@ export class AccountRegistry {
     if (result.namespace !== ns || result.slug !== slug || result.visibility !== visibility) throw new RegistryError('INVALID_RESPONSE', false);
     return result;
   }
-  status(ns: string, slug: string, versionId: string, signal: AbortSignal) {
-    return this.registry.accountJson('/api/v1/skills/' + [ns,slug].map(segment).join('/') + '/versions/' + segment(versionId),
-      z.object({ id, version: z.literal(versionId), status: text }), signal);
+  async status(versionId: number, version: string, signal: AbortSignal) {
+    if (!id.safeParse(versionId).success || !text.safeParse(version).success) throw new RegistryError('INVALID_INPUT', false);
+    return this.registry.accountJson('/api/v1/me/skills/versions/' + versionId,
+      z.object({ id: z.literal(versionId), version: z.literal(version), status: text }), signal);
   }
 }

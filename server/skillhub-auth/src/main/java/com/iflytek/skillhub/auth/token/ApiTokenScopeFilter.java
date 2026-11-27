@@ -6,6 +6,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -58,6 +59,11 @@ public class ApiTokenScopeFilter extends OncePerRequestFilter {
         if (decision.allowed()) {
             filterChain.doFilter(request, response);
             return;
+        }
+
+        if (decision.requiredScope() != null) {
+            response.setHeader(HttpHeaders.WWW_AUTHENTICATE,
+                    "Bearer error=\"insufficient_scope\", scope=\"" + decision.requiredScope() + "\"");
         }
 
         ApiTokenAccessDeniedException exception = decision.requiredScope() != null

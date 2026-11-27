@@ -258,6 +258,15 @@ try {
         await teamList.getByText(`@design · v${version}`, { exact: true }).waitFor();
       }
       await openUpload();
+      const statusReads = await page.evaluate(() => window.accountUploadStatusReads());
+      await dialog.getByRole('button', { name: '确认上传' }).click();
+      await page.waitForFunction(() => document.querySelector('[role="dialog"]')?.getAttribute('aria-busy') === 'true');
+      await page.evaluate(() => window.finishAccountUpload(false, true));
+      await dialog.getByText('来源未返回版本 ID。请到来源网页确认审核或发布状态。', { exact: true }).waitFor();
+      assert.equal(await dialog.getByRole('button', { name: '刷新版本状态' }).count(), 0);
+      assert.equal(await page.evaluate(() => window.accountUploadStatusReads()), statusReads);
+      await dialog.getByRole('button', { name: '关闭', exact: true }).click();
+      await openUpload();
       const previous = (await page.evaluate(() => window.accountWriteCounts())).upload;
       await page.context().setOffline(true);
       await dialog.getByRole('button', { name: '确认上传' }).click();

@@ -50,8 +50,15 @@ public class SkillTagService {
                                    String skillSlug,
                                    String currentUserId,
                                    java.util.Map<Long, NamespaceRole> userNamespaceRoles) {
+        return listTags(namespaceSlug, skillSlug, currentUserId, userNamespaceRoles,
+                SkillSlugResolutionService.Preference.CURRENT_USER);
+    }
+
+    public List<SkillTag> listTags(String namespaceSlug, String skillSlug, String currentUserId,
+                                   java.util.Map<Long, NamespaceRole> userNamespaceRoles,
+                                   SkillSlugResolutionService.Preference preference) {
         Namespace namespace = findNamespace(namespaceSlug);
-        Skill skill = resolveVisibleSkill(namespace.getId(), skillSlug, currentUserId);
+        Skill skill = skillSlugResolutionService.resolve(namespace.getId(), skillSlug, currentUserId, preference);
         if (!visibilityChecker.canAccess(skill, currentUserId, userNamespaceRoles)) {
             throw new DomainForbiddenException("error.skill.access.denied", skillSlug);
         }

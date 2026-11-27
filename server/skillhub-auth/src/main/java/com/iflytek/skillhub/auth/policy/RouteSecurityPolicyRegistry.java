@@ -219,6 +219,7 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.allow(HttpMethod.PUT, "/api/web/skills/*/reviews/me"),
             ApiTokenPolicy.allow(HttpMethod.DELETE, "/api/web/skills/*/reviews/me"),
             ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/me/skills", "skill:read"),
+            ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/me/skills/versions/*", "skill:read"),
             ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/namespaces/*/members", "namespace:read"),
             ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/namespaces/*/member-candidates", "namespace:manage"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/namespaces/*/members", "namespace:manage"),

@@ -162,4 +162,46 @@ class ApiTokenScopeServiceTest {
 
         assertTrue(decision.allowed());
     }
+
+    @Test
+    void dshRegistryReadsAndAccountActionsAreAvailableWithADefaultPersonalToken() {
+        Set<String> scopes = scopeService.parseScopes(ApiTokenScopes.DEFAULT_USER_SCOPE_JSON);
+        var reads = List.of(
+                "/api/cli/v1/auth/whoami",
+                "/api/cli/v1/skills/search",
+                "/api/cli/v1/skills/team-a/demo/resolve",
+                "/api/cli/v1/skills/team-a/demo/download",
+                "/api/cli/v1/skills/team-a/demo/versions/1.0.0/download",
+                "/api/web/skills",
+                "/api/web/labels",
+                "/api/v1/labels",
+                "/api/v1/skills/team-a/demo",
+                "/api/v1/skills/team-a/demo/versions",
+                "/api/v1/skills/team-a/demo/versions/1.0.0",
+                "/api/v1/skills/team-a/demo/versions/1.0.0/files",
+                "/api/v1/skills/team-a/demo/versions/1.0.0/file",
+                "/api/v1/skills/team-a/demo/versions/1.0.0/download",
+                "/api/v1/skills/42/reviews",
+                "/api/v1/me/namespaces",
+                "/api/v1/me/skills",
+                "/api/cli/v1/namespaces/team-a/skills",
+                "/api/v1/namespaces/team-a/members",
+                "/api/v1/namespaces/team-a/member-candidates");
+        for (String path : reads) {
+            assertTrue(scopeService.authorize("GET", path, scopes).allowed(), path);
+        }
+        for (String path : List.of("/api/v1/labels", "/api/web/labels")) {
+            assertTrue(scopeService.authorize("GET", path, Set.of()).allowed(), path);
+        }
+
+        assertTrue(scopeService.authorize("POST", "/api/cli/v1/skills/team-a/publish", scopes).allowed());
+        assertTrue(scopeService.authorize("DELETE", "/api/v1/skills/id/42", scopes).allowed());
+        String members = "/api/v1/namespaces/team-a/members";
+        assertTrue(scopeService.authorize("POST", members, scopes).allowed());
+        assertTrue(scopeService.authorize("PUT", members + "/member-1/role", scopes).allowed());
+        assertTrue(scopeService.authorize("DELETE", members + "/member-1", scopes).allowed());
+        assertEquals("namespace:read", scopeService.authorize("GET", members, Set.of("skill:read")).requiredScope());
+        assertTrue(scopeService.authorize("GET", members, Set.of("namespace:read")).allowed());
+        assertEquals("namespace:manage", scopeService.authorize("POST", members, Set.of("namespace:read")).requiredScope());
+    }
 }
