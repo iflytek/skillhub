@@ -63,6 +63,7 @@ export function PublishPage() {
   const [displayName, setDisplayName] = useState('')
   const [shortDescription, setShortDescription] = useState('')
   const [overview, setOverview] = useState('')
+  const [changelog, setChangelog] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [submissionState, setSubmissionState] = useState<PublishSubmissionState | null>(null)
@@ -112,6 +113,7 @@ export function PublishPage() {
       setDisplayName('')
       setShortDescription('')
       setOverview('')
+      setChangelog('')
       setShortSource('package')
       setOverviewSource('package')
       setAttempted(false)
@@ -255,6 +257,7 @@ export function PublishPage() {
         expectedSlug: updateSlug || undefined,
         displayName,
         ...presentationPayload(shortSource, overviewSource, shortDescription, overview),
+        changelog: isUpdate ? (changelog.trim() || undefined) : undefined,
       })
       setPrecheckWarnings([])
       setWarningDialogOpen(false)
@@ -477,6 +480,23 @@ export function PublishPage() {
               <h2 id="publish-presentation-heading" className="text-lg font-semibold">{t('publish.form.presentation')}</h2>
               <p className="text-sm leading-6 text-muted-foreground">{t('publish.form.presentationHelp')}</p>
             </div>
+            {isUpdate ? (
+              <div className="space-y-3">
+                <Label htmlFor="skill-changelog">{t('publish.changelog')}</Label>
+                <Textarea
+                  id="skill-changelog"
+                  aria-describedby="skill-changelog-help"
+                  className="min-h-[96px] resize-y"
+                  data-analytics-id="skill.publish.changelog"
+                  disabled={ownerReadOnly || isBusy}
+                  maxLength={4000}
+                  rows={3}
+                  value={changelog}
+                  onChange={event => setChangelog(event.target.value)}
+                />
+                <p id="skill-changelog-help" className="text-xs leading-5 text-muted-foreground">{t('publish.changelogHelp')}</p>
+              </div>
+            ) : null}
             <div className="space-y-3">
               <Label htmlFor="skill-short-description">{t('publish.shortDescription')} <span className="text-destructive">*</span></Label>
               <Textarea

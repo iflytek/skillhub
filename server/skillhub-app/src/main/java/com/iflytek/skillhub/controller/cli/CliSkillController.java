@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller.cli;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.controller.support.ReleaseNote;
 import com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
@@ -125,6 +126,7 @@ public class CliSkillController extends BaseApiController {
             @PathVariable String namespace,
             @RequestPart("file") MultipartFile file,
             @RequestPart(value = "visibility", required = false) String visibility,
+            @RequestPart(value = "changelog", required = false) String changelog,
             @AuthenticationPrincipal PlatformPrincipal principal) throws IOException {
         List<PackageEntry> entries;
         try {
@@ -135,7 +137,8 @@ public class CliSkillController extends BaseApiController {
         var result = cliSkillAppService.publish(
                 namespace, entries, principal.userId(),
                 SkillVisibility.valueOf((visibility != null ? visibility : "PUBLIC").toUpperCase()),
-                principal.platformRoles(), principal.tokenCapabilities());
+                principal.platformRoles(), principal.tokenCapabilities(), ReleaseNote.normalize(changelog));
         return ok("response.success.published", result);
     }
+
 }

@@ -4,6 +4,7 @@ import com.iflytek.skillhub.domain.review.ReviewTaskRepository;
 import com.iflytek.skillhub.domain.review.ReviewTaskStatus;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.metadata.SkillMetadataParser;
 import com.iflytek.skillhub.domain.namespace.SlugValidator;
@@ -25,8 +26,11 @@ public class SkillPublishAppService {
     private final SkillAvatarAppService avatars;
     private final SkillMetadataParser metadata;
     private ReviewTaskRepository reviews;
+    private SkillVersionRepository versions;
     @Autowired
     public void setReviews(ReviewTaskRepository reviews) { this.reviews = reviews; }
+    @Autowired
+    public void setVersions(SkillVersionRepository versions) { this.versions = versions; }
 
 
     public SkillPublishAppService(SkillPublishService publications, SkillAvatarUploadService uploads,
@@ -51,7 +55,7 @@ public class SkillPublishAppService {
             String uploadId, String expectedSlug, String displayName, String shortDescription,
             String overview, boolean resetPresentation, AuditRequestContext context) {
         return publish(namespace, entries, actor, visibility, roles, confirmWarnings, action, uploadId,
-                expectedSlug, displayName, shortDescription, overview, resetPresentation, context, null);
+                expectedSlug, displayName, shortDescription, overview, resetPresentation, context, (Set<String>) null);
     }
 
     @Transactional
@@ -59,6 +63,16 @@ public class SkillPublishAppService {
             SkillVisibility visibility, Set<String> roles, boolean confirmWarnings, AvatarAction action,
             String uploadId, String expectedSlug, String displayName, String shortDescription,
             String overview, boolean resetPresentation, AuditRequestContext context, Set<String> tokenCapabilities) {
+        return publish(namespace, entries, actor, visibility, roles, confirmWarnings, action, uploadId, expectedSlug,
+                displayName, shortDescription, overview, resetPresentation, context, tokenCapabilities, null);
+    }
+
+    @Transactional
+    public SkillPublishService.PublishResult publish(String namespace, List<PackageEntry> entries, String actor,
+            SkillVisibility visibility, Set<String> roles, boolean confirmWarnings, AvatarAction action,
+            String uploadId, String expectedSlug, String displayName, String shortDescription,
+            String overview, boolean resetPresentation, AuditRequestContext context, Set<String> tokenCapabilities,
+            String changelog) {
         if (action == AvatarAction.REPLACE && (uploadId == null || uploadId.isBlank())
                 || action != AvatarAction.REPLACE && uploadId != null && !uploadId.isBlank()) {
             throw new DomainBadRequestException("error.skill.avatar.invalidUpload");
@@ -95,6 +109,11 @@ public class SkillPublishAppService {
         }
         if (action == AvatarAction.KEEP && review != null) {
             avatars.attachScopeToReview(review.getSkillId(), visibility, review, actor, context);
+        }
+        if (changelog != null && !changelog.isBlank()) {
+            // The domain publish path does not carry a release note; attach it to the version it created.
+            result.version().setChangelog(changelog.strip());
+            versions.save(result.version());
         }
         return result;
     }

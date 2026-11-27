@@ -5,6 +5,7 @@ import com.iflytek.skillhub.dto.SkillPackagePreviewResponse;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.controller.support.ReleaseNote;
 import com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
@@ -18,6 +19,7 @@ import com.iflytek.skillhub.service.SkillPublishAppService;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import jakarta.servlet.http.HttpServletRequest;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -85,6 +87,8 @@ public class SkillPublishController extends BaseApiController {
             @RequestParam(value = "displayName", required = false) String displayName,
             @RequestParam(value = "shortDescription", required = false) String shortDescription,
             @RequestParam(value = "overview", required = false) String overview,
+            @Parameter(description = "Optional release note for this version, at most 4000 characters")
+            @RequestParam(value = "changelog", required = false) String changelog,
             @RequestParam(value = "resetPresentation", defaultValue = "false") boolean resetPresentation,
             @AuthenticationPrincipal PlatformPrincipal principal, HttpServletRequest request) throws IOException {
 
@@ -115,7 +119,7 @@ public class SkillPublishController extends BaseApiController {
                 principal.platformRoles(),
                 confirmWarnings, avatarAction, avatarUploadId, expectedSlug, displayName,
                 shortDescription, overview, resetPresentation, AuditRequestContext.from(request),
-                principal.tokenCapabilities()
+                principal.tokenCapabilities(), ReleaseNote.normalize(changelog)
         );
 
         PublishResponse response = new PublishResponse(
@@ -131,4 +135,5 @@ public class SkillPublishController extends BaseApiController {
 
         return ok("response.success.published", response);
     }
+
 }

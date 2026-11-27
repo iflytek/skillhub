@@ -457,12 +457,15 @@ cli
   .command('publish <path>', 'Publish a local skill package')
   .option('--namespace <slug>', 'Namespace')
   .option('--visibility <v>', 'Visibility (public|namespace-only|private)')
+  .option('--changelog <text>', 'Release notes for this version (max 4000 characters)')
   .option('--dry-run', 'Validate without publishing')
   .option('--registry <url>', 'Registry URL')
   .option('--token <token>', 'API token')
   .option('--json', 'Output JSON')
   .action((path: string, options: PublishCommandOptions) => {
-    return runCommand(() => publishCommand(path, options), Boolean(options.json))
+    // cac coerces numeric-looking option values (e.g. --changelog 2 -> 2, --changelog 1.10 -> 1.1).
+    const changelog = rawStringOption(process.argv.slice(2), '--changelog')
+    return runCommand(() => publishCommand(path, { ...options, changelog }), Boolean(options.json))
   })
 
 cli.help()

@@ -3,7 +3,9 @@ package com.iflytek.skillhub.service.cli;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import org.springframework.transaction.annotation.Transactional;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
@@ -41,6 +43,10 @@ public class CliSkillAppService {
     private final SkillDeleteAppService skillDeleteAppService;
     private final SkillPublishService skillPublishService;
     private final GithubSkillSourceQueryRepository githubSkillSourceQueryRepository;
+    private SkillVersionRepository versions;
+
+    @Autowired
+    public void setVersions(SkillVersionRepository versions) { this.versions = versions; }
 
     public CliSkillAppService(
             SkillSearchAppService skillSearchAppService,
@@ -202,10 +208,21 @@ public class CliSkillAppService {
     public CliPublishResponse publish(String namespace, List<PackageEntry> entries, String publisherId,
                                       SkillVisibility visibility, Set<String> platformRoles,
                                       Set<String> tokenCapabilities) {
+        return publish(namespace, entries, publisherId, visibility, platformRoles, tokenCapabilities, null);
+    }
+
+    @Transactional
+    public CliPublishResponse publish(String namespace, List<PackageEntry> entries, String publisherId,
+                                      SkillVisibility visibility, Set<String> platformRoles,
+                                      Set<String> tokenCapabilities, String changelog) {
         SkillPublishService.PublishResult result = tokenCapabilities == null
                 ? skillPublishService.publishFromEntries(namespace, entries, publisherId, visibility, platformRoles, false)
                 : skillPublishService.publishCandidateFromEntries(namespace, entries, publisherId, visibility,
                         platformRoles, false, null, null, null, false, tokenCapabilities);
+        if (changelog != null && !changelog.isBlank()) {
+            result.version().setChangelog(changelog.strip());
+            versions.save(result.version());
+        }
 
         return new CliPublishResponse(
                 namespace,
