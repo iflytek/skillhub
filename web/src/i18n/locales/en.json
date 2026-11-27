@@ -2284,8 +2284,8 @@
       "copied": "Agent prompt copied",
       "prompt": "Follow {{guideUrl}} to connect SkillHub and install {{skill}} version {{version}} from this SkillHub."
     },
-    "crossSourceTwinGithub": "A skill with the same name also exists in @github (open-source sync).",
-    "crossSourceTwinPlatform": "A skill with the same name also exists inside the platform.",
+    "crossSourceTwinGithub": "A skill with the same name also exists in @{{namespace}} (open-source sync).",
+    "crossSourceTwinPlatform": "A skill with the same name also exists in @{{namespace}}.",
     "crossSourceTwinOpen": "View that version"
   },
   "skillCompare": {

@@ -31,8 +31,9 @@ describe('CrossSourceTwinNotice', () => {
     expect(link.getAttribute('href')).toBe('/space/$namespace/$slug/github/brainstorming')
   })
 
-  it('switches the wording for an internal twin', () => {
-    render(<CrossSourceTwinNotice twin={{ namespace: 'global', slug: 'brainstorming', displayName: 'Brainstorming', source: 'platform' }} />)
-    expect(screen.getByRole('note').textContent).toContain('skillDetail.crossSourceTwinPlatform:global')
+  it('names the other namespace so the reader knows where to look', () => {
+    render(<CrossSourceTwinNotice twin={{ namespace: 'software', slug: 'brainstorming', displayName: 'Brainstorming', source: 'platform' }} />)
+    // The message interpolates the namespace instead of saying "inside the platform".
+    expect(screen.getByRole('note').textContent).toContain('skillDetail.crossSourceTwinPlatform:software')
   })
 })

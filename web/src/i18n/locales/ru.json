@@ -2345,8 +2345,8 @@
       "copied": "Инструкция скопирована",
       "prompt": "Следуйте инструкции {{guideUrl}}, чтобы подключить SkillHub и установить {{skill}} версии {{version}} из этого SkillHub."
     },
-    "crossSourceTwinGithub": "Скилл с тем же именем есть в @github (синхронизация открытого кода).",
-    "crossSourceTwinPlatform": "Скилл с тем же именем есть внутри платформы.",
+    "crossSourceTwinGithub": "Скилл с тем же именем есть в @{{namespace}} (синхронизация открытого кода).",
+    "crossSourceTwinPlatform": "Скилл с тем же именем есть в @{{namespace}}.",
     "crossSourceTwinOpen": "Открыть эту версию"
   },
   "skillCompare": {

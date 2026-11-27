@@ -2271,8 +2271,8 @@
       "copied": "에이전트 프롬프트를 복사했습니다",
       "prompt": "{{guideUrl}}의 안내에 따라 SkillHub에 연결하고 이 SkillHub에서 {{skill}}의 {{version}} 버전을 설치하세요."
     },
-    "crossSourceTwinGithub": "같은 이름의 스킬이 @github(오픈소스 동기화)에도 있습니다.",
-    "crossSourceTwinPlatform": "같은 이름의 스킬이 플랫폼 내부에도 있습니다.",
+    "crossSourceTwinGithub": "같은 이름의 스킬이 @{{namespace}}(오픈소스 동기화)에도 있습니다.",
+    "crossSourceTwinPlatform": "같은 이름의 스킬이 @{{namespace}}에도 있습니다.",
     "crossSourceTwinOpen": "해당 버전 보기"
   },
   "skillCompare": {
