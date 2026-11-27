@@ -89,19 +89,40 @@ def load_catalog(path: Path) -> list[dict[str, Any]]:
             raise BuildError(f"duplicate catalog slug: {slug}")
         seen.add(slug)
 
+        # `upstream: null` marks a package written here. Do not accept a placeholder commit:
+        # an all-zero SHA pretends to be a pinned revision while pinning nothing.
         upstream = raw.get("upstream")
+        if upstream is None:
+            normalized.append(
+                {
+                    "slug": slug,
+                    "version": version,
+                    "license": license_id,
+                    "origin": "original",
+                    "upstream": None,
+                }
+            )
+            continue
         if not isinstance(upstream, dict):
-            raise BuildError(f"catalog upstream for {slug} must be an object")
+            raise BuildError(
+                f"catalog upstream for {slug} must be an object or null for an original package"
+            )
         repository = require_text(upstream.get("repository"), f"{slug}.upstream.repository")
         commit = require_text(upstream.get("commit"), f"{slug}.upstream.commit")
         upstream_path = require_text(upstream.get("path"), f"{slug}.upstream.path")
         if not re.fullmatch(r"[0-9a-f]{40}", commit):
             raise BuildError(f"catalog upstream commit for {slug} must be a full Git SHA")
+        if not commit.strip("0"):
+            raise BuildError(
+                f"catalog upstream commit for {slug} must be a real revision; "
+                'use "upstream": null for an original package'
+            )
         normalized.append(
             {
                 "slug": slug,
                 "version": version,
                 "license": license_id,
+                "origin": "upstream",
                 "upstream": {
                     "repository": repository,
                     "commit": commit,
@@ -220,9 +241,21 @@ def validate_skill(skill: dict[str, Any], source_root: Path) -> list[Path]:
 
     notice = (skill_dir / "NOTICE.md").read_text(encoding="utf-8")
     upstream = skill["upstream"]
-    for expected in (upstream["repository"], upstream["commit"], skill["license"]):
-        if expected not in notice:
-            raise BuildError(f"{slug}/NOTICE.md is missing provenance value: {expected}")
+    if upstream is None:
+        # An original package still states where it comes from and which terms apply.
+        if "Original work notice" not in notice:
+            raise BuildError(
+                f"{slug}/NOTICE.md must start its provenance with 'Original work notice' "
+                'because the catalog declares "upstream": null'
+            )
+        if skill["license"] not in notice:
+            raise BuildError(f"{slug}/NOTICE.md is missing provenance value: {skill['license']}")
+        if "builtin-skills/skills/" not in notice:
+            raise BuildError(f"{slug}/NOTICE.md must name its in-repository source path")
+    else:
+        for expected in (upstream["repository"], upstream["commit"], skill["license"]):
+            if expected not in notice:
+                raise BuildError(f"{slug}/NOTICE.md is missing provenance value: {expected}")
 
     files = collect_files(skill_dir)
     if len(files) > MAX_FILE_COUNT:
@@ -302,6 +335,7 @@ def build(args: argparse.Namespace) -> None:
             {
                 "slug": slug,
                 "version": skill["version"],
+                "origin": skill["origin"],
                 "file": filename,
                 "sha256": sha256(destination),
                 "size": destination.stat().st_size,
