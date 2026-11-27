@@ -1,3 +1,5 @@
+import { mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'bun:test'
 import { createTempHome } from '../helpers/temp-env'
 import { startFakeRegistry } from '../helpers/fake-registry'
@@ -9,6 +11,14 @@ afterEach(() => {
   registry?.stop()
   registry = undefined
 })
+
+async function seedCredentials(home: string, registryUrl: string, token: string): Promise<void> {
+  await mkdir(join(home, '.skillhub'), { recursive: true })
+  await writeFile(
+    join(home, '.skillhub', 'credentials.json'),
+    JSON.stringify({ tokens: { [registryUrl]: token } })
+  )
+}
 
 describe('auth commands', () => {
   // -------------------------------------------------------------------------
@@ -178,6 +188,114 @@ describe('auth commands', () => {
 
     expect(result.exitCode).toBe(3) // EXIT.network
     expect(result.stderr).toMatch(/registry unreachable|registry returned 5\d\d/)
+  })
+
+  // Regression for #1119: a saved credential that the registry rejects must not
+  // strand the user in a retry loop until they discover `skillhub logout`.
+  // Login falls through to Device Flow so the account can be recovered in place.
+  test('login replaces a rejected saved credential by starting device flow', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_recovered',
+      user: { handle: 'recovered-user', displayName: 'Recovered User' },
+      deviceFlow: { accessToken: 'sk_recovered' }
+    })
+    await seedCredentials(env.home, registry.url, 'sk_stale')
+
+    const result = await runCli(['login', '--registry', registry.url, '--no-open'], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('Logged in')
+    expect(result.stdout).toContain('recovered-user')
+    expect(result.stderr).toContain('saved credential')
+    expect(result.stderr).toContain('ABCD-2345')
+    expect(`${result.stdout}\n${result.stderr}`).not.toContain('sk_stale')
+    expect(await Bun.file(`${env.home}/.skillhub/credentials.json`).json())
+      .toMatchObject({ tokens: { [registry.url]: 'sk_recovered' } })
+    expect(registry.received.devicePolls).toBe(1)
+  })
+
+  test('login --json with a rejected saved credential keeps stderr parseable', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({
+      token: 'sk_recovered',
+      user: { handle: 'recovered-user', displayName: 'Recovered User' },
+      deviceFlow: { accessToken: 'sk_recovered' }
+    })
+    await seedCredentials(env.home, registry.url, 'sk_stale')
+
+    const result = await runCli(['login', '--registry', registry.url, '--no-open', '--json'], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(JSON.parse(result.stdout)).toEqual({ ok: true, registry: registry.url, handle: 'recovered-user' })
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      event: 'device_authorization',
+      userCode: 'ABCD-2345',
+      browserOpened: false
+    })
+    expect(await Bun.file(`${env.home}/.skillhub/credentials.json`).json())
+      .toMatchObject({ tokens: { [registry.url]: 'sk_recovered' } })
+  })
+
+  test('login reuses an accepted saved credential without starting device flow', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({ token: 'sk_saved', user: { handle: 'saved-user', displayName: 'Saved User' } })
+    await seedCredentials(env.home, registry.url, 'sk_saved')
+
+    const result = await runCli(['login', '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('saved-user')
+    expect(result.stderr).not.toContain('ABCD-2345')
+    expect(registry.received.devicePolls).toBe(0)
+  })
+
+  // An explicitly supplied token is never silently replaced. Name the input that
+  // the registry rejected and explain how to retry without it.
+  test('a rejected --token names the flag and leaves the saved credential untouched', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({ token: 'sk_saved', user: { handle: 'saved-user', displayName: 'Saved User' } })
+    await seedCredentials(env.home, registry.url, 'sk_saved')
+
+    const result = await runCli(['login', '--registry', registry.url, '--token', 'sk_bad'], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    expect(result.exitCode).toBe(2)
+    expect(result.stderr).toContain('authentication failed')
+    expect(result.stderr).toContain('--token')
+    expect(result.stderr).toContain('without --token')
+    expect(result.stderr).not.toContain('ABCD-2345')
+    expect(registry.received.devicePolls).toBe(0)
+    expect(await Bun.file(`${env.home}/.skillhub/credentials.json`).json())
+      .toMatchObject({ tokens: { [registry.url]: 'sk_saved' } })
+  })
+
+  test('a rejected SKILLHUB_TOKEN names the environment variable', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({ token: 'sk_saved' })
+
+    const result = await runCli(['login', '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home,
+      SKILLHUB_TOKEN: 'sk_bad'
+    })
+
+    expect(result.exitCode).toBe(2)
+    expect(result.stderr).toContain('authentication failed')
+    expect(result.stderr).toContain('SKILLHUB_TOKEN')
+    expect(result.stderr).not.toContain('ABCD-2345')
+    expect(registry.received.devicePolls).toBe(0)
   })
 
   // -------------------------------------------------------------------------

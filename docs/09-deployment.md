@@ -7,8 +7,9 @@
 ### CLI 设备授权地址
 
 `skillhub login --no-open --registry https://skills.example.com` 先按 `--token`、
-`SKILLHUB_TOKEN`、该 registry 已保存凭据的顺序解析 Token。仅在未解析到 Token 时
-进入设备码授权；已解析的 Token 若验证失败，不会自动回退到设备码流程。`--no-open`
+`SKILLHUB_TOKEN`、该 registry 已保存凭据的顺序解析 Token。未解析到 Token 时进入设备码授权；
+已保存凭据收到 HTTP 401 时，CLI 会报告并继续进入设备码授权，新登录成功前不删除旧凭据。
+显式提供的 Token 被拒绝时不会自动替换，CLI 会指出来源并说明如何去掉它后重试；`--no-open`
 只禁止自动打开浏览器，不会跳过 Token 解析。
 
 设备码流程中，CLI 请求 `/api/v1/auth/device/code`，用户打开返回的 `/device` 页面并登录、确认授权，

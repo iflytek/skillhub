@@ -25,7 +25,7 @@ skillhub login --registry https://skillhub.example.com
 skillhub whoami --registry https://skillhub.example.com
 ```
 
-`skillhub login` first resolves a token from command-line arguments, environment variables, or stored credentials for the registry, in that order. Device authorization starts only when none is found. An invalid resolved token does not automatically fall back to device authorization. Follow the verification URL and code in the terminal and approve in the browser. On a remote terminal, use `--no-open` and open the URL yourself. Verify the resulting identity with `whoami`.
+`skillhub login` first resolves a token from command-line arguments, environment variables, or stored credentials for the registry, in that order. Device authorization starts when none is found, or after the registry rejects the saved credential with HTTP 401; that rejection is reported and the saved token stays on disk until a new login succeeds. A rejected `--token` or `SKILLHUB_TOKEN` value is never replaced automatically: the CLI names the input to retry without. Follow the verification URL and code in the terminal and approve in the browser. On a remote terminal, use `--no-open` and open the URL yourself. Verify the resulting identity with `whoami`.
 
 Credentials are stored per registry. Changing `--registry` or `SKILLHUB_REGISTRY` does not authenticate you on another instance. Signing into the website alone also does not populate CLI credentials.
 

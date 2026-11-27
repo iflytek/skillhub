@@ -25,7 +25,7 @@ skillhub login --registry https://skillhub.example.com
 skillhub whoami --registry https://skillhub.example.com
 ```
 
-`skillhub login` 先按命令行、环境变量、当前注册中心保存记录的优先级读取 Token；只有没有读取到 Token 时才进入设备授权。已有但无效的 Token 不会自动回退到设备授权。按照终端显示的网址和设备码，在浏览器确认授权；远程终端可加 `--no-open`，自行打开网址。授权完成后用 `whoami` 检查身份。
+`skillhub login` 先按命令行、环境变量、当前注册中心保存记录的优先级读取 Token；没有读取到 Token 时进入设备授权，已保存凭据收到 HTTP 401 时也会在报告后进入设备授权，新登录成功前不会删除旧记录。`--token` 或 `SKILLHUB_TOKEN` 提供的 Token 被拒绝时不会自动替换：CLI 会指出该输入并说明如何去掉它后重试。按照终端显示的网址和设备码，在浏览器确认授权；远程终端可加 `--no-open`，自行打开网址。授权完成后用 `whoami` 检查身份。
 
 CLI 凭据按注册中心保存。切换 `--registry` 或 `SKILLHUB_REGISTRY` 后，原实例的登录不会自动变成新实例的登录。仅在网页中登录也不会直接替代 CLI 凭据。
 

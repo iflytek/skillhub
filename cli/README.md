@@ -86,7 +86,7 @@ retain that prefix when following application-relative download URLs.
 
 ## 🔐 Authentication
 
-`skillhub login` uses OAuth Device Flow only when no API token is resolved from arguments, environment variables, or saved credentials for the selected registry. An invalid resolved token does not automatically fall back to Device Flow. Token resolution priority for
+`skillhub login` resolves a token from arguments, environment variables, or saved credentials for the selected registry, and starts OAuth Device Flow when none is resolved. A saved credential that the registry rejects with HTTP 401 does not dead-end the command: `login` reports it and continues with Device Flow, leaving the saved credential on disk until a new login succeeds. A token supplied by `--token` or `SKILLHUB_TOKEN` is never replaced automatically: the CLI names the rejected input and explains how to retry without it. HTTP 403 is a permission denial and does not start a new login. Token resolution priority for
 explicit token-based login and all other authenticated commands is:
 
 1. `--token <token>` command-line argument
@@ -574,9 +574,8 @@ the priority is filesystem 4, authentication 2, network 3, then other HTTP/proto
 Usage errors remain exit 5. Plain `doctor --json` retains its existing inventory schema; health-only
 options `--offline`, `--registry` and `--token` require `--health` so they cannot trigger maintenance.
 
-If a stored credential is rejected, the suggested explicit recovery is registry-scoped logout
-followed by login. Argument/environment overrides are identified separately. Diagnosis performs
-neither recovery action. `whoami` remains the direct identity command and `outdated` remains
+If a stored credential is rejected with HTTP 401, registry-scoped login starts sign-in again;
+logout is not required. HTTP 403 calls for checking permissions, not replacing the credential. Argument/environment overrides are identified separately. Diagnosis does not start login or alter credentials. `whoami` remains the direct identity command and `outdated` remains
 the installed-update check.
 
 ## 🚢 Publishing

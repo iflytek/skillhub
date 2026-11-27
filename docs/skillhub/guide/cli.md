@@ -102,7 +102,7 @@ Token 按以下优先级解析：
 
 ### 登录
 
-没有从命令行、环境变量或该注册中心保存记录读取到 Token 时，`skillhub login` 才使用 OAuth Device Flow；读取到无效 Token 时不会自动回退：打开验证页面并显示用户码，完成浏览器授权后保存凭证。无浏览器终端可用 `skillhub login --no-open`；自动化使用 API token。
+没有从命令行、环境变量或该注册中心保存记录读取到 Token 时，`skillhub login` 使用 OAuth Device Flow；读取到但收到 HTTP 401 的已保存凭据会被报告，并继续进入设备授权，无需先执行 `logout` 即可恢复登录。由 `--token` 或 `SKILLHUB_TOKEN` 提供的 Token 被拒绝时不会自动替换：CLI 会指出该输入并说明如何去掉它后重试。打开验证页面并显示用户码，完成浏览器授权后保存凭证。无浏览器终端可用 `skillhub login --no-open`；自动化使用 API token。
 
 ```bash
 # 使用 API token 登录
@@ -405,7 +405,7 @@ skillhub doctor --health --offline --json
 
 没有失败项时退出码为 0，仍可能有提示和未检查项。多个失败并存时依次优先返回文件错误 4、认证错误 2、网络错误 3、其他 HTTP/协议错误 1；参数错误仍为 5。
 原 `doctor --json` 的结构不变。`--offline`、`--registry`、`--token` 必须与 `--health` 同用，避免误触发清单写入。
-失效的保存凭证会提示对当前服务先执行 `logout` 再 `login`；命令行或环境变量覆盖会单独说明，诊断不代为执行。
+保存凭证收到 HTTP 401 时会提示对当前服务执行 `login` 重新登录，无需先 `logout`；HTTP 403 则提示检查权限。命令行或环境变量覆盖会单独说明，诊断不代为执行。
 单独验证身份继续用 `whoami`，检查可用更新继续用 `outdated`。
 
 ## 发布

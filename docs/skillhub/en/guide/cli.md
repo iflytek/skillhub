@@ -103,7 +103,7 @@ Token resolution priority:
 
 ### Login
 
-When no token is resolved from arguments, environment variables, or saved registry credentials, `skillhub login` uses OAuth Device Flow; an invalid resolved token does not automatically fall back: follow the verification URL and user code to authorize in a browser. Use `skillhub login --no-open` on headless terminals, or an API token for automation.
+`skillhub login` resolves a token from arguments, environment variables, or saved registry credentials, and starts OAuth Device Flow when none is resolved. A saved credential that the registry rejects with HTTP 401 is reported and followed by Device Flow, so the account can be recovered without a separate `logout`. A token supplied by `--token` or `SKILLHUB_TOKEN` is never replaced automatically: the CLI names the rejected input and explains how to retry without it. Follow the verification URL and user code to authorize in a browser. Use `skillhub login --no-open` on headless terminals, or an API token for automation.
 
 ```bash
 # Login with API token
@@ -446,8 +446,8 @@ produce the full report on stdout without stderr chatter. Exit 0 permits warning
 failure priority is filesystem 4, authentication 2, network 3, then other HTTP/protocol failure 1.
 Usage errors remain 5. Legacy `doctor --json` is unchanged. Health-only options require `--health`.
 
-Rejected saved credentials get explicit registry-scoped logout/login guidance; override sources get
-separate instructions. No recovery action is performed. Use `whoami` for direct identity verification
+Saved credentials rejected with HTTP 401 get registry-scoped login guidance without requiring logout;
+HTTP 403 calls for checking permissions. Override sources get separate instructions. No recovery action is performed. Use `whoami` for direct identity verification
 and `outdated` for installed-update discovery.
 
 ## Publishing

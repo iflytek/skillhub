@@ -507,7 +507,7 @@ export class SkillHubClient {
         : `registry returned ${response.status}`
     }
 
-    return new CliError(publicFields.msg ?? fallback, exitCode, details)
+    return new CliError(publicFields.msg ?? fallback, exitCode, details, response.status)
   }
 
   private async readPublicErrorFields(response: Response): Promise<PublicErrorFields> {
