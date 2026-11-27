@@ -14,6 +14,7 @@ import com.iflytek.skillhub.domain.organization.MembershipSourceType;
 import com.iflytek.skillhub.domain.organization.OrganizationMembership;
 import com.iflytek.skillhub.domain.organization.OrganizationMembershipRepository;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -30,7 +31,7 @@ class DirectoryScimAppServiceTest {
     private final DirectoryScimAppService service = new DirectoryScimAppService(
             connections, memberships, audit, requestIds,
             Clock.fixed(Instant.parse("2026-11-26T00:00:00Z"), ZoneOffset.UTC),
-            new DirectoryProvisioningProperties());
+            new DirectoryProvisioningProperties(), new ObjectMapper());
 
     private DirectoryConnection connection;
 
@@ -73,8 +74,8 @@ class DirectoryScimAppServiceTest {
 
         assertThat(membership.getStatus().name()).isEqualTo("DEPROVISIONED");
         verify(audit).recordOrganizationAdministration(
-                eq("scim:" + connection.getId()), eq("DIRECTORY_USER_DEPROVISIONED"),
-                eq("org-1"), eq(membership.getId()), eq("request-1"));
+                eq(null), eq("DIRECTORY_USER_DEPROVISIONED"), eq("org-1"), eq(membership.getId()),
+                eq("request-1"), eq("{\"actorType\":\"SCIM\",\"connectionId\":\"" + connection.getId() + "\"}"));
     }
 
     @Test

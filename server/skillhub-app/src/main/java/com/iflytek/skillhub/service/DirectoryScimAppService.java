@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.config.DirectoryProvisioningProperties;
 import com.iflytek.skillhub.domain.audit.AuditLogService;
 import com.iflytek.skillhub.domain.organization.DirectoryConnection;
@@ -15,6 +16,7 @@ import com.iflytek.skillhub.exception.ScimProtocolException;
 import com.iflytek.skillhub.observability.RequestIdAccessor;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -40,6 +42,7 @@ public class DirectoryScimAppService {
     private final RequestIdAccessor requestIds;
     private final Clock clock;
     private final DirectoryProvisioningProperties properties;
+    private final ObjectMapper mapper;
 
     public DirectoryScimAppService(
             DirectoryConnectionAppService connections,
@@ -47,7 +50,8 @@ public class DirectoryScimAppService {
             AuditLogService audit,
             RequestIdAccessor requestIds,
             Clock clock,
-            DirectoryProvisioningProperties properties
+            DirectoryProvisioningProperties properties,
+            ObjectMapper mapper
     ) {
         this.connections = connections;
         this.memberships = memberships;
@@ -55,6 +59,7 @@ public class DirectoryScimAppService {
         this.requestIds = requestIds;
         this.clock = clock;
         this.properties = properties;
+        this.mapper = mapper;
     }
 
     @Transactional(readOnly = true)
@@ -118,7 +123,7 @@ public class DirectoryScimAppService {
         OrganizationMembership membership = memberships.findByOrganizationIdAndSource(
                         organizationId, MembershipSourceType.DIRECTORY, sourceId)
                 .orElse(null);
-        Instant now = clock.instant();
+        Instant now = transitionNow();
         if (membership == null) {
             membership = OrganizationMembership.directoryProvisioned(
                     organizationId, sourceId, profile.userName(), profile.displayName(), profile.email(),
@@ -132,8 +137,8 @@ public class DirectoryScimAppService {
         membership.applyDirectoryActive(profile.active(), now);
         OrganizationMembership saved = memberships.save(membership);
         audit.recordOrganizationAdministration(
-                "scim:" + connectionId, "DIRECTORY_USER_PROVISIONED", organizationId,
-                saved.getId(), requestIds.current());
+                null, "DIRECTORY_USER_PROVISIONED", organizationId,
+                saved.getId(), requestIds.current(), machineActorDetail(connectionId));
         return resource(connection, saved);
     }
 
@@ -156,7 +161,7 @@ public class DirectoryScimAppService {
         if (!sourceId(connectionId, profile.externalId()).equals(membership.getSourceId())) {
             throw conflict("externalId cannot change for an existing SCIM resource");
         }
-        Instant now = clock.instant();
+        Instant now = transitionNow();
         membership.updateDirectoryProfile(
                 profile.userName(), profile.displayName(), profile.email(),
                 profile.department(), profile.employeeNumber(), now);
@@ -220,7 +225,7 @@ public class DirectoryScimAppService {
                 throw badRequest("invalidSyntax", "Unsupported SCIM PATCH operation");
             }
         }
-        Instant now = clock.instant();
+        Instant now = transitionNow();
         membership.updateDirectoryProfile(userName, displayName, email, department, employeeNumber, now);
         membership.applyDirectoryActive(active, now);
         return resource(connection, memberships.save(membership));
@@ -241,11 +246,11 @@ public class DirectoryScimAppService {
         if (membership.getStatus() == OrganizationMembershipStatus.DEPROVISIONED) {
             return;
         }
-        membership.deprovision(clock.instant());
+        membership.deprovision(transitionNow());
         memberships.save(membership);
         audit.recordOrganizationAdministration(
-                "scim:" + connectionId, "DIRECTORY_USER_DEPROVISIONED", organizationId,
-                membershipId, requestIds.current());
+                null, "DIRECTORY_USER_DEPROVISIONED", organizationId,
+                membershipId, requestIds.current(), machineActorDetail(connectionId));
     }
 
     private DirectoryConnection requireConnection(String organizationId, String connectionId) {
@@ -392,6 +397,23 @@ public class DirectoryScimAppService {
 
     private String sourceId(String connectionId, String externalId) {
         return connectionId + ":" + externalId;
+    }
+
+    private Instant transitionNow() {
+        // PostgreSQL TIMESTAMP precision is microseconds. Keep SCIM version tags stable
+        // across the write response and the subsequent If-Match read.
+        return clock.instant().truncatedTo(ChronoUnit.MICROS);
+    }
+
+    private String machineActorDetail(String connectionId) {
+        try {
+            return mapper.createObjectNode()
+                    .put("actorType", "SCIM")
+                    .put("connectionId", connectionId)
+                    .toString();
+        } catch (Exception failure) {
+            throw new IllegalStateException("Unable to serialize SCIM audit detail", failure);
+        }
     }
 
     private ScimProtocolException badRequest(String type, String detail) {

@@ -21,5 +21,5 @@
 
 - [x] 4.1 后端单元、集成、PostgreSQL 16/17、权限、迁移和 OpenAPI drift 检查。
 - [x] 4.2 Web tests/typecheck/lint/build 和无权限/暂停/空状态验收。
-- [ ] 4.3 使用可重复 SCIM reference service 验证用户全生命周期和幂等重放。
-- [ ] 4.4 验证目录停用即时撤权、手工 membership/Namespace 保留、日志脱敏和资源清理。
+- [x] 4.3 使用可重复 SCIM reference service 验证用户全生命周期和幂等重放。
+- [x] 4.4 验证目录停用即时撤权、手工 membership/Namespace 保留、日志脱敏和资源清理。

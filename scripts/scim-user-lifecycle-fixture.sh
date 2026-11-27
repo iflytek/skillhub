@@ -41,13 +41,14 @@ payload="$(jq -nc \
 echo "2. Create user"
 request POST /Users "$payload" | tee "$tmp_dir/create.json" | jq -e '.externalId == $ENV.SCIM_EXTERNAL_ID and .active == true' >/dev/null
 user_id="$(jq -r '.id' "$tmp_dir/create.json")"
-etag="$(awk 'BEGIN{IGNORECASE=1} /^ETag:/{sub(/[[:space:]]+$/, ""); sub(/^ETag:[[:space:]]*/, ""); print; exit}' "$tmp_dir/headers")"
-[[ -n "$user_id" && -n "$etag" ]]
+[[ -n "$user_id" ]]
 
 echo "3. List, filter and replay"
 request GET '/Users?startIndex=1&count=10' | jq -e --arg user_id "$user_id" '.totalResults >= 1 and (.Resources | map(select(.id == $user_id)) | length == 1)' >/dev/null
 request GET "/Users?filter=externalId%20eq%20%22${SCIM_EXTERNAL_ID}%22" | jq -e '.totalResults == 1' >/dev/null
 request POST /Users "$payload" | jq -e --arg user_id "$user_id" '.id == $user_id' >/dev/null
+etag="$(awk 'BEGIN{IGNORECASE=1} /^ETag:/{sub(/[[:space:]]+$/, ""); sub(/^ETag:[[:space:]]*/, ""); print; exit}' "$tmp_dir/headers")"
+[[ -n "$etag" ]]
 
 echo "4. Replace with current ETag"
 replace_payload="$(jq -nc \
