@@ -53,6 +53,18 @@ class CliSkillAppServiceChangelogTest {
     }
 
     @Test
+    void publish_reportsTheVersionStatusForTheCli() {
+        SkillVersion version = new SkillVersion(9L, "1.1.0", "publisher");
+        version.setStatus(com.iflytek.skillhub.domain.skill.SkillVersionStatus.PENDING_REVIEW);
+        given(publications.publishFromEntries("team", List.of(), "publisher", SkillVisibility.PUBLIC, Set.of(), false))
+                .willReturn(new SkillPublishService.PublishResult(9L, "demo", version));
+
+        var response = service.publish("team", List.of(), "publisher", SkillVisibility.PUBLIC, Set.of(), null, null);
+
+        assertThat(response.status()).isEqualTo("PENDING_REVIEW");
+    }
+
+    @Test
     void publish_withoutNoteDoesNotTouchTheVersion() {
         SkillVersion version = new SkillVersion(9L, "1.1.0", "publisher");
         given(publications.publishFromEntries("team", List.of(), "publisher", SkillVisibility.PUBLIC, Set.of(), false))
