@@ -8,8 +8,19 @@ The reviewed collection contains general-purpose Skills and focused operational 
 for SkillHub itself. Every package includes:
 
 - a `SKILL.md` adapted for SkillHub;
-- `LICENSE.txt` and `NOTICE.md` with pinned upstream provenance;
+- `LICENSE.txt` and `NOTICE.md` with provenance;
 - only the scripts and references required at runtime.
+
+Provenance has two forms, and the catalog decides which one applies:
+
+| Catalog entry | Meaning | `NOTICE.md` must contain |
+| --- | --- | --- |
+| `"upstream": {repository, commit, path}` | adaptation of an upstream package | the pinned repository, full commit and license |
+| `"upstream": null` | written here, no upstream | `Original work notice`, the in-repository source path and the license |
+
+An all-zero commit is rejected: it looks like a pin without pinning anything. Original packages
+declare `"upstream": null` instead. `artifacts.json` records `origin` (`upstream` or `original`)
+for each package so the release step can group them.
 
 Build and verify the packages with:
 
@@ -47,7 +58,8 @@ URL and the problem the Skill solves. A complete pull request should:
 
 1. add the reviewed package under `builtin-skills/skills/<slug>/`, including `SKILL.md`,
    `LICENSE.txt`, and `NOTICE.md`;
-2. record the pinned upstream commit and provenance in `catalog.json`;
+2. record provenance in `catalog.json`: the pinned upstream commit, or `"upstream": null` for a
+   package written here, together with the matching `Original work notice` in `NOTICE.md`;
 3. add a realistic regression case to `evals.json`;
 4. run `make test-builtin-skills`.
 
