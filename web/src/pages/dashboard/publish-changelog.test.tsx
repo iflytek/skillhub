@@ -77,6 +77,7 @@ describe('publish release notes', () => {
     mount()
     fireEvent.change(screen.getByLabelText('package'), { target: { files: [new File(['zip'], 'stable.zip')] } })
     await waitFor(() => expect(preview).toHaveBeenCalled())
+    // Nothing to type on a first publish, so the payload cannot carry a note either.
     expect(screen.queryByLabelText('publish.changelog')).toBeNull()
   })
 })

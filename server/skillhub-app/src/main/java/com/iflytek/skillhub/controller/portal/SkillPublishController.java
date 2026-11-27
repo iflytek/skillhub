@@ -5,6 +5,7 @@ import com.iflytek.skillhub.dto.SkillPackagePreviewResponse;
 import com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.controller.BaseApiController;
+import com.iflytek.skillhub.controller.support.ReleaseNote;
 import com.iflytek.skillhub.controller.support.SkillPackageArchiveExtractor;
 import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
@@ -118,7 +119,7 @@ public class SkillPublishController extends BaseApiController {
                 principal.platformRoles(),
                 confirmWarnings, avatarAction, avatarUploadId, expectedSlug, displayName,
                 shortDescription, overview, resetPresentation, AuditRequestContext.from(request),
-                principal.tokenCapabilities(), normalizeChangelog(changelog)
+                principal.tokenCapabilities(), ReleaseNote.normalize(changelog)
         );
 
         PublishResponse response = new PublishResponse(
@@ -135,15 +136,4 @@ public class SkillPublishController extends BaseApiController {
         return ok("response.success.published", response);
     }
 
-    /** Optional release note; trimmed, capped so a stuck paste cannot bloat the row. */
-    private static String normalizeChangelog(String changelog) {
-        if (changelog == null || changelog.isBlank()) {
-            return null;
-        }
-        String trimmed = changelog.strip();
-        if (trimmed.length() > 4000) {
-            throw new DomainBadRequestException("error.skill.publish.changelog.tooLong");
-        }
-        return trimmed;
-    }
 }

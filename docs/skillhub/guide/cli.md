@@ -419,6 +419,9 @@ skillhub publish ./my-skill.zip --namespace myspace
 
 # 指定可见性
 skillhub publish ./my-skill --namespace myspace --visibility private
+
+# 记录这个版本改了什么（会显示在技能的版本列表里）
+skillhub publish ./my-skill --namespace myspace --changelog "修复了解析器，补了回归测试"
 ```
 
 可见性选项：

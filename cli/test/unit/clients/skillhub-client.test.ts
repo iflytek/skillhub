@@ -81,6 +81,21 @@ describe('SkillHubClient', () => {
       .resolves.toMatchObject({ slug: 'custom-skill' })
   })
 
+  test('sends the release note only when the caller provides one', async () => {
+    const seen: Array<string | null> = []
+    const fetchImpl = (async (_input: URL | RequestInfo, init?: RequestInit) => {
+      const formData = init?.body as FormData
+      seen.push(formData.get('changelog') as string | null)
+      return Response.json({ data: { namespace: 'team', slug: 'skill', version: '1.1.0', visibility: 'PUBLIC', status: 'PUBLISHED' } })
+    }) as unknown as typeof fetch
+
+    const client = new SkillHubClient('http://registry.test', 'token', fetchImpl)
+    await client.publish('team', new Blob(['zip'], { type: 'application/zip' }), 'PUBLIC', 'skill.zip')
+    await client.publish('team', new Blob(['zip'], { type: 'application/zip' }), 'PUBLIC', 'skill.zip', false, 'Fixed the parser')
+
+    expect(seen).toEqual([null, 'Fixed the parser'])
+  })
+
   // --- download() error handling (P0) ---
 
   test('download() throws auth error on 401', async () => {

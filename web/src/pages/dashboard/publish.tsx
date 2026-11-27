@@ -113,6 +113,7 @@ export function PublishPage() {
       setDisplayName('')
       setShortDescription('')
       setOverview('')
+      setChangelog('')
       setShortSource('package')
       setOverviewSource('package')
       setAttempted(false)
@@ -256,7 +257,7 @@ export function PublishPage() {
         expectedSlug: updateSlug || undefined,
         displayName,
         ...presentationPayload(shortSource, overviewSource, shortDescription, overview),
-        changelog: changelog.trim() || undefined,
+        changelog: isUpdate ? (changelog.trim() || undefined) : undefined,
       })
       setPrecheckWarnings([])
       setWarningDialogOpen(false)

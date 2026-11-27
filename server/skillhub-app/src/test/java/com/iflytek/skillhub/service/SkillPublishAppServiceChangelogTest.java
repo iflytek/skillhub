@@ -63,7 +63,7 @@ class SkillPublishAppServiceChangelogTest {
 
         service.publish("global", List.of(), "publisher", SkillVisibility.PUBLIC, Set.of(), false,
                 SkillPublishAppService.AvatarAction.KEEP, null, null, null, null, null, false,
-                new AuditRequestContext("127.0.0.1", "test"), (String) null);
+                new AuditRequestContext("127.0.0.1", "test"), (Set<String>) null, null);
 
         assertThat(version.getChangelog()).isNull();
         verify(versions, org.mockito.Mockito.never()).save(any());

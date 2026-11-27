@@ -589,6 +589,9 @@ skillhub publish ./my-skill.zip --namespace myspace
 
 # Specify visibility
 skillhub publish ./my-skill --namespace myspace --visibility private
+
+# Record what changed in this version (shown in the skill's version list)
+skillhub publish ./my-skill --namespace myspace --changelog "Fixed the parser, added a regression test"
 ```
 
 Visibility options:
@@ -649,7 +652,7 @@ Update mechanism:
 | `skillhub remove <coordinate> [--agent <profile>] [--all] [--remote] [--hard] [--namespace <slug>] [--registry <url>] [--token <token>] [--json]` | Remove a skill |
 | `skillhub doctor [--json]` | Scan project metadata and merge into inventory, preserving entries outside the scan |
 | `skillhub doctor --health [--offline] [--registry <url>] [--token <token>] [--json]` | Read-only health diagnosis; does not repair inventory or start login |
-| `skillhub publish <path> [--namespace <slug>] [--visibility <v>] [--registry <url>] [--token <token>] [--json]` | Publish a skill |
+| `skillhub publish <path> [--namespace <slug>] [--visibility <v>] [--changelog <text>] [--registry <url>] [--token <token>] [--json]` | Publish a skill |
 | `skillhub sync pull --namespace <slug> [--skill <slug>]... [options]` | Pull explicitly selected skills from a non-global namespace |
 | `skillhub sync <status\|diff\|push> --namespace <slug> [options]` | Inspect or push a non-global namespace workspace |
 | `skillhub suite <install\|check\|upgrade\|remove> <coordinate> [options]` | Manage a pinned Skill Suite installation |

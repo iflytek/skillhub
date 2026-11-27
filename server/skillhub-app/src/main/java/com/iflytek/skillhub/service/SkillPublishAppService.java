@@ -62,15 +62,6 @@ public class SkillPublishAppService {
     public SkillPublishService.PublishResult publish(String namespace, List<PackageEntry> entries, String actor,
             SkillVisibility visibility, Set<String> roles, boolean confirmWarnings, AvatarAction action,
             String uploadId, String expectedSlug, String displayName, String shortDescription,
-            String overview, boolean resetPresentation, AuditRequestContext context, String changelog) {
-        return publish(namespace, entries, actor, visibility, roles, confirmWarnings, action, uploadId,
-                expectedSlug, displayName, shortDescription, overview, resetPresentation, context, null, changelog);
-    }
-
-    @Transactional
-    public SkillPublishService.PublishResult publish(String namespace, List<PackageEntry> entries, String actor,
-            SkillVisibility visibility, Set<String> roles, boolean confirmWarnings, AvatarAction action,
-            String uploadId, String expectedSlug, String displayName, String shortDescription,
             String overview, boolean resetPresentation, AuditRequestContext context, Set<String> tokenCapabilities) {
         return publish(namespace, entries, actor, visibility, roles, confirmWarnings, action, uploadId, expectedSlug,
                 displayName, shortDescription, overview, resetPresentation, context, tokenCapabilities, null);

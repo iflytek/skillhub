@@ -713,7 +713,7 @@ With `--health`, diagnose without inventory maintenance; `--offline` skips netwo
 ### publish
 
 ```bash
-skillhub publish <path> [options]
+skillhub publish <path> [--changelog <text>] [options]
 ```
 
 Options:

@@ -118,8 +118,8 @@ export const commands = {
   },
   publish: {
     summary: 'Publish a local skill package',
-    usage: 'skillhub publish <path> [--namespace <slug>] [--visibility <public|namespace-only|private>] [--dry-run] [--registry <url>] [--token <token>] [--json]',
-    examples: ['skillhub publish ./my-skill', 'skillhub publish ./my-skill --namespace myspace']
+    usage: 'skillhub publish <path> [--namespace <slug>] [--visibility <public|namespace-only|private>] [--changelog <text>] [--dry-run] [--registry <url>] [--token <token>] [--json]',
+    examples: ['skillhub publish ./my-skill', 'skillhub publish ./my-skill --namespace myspace', 'skillhub publish ./my-skill --changelog "Fixed the parser"']
   },
   update: {
     summary: 'Check or update CLI itself',

@@ -372,12 +372,14 @@ export class SkillHubClient {
     file: Blob,
     visibility: string,
     fileName = 'skill.zip',
-    rejectExistingVersion = false
+    rejectExistingVersion = false,
+    changelog?: string
   ): Promise<PublishResponse> {
     const formData = new FormData()
     formData.append('file', file, fileName)
     formData.append('visibility', visibility)
     if (rejectExistingVersion) formData.append('rejectExistingVersion', 'true')
+    if (changelog) formData.append('changelog', changelog)
     let response: Response
     try {
       response = await this.fetchImpl(`${this.registry}/api/cli/v1/skills/${namespace}/publish`, {
