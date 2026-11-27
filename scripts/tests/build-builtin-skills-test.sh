@@ -128,7 +128,8 @@ for coordinate in packaged_runtime_coordinates:
     assert runtime_item["sha256"] == artifact["sha256"], coordinate
     parsed_url = urlsplit(runtime_item["url"])
     assert parsed_url.scheme == "https", coordinate
-    assert parsed_url.hostname == "bjcdn.openstorage.cn", coordinate
+    # Both hosts serve the organisation's immutable skill artifacts; keep the check narrow.
+    assert parsed_url.hostname in {"bjcdn.openstorage.cn", "openres.xfyun.cn"}, coordinate
     assert not parsed_url.query and not parsed_url.fragment, coordinate
     assert parsed_url.path.lower().endswith('.zip'), coordinate
 PY

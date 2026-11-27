@@ -49,6 +49,12 @@
       "sha256": "6a2cff6c0248c9a01c2475f2467606f06312ffc093c4ac0637ad50ba13b421aa"
     },
     {
+      "slug": "event-planner",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-11-27/4e114f14-0607-4a39-b968-111f087d1f29/1795771456688/6df464590dfed80b699e98e10b2b884388ae5f6350e0aabd085598eaba941373.zip",
+      "sha256": "6df464590dfed80b699e98e10b2b884388ae5f6350e0aabd085598eaba941373"
+    },
+    {
       "slug": "exam-ready",
       "version": "1.0.0",
       "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/2a4ff8f9-7f57-435f-8eb1-69fe33afa99e/skillhub-builtin-skills/exam-ready/1.0.0/aea81a497157a19e4b136f2cfe3ba0764ebb52e520e4a87fa0446e5465f97663.zip",
@@ -73,6 +79,12 @@
       "sha256": "171acf2d0574265b1ececa53759658aeb582aae4c859d4199b1ff322d65f8642"
     },
     {
+      "slug": "meal-and-grocery-planner",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-11-27/8dc9ac66-8a25-46b2-bf4f-fead6d4dafd7/1795771465947/684f303612cad87bfa5aef7f48a58d5833d48a2d793e658bc1c338c061009406.zip",
+      "sha256": "684f303612cad87bfa5aef7f48a58d5833d48a2d793e658bc1c338c061009406"
+    },
+    {
       "slug": "meeting-note-summarizer",
       "version": "1.0.0",
       "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-07-31/6cf347a7-ccc5-4016-b4ca-6263959a1b08/skillhub-builtin-skills/meeting-note-summarizer/1.0.0/5add401203f323bc1cbb350f306d3a5d3f3b16c2ad6578e7cab55d2c196152ca.zip",
@@ -83,6 +95,12 @@
       "version": "1.0.0",
       "url": "https://bjcdn.openstorage.cn/aicontest/2026-09-22/2c7f87a4-b339-47f5-9a8e-f0ad1caad2c6.zip",
       "sha256": "9184ae8bafab208fe468c9f6b5053ca76dd9e594a96ea57ff66cb370196dbd4b"
+    },
+    {
+      "slug": "packing-checklist",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-11-27/dfcab3f5-aaff-46b4-9b9d-d4edffeff1a0/1795771611577/a6a7e679d803d0ef6aba807c2d644b250f8646f5d291427dd5b764a193b0e8d4.zip",
+      "sha256": "a6a7e679d803d0ef6aba807c2d644b250f8646f5d291427dd5b764a193b0e8d4"
     },
     {
       "slug": "plugin-scanner",
@@ -131,6 +149,12 @@
       "version": "1.0.0",
       "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-10-09/42f6a62c-2cf0-44be-acff-b204ac3e5b8c/1791511392660/459104671707d8c2adf19bce0ba97c361de644643e0434a2e325ef45e11c1ca8.zip",
       "sha256": "459104671707d8c2adf19bce0ba97c361de644643e0434a2e325ef45e11c1ca8"
+    },
+    {
+      "slug": "trip-planning-brief",
+      "version": "1.0.0",
+      "url": "https://bjcdn.openstorage.cn/open_res/xfyundoc/2026-11-27/ca7c3738-d636-4d88-a554-d917ce89e6b5/1795771623773/ed01ccae948954674b2014bb9d4e0bda30988d1aac08f61f7f9634b81032955c.zip",
+      "sha256": "ed01ccae948954674b2014bb9d4e0bda30988d1aac08f61f7f9634b81032955c"
     },
     {
       "slug": "video-frames",
