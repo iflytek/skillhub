@@ -55,6 +55,17 @@ describe('help command', () => {
     expect(root.stdout).toContain('Manage Skill Suites on compatible registries')
   })
 
+  test('keeps optional repository support and CLI self-update clear in both help entries', async () => {
+    const topic = await runCli(['help', 'repository', '--json'])
+    expect(topic.exitCode).toBe(0)
+    expect(JSON.parse(topic.stdout).summary).toContain('on compatible registries')
+    expect(JSON.parse(topic.stdout).examples).toContain('skillhub repository check 123456 --json')
+    const root = await runCli(['--help'])
+    expect(root.exitCode).toBe(0)
+    expect(root.stdout).toContain('GitHub repository skills on compatible registries')
+    expect(root.stdout).toContain('Check or update CLI itself')
+  })
+
   test('distinguishes skill upgrade from CLI self-update and namespace sync', async () => {
     const upgrade = await runCli(['help', 'upgrade'])
     expect(upgrade.exitCode).toBe(0)

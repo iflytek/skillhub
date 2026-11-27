@@ -359,9 +359,10 @@ Token 写入需 `skill:manage`，仍需维护权限。扩大范围走统一审�
 可选 `status=ALL|ACTIVE|EXPIRED`，缺省 `ALL`；`ACTIVE` 包含永不过期或尚未到期的凭证，
 `EXPIRED` 为到期时间小于等于服务端当前时间。筛选先于分页，`total` 为筛选后的总数，非法状态返回 400。
 
-创建请求显式传 `scopes` 数组；同名创建轮换旧 Token，拒绝不会吊销旧凭据。
+创建请求可显式传 `scopes` 数组；同名创建轮换旧 Token，拒绝不会吊销旧凭据。
 能力在兼容别名展开后比较，创建／轮换／续期都不能越过调用 Token 的能力或到期时间。
-省略 scopes 暂保留 read + publish + delete，响应 `deprecatedDefault=true`，下一个次版本改为仅 read。
+省略 scopes 默认签发 read + publish + delete + namespace:manage（隐含 namespace:read），
+响应 `deprecatedDefault=false`；不默认授予 token:manage，操作仍受账号与空间角色约束。
 显式空数组不授予能力。创建／列表响应提供 `capabilities` 和 `legacyCompat`。
 
 `GET /api/cli/v1/auth/whoami` 返回当前身份和 `capabilities`（排序数组，session 为 null）、
@@ -660,3 +661,10 @@ Parts:
 生成两份独立的 OpenAPI spec：
 - `openapi-native.json`：skillhub Native API，用于前端 SDK 生成
 - `openapi-compat-clawhub.json`：ClawHub 兼容层 API，用于兼容性测试和文档
+
+
+### GitHub repository current-version installation plan
+
+`GET /api/cli/v1/github-repositories/{repositoryId}/install-plan` and its Web equivalent `GET /api/web/github-repositories/{repositoryId}/install-plan` return `{repositoryId, owner, name, members}` inside `ApiResponse`. Each member contains `skillId`, `namespace`, `slug`, `displayName`, `version`, `versionId`, `fingerprint` and an application-relative exact-version `downloadUrl`.
+
+The read-only plan selects the current eligible published pointers for the complete repository, independently of catalog pagination, filters or historical snapshots. A repeatable-read transaction fixes membership, version IDs and file hashes for this response. At most 1000 members are supported; an oversized plan is rejected with HTTP 400 rather than truncated. No eligible accessible members yields HTTP 404, without exposing inaccessible or unpublished names/counts. Public content allows anonymous reads; a supplied API Token explicitly requires `skill:read`. Namespace/source visibility, hidden/archived state and published/download-ready/non-yanked version checks still apply. Downloads recheck current authorization and version availability. This endpoint creates no installation task, Suite, installation ledger or database state.

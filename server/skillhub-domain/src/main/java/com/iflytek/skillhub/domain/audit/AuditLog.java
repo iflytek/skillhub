@@ -82,11 +82,44 @@ public class AuditLog {
                                                String organizationId,
                                                String requestId,
                                                Instant createdAt) {
+        return organizationSuccess(actorUserId, action, organizationId,
+                organizationId, requestId, createdAt);
+    }
+
+    public static AuditLog organizationSuccess(String actorUserId,
+                                               String action,
+                                               String organizationId,
+                                               String targetRef,
+                                               String requestId,
+                                               Instant createdAt) {
+        return organizationSuccess(actorUserId, action, organizationId, targetRef,
+                requestId, null, createdAt);
+    }
+
+    public static AuditLog organizationSuccess(String actorUserId,
+                                               String action,
+                                               String organizationId,
+                                               String targetRef,
+                                               String requestId,
+                                               String detailJson,
+                                               Instant createdAt) {
         AuditLog log = new AuditLog(actorUserId, action, "ORGANIZATION", null,
-                requestId, null, null, null, createdAt);
+                requestId, null, null, detailJson, createdAt);
         log.organizationId = organizationId;
-        log.targetRef = organizationId;
+        log.targetRef = targetRef;
         log.result = "SUCCESS";
+        return log;
+    }
+
+    static AuditLog organizationLoginConnection(
+            String actorUserId, String action, String organizationId, String connectionId,
+            String requestId, boolean success, String detailJson, Instant createdAt
+    ) {
+        AuditLog log = new AuditLog(actorUserId, action, "LOGIN_CONNECTION", null,
+                requestId, null, null, detailJson, createdAt);
+        log.organizationId = organizationId;
+        log.targetRef = connectionId;
+        log.result = success ? "SUCCESS" : "FAILED";
         return log;
     }
 

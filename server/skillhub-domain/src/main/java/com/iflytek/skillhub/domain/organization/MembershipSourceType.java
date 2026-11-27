@@ -4,5 +4,6 @@ package com.iflytek.skillhub.domain.organization;
 public enum MembershipSourceType {
     INVITATION,
     MANUAL,
-    JIT
+    JIT,
+    DIRECTORY
 }

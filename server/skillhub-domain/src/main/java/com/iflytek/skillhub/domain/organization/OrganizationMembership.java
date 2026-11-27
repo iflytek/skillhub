@@ -52,6 +52,9 @@ public class OrganizationMembership {
     @Column(name = "employee_number", length = 128)
     private String employeeNumber;
 
+    @Column(name = "source_user_name", length = 256)
+    private String sourceUserName;
+
     @Column(name = "authority_version", nullable = false)
     private long authorityVersion;
 
@@ -114,6 +117,86 @@ public class OrganizationMembership {
                 primaryEmail,
                 createdAt
         );
+    }
+
+    public static OrganizationMembership directoryProvisioned(
+            String organizationId,
+            String sourceId,
+            String sourceUserName,
+            String displayName,
+            String primaryEmail,
+            String department,
+            String employeeNumber,
+            Instant createdAt
+    ) {
+        OrganizationMembership membership = new OrganizationMembership(
+                organizationId,
+                OrganizationMembershipStatus.PROVISIONED,
+                MembershipSourceType.DIRECTORY,
+                sourceId,
+                displayName,
+                primaryEmail,
+                createdAt
+        );
+        membership.sourceUserName = optionalText(sourceUserName);
+        membership.department = optionalText(department);
+        membership.employeeNumber = optionalText(employeeNumber);
+        return membership;
+    }
+
+    public void updateDirectoryProfile(
+            String sourceUserName,
+            String displayName,
+            String primaryEmail,
+            String department,
+            String employeeNumber,
+            Instant occurredAt
+    ) {
+        requireDirectorySource();
+        Instant transitionTime = requireCurrentOrLater(occurredAt);
+        boolean changed = !Objects.equals(this.sourceUserName, optionalText(sourceUserName))
+                || !Objects.equals(this.displayName, optionalText(displayName))
+                || !Objects.equals(this.primaryEmail, optionalText(primaryEmail))
+                || !Objects.equals(this.department, optionalText(department))
+                || !Objects.equals(this.employeeNumber, optionalText(employeeNumber));
+        this.sourceUserName = optionalText(sourceUserName);
+        this.displayName = optionalText(displayName);
+        this.primaryEmail = optionalText(primaryEmail);
+        this.department = optionalText(department);
+        this.employeeNumber = optionalText(employeeNumber);
+        if (changed) {
+            authorityVersion++;
+        }
+        updatedAt = transitionTime;
+    }
+
+    public void applyDirectoryActive(boolean active, Instant occurredAt) {
+        requireDirectorySource();
+        Instant transitionTime = requireCurrentOrLater(occurredAt);
+        if (active && status == OrganizationMembershipStatus.SUSPENDED) {
+            status = OrganizationMembershipStatus.PROVISIONED;
+            suspendedAt = null;
+            authorityVersion++;
+        } else if (!active && status != OrganizationMembershipStatus.SUSPENDED
+                && status != OrganizationMembershipStatus.DEPROVISIONED) {
+            status = OrganizationMembershipStatus.SUSPENDED;
+            suspendedAt = transitionTime;
+            authorityVersion++;
+        }
+        updatedAt = transitionTime;
+    }
+
+    public void restoreDirectory(Instant occurredAt) {
+        requireDirectorySource();
+        if (status != OrganizationMembershipStatus.DEPROVISIONED) {
+            return;
+        }
+        Instant transitionTime = requireCurrentOrLater(occurredAt);
+        status = OrganizationMembershipStatus.PROVISIONED;
+        deprovisionedAt = null;
+        suspendedAt = null;
+        authorityVersion++;
+        updatedAt = transitionTime;
     }
 
     public static OrganizationMembership invited(
@@ -225,6 +308,12 @@ public class OrganizationMembership {
         return normalized.isEmpty() ? null : normalized;
     }
 
+    private void requireDirectorySource() {
+        if (sourceType != MembershipSourceType.DIRECTORY) {
+            throw new DomainBadRequestException("error.organization.membership.source.invalid");
+        }
+    }
+
     public String getId() {
         return id;
     }
@@ -263,6 +352,10 @@ public class OrganizationMembership {
 
     public String getEmployeeNumber() {
         return employeeNumber;
+    }
+
+    public String getSourceUserName() {
+        return sourceUserName;
     }
 
     public long getAuthorityVersion() {

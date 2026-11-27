@@ -1298,3 +1298,33 @@ describe('install command — --scope', () => {
     expect(result.stdout).toMatch(/--scope project --agent codex/)
   })
 })
+
+describe('install command — GitHub provenance', () => {
+  test('reports the upstream repository tag of a synced version and keeps plain output otherwise', async () => {
+    const env = await createTempHome()
+    const githubSource = {
+      ownerLogin: 'obra', repositoryName: 'superpowers', skillPath: 'skills/brainstorming',
+      commitSha: '2ce8aa15d05bd57213e6f746f953aafb7ded7a8b', syncRevision: 1,
+      upstreamTag: { status: 'EXACT', scope: 'REPOSITORY', tag: 'v7.0.1',
+        tagCommitSha: '2ce8aa15d05bd57213e6f746f953aafb7ded7a8b', commitsAfterTag: 0 },
+      declaredVersion: null
+    }
+    registry = await startFakeRegistry({
+      skills: [
+        { namespace: 'github', slug: 'brainstorming', version: '0.0.0-ga-1', zipBytes: makeSkillZip(), githubSource },
+        { namespace: 'global', slug: 'plain', version: '1.0.0', zipBytes: makeSkillZip() }
+      ]
+    })
+    const installDir = join(env.cwd, 'skills')
+    await mkdir(installDir, { recursive: true })
+    const cliEnv = { HOME: env.home, USERPROFILE: env.home }
+
+    const synced = await runCli(['install', '@github/brainstorming', '--dir', installDir, '--registry', registry.url], cliEnv)
+    expect(synced.exitCode).toBe(0)
+    expect(synced.stdout).toContain(`-> ${join(installDir, 'brainstorming')} (custom) [upstream v7.0.1]`)
+
+    const plain = await runCli(['install', '@global/plain', '--dir', installDir, '--registry', registry.url, '--json'], cliEnv)
+    expect(plain.exitCode).toBe(0)
+    expect(JSON.parse(plain.stdout)).not.toHaveProperty('githubSource')
+  })
+})

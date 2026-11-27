@@ -13,6 +13,10 @@ const authMethodsFixture = vi.hoisted(() => ({
   bootstrapEnabled: false,
   directEnabled: false,
   isError: false,
+  localCapabilitiesMissing: false,
+  localCapabilitiesError: false,
+  refetchAuthMethods: vi.fn(),
+  refetchLocalCapabilities: vi.fn(),
   returnTo: '',
   navigate: vi.fn(),
   mutateAsync: vi.fn(),
@@ -50,6 +54,7 @@ vi.mock('lucide-react', () => ({
 vi.mock('@/api/client', () => ({
   getDirectAuthRuntimeConfig: () => ({ enabled: authMethodsFixture.directEnabled, provider: 'local' }),
   getSessionBootstrapRuntimeConfig: () => ({ enabled: authMethodsFixture.bootstrapEnabled, provider: 'proxy' }),
+  getEnterpriseOidcRuntimeConfig: () => ({ enabled: false }),
 }))
 
 vi.mock('@/features/auth/auth-shell', () => ({
@@ -66,17 +71,22 @@ vi.mock('@/features/auth/session-bootstrap-entry', () => ({
 }))
 
 vi.mock('@/features/auth/use-auth-methods', () => ({
-  useAuthMethods: () => ({ data: authMethodsFixture.methods, isError: authMethodsFixture.isError }),
+  useAuthMethods: () => ({
+    data: authMethodsFixture.methods,
+    isError: authMethodsFixture.isError,
+    refetch: authMethodsFixture.refetchAuthMethods,
+  }),
 }))
 
 vi.mock('@/features/auth/use-local-auth-capabilities', () => ({
   useLocalAuthCapabilities: () => ({
-    data: {
+    data: authMethodsFixture.localCapabilitiesMissing ? undefined : {
       passwordLoginEnabled: authMethodsFixture.passwordEnabled,
       selfRegistrationEnabled: authMethodsFixture.registrationAvailable,
       registrationAvailable: authMethodsFixture.registrationAvailable,
     },
-    isError: false,
+    isError: authMethodsFixture.localCapabilitiesError,
+    refetch: authMethodsFixture.refetchLocalCapabilities,
   }),
 }))
 
@@ -108,6 +118,10 @@ describe('LoginPage', () => {
     authMethodsFixture.bootstrapEnabled = false
     authMethodsFixture.directEnabled = false
     authMethodsFixture.isError = false
+    authMethodsFixture.localCapabilitiesMissing = false
+    authMethodsFixture.localCapabilitiesError = false
+    authMethodsFixture.refetchAuthMethods.mockClear()
+    authMethodsFixture.refetchLocalCapabilities.mockClear()
     authMethodsFixture.passwordEnabled = true
     authMethodsFixture.registrationAvailable = true
     authMethodsFixture.returnTo = ''
@@ -225,6 +239,47 @@ describe('LoginPage', () => {
 
     expect(screen.queryByRole('button', { name: 'login.tabEnterprise' })).toBeNull()
     expect(screen.queryByText('session bootstrap')).toBeNull()
+  })
+
+  it('keeps the advertised password form available when registration capabilities fail', () => {
+    authMethodsFixture.localCapabilitiesMissing = true
+    authMethodsFixture.localCapabilitiesError = true
+    authMethodsFixture.methods = [{ id: 'local-password', methodType: 'PASSWORD' }]
+    render(<LoginPage />)
+
+    expect(screen.getByRole('button', { name: 'login.submit' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'login.register' })).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('lets the user retry unavailable sign-in configuration without showing an unconfirmed form', () => {
+    authMethodsFixture.localCapabilitiesMissing = true
+    authMethodsFixture.localCapabilitiesError = true
+    authMethodsFixture.isError = true
+    const { rerender } = render(<LoginPage />)
+
+    expect(screen.getByRole('alert').textContent).toBe('login.configUnavailable')
+    expect(screen.queryByRole('button', { name: 'login.submit' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'login.retryConfig' }))
+    expect(authMethodsFixture.refetchLocalCapabilities).toHaveBeenCalledOnce()
+    expect(authMethodsFixture.refetchAuthMethods).toHaveBeenCalledOnce()
+
+    authMethodsFixture.localCapabilitiesMissing = false
+    authMethodsFixture.localCapabilitiesError = false
+    authMethodsFixture.isError = false
+    rerender(<LoginPage />)
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('button', { name: 'login.submit' })).toBeTruthy()
+  })
+
+  it('honors an explicitly disabled password capability even if the catalog advertises password', () => {
+    authMethodsFixture.passwordEnabled = false
+    authMethodsFixture.registrationAvailable = false
+    authMethodsFixture.methods = [{ id: 'local-password', methodType: 'PASSWORD' }]
+    render(<LoginPage />)
+
+    expect(screen.queryByRole('button', { name: 'login.submit' })).toBeNull()
+    expect(screen.getByText('systemConfig.passwordDisabled')).toBeTruthy()
   })
 
   it('preserves configured session bootstrap when the method catalog is unavailable', () => {

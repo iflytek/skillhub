@@ -7,6 +7,8 @@ export function GithubSkillSourceCard({ source, version }: { source: GithubSkill
   const { t } = useTranslation()
   const repositoryUrl = `https://github.com/${encodeURIComponent(source.ownerLogin)}/${encodeURIComponent(source.repositoryName)}`
   const commitUrl = `${repositoryUrl}/commit/${encodeURIComponent(source.commitSha)}`
+  // Servers without source tag support omit the field; show it like an unrecorded snapshot.
+  const upstreamTag = source.upstreamTag ?? { status: 'UNRECORDED', scope: 'REPOSITORY' }
 
   return (
     <Card className="p-5 space-y-3">
@@ -24,6 +26,24 @@ export function GithubSkillSourceCard({ source, version }: { source: GithubSkill
         <div><dt className="text-muted-foreground">{t('review.githubRepository')}</dt><dd className="break-all"><a data-analytics-id="github.repository.external" href={repositoryUrl} target="_blank" rel="noopener noreferrer" className="text-primary underline">{source.ownerLogin}/{source.repositoryName}</a></dd></div>
         <div><dt className="text-muted-foreground">{t('review.githubSkillPath')}</dt><dd className="font-mono break-all">{source.skillPath}</dd></div>
         <div><dt className="text-muted-foreground">{t('review.githubCommit')}</dt><dd className="break-all"><a data-analytics-id="github.commit.external" href={commitUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-primary underline">{source.commitSha}</a></dd></div>
+        <div>
+          <dt className="text-muted-foreground">
+            {t('skillDetail.githubUpstreamTag')}
+            <span className="ml-1 text-xs">({t('skillDetail.githubUpstreamTagScope')})</span>
+          </dt>
+          <dd className="break-all">
+            {t(`skillDetail.githubUpstreamTag${upstreamTag.status}`, {
+              tag: upstreamTag.tag ?? '',
+              count: upstreamTag.commitsAfterTag ?? 0,
+              commit: source.commitSha.slice(0, 8),
+              defaultValue: upstreamTag.status,
+            })}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">{t('skillDetail.githubDeclaredVersion')}</dt>
+          <dd className="font-mono break-all">{source.declaredVersion ?? t('skillDetail.githubDeclaredVersionNone')}</dd>
+        </div>
         <div><dt className="text-muted-foreground">{t('review.githubLicenseStatus')}</dt><dd>{t(`review.githubLicense${source.licenseStatus}`, { defaultValue: source.licenseStatus })}</dd></div>
       </dl>
       <div>

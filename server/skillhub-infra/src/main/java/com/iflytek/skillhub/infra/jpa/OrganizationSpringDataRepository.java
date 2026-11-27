@@ -15,5 +15,8 @@ interface OrganizationSpringDataRepository extends JpaRepository<Organization, S
     @Query("select organization from Organization organization where organization.id = :id")
     Optional<Organization> findByIdForUpdate(@Param("id") String id);
 
+    @Query(value = "SELECT * FROM organization WHERE id = :id FOR UPDATE", nativeQuery = true)
+    Optional<Organization> findByIdForWrite(@Param("id") String id);
+
     Optional<Organization> findBySlug(String slug);
 }

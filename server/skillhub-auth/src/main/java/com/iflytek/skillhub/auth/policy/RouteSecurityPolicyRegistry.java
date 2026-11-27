@@ -34,6 +34,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/login/oauth2/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/local/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/device/**"),
+            RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/enterprise/**"),
+            RouteAuthorizationPolicy.permitAll(null, "/api/v1/organizations/*/directory-connections/*/scim/v2/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/check"),
             RouteAuthorizationPolicy.permitAll(null, "/actuator/health"),
             RouteAuthorizationPolicy.permitAll(null, "/v3/api-docs/**"),
@@ -135,6 +137,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.authenticated(HttpMethod.PUT, "/api/web/suites/*/*/labels/*"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/suites/*/*/labels/*"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/resources"),
+            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/github-repositories/*/install-plan"),
+            RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/cli/v1/github-repositories/*/install-plan"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/github-repositories"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/github-repositories/*"),
             RouteAuthorizationPolicy.permitAll(HttpMethod.GET, "/api/web/github-repositories/*/snapshots/*/archive"),
@@ -161,7 +165,7 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.authenticated(HttpMethod.GET, "/api/web/suite-bundles/operations/*"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.POST, "/api/web/suite-bundles/operations/*/cancel"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.POST, "/api/web/suite-bundles/operations/*/retry"),
-            RouteAuthorizationPolicy.roles(HttpMethod.DELETE, "/api/v1/skills/id/*", "SUPER_ADMIN"),
+            RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/v1/skills/id/*"),
             RouteAuthorizationPolicy.roles(HttpMethod.DELETE, "/api/v1/skills/*/*", "SUPER_ADMIN"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/skills/id/*"),
             RouteAuthorizationPolicy.authenticated(HttpMethod.DELETE, "/api/web/skills/*/*"),
@@ -214,6 +218,12 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.allow(HttpMethod.PUT, "/api/web/skills/*/rating"),
             ApiTokenPolicy.allow(HttpMethod.PUT, "/api/web/skills/*/reviews/me"),
             ApiTokenPolicy.allow(HttpMethod.DELETE, "/api/web/skills/*/reviews/me"),
+            ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/me/skills", "skill:read"),
+            ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/namespaces/*/members", "namespace:read"),
+            ApiTokenPolicy.require(HttpMethod.GET, "/api/v1/namespaces/*/member-candidates", "namespace:manage"),
+            ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/namespaces/*/members", "namespace:manage"),
+            ApiTokenPolicy.require(HttpMethod.DELETE, "/api/v1/namespaces/*/members/*", "namespace:manage"),
+            ApiTokenPolicy.require(HttpMethod.PUT, "/api/v1/namespaces/*/members/*/role", "namespace:manage"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/namespaces"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/v1/namespaces/*"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/web/namespaces"),
@@ -310,6 +320,8 @@ public class RouteSecurityPolicyRegistry {
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/skills/*/versions/*/security-audit/retry", "skill:manage"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/web/skills/*/publish", "skill:submit"),
             ApiTokenPolicy.require(HttpMethod.POST, "/api/v1/publish", "skill:submit"),
+            ApiTokenPolicy.require(HttpMethod.GET, "/api/cli/v1/github-repositories/*/install-plan", "skill:read"),
+            ApiTokenPolicy.require(HttpMethod.GET, "/api/web/github-repositories/*/install-plan", "skill:read"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/cli/v1/auth/whoami"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/cli/v1/namespaces/*/skills"),
             ApiTokenPolicy.allow(HttpMethod.GET, "/api/cli/v1/skills/search"),
@@ -326,15 +338,16 @@ public class RouteSecurityPolicyRegistry {
      * {@code "<METHOD|ANY> <pattern>"} to match {@link #routeKey(HttpMethod, String)}.
      *
      * <p>These are browser-session surfaces: the interactive login flows, the admin console,
-     * the GitHub repository catalog, team-only automatic publication grants, and skill deletion, which goes through {@code /api/v1} or
-     * {@code /api/cli/v1} with the {@code skill:delete} scope instead. Bearer tokens are
-     * deliberately rejected on exactly these routes and nowhere else &mdash; anything else the
-     * authorization list opens must also be reachable with a token holding the required scope.</p>
+     * the GitHub repository catalog, team-only automatic publication grants, skill deletion, and
+     * custom-credential provisioning endpoints. Ordinary bearer tokens are deliberately rejected
+     * on exactly these routes; custom credential filters own their authentication.</p>
      */
     private static final Set<String> SESSION_ONLY_ROUTES = Set.of(
             "ANY /api/v1/auth/session/bootstrap",
             "ANY /api/v1/auth/direct/login",
             "ANY /api/v1/auth/local/**",
+            "ANY /api/v1/auth/enterprise/**",
+            "ANY /api/v1/organizations/*/directory-connections/*/scim/v2/**",
             "ANY /api/v1/admin/**",
             "GET /api/web/github-repositories",
             "GET /api/web/github-repositories/*",
@@ -404,7 +417,19 @@ public class RouteSecurityPolicyRegistry {
         if (servletPath != null && !servletPath.isBlank()) {
             return servletPath;
         }
-        return request.getRequestURI();
+        String uri = request.getRequestURI();
+        String context = request.getContextPath();
+        if (context != null && !context.isEmpty() && uri.startsWith(context + "/")) {
+            return uri.substring(context.length());
+        }
+        return uri;
+    }
+
+    public static boolean isDirectoryScimPath(String path) {
+        return path != null
+                && path.startsWith("/api/v1/organizations/")
+                && path.contains("/directory-connections/")
+                && path.contains("/scim/v2");
     }
 
     public ApiTokenAuthorizationDecision authorizeApiToken(String method, String path, Set<String> tokenScopes) {
@@ -440,7 +465,8 @@ public class RouteSecurityPolicyRegistry {
             return false;
         }
         return "/api/v1/auth/device/code".equals(path)
-                || "/api/v1/auth/device/token".equals(path);
+                || "/api/v1/auth/device/token".equals(path)
+                || "/api/v1/auth/enterprise/discovery".equals(path);
     }
 
     public boolean shouldProjectRequestContext(String path) {

@@ -7,6 +7,7 @@ import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 import { resolveSkillName } from '../shared/skill-name-parser'
 import { computeStrictIsTTY } from '../shared/tty'
+import { formatUpstreamTag } from '../shared/github-source'
 
 export { computeStrictIsTTY } from '../shared/tty'
 
@@ -52,7 +53,7 @@ export async function resolveEffectiveScope(
   return undefined
 }
 
-async function defaultPromptScope(): Promise<'user' | 'project'> {
+export async function defaultPromptScope(): Promise<'user' | 'project'> {
   const prompts = await import('prompts')
   const { scope } = await prompts.default({
     type: 'select',
@@ -115,11 +116,13 @@ export async function installCommand(
       namespace,
       slug,
       installed: result.installed,
+      ...(result.githubSource ? { githubSource: result.githubSource } : {}),
       ...(result.warnings?.length ? { warnings: result.warnings } : {})
     })
   }
+  const upstream = formatUpstreamTag(result.githubSource)
   return [
-    ...result.installed.map(i => `Installed ${namespace}/${slug} -> ${i.dir} (${i.agent})`),
+    ...result.installed.map(i => `Installed ${namespace}/${slug} -> ${i.dir} (${i.agent})${upstream ? ` [${upstream}]` : ''}`),
     ...(result.warnings ?? []).map(warning => `Warning: ${warning}`)
   ].join('\n')
 }

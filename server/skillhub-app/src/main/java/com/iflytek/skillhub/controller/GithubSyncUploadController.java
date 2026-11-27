@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.iflytek.skillhub.githubsync.GithubPackageReportResult;
 import com.iflytek.skillhub.service.GithubSyncUploadAppService;
 import io.swagger.v3.oas.annotations.Hidden;
@@ -77,7 +78,8 @@ public class GithubSyncUploadController {
         }
         GithubPackageReportResult result = uploads.report(taskId, request.lease().generation(),
                 request.lease().token(), request.admissionId(), request.commitSha(),
-                request.skillPath(), request.uploadId(), request.sizeBytes(), request.sha256());
+                request.skillPath(), request.uploadId(), request.sizeBytes(), request.sha256(),
+                request.sourceTag());
         return switch (result.status()) {
             case RECEIVED -> ResponseEntity.accepted().body(new PackageReportResponse(result.ingestionId(), "RECEIVED"));
             case LEASE_STALE -> ResponseEntity.status(409)
@@ -98,6 +100,6 @@ public class GithubSyncUploadController {
             UUID admissionId, String commitSha, String skillPath, long sizeBytes, String sha256) {}
     public record PackageReportRequest(GithubSyncInternalController.LeaseProof lease,
             UUID admissionId, String commitSha, String skillPath, UUID uploadId,
-            long sizeBytes, String sha256) {}
+            long sizeBytes, String sha256, JsonNode sourceTag) {}
     public record PackageReportResponse(UUID ingestionId, String status) {}
 }

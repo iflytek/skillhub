@@ -1,5 +1,6 @@
 package com.iflytek.skillhub.service.cli;
 
+import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
@@ -13,10 +14,12 @@ import com.iflytek.skillhub.dto.cli.CliNamespaceSyncItemResponse;
 import com.iflytek.skillhub.dto.cli.CliNamespaceSyncResponse;
 import com.iflytek.skillhub.dto.cli.CliPublishResponse;
 import com.iflytek.skillhub.dto.cli.CliResolveResponse;
+import com.iflytek.skillhub.repository.GithubSkillSourceQueryRepository;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import com.iflytek.skillhub.service.SkillDeleteAppService;
 import com.iflytek.skillhub.service.SkillSearchAppService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +40,7 @@ public class CliSkillAppService {
     private final SkillDownloadService skillDownloadService;
     private final SkillDeleteAppService skillDeleteAppService;
     private final SkillPublishService skillPublishService;
+    private final GithubSkillSourceQueryRepository githubSkillSourceQueryRepository;
 
     public CliSkillAppService(
             SkillSearchAppService skillSearchAppService,
@@ -44,11 +48,24 @@ public class CliSkillAppService {
             SkillDownloadService skillDownloadService,
             SkillDeleteAppService skillDeleteAppService,
             SkillPublishService skillPublishService) {
+        this(skillSearchAppService, skillQueryService, skillDownloadService, skillDeleteAppService,
+                skillPublishService, null);
+    }
+
+    @Autowired
+    public CliSkillAppService(
+            SkillSearchAppService skillSearchAppService,
+            SkillQueryService skillQueryService,
+            SkillDownloadService skillDownloadService,
+            SkillDeleteAppService skillDeleteAppService,
+            SkillPublishService skillPublishService,
+            GithubSkillSourceQueryRepository githubSkillSourceQueryRepository) {
         this.skillSearchAppService = skillSearchAppService;
         this.skillQueryService = skillQueryService;
         this.skillDownloadService = skillDownloadService;
         this.skillDeleteAppService = skillDeleteAppService;
         this.skillPublishService = skillPublishService;
+        this.githubSkillSourceQueryRepository = githubSkillSourceQueryRepository;
     }
 
     public record CliSearchItem(String namespace, String slug, String latestVersion, String summary) {}
@@ -82,7 +99,10 @@ public class CliSkillAppService {
                 resolved.version(),
                 resolved.versionId(),
                 resolved.fingerprint(),
-                resolved.downloadUrl()
+                resolved.downloadUrl(),
+                // resolveVersion has already authorized the viewer for this version.
+                githubSkillSourceQueryRepository == null || resolved.versionId() == null ? null
+                        : githubSkillSourceQueryRepository.findPublishedSyncedVersion(resolved.versionId()).orElse(null)
         );
     }
 
@@ -108,8 +128,11 @@ public class CliSkillAppService {
             String namespace,
             String userId,
             Map<Long, NamespaceRole> userNsRoles) {
-        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
-                namespace, skill.getSlug(), null, null, null, userId, userNsRoles);
+        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersionById(
+                skill.getLatestVersionId(), userId, userNsRoles, Set.of());
+        if (!skill.getId().equals(resolved.skillId())) {
+            throw new IllegalStateException("Published version does not belong to the listed skill");
+        }
         return new CliNamespaceSyncItemResponse(
                 namespace,
                 skill.getSlug(),
@@ -146,9 +169,9 @@ public class CliSkillAppService {
         return buildDownloadResponse(result);
     }
 
-    public CliDeleteResponse deleteRemote(String namespace, String slug, String actorUserId, AuditRequestContext auditContext) {
-        SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkill(
-                namespace, slug, null, actorUserId, auditContext
+    public CliDeleteResponse deleteRemote(String namespace, String slug, PlatformPrincipal principal, AuditRequestContext auditContext) {
+        SkillDeleteAppService.DeleteResult result = skillDeleteAppService.deleteSkillFromPortal(
+                namespace, slug, null, principal, auditContext
         );
 
         return new CliDeleteResponse(

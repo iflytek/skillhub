@@ -1,9 +1,11 @@
 package com.iflytek.skillhub.service;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.iflytek.skillhub.config.SkillPublishProperties;
 import com.iflytek.skillhub.githubsync.GithubSyncUploadRepository;
 import com.iflytek.skillhub.githubsync.GithubPackageReportResult;
+import com.iflytek.skillhub.githubsync.GithubSourceTag;
 import com.iflytek.skillhub.storage.ObjectStorageService;
 import com.iflytek.skillhub.storage.PresignedUpload;
 import com.iflytek.skillhub.storage.StorageAccessException;
@@ -151,7 +153,7 @@ public class GithubSyncUploadAppService {
 
     public GithubPackageReportResult report(UUID taskId, long generation, String leaseToken,
             UUID admissionId, String commitSha, String skillPath, UUID uploadId,
-            long sizeBytes, String sha256) {
+            long sizeBytes, String sha256, JsonNode sourceTag) {
         if (taskId == null || admissionId == null || uploadId == null || generation < 1
                 || !isHex(leaseToken, 64) || !isHex(commitSha, 40)
                 || skillPath == null || skillPath.isBlank() || skillPath.length() > 1024
@@ -184,8 +186,45 @@ public class GithubSyncUploadAppService {
         if (actualSize != sizeBytes) {
             return GithubPackageReportResult.rejected(GithubPackageReportResult.Status.OBJECT_MISMATCH);
         }
+        // Source tag provenance is optional and never rejects a package.
         return uploads.acceptReport(taskId, generation, tokenHash, admissionId,
-                commitSha, skillPath, uploadId, sizeBytes, sha256, Instant.now());
+                commitSha, skillPath, uploadId, sizeBytes, sha256,
+                sourceTag(sourceTag), Instant.now());
+    }
+
+    /**
+     * The worker's provenance is optional and untrusted: absent stays unrecorded, and any
+     * shape that does not fit (wrong types, overflowing numbers, arrays) is kept as
+     * UNKNOWN/INVALID_REPORT instead of rejecting an otherwise valid package report.
+     */
+    static GithubSourceTag sourceTag(JsonNode reported) {
+        if (reported == null || reported.isNull() || reported.isMissingNode()) {
+            return null;
+        }
+        GithubSourceTag invalid = GithubSourceTag.invalidReport();
+        if (!reported.isObject()) {
+            return invalid;
+        }
+        for (String field : new String[] {"status", "tag", "tagCommitSha", "reason"}) {
+            JsonNode value = reported.get(field);
+            if (value != null && !value.isNull() && !value.isTextual()) {
+                return invalid;
+            }
+        }
+        JsonNode distance = reported.get("commitsAfterTag");
+        if (distance != null && !distance.isNull()
+                && (!distance.isIntegralNumber() || !distance.canConvertToInt())) {
+            return invalid;
+        }
+        return GithubSourceTag.fromReport(new GithubSourceTag(
+                text(reported, "status"), text(reported, "tag"), text(reported, "tagCommitSha"),
+                distance == null || distance.isNull() ? null : distance.intValue(),
+                text(reported, "reason")));
+    }
+
+    private static String text(JsonNode node, String field) {
+        JsonNode value = node.get(field);
+        return value == null || value.isNull() ? null : value.asText();
     }
 
     private void discardOversizedUpload(UUID uploadId, String objectKey) {

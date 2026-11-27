@@ -90,7 +90,7 @@ sequenceDiagram
 | `POST /tasks/{taskId}/package-admissions` | 当前租约、固定 commit、Skill 路径 | `200 admissionId`；高水位 `409 BACKPRESSURE_ACTIVE` | 仅仓库 `FULL` 任务使用；Go 在获取文件内容前申请，Java 原子预留容量。 |
 | `POST /tasks/{taskId}/upload-authorizations` | 当前租约、`admissionId`、固定 commit、Skill 路径、包大小与 SHA-256 | `200 UploadAuthorization` | 仅仓库 `FULL` 任务使用；授权绑定已准入包和临时对象。 |
 | `PUT /uploads/{uploadId}/content` | 二进制包、上传票据 | `204`，本地临时对象已写入 | 仅 `LOCAL_STREAM` 模式使用；接收时执行大小硬上限。 |
-| `POST /tasks/{taskId}/packages/report` | 当前租约、`admissionId`、固定 commit、Skill 路径、上传 ID、包大小与 SHA-256 | `202 ingestionId`、`RECEIVED` | Java 已持久接收摄入记录；准入占位转为未解决摄入项，不表示内容校验、审核或发布成功。 |
+| `POST /tasks/{taskId}/packages/report` | 当前租约、`admissionId`、固定 commit、Skill 路径、上传 ID、包大小与 SHA-256；可选 `sourceTag` | `202 ingestionId`、`RECEIVED` | Java 已持久接收摄入记录；准入占位转为未解决摄入项，不表示内容校验、审核或发布成功。`sourceTag` 只在创建摄入记录时保存，不合法时记为未知，不影响接收。 |
 | `POST /tasks/{taskId}/complete` | 租约、覆盖情况、逐路径结果、观测 commit、可选额度/重试时间 | `200`，Java 权威任务状态 | `COMPLETE`、`INCOMPLETE`、`HEAD_ONLY` 的检查点推进规则不同。 |
 | `POST /tasks/{taskId}/fail` | 租约、分类原因、可选 `retryAt`、额度与受控诊断码 | `200`，失败/重试状态已持久化 | 仅接受 `WORKER_TIMEOUT`、`WORKER_ERROR` 或 OpenAPI 所列的 GitHub HTTP 诊断码，不保存原始异常文本。 |
 

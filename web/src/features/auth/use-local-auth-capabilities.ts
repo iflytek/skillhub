@@ -6,5 +6,6 @@ export function useLocalAuthCapabilities() {
     queryKey: ['auth', 'local-capabilities'],
     queryFn: authApi.getLocalCapabilities,
     staleTime: 0,
+    meta: { skipGlobalErrorHandler: true },
   })
 }

@@ -10,9 +10,9 @@ import { diffSkillFiles, snapshotSkillDirectory } from './skill-fingerprint'
 import { snapshotInstalledSkillDirectory } from './installed-skill-snapshot'
 import { installSkill } from './install-service'
 import { readInstalledSkillMetadata, sameInstalledSkillSource } from './installed-skill-metadata'
-import { compareSkillVersions } from './skill-version-order'
+import { compareSkillVersions, type SkillVersionOrder } from './skill-version-order'
 
-const MAX_UPGRADE_SELECTION = 50
+export const MAX_UPGRADE_SELECTION = 50
 
 export interface UpgradeSelectionOptions {
   coordinates: string[]
@@ -23,6 +23,10 @@ export interface UpgradeSelectionOptions {
   force: boolean
   home?: string
   tokenForRegistry: (registry: string) => Promise<string | undefined>
+  /** Internal source adapter; a repository invocation supplies its already pinned releases. */
+  resolveVersion?: (item: InventoryItem) => Promise<ResolveResponse>
+  /** Source-specific ordering; ordinary upgrades retain the SemVer comparator. */
+  compareVersions?: (item: InventoryItem, resolved: ResolveResponse) => Promise<SkillVersionOrder>
 }
 
 export type UpgradePlanAction = 'upgrade' | 'unchanged' | 'blocked'
@@ -102,8 +106,8 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
     try {
       await assertDirectTargetOwnership(inventory, selection.targets.map(target => target.installDir))
       const token = await options.tokenForRegistry(selection.item.registry)
-      resolved = await new SkillHubClient(selection.item.registry, token)
-        .resolve(selection.item.namespace, selection.item.slug)
+      resolved = options.resolveVersion ? await options.resolveVersion(selection.item)
+        : await new SkillHubClient(selection.item.registry, token).resolve(selection.item.namespace, selection.item.slug)
     } catch (error) {
       items.push({
         ...base,
@@ -123,7 +127,18 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       continue
     }
 
-    const inspection = await inspectTargets(selection.item, selection.targets)
+    let inspection: Awaited<ReturnType<typeof inspectTargets>>
+    try {
+      inspection = await inspectTargets(selection.item, selection.targets)
+    } catch {
+      items.push({
+        ...base,
+        remoteVersion: resolved.version,
+        action: 'blocked',
+        reason: 'installed target could not be safely verified; local files were kept'
+      })
+      continue
+    }
     const hardConflict = inspection.hardConflicts[0]
     if (hardConflict) {
       items.push({
@@ -161,7 +176,8 @@ export async function planSkillUpgrades(options: UpgradeSelectionOptions): Promi
       continue
     }
 
-    const versionOrder = compareSkillVersions(selection.targets[0]!.version, resolved.version)
+    const versionOrder = options.compareVersions ? await options.compareVersions(selection.item, resolved)
+      : compareSkillVersions(selection.targets[0]!.version, resolved.version)
     if (versionOrder === 'remote-older') {
       items.push({
         ...base,
@@ -331,7 +347,8 @@ function selectInventoryItems(
   return [...selected.values()]
 }
 
-async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): Promise<{
+/** Read-only local-change inspection; also used by `outdated` to report the same state. */
+export async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): Promise<{
   hardConflicts: string[]
   changedFiles: string[]
   baselineMissing: boolean
@@ -388,7 +405,7 @@ async function inspectTargets(item: InventoryItem, targets: InventoryTarget[]): 
   }
 }
 
-function matchesTargetFilters(target: InventoryTarget, agents?: string[], dir?: string): boolean {
+export function matchesTargetFilters(target: InventoryTarget, agents?: string[], dir?: string): boolean {
   if (agents?.length && !agents.includes(target.agent)) return false
   if (!dir) return true
   const filterPath = resolve(dir)

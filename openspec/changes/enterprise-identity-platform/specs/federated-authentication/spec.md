@@ -60,6 +60,10 @@ Login Connection SHALL 分离可编辑草稿、不可变 revision 和 active run
 - **WHEN** 管理员显式确认并暂停 ACTIVE connection
 - **THEN** discovery 不再展示该连接，新的 start/callback 被拒绝，旧企业会话在企业边界失效
 
+#### Scenario: Connection resumes with its previously active revision
+- **WHEN** 授权管理员显式确认恢复仍处于暂停状态的连接和上次生效 revision
+- **THEN** 连接以该 revision 恢复，待启用草稿和探测结果保留
+
 ### Requirement: Login discovery resists enumeration
 
 匿名 discovery SHALL 仅依据规范化 Organization slug 或 ACTIVE VERIFIED domain 返回公开品牌和登录选项；不得查询或泄露账号、Membership、内部 connection id、issuer 或 Secret。
@@ -104,9 +108,13 @@ Login Connection SHALL 分离可编辑草稿、不可变 revision 和 active run
 
 OIDC discovery、JWKS 和 token endpoint 访问 SHALL 限制协议、目标地址、重定向、连接/读取超时和响应大小；每一跳 SHALL 验证全部解析地址，并将已验证地址固定到该次实际连接，同时保留原主机名执行 TLS SNI 和 hostname verification。
 
-#### Scenario: Metadata resolves to a private address
-- **WHEN** issuer 或 metadata/JWKS/token endpoint 解析到回环、私网、链路本地、保留或不允许的地址
+#### Scenario: Metadata resolves to a blocked address
+- **WHEN** issuer 或 metadata/JWKS/token endpoint 解析到回环、链路本地、保留或未经部署运维授权的私网地址
 - **THEN** 系统在发送凭证或读取响应前拒绝访问
+
+#### Scenario: An operator permits a private host for the R1-B connection probe
+- **WHEN** 部署运维显式配置合法的确切主机名，且该主机解析到允许的私网地址
+- **THEN** R1-B 可以通过 HTTPS 拉取 discovery 或 JWKS，维持证书及主机名校验，且不发送身份凭据
 
 #### Scenario: Endpoint redirects to a different target
 - **WHEN** 上游返回重定向

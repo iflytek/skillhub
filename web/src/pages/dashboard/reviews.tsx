@@ -7,6 +7,7 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { canManageNamespaceReviews } from '@/features/review/review-paths'
+import { VerdictBadge } from '@/features/security-audit/verdict-badge'
 import { ReviewCenterFilterForm } from '@/features/review/review-center-filter-form'
 import { DEFAULT_REVIEW_FILTERS, parseReviewCenterFilters, reviewCenterSearch, type ReviewCenterFilters } from '@/features/review/review-center-filters'
 import { useReviewScopes } from '@/features/review/use-review-scopes'
@@ -48,16 +49,16 @@ export function ReviewsPage() {
   const [draft, setDraft] = useState<ReviewCenterFilters>(routeFilters)
   const [applied, setApplied] = useState<ReviewCenterFilters>(routeFilters)
   const [page, setPage] = useState(search.page ?? 0)
-  const { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, sortDirection: routeSort } = routeFilters
+  const { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, scanVerdict: routeVerdict, sortDirection: routeSort } = routeFilters
   const routePage = search.page ?? 0
   const batch = useBatchReview(JSON.stringify([user?.userId, routeFilters, search.snapshotId, search.reviewView, search.memberQ]))
 
   useEffect(() => {
-    const next = { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, sortDirection: routeSort }
+    const next = { q: routeQ, status: routeStatus, namespace: routeNamespace, reviewKind: routeKind, originType: routeOrigin, scanVerdict: routeVerdict, sortDirection: routeSort }
     setApplied(next)
     setDraft(next)
     setPage(routePage)
-  }, [routeQ, routeStatus, routeNamespace, routeKind, routeOrigin, routeSort, routePage])
+  }, [routeQ, routeStatus, routeNamespace, routeKind, routeOrigin, routeVerdict, routeSort, routePage])
 
   const isSkillAdmin = hasRole('SKILL_ADMIN') || hasRole('SUPER_ADMIN')
   const isUserAdmin = hasRole('USER_ADMIN') || hasRole('SUPER_ADMIN')
@@ -67,14 +68,14 @@ export function ReviewsPage() {
   const scopes = useReviewScopes(canReviewSkills && !profileMode)
   const scope = scopes.data?.find((item) => item.slug === applied.namespace)
   const scopePending = !scopes.data || (applied.namespace !== 'ALL' && !scope)
-  const grouped = applied.originType === 'GITHUB_SYNC' && search.reviewView !== 'rows'
+  const grouped = applied.originType === 'GITHUB_SYNC' && applied.scanVerdict === 'ALL' && search.reviewView !== 'rows'
   const query = useReviewList(applied.status, applied.namespace === 'ALL' ? undefined : scope?.id,
     page, PAGE_SIZE, applied.sortDirection, canReviewSkills && !profileMode && !scopePending && !grouped,
-    { q: applied.q.trim(), reviewKind: applied.reviewKind, originType: applied.originType })
+    { q: applied.q.trim(), reviewKind: applied.reviewKind, originType: applied.originType, scanVerdict: applied.scanVerdict })
   const sourceCounts = useQueries({ queries: REVIEW_ORIGINS.map(originType => ({
-    queryKey: ['reviews', 'source-count', user?.userId, scope?.id, applied.status, applied.namespace, applied.q, applied.reviewKind, originType],
+    queryKey: ['reviews', 'source-count', user?.userId, scope?.id, applied.status, applied.namespace, applied.q, applied.reviewKind, applied.scanVerdict, originType],
     queryFn: async () => (await reviewApi.list({ status: applied.status, namespaceId: scope?.id,
-      q: applied.q.trim(), reviewKind: applied.reviewKind, originType, page: 0, size: 1 })).total,
+      q: applied.q.trim(), reviewKind: applied.reviewKind, originType, scanVerdict: applied.scanVerdict, page: 0, size: 1 })).total,
     enabled: canReviewSkills && !profileMode && !scopePending && !scopes.isError,
     staleTime: 15000, retry: false,
   })) })
@@ -133,6 +134,7 @@ export function ReviewsPage() {
     return <>
       <span className="inline-flex rounded-full bg-secondary px-2.5 py-1 text-xs font-medium">{t(kind === 'AVATAR_CHANGE' && review.avatarRemoval ? 'reviewCenter.kind.AVATAR_REMOVAL' : `reviewCenter.kind.${kind}`)}</span>
       {applied.status !== 'PENDING' && <span className="mt-1 block text-xs text-muted-foreground">{t(`reviewCenter.status.${review.status}`)}</span>}
+      {review.scanVerdict && <VerdictBadge compact verdict={review.scanVerdict} />}
       {review.decisionMethod && (
         <span className="mt-1 block text-xs text-muted-foreground">
           {t(`review.decisionMethod.${review.decisionMethod}`)}
@@ -156,7 +158,7 @@ export function ReviewsPage() {
       {scopes.isError && <div role="alert" className="flex flex-wrap items-center gap-3 text-sm"><p className="text-destructive">{t('reviewCenter.scopeFailed')}</p><Button type="button" size="sm" variant="outline" onClick={() => void scopes.refetch()}>{t('reviewCenter.retry')}</Button></div>}
       {batch.dialogs}
       {applied.originType === 'GITHUB_SYNC' && <div className="flex justify-end gap-2 [&_button]:min-h-11 sm:[&_button]:min-h-8">
-        {(['rows', 'snapshots'] as const).map(view => <Button key={view} variant={(grouped ? 'snapshots' : 'rows') === view ? 'secondary' : 'outline'} disabled={batch.busy} onClick={() => batch.guardFilter(() => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied), reviewView: view } }) })}>{t(`reviewGroups.${view}`)}</Button>)}
+        {(['rows', 'snapshots'] as const).map(view => <Button key={view} variant={(grouped ? 'snapshots' : 'rows') === view ? 'secondary' : 'outline'} disabled={batch.busy || (view === 'snapshots' && applied.scanVerdict !== 'ALL')} onClick={() => batch.guardFilter(() => { void navigate({ to: '/dashboard/reviews', search: { ...reviewCenterSearch(applied), reviewView: view } }) })}>{t(`reviewGroups.${view}`)}</Button>)}
       </div>}
       {grouped ? <ReviewRepositoryGroups filters={applied} namespaceId={scope?.id} enabled={!scopePending && !scopes.isError} page={page}
         onGroup={snapshotId => batch.guardFilter(() => {

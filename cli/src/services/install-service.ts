@@ -22,6 +22,7 @@ import type { AgentCandidate } from '../agents/types'
 import type { ResolveResponse } from '../clients/skillhub-client'
 import type { Inventory, InventoryItem } from '../stores/inventory-store'
 import { acquireSkillTargetLock, orderSkillTargetLocks } from './skill-target-lock'
+import type { GithubSource } from '../shared/github-source'
 
 export interface InstallOptions {
   /** Internal native import bytes; never read from CLI flags. */
@@ -36,6 +37,8 @@ export interface InstallOptions {
   force: boolean
   home?: string | undefined
   resolved?: ResolveResponse | undefined
+  /** Optional source hint in per-skill metadata, not a repository installation ledger. */
+  sourceRepositoryId?: string | undefined
   expectedTargetFiles?: Record<string, Record<string, string>> | undefined
   allowTargetDrift?: boolean | undefined
   requireExistingTargets?: boolean | undefined
@@ -55,6 +58,8 @@ export interface InstallOptions {
 
 export interface InstallResult {
   installed: Array<{ agent: string; dir: string }>
+  /** GitHub provenance of the installed version, when the registry records it. */
+  githubSource?: GithubSource
   warnings?: string[]
   transactionWarnings?: InstallTransactionWarning[]
 }
@@ -193,6 +198,9 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
         const metaDir = join(tempDir, '.skillhub')
         await options.authorizeTargetMutation?.([metaDir], 'staging')
         await mkdir(metaDir, { recursive: true })
+        const previousMetadata = await readInstalledSkillMetadata(skillDir)
+        const sourceRepositoryId = options.sourceRepositoryId ?? (previousMetadata.status === 'valid'
+          && sameInstalledSkillSource(previousMetadata.metadata, identity) ? previousMetadata.metadata.sourceRepositoryId : undefined)
         await writeFile(join(metaDir, 'metadata.json'), JSON.stringify({
           schemaVersion: 1,
           registry: options.registry,
@@ -203,6 +211,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
           fingerprint: resolved.fingerprint,
           files: snapshot.files,
           source: options.metadataSource ?? 'skillhub',
+          ...(sourceRepositoryId ? { sourceRepositoryId } : {}),
           agent: target.agent,
           installedAt
         }, null, 2))
@@ -432,6 +441,7 @@ export async function installSkill(options: InstallOptions): Promise<InstallResu
 
     return {
       installed: staged.map(item => ({ agent: item.target.agent, dir: item.skillDir })),
+      ...(resolved.githubSource ? { githubSource: resolved.githubSource } : {}),
       warnings,
       transactionWarnings
     }

@@ -10,6 +10,9 @@ public interface OrganizationRepository {
     /** Serializes identity association with Organization lifecycle changes. */
     Optional<Organization> findByIdForUpdate(String id);
 
+    /** Acquires an exclusive organization lock before member and role write checks. */
+    Optional<Organization> findByIdForWrite(String id);
+
     Optional<Organization> findBySlug(String slug);
 
     Organization save(Organization organization);

@@ -15,7 +15,7 @@ public final class ApiTokenScopes {
     public static final String SUITE_LEGACY_WRITE = "suite:legacy-write";
 
     public static final String DEFAULT_USER_SCOPE_JSON =
-            "[\"skill:read\",\"skill:publish\",\"skill:delete\"]";
+            "[\"skill:read\",\"skill:publish\",\"skill:delete\",\"namespace:manage\"]";
     public static final String CLI_SCOPE_JSON = "[\"skill:read\",\"skill:submit\"]";
 
     private ApiTokenScopes() {

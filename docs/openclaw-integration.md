@@ -136,13 +136,14 @@ npx @astron-team/skillhub@latest publish ./my-skill --namespace my-space
 
 第一方 CLI 的设备码／浏览器回跳登录只签发 `skill:read + skill:submit`，不会静默授予删除权限。
 已有旧 Token 的路由授权保持兼容，重新登录后 `remove --remote` 需另行显式授权：
-在 Web 自定义 Token 中勾选 `skill:delete`，再运行 `skillhub login --token <token>`。
+使用 Web 默认创建的个人 Token，再运行 `skillhub login --token <token>`。
 CLI 不会为删除自动换发更宽 Token；本地卸载不需要远端删除能力。
 `skillhub whoami` 可显示当前能力、旧版兼容标记与到期时间；查询不需要 `token:manage`。
 账号／空间管理员角色不能扩大 Token 能力。
 
-直接调用 Token API 的旧脚本应显式传 scopes；省略值目前仍为 read + publish + delete，
-响应标记 `deprecatedDefault=true`，下一个次版本将收紧为仅 read。
+直接调用 Token API 可显式传 scopes 申请更小权限；省略时默认签发
+read + publish + delete + namespace:manage（包含成员读取），响应 `deprecatedDefault=false`。
+网页创建不再选择权限，操作仍受账号与空间角色约束，不默认授予 token:manage。
 
 ## API 端点说明
 

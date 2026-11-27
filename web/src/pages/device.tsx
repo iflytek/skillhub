@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { CheckCircle2 } from 'lucide-react'
 import { Card } from '@/shared/ui/card'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -22,14 +23,17 @@ export function DeviceAuthPage() {
   const [part1, setPart1] = useState('')
   const [part2, setPart2] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [isAuthorized, setIsAuthorized] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const input1Ref = useRef<HTMLInputElement>(null)
   const input2Ref = useRef<HTMLInputElement>(null)
+  const successTitleRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
-    input1Ref.current?.focus()
-  }, [])
+    if (isAuthorized) successTitleRef.current?.focus()
+    else if (!isSubmitting) input1Ref.current?.focus()
+  }, [isAuthorized, isSubmitting, errorMessage])
 
   const handlePart1Change = (value: string) => {
     const cleaned = value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)
@@ -62,30 +66,47 @@ export function DeviceAuthPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isSubmitting || isAuthorized) return
 
     if (part1.length !== 4 || part2.length !== 4) {
-      setMessage({ type: 'error', text: t('device.incompleteCode') })
+      setErrorMessage(t('device.incompleteCode'))
       return
     }
 
     const userCode = `${part1}-${part2}`
     setIsSubmitting(true)
-    setMessage(null)
+    setErrorMessage(null)
 
     try {
       await authorizeDevice(userCode)
-      setMessage({ type: 'success', text: t('device.success') })
+      setIsAuthorized(true)
       setPart1('')
       setPart2('')
-      input1Ref.current?.focus()
     } catch (error) {
-      setMessage({
-        type: 'error',
-        text: truncateErrorMessage(error instanceof Error ? error.message : t('device.defaultError')) ?? t('device.defaultError'),
-      })
+      setErrorMessage(truncateErrorMessage(error instanceof Error ? error.message : t('device.defaultError')) ?? t('device.defaultError'))
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  if (isAuthorized) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4 animate-fade-up">
+        <Card className="w-full max-w-md p-8">
+          <section aria-labelledby="device-authorized-title" className="space-y-6 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10 text-success">
+              <CheckCircle2 className="h-8 w-8" aria-hidden="true" />
+            </div>
+            <div className="space-y-3">
+              <h1 id="device-authorized-title" ref={successTitleRef} tabIndex={-1} className="text-3xl font-bold font-heading text-foreground">
+                {t('device.authorizedTitle')}
+              </h1>
+              <p className="text-balance text-base leading-6 text-foreground">{t('device.success')}</p>
+            </div>
+          </section>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -103,12 +124,17 @@ export function DeviceAuthPage() {
           </p>
         </div>
 
-        <form data-analytics-id="auth.device.authorize" onSubmit={handleSubmit} className="space-y-6">
+        <form data-analytics-id="auth.device.authorize" onSubmit={handleSubmit} aria-busy={isSubmitting} className="space-y-6">
           <div className="space-y-2">
-            <Label>{t('device.codeLabel')}</Label>
+            <Label htmlFor="device-code-first">{t('device.codeLabel')}</Label>
             <div className="flex items-center gap-3">
               <Input
                 ref={input1Ref}
+                id="device-code-first"
+                aria-label={`${t('device.codeLabel')} (1/2)`}
+                aria-invalid={Boolean(errorMessage)}
+                aria-describedby={errorMessage ? 'device-code-hint device-code-error' : 'device-code-hint'}
+                disabled={isSubmitting}
                 type="text"
                 value={part1}
                 onChange={(e) => handlePart1Change(e.target.value)}
@@ -120,6 +146,11 @@ export function DeviceAuthPage() {
               <span className="text-2xl font-bold text-muted-foreground">-</span>
               <Input
                 ref={input2Ref}
+                id="device-code-second"
+                aria-label={`${t('device.codeLabel')} (2/2)`}
+                aria-invalid={Boolean(errorMessage)}
+                aria-describedby={errorMessage ? 'device-code-hint device-code-error' : 'device-code-hint'}
+                disabled={isSubmitting}
                 type="text"
                 value={part2}
                 onChange={(e) => handlePart2Change(e.target.value)}
@@ -129,20 +160,18 @@ export function DeviceAuthPage() {
                 maxLength={4}
               />
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p id="device-code-hint" className="text-sm text-muted-foreground">
               {t('device.codeHint')}
             </p>
           </div>
 
-          {message && (
+          {errorMessage && (
             <div
-              className={`p-4 rounded-xl text-sm ${
-                message.type === 'success'
-                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
-              }`}
+              id="device-code-error"
+              role="alert"
+              className="p-4 rounded-xl text-sm bg-destructive/10 text-destructive border border-destructive/20"
             >
-              {message.text}
+              {errorMessage}
             </div>
           )}
 

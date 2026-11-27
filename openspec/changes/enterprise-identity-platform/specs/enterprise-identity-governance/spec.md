@@ -8,9 +8,9 @@
 
 OIDC client secret SHALL 使用独立 envelope encryption 存储，并记录用途、key id、版本和状态；Login Connection revision 只保存 Secret version reference。API、UI、审计、异常和日志不得返回明文。
 
-#### Scenario: Connection is created with a secret
-- **WHEN** 有 Secret 轮换权限的管理员创建需要 client secret 的 OIDC connection
-- **THEN** 系统加密保存 Secret、将其版本绑定到 revision，并只返回 configured/redacted 摘要
+#### Scenario: Secret is written for an existing draft
+- **WHEN** 有 Secret 写入权限的管理员为目标组织的当前草稿提交 client secret
+- **THEN** 系统加密保存 Secret，将新版本绑定到配置相同的新 revision，并只返回已配置状态
 
 #### Scenario: Secret is replaced
 - **WHEN** 获授权管理员为已有 connection 创建携带新 Secret 的 revision
@@ -22,14 +22,22 @@ OIDC client secret SHALL 使用独立 envelope encryption 存储，并记录用�
 
 ### Requirement: Connection data-plane changes require explicit authority and confirmation
 
-创建/修改 Login Connection SHALL 要求 `IDENTITY_ADMIN`；写入 Secret SHALL 额外要求 Secret 轮换权限；激活、暂停和禁用 SHALL 要求显式确认并产生审计。
+创建连接、修改非密钥配置和连接探测 SHALL 要求目标组织的 `IDENTITY_ADMIN`。针对已有草稿独立写入 Secret SHALL 要求目标组织的 `LOGIN_SECRET_ADMIN`，且必须指定当前草稿版本；该操作不得改变非密钥配置或 active revision。同一人被显式授予两个角色时可以完成两类操作。激活、暂停、恢复和禁用 SHALL 要求 `IDENTITY_ADMIN`、显式确认及审计。
+
+#### Scenario: A secret administrator prepares a credential without connection management privileges
+- **WHEN** 密钥管理员在核对 issuer、client ID 和当前草稿版本后写入 Secret
+- **THEN** 系统允许该写入并创建审计记录，测试和激活仍需由身份管理员完成
+
+#### Scenario: The provider identity changes
+- **WHEN** 新草稿的 issuer 或 client ID 与原配置不同
+- **THEN** 新草稿须重新录入 Secret 并通过测试才能激活，现有 active revision 不随草稿变更
 
 #### Scenario: Reader attempts to rotate a secret
 - **WHEN** 只有连接查看权限的成员提交 client secret
 - **THEN** 系统拒绝请求且不创建 Secret version 或 revision
 
 #### Scenario: Activation confirmation is absent
-- **WHEN** 管理员调用激活、暂停或禁用接口但没有提交有效确认
+- **WHEN** 管理员调用激活、暂停、恢复或禁用接口但没有提交有效确认
 - **THEN** 系统在状态变更前返回 usage/validation error
 
 ### Requirement: Authentication logs and errors are privacy preserving

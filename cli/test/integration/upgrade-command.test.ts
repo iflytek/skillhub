@@ -75,8 +75,14 @@ describe('upgrade command', () => {
       coordinate: '@global/skillhub-registry',
       currentVersion: '1.0.0',
       remoteVersion: '1.1.0',
+      change: 'minor',
       action: 'upgrade'
     })
+    const checkedText = await runCli([
+      'upgrade', '@global/skillhub-registry', '--registry', registry.url, '--dir', rootDir, '--check'
+    ], { HOME: env.home, USERPROFILE: env.home })
+    expect(checkedText.exitCode).toBe(0)
+    expect(checkedText.stdout).toContain('upgrade    @global/skillhub-registry 1.0.0 -> 1.1.0 [minor]')
     expect(await readFile(join(rootDir, 'skillhub-registry', 'SKILL.md'), 'utf-8')).toBe('# v1')
     expect(registry.received.downloads).toBe(1)
     expect(await readFile(inventoryPath, 'utf-8')).toBe(inventoryBeforeCheck)

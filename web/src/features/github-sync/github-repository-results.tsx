@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/ui/tabs'
 import { ApiError } from '@/shared/lib/api-error'
 import { MAX_SEARCH_QUERY_LENGTH } from '@/shared/lib/search-query'
 import { GithubSnapshotDownload } from './github-snapshot-download'
+import { GithubRepositoryInstall } from './github-repository-install'
 
 interface Props {
   navigation?: ReactNode
@@ -148,6 +149,7 @@ export function GithubRepositoryResults({ repositoryId, repositoryPage, memberQu
         </li>)}
       </ul> : null}
     </> : null}
+    {repository ? <GithubRepositoryInstall key={repository.repositoryId} repositoryId={repository.repositoryId} /> : null}
     {repository ? <Tabs value={repositoryTab ?? 'members'} className="github-repository-layout" onValueChange={tab => {
       void navigate({ to: '/github', search: { ...currentSearch, repositoryTab: tab === 'history' ? 'history' : undefined } })
     }}>

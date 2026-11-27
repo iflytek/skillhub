@@ -2,7 +2,7 @@ import { useId, type FormEvent } from 'react'
 import { Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { ReviewCenterFilters } from './review-center-filters'
-import { REVIEW_KINDS, REVIEW_STATUSES } from './review-center-filters'
+import { REVIEW_KINDS, REVIEW_STATUSES, SCAN_VERDICTS } from './review-center-filters'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
@@ -36,14 +36,14 @@ export function ReviewCenterFilterForm({ value, namespaces, namespaceLoading, on
   const id = useId()
   const setValue = <K extends keyof ReviewCenterFilters>(key: K, next: ReviewCenterFilters[K]) => onChange({ ...value, [key]: next })
   const submit = (event: FormEvent) => { event.preventDefault(); onApply() }
-  const field = (key: 'status' | 'namespace' | 'reviewKind' | 'originType', options: ReviewFilterOption[]) => (
+  const field = (key: 'status' | 'namespace' | 'reviewKind' | 'scanVerdict', options: ReviewFilterOption[]) => (
     <div className="min-w-0">
       <label htmlFor={`${id}-${key}`} className="mb-2 block text-xs font-medium text-muted-foreground">{t(`reviewCenter.filters.${key}`)}</label>
       <Select value={value[key]} onValueChange={(next) => setValue(key, next as ReviewCenterFilters[typeof key])} disabled={key === 'namespace' && namespaceLoading}>
-        <SelectTrigger id={`${id}-${key}`} data-analytics-id={key === 'status' ? 'review.filter.status.interact' : key === 'namespace' ? 'review.filter.namespace.interact' : key === 'reviewKind' ? 'review.filter.kind.interact' : 'review.filter.origin.interact'} className={REVIEW_FILTER_TRIGGER_CLASS_NAME}><SelectValue /></SelectTrigger>
+        <SelectTrigger id={`${id}-${key}`} data-analytics-id={key === 'status' ? 'review.filter.status.interact' : key === 'namespace' ? 'review.filter.namespace.interact' : key === 'reviewKind' ? 'review.filter.kind.interact' : 'review.filter.verdict.interact'} className={REVIEW_FILTER_TRIGGER_CLASS_NAME}><SelectValue /></SelectTrigger>
         <SelectContent sideOffset={8} align="start" className={`${REVIEW_FILTER_CONTENT_CLASS_NAME} ${key === 'namespace' ? 'review-scope-menu' : ''}`}
           onKeyDownCapture={key === 'namespace' ? (event) => event.currentTarget.removeAttribute('data-pointer') : undefined}>
-          {options.map((option) => <SelectItem key={option.value} value={option.value} textValue={option.label} title={option.label} onPointerEnter={key === 'namespace' ? (event) => measureScopeLabel(event.currentTarget) : undefined} data-analytics-id={key === 'status' ? 'review.filter.status.select' : key === 'namespace' ? 'review.filter.namespace.select' : key === 'reviewKind' ? 'review.filter.kind.select' : 'review.filter.origin.select'}><span className={key === 'namespace' ? 'review-scope-label' : 'block truncate'}>{key === 'namespace' ? <span>{option.label}</span> : option.label}</span></SelectItem>)}
+          {options.map((option) => <SelectItem key={option.value} value={option.value} textValue={option.label} title={option.label} onPointerEnter={key === 'namespace' ? (event) => measureScopeLabel(event.currentTarget) : undefined} data-analytics-id={key === 'status' ? 'review.filter.status.select' : key === 'namespace' ? 'review.filter.namespace.select' : key === 'reviewKind' ? 'review.filter.kind.select' : 'review.filter.verdict.select'}><span className={key === 'namespace' ? 'review-scope-label' : 'block truncate'}>{key === 'namespace' ? <span>{option.label}</span> : option.label}</span></SelectItem>)}
         </SelectContent>
       </Select>
     </div>
@@ -62,6 +62,7 @@ export function ReviewCenterFilterForm({ value, namespaces, namespaceLoading, on
       </div>
       <div className="grid grid-cols-2 gap-4 md:flex md:flex-wrap md:items-end">
         {field('reviewKind', REVIEW_KINDS.map((kind) => ({ value: kind, label: t(`reviewCenter.kind.${kind}`) })))}
+        {field('scanVerdict', SCAN_VERDICTS.map(verdict => ({ value: verdict, label: t(verdict === 'ALL' ? 'reviewCenter.filters.allVerdicts' : `securityAudit.verdict.${verdict}`) })))}
         <div className="col-span-2 mt-2 flex w-full gap-3 md:ml-auto md:mt-0 md:w-auto">
           <Button data-analytics-id="review.filter.reset" type="button" variant="outline" onClick={onReset} className="h-11 flex-1 bg-background md:h-8 md:w-20 md:flex-none">{t('reviewCenter.filters.reset')}</Button>
           <Button data-analytics-id="review.filter.apply" type="submit" className="h-11 flex-1 md:h-8 md:w-[100px] md:flex-none">{t('reviewCenter.filters.apply')}</Button>

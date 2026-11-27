@@ -944,6 +944,12 @@ class GithubSyncHttpIngestionInteropTest {
                 """, Integer.class, UUID.fromString(ingestionId), taskId, digest, archive.length)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT status FROM github_sync_task WHERE id = ?",
                 String.class, taskId)).isEqualTo("ACQUISITION_COMPLETE");
+        // The Go fixture reports AFTER_TAG first and replays NO_TAG; only the first report is kept.
+        assertThat(jdbc.queryForObject("""
+                SELECT source_tag_json::text FROM github_sync_package_ingestion WHERE id = ?
+                """, String.class, UUID.fromString(ingestionId))).isEqualTo("""
+                {"tag": "v1.3.2", "status": "AFTER_TAG", "tagCommitSha": "%s", "schemaVersion": 1, \
+                "commitsAfterTag": 3}""".formatted("d".repeat(40)));
         assertThat(jdbc.queryForObject("""
                 SELECT count(*) FROM github_sync_path_result
                 WHERE task_id = ? AND commit_sha = ? AND skill_path = ?

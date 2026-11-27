@@ -2,6 +2,7 @@ import { CredentialsStore } from '../stores/credentials-store'
 import { resolveToken } from '../services/registry-service'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
+import { classifySkillVersionChange, type SkillVersionChange } from '../services/skill-version-order'
 import {
   executeSkillUpgradePlan,
   planSkillUpgrades,
@@ -61,7 +62,7 @@ export async function upgradeCommand(coordinates: string[], options: UpgradeComm
   return output
 }
 
-function renderUpgradePlan(
+export function renderUpgradePlan(
   plan: UpgradePlan,
   state: { check: boolean; executed: boolean },
   json: boolean
@@ -76,6 +77,7 @@ function renderUpgradePlan(
         registry: item.registry,
         currentVersion: item.currentVersion,
         remoteVersion: item.remoteVersion,
+        change: planItemChange(item),
         action: item.action === 'upgrade' && state.executed ? 'upgraded' : item.action,
         reason: item.reason,
         changedFiles: item.changedFiles,
@@ -89,14 +91,20 @@ function renderUpgradePlan(
     `${heading}: ${plan.upgrades} upgrade, ${plan.unchanged} unchanged, ${plan.blocked} blocked`,
     ...plan.items.map(item => {
       const action = item.action === 'upgrade' && state.executed ? 'upgraded' : item.action
-      const versions = item.remoteVersion ? ` ${item.currentVersion} -> ${item.remoteVersion}` : ''
+      const change = planItemChange(item)
+      const changeLabel = change === 'none' ? '' : ` [${change}]`
+      const versions = item.remoteVersion ? ` ${item.currentVersion} -> ${item.remoteVersion}${changeLabel}` : ''
       const reason = item.reason ? ` (${item.reason})` : ''
       return `${action.padEnd(10)} ${item.coordinate}${versions}  ${item.targets.map(target => target.dir).join(', ')}${reason}`
     })
   ].join('\n')
 }
 
-export function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, json: boolean): string {
+function planItemChange(item: UpgradePlan['items'][number]): SkillVersionChange {
+  return item.remoteVersion ? classifySkillVersionChange(item.currentVersion, item.remoteVersion) : 'unknown'
+}
+
+export function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionResult, json: boolean, blocked = 0): string {
   // Execution returns one row per plan position, in order. Coordinates can repeat at different versions.
   const items = plan.items.map((item, index) => ({
     coordinate: item.coordinate,
@@ -112,13 +120,14 @@ export function renderUpgradeResult(plan: UpgradePlan, result: UpgradeExecutionR
 
   if (json) {
     return JSON.stringify({
-      ok: result.failed === 0,
+      ok: result.failed === 0 && blocked === 0,
       check: false,
       summary: {
         upgraded: result.upgraded,
         unchanged: result.unchanged,
         failed: result.failed,
-        notAttempted: result.notAttempted
+        notAttempted: result.notAttempted,
+        ...(blocked ? { blocked } : {})
       },
       items
     })

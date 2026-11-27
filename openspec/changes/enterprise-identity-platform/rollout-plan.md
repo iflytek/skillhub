@@ -37,14 +37,13 @@
 ```text
 R1-A 统一身份核心与兼容迁移
   -> R1-A2 公共 Provider Adapter 扩展（飞书/钉钉等，按 Provider 分批）
-  -> R1-B Organization 与 Login Connection 控制面
-  -> R1-C 动态 OIDC 登录数据面
-  -> OIDC 小范围灰度并扩大
-  -> R2-SAML（独立）
-  -> R3-CAS（独立）
-  -> R4-LDAP 登录（只有产品决策明确后）
+  -> R1-B Organization 创建、成员与角色管理（已合并）
+  -> R1-B 企业 OIDC Login Connection 管理（下一批）
+  -> R1-C 明确选择组织的 OIDC 登录试点
+  -> 按需补充域名验证、邮箱域名发现，再扩大 OIDC 灰度
 
-认证面稳定后，另起 Provisioning 发布序列：
+首个 OIDC 试点稳定后，按接入需求独立安排 SAML、CAS 客户端和 LDAP 登录。
+Provisioning 可独立排期，无需等待上述协议全部齐备：
 P1-SCIM 用户生命周期
   -> P2-Group/组织关系同步
   -> P3-Namespace entitlement 投影
@@ -146,6 +145,12 @@ V54–V60 是一条已经联合验证的 expand-only 迁移链：
 
 让管理员能够建立企业身份边界、成员关系和 OIDC 连接配置，但普通用户仍不能从匿名入口发起企业登录。该批次证明“企业配置和权限模型正确”，不同时承担真实登录风险。
 
+#### 合并顺序
+
+1. Organization 创建及成员、角色管理已有独立合并批次。后续连接管理复用这些入口、租户授权和审计。
+2. 企业 OIDC 连接管理是下一批。范围包括配置、版本化密钥、连接探测、成功测试后激活及暂停/禁用。连接探测验收上游元数据和密钥集可用性；完整授权码与客户端凭证验证由 R1-C 登录验收覆盖。
+3. 域名归属验证和管理作为独立切片，在按邮箱域名发现组织或使用已验证邮箱做组织内账号关联前交付。通过明确的组织标识开展首个 OIDC 试点时无需域名验收。
+
 #### 包含
 
 - Organization、Membership、Domain、角色和 authority version 生命周期。
@@ -182,9 +187,13 @@ V54–V60 是一条已经联合验证的 expand-only 迁移链：
 
 ### 4.3 R1-C：动态 OIDC 登录数据面
 
+实施和验收进度见 [R1-C OIDC 试点变更](../enterprise-identity-r1c-oidc-login/proposal.md)。
+
 #### 目标
 
 在一个测试 Organization 内开放完整 OIDC authorization-code 登录，验证真实身份源、首次关联、重复登录、Session 和即时撤权，然后再逐个扩大 Organization allowlist。
+
+首个试点使用明确的 Organization slug 定位登录选项，由服务端签发不透明登录句柄。首登使用管理员预先授权的不可变外部 subject，已有用户沿用有效身份绑定。按邮箱域名发现组织、邮箱关联和首次登录自动建号各自按策略验收。
 
 #### 包含
 
@@ -201,7 +210,7 @@ V54–V60 是一条已经联合验证的 expand-only 迁移链：
 
 1. 部署后继续保持 `SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED=false`。
 2. 使用测试 Organization 完成控制面连接测试和激活。
-3. 确认 identity core 已经在 R1-A 独立验收为 `ACTIVE`。
+3. 确认 identity core 已经在 R1-A 独立验收为 `ACTIVE`，并单独回归现有公共登录。Organization allowlist 只限制组织范围，公共登录仍读取全局 identity core 模式。
 4. 只把测试 Organization 放入 `SKILLHUB_ENTERPRISE_ORGANIZATION_ALLOWLIST`。
 5. 设置 `SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED=true`。
 6. 完成首次登录、重复登录、退出、成员暂停、连接暂停和错误路径验收。
@@ -248,8 +257,8 @@ Keycloak、CoreDNS、Caddy、mock provider 都是隔离的测试设施，不是�
 1. 从当时最新 `main` 创建 R1-A 工作分支。
 2. 按能力和文件依赖提取实现，把后期安全修复折叠回所属代码，而不是机械 cherry-pick 一段早期提交。
 3. 保证 R1-A 独立编译、迁移、测试和运行；完成审查、合并、部署与观察后结束该批。
-4. 从已经包含 R1-A 的最新 `main` 创建 R1-B，重复完整验证。
-5. R1-B 合并并完成控制面验收后，再从最新 `main` 创建 R1-C。
+4. 从已经包含 R1-A 和组织管理的最新 `main` 创建 R1-B 企业 OIDC 连接管理分支，完成本批验证。
+5. 企业 OIDC 连接管理合并并验收后，再从最新 `main` 开始 R1-C。域名归属及邮箱发现按各自依赖分批验收。
 6. 每批生成自己的 exact-SHA 验证记录；当前 [verification.md](./verification.md) 只能作为整体参考证据，不能替代重组后 SHA 的验证。
 
 重组过程中可能需要少量代码调整来消除批次间的编译依赖。是否属于 R1-A、R1-B 或 R1-C，以运行时职责和最小可独立验证单元判断，不以原提交时间判断。
@@ -359,11 +368,13 @@ OIDC 稳定后，SAML、CAS 和可能的 LDAP 登录分别建立独立 OpenSpec�
 
 这些批次复用统一身份核心、External Identity、Organization、Membership、Profile Authority 和 Session guard。Adapter 仍然不得决定建号、账号合并、成员授权或 Namespace 权限。
 
+SAML 与 CAS 客户端之间没有前置依赖。协议顺序以已明确的企业接入方、可重复的参考服务和验收负责人为依据。CAS 客户端批次验证 SkillHub 接入企业已有的 CAS 服务。
+
 LDAP 可能同时被用作“用户输入企业密码直接登录”和“后台读取企业目录”。这两种能力必须使用不同连接类型和安全边界：前者属于 authentication，后者属于 provisioning。没有明确 TLS、稳定 object id、密码不落盘和连接隔离方案前，不把 LDAP 标记为已支持的登录协议。
 
 ## 9. 组织同步的独立发布序列
 
-组织同步不进入 Release 1。后续建议至少拆为三个批次：
+组织同步不进入 Release 1。首个 OIDC 试点稳定后，如已有明确的目录接入需求，可以独立立项。后续建议至少拆为三个批次：
 
 ### P1：SCIM 用户生命周期
 
@@ -397,7 +408,7 @@ LDAP 可能同时被用作“用户输入企业密码直接登录”和“后台
 5. OIDC 之后优先做 SAML、CAS 还是 LDAP 登录；每种协议仍保持独立批次。
 6. 是否确认 SCIM/Directory、Group 同步和 Namespace entitlement 分别立项，不与认证协议混合。
 
-以上六项确认前，只保留当前参考分支和文档，不创建分批 PR。
+未决事项按所属批次确认。试点对象和灰度门槛在 R1-C 启用前确认；协议优先级和目录同步分别在相应批次立项时确认。
 
 ## 11. R1-A 本地提取作业单
 

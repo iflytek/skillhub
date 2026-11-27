@@ -66,6 +66,18 @@ beforeEach(() => {
 })
 
 describe('unified review center', () => {
+  it('applies a verdict to individual rows and resets the page', () => {
+    mocks.search = { page: 2 }
+    mocks.list.mockReturnValue({ data: { items: [{ id: 3, skillSlug: 'notes', status: 'PENDING', submittedAt: '2026-11-05T10:00:00Z', scanVerdict: 'DANGEROUS' }], totalElements: 1, totalPages: 1 }, refetch: mocks.refetch })
+    renderPage()
+    expect(screen.getAllByText('securityAudit.verdict.DANGEROUS').filter(element => element.tagName !== 'OPTION')).toHaveLength(2)
+    fireEvent.change(screen.getByLabelText('reviewCenter.filters.scanVerdict'), { target: { value: 'DANGEROUS' } })
+    fireEvent.click(screen.getByRole('button', { name: 'reviewCenter.filters.apply' }))
+    expect(lastFilters()?.[2]).toBe(0)
+    expect(lastFilters()?.[6]).toMatchObject({ scanVerdict: 'DANGEROUS' })
+    expect(mocks.navigate).toHaveBeenLastCalledWith(expect.objectContaining({ search: expect.objectContaining({ scanVerdict: 'DANGEROUS' }) }))
+  })
+
   it('does not infer a version update or replace its primary request kind with attached avatar changes', () => {
     expect(reviewTaskKind({ subjectType: 'SKILL_VERSION' } as ReviewTask)).toBe('SKILL_VERSION')
     expect(reviewTaskKind({ subjectType: 'SKILL_METADATA', requestedVisibility: 'PUBLIC', avatarRemoval: true } as ReviewTask)).toBe('VISIBILITY_CHANGE')
@@ -140,10 +152,10 @@ describe('unified review center', () => {
     renderPage()
     fireEvent.change(screen.getByLabelText('reviewCenter.filters.q'), { target: { value: '  notes  ' } })
     expect(lastFilters()?.[2]).toBe(2)
-    expect(lastFilters()?.[6]).toEqual({ q: '', reviewKind: 'ALL', originType: 'ALL' })
+    expect(lastFilters()?.[6]).toEqual({ q: '', reviewKind: 'ALL', originType: 'ALL', scanVerdict: 'ALL' })
     fireEvent.click(screen.getByRole('button', { name: 'reviewCenter.filters.apply' }))
     expect(lastFilters()?.[2]).toBe(0)
-    expect(lastFilters()?.[6]).toEqual({ q: 'notes', reviewKind: 'ALL', originType: 'ALL' })
+    expect(lastFilters()?.[6]).toEqual({ q: 'notes', reviewKind: 'ALL', originType: 'ALL', scanVerdict: 'ALL' })
     expect(mocks.navigate).toHaveBeenLastCalledWith(expect.objectContaining({ search: expect.objectContaining({ q: 'notes', page: undefined }) }))
   })
 
@@ -152,7 +164,7 @@ describe('unified review center', () => {
     renderPage()
     fireEvent.click(screen.getByRole('button', { name: 'reviewCenter.filters.reset' }))
     expect(lastFilters()?.slice(0, 6)).toEqual(['PENDING', undefined, 0, 20, 'DESC', true])
-    expect(lastFilters()?.[6]).toEqual({ q: '', reviewKind: 'ALL', originType: 'ALL' })
+    expect(lastFilters()?.[6]).toEqual({ q: '', reviewKind: 'ALL', originType: 'ALL', scanVerdict: 'ALL' })
     fireEvent.click(screen.getByRole('button', { name: 'reviewCenter.filters.reset' }))
     expect(mocks.refetch).toHaveBeenCalledTimes(1)
   })
@@ -162,7 +174,7 @@ describe('unified review center', () => {
     fireEvent.change(screen.getByLabelText('reviewCenter.filters.q'), { target: { value: 'unsubmitted' } })
     fireEvent.click(screen.getByRole('button', { name: /pagination.next/i }))
     expect(lastFilters()?.[2]).toBe(1)
-    expect(lastFilters()?.[6]).toEqual({ q: '', reviewKind: 'ALL', originType: 'ALL' })
+    expect(lastFilters()?.[6]).toEqual({ q: '', reviewKind: 'ALL', originType: 'ALL', scanVerdict: 'ALL' })
   })
 
   it('allows a team owner to use the same center but does not treat USER_ADMIN as a skill reviewer', () => {

@@ -31,7 +31,8 @@ public record ReviewTaskResponse(
         boolean canReview,
         String decisionMethod,
         String decisionScanTaskId,
-        String autoPublicationGrantId
+        String autoPublicationGrantId,
+        String scanVerdict
 ) {
     public ReviewTaskResponse(Long id, Long skillVersionId, String namespace, String skillSlug,
             String version, String status, String submittedBy, String submittedByName,
@@ -43,7 +44,7 @@ public record ReviewTaskResponse(
                 reviewedBy, reviewedByName, reviewComment, submittedAt, reviewedAt, subjectType,
                 subjectId, subjectVersionId, subjectSlug, avatarCandidateId, avatarRemoval,
                 previousVisibility, requestedVisibility, originType, null, null, null, false,
-                null, null, null);
+                null, null, null, null);
     }
 
     public ReviewTaskResponse withReviewPermission(boolean allowed) {
@@ -52,16 +53,16 @@ public record ReviewTaskResponse(
                 submittedAt, reviewedAt, subjectType, subjectId, subjectVersionId, subjectSlug,
                 avatarCandidateId, avatarRemoval, previousVisibility, requestedVisibility,
                 originType, displayName, summary, reviewKind, allowed,
-                decisionMethod, decisionScanTaskId, autoPublicationGrantId);
+                decisionMethod, decisionScanTaskId, autoPublicationGrantId, scanVerdict);
     }
 
-    public ReviewTaskResponse withPresentation(String displayName, String summary, String reviewKind) {
+    public ReviewTaskResponse withPresentation(String displayName, String summary, String reviewKind, String scanVerdict) {
         return new ReviewTaskResponse(id, skillVersionId, namespace, skillSlug, version, status,
                 submittedBy, submittedByName, reviewedBy, reviewedByName, reviewComment,
                 submittedAt, reviewedAt, subjectType, subjectId, subjectVersionId, subjectSlug,
                 avatarCandidateId, avatarRemoval, previousVisibility, requestedVisibility,
                 originType, displayName, summary, reviewKind, canReview,
-                decisionMethod, decisionScanTaskId, autoPublicationGrantId);
+                decisionMethod, decisionScanTaskId, autoPublicationGrantId, scanVerdict);
     }
 
     /**
@@ -74,7 +75,7 @@ public record ReviewTaskResponse(
                 submittedAt, reviewedAt, subjectType, subjectId, subjectVersionId, subjectSlug,
                 avatarCandidateId, avatarRemoval, previousVisibility, requestedVisibility,
                 originType, displayName, summary, reviewKind, canReview,
-                method, scanTaskId, grantId);
+                method, scanTaskId, grantId, scanVerdict);
     }
 
     public ReviewTaskResponse(Long id, Long skillVersionId, String namespace, String skillSlug, String version, String status, String submittedBy, String submittedByName, String reviewedBy, String reviewedByName, String reviewComment, Instant submittedAt, Instant reviewedAt, String subjectType, Long subjectId, Long subjectVersionId, String subjectSlug, String originType) {

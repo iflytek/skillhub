@@ -81,7 +81,10 @@ class SkillControllerTest {
                 .thenReturn(Optional.of(new GithubSkillSourceResponse(
                         "upstream", "skills", "agents/demo", "a".repeat(40),
                         2, "PRESENT_UNCLASSIFIED", List.of(new GithubSkillSourceResponse.LicenseDocument(
-                        "REPOSITORY_ROOT", "LICENSE", true)))));
+                        "REPOSITORY_ROOT", "LICENSE", true)),
+                        new GithubSkillSourceResponse.UpstreamTag("AFTER_TAG", "REPOSITORY", "v1.3.2",
+                                "d".repeat(40), 3, null),
+                        null)));
 
         mockMvc.perform(get("/api/web/skills/team/demo"))
                 .andExpect(status().isOk())
@@ -90,6 +93,11 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.data.githubSource.skillPath").value("agents/demo"))
                 .andExpect(jsonPath("$.data.githubSource.commitSha").value("a".repeat(40)))
                 .andExpect(jsonPath("$.data.githubSource.licenseDocuments[0].path").value("LICENSE"))
+                .andExpect(jsonPath("$.data.githubSource.upstreamTag.status").value("AFTER_TAG"))
+                .andExpect(jsonPath("$.data.githubSource.upstreamTag.scope").value("REPOSITORY"))
+                .andExpect(jsonPath("$.data.githubSource.upstreamTag.tag").value("v1.3.2"))
+                .andExpect(jsonPath("$.data.githubSource.upstreamTag.commitsAfterTag").value(3))
+                .andExpect(jsonPath("$.data.githubSource.declaredVersion").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.data.githubSource.ingestionStatus").doesNotExist());
     }
 
@@ -220,8 +228,34 @@ class SkillControllerTest {
                 .andExpect(jsonPath("$.data.parsedMetadataJson").value(parsedMetadata))
                 .andExpect(jsonPath("$.data.complianceSnapshot.items[0].controlId").value("T1059"))
                 .andExpect(jsonPath("$.data.manifestJson").value("[{\"path\":\"SKILL.md\"}]"))
+                .andExpect(jsonPath("$.data.githubSource").value(org.hamcrest.Matchers.nullValue()))
                 .andExpect(jsonPath("$.timestamp").isNotEmpty())
                 .andExpect(jsonPath("$.requestId").isNotEmpty());
+    }
+
+    @Test
+    void getVersionDetailShouldExposeThatVersionsGithubSource() throws Exception {
+        when(skillQueryService.getVersionDetail(eq("github"), eq("demo"), eq("0.0.0-gabc"),
+                eq((String) null), eq(Map.<Long, NamespaceRole>of())))
+                .thenReturn(new SkillQueryService.SkillVersionDetailDTO(
+                        11L, "0.0.0-gabc", "PUBLISHED", null, 1, 10L,
+                        Instant.parse("2026-11-01T00:00:00Z"), "{}", "[]"));
+        when(githubSkillSourceQueryRepository.findPublishedSyncedVersion(11L))
+                .thenReturn(Optional.of(new GithubSkillSourceResponse(
+                        "obra", "superpowers", "skills/brainstorming", "2ce8aa15".repeat(5), 1,
+                        "RECOGNIZED", List.of(),
+                        new GithubSkillSourceResponse.UpstreamTag("EXACT", "REPOSITORY", "v7.0.1",
+                                "2ce8aa15".repeat(5), 0, null),
+                        "2.1.0")));
+
+        mockMvc.perform(get("/api/v1/skills/github/demo/versions/0.0.0-gabc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.version").value("0.0.0-gabc"))
+                .andExpect(jsonPath("$.data.githubSource.commitSha").value("2ce8aa15".repeat(5)))
+                .andExpect(jsonPath("$.data.githubSource.upstreamTag.status").value("EXACT"))
+                .andExpect(jsonPath("$.data.githubSource.upstreamTag.tag").value("v7.0.1"))
+                .andExpect(jsonPath("$.data.githubSource.upstreamTag.commitsAfterTag").value(0))
+                .andExpect(jsonPath("$.data.githubSource.declaredVersion").value("2.1.0"));
     }
 
     @Test

@@ -39,17 +39,35 @@ export async function withRenamedAvailabilityPath(checkpoint, from, to, inspect,
   }
 }
 
+/** Each probe owns a fresh Host; a fixed startup delay cannot establish runtime readiness. */
+export async function waitForAvailabilityRuntime(read, signal, { timeoutMs = 20000, pollMs = 100 } = {}) {
+  const deadline = performance.now() + timeoutMs;
+  for (;;) {
+    signal.throwIfAborted();
+    const status = read();
+    signal.throwIfAborted();
+    if (performance.now() >= deadline) {
+      throw Object.assign(new Error('Fixture local runtime did not become ready before the deadline.'), { code: 'RUNTIME_READY_TIMEOUT' });
+    }
+    if (status?.state === 'ready' && status.hostInstanceId) return;
+    if (status && !['starting', 'ready'].includes(status.state)) {
+      throw Object.assign(new Error('Fixture local runtime cannot become ready.'), { code: 'RUNTIME_NOT_READY' });
+    }
+    await delay(Math.min(pollMs, Math.max(1, deadline - performance.now())), undefined, { signal });
+  }
+}
+
 /** File commit and official watcher discovery are independent; wait only on read-only observations. */
 export async function waitForAvailabilityWinner(read, directory, signal, { timeoutMs = 15000, pollMs = 100 } = {}) {
   signal.throwIfAborted();
   const timeout = Object.assign(new Error('Official Host discovery did not select the installed fixture before the deadline.'), { code: 'DISCOVERY_TIMEOUT' });
-  const deadline = Date.now() + timeoutMs;
+  const deadline = performance.now() + timeoutMs;
   const bounded = new AbortController();
   const cancel = () => bounded.abort(signal.reason);
   signal.addEventListener('abort', cancel, { once: true });
   const timer = setTimeout(() => bounded.abort(timeout), timeoutMs);
   const valid = () => {
-    if (Date.now() >= deadline) bounded.abort(timeout);
+    if (performance.now() >= deadline) bounded.abort(timeout);
     bounded.signal.throwIfAborted();
   };
   let rejectAbort;
@@ -162,17 +180,17 @@ async function run(ctx, root, signal, checkpoint) {
     assert.equal(result.isError, false);
     mark('assertion', 'accepted');
     assert.equal(result.value.status, 'accepted');
-    const deadline = Date.now() + 15000;
+    const deadline = performance.now() + 15000;
     let operation;
     mark('install-poll');
-    while (Date.now() < deadline) {
+    while (performance.now() < deadline) {
       operation = await ctx.skillhub.getInstallationOperation(created.sessionId, result.value.operationId);
       checkpoint.operation = { phase: operation?.phase, files: operation?.files, recovery: operation?.recovery,
-        discovery: operation?.discovery, deadlineReached: Date.now() >= deadline };
+        discovery: operation?.discovery, deadlineReached: performance.now() >= deadline };
       if (['completed', 'failed', 'unknown', 'recovery-required'].includes(operation?.phase)) break;
       await delay(100, undefined, { signal });
     }
-    checkpoint.operation.deadlineReached = Date.now() >= deadline;
+    checkpoint.operation.deadlineReached = performance.now() >= deadline;
     mark('assertion', 'completed');
     assert.equal(operation?.phase, 'completed');
     // Do not mistake a completed file transaction for the asynchronous watcher having refreshed its catalog.
@@ -200,6 +218,13 @@ async function run(ctx, root, signal, checkpoint) {
     return { sourceRevision, itemKey: item.itemKey };
   }
   checkpoint.scenario = 'user-install';
+  mark('runtime-ready');
+  await waitForAvailabilityRuntime(() => {
+    const status = ctx.skillhub.getLocalRuntimeStatus();
+    checkpoint.runtimeState = status?.state ?? 'absent';
+    return status;
+  }, signal);
+  delete checkpoint.runtimeState;
   await install('user');
   checkpoint.scenario = 'user-winner';
   await check(await reference('user'), { association: 'managed-reference', scope: 'user', integrity: 'verified', discovery: 'winner', name: 'document-helper' });

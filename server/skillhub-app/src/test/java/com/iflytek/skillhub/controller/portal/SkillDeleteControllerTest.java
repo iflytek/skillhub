@@ -94,20 +94,20 @@ class SkillDeleteControllerTest {
     }
 
     @Test
-    void deleteSkillById_allowsSuperAdminAndReturnsDeletedResponse() throws Exception {
-        given(skillDeleteAppService.deleteSkillById(
+    void deleteSkillById_delegatesAuthorAuthorizationAndReturnsDeletedResponse() throws Exception {
+        given(skillDeleteAppService.deleteSkillByIdFromPortal(
                 org.mockito.ArgumentMatchers.eq(11L),
-                org.mockito.ArgumentMatchers.eq("super-1"),
+                org.mockito.ArgumentMatchers.argThat(actor -> actor.userId().equals("author-1")),
                 org.mockito.ArgumentMatchers.any()))
                 .willReturn(new SkillDeleteAppService.DeleteResult(11L, "global", "demo-skill", true));
 
         PlatformPrincipal principal = new PlatformPrincipal(
-                "super-1", "Super", "super@example.com", "", "api_token", Set.of("SUPER_ADMIN"));
+                "author-1", "Author", "super@example.com", "", "api_token", Set.of("USER"));
         var auth = new UsernamePasswordAuthenticationToken(
                 principal,
                 null,
                 List.of(
-                        new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"),
+                        new SimpleGrantedAuthority("ROLE_USER"),
                         new SimpleGrantedAuthority("SCOPE_skill:delete")
                 ));
 

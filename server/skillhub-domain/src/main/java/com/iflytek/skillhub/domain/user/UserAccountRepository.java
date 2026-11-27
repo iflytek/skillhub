@@ -16,5 +16,6 @@ public interface UserAccountRepository {
     List<UserAccount> findByIdIn(List<String> ids);
     Optional<UserAccount> findByEmailIgnoreCase(String email);
     Page<UserAccount> search(String keyword, UserStatus status, Pageable pageable);
+    List<UserAccount> searchNonMembers(Long namespaceId, String keyword, Pageable pageable);
     UserAccount save(UserAccount user);
 }

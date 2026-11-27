@@ -62,6 +62,23 @@ class MySkillManagementPostgresTest {
         entities.persist(skill);
         return skill;
     }
+    @Test
+    void personalUploadListRequiresMembershipAndCountsOnlyTheAuthorsSkillsInThisNamespace() {
+        entities.persist(new com.iflytek.skillhub.domain.namespace.NamespaceMember(team.getId(), "owner", NamespaceRole.MEMBER));
+        Skill owned = skill(team, "owned");
+        Skill foreign = skill(team, "foreign");
+        ReflectionTestUtils.setField(foreign, "ownerId", "other");
+        skill(global, "other-space");
+        entities.flush();
+        var page = org.springframework.data.domain.PageRequest.of(0, 1);
+        var ownedPage = query.findOwnedNamespaceSkills("owner", team.getSlug(), "", page);
+        assertThat(ownedPage.getTotalElements()).isOne();
+        assertThat(ownedPage.getContent()).containsExactly(owned);
+        org.assertj.core.api.Assertions.assertThatThrownBy(
+                () -> query.findOwnedNamespaceSkills("other", team.getSlug(), "", page))
+                .isInstanceOf(com.iflytek.skillhub.domain.shared.exception.DomainForbiddenException.class);
+    }
+
     @Test void pendingProjectionIsPageBoundedSingleQueryAndClearsForAllFinishedStatuses() {
         Skill first = skill(team, "first");
         Skill second = skill(team, "second");

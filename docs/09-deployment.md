@@ -367,11 +367,15 @@ services:
 - `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO`
   - 是否在登录页加载后自动尝试一次 bootstrap
   - 建议私有版初期保持 `false`
+- `SKILLHUB_WEB_AUTH_ENTERPRISE_OIDC_ENABLED`
+  - 是否在登录页显示组织标识查找和 OIDC 连接入口
+  - 只有在后端 `SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED=true` 且组织在 allowlist 中时才会实际跳转
 
 注意：
 
 - 前端密码兼容层打开之前，后端仍必须同步打开 `skillhub.auth.direct.enabled=true`
 - 前端开关打开之前，后端仍必须同步打开 `skillhub.auth.session-bootstrap.enabled=true`
+- 组织 OIDC 入口打开之前，后端必须同步打开 `SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED=true`，并配置回调地址、密钥和组织 allowlist
 - 前后端任一侧未开启，都不会破坏原有登录方式；只会使该兼容入口不可用或不显示
 
 开发环境：
@@ -651,6 +655,24 @@ override 或部署平台环境变量把上述 `SPRING_SECURITY_*` 变量注入 `
 容器。Kubernetes 部署同理，将这些变量放入 `backend-deployment.yaml` 的
 `server` 容器环境变量或统一的配置管理系统中。
 
+### 8.1 企业 OIDC 登录连接管理
+
+企业登录连接从组织管理页面配置。启用前，为所有后端实例从部署环境的密钥管理系统注入一套相同的加密配置：
+
+| 环境变量 | 用途 |
+|---|---|
+| `SKILLHUB_ENTERPRISE_OIDC_ENABLED` | 默认 `false`。设为 `true` 后，授权的组织管理员可以配置和测试连接。 |
+| `SKILLHUB_ENTERPRISE_SECRET_ENVELOPE_ACTIVE_KEY_ID` | 写入新密钥时使用的加密密钥标识。 |
+| `SKILLHUB_ENTERPRISE_SECRET_ENVELOPE_KEYS` | 逗号分隔的 `id:Base64` 项，每个值解码后必须为 32 字节。保留仍有关联密文的旧密钥。 |
+| `SKILLHUB_ENTERPRISE_OIDC_PRIVATE_HOST_ALLOWLIST` | 逗号分隔的私有身份源确切主机名。默认空，使用标准 TLS 校验。 |
+
+Compose 使用 override 注入这些后端环境变量。Kubernetes 可通过 Secret 引用注入加密密钥。
+管理开关开启后仍需通过一次密钥录入确认加密配置有效。配置缺失或格式无效时，服务拒绝写入密钥。
+
+组织所有者可以委派身份管理员和密钥管理员角色。身份管理员创建草稿，密钥管理员核对发行方（issuer）和客户端 ID 后录入客户端密钥。测试通过后，身份管理员可以激活该版本。连接探测校验 OIDC 元数据和 JWKS，凭据是否可用于授权码交换由后续员工登录验收确认。
+
+这一阶段的激活仅选定连接版本。匿名企业登录入口仍需后续登录功能启用。关闭管理开关会停止连接写入和探测，保留组织功能和已保存的版本。
+
 ## 9 裸金属上线清单
 
 推荐顺序：
@@ -835,7 +857,51 @@ SkyWalking 中没有被保留的 Trace。这是头部采样的预期行为。
 - `scripts/verify-scanner.sh`
 - `docs/security-scanning.md`
 
-## 12 数据迁移
+## 12 SCIM 2.0 用户目录
+
+SCIM 是组织目录的 provisioning 接口，与 OIDC、OAuth、CAS、LDAP 登录连接分开配置。
+当前 P1 只支持 Users，不支持 Groups、部门树或 Namespace entitlement。Directory Connection
+默认关闭，并且必须同时满足 `SKILLHUB_IDENTITY_DIRECTORY_ENABLED=true` 和组织 allowlist。
+
+启用方式（仅用于隔离测试组织）：
+
+```bash
+export SKILLHUB_IDENTITY_DIRECTORY_ENABLED=true
+export SKILLHUB_IDENTITY_DIRECTORY_ORGANIZATION_ALLOWLIST=<test-organization-id>
+```
+
+请求边界默认值如下，可按部署环境收紧，但不建议随意放大：
+
+| 配置 | 默认值 | 作用 |
+|---|---:|---|
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_REQUEST_BYTES` | `65536` | SCIM 写请求 Content-Length 上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_FIELD_LENGTH` | `256` | externalId、userName、资料字段长度上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_FILTER_LENGTH` | `512` | filter 表达式长度上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_PATCH_OPERATIONS` | `32` | 单次 PATCH 操作数上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_PAGE_COUNT` | `100` | 单页最多返回用户数 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_START_INDEX` | `10000` | 最大 SCIM 起始位置 |
+
+组织管理员在组织详情创建并激活 Directory Connection 后，复制 SCIM endpoint 和一次性
+bootstrap token。Token 只在创建或轮换响应中展示一次；数据库、审计和日志只保存哈希、版本
+和提示信息。暂停连接会立即拒绝 SCIM 请求；轮换后旧 token 立即失效。
+
+资源更新返回 `ETag`，外部目录更新 `PUT`、`PATCH`、`DELETE` 时应回传 `If-Match`。
+版本不匹配返回 `412`，避免旧事件覆盖新资料。重复创建同一 `externalId` 会复用同一目录
+membership，不会创建平台账号、登录绑定或 Namespace 权限。
+
+本地可重复验收使用：
+
+```bash
+SCIM_BASE_URL="<directory-connection-scim-v2-url>" \
+SCIM_TOKEN="<one-time-token>" \
+./scripts/scim-user-lifecycle-fixture.sh
+```
+
+脚本覆盖 ServiceProviderConfig、Users create/list/filter/replay/replace/PATCH/deactivate，
+不会打印 token；验收完成后应暂停或禁用测试连接并清理临时组织和容器。该脚本是一次性
+SCIM 客户端 fixture，不代表已经完成 OIDC 登录或厂商通讯录接入。
+
+## 13 数据迁移
 
 Flyway 仍是唯一 schema 变更入口：
 

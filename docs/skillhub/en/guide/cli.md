@@ -8,10 +8,19 @@ SkillHub CLI is the official command-line tool for SkillHub, designed for search
 | --- | --- | --- |
 | Install a remote Skill | install | Selected Agent, scope or custom directory |
 | Update installed skills | upgrade | Explicit coordinates and targets; no implicit upgrade-all |
+| Discover installed skill updates | outdated | Read-only, scoped to the effective registry |
+| Install or update skills by GitHub repository | repository | Requires a compatible repository plan; separate from Suites and server-side GitHub synchronization |
 | Manage pinned collections | suite | Suite inventory and member ownership |
 | Sync team authoring files | sync | Non-global namespace workspace, not Suite lifecycle |
 | Update the CLI executable | update | CLI installation, not installed skills |
 | Recover local records | doctor | Project metadata and inventory, not remote upgrades |
+
+Existing command names and compatibility entry points remain supported. `repository check` and
+`repository upgrade --check` use the same read-only plan. `outdated` discovers updates, selected-skill
+`upgrade --check` previews an upgrade, and `update` updates the CLI itself. `suite check` inspects the
+installed Suite and member state; `suite upgrade --check` previews remote member changes. `sync`
+manages namespace authoring workspaces, not server-side GitHub synchronization; `status` lists all
+states and `diff` shows differences. See the [complete CLI command reference](https://github.com/iflytek/skillhub/blob/main/cli/README.md#-command-reference).
 
 ## Automation and failure handling
 
@@ -271,6 +280,25 @@ DeepSeek Harness resolves project skills from the nearest Git repository root, w
 The CLI creates this file after extracting the registry package. It is not included in the downloaded
 ZIP, and `.skillhub/` is excluded when an installed directory is published again.
 
+## Check Installed Skills for Updates
+
+`outdated` requires a CLI version containing this command; upgrading the server does not add it to an older CLI.
+
+```bash
+skillhub outdated --json
+skillhub outdated --namespace team --agent codex --registry https://skillhub.example.com
+```
+
+The command checks installations in the effective registry only. It does not download, acquire
+installation locks, write local files, migrate inventory or apply updates. Results include local
+modification state and numeric version-change labels; `0.1.0 -> 0.2.0` is `minor`, without promising
+compatibility. GitHub content-hash versions are `unknown` unless unchanged; hash text is not chronology.
+
+A complete check exits zero, including when there are updates or unknown version ordering.
+Failed lookups preserve the available results but produce a nonzero exit, `ok: false`, and
+`summary.failed`; stdout remains a single JSON report and stderr contains the error. The first
+lookup failure supplies the existing CLI exit code. Use explicit `upgrade --check` to plan changes.
+
 ## Upgrade Installed Skills
 
 ```bash
@@ -388,6 +416,39 @@ skillhub doctor
 4. Writes new `inventory.json`
 
 Versions are tracked per target. Doctor reports recovery problems; it does not download or upgrade skills.
+
+### Read-only Health Diagnosis
+
+```bash
+skillhub doctor --health
+skillhub doctor --health --registry https://skillhub.example.com --json
+skillhub doctor --health --offline --json
+```
+
+`--health` explicitly selects diagnosis instead of inventory reconstruction. It checks actual state
+paths, configuration and credential sources, the selected registry, and its registered installations.
+It never repairs files, creates backups, acquires installation locks, deletes credentials or starts login.
+`--offline` makes no network requests and marks remote checks as skipped; saved-token validity remains unknown.
+
+Online mode sends one request to the existing CLI identity endpoint with a five-second limit and no
+redirect following. It distinguishes observed transport, HTTP and authentication failures without
+printing tokens or raw error bodies. Optional GitHub/Suite features and server internals are not probed.
+Accepted identity does not certify publish/delete permissions, and read access does not certify write access.
+
+Missing login, modified content and missing legacy integrity baselines are warnings. Unsafe, unreadable,
+missing or inconsistent installations are failures. Only selected-registry records are inspected;
+enabled/disabled state and all local content are preserved.
+
+Health JSON is one stdout object with `schemaVersion: 1`, `mode: "health"`, `ok`, selected registry and
+credential sources, state `paths`, `checks` and `exitCode`. Check statuses are `pass`, `warn`, `fail`
+or `skipped`, with stable identifiers/codes, safe messages and optional next steps. Failed runs still
+produce the full report on stdout without stderr chatter. Exit 0 permits warnings/skipped checks;
+failure priority is filesystem 4, authentication 2, network 3, then other HTTP/protocol failure 1.
+Usage errors remain 5. Legacy `doctor --json` is unchanged. Health-only options require `--health`.
+
+Rejected saved credentials get explicit registry-scoped logout/login guidance; override sources get
+separate instructions. No recovery action is performed. Use `whoami` for direct identity verification
+and `outdated` for installed-update discovery.
 
 ## Publishing
 
@@ -643,9 +704,11 @@ installations across all namespaces in the current registry.
 
 ```bash
 skillhub doctor [--json]
+skillhub doctor --health [--offline] [--registry <url>] [--token <token>] [--json]
 ```
 
 Scan project directory and rebuild local inventory.
+With `--health`, diagnose without inventory maintenance; `--offline` skips network access.
 
 ### publish
 
@@ -772,3 +835,35 @@ skillhub list
 Apache-2.0
 
 Copyright 2026 iFlytek Co., Ltd.
+
+## Install skills from a GitHub repository
+
+Open **Open-source skills → Repositories**, expand **Install repository skills**, and copy its stable repository ID:
+
+```bash
+skillhub repository install 123456 --scope project --agent codex --registry https://skillhub.example.com
+```
+
+Requires the repository install-plan API. Public content can be read anonymously; a supplied Token requires `skill:read` and remains subject to account and namespace permissions. A single plan pins all currently accessible, published, downloadable member versions and fingerprints (up to 1000). Versions may come from different commits; a newer pending revision does not block an older usable publication. Excluded private or unpublished details and counts are not disclosed. The Web list is a preview; the CLI resolves a fresh plan when run.
+
+SaaS and self-hosted registries may expose different GitHub features. Synced skills do not imply
+repository batch support, and the CLI does not infer support from a hostname. An unavailable endpoint
+gets a feature-availability hint; an untyped 404 explicitly leaves both a disabled feature and an
+unavailable repository possible. HTML returned instead of a compatible plan gets a contract error.
+These failures return nonzero without changing local skills, credentials or inventory. Authentication,
+permission, network and structured repository-not-found errors retain their meaning. Ordinary skill
+commands do not require this repository endpoint and can still operate on accessible published skills.
+
+No batch `--force` is supported. Existing directories remain protected, successful members survive partial failures, and a partial failure returns a nonzero exit code with per-member results. This reuses individual installation records without creating a Suite or repository installation ledger. Complete snapshot ZIP downloads remain separate and require every pinned snapshot member to be available.
+
+### Check and upgrade installed repository skills
+
+```bash
+skillhub repository check 123456 --registry https://skillhub.example.com --json
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com --check
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com
+```
+
+Checks are read-only. Use `--agent` and/or `--dir` to filter existing targets; `--scope` is installation-only. Compare exact versions and fingerprints rather than commit equality. Do not add new upstream members or delete local files for removed/unavailable members. Legacy metadata stays readable without a forced migration.
+
+Local edits, other owners, disabled state, source checks, locks and inventory consistency remain protected. Safe targets can upgrade independently while protected targets remain unchanged. Any protected or failed item makes the overall result nonzero, with explicit per-target results. Runtime failure retains completed work and reports later unattempted targets. No batch `--force`, cross-directory atomicity, new repository installation ledger or server installation telemetry is introduced. Existing download quotas apply. The Web offers commands only and cannot know local installation or drift counts.

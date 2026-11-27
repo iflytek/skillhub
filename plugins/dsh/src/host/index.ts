@@ -6,6 +6,7 @@ import type { InstallationContextReason } from './installation-context.js';
 import { Context, symbols } from '@deepseek-ai/cordis';
 import { Remote, RemoteError, RemoteScope, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol';
 import type {} from '@deepseek-ai/dsh-agent';
+import type {} from '@deepseek-ai/dsh-app-boot';
 import type {} from '@deepseek-ai/dsh-user-questions';
 import type {} from '@deepseek-ai/dsh-session-query';
 import { historicalSearchCandidate } from './conversation-history.js';
@@ -28,7 +29,7 @@ import { registerInstallTool } from './install-tool.js';
 import type { ConversationSearchContext, ConversationSearchResult } from './search-tool.js';
 import type { RegistryConnectionTest, CatalogContext, CatalogLabels, CatalogPageResult, CatalogSort, ModuleAvailability, ReviewPage, ConversationDetail, SkillDetail, SkillList, VersionPage } from './types.js';
 import { RegistryAdapter, RegistryError } from './registry-adapter.js';
-import { LocalRuntime } from './local-runtime.js';
+import { LocalRuntime, openLocalRuntime } from './local-runtime.js';
 import { FavoritesStore, FavoritesError, validateFavoriteSkill } from './favorites-store.js';
 import type { FavoriteList, FavoriteSkill, FavoriteVersion } from './types.js';
 import { assertRuntimeCompatibility } from './runtime-compatibility.js';
@@ -60,6 +61,11 @@ import type { ChangesView, ChangeDiffView, FileResetPlanView } from './types.js'
 import type { InstalledProjectionItem } from './generated/native-contract.js';
 import type { SkillFileEntry, SkillFileList, SkillFilePreview } from './types.js';
 
+import { AccountRegistry, uploadPackage } from './account-registry.js';
+import { AccountCredentials, AccountStorageError, type Credential } from './account-credentials.js';
+import type { AccountIdentity, AccountMember, AccountNamespace, AccountPage, MemberCandidate, MemberMutation,
+  OwnedSkill, UploadReceipt, UploadTarget, Visibility, WorkspaceSkills } from './account-types.js';
+
 declare module '@deepseek-ai/cordis' {
   interface Context { skillhub: SkillHubService }
 }
@@ -71,6 +77,10 @@ export class SkillHubService extends TypertRemoteService {
   private sourceRevision = randomUUID();
   private registry?: RegistryAdapter;
   private sourceInput = '';
+  private readonly credentials: AccountCredentials;
+  private account?: AccountIdentity;
+  private accountRestoreFailed = false;
+  private accountEpoch = new AbortController();
   private readonly lifetime = new AbortController();
   private localRuntime?: LocalRuntime;
   private readonly favorites = new FavoritesStore();
@@ -103,9 +113,14 @@ export class SkillHubService extends TypertRemoteService {
   constructor(ctx: Context, configuration: ReturnType<typeof Config> = Config({})) {
     super(ctx, 'skillhub', { namespace: 'skillhub' });
     this.configuration = configuration;
+    this.credentials = new AccountCredentials(ctx.get('profileContext')?.dir);
     ctx.inject(['sessions'], ctx => {
       ctx.effect(() => {
-        const runtime = new LocalRuntime(undefined, () => this.assertRuntimeBaseline());
+        const runtime = new LocalRuntime(() => openLocalRuntime(source => {
+          this.refreshSource();
+          if (!this.registry || source !== this.registry.source || !this.account) return undefined;
+          return this.credentials.get(source)?.token;
+        }), () => this.assertRuntimeBaseline());
         this.localRuntime = runtime;
         void runtime.start();
         return async () => {
@@ -147,12 +162,28 @@ export class SkillHubService extends TypertRemoteService {
     const source = this.configuration.get().registryUrl.trim();
     if (source === this.sourceInput) return;
     let registry: RegistryAdapter | undefined;
-    try { registry = source ? new RegistryAdapter(source) : undefined; }
+    let account: AccountIdentity | undefined;
+    let restoreFailed = false;
+    try {
+      registry = source ? new RegistryAdapter(source) : undefined;
+      let credential: Credential | undefined;
+      try { credential = registry && this.credentials.get(registry.source); }
+      catch (error) {
+        if (!(error instanceof AccountStorageError)) throw error;
+        restoreFailed = true;
+      }
+      account = credential?.identity;
+      if (registry && credential) registry = new RegistryAdapter(registry.source, fetch, 30_000, credential.token);
+    }
     catch {
       throw new RemoteError('skillhub/registry-error', 'Invalid SkillHub source address.', {
         reason: 'INVALID_SOURCE', retryable: false,
       });
     }
+    this.account = account;
+    this.accountRestoreFailed = restoreFailed;
+    this.accountEpoch.abort();
+    this.accountEpoch = new AbortController();
     for (const scan of this.installedUpdateScans.values()) scan.close();
     this.details.clear();
     this.selections.clear();
@@ -218,7 +249,129 @@ export class SkillHubService extends TypertRemoteService {
       registryUrl: this.registry?.source ?? '',
       configured: !!this.registry,
       detailTabs: { ...this.configuration.get().detailTabs },
+      ...(this.registry && this.credentials.hasRemovalFailure(this.registry.source) ? { accountClearFailed: true } : {}),
     };
+  }
+
+  private clearAccount() {
+    try { if (this.registry) this.credentials.set(this.registry.source); }
+    finally { this.sourceInput = '\0'; this.refreshSource(); }
+  }
+
+  private accountStorageError(reason: AccountStorageError['reason']): RemoteError {
+    return new RemoteError('skillhub/account-storage-error', 'The saved SkillHub account is unavailable.', { reason, retryable: false });
+  }
+
+  @Remote
+  async connectAccount(revision: string, token: string, signal: AbortSignal): Promise<AccountIdentity> {
+    this.assertSource(revision);
+    if (!this.registry || typeof token !== 'string' || !/^\S{1,4096}$/u.test(token)) throw new RemoteError('skillhub/registry-error', 'Invalid token.', { reason: 'INVALID_INPUT', retryable: false });
+    const source = this.registry.source;
+    const combined = AbortSignal.any([signal, this.accountEpoch.signal, this.lifetime.signal]);
+    let identity: AccountIdentity;
+    try { identity = await new AccountRegistry(new RegistryAdapter(source, fetch, 30_000, token)).whoami(combined); }
+    catch (error) { throw new RemoteError('skillhub/registry-error', 'Account verification failed.', { reason: error instanceof RegistryError ? error.code : 'NETWORK_ERROR', retryable: false }); }
+    combined.throwIfAborted();
+    this.assertSource(revision);
+    try { this.credentials.set(source, { token, identity }); }
+    catch { throw this.accountStorageError('SAVE_FAILED'); }
+    this.sourceInput = '\0';
+    this.refreshSource();
+    return identity;
+  }
+
+  @Remote
+  disconnectAccount(revision: string): boolean {
+    this.assertSource(revision);
+    try { this.clearAccount(); }
+    catch { throw this.accountStorageError('CLEAR_FAILED'); }
+    return true;
+  }
+
+  private async withAccount<T>(revision: string, signal: AbortSignal, write: boolean,
+    perform: (api: AccountRegistry, signal: AbortSignal) => Promise<T>): Promise<T> {
+    return this.readSource(revision, signal, async (registry, combined) => {
+      if (!this.account) throw new RegistryError('AUTH_REQUIRED', false);
+      const api = new AccountRegistry(registry);
+      if (write) {
+        const identity = await api.whoami(combined);
+        if (identity.handle !== this.account?.handle) throw new RegistryError('AUTH_REQUIRED', false);
+        this.assertSource(revision);
+      }
+      return perform(api, combined);
+    });
+  }
+
+  @Remote
+  async accountIdentity(revision: string, signal: AbortSignal): Promise<AccountIdentity | null> {
+    this.assertSource(revision);
+    if (this.accountRestoreFailed && this.registry) {
+      let credential: Credential | undefined;
+      try { credential = this.credentials.get(this.registry.source); }
+      catch { throw this.accountStorageError('RESTORE_FAILED'); }
+      this.accountRestoreFailed = false;
+      if (credential) {
+        this.sourceInput = '\0';
+        this.refreshSource();
+        this.assertSource(revision);
+      }
+    }
+    if (!this.account) return null;
+    return this.withAccount(revision, signal, false, async (api, combined) => {
+      const identity = await api.whoami(combined);
+      if (identity.handle !== this.account?.handle) throw new RegistryError('AUTH_REQUIRED', false);
+      return identity;
+    });
+  }
+
+  @Remote
+  async accountNamespaces(revision: string, signal: AbortSignal): Promise<AccountNamespace[]> {
+    return this.withAccount(revision, signal, false, (api, s) => api.namespaces(s));
+  }
+
+  @Remote
+  async accountOwned(revision: string, ns: string, page: number, signal: AbortSignal): Promise<AccountPage<OwnedSkill>> {
+    return this.withAccount(revision, signal, false, (api, s) => api.owned(ns, page, '', s));
+  }
+
+  @Remote
+  async accountTeam(revision: string, ns: string, cursor: string, signal: AbortSignal): Promise<WorkspaceSkills> {
+    return this.withAccount(revision, signal, false, (api, s) => api.team(ns, cursor, s));
+  }
+
+  @Remote
+  async accountMembers(revision: string, ns: string, page: number, signal: AbortSignal): Promise<AccountPage<AccountMember>> {
+    return this.withAccount(revision, signal, false, (api, s) => api.members(ns, page, s));
+  }
+
+  @Remote
+  async accountCandidates(revision: string, ns: string, search: string, signal: AbortSignal): Promise<MemberCandidate[]> {
+    return this.withAccount(revision, signal, false, (api, s) => api.candidates(ns, search, s));
+  }
+
+  @Remote
+  async changeAccountMember(revision: string, ns: string, change: MemberMutation, signal: AbortSignal): Promise<boolean> {
+    return this.withAccount(revision, signal, true, (api, s) => api.changeMember(ns, change, s));
+  }
+
+  @Remote
+  async deleteAccountSkill(revision: string, ns: string, id: number, slug: string, signal: AbortSignal): Promise<boolean> {
+    return this.withAccount(revision, signal, true, (api, s) => api.deleteOwned(ns, id, slug, s));
+  }
+
+  @Remote
+  async inspectUpload(revision: string, ns: string, archive: string, signal: AbortSignal): Promise<UploadTarget> {
+    return this.withAccount(revision, signal, false, (api, s) => api.target(ns, uploadPackage(archive).slug, s));
+  }
+
+  @Remote
+  async publishUpload(revision: string, ns: string, archive: string, visibility: Visibility, expected: UploadTarget, signal: AbortSignal): Promise<UploadReceipt> {
+    return this.withAccount(revision, signal, true, (api, s) => api.publish(ns, archive, visibility, expected, s));
+  }
+
+  @Remote
+  async uploadStatus(revision: string, ns: string, slug: string, version: string, signal: AbortSignal): Promise<{ id: number; version: string; status: string }> {
+    return this.withAccount(revision, signal, false, (api, s) => api.status(ns, slug, version, s));
   }
 
   @Remote
@@ -229,8 +382,16 @@ export class SkillHubService extends TypertRemoteService {
 
   @Remote
   async setFavorite(sourceRevision: string, item: FavoriteSkill, favorite: boolean, signal: AbortSignal): Promise<FavoriteList> {
-    return this.readSource(sourceRevision, signal, (registry, combined) => this.readFavorites(() =>
-      this.favorites.set(registry.source, item, favorite, () => { combined.throwIfAborted(); this.assertSource(sourceRevision); })));
+    return this.readSource(sourceRevision, signal, async (registry, combined) => {
+      let snapshot = item;
+      if (favorite && this.account) {
+        const publicItem = await new RegistryAdapter(registry.source).metadata(item.namespace, item.slug, combined);
+        snapshot = { namespace: publicItem.namespace, slug: publicItem.slug,
+          displayName: publicItem.displayName ?? undefined, summary: publicItem.summary ?? undefined };
+      }
+      return this.readFavorites(() => this.favorites.set(registry.source, snapshot, favorite,
+        () => { combined.throwIfAborted(); this.assertSource(sourceRevision); }));
+    });
   }
 
   @Remote
@@ -296,7 +457,7 @@ export class SkillHubService extends TypertRemoteService {
       try {
         documentation = { state: 'ready', content: await registry.documentation(namespace, slug, resolved.version, signal) };
       } catch (error) {
-        if (!(error instanceof RegistryError) || error.code === 'CANCELLED') throw error;
+        if (!(error instanceof RegistryError) || error.code === 'CANCELLED' || error.code === 'AUTH_REQUIRED') throw error;
         documentation = { state: 'error', reason: error.code, retryable: error.retryable };
       }
       const modes = this.configuration.get().detailTabs;
@@ -313,7 +474,7 @@ export class SkillHubService extends TypertRemoteService {
         };
         try { await read(); return remember('available'); }
         catch (error) {
-          if (!(error instanceof RegistryError) || error.code === 'CANCELLED') throw error;
+          if (!(error instanceof RegistryError) || error.code === 'CANCELLED' || error.code === 'AUTH_REQUIRED') throw error;
           return error.code === 'ANONYMOUS_DENIED' ? remember('anonymous-denied') : 'unknown';
         }
       };
@@ -325,7 +486,7 @@ export class SkillHubService extends TypertRemoteService {
       if (this.details.size >= 100) this.details.delete(this.details.keys().next().value!);
       this.details.set(detailToken, { sourceRevision, namespace, slug, version: resolved.version,
         skillId: metadata.id, versionId: resolved.versionId, fingerprint: resolved.fingerprint });
-      return { detailToken, webUrl: metadata.webUrl, title: metadata.displayName?.trim() || slug, summary: metadata.summary ?? '',
+      return { detailToken, skillId: metadata.id, webUrl: metadata.webUrl, title: metadata.displayName?.trim() || slug, summary: metadata.summary ?? '',
         downloadCount: metadata.downloadCount, starCount: metadata.starCount,
         ratingAvg: metadata.ratingCount === 0 ? undefined : metadata.ratingAvg, ratingCount: metadata.ratingCount,
         namespace, slug, version: resolved.version, versionId: resolved.versionId, documentation,
@@ -1983,12 +2144,16 @@ export class SkillHubService extends TypertRemoteService {
       throw new RemoteError('skillhub/source-not-configured', 'Configure a SkillHub source first.', { retryable: false });
     }
     try {
-      const result = await read(this.registry, AbortSignal.any([signal, this.lifetime.signal]));
+      const result = await read(this.registry, AbortSignal.any([signal, this.lifetime.signal, this.accountEpoch.signal]));
       this.assertSource(sourceRevision);
       return result;
     } catch (error) {
       this.assertSource(sourceRevision);
       if (error instanceof RegistryError) {
+        if (error.code === 'AUTH_REQUIRED' && this.account && this.registry) {
+          // Disk cleanup failure must not suppress authentication expiry or retain a live session.
+          try { this.clearAccount(); } catch { /* getContext retains the source-bound cleanup warning. */ }
+        }
         throw new RemoteError('skillhub/registry-error', 'SkillHub request failed.', {
           reason: error.code, retryable: error.retryable,
           ...(error.status === undefined ? {} : { status: error.status }),

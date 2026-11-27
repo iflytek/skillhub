@@ -20,7 +20,7 @@ interface ConfirmDialogProps {
   confirmText?: string
   cancelText?: string
   variant?: 'default' | 'destructive'
-  onConfirm: () => void | Promise<void>
+  onConfirm: () => void | boolean | Promise<void | boolean>
   contentTestId?: string
   confirmButtonTestId?: string
   closeOnConfirm?: boolean
@@ -56,9 +56,9 @@ export function ConfirmDialog({
     pendingRef.current = true
     setPending(true)
     try {
-      await onConfirm()
+      const confirmed = await onConfirm()
       // Skip close if the caller already closed (e.g. publish success + navigate).
-      if (closeOnConfirm && openRef.current) onOpenChange(false)
+      if (confirmed !== false && closeOnConfirm && openRef.current) onOpenChange(false)
     } finally {
       pendingRef.current = false
       setPending(false)

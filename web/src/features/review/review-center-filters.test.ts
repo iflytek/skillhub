@@ -6,7 +6,7 @@ describe('review center URL state', () => {
     expect(parseReviewCenterFilters({ status: 'unknown', originType: 'unsafe', reviewKind: 'x', type: 'sync' })).toEqual({ ...DEFAULT_REVIEW_FILTERS, originType: 'GITHUB_SYNC' })
   })
   it('round trips non-default conditions and leaves defaults out of the URL', () => {
-    const filters = { ...DEFAULT_REVIEW_FILTERS, status: 'APPROVED' as const, namespace: 'design', q: '  notes  ', originType: 'USER' as const }
+    const filters = { ...DEFAULT_REVIEW_FILTERS, status: 'APPROVED' as const, namespace: 'design', q: '  notes  ', originType: 'USER' as const, scanVerdict: 'BLOCKED' as const }
     const search = reviewCenterSearch(filters, 2)
     expect(search).toMatchObject({ q: 'notes', status: 'APPROVED', namespace: 'design', originType: 'USER', page: 2 })
     expect(parseReviewCenterFilters(search)).toEqual({ ...filters, q: 'notes' })

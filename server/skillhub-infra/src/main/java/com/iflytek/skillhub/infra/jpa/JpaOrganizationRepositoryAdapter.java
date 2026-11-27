@@ -31,6 +31,11 @@ public class JpaOrganizationRepositoryAdapter implements OrganizationRepository 
     }
 
     @Override
+    public Optional<Organization> findByIdForWrite(String id) {
+        return delegate.findByIdForWrite(id);
+    }
+
+    @Override
     public Optional<Organization> findBySlug(String slug) {
         return delegate.findBySlug(slug);
     }

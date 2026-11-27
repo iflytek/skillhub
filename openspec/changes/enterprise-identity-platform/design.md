@@ -222,11 +222,11 @@ MockMvc 或伪造 token 不能替代 L3。实验室必须限制 CPU/内存、随
 - [第一批只支持动态 OIDC，协议覆盖有限] → 先获得可回滚的真实生产切片；SAML、CAS 分批复用同一 conformance suite。
 - [Organization 模型先于 Directory 上线，管理员仍需手工预供给] → 明确这是认证批次；后续 provisioning 不改变已有 identity coordinate。
 - [verified email/JIT 可能造成账号接管] → 默认关闭、要求已验证域名与高 assurance、歧义和历史成员 fail closed。
-- [metadata/JWKS/token 出站请求可能形成 SSRF 或 DNS rebinding] → 每一跳仅允许 HTTPS，解析并校验全部地址，并将已验证地址固定到该次实际连接；保留原主机名用于 TLS SNI/hostname verification，禁止私网/回环/链路本地地址并限制 redirect/timeout/body。
+- [metadata/JWKS/token 出站请求可能形成 SSRF 或 DNS rebinding] → 每一跳仅允许 HTTPS，解析并校验全部地址，并将已验证地址固定到该次实际连接；保留原主机名用于 TLS SNI/hostname verification，限制 redirect/timeout/body。R1-B 探测默认拒绝私网；部署运维可按确切主机名为隔离实验室或内部身份源放行私网 discovery/JWKS，保留回环、链路本地及保留地址限制。
 - [公共 OAuth 统一核心门禁与 legacy binding 结果不一致] → ACTIVE 下在 active/pending legacy 写入前 fail closed，保留 LEGACY/SHADOW 回滚；V2 写入权威切换另立批次时再补新写入同步、backfill digest 与 dual-read 证据。
 - [authority version 校验增加请求开销] → 查询使用索引并仅在企业边界执行；后续性能证据不足时不得扩大灰度。
-- [七个 Flyway migration 增加发布复杂度] → 编号固定 V54–V60，做空库和升级库测试；当前批次不再新增 SQL，后续协议优先复用已有表。
-- [Secret key 配置错误导致连接不可用] → 默认禁用企业 OIDC；启动校验 keyring，暴露不含 Secret 的健康信息，保留旧 revision 供回切。
+- [Flyway migration 增加发布复杂度] → 保留已发布迁移，R1-B 复用 V62 中的连接和 revision，只在当前 main 之后追加独立密钥表。验收空库及上一个版本升级，后续协议优先复用已有表。
+- [Secret key 配置错误导致连接不可用] → 默认禁用企业 OIDC。R1-B 录入密钥时校验 keyring 并拒绝无效配置，保留已有 revision 和全站公共登录可用性；R1-C 必须另行验收连接密钥可解密、应用凭据有效及回切。
 
 ## Migration Plan
 

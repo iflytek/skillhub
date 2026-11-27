@@ -1,5 +1,27 @@
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
+import { z } from 'zod'
+import type { GithubSource } from '../shared/github-source'
+
+const repositoryInstallPlanSchema = z.object({
+  repositoryId: z.string().regex(/^[1-9]\d*$/),
+  owner: z.string().min(1),
+  name: z.string().min(1),
+  members: z.array(z.object({
+    skillId: z.number().int().positive().safe(),
+    namespace: z.literal('github'),
+    // Match the registry's Unicode identifier classes while rejecting path separators.
+    slug: z.string().min(2).max(64).regex(/^[\p{L}\p{N}\p{So}][\p{L}\p{N}\p{So}-]*[\p{L}\p{N}\p{So}]$/u)
+      .refine(slug => !/[A-Z]|--/.test(slug)),
+    displayName: z.string(),
+    version: z.string().min(1).max(255),
+    versionId: z.number().int().positive().safe(),
+    fingerprint: z.string().regex(/^sha256:[a-f0-9]{64}$/),
+    downloadUrl: z.string()
+  })).min(1).max(1000)
+})
+
+export type RepositoryInstallPlan = z.infer<typeof repositoryInstallPlanSchema>
 
 export interface WhoAmIResponse {
   handle: string
@@ -44,6 +66,8 @@ export interface ResolveResponse {
   versionId: number
   fingerprint: string
   downloadUrl: string
+  /** Present only for GitHub-synced versions on registries that record provenance. */
+  githubSource?: GithubSource | null
 }
 
 export interface DeleteResponse {
@@ -163,6 +187,48 @@ export class SkillHubClient {
 
   async whoami(): Promise<WhoAmIResponse> {
     return this.getJson('/auth/whoami')
+  }
+
+  async repositoryInstallPlan(repositoryId: string): Promise<RepositoryInstallPlan> {
+    const response = await this.getResponse(`/github-repositories/${encodeURIComponent(repositoryId)}/install-plan`)
+    const next = 'Check whether this registry enables repository batch operations and verify the repository ID. '
+      + 'Use `skillhub install <coordinate>` for an individual published skill.'
+    if (!response.ok) {
+      const error = await this.createResponseError(response, 'json')
+      // An untyped 404 can mean a missing endpoint or an unavailable resource. Do not
+      // misreport a typed business error, authentication failure or outage as a missing feature.
+      if ([404, 405, 501].includes(response.status) && !error.details.errorCode) {
+        throw new CliError(response.status === 404
+          ? 'Repository batch operations may not be enabled on this registry, or the repository is unavailable.'
+          : 'Repository batch operations are not available on this registry.', error.exitCode, {
+          ...error.details, feature: 'repository', status: response.status, next
+        })
+      }
+      throw error
+    }
+    let body: unknown
+    try {
+      body = await response.json()
+    } catch {
+      // Some deployments return a landing page for routes they do not implement.
+      throw new CliError('This registry did not return a compatible repository installation plan. '
+        + 'Repository batch operations may not be enabled.', EXIT.validation, {
+        registry: this.registry, feature: 'repository', status: response.status, next
+      })
+    }
+    const data = typeof body === 'object' && body !== null && 'data' in body ? body.data : undefined
+    const parsed = repositoryInstallPlanSchema.safeParse(data)
+    if (!parsed.success) throw new CliError('registry returned an invalid repository installation plan', EXIT.validation)
+    const plan = parsed.data
+    const ids = new Set<number>()
+    const slugs = new Set<string>()
+    if (plan.repositoryId !== repositoryId || plan.members.some(member => {
+      const duplicate = ids.has(member.skillId) || slugs.has(member.slug)
+      ids.add(member.skillId)
+      slugs.add(member.slug)
+      return duplicate || member.downloadUrl !== `/api/cli/v1/skills/github/${encodeURIComponent(member.slug)}/versions/${encodeURIComponent(member.version)}/download`
+    })) throw new CliError('registry returned an inconsistent repository installation plan', EXIT.validation)
+    return plan
   }
 
   async requestDeviceCode(): Promise<DeviceCodeResponse> {
@@ -372,15 +438,17 @@ export class SkillHubClient {
   }
 
   private async getJson<T>(path: string): Promise<T> {
-    let response: Response
+    return this.handleJsonResponse<T>(await this.getResponse(path))
+  }
+
+  private async getResponse(path: string): Promise<Response> {
     try {
-      response = await this.fetchImpl(`${this.registry}/api/cli/v1${path}`, {
+      return await this.fetchImpl(`${this.registry}/api/cli/v1${path}`, {
         headers: this.headers()
       })
     } catch (err) {
       throw new CliError('registry unreachable', EXIT.network, { registry: this.registry, next: 'check network or pass --registry' })
     }
-    return this.handleJsonResponse<T>(response)
   }
 
   private async postPublicJson<T>(path: string, body?: Record<string, unknown>): Promise<T> {

@@ -2,10 +2,11 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router'
 import { useState } from 'react'
 import { Trans, useTranslation } from 'react-i18next'
 import { ArrowRight, Eye, EyeOff, LockKeyhole, UserRound } from 'lucide-react'
-import { getSessionBootstrapRuntimeConfig } from '@/api/client'
+import { getEnterpriseOidcRuntimeConfig, getSessionBootstrapRuntimeConfig } from '@/api/client'
 import { AuthShell } from '@/features/auth/auth-shell'
 import { AuthMethodButtonList } from '@/features/auth/login-button'
 import { SessionBootstrapEntry } from '@/features/auth/session-bootstrap-entry'
+import { EnterpriseLoginEntry } from '@/features/auth/enterprise-login-entry'
 import { useAuthMethods } from '@/features/auth/use-auth-methods'
 import { useLocalAuthCapabilities } from '@/features/auth/use-local-auth-capabilities'
 import { usePasswordLogin } from '@/features/auth/use-password-login'
@@ -25,20 +26,36 @@ export function LoginPage() {
   const search = useSearch({ from: '/login' })
   const loginMutation = usePasswordLogin()
   const bootstrapConfig = getSessionBootstrapRuntimeConfig()
+  const enterpriseOidcConfig = getEnterpriseOidcRuntimeConfig()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [loginMode, setLoginMode] = useState<'personal' | 'organization'>('personal')
   const [fieldErrors, setFieldErrors] = useState<{ username?: string, password?: string }>({})
   const returnTo = resolveAuthReturnTo(search.returnTo)
-  const { data: authMethods, isLoading: authMethodsLoading } = useAuthMethods(returnTo)
-  const { data: localCapabilities, isError: localCapabilitiesError } = useLocalAuthCapabilities()
-  const passwordEnabled = localCapabilities?.passwordLoginEnabled === true
+  const {
+    data: authMethods, isLoading: authMethodsLoading, isError: authMethodsError,
+    isFetching: authMethodsFetching, refetch: refetchAuthMethods,
+  } = useAuthMethods(returnTo)
+  const {
+    data: localCapabilities, isLoading: localCapabilitiesLoading, isError: localCapabilitiesError,
+    isFetching: localCapabilitiesFetching, refetch: refetchLocalCapabilities,
+  } = useLocalAuthCapabilities()
+  const passwordEnabled = localCapabilities?.passwordLoginEnabled
+    ?? (localCapabilitiesError && !authMethodsError && authMethods?.some((method) => method.methodType === 'PASSWORD') === true)
   const effectiveLoginMode = passwordEnabled ? loginMode : 'organization'
   const disabledMessage = search.reason === 'accountDisabled' ? t('error.auth.local.accountDisabled') : null
   const bootstrapMethod = authMethods?.find((method) => method.methodType === 'SESSION_BOOTSTRAP')
-  const hasOrganizationMethod = bootstrapConfig.enabled
+  const hasOrganizationMethod = bootstrapConfig.enabled || enterpriseOidcConfig.enabled
   const hasExternalMethods = authMethods?.some((method) => method.methodType === 'OAUTH_REDIRECT')
+  const noLoginMethod = !passwordEnabled && !hasOrganizationMethod && !hasExternalMethods
+  const configUnavailable = noLoginMethod && (localCapabilitiesError || authMethodsError)
+    && !localCapabilitiesLoading && !authMethodsLoading
+
+  function retryLoginConfig() {
+    if (localCapabilitiesError) void refetchLocalCapabilities()
+    if (authMethodsError) void refetchAuthMethods()
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -166,10 +183,16 @@ export function LoginPage() {
         </form>
         </div> : null}
 
-        {localCapabilitiesError ? (
-          <p className="text-sm text-red-600">{t('systemConfig.capabilitiesUnavailable')}</p>
+        {configUnavailable ? (
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-muted/40 p-3">
+            <p role="alert" className="text-sm text-foreground">{t('login.configUnavailable')}</p>
+            <Button type="button" variant="outline" size="sm" disabled={authMethodsFetching || localCapabilitiesFetching}
+              onClick={retryLoginConfig}>
+              {t('login.retryConfig')}
+            </Button>
+          </div>
         ) : null}
-        {localCapabilities && !passwordEnabled && !bootstrapConfig.enabled && !hasExternalMethods ? (
+        {localCapabilities && noLoginMethod && !configUnavailable && !authMethodsLoading ? (
           <p className="text-sm text-muted-foreground">{t('systemConfig.passwordDisabled')}</p>
         ) : null}
 
@@ -181,6 +204,12 @@ export function LoginPage() {
               compact
             />
             <p className="text-sm text-muted-foreground">{t('login.orgLoginHint')}</p>
+          </div>
+        ) : null}
+
+        {enterpriseOidcConfig.enabled ? (
+          <div hidden={effectiveLoginMode !== 'organization'}>
+            <EnterpriseLoginEntry returnTo={returnTo} />
           </div>
         ) : null}
 

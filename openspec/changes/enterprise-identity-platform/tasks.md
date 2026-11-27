@@ -1,3 +1,5 @@
+> 本清单记录完整参考实现及其验证。分阶段合入 `main` 的范围和验收以 [分批计划](./rollout-plan.md) 及各批次的 OpenSpec 清单为准。
+
 ## 1. Release boundary and architecture
 
 - [x] 1.1 Freeze Release 1 as unified identity core, minimal Organization boundary and dynamic OIDC only.

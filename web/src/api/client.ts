@@ -43,6 +43,7 @@ import type {
   ExternalRoleGrantRule,
   PlatformRole,
   OAuthProvider,
+  EnterpriseLoginDiscovery,
   User,
   ManagedNamespace,
   AdminNamespace,
@@ -84,6 +85,7 @@ type RuntimeConfig = {
   authSessionBootstrapEnabled?: string
   authSessionBootstrapProvider?: string
   authSessionBootstrapAuto?: string
+  authEnterpriseOidcEnabled?: string
   analytics?: unknown
 }
 
@@ -621,6 +623,10 @@ export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfi
   }
 }
 
+export function getEnterpriseOidcRuntimeConfig(): { enabled: boolean } {
+  return { enabled: parseBooleanFlag(getRuntimeConfig().authEnterpriseOidcEnabled) }
+}
+
 type ApiEnvelope<T> = {
   code: number
   msg: string
@@ -787,6 +793,14 @@ export const authApi = {
         displayName: method.displayName,
         actionUrl: method.actionUrl,
       }))
+  },
+
+  async discoverEnterprise(identifier: string, returnTo?: string): Promise<EnterpriseLoginDiscovery> {
+    return fetchJson<EnterpriseLoginDiscovery>('/api/v1/auth/enterprise/discovery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, returnTo }),
+    })
   },
 
   async localLogin(request: LocalLoginRequest): Promise<User> {
@@ -1244,6 +1258,164 @@ export const labelApi = {
   },
 }
 
+export type OrganizationSummary = components['schemas']['OrganizationSummaryResponse']
+type DirectoryOrganizationPermissions = {
+  canViewDirectoryConnections?: boolean
+  canManageDirectoryConnections?: boolean
+  canRotateDirectorySecrets?: boolean
+}
+export type OrganizationDetail = components['schemas']['OrganizationDetailResponse'] & {
+  permissions?: components['schemas']['OrganizationPermissionsResponse'] & DirectoryOrganizationPermissions
+}
+export type OrganizationMember = components['schemas']['OrganizationMemberResponse']
+export type OrganizationRole = components['schemas']['OrganizationRoleGrantRequest']['role']
+export type OrganizationRoleBinding = components['schemas']['OrganizationRoleBindingResponse']
+type ConnectionSummary = components['schemas']['LoginConnectionSummaryResponse']
+type ConnectionManagement = components['schemas']['LoginConnectionManagementResponse']
+export type OrganizationLoginConnection = components['schemas']['LoginConnectionResponse']
+export type OrganizationDirectoryConnection = {
+  id: string
+  organizationId: string
+  protocol: string
+  status: string
+  secretVersion: number
+  tokenHint: string
+  scimBaseUrl: string
+  createdAt: string
+  updatedAt: string
+  bootstrapToken?: string | null
+}
+type ConnectionDraft = components['schemas']['LoginConnectionCreateRequest']
+type ConnectionRevision = components['schemas']['LoginConnectionRevisionCreateRequest']
+type ConnectionCredential = components['schemas']['LoginConnectionSecretRequest']
+type ConnectionProbe = components['schemas']['LoginConnectionTestResponse']
+type ConnectionConfirmation = components['schemas']['ConfirmedConnectionActionRequest']
+
+export const organizationApi = {
+  list(page = 0, size = 20) {
+    return fetchJson<PagedResponse<OrganizationSummary>>(`/api/v1/organizations?page=${page}&size=${size}`)
+  },
+  get(id: string) {
+    return fetchJson<OrganizationDetail>(`/api/v1/organizations/${encodeURIComponent(id)}`)
+  },
+  members(id: string, page = 0, size = 20) {
+    return fetchJson<PagedResponse<OrganizationMember>>(
+      `/api/v1/organizations/${encodeURIComponent(id)}/members?page=${page}&size=${size}`,
+    )
+  },
+  async addMember(id: string, userId: string) {
+    return fetchJson<OrganizationMember>(`/api/v1/organizations/${encodeURIComponent(id)}/members`, {
+      method: 'POST',
+      headers: await ensureCsrfHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ userId: userId.trim() }),
+    })
+  },
+  async grantRole(id: string, userId: string, role: OrganizationRole) {
+    return fetchJson<OrganizationRoleBinding>(
+      `/api/v1/organizations/${encodeURIComponent(id)}/members/${encodeURIComponent(userId)}/roles`, {
+        method: 'POST',
+        headers: await ensureCsrfHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ role }),
+      },
+    )
+  },
+  async revokeRole(id: string, bindingId: string) {
+    return fetchJson<OrganizationRoleBinding>(
+      `/api/v1/organizations/${encodeURIComponent(id)}/role-bindings/${encodeURIComponent(bindingId)}`, {
+        method: 'DELETE',
+        headers: await ensureCsrfHeaders(),
+      },
+    )
+  },
+}
+
+function connectionPath(organizationId: string, connectionId?: string, revisionId?: string): string {
+  const base = `/api/v1/organizations/${encodeURIComponent(organizationId)}/login-connections`
+  if (!connectionId) return base
+  const detail = `${base}/${encodeURIComponent(connectionId)}`
+  return revisionId ? `${detail}/revisions/${encodeURIComponent(revisionId)}` : detail
+}
+
+async function postConnection<T>(path: string, body?: object): Promise<T> {
+  return fetchJson<T>(path, {
+    method: 'POST',
+    headers: await ensureCsrfHeaders(body ? { 'Content-Type': 'application/json' } : undefined),
+    body: body ? JSON.stringify(body) : undefined,
+  })
+}
+
+export const organizationConnectionApi = {
+  list(organizationId: string, page: number, size: number) {
+    return fetchJson<PagedResponse<ConnectionSummary>>(`${connectionPath(organizationId)}?page=${page}&size=${size}`)
+  },
+  management(organizationId: string) {
+    return fetchJson<ConnectionManagement>(`${connectionPath(organizationId)}/management`)
+  },
+  get(organizationId: string, connectionId: string) {
+    return fetchJson<OrganizationLoginConnection>(connectionPath(organizationId, connectionId))
+  },
+  create(organizationId: string, draft: ConnectionDraft) {
+    return postConnection<OrganizationLoginConnection>(connectionPath(organizationId), draft)
+  },
+  revise(organizationId: string, connectionId: string, revision: ConnectionRevision) {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId)}/revisions`, revision)
+  },
+  writeSecret(organizationId: string, connectionId: string, revisionId: string, body: ConnectionCredential) {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId, revisionId)}/secret`, body)
+  },
+  test(organizationId: string, connectionId: string, revisionId: string) {
+    return postConnection<ConnectionProbe>(`${connectionPath(organizationId, connectionId, revisionId)}/test`)
+  },
+  activate(organizationId: string, connectionId: string, revisionId: string) {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId, revisionId)}/activate`, {
+      confirmed: true,
+    } satisfies ConnectionConfirmation)
+  },
+  resume(organizationId: string, connectionId: string, revisionId: string) {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId, revisionId)}/resume`, {
+      confirmed: true,
+    } satisfies ConnectionConfirmation)
+  },
+  changeStatus(organizationId: string, connectionId: string, action: 'suspend' | 'disable') {
+    return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId)}/${action}`, {
+      confirmed: true,
+    } satisfies ConnectionConfirmation)
+  },
+}
+
+export const organizationDirectoryConnectionApi = {
+  list(organizationId: string) {
+    return fetchJson<OrganizationDirectoryConnection[]>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections`,
+    )
+  },
+  create(organizationId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections`,
+    )
+  },
+  activate(organizationId: string, connectionId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections/${encodeURIComponent(connectionId)}/activate`,
+    )
+  },
+  suspend(organizationId: string, connectionId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections/${encodeURIComponent(connectionId)}/suspend`,
+    )
+  },
+  disable(organizationId: string, connectionId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections/${encodeURIComponent(connectionId)}/disable`,
+    )
+  },
+  rotateSecret(organizationId: string, connectionId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections/${encodeURIComponent(connectionId)}/rotate-secret`,
+    )
+  },
+}
+
 export const namespaceApi = {
   async invitationHistory(slug: string, page = 0, size = 10): Promise<NamespaceInvitationHistoryPage> {
     const params = new URLSearchParams({ page: String(page), size: String(size) })
@@ -1629,11 +1801,12 @@ export const reviewApi = {
   async getSyncSource(id: number): Promise<GithubSyncReviewSource> {
     return fetchJson<GithubSyncReviewSource>(`${WEB_API_PREFIX}/reviews/sync/${id}/source`)
   },
-  async list(params: { status: string; namespaceId?: number; q?: string; reviewKind?: string; originType?: string; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
+  async list(params: { status: string; namespaceId?: number; q?: string; reviewKind?: string; originType?: string; scanVerdict?: string; page?: number; size?: number; sortDirection?: 'ASC' | 'DESC' }) {
     const searchParams = new URLSearchParams()
     searchParams.set('status', params.status)
     if (params.q?.trim()) searchParams.set('q', params.q.trim())
     if (params.reviewKind && params.reviewKind !== 'ALL') searchParams.set('reviewKind', params.reviewKind)
+    if (params.scanVerdict && params.scanVerdict !== 'ALL') searchParams.set('scanVerdict', params.scanVerdict)
     if (params.originType && params.originType !== 'ALL') searchParams.set('originType', params.originType)
     if (params.namespaceId !== undefined) {
       searchParams.set('namespaceId', String(params.namespaceId))

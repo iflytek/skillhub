@@ -4,6 +4,9 @@ import com.iflytek.skillhub.dto.GithubRepositoryCatalogResponse.GithubCatalogRep
 import com.iflytek.skillhub.dto.GithubRepositoryCatalogResponse.GithubCatalogMember;
 import com.iflytek.skillhub.dto.GithubRepositoryCatalogResponse.GithubCatalogRepositoryPage;
 import com.iflytek.skillhub.dto.GithubRepositoryCatalogResponse.RepositorySummary;
+import com.iflytek.skillhub.dto.GithubRepositoryInstallPlanResponse;
+import com.iflytek.skillhub.domain.skill.SkillFingerprint;
+import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
@@ -23,7 +26,7 @@ public class GithubRepositoryCatalogQueryRepository {
                 SELECT source.repository_id, source.owner_login, source.repository_name,
                        skill.id, skill.slug, COALESCE(NULLIF(skill.display_name, ''), skill.slug) AS display_name,
                        skill.summary,
-                       version.version, version.github_sync_revision
+                       version.id AS version_id, version.version, version.github_sync_revision
                 FROM github_source_binding source
                 JOIN namespace ns ON ns.id = source.namespace_id
                 JOIN github_source_skill_binding binding ON binding.source_id = source.id
@@ -138,6 +141,43 @@ public class GithubRepositoryCatalogQueryRepository {
                     row.getObject("github_sync_revision", Integer.class)));
             return Optional.of(new GithubCatalogRepositoryDetail(header, members, total, page, size, versions, null, null));
         });
+    }
+
+    /** Current published pointers, deliberately independent of catalog pages and complete snapshots. */
+    public Optional<GithubRepositoryInstallPlanResponse> installPlan(long repositoryId, Set<Long> memberNamespaceIds) {
+        var params = Map.of("members", nonEmpty(memberNamespaceIds), "repositoryId", repositoryId);
+        var members = jdbc.query(VISIBLE_MEMBERS + """
+                SELECT * FROM visible_members WHERE repository_id = :repositoryId
+                ORDER BY slug, id LIMIT 1001
+                """, params, (row, index) -> new InstallMember(
+                row.getString("owner_login"), row.getString("repository_name"),
+                row.getLong("id"), row.getString("slug"), row.getString("display_name"),
+                row.getString("version"), row.getLong("version_id")));
+        if (members.isEmpty()) return Optional.empty();
+        if (members.size() > 1000) throw new DomainBadRequestException("error.githubSync.installPlan.tooLarge", 1000);
+
+        // Batch file metadata avoids one resolve query per member. The surrounding read-only
+        // repeatable-read transaction binds membership, version pointers and hashes together.
+        var hashes = new java.util.HashMap<Long, java.util.List<SkillFingerprint.FileHash>>();
+        jdbc.query("SELECT version_id, file_path, sha256 FROM skill_file WHERE version_id IN (:versions)",
+                Map.of("versions", members.stream().map(InstallMember::versionId).toList()), row -> {
+                    hashes.computeIfAbsent(row.getLong("version_id"), key -> new java.util.ArrayList<>())
+                            .add(new SkillFingerprint.FileHash(row.getString("file_path"), row.getString("sha256")));
+                });
+        var first = members.getFirst();
+        return Optional.of(new GithubRepositoryInstallPlanResponse(Long.toString(repositoryId), first.owner(), first.name(),
+                members.stream().map(member -> new GithubRepositoryInstallPlanResponse.Member(
+                        member.skillId(), "github", member.slug(), member.displayName(), member.version(), member.versionId(),
+                        SkillFingerprint.compute(hashes.getOrDefault(member.versionId(), java.util.List.of())),
+                        "/api/cli/v1/skills/github/" + encodeSegment(member.slug()) + "/versions/"
+                                + encodeSegment(member.version()) + "/download")).toList()));
+    }
+
+    private record InstallMember(String owner, String name, long skillId, String slug,
+                                 String displayName, String version, long versionId) {}
+
+    private static String encodeSegment(String value) {
+        return java.net.URLEncoder.encode(value, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private static Set<Long> nonEmpty(Set<Long> members) {

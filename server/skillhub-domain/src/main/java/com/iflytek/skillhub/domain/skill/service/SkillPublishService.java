@@ -803,7 +803,7 @@ public class SkillPublishService {
             }
             visibilityService.assertNoPendingVisibility(skill.getId());
         }
-        if (skill.getStatus() == SkillStatus.ARCHIVED) {
+        if (skill.isHidden() || skill.getStatus() == SkillStatus.ARCHIVED) {
             throw new DomainBadRequestException("error.skill.publish.archived", skillSlug);
         }
 

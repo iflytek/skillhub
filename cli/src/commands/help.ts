@@ -49,6 +49,16 @@ export const commands = {
       'skillhub install pdf-parser --scope project --agent codex'
     ]
   },
+  repository: {
+    summary: 'Install, check or upgrade GitHub repository skills on compatible registries',
+    usage: 'skillhub repository <install|check|upgrade> <repository-id> [--scope <user|project> (install only)] [--agent <profile>] [--dir <path>] [--registry <url>] [--token <token>] [--check (upgrade only)] [--json]',
+    examples: [
+      'skillhub repository install 123456 --scope project --agent codex',
+      'skillhub repository install 123456 --dir ./skills --json',
+      'skillhub repository check 123456 --json',
+      'skillhub repository upgrade 123456 --agent codex --check'
+    ]
+  },
   suite: {
     summary: 'Manage Skill Suites on compatible registries',
     usage: 'skillhub suite <install|check|upgrade|remove> <coordinate> [options]',
@@ -66,6 +76,15 @@ export const commands = {
       'skillhub upgrade @global/skillhub-cli',
       'skillhub upgrade @team/code-review @team/java-guide --check --json',
       'skillhub upgrade code-review --namespace team --agent codex'
+    ]
+  },
+  outdated: {
+    summary: 'List installed skills with newer registry versions (read-only)',
+    usage: 'skillhub outdated [--namespace <slug>] [--agent <profile>] [--dir <path>] [--registry <url>] [--token <token>] [--json]',
+    examples: [
+      'skillhub outdated',
+      'skillhub outdated --namespace team --agent codex',
+      'skillhub outdated --json'
     ]
   },
   sync: {
@@ -93,9 +112,9 @@ export const commands = {
     ]
   },
   doctor: {
-    summary: 'Scan project and merge into local inventory (preserves entries outside scan scope)',
-    usage: 'skillhub doctor [--json]',
-    examples: ['skillhub doctor', 'skillhub doctor --json']
+    summary: 'Maintain inventory, or run explicit read-only health diagnosis',
+    usage: 'skillhub doctor [--json] | skillhub doctor --health [--offline] [--registry <url>] [--token <token>] [--json]',
+    examples: ['skillhub doctor', 'skillhub doctor --json', 'skillhub doctor --health', 'skillhub doctor --health --offline --json']
   },
   publish: {
     summary: 'Publish a local skill package',

@@ -229,7 +229,7 @@ class ApiTokenServiceTest {
         ApiToken token = new ApiToken("user-1", "old", "prefix", "hash", "[\"skill:delete\"]");
         Instant original = Instant.parse("2026-03-19T00:00:00Z");
         token.setExpiresAt(original);
-        when(tokenRepo.findById(1L)).thenReturn(Optional.of(token));
+        when(tokenRepo.findUnrevokedForUpdate(1L, "user-1")).thenReturn(Optional.of(token));
         assertThatThrownBy(() -> service.updateExpiration(1L, "user-1", "2026-03-20T00:00:00Z",
                 caller(Set.of("skill:read", "token:manage"), null))).isInstanceOf(DomainForbiddenException.class);
         assertThat(token.getExpiresAt()).isEqualTo(original);

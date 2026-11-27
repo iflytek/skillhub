@@ -22,6 +22,8 @@ export function ConfigPage({ form, testConnection }: { form: ConfigForm<SkillHub
   const subscribe = useCallback((listener: () => void) => form.subscribe(listener), [form]);
   const read = useCallback(() => form.getSnapshot(), [form]);
   const state = useSyncExternalStore(subscribe, read);
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { heading.current?.focus(); }, [state.status]);
   const [draft, setDraft] = useState<{ value: SkillHubConfig; revision: number }>();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState('');
@@ -128,7 +130,7 @@ export function ConfigPage({ form, testConnection }: { form: ConfigForm<SkillHub
 
   return <form className="skillhub-controls astron-sh-config" noValidate onSubmit={event => void save(event)} aria-label="SkillHub 配置">
     <NativeControlStyles /><ConfigStyles />
-    <header className="astron-sh-config-heading"><h2>SkillHub 设置</h2><p>连接技能来源，调整详情页展示。</p></header>
+    <header className="astron-sh-config-heading"><h2 ref={heading} tabIndex={-1}>SkillHub 设置</h2><p>连接技能来源，调整详情页展示。</p></header>
     {!state.writable && <p className="astron-sh-config-notice" role="status">当前 Host 配置为只读。</p>}
     <Tabs value={tab} onValueChange={setTab}>
       <TabsList className="astron-sh-config-tabs" aria-label="设置分类"><TabsTrigger value="source">技能来源</TabsTrigger><TabsTrigger value="display">页面显示</TabsTrigger></TabsList>

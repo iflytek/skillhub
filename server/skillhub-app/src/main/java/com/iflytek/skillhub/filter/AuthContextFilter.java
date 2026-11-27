@@ -3,6 +3,7 @@ package com.iflytek.skillhub.filter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.auth.session.IdentitySessionOriginGuard;
 import com.iflytek.skillhub.domain.namespace.NamespaceMember;
 import com.iflytek.skillhub.domain.namespace.NamespaceMemberRepository;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
@@ -39,19 +40,22 @@ public class AuthContextFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper;
     private final boolean enforceActiveUserCheck;
     private final RouteSecurityPolicyRegistry routeSecurityPolicyRegistry;
+    private final IdentitySessionOriginGuard identitySessionOriginGuard;
 
     public AuthContextFilter(NamespaceMemberRepository namespaceMemberRepository,
                              UserAccountRepository userAccountRepository,
                              ApiResponseFactory apiResponseFactory,
                              ObjectMapper objectMapper,
                              @Value("${skillhub.auth.enforce-active-user-check:true}") boolean enforceActiveUserCheck,
-                             RouteSecurityPolicyRegistry routeSecurityPolicyRegistry) {
+                             RouteSecurityPolicyRegistry routeSecurityPolicyRegistry,
+                             IdentitySessionOriginGuard identitySessionOriginGuard) {
         this.namespaceMemberRepository = namespaceMemberRepository;
         this.userAccountRepository = userAccountRepository;
         this.apiResponseFactory = apiResponseFactory;
         this.objectMapper = objectMapper;
         this.enforceActiveUserCheck = enforceActiveUserCheck;
         this.routeSecurityPolicyRegistry = routeSecurityPolicyRegistry;
+        this.identitySessionOriginGuard = identitySessionOriginGuard;
     }
 
     @Override
@@ -66,6 +70,14 @@ public class AuthContextFilter extends OncePerRequestFilter {
         }
         PlatformPrincipal principal = resolvePrincipal(request);
         if (principal != null) {
+            if (!identitySessionOriginGuard.isAllowed(request.getSession(false), principal)) {
+                clearAuthentication(request);
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                objectMapper.writeValue(response.getOutputStream(),
+                        apiResponseFactory.error(HttpServletResponse.SC_UNAUTHORIZED, "error.auth.enterprise.sessionRevoked"));
+                return;
+            }
             if (isInactiveUser(principal.userId())) {
                 clearAuthentication(request);
                 if (isAnonymousFallbackAllowed(request, requestPath)) {

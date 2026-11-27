@@ -53,7 +53,7 @@ export function createRedirectAuthenticated(getCurrentUser: () => Promise<unknow
   }
 }
 
-export function createRequireAuth(getCurrentUser: () => Promise<unknown>, returnTo?: string) {
+export function createRequireAuth<T>(getCurrentUser: () => Promise<T>, returnTo?: string) {
   return async function requireAuth({ location }: { location: RouteLocationLike }) {
     const user = await getCurrentUser()
     if (!user) {

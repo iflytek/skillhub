@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -28,6 +29,16 @@ public interface OrganizationQueryRepository {
     Page<LoginConnectionSummaryProjection> findLoginConnections(
             String organizationId,
             Pageable pageable
+    );
+
+    Page<OrganizationMemberProjection> findCurrentMembers(
+            String organizationId,
+            Pageable pageable
+    );
+
+    Map<String, List<OrganizationMemberRoleProjection>> findActiveMemberRoles(
+            String organizationId,
+            Collection<String> userIds
     );
 
     record OrganizationMembershipProjection(
@@ -56,5 +67,18 @@ public interface OrganizationQueryRepository {
             Instant updatedAt,
             long version
     ) {
+    }
+
+    record OrganizationMemberProjection(
+            String id,
+            String userId,
+            String displayName,
+            String status,
+            long authorityVersion,
+            Instant createdAt
+    ) {
+    }
+
+    record OrganizationMemberRoleProjection(String id, String userId, String role) {
     }
 }

@@ -54,4 +54,35 @@ public class AuditLogService {
                 requestId,
                 Instant.now(clock)));
     }
+
+    @Transactional
+    public AuditLog recordOrganizationAdministration(String actorUserId,
+                                                     String action,
+                                                     String organizationId,
+                                                     String targetRef,
+                                                     String requestId) {
+        return recordOrganizationAdministration(actorUserId, action, organizationId, targetRef,
+                requestId, null);
+    }
+
+    @Transactional
+    public AuditLog recordOrganizationAdministration(String actorUserId,
+                                                     String action,
+                                                     String organizationId,
+                                                     String targetRef,
+                                                     String requestId,
+                                                     String detailJson) {
+        return auditLogRepository.save(AuditLog.organizationSuccess(
+                actorUserId, action, organizationId, targetRef, requestId, detailJson, Instant.now(clock)));
+    }
+
+    @Transactional
+    public AuditLog recordOrganizationLoginConnection(
+            String actorUserId, String action, String organizationId, String connectionId,
+            String requestId, boolean success, String detailJson
+    ) {
+        return auditLogRepository.save(AuditLog.organizationLoginConnection(
+                actorUserId, action, organizationId, connectionId,
+                requestId, success, detailJson, Instant.now(clock)));
+    }
 }

@@ -2,7 +2,7 @@ import { useLayoutEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient, type QueryClient, type UseMutationOptions } from '@tanstack/react-query';
 import type { TypertRemoteNamespaceMap } from '@deepseek-ai/dsh-typert-protocol';
 import type { FavoriteList, FavoriteSkill } from '../host/types.js';
-import { catalogErrorMessage } from './catalog-error.js';
+import { catalogError } from './catalog-error.js';
 import { favoriteSnapshot, favoritesKey } from './favorites.js';
 import '../../lib/typert.remote-client.js';
 
@@ -11,7 +11,7 @@ interface FavoriteMutation { sourceRevision: string; item: FavoriteSkill; favori
 
 function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { code: string; details?: unknown } }): T {
   if (result.ok) return result.value;
-  throw new Error(catalogErrorMessage(result.error));
+  throw catalogError(result.error);
 }
 
 /** Share serialization across observers of the same source, including a detail/card pair. */

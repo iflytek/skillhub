@@ -30,10 +30,8 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -990,19 +988,8 @@ public class SkillQueryService {
     }
 
     private String computeFingerprint(SkillVersion version) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            List<SkillFile> files = skillFileRepository.findByVersionId(version.getId()).stream()
-                    .sorted(Comparator.comparing(SkillFile::getFilePath))
-                    .toList();
-            for (SkillFile file : files) {
-                String line = file.getFilePath() + ":" + file.getSha256() + "\n";
-                digest.update(line.getBytes(StandardCharsets.UTF_8));
-            }
-            return "sha256:" + HexFormat.of().formatHex(digest.digest());
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to compute version fingerprint", e);
-        }
+        return SkillFingerprint.compute(skillFileRepository.findByVersionId(version.getId()).stream()
+                .map(file -> new SkillFingerprint.FileHash(file.getFilePath(), file.getSha256())).toList());
     }
 
     private String encodePathSegment(String value) {

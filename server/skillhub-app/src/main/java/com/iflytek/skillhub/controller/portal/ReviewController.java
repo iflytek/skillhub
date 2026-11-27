@@ -124,6 +124,7 @@ public class ReviewController extends BaseApiController {
                                                                      @RequestParam(defaultValue = "") String q,
                                                                      @RequestParam(required = false) String reviewKind,
                                                                      @RequestParam(required = false) String originType,
+                                                                     @RequestParam(required = false) String scanVerdict,
                                                                      @RequestParam(defaultValue = "0") int page,
                                                                      @RequestParam(defaultValue = "20") int size,
                                                                      @RequestParam(defaultValue = "DESC") String sortDirection,
@@ -131,7 +132,7 @@ public class ReviewController extends BaseApiController {
                                                                      @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
         return ok(
                 "response.success.read",
-                governanceWorkflowAppService.listReviewQueue(status, namespaceId, q, reviewKind, originType, page, size, sortDirection, userId, userNsRoles)
+                governanceWorkflowAppService.listReviewQueue(status, namespaceId, q, reviewKind, originType, scanVerdict, page, size, sortDirection, userId, userNsRoles)
         );
     }
 

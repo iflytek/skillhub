@@ -596,9 +596,9 @@ class ReviewPortalControllerTest {
         );
 
         given(reviewQueueQueryRepository.list(
-                new com.iflytek.skillhub.repository.ReviewQueueQueryRepository.Filter(status.name(), null, "", null, null),
+                new com.iflytek.skillhub.repository.ReviewQueueQueryRepository.Filter(status.name(), null, "", null, null, "DANGEROUS"),
                 true, Set.of(), pageable)).willReturn(new PageImpl<>(tasks.stream().map(task ->
-                        new com.iflytek.skillhub.repository.ReviewQueueQueryRepository.Entry(task, "Skill", "Summary", "FIRST_PUBLISH"))
+                        new com.iflytek.skillhub.repository.ReviewQueueQueryRepository.Entry(task, "Skill", "Summary", "FIRST_PUBLISH", "DANGEROUS"))
                         .toList(), pageable, 42));
         given(namespaceRepository.findById(20L)).willReturn(Optional.of(namespace));
         given(rbacService.getUserRoleCodes("admin")).willReturn(Set.of("SKILL_ADMIN"));
@@ -612,10 +612,12 @@ class ReviewPortalControllerTest {
 
         mockMvc.perform(get("/api/v1/reviews")
                         .param("status", status.name())
+                        .param("scanVerdict", "DANGEROUS")
                         .with(auth("admin")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data.total").value(42))
+                .andExpect(jsonPath("$.data.items[0].scanVerdict").value("DANGEROUS"))
                 .andExpect(jsonPath("$.data.size").value(20))
                 .andExpect(jsonPath("$.data.items.length()").value(20));
     }

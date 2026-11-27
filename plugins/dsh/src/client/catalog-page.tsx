@@ -1,3 +1,5 @@
+import { AccountWorkspace, type AccountPageName } from './account-workspace.js';
+import { AppearanceToggle } from './appearance-toggle.js';
 import { sameRegistry } from './registry-config.js';
 import { DetailMeta, sourceHost } from './detail-presentation.js';
 import { UpgradeControl } from './upgrade-control.js';
@@ -11,7 +13,7 @@ import { CardSkeletons, CatalogSkeleton, DetailSkeleton } from './loading-layout
 import { UiAvailabilityNotice, type UiAvailability } from './ui-availability.js';
 import { WorkbenchStyles } from './installed-styles.js';
 import { NativeControlStyles } from './native-control-styles.js';
-import { catalogErrorMessage } from './catalog-error.js';
+import { catalogError } from './catalog-error.js';
 import { FavoriteButton } from './favorite-button.js';
 import { favoriteIdentity, favoriteSnapshot, filterFavorites, resolvedFavoriteItem } from './favorites.js';
 import { useFavorites } from './use-favorites.js';
@@ -30,10 +32,18 @@ import type { InfiniteData } from '@tanstack/react-query';
 import type { CatalogPageResult, SkillList, InstalledSkillList, FavoriteSkill } from '../host/types.js';
 import '../../lib/typert.remote-client.js';
 
-type Item = SkillList['items'][number];
+type Item = SkillList['items'][number] & { skillId?: number; versionId?: number };
+async function boundDetail(remote: Remote, revision: string, item: Item, signal: AbortSignal) {
+  const detail = unwrap(await remote.getSkillDetail(revision, item.namespace, item.slug, item.latestVersion, signal));
+  if ((item.skillId !== undefined && detail.skillId !== item.skillId)
+    || (item.versionId !== undefined && detail.versionId !== item.versionId)) throw new Error('技能标识已变化，请返回空间刷新。');
+  return detail;
+}
 type Remote = TypertRemoteNamespaceMap['skillhub'];
 type Sort = 'newest' | 'downloads' | 'rating';
 export interface CatalogNavigation {
+  accountPage?: AccountPageName;
+  detailSpace?: AccountPageName;
   installedNavigation?: InstalledNavigation;
   installedOrigin?: { sessionId: string; sourceRevision: string };
   tab: 'browse' | 'installed'; query: string; draft: string; sort?: Sort;
@@ -46,7 +56,7 @@ export const createCatalogNavigation = (): CatalogNavigation => ({
 });
 function unwrap<T>(result: { ok: true; value: T } | { ok: false; error: { code: string; details?: unknown } }): T {
   if (result.ok) return result.value;
-  throw new Error(catalogErrorMessage(result.error));
+  throw catalogError(result.error);
 }
 export function CatalogPage({ remote, navigation, client, onReturn, onSettings, installation, installed, availability }: {
   remote: Remote; navigation: CatalogNavigation; client: QueryClient; onReturn: () => void; onSettings?: () => void; installation?: InstallationServices; installed?: InstalledServices; availability: UiAvailability;
@@ -58,6 +68,29 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
 }) {
   const queryClient = useQueryClient();
   const entries = useSyncExternalStore(availability.subscribe, availability.getSnapshot);
+  const [accountPage, setAccountPage] = useState<AccountPageName>(navigation.accountPage ?? null);
+  const [accountToolbar, setAccountToolbar] = useState<HTMLSpanElement | null>(null);
+  const [uploadSlot, setUploadSlot] = useState<HTMLSpanElement | null>(null);
+  // Keep account routes in the mounted view. Browser history carries only an opaque entry ID.
+  const accountHistory = useRef(new Map<string, { page: AccountPageName; scrollTop: number }>());
+  function navigateAccount(page: AccountPageName) {
+    const current = navigation.accountPage ?? null;
+    if ((!page && !current) || (page && current && current.space === page.space)) return;
+    const entries = accountHistory.current;
+    const previous = entries.get(history.state?.skillhubAccountEntry);
+    if (previous) previous.scrollTop = scroller.current?.scrollTop ?? 0;
+    else {
+      const id = crypto.randomUUID();
+      entries.set(id, { page: current, scrollTop: scroller.current?.scrollTop ?? 0 });
+      history.replaceState({ ...history.state, skillhubAccountEntry: id }, '');
+    }
+    const id = crypto.randomUUID();
+    entries.set(id, { page, scrollTop: 0 });
+    history.pushState({ ...history.state, skillhubAccountEntry: id }, '');
+    navigation.accountPage = page;
+    setAccountPage(page);
+    scroller.current?.scrollTo({ top: 0 });
+  }
   const [sourceOpen, setSourceOpen] = useState(false);
   const [upgradeCandidate, setUpgradeCandidate] = useState<{ item: InstalledSkillList['items'][number]; revision: string; source: string } | null>(null);
   const [removalCandidate, setRemovalCandidate] = useState<{ item: InstalledSkillList['items'][number]; revision: string; source: string } | null>(null);
@@ -87,7 +120,8 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
   const favoriteFilter = useRef<HTMLButtonElement>(null);
   const previousFavoriteOnly = useRef(favoriteOnly);
   const favoriteRequest = useRef<AbortController | null>(null);
-  const context = useQuery({ queryKey: ['skillhub-context'], queryFn: async () => unwrap(await remote.getContext()), retry: false });
+  // This is local Host state, including sign-out cleanup while the browser is offline.
+  const context = useQuery({ queryKey: ['skillhub-context'], queryFn: async () => unwrap(await remote.getContext()), retry: false, networkMode: 'always', refetchOnReconnect: true });
   const compatibility = useQuery({ queryKey: ['skillhub-compatibility'], queryFn: async () => unwrap(await remote.getCompatibility()), retry: false });
   const revision = context.data?.sourceRevision;
   const latestRevision = useRef(revision); latestRevision.current = revision;
@@ -99,9 +133,26 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
   const favorites = useFavorites(remote, revision, !!context.data?.configured && tab === 'browse');
   const favoriteItems = useRef(favorites.items); favoriteItems.current = favorites.items;
   useLayoutEffect(() => () => { favoriteRequest.current?.abort(); favoriteRequest.current = null; }, [revision]);
+  useLayoutEffect(() => {
+    function restore(event: PopStateEvent) {
+      const entry = accountHistory.current.get(event.state?.skillhubAccountEntry);
+      if (!entry) return;
+      navigation.accountPage = entry.page;
+      navigation.selected = null;
+      setSelected(null);
+      setAccountPage(entry.page);
+      requestAnimationFrame(() => scroller.current?.scrollTo({ top: entry.scrollTop }));
+    }
+    window.addEventListener('popstate', restore);
+    return () => window.removeEventListener('popstate', restore);
+  }, [navigation]);
   const previousRevision = useRef(revision);
   useLayoutEffect(() => {
     if (previousRevision.current && revision && previousRevision.current !== revision) {
+      navigation.detailSpace = undefined;
+      accountHistory.current.clear();
+      navigation.accountPage = null;
+      setAccountPage(null);
       setInstallCandidate(null); setUpgradeCandidate(null); setRemovalCandidate(null);
       navigation.selected = null; setSelected(null);
       navigation.installedOrigin = undefined; setInstalledOrigin(undefined);
@@ -138,9 +189,9 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
   const visibleFavorites = filterFavorites(favorites.items, favoriteQuery);
   const detail = useQuery({
     ...readCacheOptions,
-    queryKey: ['skillhub-detail', revision, selected?.namespace, selected?.slug, selected?.latestVersion],
+    queryKey: ['skillhub-detail', revision, selected?.namespace, selected?.slug, selected?.latestVersion, selected?.skillId, selected?.versionId],
     enabled: !!selected && !!context.data?.configured && sourceMatches,
-    queryFn: async ({ signal }) => unwrap(await remote.getSkillDetail(revision!, selected!.namespace, selected!.slug, selected!.latestVersion, signal)), retry: false,
+    queryFn: async ({ signal }) => boundDetail(remote, revision!, selected!, signal), retry: false,
   });
   const browseReady = favoriteOnly ? favorites.ready && !favorites.loading : !!pages;
   // Radix Presence mounts the tab body in a later commit than the route change.
@@ -161,7 +212,12 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
       heading.current?.focus();
     }
   }, [selected, tab]);
-  function back() { navigation.selected = null; setSelected(null); }
+  function back() {
+    navigation.selected = null;
+    setSelected(null);
+    if (navigation.detailSpace) navigateAccount(navigation.detailSpace);
+    navigation.detailSpace = undefined;
+  }
   function rememberScroll() {
     const top = scroller.current?.scrollTop ?? 0;
     if (favoriteOnly) navigation.favoriteScrollTop = top;
@@ -310,23 +366,27 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
       services={installation} initiatedFrom="plaza" close={() => setInstallCandidate(null)} onManage={item => { setInstallCandidate(null); manageSkill(item, 'remove'); }} load={async signal => {
         const source = unwrap(await remote.getContext());
         if (source.sourceRevision !== installCandidate.revision) throw new Error('来源已变化，请重新选择。');
-        const detail = unwrap(await remote.getSkillDetail(installCandidate.revision, installCandidate.item.namespace, installCandidate.item.slug, installCandidate.item.latestVersion, signal));
+        const detail = await boundDetail(remote, installCandidate.revision, installCandidate.item, signal);
         return { detail, sourceRevision: source.sourceRevision };
       }} />}
 
-    <Tabs value={tab} onValueChange={changeTab}>
+    <Tabs value={tab} onValueChange={value => { navigateAccount(null); changeTab(value); }}>
     <header className="astron-sh-catalog-header"><div className="astron-sh-location"><Icon name="library" /><strong>SkillHub</strong><span>技能工作台</span></div>
-      <TabsList className="astron-sh-directory-tabs" aria-label="技能目录"><TabsTrigger value="browse" onClick={() => { if (selected) back(); }}>发现技能</TabsTrigger><TabsTrigger value="installed" onClick={() => {
+      <TabsList className="astron-sh-directory-tabs" aria-label="技能目录"><TabsTrigger value="browse" onClick={() => { navigation.detailSpace = undefined; navigateAccount(null); if (selected) back(); }}>发现技能</TabsTrigger><TabsTrigger value="installed" onClick={() => {
+        navigation.detailSpace = undefined; navigateAccount(null);
         navigation.installedOrigin = undefined; setInstalledOrigin(undefined);
         if (installedNavigation?.selected) {
           installedNavigation.selected = null; installedNavigation.intent = 'detail'; installedNavigation.changeVersion = undefined;
           setInstalledView(value => value + 1);
         }
-      }}>我的技能</TabsTrigger></TabsList>
-      <div className="astron-sh-toolbar-actions">{onSettings && <Button variant="ghost" size="sm" aria-label="SkillHub 设置" title="SkillHub 设置" onClick={() => { favoriteFeedbackGeneration.current++; setFavoriteUndo(null); cancelFavoriteOpen(); if (!selected && tab === 'browse') rememberScroll(); onSettings(); }}><Icon name="settings" />设置</Button>}<Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
+      }}>已安装技能</TabsTrigger></TabsList>
+      <div className="astron-sh-toolbar-actions"><AppearanceToggle /><span ref={setAccountToolbar} />{onSettings && <Button variant="ghost" size="sm" aria-label="SkillHub 设置" title="SkillHub 设置" onClick={() => { favoriteFeedbackGeneration.current++; setFavoriteUndo(null); cancelFavoriteOpen(); if (!selected && tab === 'browse') rememberScroll(); onSettings(); }}><Icon name="settings" />设置</Button>}<Button variant="ghost" className="astron-sh-icon-button" aria-label="查看当前来源" title={context.data?.registryUrl || '尚未配置来源'} onClick={() => setSourceOpen(value => !value)}><Icon name="info" /></Button>
       {(installation || installed) && <Button variant="ghost" className="astron-sh-icon-button" aria-label="返回会话" title="关闭 SkillHub，返回会话" onClick={leaveCatalog}><Icon name="close" /></Button>}</div>
     </header>
-    <div className="astron-sh-workbench-frame">
+    {revision && context.data?.configured && <AccountWorkspace key={revision} remote={remote} source={context.data.registryUrl} revision={revision}
+      toolbar={accountToolbar} primary={uploadSlot} screen={accountPage} navigate={navigateAccount} settings={onSettings} clearFailed={context.data.accountClearFailed}
+      open={(namespace, slug, version, skillId, versionId) => { navigation.detailSpace = accountPage; navigateAccount(null); changeTab('browse'); openSkill({ namespace, slug, skillId, versionId, latestVersion: version, summary: '' }); }} />}
+    <div className="astron-sh-workbench-frame" hidden={!!accountPage}>
     {sourceOpen && <p className="astron-sh-source-info" role="status">当前来源：{context.data?.registryUrl || '尚未配置来源'}</p>}
     {(compatibility.isError || compatibility.data?.dependencyBaseline === 'unverified') && <div role="alert" className="astron-sh-error">
       <p>{compatibility.isError ? '无法读取 DSH 依赖版本核验结果。' : `当前 DSH 依赖组合未通过核验，安装、升级、卸载和恢复写入已禁用。请使用 ${compatibility.data?.candidateDshVersion} 对应的完整发行依赖。`}</p>
@@ -350,7 +410,7 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
                   <DetailContent ref={detailContent} managementTarget={managementTarget} detail={detail.data} modes={context.data.detailTabs} remote={remote} retry={() => { void detail.refetch(); }}
                     cacheIdentity={JSON.stringify([installation?.sessionId ?? installed?.sessionId, revision, selected.namespace, selected.slug, selected.latestVersion])}
                     onContextStale={() => { void detail.refetch(); }}
-                    onSelectVersion={version => { const next = { ...selected, latestVersion: version }; navigation.selected = next; setSelected(next); }} />
+                    onSelectVersion={version => { const next = { ...selected, skillId: detail.data?.skillId, versionId: undefined, latestVersion: version }; navigation.selected = next; setSelected(next); }} />
                 </article><aside ref={managementTarget} tabIndex={-1} aria-label="安装位置管理" className="astron-sh-detail-aside">
                   {installed?.management ? <InstallationManagement identity={{ ...selected, registry: context.data.registryUrl }} revision={revision!} services={{ ...installed.management, openChanges: openInstalledChanges }} useSkill={installed.skillUse}
                     onInstall={inventory.data?.items.some(item => sameRegistry(item.registry, context.data.registryUrl) && item.namespace === selected.namespace && item.slug === selected.slug) ? () => setInstallCandidate({ item: selected, revision: revision! }) : undefined} />
@@ -359,11 +419,11 @@ function Catalog({ remote, navigation, onReturn, onSettings, installation, insta
                 </aside></div></>}
         </div> : <>
           <TabsContent value="installed">{installedOrigin && (installedOrigin.sessionId !== installed?.sessionId || installedOrigin.sourceRevision !== revision)
-            ? <p role="alert">会话或来源已变化，请点击“我的技能”查看当前上下文的记录。</p>
+            ? <p role="alert">会话或来源已变化，请点击“已安装技能”查看当前上下文的记录。</p>
             : installed ? <InstalledSkills key={`${installed.sessionId}:${revision}:${installedView}`} services={installed} onInstall={item => setInstallCandidate({ item: { namespace: item.namespace, slug: item.slug, latestVersion: item.version, summary: '' }, revision: revision! })} onRemove={item => manageSkill(item, 'remove')} onUpgrade={item => manageSkill(item, 'upgrade')} navigation={installedNavigation!} source={context.data.registryUrl} sourceRevision={revision!} remote={remote} modes={context.data.detailTabs} scrollContainer={scroller} />
               : <div className="astron-sh-empty"><p>请先打开一个 DSH 会话，再查看该用户和项目的安装记录。</p><Button onClick={onReturn}>前往会话</Button></div>
             }</TabsContent><TabsContent value="browse"><div ref={restoreBrowse} className="astron-sh-browse-view">
-              <div className="astron-sh-workbench-heading"><div><h1>发现技能</h1><p>从日常办公到专业开发，找到适合当前工作的技能。</p></div>{context.data.configured && <span className="astron-sh-catalog-source-label" title={context.data.registryUrl}><Icon name="library" />{sourceHost(context.data.registryUrl)}</span>}</div>
+              <div className="astron-sh-workbench-heading"><div><h1>发现技能</h1><p>从日常办公到专业开发，找到适合当前工作的技能。</p></div><span className="astron-sh-upload-slot" ref={setUploadSlot} />{context.data.configured && <span className="astron-sh-catalog-source-label" title={context.data.registryUrl}><Icon name="library" />{sourceHost(context.data.registryUrl)}</span>}</div>
               {!context.data.configured ? <div className="astron-sh-empty"><h2>连接 SkillHub</h2><p>{entries.configuration ? '在 DSH 插件页面的 SkillHub 设置中配置技能来源。' : '来源配置暂不可用，已安装技能仍可管理。'}</p><Button onClick={() => { void context.refetch(); }}>刷新连接</Button></div> : <>
               <form className="astron-sh-search-form" onSubmit={event => { event.preventDefault(); if (favoriteOnly) searchFavorites(favoriteDraft.trim()); else search(draft.trim()); }}>
                 <div className="astron-sh-search-field"><Button type="submit" variant="ghost" size="icon" className="astron-sh-search-submit" aria-label="搜索"><Icon name="search" /></Button><Input aria-label={favoriteOnly ? '搜索本机收藏' : '搜索技能'} placeholder={favoriteOnly ? '搜索收藏的技能' : '搜索技能名称或用途'} value={favoriteOnly ? favoriteDraft : draft} onChange={event => {

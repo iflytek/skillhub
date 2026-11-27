@@ -25,9 +25,13 @@ public interface GithubSyncUploadRepository {
             UUID admissionId, String commitSha, String skillPath, UUID uploadId,
             long sizeBytes, String sha256, Instant now);
 
+    /**
+     * Creates the ingestion once. {@code sourceTag} is stored only on that insert;
+     * replayed reports never rewrite it.
+     */
     GithubPackageReportResult acceptReport(UUID taskId, long generation, String leaseTokenHash,
             UUID admissionId, String commitSha, String skillPath, UUID uploadId,
-            long sizeBytes, String sha256, Instant now);
+            long sizeBytes, String sha256, GithubSourceTag sourceTag, Instant now);
 
     record LocalUpload(String objectKey, long sizeBytes, String sha256) {}
     record CleanupUpload(UUID uploadId, String objectKey) {}

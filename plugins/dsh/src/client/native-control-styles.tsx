@@ -1,5 +1,8 @@
 /** Scoped shadcn component styles; never reset the DSH document or other plugins. */
+import { accountStyles } from './account-styles.js';
+import { useAppearance } from './appearance.js';
 export function NativeControlStyles() {
+  const appearance = useAppearance();
   return <style>{`
 .astron-sh-management-notice{position:fixed;top:20px;right:20px;z-index:1100;display:flex;align-items:flex-start;gap:12px;width:min(360px,calc(100vw - 32px));box-sizing:border-box;padding:14px;border:1px solid var(--astron-sh-border);border-radius:8px;background:var(--astron-sh-bg);color:var(--astron-sh-fg);box-shadow:0 4px 18px #0003;font-size:13px;overflow-wrap:anywhere}
 .astron-sh-management-notice>div{flex:1;min-width:0}.astron-sh-management-notice p{margin:6px 0 0}.astron-sh-management-notice>button{flex-shrink:0}
@@ -8,9 +11,10 @@ export function NativeControlStyles() {
 .astron-sh-position-menu [role=menuitem]{padding:6px 10px;border-radius:3px;outline:none;cursor:pointer}
 .astron-sh-position-menu [data-highlighted]{background:var(--astron-sh-soft)}
 .astron-sh-position-menu [data-disabled]{opacity:.5;pointer-events:none}
+.skillhub-controls.astron-sh-catalog,.skillhub-controls.astron-sh-config,.skillhub-controls.astron-sh-modal-layer,.skillhub-controls.astron-sh-management-notice,.skillhub-controls.astron-sh-position-menu{color-scheme:${appearance}}
 .skillhub-controls {
  --astron-sh-bg:light-dark(#ffffff,#101010);--astron-sh-surface:light-dark(#ffffff,#181818);
- --astron-sh-fg:light-dark(#171717,#f4f4f4);--astron-sh-secondary:light-dark(#575757,#b9b9b9);--astron-sh-muted:light-dark(#737373,#909090);
+ --astron-sh-fg:light-dark(#171717,#f4f4f4);--astron-sh-secondary:light-dark(#575757,#b9b9b9);--astron-sh-muted:light-dark(#686868,#a0a0a0);
  --astron-sh-border:light-dark(#e5e5e5,#303030);--astron-sh-border-subtle:light-dark(#f0f0f0,#242424);--astron-sh-border-strong:light-dark(#d4d4d4,#3e3e3e);
  --astron-sh-primary:light-dark(#212121,#ededed);--astron-sh-primary-fg:light-dark(#ffffff,#101010);
  --astron-sh-accent:var(--astron-sh-primary);--astron-sh-link:light-dark(#156f99,#9bc1d4);--astron-sh-soft:light-dark(#f6f6f7,#090909);
@@ -53,7 +57,7 @@ export function NativeControlStyles() {
 .skillhub-controls .astron-sh-input{height:40px;min-width:0;background:var(--astron-sh-soft)}
 .skillhub-controls .astron-sh-catalog-header{display:flex;align-items:start;justify-content:space-between;gap:16px;margin-bottom:24px;flex-wrap:wrap}
 .skillhub-controls .astron-sh-catalog-header h1{margin:0 0 6px}.skillhub-controls .astron-sh-source{font-size:12px;color:var(--astron-sh-muted);overflow-wrap:anywhere;margin:0}
-.skillhub-controls.astron-sh-catalog{height:100%;overflow:auto;padding:0;container-type:inline-size}
+.skillhub-controls.astron-sh-catalog{height:100%;overflow:auto;padding:0;container-type:inline-size;background:var(--astron-sh-bg)}
 .skillhub-controls .astron-sh-tabs-list{display:flex;gap:26px;border-bottom:1px solid var(--astron-sh-border);margin-bottom:22px;overflow-x:auto}
 .skillhub-controls .astron-sh-tabs-trigger{border:0;border-radius:0;background:transparent;padding:11px 0;font-size:14px;white-space:nowrap;color:var(--astron-sh-muted)}
 .skillhub-controls .astron-sh-tabs-trigger[data-state=active]{color:var(--astron-sh-fg);box-shadow:inset 0 -2px var(--astron-sh-accent)}
@@ -337,5 +341,6 @@ export function NativeControlStyles() {
 @container(max-width:1119px){.skillhub-controls .astron-sh-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.skillhub-controls .astron-sh-detail-layout{grid-template-columns:minmax(0,1fr) 280px;gap:24px}}
 @container(max-width:839px){.skillhub-controls .astron-sh-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.skillhub-controls .astron-sh-detail-layout{display:flex;flex-direction:column}.skillhub-controls .astron-sh-detail-aside{position:static;order:-1}}
 @container(max-width:579px){.skillhub-controls .astron-sh-card-grid{grid-template-columns:1fr}.skillhub-controls .astron-sh-skill-card{min-height:172px}.skillhub-controls .astron-sh-skill-heading h3{font-size:14px}}
+${accountStyles}
 `}</style>;
 }

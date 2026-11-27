@@ -66,7 +66,7 @@ public class GithubReviewGroupAppService {
         var filter = filter(status, namespaceId, q, kind, page, size, direction);
         var ids = groups.members(filter, scopes(actor, roles, namespaceId), snapshotId, page, size, "ASC".equals(direction));
         // Recheck each task's current permission through the existing detail boundary.
-        var tasks = ids.items().stream().map(member -> new GithubReviewGroupMemberResponse(reviews.getReviewDetail(member.reviewId(), actor, roles).withPresentation(member.displayName(), member.summary(), member.reviewKind()), member.scanStatus())).toList();
+        var tasks = ids.items().stream().map(member -> new GithubReviewGroupMemberResponse(reviews.getReviewDetail(member.reviewId(), actor, roles).withPresentation(member.displayName(), member.summary(), member.reviewKind(), null), member.scanStatus())).toList();
         return new PageResponse<>(tasks, ids.total(), ids.page(), ids.size());
     }
 }

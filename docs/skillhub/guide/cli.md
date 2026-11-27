@@ -8,10 +8,18 @@ SkillHub CLI 是 SkillHub 的第一方命令行工具，用于搜索、安装、
 | --- | --- | --- |
 | 安装单个远端 Skill | install | 选定 Agent / scope / 自定义目录 |
 | 更新已安装单个技能 | upgrade | 显式选择的坐标及目标，不隐式升级全部 |
+| 发现已安装技能的更新 | outdated | 只读检查当前生效 Registry 的安装记录 |
+| 按 GitHub 仓库安装或更新技能 | repository | 仅适用于提供兼容仓库安装清单的 Registry，不等于套装或 GitHub 同步管理 |
 | 管理固定版本集合 | suite | 套装安装记录及成员来源 |
 | 同步团队创作工作区 | sync | 非 global 空间与工作区，不等于套装管理 |
 | 更新 CLI 程序本身 | update | 本机 CLI 安装，不更新技能 |
-| 修复本地记录 | doctor | 扫描项目元数据并重建 inventory，不代替远端升级 |
+| 修复本地记录 | doctor | 扫描项目元数据并合并 inventory，保留扫描范围外的记录，不代替远端升级 |
+
+保留现有命令名与兼容入口，不要求改写历史脚本。`repository check` 与 `repository upgrade --check`
+使用同一只读计划；`outdated` 负责发现更新，`upgrade --check` 预览明确选择的技能更新，`update`
+更新 CLI 本身。`suite check` 检查已安装套装及成员状态，`suite upgrade --check` 预览新版成员变化，
+二者职责不同。`sync` 面向命名空间创作工作区，不负责服务端 GitHub 同步；`status` 展示全部状态，
+`diff` 展示差异。完整命令清单见 [CLI README](https://github.com/iflytek/skillhub/blob/main/cli/README.md#-command-reference)。
 
 ## 自动化和错误处理
 
@@ -260,6 +268,24 @@ DeepSeek Harness 从最近的 Git 仓库根目录解析项目技能，而 SkillH
 }
 ```
 
+## 只读检查技能更新
+
+`outdated` 需要包含此命令的 CLI 版本；仅升级服务端，不会给旧 CLI 增加该命令。
+
+```bash
+skillhub outdated --json
+skillhub outdated --namespace team --agent codex --registry https://skillhub.example.com
+```
+
+默认只检查当前生效 Registry 的已安装技能，不自动访问其他来源。命令不下载、不获取安装锁、
+不写本地文件、不迁移 inventory，也不执行升级。结果包含本地修改状态和版本编号变化标签；
+例如 `0.1.0 -> 0.2.0` 标记为 `minor`，不承诺实际兼容性。GitHub 内容哈希版本除完全相同外标记
+为 `unknown`，不会按哈希字母顺序判断新旧。
+
+完整检查以零退出，包括发现更新或无法判断版本顺序的情况。远端查询失败时保留已取得的结果，
+但返回非零退出码、`ok: false` 和 `summary.failed`；stdout 仍是单个 JSON 报告，stderr 输出错误。
+退出码沿用首个查询失败的既有 CLI 错误分类。实际更新仍需显式选择技能并使用 `upgrade --check`。
+
 ## 技能安装后的使用与套装
 
 安装命令只下载技能文件，不执行任务。打开目标项目并让 Agent 发现 `SKILL.md`，按技能说明配置依赖，再要求 Agent 使用该技能。套装请阅读[安装与使用指南](./skill-suites)。
@@ -352,6 +378,35 @@ skillhub doctor
 4. 写入新的 `inventory.json`
 
 版本按安装目标记录。doctor 报告恢复问题，不会下载或升级技能。
+
+### 只读健康诊断
+
+```bash
+skillhub doctor --health
+skillhub doctor --health --registry https://skillhub.example.com --json
+skillhub doctor --health --offline --json
+```
+
+`--health` 明确选择只读诊断，检查实际配置、凭证与清单文件，以及当前服务地址、凭证来源、连接和已登记安装。
+原 `doctor` 的清单重建行为保持不变。诊断不会修复文件、生成备份、获取安装锁、删除凭证或自动登录。
+`--offline` 不发网络请求，远端检查显示为“未检查”，不能据此认定保存的凭证有效。
+
+在线模式仅向当前服务的既有 CLI 身份接口发起一次请求，最多等待 5 秒，不跟随跳转，不探测 GitHub、套件等可选功能或服务器内部组件。
+输出区分 DNS、连接、TLS、超时、HTTP 和身份失败；不展示 Token、服务端原始错误或内部异常。
+身份有效不代表拥有发布、删除等权限；文件可读不代表未来一定可写。
+
+未登录、内容被修改、历史安装缺少完整性基线均为提示，不自动修复；目录缺失、路径不安全、状态无法读取或不一致则报告失败。
+只检查当前服务对应的登记记录，启用或停用状态不变。
+
+健康模式 JSON 是 stdout 中的单个对象：`schemaVersion: 1`、`mode: "health"`、`ok`、`registry`、
+`registrySource`、`credentialSource`、`paths`、`checks` 和 `exitCode`。
+检查状态为 `pass`、`warn`、`fail`、`skipped`，每项包含稳定的 `id`、`code`、安全说明及可选的下一步。
+即使检查失败，也完整输出 JSON 报告，不向 stderr 混入提示。
+
+没有失败项时退出码为 0，仍可能有提示和未检查项。多个失败并存时依次优先返回文件错误 4、认证错误 2、网络错误 3、其他 HTTP/协议错误 1；参数错误仍为 5。
+原 `doctor --json` 的结构不变。`--offline`、`--registry`、`--token` 必须与 `--health` 同用，避免误触发清单写入。
+失效的保存凭证会提示对当前服务先执行 `logout` 再 `login`；命令行或环境变量覆盖会单独说明，诊断不代为执行。
+单独验证身份继续用 `whoami`，检查可用更新继续用 `outdated`。
 
 ## 发布
 
@@ -590,9 +645,11 @@ skillhub remove <coordinate> [options]
 
 ```bash
 skillhub doctor [--json]
+skillhub doctor --health [--offline] [--registry <url>] [--token <token>] [--json]
 ```
 
 扫描项目目录，重建本地清单。
+加 `--health` 则仅诊断，不进行清单维护；加 `--offline` 则不访问网络。
 
 ### publish
 
@@ -719,3 +776,39 @@ skillhub list
 Apache-2.0
 
 Copyright 2026 iFlytek Co., Ltd.
+
+## 按 GitHub 仓库批量安装
+
+在「开源技能 → 仓库」打开仓库详情，展开「安装仓库技能」查看清单并复制命令：
+
+```bash
+skillhub repository install 123456 --scope project --agent codex --registry https://skillhub.example.com
+```
+
+命令中的数字是仓库稳定 ID，不会因仓库改名而变化。需要新版服务端的安装清单接口；公开内容可匿名读取，提供的 Token 必须具备 `skill:read`，受限内容还受账号和空间权限约束。
+
+SaaS 与开源部署的 GitHub 同步能力可能不同；已有 GitHub 同步技能不代表开放了仓库批量接口。
+CLI 不按域名判断，也不为普通技能操作增加仓库接口依赖。仓库接口不可用时会提示“当前服务未开放或不支持仓库批量操作”；
+仅返回无明确业务错误码的 404 时，则提示“功能可能未开放，或仓库不可用”，避免将资源不存在误判为缺少功能。
+返回网页而非兼容安装清单时会明确提示协议不兼容。均以非零退出，且不写入本地技能、凭证或安装记录。
+认证失败、无权限、网络异常和明确的仓库不存在错误保留原意。若有可访问的已发布技能，仍可使用单技能 `install`、`outdated`、`upgrade`。
+
+一次获取完整清单（最多 1000 个成员），固定本次各技能的已发布版本和指纹；各技能可以来自不同提交。新版本待审时，仍可安装其当前可用的已发布版本。不可访问、隐藏、撤回或没有可用已发布版本的成员不会纳入，也不会泄漏其名称或数量。网页展示为参考清单，执行命令时会重新解析。
+
+默认保护已有目录，不支持批量 `--force`。成员逐个安装：部分失败时已成功成员保留，结果逐项报告，并以非零退出码结束；不会伪报整仓成功。复用原有逐技能安装记录，不自动创建套件，也不增加仓库安装账本。
+
+完整快照 ZIP 仍是另一个入口，要求该快照内每个固定成员均可下载；它与可能混合提交的日常批量安装不同。
+
+### 检查和升级已安装的仓库技能
+
+```bash
+skillhub repository check 123456 --registry https://skillhub.example.com --json
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com --check
+skillhub repository upgrade 123456 --agent codex --registry https://skillhub.example.com
+```
+
+`check` 和 `upgrade --check` 不写文件。`--agent`、`--dir` 筛选已有目标；`--scope` 仅用于首次安装。按版本和指纹比较，不要求成员来自同一提交。只升级已有成员，不补装上游新增技能，不删除已移除或不可用成员的本地文件。历史 metadata 缺少仓库来源提示仍可读取，不强制迁移；当前可用成员的资格来自服务端真实绑定。
+
+本地修改、共享/Suite 归属、禁用状态、来源冲突仍按现有保护规则处理。受保护项保留，其他安全项可以独立升级；有保护项或失败时整体非零退出并逐项解释。意外失败时保留已完成项并停止后续升级，不宣称整仓文件系统事务。批量操作不提供 `--force`，仍遵循现有下载限额。
+
+网页只提供命令，不知道你的本地安装情况，也不会显示推测的“落后 N 项”。

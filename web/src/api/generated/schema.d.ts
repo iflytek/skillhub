@@ -648,6 +648,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/Users/{membershipId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getUser"];
+        put: operations["replaceUser"];
+        post?: never;
+        delete: operations["deleteUser"];
+        options?: never;
+        head?: never;
+        patch: operations["patchUser"];
+        trace?: never;
+    };
     "/api/v1/admin/users/{userId}/status": {
         parameters: {
             query?: never;
@@ -3315,6 +3331,262 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organizationId}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listOrganizationMembers"];
+        put?: never;
+        post: operations["addOrganizationMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/members/{userId}/roles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["grantOrganizationRole"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listLoginConnections"];
+        put?: never;
+        post: operations["createLoginConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspendLoginConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["createLoginConnectionRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["testLoginConnectionRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["writeLoginConnectionSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/resume": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["resumeLoginConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/revisions/{revisionId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activateLoginConnectionRevision"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disableLoginConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_11"];
+        put?: never;
+        post: operations["create_5"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/Users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listUsers"];
+        put?: never;
+        post: operations["createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rotateSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/device/authorize": {
         parameters: {
             query?: never;
@@ -3421,6 +3693,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/enterprise/discovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discover"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4004,10 +4292,10 @@ export interface paths {
             cookie?: never;
         };
         /** 查看系统级公开 GitHub 凭证的脱敏状态 */
-        get: operations["list_13"];
+        get: operations["list_14"];
         put?: never;
         /** 加密保存系统级公开 GitHub 凭证 */
-        post: operations["create_5"];
+        post: operations["create_6"];
         delete?: never;
         options?: never;
         head?: never;
@@ -6947,14 +7235,78 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/organizations/{organizationId}/login-connections": {
+    "/api/v1/organizations/{organizationId}/login-connections/{connectionId}": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        get: operations["listLoginConnections"];
+        get: operations["getLoginConnection"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/login-connections/management": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getLoginConnectionManagement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/ServiceProviderConfig": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["serviceProviderConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/Schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["schemas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/ResourceTypes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["resourceTypes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7075,6 +7427,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/enterprise/{publicHandle}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["start"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/enterprise/{publicHandle}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users": {
         parameters: {
             query?: never;
@@ -7082,7 +7466,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["listUsers"];
+        get: operations["listUsers_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7147,7 +7531,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_11"];
+        get: operations["list_12"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7399,7 +7783,7 @@ export interface paths {
             cookie?: never;
         };
         /** 查看 GitHub 发现规则与精选入口 */
-        get: operations["list_12"];
+        get: operations["list_13"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7639,6 +8023,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/web/github-repositories/{repositoryId}/install-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGithubRepositoryInstallPlan"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cli/v1/github-repositories/{repositoryId}/install-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getGithubRepositoryInstallPlan_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/cli/v1/auth/whoami": {
         parameters: {
             query?: never;
@@ -7812,6 +8228,22 @@ export interface paths {
         put?: never;
         post?: never;
         delete: operations["deleteSkillById_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/role-bindings/{bindingId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["revokeOrganizationRole"];
         options?: never;
         head?: never;
         patch?: never;
@@ -8298,6 +8730,48 @@ export interface components {
             lastUsedAt?: string;
             capabilities?: string[];
             legacyCompat?: boolean;
+        };
+        ScimEmail: {
+            value?: string;
+            type?: string;
+            primary?: boolean;
+        };
+        ScimEnterpriseUser: {
+            department?: string;
+            employeeNumber?: string;
+        };
+        ScimName: {
+            givenName?: string;
+            familyName?: string;
+        };
+        ScimUserRequest: {
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"?: components["schemas"]["ScimEnterpriseUser"];
+            schemas?: string[];
+            externalId?: string;
+            userName?: string;
+            displayName?: string;
+            active?: boolean;
+            name?: components["schemas"]["ScimName"];
+            emails?: components["schemas"]["ScimEmail"][];
+        };
+        ScimMeta: {
+            resourceType?: string;
+            created?: string;
+            lastModified?: string;
+            location?: string;
+            version?: string;
+        };
+        ScimUserResource: {
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"?: components["schemas"]["ScimEnterpriseUser"];
+            schemas?: string[];
+            id?: string;
+            externalId?: string;
+            userName?: string;
+            displayName?: string;
+            active?: boolean;
+            name?: components["schemas"]["ScimName"];
+            emails?: components["schemas"]["ScimEmail"][];
+            meta?: components["schemas"]["ScimMeta"];
         };
         AdminUserStatusUpdateRequest: {
             status: string;
@@ -9203,6 +9677,7 @@ export interface components {
             decisionMethod?: string;
             decisionScanTaskId?: string;
             autoPublicationGrantId?: string;
+            scanVerdict?: string;
         };
         BatchReviewRequest: {
             ids: number[];
@@ -9638,6 +10113,153 @@ export interface components {
         ClawHubDeleteResponse: {
             ok?: boolean;
         };
+        OrganizationMemberRequest: {
+            userId: string;
+        };
+        ApiResponseOrganizationMemberResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["OrganizationMemberResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        OrganizationMemberResponse: {
+            id?: string;
+            userId?: string;
+            displayName?: string;
+            status?: string;
+            /** Format: int64 */
+            authorityVersion?: number;
+            /** Format: date-time */
+            createdAt?: string;
+            roles?: components["schemas"]["OrganizationRoleBindingResponse"][];
+        };
+        OrganizationRoleBindingResponse: {
+            id?: string;
+            userId?: string;
+            role?: string;
+            status?: string;
+        };
+        OrganizationRoleGrantRequest: {
+            /** @enum {string} */
+            role: "ORG_OWNER" | "IDENTITY_ADMIN" | "LOGIN_SECRET_ADMIN" | "MEMBER_ADMIN" | "ORG_AUDITOR";
+        };
+        ApiResponseOrganizationRoleBindingResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["OrganizationRoleBindingResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        LoginConnectionCreateRequest: {
+            displayName: string;
+            issuer: string;
+            clientId: string;
+        };
+        ApiResponseLoginConnectionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LoginConnectionResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        LoginConnectionHealthResponse: {
+            status?: string;
+            failureReason?: string;
+            /** Format: date-time */
+            checkedAt?: string;
+        };
+        LoginConnectionResponse: {
+            id?: string;
+            displayName?: string;
+            status?: string;
+            activeRevisionId?: string;
+            lastTestedRevisionId?: string;
+            activeRevision?: components["schemas"]["LoginConnectionRevisionResponse"];
+            latestRevision?: components["schemas"]["LoginConnectionRevisionResponse"];
+            health?: components["schemas"]["LoginConnectionHealthResponse"];
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        LoginConnectionRevisionResponse: {
+            id?: string;
+            /** Format: int64 */
+            revision?: number;
+            issuer?: string;
+            clientId?: string;
+            secretConfigured?: boolean;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        ConfirmedConnectionActionRequest: {
+            confirmed: boolean;
+        };
+        LoginConnectionRevisionCreateRequest: {
+            expectedRevisionId: string;
+            issuer: string;
+            clientId: string;
+        };
+        ApiResponseLoginConnectionTestResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LoginConnectionTestResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        LoginConnectionTestResponse: {
+            success?: boolean;
+            revisionId?: string;
+            failureReason?: string;
+            /** Format: date-time */
+            checkedAt?: string;
+        };
+        LoginConnectionSecretRequest: {
+            clientSecret: string;
+        };
+        ApiResponseDirectoryConnectionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["DirectoryConnectionResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        DirectoryConnectionResponse: {
+            id?: string;
+            organizationId?: string;
+            protocol?: string;
+            status?: string;
+            /** Format: int64 */
+            secretVersion?: number;
+            tokenHint?: string;
+            scimBaseUrl?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            bootstrapToken?: string;
+        };
         AuthorizeRequest: {
             userCode?: string;
         };
@@ -9684,6 +10306,41 @@ export interface components {
         ChangePasswordRequest: {
             currentPassword: string;
             newPassword: string;
+        };
+        EnterpriseLoginDiscoveryRequest: {
+            identifier: string;
+            returnTo?: string;
+        };
+        ApiResponseEnterpriseLoginDiscoveryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["EnterpriseLoginDiscoveryResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        AuthMethodResponse: {
+            id?: string;
+            methodType?: string;
+            provider?: string;
+            displayName?: string;
+            actionUrl?: string;
+        };
+        EnterpriseLoginDiscoveryResponse: {
+            publicMethods?: components["schemas"]["AuthMethodResponse"][];
+            organizations?: components["schemas"]["OrganizationLoginOptions"][];
+        };
+        LoginOption: {
+            displayName?: string;
+            actionUrl?: string;
+        };
+        OrganizationLoginOptions: {
+            slug?: string;
+            displayName?: string;
+            loginOptions?: components["schemas"]["LoginOption"][];
         };
         DirectLoginRequest: {
             provider: string;
@@ -9907,6 +10564,7 @@ export interface components {
             sortOrder?: number;
             translations: components["schemas"]["LabelTranslationItemRequest"][];
         };
+        JsonNode: Record<string, never>;
         GithubCuratedRepositoryRequest: {
             ownerLogin: string;
             repositoryName: string;
@@ -10290,6 +10948,24 @@ export interface components {
             errorCode?: string;
             errorArgs?: string[];
         };
+        GithubSkillSourceResponse: {
+            ownerLogin?: string;
+            repositoryName?: string;
+            skillPath?: string;
+            commitSha?: string;
+            /** Format: int32 */
+            syncRevision?: number;
+            licenseStatus?: string;
+            licenseDocuments?: components["schemas"]["LicenseDocument"][];
+            upstreamTag: components["schemas"]["UpstreamTag"];
+            /** @description Version declared in this Skill's SKILL.md, independent of repository tags */
+            declaredVersion?: string | null;
+        };
+        LicenseDocument: {
+            scope?: string;
+            path?: string;
+            bundled?: boolean;
+        };
         SkillVersionDetailResponse: {
             /** Format: int64 */
             id?: number;
@@ -10305,6 +10981,18 @@ export interface components {
             parsedMetadataJson?: string;
             manifestJson?: string;
             complianceSnapshot?: components["schemas"]["ComplianceSnapshotResponse"];
+            githubSource?: components["schemas"]["GithubSkillSourceResponse"];
+        };
+        UpstreamTag: {
+            /** @enum {string} */
+            status: "EXACT" | "AFTER_TAG" | "NO_TAG" | "UNKNOWN" | "UNRECORDED";
+            /** @enum {string} */
+            scope: "REPOSITORY";
+            tag?: string | null;
+            tagCommitSha?: string | null;
+            /** Format: int32 */
+            commitsAfterTag?: number | null;
+            reason?: string | null;
         };
         ApiResponseSkillVersionCompareResponse: {
             /** Format: int32 */
@@ -10494,21 +11182,6 @@ export interface components {
             requestId?: string;
             errorCode?: string;
             errorArgs?: string[];
-        };
-        GithubSkillSourceResponse: {
-            ownerLogin?: string;
-            repositoryName?: string;
-            skillPath?: string;
-            commitSha?: string;
-            /** Format: int32 */
-            syncRevision?: number;
-            licenseStatus?: string;
-            licenseDocuments?: components["schemas"]["LicenseDocument"][];
-        };
-        LicenseDocument: {
-            scope?: string;
-            path?: string;
-            bundled?: boolean;
         };
         SkillDetailResponse: {
             /** Format: int64 */
@@ -12105,6 +12778,9 @@ export interface components {
             canViewLoginConnections?: boolean;
             canManageLoginConnections?: boolean;
             canRotateLoginSecrets?: boolean;
+            canViewDirectoryConnections?: boolean;
+            canManageDirectoryConnections?: boolean;
+            canRotateDirectorySecrets?: boolean;
             canManageMembers?: boolean;
             canViewAudit?: boolean;
         };
@@ -12164,6 +12840,26 @@ export interface components {
             updatedAt?: string;
             permissions?: components["schemas"]["OrganizationPermissionsResponse"];
         };
+        ApiResponsePageResponseOrganizationMemberResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["PageResponseOrganizationMemberResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        PageResponseOrganizationMemberResponse: {
+            items?: components["schemas"]["OrganizationMemberResponse"][];
+            /** Format: int64 */
+            total?: number;
+            /** Format: int32 */
+            page?: number;
+            /** Format: int32 */
+            size?: number;
+        };
         ApiResponsePageResponseLoginConnectionSummaryResponse: {
             /** Format: int32 */
             code?: number;
@@ -12199,6 +12895,41 @@ export interface components {
             /** Format: int32 */
             size?: number;
         };
+        ApiResponseLoginConnectionManagementResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["LoginConnectionManagementResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        LoginConnectionManagementResponse: {
+            enabled?: boolean;
+        };
+        ApiResponseListDirectoryConnectionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["DirectoryConnectionResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        ScimListResponse: {
+            Resources?: components["schemas"]["ScimUserResource"][];
+            schemas?: string[];
+            /** Format: int32 */
+            totalResults?: number;
+            /** Format: int32 */
+            startIndex?: number;
+            /** Format: int32 */
+            itemsPerPage?: number;
+        };
         ApiResponseListAuthProviderResponse: {
             /** Format: int32 */
             code?: number;
@@ -12225,13 +12956,6 @@ export interface components {
             requestId?: string;
             errorCode?: string;
             errorArgs?: string[];
-        };
-        AuthMethodResponse: {
-            id?: string;
-            methodType?: string;
-            provider?: string;
-            displayName?: string;
-            actionUrl?: string;
         };
         ApiResponseLocalAuthCapabilitiesResponse: {
             /** Format: int32 */
@@ -13021,6 +13745,7 @@ export interface components {
             versionId: number;
             fingerprint: string;
             downloadUrl: string;
+            githubSource?: components["schemas"]["GithubSkillSourceResponse"];
         };
         ApiResponseCliSearchResponse: {
             /** Format: int32 */
@@ -13072,6 +13797,35 @@ export interface components {
         CliNamespaceSyncResponse: {
             items?: components["schemas"]["CliNamespaceSyncItemResponse"][];
             nextCursor?: string;
+        };
+        ApiResponseGithubRepositoryInstallPlanResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["GithubRepositoryInstallPlanResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        GithubRepositoryInstallPlanResponse: {
+            repositoryId: string;
+            owner: string;
+            name: string;
+            members: components["schemas"]["Member"][];
+        };
+        Member: {
+            /** Format: int64 */
+            skillId: number;
+            namespace: string;
+            slug: string;
+            displayName: string;
+            version: string;
+            /** Format: int64 */
+            versionId: number;
+            fingerprint: string;
+            downloadUrl: string;
         };
         ApiResponseCliWhoAmIResponse: {
             /** Format: int32 */
@@ -14877,6 +15631,116 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseTokenSummaryResponse"];
+                };
+            };
+        };
+    };
+    getUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUserResource"];
+                };
+            };
+        };
+    };
+    replaceUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                organizationId: string;
+                connectionId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/scim+json": components["schemas"]["ScimUserRequest"];
+                "application/json": components["schemas"]["ScimUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUserResource"];
+                };
+            };
+        };
+    };
+    deleteUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                organizationId: string;
+                connectionId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                organizationId: string;
+                connectionId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/scim+json": components["schemas"]["JsonNode"];
+                "application/json": components["schemas"]["JsonNode"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUserResource"];
                 };
             };
         };
@@ -17718,6 +18582,7 @@ export interface operations {
                 q?: string;
                 reviewKind?: string;
                 originType?: string;
+                scanVerdict?: string;
                 page?: number;
                 size?: number;
                 sortDirection?: string;
@@ -17771,6 +18636,7 @@ export interface operations {
                 q?: string;
                 reviewKind?: string;
                 originType?: string;
+                scanVerdict?: string;
                 page?: number;
                 size?: number;
                 sortDirection?: string;
@@ -19828,6 +20694,515 @@ export interface operations {
             };
         };
     };
+    listOrganizationMembers: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseOrganizationMemberResponse"];
+                };
+            };
+        };
+    };
+    addOrganizationMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationMemberResponse"];
+                };
+            };
+        };
+    };
+    grantOrganizationRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                userId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrganizationRoleGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationRoleBindingResponse"];
+                };
+            };
+        };
+    };
+    listLoginConnections: {
+        parameters: {
+            query?: {
+                page?: number;
+                size?: number;
+            };
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponsePageResponseLoginConnectionSummaryResponse"];
+                };
+            };
+        };
+    };
+    createLoginConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginConnectionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    suspendLoginConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    createLoginConnectionRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginConnectionRevisionCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    testLoginConnectionRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionTestResponse"];
+                };
+            };
+        };
+    };
+    writeLoginConnectionSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginConnectionSecretRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    resumeLoginConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    activateLoginConnectionRevision: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                revisionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    disableLoginConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmedConnectionActionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    list_11: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    create_5: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    suspend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: {
+                startIndex?: number;
+                count?: number;
+                filter?: string;
+            };
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimListResponse"];
+                };
+            };
+        };
+    };
+    createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/scim+json": components["schemas"]["ScimUserRequest"];
+                "application/json": components["schemas"]["ScimUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUserResource"];
+                };
+            };
+        };
+    };
+    rotateSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
     authorizeDevice: {
         parameters: {
             query?: never;
@@ -19992,6 +21367,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    discover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnterpriseLoginDiscoveryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseEnterpriseLoginDiscoveryResponse"];
                 };
             };
         };
@@ -20900,7 +22299,7 @@ export interface operations {
             };
         };
     };
-    list_13: {
+    list_14: {
         parameters: {
             query?: never;
             header?: never;
@@ -20920,7 +22319,7 @@ export interface operations {
             };
         };
     };
-    create_5: {
+    create_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -25419,12 +26818,32 @@ export interface operations {
             };
         };
     };
-    listLoginConnections: {
+    getLoginConnection: {
         parameters: {
-            query?: {
-                page?: number;
-                size?: number;
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionResponse"];
+                };
+            };
+        };
+    };
+    getLoginConnectionManagement: {
+        parameters: {
+            query?: never;
             header?: never;
             path: {
                 organizationId: string;
@@ -25439,7 +26858,73 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["ApiResponsePageResponseLoginConnectionSummaryResponse"];
+                    "*/*": components["schemas"]["ApiResponseLoginConnectionManagementResponse"];
+                };
+            };
+        };
+    };
+    serviceProviderConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        [key: string]: Record<string, never>;
+                    };
+                };
+            };
+        };
+    };
+    schemas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        [key: string]: Record<string, never>;
+                    }[];
+                };
+            };
+        };
+    };
+    resourceTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        [key: string]: Record<string, never>;
+                    }[];
                 };
             };
         };
@@ -25591,7 +27076,54 @@ export interface operations {
             };
         };
     };
-    listUsers: {
+    start: {
+        parameters: {
+            query?: {
+                returnTo?: string;
+            };
+            header?: never;
+            path: {
+                publicHandle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    callback: {
+        parameters: {
+            query?: {
+                state?: string;
+                code?: string;
+            };
+            header?: never;
+            path: {
+                publicHandle: string;
+            };
+            cookie?: {
+                SKILLHUB_ENT_BINDING?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listUsers_1: {
         parameters: {
             query?: {
                 search?: string;
@@ -25685,7 +27217,7 @@ export interface operations {
             };
         };
     };
-    list_11: {
+    list_12: {
         parameters: {
             query?: {
                 status?: string;
@@ -26050,7 +27582,7 @@ export interface operations {
             };
         };
     };
-    list_12: {
+    list_13: {
         parameters: {
             query?: never;
             header?: never;
@@ -26410,6 +27942,50 @@ export interface operations {
             };
         };
     };
+    getGithubRepositoryInstallPlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repositoryId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGithubRepositoryInstallPlanResponse"];
+                };
+            };
+        };
+    };
+    getGithubRepositoryInstallPlan_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                repositoryId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseGithubRepositoryInstallPlanResponse"];
+                };
+            };
+        };
+    };
     whoami_1: {
         parameters: {
             query?: never;
@@ -26646,6 +28222,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseSkillDeleteResponse"];
+                };
+            };
+        };
+    };
+    revokeOrganizationRole: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                bindingId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseOrganizationRoleBindingResponse"];
                 };
             };
         };

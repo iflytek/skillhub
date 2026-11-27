@@ -57,7 +57,7 @@ public class OrganizationMembershipService {
                 MembershipSourceType.MANUAL,
                 targetUserId,
                 account.getDisplayName(),
-                account.getEmail(),
+                null,
                 occurredAt
         );
         membership.activate(targetUserId, occurredAt);
