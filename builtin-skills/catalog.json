@@ -75,11 +75,7 @@
       "slug": "event-planner",
       "version": "1.0.0",
       "license": "Apache-2.0",
-      "upstream": {
-        "repository": "https://github.com/iflytek/skillhub",
-        "commit": "0000000000000000000000000000000000000000",
-        "path": "builtin-skills/skills/event-planner"
-      }
+      "upstream": null
     },
     {
       "slug": "exam-ready",
@@ -125,11 +121,7 @@
       "slug": "meal-and-grocery-planner",
       "version": "1.0.0",
       "license": "Apache-2.0",
-      "upstream": {
-        "repository": "https://github.com/iflytek/skillhub",
-        "commit": "0000000000000000000000000000000000000000",
-        "path": "builtin-skills/skills/meal-and-grocery-planner"
-      }
+      "upstream": null
     },
     {
       "slug": "meeting-note-summarizer",
@@ -155,11 +147,7 @@
       "slug": "packing-checklist",
       "version": "1.0.0",
       "license": "Apache-2.0",
-      "upstream": {
-        "repository": "https://github.com/iflytek/skillhub",
-        "commit": "0000000000000000000000000000000000000000",
-        "path": "builtin-skills/skills/packing-checklist"
-      }
+      "upstream": null
     },
     {
       "slug": "plugin-scanner",
@@ -245,11 +233,7 @@
       "slug": "trip-planning-brief",
       "version": "1.0.0",
       "license": "Apache-2.0",
-      "upstream": {
-        "repository": "https://github.com/iflytek/skillhub",
-        "commit": "0000000000000000000000000000000000000000",
-        "path": "builtin-skills/skills/trip-planning-brief"
-      }
+      "upstream": null
     },
     {
       "slug": "video-frames",
