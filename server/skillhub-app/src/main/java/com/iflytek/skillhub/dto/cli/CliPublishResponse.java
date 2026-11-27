@@ -4,5 +4,6 @@ public record CliPublishResponse(
         String namespace,
         String slug,
         String version,
-        String visibility
+        String visibility,
+        String status
 ) {}

@@ -48,6 +48,13 @@ class OidcLoginProtocolClientTest {
         assertThat(claims.getSubject()).isEqualTo("subject-1");
     }
 
+    private static String tamperSignature(String token) {
+        int signatureStart = token.lastIndexOf('.') + 1;
+        int index = signatureStart + (token.length() - signatureStart) / 2;
+        char replacement = token.charAt(index) == 'a' ? 'b' : 'a';
+        return token.substring(0, index) + replacement + token.substring(index + 1);
+    }
+
     @Test
     void rejectsWrongNonceAndTamperedToken() throws Exception {
         OidcHttpDocumentClient http = mock(OidcHttpDocumentClient.class);
@@ -62,7 +69,11 @@ class OidcLoginProtocolClientTest {
                         .expirationTime(Date.from(NOW.plusSeconds(300))).claim("nonce", "nonce-1").build());
         jwt.sign(new RSASSASigner(key));
         String token = jwt.serialize();
-        String tampered = token.substring(0, token.length() - 2) + "aa";
+        // Mutate a character in the middle of the signature segment. Replacing the trailing
+        // characters is not deterministic: when the original signature already ends with the
+        // replacement, the token is unchanged and this test would pass a valid token through.
+        String tampered = tamperSignature(token);
+        assertThat(tampered).isNotEqualTo(token);
         var metadata = new OidcLoginProtocolClient.ProviderMetadata(null, null,
                 URI.create("https://idp.example.test/jwks"), null);
 
