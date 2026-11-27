@@ -2245,7 +2245,10 @@
       "button": "安装到 Agent",
       "copied": "安装指令已复制",
       "prompt": "请根据 {{guideUrl}} 接入 SkillHub，并从该 SkillHub 安装 {{skill}} 的 {{version}} 版本。"
-    }
+    },
+    "crossSourceTwinGithub": "该技能在 @github 还有同名版本（开源同步）。",
+    "crossSourceTwinPlatform": "该技能在平台内部还有同名版本。",
+    "crossSourceTwinOpen": "查看该版本"
   },
   "skillCompare": {
     "pageTitle": "版本对比",
@@ -3566,6 +3569,17 @@
     "overviewTitle": "套件概述",
     "noOverview": "作者暂未提供详细概述。",
     "viewMember": "查看技能：{{name}}",
+    "workflowTab": "工作流",
+    "workflowTitle": "这套技能怎么跑",
+    "workflowNote": "顺序与版本取自当前套件版本；点击成员可查看它的完整指令。",
+    "startHere": "从这里开始",
+    "viewEntryInstructions": "查看入口技能指令",
+    "copyCoordinate": "复制坐标",
+    "coordinateCopied": "已复制入口技能坐标",
+    "entrySummaryFallback": "入口技能负责决定成员调用顺序与汇总格式。",
+    "entryRoleHint": "职责说明见上方入口技能卡片。",
+    "memberSummaryFallback": "职责见该技能的 SKILL.md。",
+    "installNextStep": "安装后先对 Agent 说：使用 {{entry}} 开始这个套件。",
     "pinnedVersion": "固定版本 v{{version}}",
     "entrySkill": "入口技能",
     "startWithEntry": "从入口技能开始",

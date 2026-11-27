@@ -2248,7 +2248,10 @@
       "button": "Install for Agent",
       "copied": "Agent prompt copied",
       "prompt": "Follow {{guideUrl}} to connect SkillHub and install {{skill}} version {{version}} from this SkillHub."
-    }
+    },
+    "crossSourceTwinGithub": "A skill with the same name also exists in @github (open-source sync).",
+    "crossSourceTwinPlatform": "A skill with the same name also exists inside the platform.",
+    "crossSourceTwinOpen": "View that version"
   },
   "skillCompare": {
     "pageTitle": "Version Compare",
@@ -3570,6 +3573,17 @@
     "overviewTitle": "Suite overview",
     "noOverview": "The author has not provided a detailed overview.",
     "viewMember": "View skill: {{name}}",
+    "workflowTab": "Workflow",
+    "workflowTitle": "How this suite runs",
+    "workflowNote": "Order and versions come from this suite version. Open a member to read its full instructions.",
+    "startHere": "Start here",
+    "viewEntryInstructions": "View entry skill instructions",
+    "copyCoordinate": "Copy coordinate",
+    "coordinateCopied": "Entry skill coordinate copied",
+    "entrySummaryFallback": "The entry skill decides the member order and the summary format.",
+    "entryRoleHint": "Its role is described in the entry skill card above.",
+    "memberSummaryFallback": "See this skill's SKILL.md for its role.",
+    "installNextStep": "After installing, tell your agent: use {{entry}} to start this suite.",
     "pinnedVersion": "Pinned version v{{version}}",
     "entrySkill": "Entry skill",
     "startWithEntry": "Start with the entry skill",
