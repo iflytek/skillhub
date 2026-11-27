@@ -18,6 +18,7 @@ import com.iflytek.skillhub.service.SkillPublishAppService;
 import com.iflytek.skillhub.service.AuditRequestContext;
 import jakarta.servlet.http.HttpServletRequest;
 import com.iflytek.skillhub.ratelimit.RateLimit;
+import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -85,6 +86,8 @@ public class SkillPublishController extends BaseApiController {
             @RequestParam(value = "displayName", required = false) String displayName,
             @RequestParam(value = "shortDescription", required = false) String shortDescription,
             @RequestParam(value = "overview", required = false) String overview,
+            @Parameter(description = "Optional release note for this version, at most 4000 characters")
+            @RequestParam(value = "changelog", required = false) String changelog,
             @RequestParam(value = "resetPresentation", defaultValue = "false") boolean resetPresentation,
             @AuthenticationPrincipal PlatformPrincipal principal, HttpServletRequest request) throws IOException {
 
@@ -115,7 +118,7 @@ public class SkillPublishController extends BaseApiController {
                 principal.platformRoles(),
                 confirmWarnings, avatarAction, avatarUploadId, expectedSlug, displayName,
                 shortDescription, overview, resetPresentation, AuditRequestContext.from(request),
-                principal.tokenCapabilities()
+                principal.tokenCapabilities(), normalizeChangelog(changelog)
         );
 
         PublishResponse response = new PublishResponse(
@@ -130,5 +133,17 @@ public class SkillPublishController extends BaseApiController {
         skillHubMetrics.incrementSkillPublish(namespace, publishResult.version().getStatus().name());
 
         return ok("response.success.published", response);
+    }
+
+    /** Optional release note; trimmed, capped so a stuck paste cannot bloat the row. */
+    private static String normalizeChangelog(String changelog) {
+        if (changelog == null || changelog.isBlank()) {
+            return null;
+        }
+        String trimmed = changelog.strip();
+        if (trimmed.length() > 4000) {
+            throw new DomainBadRequestException("error.skill.publish.changelog.tooLong");
+        }
+        return trimmed;
     }
 }

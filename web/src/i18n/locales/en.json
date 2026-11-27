@@ -3111,7 +3111,9 @@
       "checkMySkills": "Check My skills",
       "returnToForm": "Return to editing",
       "receiptHint": "This is the submission receipt. Open this version to check its latest progress."
-    }
+    },
+    "changelog": "Release notes (optional)",
+    "changelogHelp": "Say what changed in this version. It is shown in the skill's version list so others can decide whether to upgrade."
   },
   "toast": {
     "success": "Success",

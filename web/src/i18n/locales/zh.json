@@ -3107,7 +3107,9 @@
       "checkMySkills": "查看我的技能核对",
       "returnToForm": "返回继续编辑",
       "receiptHint": "这是本次提交的返回结果，最新进度请进入本次版本查看。"
-    }
+    },
+    "changelog": "版本更新说明（可选）",
+    "changelogHelp": "写清这个版本改了什么。会显示在该技能的版本列表里，方便他人判断是否升级。"
   },
   "toast": {
     "success": "成功",
