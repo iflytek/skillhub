@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { SkillSuite, SkillSuiteVersion } from '@/api/types'
@@ -147,17 +147,62 @@ describe('SuiteDetailPage', () => {
     expect(screen.getByText('医疗健康')).not.toBeNull()
     expect(screen.getAllByRole('tab')).toHaveLength(3)
     expect(screen.getByTestId('suite-overview').textContent).toContain('Run the entry skill first.')
-    expect(screen.queryByText('Structures medical records.')).toBeNull()
+    expect(screen.getByTestId('suite-overview').textContent).not.toContain('Structures medical records.')
+    // Member summaries belong to the workflow list, not to the authored overview.
+    expect(screen.getAllByText('Structures medical records.').length).toBeGreaterThan(0)
   })
 
-  it('does not fetch or embed the Entry Skill SKILL.md in the Suite overview', () => {
+  it('puts the entry skill in the header with its pinned version and next action', () => {
+    mocks.detail = { data: suite(), isLoading: false, error: null }
+
+    render(<SuiteDetailPage />)
+
+    const card = document.querySelector<HTMLElement>('[data-analytics-id="suite.entry.card"]')!
+    expect(card.textContent).toContain('Medical Records')
+    expect(card.textContent).toContain('@global/medical-records@1.0.0')
+    expect(card.textContent).toContain('Structures medical records.')
+    fireEvent.click(within(card).getByRole('button', { name: 'suite.viewEntryInstructions' }))
+    expect(mocks.navigate).toHaveBeenCalledWith(expect.objectContaining({
+      to: '/space/$namespace/$slug',
+      params: { namespace: 'global', slug: 'medical-records' },
+      search: expect.objectContaining({ version: '1.0.0' }),
+    }))
+  })
+
+  it('lists members in pinned order and marks the entry step without repeating its summary', () => {
+    mocks.detail = { data: suite(), isLoading: false, error: null }
+
+    render(<SuiteDetailPage />)
+
+    const steps = screen.getAllByRole('listitem')
+    expect(steps[0].textContent).toContain('Medical Records')
+    expect(steps[0].textContent).toContain('suite.entryRoleHint')
+    expect(steps[0].textContent).not.toContain('Structures medical records.')
+    expect(steps[1].textContent).toContain('deleted-helper')
+  })
+
+  it('copies the entry coordinate from the header card', async () => {
+    mocks.detail = { data: suite(), isLoading: false, error: null }
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', Object.create(navigator, { clipboard: { value: { writeText } } }))
+
+    render(<SuiteDetailPage />)
+    fireEvent.click(screen.getByRole('button', { name: 'suite.copyCoordinate' }))
+
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith('@global/medical-records@1.0.0'))
+    expect(mocks.toastSuccess).toHaveBeenCalledWith('suite.coordinateCopied', '@global/medical-records@1.0.0')
+  })
+
+  it('does not fetch the Entry Skill SKILL.md and keeps the header card as its only entry point', () => {
     mocks.detail = { data: suite(), isLoading: false, error: null }
 
     render(<SuiteDetailPage />)
 
     expect(mocks.entryGuideCalls).not.toHaveBeenCalled()
-    expect(screen.getByText('suite.startWithEntry')).not.toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: 'suite.viewPinnedVersion' }))
+    expect(screen.queryByText('suite.startWithEntry')).toBeNull()
+    // One entry surface: the header card, not also a sidebar copy.
+    expect(document.querySelectorAll('[data-analytics-id="suite.entry.card"]')).toHaveLength(1)
+    fireEvent.click(screen.getByRole('button', { name: 'suite.viewEntryInstructions' }))
     expect(mocks.navigate).toHaveBeenCalledWith(expect.objectContaining({
       to: '/space/$namespace/$slug',
       search: expect.objectContaining({ version: '1.0.0' }),
@@ -250,7 +295,7 @@ describe('SuiteDetailPage', () => {
     render(<SuiteDetailPage />)
     fireEvent.click(screen.getByRole('button', { name: button }))
 
-    await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledWith('suite.commandCopied'))
+    await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledWith('suite.commandCopied', expect.any(String)))
     expect(execCommand).toHaveBeenCalledWith('copy')
     expect(mocks.toastError).not.toHaveBeenCalled()
     expect(document.querySelector('textarea')).toBeNull()
@@ -264,7 +309,7 @@ describe('SuiteDetailPage', () => {
     render(<SuiteDetailPage />)
     fireEvent.click(screen.getByRole('button', { name: 'suite.copyInstallCommand' }))
 
-    await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledWith('suite.commandCopied'))
+    await waitFor(() => expect(mocks.toastSuccess).toHaveBeenCalledWith('suite.commandCopied', expect.any(String)))
     expect(writeText).toHaveBeenCalledWith(
       `skillhub suite install @global/care-workflow --version 1.0.0 --registry ${window.location.origin}`,
     )

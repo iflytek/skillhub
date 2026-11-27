@@ -2235,7 +2235,10 @@
       "button": "에이전트용 설치",
       "copied": "에이전트 프롬프트를 복사했습니다",
       "prompt": "{{guideUrl}}의 안내에 따라 SkillHub에 연결하고 이 SkillHub에서 {{skill}}의 {{version}} 버전을 설치하세요."
-    }
+    },
+    "crossSourceTwinGithub": "같은 이름의 스킬이 @github(오픈소스 동기화)에도 있습니다.",
+    "crossSourceTwinPlatform": "같은 이름의 스킬이 플랫폼 내부에도 있습니다.",
+    "crossSourceTwinOpen": "해당 버전 보기"
   },
   "skillCompare": {
     "pageTitle": "버전 비교",
@@ -3556,6 +3559,17 @@
     "overviewTitle": "스킬 모음 개요",
     "noOverview": "작성자가 상세 개요를 제공하지 않았습니다.",
     "viewMember": "스킬 보기: {{name}}",
+    "workflowTab": "워크플로",
+    "workflowTitle": "이 스위트가 실행되는 방식",
+    "workflowNote": "순서와 버전은 현재 스위트 버전을 따릅니다. 구성원을 열면 전체 지침을 볼 수 있습니다.",
+    "startHere": "여기서 시작",
+    "viewEntryInstructions": "진입 스킬 지침 보기",
+    "copyCoordinate": "좌표 복사",
+    "coordinateCopied": "진입 스킬 좌표를 복사했습니다",
+    "entrySummaryFallback": "진입 스킬이 구성원 호출 순서와 요약 형식을 정합니다.",
+    "entryRoleHint": "역할은 위 진입 스킬 카드에 설명되어 있습니다.",
+    "memberSummaryFallback": "역할은 해당 스킬의 SKILL.md를 참고하세요.",
+    "installNextStep": "설치 후 Agent에게 말하세요: {{entry}}로 이 스위트를 시작합니다.",
     "pinnedVersion": "고정 버전 v{{version}}",
     "entrySkill": "진입점 스킬",
     "startWithEntry": "진입점 스킬부터 시작하세요",
