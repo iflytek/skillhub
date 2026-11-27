@@ -87,6 +87,7 @@ vi.mock('@/shared/components/pagination', () => ({
 
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useArchiveSkill: () => ({ mutateAsync: vi.fn() }),
+  useDeleteSkill: () => ({ mutateAsync: vi.fn() }),
   useUnarchiveSkill: () => ({ mutateAsync: vi.fn() }),
   useWithdrawSkillReview: () => ({ mutateAsync: vi.fn() }),
 }))

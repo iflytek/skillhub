@@ -5,12 +5,17 @@ import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vites
 
 const navigate = vi.fn()
 const copy = vi.fn()
+const deleteSkill = vi.fn()
 const retryVersions = vi.fn()
 const retryCompare = vi.fn()
 const useVersions = vi.fn()
 const useCompare = vi.fn()
 vi.hoisted(() => { vi.stubEnv('BASE_URL', '/skillhub/') })
-let skill: ReturnType<typeof makeSkill> & { ownerPreviewVersion?: { id: number; version: string; status: string } } = makeSkill()
+type TestSkill = Omit<ReturnType<typeof makeSkill>, 'publishedVersion'> & {
+  publishedVersion?: ReturnType<typeof makeSkill>['publishedVersion']
+  ownerPreviewVersion?: { id: number; version: string; status: string }
+}
+let skill: TestSkill = makeSkill()
 let showEmpty = false
 let superAdmin = false
 let search: { filter?: string; q?: string; namespace?: string; page?: number } = {}
@@ -41,6 +46,7 @@ vi.mock('@/shared/hooks/use-user-queries', () => ({
 vi.mock('@/shared/hooks/use-namespace-queries', () => ({ useMyNamespaces: () => ({ data: [] }) }))
 vi.mock('@/shared/hooks/use-skill-queries', () => ({
   useArchiveSkill: () => ({ mutateAsync: vi.fn() }),
+  useDeleteSkill: () => ({ mutateAsync: deleteSkill }),
   useUnarchiveSkill: () => ({ mutateAsync: vi.fn() }),
   useWithdrawSkillReview: () => ({ mutateAsync: vi.fn() }),
   useSkillVersions: (...args: unknown[]) => useVersions(...args),
@@ -52,6 +58,7 @@ vi.mock('@/features/skill/skill-visibility-dialog', () => ({ SkillVisibilityDial
 vi.mock('@/shared/lib/clipboard', () => ({ copyToClipboard: (...args: unknown[]) => copy(...args) }))
 vi.mock('@/shared/lib/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }))
 
+import { toast } from '@/shared/lib/toast'
 import { MySkillsPage } from './my-skills'
 
 async function openMenu() {
@@ -69,6 +76,9 @@ beforeEach(() => {
   superAdmin = false
   navigate.mockReset()
   copy.mockReset()
+  deleteSkill.mockReset()
+  vi.mocked(toast.success).mockReset()
+  vi.mocked(toast.error).mockReset()
   retryVersions.mockReset()
   retryCompare.mockReset()
   useVersions.mockReturnValue({ data: [
@@ -161,10 +171,90 @@ describe('My Skills interactions with real menu and dialog', () => {
     render(<MySkillsPage />)
     expect(screen.queryByRole('button', { name: 'mySkills.update' })).toBeNull()
     await openMenu()
-    for (const name of ['mySkills.archive', 'skillVisibility.title', 'mySkills.withdrawReview', 'mySkills.promoteToGlobal']) {
+    for (const name of ['mySkills.archive', 'skillVisibility.title', 'mySkills.withdrawReview', 'mySkills.promoteToGlobal', 'mySkills.deleteSkill']) {
       expect(screen.queryByRole('menuitem', { name })).toBeNull()
     }
     expect(screen.getByRole('menuitem', { name: 'mySkills.viewDetail' })).toBeTruthy()
+  })
+
+  it('requires the exact slug in a second step before deleting an archived skill', async () => {
+    skill = { ...makeSkill(), status: 'ARCHIVED' }
+    deleteSkill.mockResolvedValue({ skillId: 1 })
+    render(<MySkillsPage />)
+    await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.deleteSkill' }))
+    const firstStep = await screen.findByRole('dialog', { name: 'mySkills.deleteConfirmTitle' })
+    expect(deleteSkill).not.toHaveBeenCalled()
+    fireEvent.click(within(firstStep).getByRole('button', { name: 'mySkills.deleteSkillContinue' }))
+    const slugStep = await screen.findByRole('dialog', { name: 'mySkills.deleteSkillInputTitle' })
+    const confirm = within(slugStep).getByRole('button', { name: 'mySkills.deleteSkillFinal' })
+    expect(confirm.hasAttribute('disabled')).toBe(true)
+
+    fireEvent.change(within(slugStep).getByTestId('delete-skill-slug-input'), { target: { value: 'wrong-slug' } })
+    expect(within(slugStep).getByRole('button', { name: 'mySkills.deleteSkillFinal' }).hasAttribute('disabled')).toBe(true)
+    fireEvent.click(within(slugStep).getByRole('button', { name: 'mySkills.deleteSkillFinal' }))
+    expect(deleteSkill).not.toHaveBeenCalled()
+
+    fireEvent.change(within(slugStep).getByTestId('delete-skill-slug-input'), { target: { value: 'demo' } })
+    fireEvent.click(within(slugStep).getByRole('button', { name: 'mySkills.deleteSkillFinal' }))
+    await waitFor(() => expect(deleteSkill).toHaveBeenCalledWith({ namespace: 'team', slug: 'demo' }))
+    expect(navigate).not.toHaveBeenCalled()
+  })
+
+  it('keeps the dialog open and does not raise a second error when deletion fails', async () => {
+    skill = { ...makeSkill(), status: 'ARCHIVED' }
+    deleteSkill.mockRejectedValue(new Error('promotion.revocation.required'))
+    render(<MySkillsPage />)
+    await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.deleteSkill' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'mySkills.deleteConfirmTitle' })).getByRole('button', { name: 'mySkills.deleteSkillContinue' }))
+    const slugStep = await screen.findByRole('dialog', { name: 'mySkills.deleteSkillInputTitle' })
+    fireEvent.change(within(slugStep).getByTestId('delete-skill-slug-input'), { target: { value: 'demo' } })
+    fireEvent.click(within(slugStep).getByRole('button', { name: 'mySkills.deleteSkillFinal' }))
+    await waitFor(() => expect(deleteSkill).toHaveBeenCalled())
+    // MutationCache owns the single failure toast; the page must not add another.
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog', { name: 'mySkills.deleteSkillInputTitle' })).toBeTruthy()
+  })
+
+  it('closes the slug step without reopening the first confirmation', async () => {
+    skill = { ...makeSkill(), status: 'ARCHIVED' }
+    render(<MySkillsPage />)
+    await openMenu()
+    fireEvent.click(screen.getByRole('menuitem', { name: 'mySkills.deleteSkill' }))
+    fireEvent.click(within(await screen.findByRole('dialog', { name: 'mySkills.deleteConfirmTitle' })).getByRole('button', { name: 'mySkills.deleteSkillContinue' }))
+    const slugStep = await screen.findByRole('dialog', { name: 'mySkills.deleteSkillInputTitle' })
+    fireEvent.click(within(slugStep).getByRole('button', { name: 'dialog.cancel' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // The first step must not come back, and reopening the menu starts from scratch.
+    expect(screen.queryByRole('dialog', { name: 'mySkills.deleteConfirmTitle' })).toBeNull()
+    expect(deleteSkill).not.toHaveBeenCalled()
+  })
+
+  it('never offers deletion for a global copy or a promoted source skill', async () => {
+    for (const promotionRole of ['GLOBAL_COPY', 'TEAM_SOURCE']) {
+      skill = { ...makeSkill({ ownerReadOnly: false, promotionRole }), status: 'ARCHIVED' }
+      const view = render(<MySkillsPage />)
+      await openMenu()
+      expect(screen.queryByRole('menuitem', { name: 'mySkills.deleteSkill' })).toBeNull()
+      view.unmount()
+      cleanup()
+    }
+  })
+
+  it('never exposes permanent deletion for an active skill that still has a published version', async () => {
+    render(<MySkillsPage />)
+    await openMenu()
+    expect(screen.queryByRole('menuitem', { name: 'mySkills.deleteSkill' })).toBeNull()
+    expect(screen.getByRole('menuitem', { name: 'mySkills.archive' })).toBeTruthy()
+  })
+
+  it('offers permanent deletion for a skill that never published a version', async () => {
+    skill = { ...makeSkill(), status: 'REJECTED', publishedVersion: undefined }
+    render(<MySkillsPage />)
+    await openMenu()
+    expect(screen.getByRole('menuitem', { name: 'mySkills.deleteSkill' })).toBeTruthy()
   })
 
   it('preserves the separate hidden-governance restore action', async () => {
@@ -175,6 +265,7 @@ describe('My Skills interactions with real menu and dialog', () => {
     expect(screen.getByRole('menuitem', { name: 'mySkills.restoreHidden' })).toBeTruthy()
     expect(screen.queryByRole('menuitem', { name: 'mySkills.viewDetail' })).toBeNull()
     expect(screen.queryByRole('menuitem', { name: 'mySkills.archive' })).toBeNull()
+    expect(screen.queryByRole('menuitem', { name: 'mySkills.deleteSkill' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'mySkills.update' })).toBeNull()
   })
 

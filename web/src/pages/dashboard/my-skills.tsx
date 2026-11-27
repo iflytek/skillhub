@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Archive, ArrowUpRight, Copy, Download, Eye, GitCompareArrows, Globe, Info, LockKeyhole, MoreHorizontal, Package, Plus, RotateCcw, Search, Undo2, Upload, Users } from 'lucide-react'
+import { Archive, ArrowUpRight, Copy, Download, Eye, GitCompareArrows, Globe, Info, LockKeyhole, MoreHorizontal, Package, Plus, RotateCcw, Search, Trash2, Undo2, Upload, Users } from 'lucide-react'
 import styles from './my-skills.module.css'
 import { useLocation, useNavigate, useSearch } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '@/features/auth/use-auth'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/shared/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/shared/ui/dropdown-menu'
 import { copyToClipboard } from '@/shared/lib/clipboard'
 import { SkillVersionCompareContent } from '@/features/skill/skill-version-compare-content'
@@ -17,7 +17,7 @@ import { EmptyState } from '@/shared/components/empty-state'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
-import { useArchiveSkill, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
+import { useArchiveSkill, useDeleteSkill, useUnarchiveSkill, useWithdrawSkillReview } from '@/shared/hooks/use-skill-queries'
 import { useMyNamespaces } from '@/shared/hooks/use-namespace-queries'
 import { useMySkills, useSubmitPromotion } from '@/shared/hooks/use-user-queries'
 import { useRestoreHiddenSkill } from '@/features/admin/use-admin-skills'
@@ -27,6 +27,7 @@ import { toast } from '@/shared/lib/toast'
 import { withBasePath } from '@/shared/lib/base-path'
 import { buildReturnTo } from '@/shared/lib/auth-route'
 import { SkillVisibilityDialog } from '@/features/skill/skill-visibility-dialog'
+import { isDeleteSlugConfirmationValid } from '@/features/skill/skill-delete-flow'
 import { SkillAvatar } from '@/features/skill/skill-avatar'
 import { SkillAvatarManager } from '@/features/skill/skill-avatar-manager'
 import { ApiError } from '@/api/client'
@@ -81,6 +82,9 @@ export function MySkillsPage() {
   const [visibilityTarget, setVisibilityTarget] = useState<{ namespace: string; slug: string; visibility: string } | null>(null)
   const scrollKey = JSON.stringify([user?.userId, keyword, namespaceFilter, filter, page])
   const [archiveTarget, setArchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
+  const [deleteSlugInput, setDeleteSlugInput] = useState('')
+  const [deleteSlugDialogOpen, setDeleteSlugDialogOpen] = useState(false)
   const [unarchiveTarget, setUnarchiveTarget] = useState<{ namespace: string; slug: string; name: string } | null>(null)
   const [withdrawTarget, setWithdrawTarget] = useState<{ namespace: string; slug: string; name: string; version: string } | null>(null)
   const [promotionTarget, setPromotionTarget] = useState<{ skillId: number; versionId: number; name: string; version: string } | null>(null)
@@ -116,6 +120,7 @@ export function MySkillsPage() {
   const hasActiveFilters = hasActiveSearch || filter !== 'ALL'
   const emptyStateKey = getMySkillEmptyStateKey(filter)
   const archiveMutation = useArchiveSkill()
+  const deleteMutation = useDeleteSkill()
   const unarchiveMutation = useUnarchiveSkill()
   const withdrawMutation = useWithdrawSkillReview()
   const submitPromotionMutation = useSubmitPromotion()
@@ -251,6 +256,38 @@ export function MySkillsPage() {
       toast.error(t('mySkills.archiveErrorTitle'), error instanceof Error ? error.message : '')
       throw error
     }
+  }
+
+  const openDeleteSlugDialog = () => {
+    setDeleteSlugInput('')
+    setDeleteSlugDialogOpen(true)
+  }
+
+  const closeDeleteSlugDialog = () => {
+    setDeleteSlugDialogOpen(false)
+    setDeleteSlugInput('')
+    setDeleteTarget(null)
+  }
+
+  const handleDeleteSkill = async () => {
+    if (!deleteTarget || !isDeleteSlugConfirmationValid(deleteTarget.slug, deleteSlugInput)) {
+      return
+    }
+    try {
+      await deleteMutation.mutateAsync({
+        namespace: deleteTarget.namespace,
+        slug: deleteTarget.slug,
+      })
+    } catch {
+      // MutationCache already reports the failure; consuming the rejection keeps the
+      // dialog open for a retry without a second toast or an unhandled rejection.
+      return
+    }
+    toast.success(
+      t('mySkills.deleteSuccessTitle'),
+      t('mySkills.deleteSuccessDescription', { skill: deleteTarget.name }),
+    )
+    closeDeleteSlugDialog()
   }
 
   const handleUnarchiveSkill = async () => {
@@ -453,6 +490,12 @@ export function MySkillsPage() {
                 ? skill.status : preview?.status ?? headlineVersion?.status ?? skill.status
               const writable = !hidden && !ownerReadOnly
               const canChangeVisibility = writable && skill.status === 'ACTIVE' && !!publishedVersion
+              // Permanent deletion is offered only where the backend will accept it: the skill is
+              // archived or never published, and it is not part of a global promotion chain.
+              // A global copy and a promoted source are both rejected with
+              // promotion.revocation.required until the revocation is approved.
+              const promotionRole = skill.managementState?.promotionRole
+              const canHardDelete = writable && !promotionRole && (skill.status === 'ARCHIVED' || !publishedVersion)
               const coordinate = `@${skill.namespace}/${skill.slug}`
               const visibilityLabel = t(`publish.visibilityOptions.${skill.visibility === 'PRIVATE' ? 'private' : skill.visibility === 'NAMESPACE_ONLY' ? 'namespaceOnly' : 'public'}`)
               const versionLabel = preview && publishedVersion
@@ -508,7 +551,7 @@ export function MySkillsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className={styles.moreMenu} onClick={event => event.stopPropagation()}
-                              onCloseAutoFocus={event => { if (compareTarget || visibilityTarget || archiveTarget || unarchiveTarget || withdrawTarget || promotionTarget || restoreHiddenTarget) event.preventDefault() }}>
+                              onCloseAutoFocus={event => { if (compareTarget || visibilityTarget || archiveTarget || deleteTarget || unarchiveTarget || withdrawTarget || promotionTarget || restoreHiddenTarget) event.preventDefault() }}>
                               {!hidden && <DropdownMenuItem onSelect={() => deferMenuNavigation(openDetail)}><Eye aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.viewDetail')}</DropdownMenuItem>}
                               <DropdownMenuItem onSelect={async () => {
                                 try { await copyToClipboard(coordinate); toast.success(t('mySkills.coordinateCopied')) }
@@ -539,6 +582,9 @@ export function MySkillsPage() {
                               </DropdownMenuItem></> : publishedVersion ? <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.archive.request" className={styles.dangerAction} onSelect={() => setArchiveTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })}>
                                 <Archive aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.archive')}
                               </DropdownMenuItem></> : null)}
+                              {canHardDelete && <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.delete.request" className={styles.dangerAction} onSelect={() => setDeleteTarget({ namespace: skill.namespace, slug: skill.slug, name: displayName })}>
+                                <Trash2 aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.deleteSkill')}
+                              </DropdownMenuItem></>}
                               {canRestoreHidden && <><DropdownMenuSeparator /><DropdownMenuItem data-analytics-id="skill.restore.request" onSelect={() => setRestoreHiddenTarget({ skillId: skill.id, name: displayName })}>
                                 <RotateCcw aria-hidden="true" className="mr-2 h-4 w-4" />{t('mySkills.restoreHidden')}
                               </DropdownMenuItem></>}
@@ -679,6 +725,61 @@ export function MySkillsPage() {
         confirmText={t('mySkills.unarchive')}
         onConfirm={handleUnarchiveSkill}
       />
+
+      <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.delete.continue" cancelAnalyticsId="skill.delete.cancel"
+        open={!!deleteTarget && !deleteSlugDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteTarget(null)
+          }
+        }}
+        title={t('mySkills.deleteConfirmTitle')}
+        description={deleteTarget ? t('mySkills.deleteConfirmDescription', { skill: deleteTarget.name }) : ''}
+        confirmText={t('mySkills.deleteSkillContinue')}
+        variant="destructive"
+        // Keep the shared target: the slug step reuses it, so close the first step ourselves.
+        onConfirm={() => {
+          openDeleteSlugDialog()
+          return false
+        }}
+      />
+
+      <Dialog onOpenChange={(open) => {
+        if (open) {
+          setDeleteSlugDialogOpen(true)
+        } else {
+          closeDeleteSlugDialog()
+        }
+      }} open={deleteSlugDialogOpen}>
+        <DialogContent aria-label={t('mySkills.deleteSkillInputTitle')} closeAnalyticsId="skill.delete.cancel" onCloseAutoFocus={restoreMoreFocus}>
+          <DialogHeader>
+            <DialogTitle>{t('mySkills.deleteSkillInputTitle')}</DialogTitle>
+            <DialogDescription>{deleteTarget ? t('mySkills.deleteSkillInputDescription', { slug: deleteTarget.slug }) : ''}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-3 text-sm text-muted-foreground">
+              {t('mySkills.deleteSkillWarning')}
+            </div>
+            <Input
+              data-testid="delete-skill-slug-input"
+              onChange={(event) => setDeleteSlugInput(event.target.value)}
+              placeholder={t('mySkills.deleteSkillInputPlaceholder')}
+              value={deleteSlugInput}
+            />
+          </div>
+          <DialogFooter>
+            <Button data-analytics-id="skill.delete.cancel" onClick={closeDeleteSlugDialog} variant="outline">
+              {t('dialog.cancel')}
+            </Button>
+            <Button data-analytics-id="skill.delete.confirm"
+              disabled={!deleteTarget || !isDeleteSlugConfirmationValid(deleteTarget.slug, deleteSlugInput) || deleteMutation.isPending}
+              onClick={handleDeleteSkill}
+              variant="destructive">
+              {deleteMutation.isPending ? t('dialog.processing') : t('mySkills.deleteSkillFinal')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog onCloseAutoFocus={restoreMoreFocus} confirmAnalyticsId="skill.review.withdraw.confirm" cancelAnalyticsId="skill.review.withdraw.cancel"
         open={!!withdrawTarget}
