@@ -49,6 +49,26 @@ test('rate limit hints only interpolate a validated wait duration', () => {
   }
 });
 
+test('system namespace member directory denial explains the supported space type', () => {
+  expect(catalogErrorMessage({
+    code: 'skillhub/registry-error',
+    details: { reason: 'ACCESS_DENIED', errorCode: 'error.namespace.member.listForbidden' },
+  })).toBe('系统空间不支持成员列表。请选择团队空间查看成员。');
+  expect(catalogErrorMessage({
+    code: 'skillhub/registry-error',
+    details: { reason: 'ACCESS_DENIED', errorCode: 'private.diagnostic' },
+  })).toBe('当前 Token 权限或空间角色不足，请到来源网页核对授权。');
+});
+
+test('missing token scope guidance shows validated scope names only', () => {
+  const message = (requiredScope: string) => catalogErrorMessage({
+    code: 'skillhub/registry-error', details: { reason: 'TOKEN_SCOPE_REQUIRED', requiredScope },
+  });
+  expect(message('namespace:read')).toContain('namespace:read');
+  expect(message('namespace:read')).toContain('新建个人 API Token');
+  expect(message('private diagnostic')).not.toContain('private diagnostic');
+});
+
 test('authentication failures retain their classification across all browser readers', async () => {
   const { catalogError } = await import('../src/client/catalog-error.js');
   const expired = catalogError({ code: 'skillhub/registry-error', details: { reason: 'AUTH_REQUIRED' } });

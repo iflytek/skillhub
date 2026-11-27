@@ -15,7 +15,7 @@ export interface WorkspaceSkills {
   items: { namespace: string; slug: string; version: string; versionId: number }[]; nextCursor: string | null;
 }
 export interface UploadTarget { slug: string; existing: { id: number; visibility: Visibility } | null }
-export interface UploadReceipt { namespace: string; slug: string; version: string; visibility: Visibility }
+export interface UploadReceipt { namespace: string; slug: string; version: string; visibility: Visibility; versionId?: number }
 export type EditableRole = Exclude<TeamRole, 'OWNER'>;
 export type MemberMutation =
   | { action: 'add' | 'role'; userId: string; role: EditableRole }

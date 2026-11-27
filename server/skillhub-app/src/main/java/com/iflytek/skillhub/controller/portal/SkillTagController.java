@@ -4,6 +4,7 @@ import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.SkillTag;
 import com.iflytek.skillhub.domain.skill.service.SkillTagService;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService.Preference;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.MessageResponse;
@@ -39,14 +40,13 @@ public class SkillTagController extends BaseApiController {
             @PathVariable String namespace,
             @PathVariable String slug,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        List<SkillTag> tags = skillTagService.listTags(
-                namespace,
-                slug,
-                userId,
-                userNsRoles != null ? userNsRoles : Map.of()
-        );
+        Map<Long, NamespaceRole> roles = userNsRoles != null ? userNsRoles : Map.of();
+        List<SkillTag> tags = Boolean.TRUE.equals(apiToken)
+                ? skillTagService.listTags(namespace, slug, userId, roles, Preference.PUBLIC_PUBLISHED)
+                : skillTagService.listTags(namespace, slug, userId, roles);
 
         List<TagResponse> response = tags.stream()
                 .map(TagResponse::from)

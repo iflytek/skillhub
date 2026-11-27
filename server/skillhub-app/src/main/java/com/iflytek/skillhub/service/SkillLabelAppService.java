@@ -73,7 +73,14 @@ public class SkillLabelAppService {
                                                String skillSlug,
                                                String userId,
                                                Map<Long, NamespaceRole> userNsRoles) {
-        Skill skill = resolveSkillForRead(namespaceSlug, skillSlug, userId, userNsRoles, platformRoles(userId));
+        return listSkillLabels(namespaceSlug, skillSlug, userId, userNsRoles,
+                SkillSlugResolutionService.Preference.CURRENT_USER);
+    }
+
+    public List<SkillLabelDto> listSkillLabels(String namespaceSlug, String skillSlug, String userId,
+                                               Map<Long, NamespaceRole> userNsRoles,
+                                               SkillSlugResolutionService.Preference preference) {
+        Skill skill = resolveSkillForRead(namespaceSlug, skillSlug, userId, userNsRoles, platformRoles(userId), preference);
         return toDtos(skillLabelService.listSkillLabels(skill.getId()));
     }
 
@@ -149,13 +156,18 @@ public class SkillLabelAppService {
     }
 
     private Skill resolveSkill(String namespaceSlug, String skillSlug, String userId) {
+        return resolveSkill(namespaceSlug, skillSlug, userId, SkillSlugResolutionService.Preference.CURRENT_USER);
+    }
+
+    private Skill resolveSkill(String namespaceSlug, String skillSlug, String userId,
+                               SkillSlugResolutionService.Preference preference) {
         Namespace namespace = namespaceRepository.findBySlug(namespaceSlug)
                 .orElseThrow(() -> new DomainBadRequestException("error.namespace.slug.notFound", namespaceSlug));
         return skillSlugResolutionService.resolve(
                 namespace.getId(),
                 skillSlug,
                 userId,
-                SkillSlugResolutionService.Preference.CURRENT_USER
+                preference
         );
     }
 
@@ -163,8 +175,9 @@ public class SkillLabelAppService {
                                       String skillSlug,
                                       String userId,
                                       Map<Long, NamespaceRole> userNsRoles,
-                                      Set<String> platformRoles) {
-        Skill skill = resolveSkill(namespaceSlug, skillSlug, userId);
+                                      Set<String> platformRoles,
+                                      SkillSlugResolutionService.Preference preference) {
+        Skill skill = resolveSkill(namespaceSlug, skillSlug, userId, preference);
         if (platformRoles.contains("SUPER_ADMIN")) {
             return skill;
         }

@@ -1,6 +1,7 @@
 package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.auth.rbac.PlatformPrincipal;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService.Preference;
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
 import com.iflytek.skillhub.domain.skill.SkillFile;
@@ -123,8 +124,9 @@ public class SkillController extends BaseApiController {
         Map<Long, NamespaceRole> namespaceRoles = userNsRoles != null ? userNsRoles : Map.of();
         Set<String> platformRoles = principal == null || principal.platformRoles() == null
                 ? Set.of() : principal.platformRoles();
-        SkillQueryService.SkillDetailDTO detail = skillQueryService.getSkillDetail(
-                namespace, slug, userId, namespaceRoles, platformRoles);
+        SkillQueryService.SkillDetailDTO detail = principal != null && principal.tokenCapabilities() != null
+                ? skillQueryService.getSkillDetail(namespace, slug, userId, namespaceRoles, platformRoles, Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.getSkillDetail(namespace, slug, userId, namespaceRoles, platformRoles);
         PageResponse<SkillSuiteReferenceResponse> memberOfSuites =
                 skillSuiteAppService.findVisibleMemberships(
                         detail.id(), userId, namespaceRoles, platformRoles, 0, 20);
@@ -188,8 +190,10 @@ public class SkillController extends BaseApiController {
         Map<Long, NamespaceRole> namespaceRoles = userNsRoles != null ? userNsRoles : Map.of();
         Set<String> platformRoles = principal == null || principal.platformRoles() == null
                 ? Set.of() : principal.platformRoles();
-        SkillQueryService.SkillDetailDTO detail = skillQueryService.getSkillDetail(
-                namespace, slug, userId, namespaceRoles);
+        SkillQueryService.SkillDetailDTO detail = principal != null && principal.tokenCapabilities() != null
+                ? skillQueryService.getSkillDetail(
+                        namespace, slug, userId, namespaceRoles, Set.of(), Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.getSkillDetail(namespace, slug, userId, namespaceRoles);
         return ok("response.success.read", skillSuiteAppService.findVisibleMemberships(
                 detail.id(), userId, namespaceRoles, platformRoles, page, size));
     }
@@ -206,9 +210,13 @@ public class SkillController extends BaseApiController {
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "false") boolean downloadableOnly,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        Page<SkillVersion> versions = downloadableOnly ? skillQueryService.listVersions(
+        Page<SkillVersion> versions = Boolean.TRUE.equals(apiToken)
+                ? skillQueryService.listVersions(namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of(),
+                        PageRequest.of(page, size), downloadableOnly, Preference.PUBLIC_PUBLISHED)
+                : downloadableOnly ? skillQueryService.listVersions(
                 namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of(),
                 PageRequest.of(page, size), true) : skillQueryService.listVersions(
                 namespace,
@@ -243,9 +251,13 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             @PathVariable String version,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        SkillQueryService.SkillVersionDetailDTO detail = skillQueryService.getVersionDetail(
+        SkillQueryService.SkillVersionDetailDTO detail = Boolean.TRUE.equals(apiToken)
+                ? skillQueryService.getVersionDetail(
+                         namespace, slug, version, userId, userNsRoles != null ? userNsRoles : Map.of(), Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.getVersionDetail(
                 namespace,
                 slug,
                 version,
@@ -276,16 +288,13 @@ public class SkillController extends BaseApiController {
             @RequestParam("from") String from,
             @RequestParam("to") String to,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        SkillQueryService.SkillVersionCompareDTO compare = skillQueryService.compareVersions(
-                namespace,
-                slug,
-                from,
-                to,
-                userId,
-                userNsRoles != null ? userNsRoles : Map.of()
-        );
+        Map<Long, NamespaceRole> roles = userNsRoles != null ? userNsRoles : Map.of();
+        SkillQueryService.SkillVersionCompareDTO compare = Boolean.TRUE.equals(apiToken)
+                ? skillQueryService.compareVersions(namespace, slug, from, to, userId, roles, Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.compareVersions(namespace, slug, from, to, userId, roles);
 
         return ok("response.success.read", toCompareResponse(compare));
     }
@@ -300,9 +309,13 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             @PathVariable String version,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        List<SkillFile> files = skillQueryService.listFiles(
+        List<SkillFile> files = Boolean.TRUE.equals(apiToken)
+                ? skillQueryService.listFiles(
+                         namespace, slug, version, userId, userNsRoles != null ? userNsRoles : Map.of(), Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.listFiles(
                 namespace,
                 slug,
                 version,
@@ -329,9 +342,13 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             @PathVariable String tagName,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        List<SkillFile> files = skillQueryService.listFilesByTag(
+        List<SkillFile> files = Boolean.TRUE.equals(apiToken)
+                ? skillQueryService.listFilesByTag(
+                         namespace, slug, tagName, userId, userNsRoles != null ? userNsRoles : Map.of(), Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.listFilesByTag(
                 namespace,
                 slug,
                 tagName,
@@ -367,9 +384,13 @@ public class SkillController extends BaseApiController {
             @PathVariable String version,
             @RequestParam("path") String path,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        InputStream content = skillQueryService.getFileContent(
+        InputStream content = Boolean.TRUE.equals(apiToken)
+                ? skillQueryService.getFileContent(
+                         namespace, slug, version, path, userId, userNsRoles != null ? userNsRoles : Map.of(), Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.getFileContent(
                 namespace,
                 slug,
                 version,
@@ -390,9 +411,13 @@ public class SkillController extends BaseApiController {
             @PathVariable String tagName,
             @RequestParam("path") String path,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        InputStream content = skillQueryService.getFileContentByTag(
+        InputStream content = Boolean.TRUE.equals(apiToken)
+                ? skillQueryService.getFileContentByTag(
+                         namespace, slug, tagName, path, userId, userNsRoles != null ? userNsRoles : Map.of(), Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.getFileContentByTag(
                 namespace,
                 slug,
                 tagName,
@@ -418,9 +443,13 @@ public class SkillController extends BaseApiController {
             @RequestParam(required = false) String tag,
             @RequestParam(required = false) String hash,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
+        SkillQueryService.ResolvedVersionDTO resolved = Boolean.TRUE.equals(apiToken)
+                ? skillQueryService.resolveVersion(
+                         namespace, slug, version, tag, hash, userId, userNsRoles != null ? userNsRoles : Map.of(), Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.resolveVersion(
                 namespace,
                 slug,
                 version,
@@ -451,9 +480,13 @@ public class SkillController extends BaseApiController {
             @PathVariable String slug,
             HttpServletRequest request,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        SkillDownloadService.DownloadResult result = skillDownloadService.downloadLatest(
+        SkillDownloadService.DownloadResult result = Boolean.TRUE.equals(apiToken)
+                ? skillDownloadService.downloadLatest(
+                         namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of(), Preference.PUBLIC_PUBLISHED)
+                : skillDownloadService.downloadLatest(
                 namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of());
 
         return buildDownloadResponse(request, result);
@@ -477,9 +510,13 @@ public class SkillController extends BaseApiController {
             @PathVariable String version,
             HttpServletRequest request,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        SkillDownloadService.DownloadResult result = skillDownloadService.downloadVersion(
+        SkillDownloadService.DownloadResult result = Boolean.TRUE.equals(apiToken)
+                ? skillDownloadService.downloadVersion(
+                         namespace, slug, version, userId, userNsRoles != null ? userNsRoles : Map.of(), Preference.PUBLIC_PUBLISHED)
+                : skillDownloadService.downloadVersion(
                 namespace, slug, version, userId, userNsRoles != null ? userNsRoles : Map.of());
 
         return buildDownloadResponse(request, result);
@@ -493,9 +530,13 @@ public class SkillController extends BaseApiController {
             @PathVariable String tagName,
             HttpServletRequest request,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
 
-        SkillDownloadService.DownloadResult result = skillDownloadService.downloadByTag(
+        SkillDownloadService.DownloadResult result = Boolean.TRUE.equals(apiToken)
+                ? skillDownloadService.downloadByTag(
+                         namespace, slug, tagName, userId, userNsRoles != null ? userNsRoles : Map.of(), Preference.PUBLIC_PUBLISHED)
+                : skillDownloadService.downloadByTag(
                 namespace, slug, tagName, userId, userNsRoles != null ? userNsRoles : Map.of());
 
         return buildDownloadResponse(request, result);

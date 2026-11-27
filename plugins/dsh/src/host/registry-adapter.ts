@@ -5,6 +5,11 @@ import { isPreviewableText, isRegistryFilePath, MAX_SKILL_PREVIEW_BYTES, MAX_SKI
 import { retryAfterDeadline } from './retry-after.js';
 import type { CatalogLabels, CatalogPageResult, CatalogSort } from './types.js';
 
+const namespaceMemberErrorCodes = new Set([
+  'error.namespace.member.listForbidden',
+  'error.namespace.global.members.platformAdmin.required',
+]);
+
 const labelSlug = z.string().min(1).max(64).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u);
 const labelsSchema = z.array(z.object({
   slug: labelSlug, type: z.enum(['RECOMMENDED', 'PRIVILEGED']), displayName: z.string().trim().min(1),
@@ -64,7 +69,7 @@ export type SearchResult = z.infer<typeof searchSchema>;
 export type ResolvedSkill = z.infer<typeof resolveSchema>;
 export type RegistryErrorCode = 'INVALID_SOURCE' | 'INVALID_INPUT' | 'ANONYMOUS_DENIED'
   | 'NOT_FOUND' | 'RATE_LIMITED' | 'REGISTRY_UNAVAILABLE' | 'HTTP_ERROR'
-  | 'AUTH_REQUIRED' | 'ACCESS_DENIED' | 'TARGET_CHANGED' | 'WRITE_UNKNOWN' | 'INVALID_RESPONSE' | 'RESPONSE_TOO_LARGE' | 'CANCELLED' | 'NETWORK_ERROR';
+  | 'AUTH_REQUIRED' | 'ACCESS_DENIED' | 'TOKEN_SCOPE_REQUIRED' | 'TARGET_CHANGED' | 'WRITE_UNKNOWN' | 'INVALID_RESPONSE' | 'RESPONSE_TOO_LARGE' | 'CANCELLED' | 'NETWORK_ERROR';
 
 export class RegistryError extends Error {
   constructor(
@@ -72,6 +77,8 @@ export class RegistryError extends Error {
     readonly retryable: boolean,
     readonly status?: number,
     readonly retryAfterSeconds?: number,
+    readonly requiredScope?: string,
+    readonly errorCode?: string,
   ) {
     super(code);
     this.name = 'RegistryError';
@@ -87,7 +94,7 @@ function segment(value: string): string {
   return encodeURIComponent(value);
 }
 
-/** Anonymous, read-only Registry transport; no CLI auth/configuration side effects. */
+/** Registry transport for browsing and source-bound account requests. */
 export class RegistryAdapter {
   readonly source: string;
   private retryAt = 0;
@@ -139,7 +146,7 @@ export class RegistryAdapter {
 
   async labels(signal?: AbortSignal): Promise<CatalogLabels> {
     try {
-      const items = await this.json('/api/web/labels', labelsSchema, signal);
+      const items = await this.json('/api/web/labels', labelsSchema, signal, { anonymous: true });
       return { available: true, items: [...new Map(items.map(item => [item.slug, item])).values()] };
     } catch (error) {
       if (error instanceof RegistryError && [404, 405].includes(error.status ?? 0)) {
@@ -240,8 +247,8 @@ export class RegistryAdapter {
     catch { throw new RegistryError(options ? 'WRITE_UNKNOWN' : 'INVALID_RESPONSE', false); }
   }
 
-  private async json<T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal): Promise<T> {
-    const body = await this.read(path, 'application/json', signal);
+  private async json<T>(path: string, schema: z.ZodType<T>, signal?: AbortSignal, options?: { anonymous: true }): Promise<T> {
+    const body = await this.read(path, 'application/json', signal, undefined, options);
     try {
       return z.object({ data: schema }).parse(JSON.parse(body)).data;
     } catch {
@@ -249,7 +256,9 @@ export class RegistryAdapter {
     }
   }
 
-  private async read(path: string, accept: string, signal?: AbortSignal, maxBytes = 1024 * 1024, options?: RequestInit): Promise<string> {
+  private async read(path: string, accept: string, signal?: AbortSignal, maxBytes = 1024 * 1024, options?: RequestInit & { anonymous?: true }): Promise<string> {
+    const { anonymous, ...requestOptions } = options ?? {};
+    const token = anonymous ? undefined : this.token;
     // Both JSON and SKILL.md are bounded; archive downloads use the install core.
     const deadline = new AbortController();
     const requestSignal = signal ? AbortSignal.any([signal, deadline.signal]) : deadline.signal;
@@ -259,52 +268,71 @@ export class RegistryAdapter {
       const remaining = Math.ceil((this.retryAt - Date.now()) / 1000);
       if (remaining > 0) throw new RegistryError('RATE_LIMITED', true, 429, remaining);
       const response = await this.fetchImpl(`${this.source}${path}`, {
-        ...options, credentials: 'omit', redirect: 'error', signal: requestSignal,
-        headers: { ...options?.headers, Accept: accept, ...(this.token ? { Authorization: 'Bearer ' + this.token } : {}) },
+        ...requestOptions, credentials: 'omit', redirect: 'error', signal: requestSignal,
+        headers: { ...requestOptions.headers, Accept: accept, ...(token ? { Authorization: 'Bearer ' + token } : {}) },
       });
+      if (response.status === 429) {
+        this.retryAt = Math.max(this.retryAt, retryAfterDeadline(response.headers.get('retry-after'), Date.now()) ?? 0);
+      }
       if (!response.ok) {
         const status = response.status;
-        if (status === 429) {
-          this.retryAt = Math.max(this.retryAt, retryAfterDeadline(response.headers.get('retry-after'), Date.now()) ?? 0);
+        let responseErrorCode: string | undefined;
+        if (status === 403 && token && /^\/api\/v1\/namespaces\/[^/]+\/members(?:\?|$)/u.test(path)) {
+          try {
+            const body = JSON.parse(await readBoundedText(response, 64 * 1024, requestSignal));
+            if (namespaceMemberErrorCodes.has(body?.errorCode)) responseErrorCode = body.errorCode;
+          } catch {
+            requestSignal.throwIfAborted();
+          }
+        } else {
+          await response.body?.cancel().catch(() => undefined);
         }
-        await response.body?.cancel().catch(() => undefined);
-        const code = this.token && status === 401 ? 'AUTH_REQUIRED' : this.token && status === 403 ? 'ACCESS_DENIED' : status === 401 || status === 403 ? 'ANONYMOUS_DENIED'
+        const requiredScope = token && status === 403
+          ? /^Bearer error="insufficient_scope", scope="([a-z]{1,16}:[a-z-]{1,32})"$/iu.exec(response.headers.get('www-authenticate') ?? '')?.[1]
+          : undefined;
+        const code = requiredScope ? 'TOKEN_SCOPE_REQUIRED'
+          : token && status === 401 ? 'AUTH_REQUIRED' : token && status === 403 ? 'ACCESS_DENIED' : status === 401 || status === 403 ? 'ANONYMOUS_DENIED'
           : status === 404 ? 'NOT_FOUND' : status === 429 ? 'RATE_LIMITED'
           : status >= 500 ? 'REGISTRY_UNAVAILABLE' : 'HTTP_ERROR';
         const seconds = status === 429 ? Math.ceil((this.retryAt - Date.now()) / 1000) : 0;
-        throw new RegistryError(code, status === 429 || status >= 500, status, seconds > 0 ? seconds : undefined);
+        throw new RegistryError(code, status === 429 || status >= 500, status, seconds > 0 ? seconds : undefined, requiredScope, responseErrorCode);
       }
-      if (Number(response.headers.get('content-length')) > maxBytes) {
-        await response.body?.cancel();
-        throw new RegistryError('RESPONSE_TOO_LARGE', false);
-      }
-      if (!response.body) return '';
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8', { fatal: true });
-      let bytes = 0;
-      let content = '';
-      try {
-        for (;;) {
-          requestSignal.throwIfAborted();
-          const { done, value } = await reader.read();
-          if (done) break;
-          bytes += value.byteLength;
-          if (bytes > maxBytes) throw new RegistryError('RESPONSE_TOO_LARGE', false);
-          try { content += decoder.decode(value, { stream: true }); }
-          catch { throw new RegistryError('INVALID_RESPONSE', false); }
-        }
-        try { return content + decoder.decode(); }
-        catch { throw new RegistryError('INVALID_RESPONSE', false); }
-      } finally {
-        await reader.cancel().catch(() => undefined);
-        reader.releaseLock();
-      }
+      return await readBoundedText(response, maxBytes, requestSignal);
     } catch (error) {
       if (signal?.aborted) throw new RegistryError('CANCELLED', false);
       if (error instanceof RegistryError) throw error;
-      throw new RegistryError(options ? 'WRITE_UNKNOWN' : 'NETWORK_ERROR', !options);
+      const write = requestOptions.method !== undefined && requestOptions.method !== 'GET';
+      throw new RegistryError(write ? 'WRITE_UNKNOWN' : 'NETWORK_ERROR', !write);
     } finally {
       clearTimeout(timer);
     }
+  }
+}
+
+async function readBoundedText(response: Response, maxBytes: number, signal: AbortSignal): Promise<string> {
+  if (Number(response.headers.get('content-length')) > maxBytes) {
+    await response.body?.cancel();
+    throw new RegistryError('RESPONSE_TOO_LARGE', false);
+  }
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  let bytes = 0;
+  let content = '';
+  try {
+    for (;;) {
+      signal.throwIfAborted();
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maxBytes) throw new RegistryError('RESPONSE_TOO_LARGE', false);
+      try { content += decoder.decode(value, { stream: true }); }
+      catch { throw new RegistryError('INVALID_RESPONSE', false); }
+    }
+    try { return content + decoder.decode(); }
+    catch { throw new RegistryError('INVALID_RESPONSE', false); }
+  } finally {
+    await reader.cancel().catch(() => undefined);
+    reader.releaseLock();
   }
 }

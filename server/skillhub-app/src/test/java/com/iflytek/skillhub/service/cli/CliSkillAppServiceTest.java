@@ -343,6 +343,7 @@ class CliSkillAppServiceTest {
         );
         var mockVersion = org.mockito.Mockito.mock(SkillVersion.class);
         given(mockVersion.getVersion()).willReturn("1.0.0");
+        given(mockVersion.getId()).willReturn(42L);
         given(skillPublishService.publishFromEntries("global", entries, "user-1", SkillVisibility.PUBLIC, Set.of("USER"), false))
                 .willReturn(new SkillPublishService.PublishResult(1L, "test-skill", mockVersion));
 
@@ -352,6 +353,7 @@ class CliSkillAppServiceTest {
         assertEquals("test-skill", response.slug());
         assertEquals("1.0.0", response.version());
         assertEquals("PUBLIC", response.visibility());
+        assertEquals(42L, response.versionId());
     }
 
     private boolean requiresInstallableLatest(SearchQuery query) {

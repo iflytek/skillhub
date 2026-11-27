@@ -112,7 +112,7 @@ export function AccountWorkspace({ remote, revision, source, toolbar, primary, s
             <div className="astron-sh-account-row-actions"><Badge variant={ns.status === 'ACTIVE' ? 'neutral' : 'warning'}>{namespaceStatusLabels[ns.status] ?? '状态未知'}</Badge><span className="astron-sh-namespace-role">{roleLabels[ns.currentUserRole]}</span><Button size="sm" onClick={() => navigate({ space: ns.slug })}>进入空间</Button></div></li>)}</ul> : <p className="astron-sh-namespace-empty">当前账号还没有所属命名空间。</p>}</>}
     </section>}
     {(modal === 'login' || modal === 'settings') && <AccountDialog close={() => setModal(null)} returnFocus={accountMenu.current} busy={busy}
-      title={modal === 'login' ? '登录 SkillHub' : '个人设置'} description={modal === 'login' ? '使用当前来源的个人 API Token；桌面版会在本机保留登录。' : '管理当前来源的本机登录与连接。'} closeLabel={modal === 'settings' ? '完成' : undefined}
+      title={modal === 'login' ? '登录 SkillHub' : '个人设置'} description={modal === 'login' ? '请使用当前来源网页新建的个人 API Token 登录。旧 Token 可能缺少团队成员权限。桌面版会在本机保留登录。' : '管理当前来源的本机登录与连接。'} closeLabel={modal === 'settings' ? '完成' : undefined}
       actions={modal === 'login' && <Button type="submit" form={loginForm} variant="default" disabled={busy}>{busy ? '正在验证…' : '登录'}</Button>}>
       {modal === 'login' ? <><div className="astron-sh-account-source-row"><dl className="astron-sh-account-source"><dt>当前技能来源</dt><dd>{source}</dd></dl>
         {settings && <Button size="sm" disabled={busy} onClick={configureSource}>更改来源</Button>}</div>

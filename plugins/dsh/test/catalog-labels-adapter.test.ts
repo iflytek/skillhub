@@ -20,6 +20,36 @@ describe('anonymous catalog labels', () => {
     ] });
   });
 
+  test('a connected account reads public labels without exposing its token', async () => {
+    const registry = new RegistryAdapter('https://registry.example', transport((url, init) => {
+      const authorization = new Headers(init?.headers).get('Authorization');
+      if (url.pathname === '/api/web/labels') {
+        expect(authorization).toBeNull();
+        return Response.json({ data: [{ slug: 'writing', type: 'RECOMMENDED', displayName: 'Writing' }] });
+      }
+      expect(authorization).toBe('Bearer local-fixture');
+      return Response.json({ data: { items: [], total: 0, page: 0, size: 12 } });
+    }), 1000, 'local-fixture');
+    await expect(registry.labels()).resolves.toMatchObject({ available: true });
+    await expect(registry.catalog('', 0, 'newest', undefined, 'writing')).resolves.toMatchObject({ mode: 'paged' });
+  });
+
+  test.each([
+    ['/api/web/skills', (registry: RegistryAdapter) => registry.catalog('', 0, 'newest')],
+    ['/api/v1/skills/team/private', (registry: RegistryAdapter) => registry.metadata('team', 'private')],
+  ] as const)('preserves denial for %s without retrying anonymously', async (path, read) => {
+    const headers: (string | null)[] = [];
+    const registry = new RegistryAdapter('https://registry.example', transport((url, init) => {
+      expect(url.pathname).toBe(path);
+      const authorization = new Headers(init?.headers).get('Authorization');
+      headers.push(authorization);
+      return authorization ? new Response(null, { status: 403 })
+        : Response.json({ data: { items: [], total: 0, page: 0, size: 12 } });
+    }), 1000, 'local-fixture');
+    await expect(read(registry)).rejects.toMatchObject({ code: 'ACCESS_DENIED', status: 403 });
+    expect(headers).toEqual(['Bearer local-fixture']);
+  });
+
   test.each([404, 405])('absent label route %s disables labels only', async status => {
     const registry = new RegistryAdapter('https://registry.example', transport(url => url.pathname.endsWith('/labels')
       ? new Response('', { status }) : Response.json({ data: { items: [], total: 0, page: 0, size: 12 } })));

@@ -46,7 +46,9 @@ import static org.hamcrest.Matchers.hasKey;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.clearInvocations;
@@ -105,10 +107,10 @@ class CliTokenLifecycleSecurityIntegrationTest {
                 sessionUserId, "Session Matrix", sessionUserId + "@example.com", ""));
         given(cliSkillAppService.search(any(), anyInt(), any(), any()))
                 .willReturn(new CliSkillAppService.CliSearchResult(List.of(), 0, 20));
-        given(cliSkillAppService.resolve(anyString(), anyString(), any(), any(), any()))
-                .willReturn(new CliResolveResponse(
-                        "global", "demo", "1.0.0", 1L, "sha256:empty",
-                        "/api/v1/skills/global/demo/versions/1.0.0/download"));
+        var resolved = new CliResolveResponse("global", "demo", "1.0.0", 1L, "sha256:empty",
+                "/api/v1/skills/global/demo/versions/1.0.0/download");
+        given(cliSkillAppService.resolve(anyString(), anyString(), any(), any(), any())).willReturn(resolved);
+        given(cliSkillAppService.resolve(anyString(), anyString(), any(), any(), any(), anyBoolean())).willReturn(resolved);
         given(cliSkillAppService.downloadLatest(anyString(), anyString(), any()))
                 .willAnswer(ignored -> downloadResponse());
         given(cliSkillAppService.downloadVersion(anyString(), anyString(), anyString(), any()))
@@ -158,7 +160,7 @@ class CliTokenLifecycleSecurityIntegrationTest {
             result.andExpect(jsonPath("$", aMapWithSize(5)))
                     .andExpect(jsonPath("$.code").value(0));
         }
-        assertProjectedUser(endpoint, expectedUserId);
+        assertProjectedUser(endpoint, expectedUserId, credentialState == MixedCredentialState.SESSION_VALID_BEARER);
     }
 
     @Test
@@ -379,7 +381,7 @@ class CliTokenLifecycleSecurityIntegrationTest {
         };
     }
 
-    private void assertProjectedUser(EndpointCase endpoint, String expectedUserId) {
+    private void assertProjectedUser(EndpointCase endpoint, String expectedUserId, boolean apiToken) {
         if (endpoint == EndpointCase.SEARCH) {
             ArgumentCaptor<String> userCaptor = ArgumentCaptor.forClass(String.class);
             verify(cliSkillAppService).search(any(), anyInt(), userCaptor.capture(), any());
@@ -388,7 +390,11 @@ class CliTokenLifecycleSecurityIntegrationTest {
         }
         if (endpoint == EndpointCase.RESOLVE) {
             ArgumentCaptor<String> userCaptor = ArgumentCaptor.forClass(String.class);
-            verify(cliSkillAppService).resolve(anyString(), anyString(), any(), userCaptor.capture(), any());
+            if (apiToken) {
+                verify(cliSkillAppService).resolve(anyString(), anyString(), any(), userCaptor.capture(), any(), eq(true));
+            } else {
+                verify(cliSkillAppService).resolve(anyString(), anyString(), any(), userCaptor.capture(), any());
+            }
             assertEquals(expectedUserId, userCaptor.getValue());
             return;
         }

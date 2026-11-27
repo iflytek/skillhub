@@ -156,6 +156,7 @@ class ApiTokenCapabilityCatalogTest {
 
     private static final Map<String, String> ACCOUNT_ROUTES = Map.of(
             "GET /api/v1/me/skills", "skill:read",
+            "GET /api/v1/me/skills/versions/*", "skill:read",
             "GET /api/v1/namespaces/*/members", "namespace:read",
             "GET /api/v1/namespaces/*/member-candidates", "namespace:manage",
             "POST /api/v1/namespaces/*/members", "namespace:manage",

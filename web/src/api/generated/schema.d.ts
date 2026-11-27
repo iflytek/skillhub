@@ -7315,6 +7315,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/me/skills/versions/{versionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getMySkillVersionStatus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -8285,6 +8301,24 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        ApiResponseVersionStatus: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["VersionStatus"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        VersionStatus: {
+            /** Format: int64 */
+            id?: number;
+            version?: string;
+            /** @enum {string} */
+            status?: "DRAFT" | "SCANNING" | "SCAN_FAILED" | "UPLOADED" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "YANKED";
+        };
         SkillSuiteCreateRequest: {
             namespace: string;
             slug: string;
@@ -26925,6 +26959,28 @@ export interface operations {
                     "application/scim+json": {
                         [key: string]: Record<string, never>;
                     }[];
+                };
+            };
+        };
+    };
+    getMySkillVersionStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                versionId: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseVersionStatus"];
                 };
             };
         };

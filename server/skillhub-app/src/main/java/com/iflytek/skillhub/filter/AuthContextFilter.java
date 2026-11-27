@@ -93,6 +93,9 @@ public class AuthContextFilter extends OncePerRequestFilter {
                 return;
             }
             request.setAttribute("userId", principal.userId());
+            if (principal.tokenCapabilities() != null) {
+                request.setAttribute("apiToken", true);
+            }
             request.setAttribute("platformRoles", principal.platformRoles() != null ? principal.platformRoles() : java.util.Set.of());
             Map<Long, NamespaceRole> userNsRoles = namespaceMemberRepository.findByUserId(principal.userId()).stream()
                     .collect(Collectors.toMap(

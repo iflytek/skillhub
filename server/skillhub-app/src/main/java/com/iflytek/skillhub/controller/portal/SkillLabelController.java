@@ -2,6 +2,7 @@ package com.iflytek.skillhub.controller.portal;
 
 import com.iflytek.skillhub.controller.BaseApiController;
 import com.iflytek.skillhub.domain.namespace.NamespaceRole;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService.Preference;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
 import com.iflytek.skillhub.dto.MessageResponse;
@@ -32,9 +33,13 @@ public class SkillLabelController extends BaseApiController {
     public ApiResponse<List<SkillLabelDto>> listLabels(@PathVariable String namespace,
                                                        @PathVariable String slug,
                                                        @RequestAttribute(value = "userId", required = false) String userId,
-                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        return ok("response.success.read",
-                skillLabelAppService.listSkillLabels(namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of()));
+                                                       @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                                       @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
+        Map<Long, NamespaceRole> roles = userNsRoles != null ? userNsRoles : Map.of();
+        List<SkillLabelDto> labels = Boolean.TRUE.equals(apiToken)
+                ? skillLabelAppService.listSkillLabels(namespace, slug, userId, roles, Preference.PUBLIC_PUBLISHED)
+                : skillLabelAppService.listSkillLabels(namespace, slug, userId, roles);
+        return ok("response.success.read", labels);
     }
 
     @PutMapping("/{labelSlug}")

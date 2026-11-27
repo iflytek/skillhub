@@ -481,6 +481,15 @@ class RouteSecurityPolicyRegistryTest {
     }
 
     @Test
+    void exactVersionStatusRequiresSkillRead() {
+        String path = "/api/v1/me/skills/versions/42";
+        assertEquals(RouteSecurityPolicyRegistry.AccessLevel.AUTHENTICATED, registry.accessLevel("GET", path));
+        assertEquals("skill:read", registry.authorizeApiToken("GET", path, Set.of()).requiredScope());
+        assertTrue(registry.authorizeApiToken("GET", path, Set.of("skill:read")).allowed());
+        assertFalse(registry.authorizeApiToken("POST", path, Set.of("skill:read")).allowed());
+    }
+
+    @Test
     void apiTokenPolicies_coverEveryTokenReachableAuthorizationRoute() {
         List<String> gaps = new ArrayList<>();
 

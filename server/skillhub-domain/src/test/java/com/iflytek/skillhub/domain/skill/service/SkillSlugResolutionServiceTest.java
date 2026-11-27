@@ -4,6 +4,9 @@ import com.iflytek.skillhub.domain.shared.exception.DomainBadRequestException;
 import com.iflytek.skillhub.domain.skill.Skill;
 import com.iflytek.skillhub.domain.skill.SkillRepository;
 import com.iflytek.skillhub.domain.skill.SkillVisibility;
+import com.iflytek.skillhub.domain.skill.SkillVersion;
+import com.iflytek.skillhub.domain.skill.SkillVersionRepository;
+import com.iflytek.skillhub.domain.skill.SkillVersionStatus;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
@@ -66,6 +69,36 @@ class SkillSlugResolutionServiceTest {
 
         assertThrows(DomainBadRequestException.class, () ->
                 service.resolve(1L, "demo", "user-9", SkillSlugResolutionService.Preference.CURRENT_USER));
+    }
+
+    @Test
+    void publicPublishedPreferenceSkipsEarlierNonPublicCandidate() throws Exception {
+        Skill namespaceOnly = createSkill(1L, "demo", "user-2", 11L);
+        namespaceOnly.setVisibility(SkillVisibility.NAMESPACE_ONLY);
+        Skill publicSkill = createSkill(2L, "demo", "user-3", 22L);
+        Skill ownDraft = createSkill(3L, "demo", "user-1", null);
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "demo"))
+                .thenReturn(List.of(namespaceOnly, publicSkill, ownDraft));
+
+        assertEquals(publicSkill, service.resolve(
+                1L, "demo", "user-1", SkillSlugResolutionService.Preference.PUBLIC_PUBLISHED));
+    }
+
+    @Test
+    void publicVersionReadsFallBackToTheCallersMatchingVersion() throws Exception {
+        Skill publishedSkill = createSkill(1L, "demo", "user-2", 11L);
+        Skill ownSkill = createSkill(2L, "demo", "user-1", 22L);
+        SkillVersion ownDraft = new SkillVersion(2L, "2.0.0", "user-1");
+        ownDraft.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        SkillVersionRepository versions = mock(SkillVersionRepository.class);
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "demo")).thenReturn(List.of(publishedSkill, ownSkill));
+        when(versions.findBySkillIdAndVersion(1L, "2.0.0")).thenReturn(java.util.Optional.empty());
+        when(versions.findBySkillIdAndVersion(2L, "2.0.0")).thenReturn(java.util.Optional.of(ownDraft));
+
+        Skill resolved = service.resolveForVersion(
+                1L, "demo", "2.0.0", "user-1", SkillSlugResolutionService.Preference.PUBLIC_PUBLISHED, versions);
+
+        assertEquals(2L, resolved.getId());
     }
 
     private Skill createSkill(Long id, String slug, String ownerId, Long latestVersionId) throws Exception {

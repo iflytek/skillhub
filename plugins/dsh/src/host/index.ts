@@ -370,8 +370,8 @@ export class SkillHubService extends TypertRemoteService {
   }
 
   @Remote
-  async uploadStatus(revision: string, ns: string, slug: string, version: string, signal: AbortSignal): Promise<{ id: number; version: string; status: string }> {
-    return this.withAccount(revision, signal, false, (api, s) => api.status(ns, slug, version, s));
+  async uploadStatus(revision: string, versionId: number, version: string, signal: AbortSignal): Promise<{ id: number; version: string; status: string }> {
+    return this.withAccount(revision, signal, false, (api, s) => api.status(versionId, version, s));
   }
 
   @Remote
@@ -2158,6 +2158,8 @@ export class SkillHubService extends TypertRemoteService {
           reason: error.code, retryable: error.retryable,
           ...(error.status === undefined ? {} : { status: error.status }),
           ...(error.retryAfterSeconds === undefined ? {} : { retryAfterSeconds: error.retryAfterSeconds }),
+          ...(error.requiredScope === undefined ? {} : { requiredScope: error.requiredScope }),
+          ...(error.errorCode === undefined ? {} : { errorCode: error.errorCode }),
         });
       }
       throw error;

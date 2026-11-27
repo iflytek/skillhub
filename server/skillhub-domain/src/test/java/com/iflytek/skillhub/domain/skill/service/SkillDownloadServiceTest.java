@@ -388,6 +388,40 @@ class SkillDownloadServiceTest {
     }
 
     @Test
+    void testDownloadVersion_PublicPreferenceFallsBackToOwnersMatchingDraft() throws Exception {
+        Namespace namespace = new Namespace("test-ns", "Test NS", "admin");
+        setId(namespace, 1L);
+        Skill publicSkill = new Skill(1L, "demo", "other-user", SkillVisibility.PUBLIC);
+        setId(publicSkill, 1L);
+        publicSkill.setStatus(SkillStatus.ACTIVE);
+        publicSkill.setLatestVersionId(11L);
+        Skill ownSkill = new Skill(1L, "demo", "owner", SkillVisibility.PUBLIC);
+        setId(ownSkill, 2L);
+        ownSkill.setStatus(SkillStatus.ACTIVE);
+        SkillVersion ownDraft = new SkillVersion(2L, "2.0.0", "owner");
+        setId(ownDraft, 22L);
+        ownDraft.setStatus(SkillVersionStatus.PENDING_REVIEW);
+        ownDraft.setFileCount(1);
+        SkillFile file = new SkillFile(22L, "SKILL.md", 5L, "text/markdown", "hash", "draft-key");
+
+        when(namespaceRepository.findBySlug("test-ns")).thenReturn(Optional.of(namespace));
+        when(skillRepository.findByNamespaceIdAndSlug(1L, "demo")).thenReturn(List.of(publicSkill, ownSkill));
+        when(skillVersionRepository.findBySkillIdAndVersion(1L, "2.0.0")).thenReturn(Optional.empty());
+        when(skillVersionRepository.findBySkillIdAndVersion(2L, "2.0.0")).thenReturn(Optional.of(ownDraft));
+        when(visibilityChecker.canAccess(ownSkill, "owner", Map.of())).thenReturn(true);
+        when(skillFileRepository.findByVersionId(22L)).thenReturn(List.of(file));
+        when(objectStorageService.exists("packages/2/22/bundle.zip")).thenReturn(false);
+        when(objectStorageService.exists("draft-key")).thenReturn(true);
+        when(objectStorageService.getObject("draft-key")).thenReturn(new ByteArrayInputStream("draft".getBytes()));
+
+        SkillDownloadService.DownloadResult result = service.downloadVersion(
+                "test-ns", "demo", "2.0.0", "owner", Map.of(), SkillSlugResolutionService.Preference.PUBLIC_PUBLISHED);
+
+        assertTrue(result.fallbackBundle());
+        assertTrue(result.openContent().available() > 0);
+    }
+
+    @Test
     void testDownloadVersion_ShouldRejectOtherUsersDraftVersion() throws Exception {
         String namespaceSlug = "test-ns";
         String skillSlug = "test-skill";

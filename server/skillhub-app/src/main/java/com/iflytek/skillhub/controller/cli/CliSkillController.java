@@ -62,8 +62,12 @@ public class CliSkillController extends BaseApiController {
             @PathVariable String slug,
             @RequestParam(required = false) String version,
             @RequestAttribute(value = "userId", required = false) String userId,
-            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        return ok("response.success.read", cliSkillAppService.resolve(namespace, slug, version, userId, userNsRoles));
+            @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+            @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
+        CliResolveResponse resolved = Boolean.TRUE.equals(apiToken)
+                ? cliSkillAppService.resolve(namespace, slug, version, userId, userNsRoles, true)
+                : cliSkillAppService.resolve(namespace, slug, version, userId, userNsRoles);
+        return ok("response.success.read", resolved);
     }
 
     @GetMapping("/{namespace}/{slug}/download")

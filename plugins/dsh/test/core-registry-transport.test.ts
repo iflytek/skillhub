@@ -22,6 +22,43 @@ test('DSH download redirects stop carrying credentials after leaving Registry AP
   expect(observed).toEqual(['Bearer fixture-token', null, null]);
 });
 
+test('a CDN denial cannot replay a successful authenticated Registry redirect', async () => {
+  const registry = 'https://registry.example/prefix';
+  const seen: Array<string | null> = [];
+  const fetchImpl = Object.assign(async (input: string | URL | Request, init?: RequestInit) => {
+    seen.push(new Headers(init?.headers).get('Authorization'));
+    return new URL(String(input)).origin === 'https://registry.example'
+      ? new Response(null, { status: 302, headers: { Location: 'https://cdn.example/file' } })
+      : new Response('cdn denial', { status: 403 });
+  }, { preconnect: fetch.preconnect });
+  const result = await registryFetch(registry, 'fixture-token', fetchImpl)(registry + '/api/v1/skills/team/demo/versions/1.0/download');
+  expect(result.status).toBe(403);
+  expect(await result.text()).toBe('cdn denial');
+  expect(seen).toEqual(['Bearer fixture-token', null]);
+});
+
+test('resolve, archive and other Registry requests preserve authenticated denials', async () => {
+  const registry = 'https://registry.example/prefix';
+  const observed: Array<string | null> = [];
+  const fetchImpl = Object.assign(async (_input: string | URL | Request, init?: RequestInit) => {
+    const bearer = new Headers(init?.headers).get('Authorization');
+    observed.push(bearer);
+    return bearer ? new Response('authorization denied', { status: 403 }) : new Response('public response');
+  }, { preconnect: fetch.preconnect });
+  const request = registryFetch(registry, 'fixture-token', fetchImpl);
+  for (const [path, method] of [
+    ['/api/cli/v1/skills/team/demo/resolve', 'GET'],
+    ['/api/v1/skills/team/demo/versions/1.0/download', 'GET'],
+    ['/api/cli/v1/auth/whoami', 'GET'],
+    ['/api/cli/v1/skills/team/demo/resolve', 'POST'],
+  ] as const) {
+    const result = await request(registry + path, { method });
+    expect(result.status).toBe(403);
+    expect(await result.text()).toBe('authorization denied');
+  }
+  expect(observed).toEqual(Array(4).fill('Bearer fixture-token'));
+});
+
 test('the packaged DSH adapter authenticates concurrent Host installations independently', async () => {
   const content = '# Private fixture';
   const fingerprint = 'sha256:' + createHash('sha256').update('SKILL.md:' + createHash('sha256').update(content).digest('hex') + '\n').digest('hex');

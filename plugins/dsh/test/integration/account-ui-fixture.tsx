@@ -15,9 +15,10 @@ import type { AccountMember, MemberMutation, Visibility } from '../../src/host/a
 // Isolated UI fixture: no real service, credentials, or filesystem writes.
 let identity: { handle: string; displayName: string } | null = null;
 let uploadsEmpty = false;
-let finishUpload: ((published: boolean) => void) | undefined;
+let finishUpload: ((published: boolean, legacy: boolean) => void) | undefined;
 let uploadedPatch = 0;
 let publishedPatch = 0;
+let uploadStatusReads = 0;
 const writes = { upload: 0, add: 0, role: 0, remove: 0, delete: 0 };
 function startWrite(action: keyof typeof writes) {
   writes[action]++;
@@ -26,7 +27,8 @@ function startWrite(action: keyof typeof writes) {
 let pauseInspection = false;
 let finishInspection: (() => void) | undefined;
 Object.assign(globalThis, {
-  finishAccountUpload: (published = false) => finishUpload?.(published),
+  finishAccountUpload: (published = false, legacy = false) => finishUpload?.(published, legacy),
+  accountUploadStatusReads: () => uploadStatusReads,
   publishAccountVersion: () => { publishedPatch = uploadedPatch; },
   accountWriteCounts: () => ({ ...writes }),
   pauseNextAccountInspection: () => { pauseInspection = true; },
@@ -84,12 +86,18 @@ const api = {
   },
   publishUpload: async (_revision: string, namespace: string, _archive: string, visibility: Visibility) => {
     startWrite('upload');
-    const published = await new Promise<boolean>(resolve => { finishUpload = resolve; });
+    const { published, legacy } = await new Promise<{ published: boolean; legacy: boolean }>(resolve => {
+      finishUpload = (published, legacy) => resolve({ published, legacy });
+    });
     uploadedPatch++;
     if (published) publishedPatch = uploadedPatch;
-    return { namespace, slug: 'example', version: `1.0.${uploadedPatch}`, visibility };
+    return { namespace, slug: 'example', version: `1.0.${uploadedPatch}`, visibility, ...(legacy ? {} : { versionId: uploadedPatch + 1 }) };
   },
-  uploadStatus: () => ({ status: publishedPatch === uploadedPatch ? 'PUBLISHED' : 'UPLOADED' }),
+  uploadStatus: (_revision: string, versionId: number, version: string) => {
+    uploadStatusReads++;
+    if (versionId !== uploadedPatch + 1 || version !== `1.0.${uploadedPatch}`) throw new Error('Expected the upload receipt identity');
+    return { id: versionId, version, status: publishedPatch === uploadedPatch ? 'PUBLISHED' : 'UPLOADED' };
+  },
 };
 const remote = Object.fromEntries(Object.entries(api).map(([name, fn]) => [name, async (...args: unknown[]) => {
   try { return { ok: true, value: await Reflect.apply(fn, null, args) }; }

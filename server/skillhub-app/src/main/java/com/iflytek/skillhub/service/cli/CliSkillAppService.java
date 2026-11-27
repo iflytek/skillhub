@@ -7,6 +7,7 @@ import com.iflytek.skillhub.domain.skill.SkillVisibility;
 import com.iflytek.skillhub.domain.skill.service.SkillDownloadService;
 import com.iflytek.skillhub.domain.skill.service.SkillPublishService;
 import com.iflytek.skillhub.domain.skill.service.SkillQueryService;
+import com.iflytek.skillhub.domain.skill.service.SkillSlugResolutionService.Preference;
 import com.iflytek.skillhub.domain.skill.validation.PackageEntry;
 import com.iflytek.skillhub.dto.cli.CliDeleteResponse;
 import com.iflytek.skillhub.dto.cli.CliDryRunResponse;
@@ -89,9 +90,15 @@ public class CliSkillAppService {
     }
 
     public CliResolveResponse resolve(String namespace, String slug, String version, String userId, Map<Long, NamespaceRole> userNsRoles) {
-        SkillQueryService.ResolvedVersionDTO resolved = skillQueryService.resolveVersion(
-                namespace, slug, version, null, null, userId, userNsRoles
-        );
+        return resolve(namespace, slug, version, userId, userNsRoles, false);
+    }
+
+    public CliResolveResponse resolve(String namespace, String slug, String version, String userId,
+                                      Map<Long, NamespaceRole> userNsRoles, boolean apiToken) {
+        SkillQueryService.ResolvedVersionDTO resolved = apiToken
+                ? skillQueryService.resolveVersion(
+                        namespace, slug, version, null, null, userId, userNsRoles, Preference.PUBLIC_PUBLISHED)
+                : skillQueryService.resolveVersion(namespace, slug, version, null, null, userId, userNsRoles);
 
         return new CliResolveResponse(
                 resolved.namespace(),
@@ -150,9 +157,10 @@ public class CliSkillAppService {
         @SuppressWarnings("unchecked")
         Map<Long, NamespaceRole> userNsRoles = (Map<Long, NamespaceRole>) request.getAttribute("userNsRoles");
 
-        SkillDownloadService.DownloadResult result = skillDownloadService.downloadLatest(
-                namespace, slug, userId, userNsRoles != null ? userNsRoles : Map.of()
-        );
+        Map<Long, NamespaceRole> roles = userNsRoles != null ? userNsRoles : Map.of();
+        SkillDownloadService.DownloadResult result = Boolean.TRUE.equals(request.getAttribute("apiToken"))
+                ? skillDownloadService.downloadLatest(namespace, slug, userId, roles, Preference.PUBLIC_PUBLISHED)
+                : skillDownloadService.downloadLatest(namespace, slug, userId, roles);
 
         return buildDownloadResponse(result);
     }
@@ -162,9 +170,10 @@ public class CliSkillAppService {
         @SuppressWarnings("unchecked")
         Map<Long, NamespaceRole> userNsRoles = (Map<Long, NamespaceRole>) request.getAttribute("userNsRoles");
 
-        SkillDownloadService.DownloadResult result = skillDownloadService.downloadVersion(
-                namespace, slug, version, userId, userNsRoles != null ? userNsRoles : Map.of()
-        );
+        Map<Long, NamespaceRole> roles = userNsRoles != null ? userNsRoles : Map.of();
+        SkillDownloadService.DownloadResult result = Boolean.TRUE.equals(request.getAttribute("apiToken"))
+                ? skillDownloadService.downloadVersion(namespace, slug, version, userId, roles, Preference.PUBLIC_PUBLISHED)
+                : skillDownloadService.downloadVersion(namespace, slug, version, userId, roles);
 
         return buildDownloadResponse(result);
     }
@@ -211,7 +220,8 @@ public class CliSkillAppService {
                 namespace,
                 result.slug(),
                 result.version().getVersion(),
-                visibility.name()
+                visibility.name(),
+                result.version().getId()
         );
     }
 

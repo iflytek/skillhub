@@ -62,8 +62,9 @@ public class ClawHubCompatController {
                                                  @RequestParam(required = false) String version,
                                                  @RequestParam(required = false) String hash,
                                                  @RequestAttribute(value = "userId", required = false) String userId,
-                                                 @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        return clawHubCompatAppService.resolveByQuery(slug, version, hash, userId, userNsRoles);
+                                                 @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                          @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
+        return clawHubCompatAppService.resolveByQuery(slug, version, hash, userId, userNsRoles, Boolean.TRUE.equals(apiToken));
     }
 
     @RateLimit(category = "resolve", authenticated = 60, anonymous = 20)
@@ -71,8 +72,9 @@ public class ClawHubCompatController {
     public ClawHubResolveResponse resolve(@PathVariable String canonicalSlug,
                                           @RequestParam(defaultValue = "latest") String version,
                                           @RequestAttribute(value = "userId", required = false) String userId,
-                                          @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles) {
-        return clawHubCompatAppService.resolve(canonicalSlug, version, userId, userNsRoles);
+                                          @RequestAttribute(value = "userNsRoles", required = false) Map<Long, NamespaceRole> userNsRoles,
+                                          @RequestAttribute(value = "apiToken", required = false) Boolean apiToken) {
+        return clawHubCompatAppService.resolve(canonicalSlug, version, userId, userNsRoles, Boolean.TRUE.equals(apiToken));
     }
 
     @RateLimit(category = "download", authenticated = 60, anonymous = 20)
