@@ -72,6 +72,12 @@
       }
     },
     {
+      "slug": "event-planner",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "upstream": null
+    },
+    {
       "slug": "exam-ready",
       "version": "1.0.0",
       "license": "MIT",
@@ -112,6 +118,12 @@
       }
     },
     {
+      "slug": "meal-and-grocery-planner",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "upstream": null
+    },
+    {
       "slug": "meeting-note-summarizer",
       "version": "1.0.0",
       "license": "MIT",
@@ -130,6 +142,12 @@
         "commit": "0d78203d6fc03465b84f844c3e0bfd019ae10dc5",
         "path": "skills/orca-replay"
       }
+    },
+    {
+      "slug": "packing-checklist",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "upstream": null
     },
     {
       "slug": "plugin-scanner",
@@ -210,6 +228,12 @@
         "commit": "da38ec1ee89d41e5380e652a97382695003396e7",
         "path": "legal/skills/triage-nda"
       }
+    },
+    {
+      "slug": "trip-planning-brief",
+      "version": "1.0.0",
+      "license": "Apache-2.0",
+      "upstream": null
     },
     {
       "slug": "video-frames",
