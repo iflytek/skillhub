@@ -1361,6 +1361,30 @@
       "disable": "이 연결을 비활성화하시겠습니까?"
     }
   },
+  "organizationDirectoryConnections": {
+    "title": "Directory provisioning",
+    "description": "Sync organization members with SCIM 2.0.",
+    "create": "Add SCIM connection",
+    "empty": "No directory connections.",
+    "created": "Directory connection created",
+    "saved": "Directory connection updated",
+    "scim": "SCIM 2.0 user directory",
+    "endpoint": "SCIM endpoint",
+    "tokenHint": "The token is shown only after creation or rotation. Save it immediately.",
+    "tokenTitle": "Save the new SCIM token",
+    "copy": "Copy",
+    "secretVersion": "Secret version {{version}}",
+    "activate": "Activate",
+    "suspend": "Suspend",
+    "disable": "Disable",
+    "rotate": "Rotate token",
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "DISABLED": "Disabled"
+    }
+  },
   "overview": {
     "mySkills": "내 스킬",
     "mySkillsDesc": "게시한 모든 스킬을 확인하고 관리하세요",

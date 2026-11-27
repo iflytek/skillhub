@@ -7,6 +7,7 @@ import { organizationApi, type OrganizationRole } from '@/api/client'
 import { APP_SHELL_PAGE_CLASS_NAME } from '@/app/page-shell-style'
 import { useAuth } from '@/features/auth/use-auth'
 import { OrganizationLoginConnections } from '@/features/organization/organization-login-connections'
+import { OrganizationDirectoryConnections } from '@/features/organization/organization-directory-connections'
 import { ConfirmDialog } from '@/shared/components/confirm-dialog'
 import { DashboardPageHeader } from '@/shared/components/dashboard-page-header'
 import { Pagination } from '@/shared/components/pagination'
@@ -291,6 +292,11 @@ function OrganizationMembers({ viewerId, organizationId }: { viewerId: string; o
         <OrganizationLoginConnections viewerId={viewerId} organizationId={organizationId}
           canManage={organization.permissions.canManageLoginConnections === true}
           canWriteSecret={organization.permissions.canRotateLoginSecrets === true} />
+      ) : null}
+      {organization?.permissions?.canViewDirectoryConnections ? (
+        <OrganizationDirectoryConnections viewerId={viewerId} organizationId={organizationId}
+          canManage={organization.permissions.canManageDirectoryConnections === true}
+          canRotateSecret={organization.permissions.canRotateDirectorySecrets === true} />
       ) : null}
       <Dialog open={!!visibleEditor} onOpenChange={(open) => { if (!open && !editorMutation.isPending) setEditor(null) }}>
         <DialogContent hideClose={editorMutation.isPending} onCloseAutoFocus={(event) => restoreFocus(event, editorTrigger.current)}>

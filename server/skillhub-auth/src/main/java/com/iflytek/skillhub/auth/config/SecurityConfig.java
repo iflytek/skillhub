@@ -12,6 +12,7 @@ import com.iflytek.skillhub.auth.session.ExpiredPublicSessionFilter;
 import com.iflytek.skillhub.auth.session.CorruptSessionRemover;
 import com.iflytek.skillhub.auth.token.ApiTokenAuthenticationFilter;
 import com.iflytek.skillhub.auth.token.ApiTokenScopeFilter;
+import com.iflytek.skillhub.auth.token.ScimBearerAuthenticationFilter;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -68,6 +69,7 @@ public class SecurityConfig {
     private final OAuth2LoginFailureHandler failureHandler;
     private final ApiTokenAuthenticationFilter apiTokenAuthenticationFilter;
     private final ApiTokenScopeFilter apiTokenScopeFilter;
+    private final ScimBearerAuthenticationFilter scimBearerAuthenticationFilter;
     private final AuthenticationEntryPoint apiAuthenticationEntryPoint;
     private final AccessDeniedHandler apiAccessDeniedHandler;
     private final ObjectProvider<MockAuthFilter> mockAuthFilterProvider;
@@ -83,6 +85,7 @@ public class SecurityConfig {
                           OAuth2LoginFailureHandler failureHandler,
                           ApiTokenAuthenticationFilter apiTokenAuthenticationFilter,
                           ApiTokenScopeFilter apiTokenScopeFilter,
+                          ScimBearerAuthenticationFilter scimBearerAuthenticationFilter,
                           AuthenticationEntryPoint apiAuthenticationEntryPoint,
                           AccessDeniedHandler apiAccessDeniedHandler,
                           ObjectProvider<MockAuthFilter> mockAuthFilterProvider,
@@ -97,6 +100,7 @@ public class SecurityConfig {
         this.failureHandler = failureHandler;
         this.apiTokenAuthenticationFilter = apiTokenAuthenticationFilter;
         this.apiTokenScopeFilter = apiTokenScopeFilter;
+        this.scimBearerAuthenticationFilter = scimBearerAuthenticationFilter;
         this.apiAuthenticationEntryPoint = apiAuthenticationEntryPoint;
         this.apiAccessDeniedHandler = apiAccessDeniedHandler;
         this.mockAuthFilterProvider = mockAuthFilterProvider;
@@ -180,6 +184,7 @@ public class SecurityConfig {
             )
             .addFilterBefore(new ExpiredPublicSessionFilter(
                     routeSecurityPolicyRegistry, corruptSessionRemover, sessionCookieName), CsrfFilter.class)
+            .addFilterBefore(scimBearerAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(apiTokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterAfter(apiTokenScopeFilter, ApiTokenAuthenticationFilter.class);
 

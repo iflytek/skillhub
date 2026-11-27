@@ -158,6 +158,9 @@ public class OrganizationPortalQueryAppService {
                 authorizationPolicy.isAllowed(roles, OrganizationAdministrativeAction.VIEW_LOGIN_CONNECTIONS),
                 authorizationPolicy.isAllowed(roles, OrganizationAdministrativeAction.MANAGE_LOGIN_CONNECTIONS),
                 authorizationPolicy.isAllowed(roles, OrganizationAdministrativeAction.ROTATE_LOGIN_SECRETS),
+                authorizationPolicy.isAllowed(roles, OrganizationAdministrativeAction.VIEW_DIRECTORY_CONNECTIONS),
+                authorizationPolicy.isAllowed(roles, OrganizationAdministrativeAction.MANAGE_DIRECTORY_CONNECTIONS),
+                authorizationPolicy.isAllowed(roles, OrganizationAdministrativeAction.ROTATE_DIRECTORY_SECRETS),
                 authorizationPolicy.isAllowed(roles, OrganizationAdministrativeAction.MANAGE_MEMBERS),
                 authorizationPolicy.isAllowed(roles, OrganizationAdministrativeAction.VIEW_AUDIT)
         );

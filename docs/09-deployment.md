@@ -857,7 +857,51 @@ SkyWalking 中没有被保留的 Trace。这是头部采样的预期行为。
 - `scripts/verify-scanner.sh`
 - `docs/security-scanning.md`
 
-## 12 数据迁移
+## 12 SCIM 2.0 用户目录
+
+SCIM 是组织目录的 provisioning 接口，与 OIDC、OAuth、CAS、LDAP 登录连接分开配置。
+当前 P1 只支持 Users，不支持 Groups、部门树或 Namespace entitlement。Directory Connection
+默认关闭，并且必须同时满足 `SKILLHUB_IDENTITY_DIRECTORY_ENABLED=true` 和组织 allowlist。
+
+启用方式（仅用于隔离测试组织）：
+
+```bash
+export SKILLHUB_IDENTITY_DIRECTORY_ENABLED=true
+export SKILLHUB_IDENTITY_DIRECTORY_ORGANIZATION_ALLOWLIST=<test-organization-id>
+```
+
+请求边界默认值如下，可按部署环境收紧，但不建议随意放大：
+
+| 配置 | 默认值 | 作用 |
+|---|---:|---|
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_REQUEST_BYTES` | `65536` | SCIM 写请求 Content-Length 上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_FIELD_LENGTH` | `256` | externalId、userName、资料字段长度上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_FILTER_LENGTH` | `512` | filter 表达式长度上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_PATCH_OPERATIONS` | `32` | 单次 PATCH 操作数上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_PAGE_COUNT` | `100` | 单页最多返回用户数 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_START_INDEX` | `10000` | 最大 SCIM 起始位置 |
+
+组织管理员在组织详情创建并激活 Directory Connection 后，复制 SCIM endpoint 和一次性
+bootstrap token。Token 只在创建或轮换响应中展示一次；数据库、审计和日志只保存哈希、版本
+和提示信息。暂停连接会立即拒绝 SCIM 请求；轮换后旧 token 立即失效。
+
+资源更新返回 `ETag`，外部目录更新 `PUT`、`PATCH`、`DELETE` 时应回传 `If-Match`。
+版本不匹配返回 `412`，避免旧事件覆盖新资料。重复创建同一 `externalId` 会复用同一目录
+membership，不会创建平台账号、登录绑定或 Namespace 权限。
+
+本地可重复验收使用：
+
+```bash
+SCIM_BASE_URL="<directory-connection-scim-v2-url>" \
+SCIM_TOKEN="<one-time-token>" \
+./scripts/scim-user-lifecycle-fixture.sh
+```
+
+脚本覆盖 ServiceProviderConfig、Users create/list/filter/replay/replace/PATCH/deactivate，
+不会打印 token；验收完成后应暂停或禁用测试连接并清理临时组织和容器。该脚本是一次性
+SCIM 客户端 fixture，不代表已经完成 OIDC 登录或厂商通讯录接入。
+
+## 13 数据迁移
 
 Flyway 仍是唯一 schema 变更入口：
 

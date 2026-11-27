@@ -117,7 +117,8 @@ public class ApiTokenAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = RouteSecurityPolicyRegistry.requestPath(request);
-        return !(path.startsWith("/api/v1/")
+        return RouteSecurityPolicyRegistry.isDirectoryScimPath(path)
+            || !(path.startsWith("/api/v1/")
             || path.startsWith("/api/web/")
             || path.startsWith("/api/cli/"));
     }

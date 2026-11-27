@@ -92,8 +92,19 @@ public class AuditLog {
                                                String targetRef,
                                                String requestId,
                                                Instant createdAt) {
+        return organizationSuccess(actorUserId, action, organizationId, targetRef,
+                requestId, null, createdAt);
+    }
+
+    public static AuditLog organizationSuccess(String actorUserId,
+                                               String action,
+                                               String organizationId,
+                                               String targetRef,
+                                               String requestId,
+                                               String detailJson,
+                                               Instant createdAt) {
         AuditLog log = new AuditLog(actorUserId, action, "ORGANIZATION", null,
-                requestId, null, null, null, createdAt);
+                requestId, null, null, detailJson, createdAt);
         log.organizationId = organizationId;
         log.targetRef = targetRef;
         log.result = "SUCCESS";

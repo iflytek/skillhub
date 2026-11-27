@@ -2,6 +2,7 @@ package com.iflytek.skillhub;
 
 import com.iflytek.skillhub.bootstrap.BuiltinSkillProperties;
 import com.iflytek.skillhub.config.AuthoringProperties;
+import com.iflytek.skillhub.config.DirectoryProvisioningProperties;
 import com.iflytek.skillhub.config.ProfileFieldPolicyProperties;
 import com.iflytek.skillhub.config.ProfileModerationProperties;
 import org.springframework.boot.SpringApplication;
@@ -16,7 +17,8 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
         BuiltinSkillProperties.class,
         ProfileModerationProperties.class,
         ProfileFieldPolicyProperties.class,
-        AuthoringProperties.class
+        AuthoringProperties.class,
+        DirectoryProvisioningProperties.class
 })
 public class SkillhubApplication {
     public static void main(String[] args) {

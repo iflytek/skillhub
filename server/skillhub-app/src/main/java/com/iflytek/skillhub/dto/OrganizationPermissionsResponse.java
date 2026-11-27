@@ -8,6 +8,9 @@ public record OrganizationPermissionsResponse(
         boolean canViewLoginConnections,
         boolean canManageLoginConnections,
         boolean canRotateLoginSecrets,
+        boolean canViewDirectoryConnections,
+        boolean canManageDirectoryConnections,
+        boolean canRotateDirectorySecrets,
         boolean canManageMembers,
         boolean canViewAudit
 ) {

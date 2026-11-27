@@ -1371,6 +1371,30 @@
       "disable": "禁用这个连接？"
     }
   },
+  "organizationDirectoryConnections": {
+    "title": "目录同步",
+    "description": "使用 SCIM 2.0 同步组织成员。目录同步与登录连接、技能权限分开管理。",
+    "create": "新增 SCIM 连接",
+    "empty": "暂无目录连接。",
+    "created": "目录连接已创建",
+    "saved": "目录连接已更新",
+    "scim": "SCIM 2.0 用户目录",
+    "endpoint": "SCIM Endpoint",
+    "tokenHint": "Token 只在创建或轮换后显示一次，请立即保存。",
+    "tokenTitle": "请保存新的 SCIM Token",
+    "copy": "复制",
+    "secretVersion": "密钥版本 {{version}}",
+    "activate": "启用",
+    "suspend": "暂停",
+    "disable": "禁用",
+    "rotate": "轮换 Token",
+    "status": {
+      "DRAFT": "草稿",
+      "ACTIVE": "已启用",
+      "SUSPENDED": "已暂停",
+      "DISABLED": "已禁用"
+    }
+  },
   "overview": {
     "mySkills": "我的技能",
     "mySkillsDesc": "查看和管理你发布的所有技能",
