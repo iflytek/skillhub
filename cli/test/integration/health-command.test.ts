@@ -65,7 +65,8 @@ describe('doctor --health subprocess contract', () => {
     const result = await runCli(['doctor', '--health', '--json'], f.env, { cwd: f.cwd })
     expect(result.exitCode).toBe(2); expect(result.stderr).toBe(''); expect(calls).toBe(1)
     const report = JSON.parse(result.stdout); expect(report.ok).toBe(false); expect(report.exitCode).toBe(2)
-    expect(report.checks.find((x: { code: string }) => x.code === 'CREDENTIAL_REJECTED').next).toContain('logout --registry')
+    expect(report.checks.find((x: { code: string }) => x.code === 'CREDENTIAL_REJECTED').next).toContain('login --registry')
+    expect(result.stdout).not.toContain('logout --registry')
     expect(result.stdout).not.toContain(token); expect(await readFile(join(f.home, '.skillhub/credentials.json'))).toEqual(before)
   })
   test('missing login is a warning and human report contains actionable safe output', async () => {

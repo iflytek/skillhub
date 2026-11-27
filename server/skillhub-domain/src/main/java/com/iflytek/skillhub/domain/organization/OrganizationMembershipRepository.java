@@ -2,6 +2,8 @@ package com.iflytek.skillhub.domain.organization;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /** Tenant-scoped repository port for organization membership persistence. */
 public interface OrganizationMembershipRepository {
@@ -20,6 +22,20 @@ public interface OrganizationMembershipRepository {
             String organizationId,
             MembershipSourceType sourceType,
             String sourceId
+    );
+
+    Optional<OrganizationMembership> findByOrganizationIdAndSource(
+            String organizationId,
+            MembershipSourceType sourceType,
+            String sourceId
+    );
+
+    Page<OrganizationMembership> findDirectoryMembers(
+            String organizationId,
+            String connectionId,
+            String sourceUserName,
+            String primaryEmail,
+            Pageable pageable
     );
 
     /**

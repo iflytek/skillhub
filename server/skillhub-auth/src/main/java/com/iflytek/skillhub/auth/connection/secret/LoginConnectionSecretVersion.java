@@ -14,9 +14,9 @@ import org.hibernate.annotations.Immutable;
 @Entity
 @Immutable
 @Table(name = "login_connection_secret_version")
-class LoginConnectionSecretVersion {
+public class LoginConnectionSecretVersion {
 
-    static final String PURPOSE = "oidc-client-secret";
+    public static final String PURPOSE = "oidc-client-secret";
 
     @EmbeddedId
     private Id id;
@@ -62,7 +62,7 @@ class LoginConnectionSecretVersion {
     }
 
     @Embeddable
-    static class Id implements Serializable {
+    public static class Id implements Serializable {
         @Column(name = "connection_id", length = 64)
         private String connectionId;
 
@@ -72,7 +72,7 @@ class LoginConnectionSecretVersion {
         protected Id() {
         }
 
-        Id(String connectionId, long bindingVersion) {
+        public Id(String connectionId, long bindingVersion) {
             this.connectionId = connectionId;
             this.bindingVersion = bindingVersion;
         }
@@ -87,5 +87,16 @@ class LoginConnectionSecretVersion {
         public int hashCode() {
             return Objects.hash(connectionId, bindingVersion);
         }
+
+        public String getConnectionId() { return connectionId; }
+        public long getBindingVersion() { return bindingVersion; }
     }
+
+    public String getOrganizationId() { return organizationId; }
+    public String getPurpose() { return purpose; }
+    public String getStatus() { return status; }
+    public String getKeyId() { return keyId; }
+    public byte[] getNonce() { return nonce.clone(); }
+    public byte[] getCiphertext() { return ciphertext.clone(); }
+    public Id getId() { return id; }
 }

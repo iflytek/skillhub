@@ -4,6 +4,16 @@ import { CredentialsStore } from '../stores/credentials-store'
 import { CliError } from '../shared/errors'
 import { EXIT } from '../shared/constants'
 
+type DeviceVerificationHandler = (details: {
+  userCode: string
+  verificationUri: string
+  expiresIn: number
+}) => Promise<void>
+
+function isRejectedCredential(error: unknown): boolean {
+  return error instanceof CliError && error.exitCode === EXIT.auth && error.httpStatus === 401
+}
+
 export class AuthService {
   private readonly clientFactory: (registry: string, token?: string) => SkillHubClient
   private readonly sleep: (milliseconds: number) => Promise<void>
@@ -25,14 +35,38 @@ export class AuthService {
 
   async login(registry: string, token: string): Promise<{ handle: string }> {
     const user = await this.clientFactory(registry, token).whoami()
+    if (!user || typeof user.handle !== 'string' || !user.handle.trim()) {
+      throw new CliError('registry returned invalid identity data', EXIT.generic, { registry })
+    }
     await this.configStore.setRegistry(registry)
     await this.credentialsStore.setToken(registry, token)
     return { handle: user.handle }
   }
 
+  /**
+   * Validate the credential saved for this registry. A credential the server
+   * rejects with HTTP 401 must not dead-end `login`: report it, then continue with
+   * Device Flow so the account can be recovered without a separate `logout`.
+   * The stored token is only replaced once the new login persists a token.
+   */
+  async loginWithStoredCredential(
+    registry: string,
+    storedToken: string,
+    onVerification: DeviceVerificationHandler,
+    onCredentialRejected?: () => void | Promise<void>
+  ): Promise<{ handle: string }> {
+    try {
+      return await this.login(registry, storedToken)
+    } catch (error) {
+      if (!isRejectedCredential(error)) throw error
+      await onCredentialRejected?.()
+      return this.loginWithDeviceFlow(registry, onVerification)
+    }
+  }
+
   async loginWithDeviceFlow(
     registry: string,
-    onVerification: (details: { userCode: string; verificationUri: string; expiresIn: number }) => Promise<void>
+    onVerification: DeviceVerificationHandler
   ): Promise<{ handle: string }> {
     const client = this.clientFactory(registry)
     const device = await client.requestDeviceCode()

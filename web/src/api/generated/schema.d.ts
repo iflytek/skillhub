@@ -648,6 +648,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/Users/{membershipId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["getUser"];
+        put: operations["replaceUser"];
+        post?: never;
+        delete: operations["deleteUser"];
+        options?: never;
+        head?: never;
+        patch: operations["patchUser"];
+        trace?: never;
+    };
     "/api/v1/admin/users/{userId}/status": {
         parameters: {
             query?: never;
@@ -3475,6 +3491,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organizationId}/directory-connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_11"];
+        put?: never;
+        post: operations["create_5"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/suspend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["suspend"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/Users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["listUsers"];
+        put?: never;
+        post: operations["createUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/rotate-secret": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["rotateSecret"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["disable"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["activate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/device/authorize": {
         parameters: {
             query?: never;
@@ -3581,6 +3693,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["changePassword"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/enterprise/discovery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["discover"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4164,10 +4292,10 @@ export interface paths {
             cookie?: never;
         };
         /** 查看系统级公开 GitHub 凭证的脱敏状态 */
-        get: operations["list_13"];
+        get: operations["list_14"];
         put?: never;
         /** 加密保存系统级公开 GitHub 凭证 */
-        post: operations["create_5"];
+        post: operations["create_6"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7139,6 +7267,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/ServiceProviderConfig": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["serviceProviderConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/Schemas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["schemas"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/organizations/{organizationId}/directory-connections/{connectionId}/scim/v2/ResourceTypes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["resourceTypes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/health": {
         parameters: {
             query?: never;
@@ -7251,6 +7427,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/enterprise/{publicHandle}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["start"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/enterprise/{publicHandle}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/users": {
         parameters: {
             query?: never;
@@ -7258,7 +7466,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["listUsers"];
+        get: operations["listUsers_1"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7323,7 +7531,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get: operations["list_11"];
+        get: operations["list_12"];
         put?: never;
         post?: never;
         delete?: never;
@@ -7575,7 +7783,7 @@ export interface paths {
             cookie?: never;
         };
         /** 查看 GitHub 发现规则与精选入口 */
-        get: operations["list_12"];
+        get: operations["list_13"];
         put?: never;
         post?: never;
         delete?: never;
@@ -8522,6 +8730,48 @@ export interface components {
             lastUsedAt?: string;
             capabilities?: string[];
             legacyCompat?: boolean;
+        };
+        ScimEmail: {
+            value?: string;
+            type?: string;
+            primary?: boolean;
+        };
+        ScimEnterpriseUser: {
+            department?: string;
+            employeeNumber?: string;
+        };
+        ScimName: {
+            givenName?: string;
+            familyName?: string;
+        };
+        ScimUserRequest: {
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"?: components["schemas"]["ScimEnterpriseUser"];
+            schemas?: string[];
+            externalId?: string;
+            userName?: string;
+            displayName?: string;
+            active?: boolean;
+            name?: components["schemas"]["ScimName"];
+            emails?: components["schemas"]["ScimEmail"][];
+        };
+        ScimMeta: {
+            resourceType?: string;
+            created?: string;
+            lastModified?: string;
+            location?: string;
+            version?: string;
+        };
+        ScimUserResource: {
+            "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User"?: components["schemas"]["ScimEnterpriseUser"];
+            schemas?: string[];
+            id?: string;
+            externalId?: string;
+            userName?: string;
+            displayName?: string;
+            active?: boolean;
+            name?: components["schemas"]["ScimName"];
+            emails?: components["schemas"]["ScimEmail"][];
+            meta?: components["schemas"]["ScimMeta"];
         };
         AdminUserStatusUpdateRequest: {
             status: string;
@@ -9984,6 +10234,32 @@ export interface components {
         LoginConnectionSecretRequest: {
             clientSecret: string;
         };
+        ApiResponseDirectoryConnectionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["DirectoryConnectionResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        DirectoryConnectionResponse: {
+            id?: string;
+            organizationId?: string;
+            protocol?: string;
+            status?: string;
+            /** Format: int64 */
+            secretVersion?: number;
+            tokenHint?: string;
+            scimBaseUrl?: string;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+            bootstrapToken?: string;
+        };
         AuthorizeRequest: {
             userCode?: string;
         };
@@ -10030,6 +10306,41 @@ export interface components {
         ChangePasswordRequest: {
             currentPassword: string;
             newPassword: string;
+        };
+        EnterpriseLoginDiscoveryRequest: {
+            identifier: string;
+            returnTo?: string;
+        };
+        ApiResponseEnterpriseLoginDiscoveryResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["EnterpriseLoginDiscoveryResponse"];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        AuthMethodResponse: {
+            id?: string;
+            methodType?: string;
+            provider?: string;
+            displayName?: string;
+            actionUrl?: string;
+        };
+        EnterpriseLoginDiscoveryResponse: {
+            publicMethods?: components["schemas"]["AuthMethodResponse"][];
+            organizations?: components["schemas"]["OrganizationLoginOptions"][];
+        };
+        LoginOption: {
+            displayName?: string;
+            actionUrl?: string;
+        };
+        OrganizationLoginOptions: {
+            slug?: string;
+            displayName?: string;
+            loginOptions?: components["schemas"]["LoginOption"][];
         };
         DirectLoginRequest: {
             provider: string;
@@ -10253,6 +10564,7 @@ export interface components {
             sortOrder?: number;
             translations: components["schemas"]["LabelTranslationItemRequest"][];
         };
+        JsonNode: Record<string, never>;
         GithubCuratedRepositoryRequest: {
             ownerLogin: string;
             repositoryName: string;
@@ -12466,6 +12778,9 @@ export interface components {
             canViewLoginConnections?: boolean;
             canManageLoginConnections?: boolean;
             canRotateLoginSecrets?: boolean;
+            canViewDirectoryConnections?: boolean;
+            canManageDirectoryConnections?: boolean;
+            canRotateDirectorySecrets?: boolean;
             canManageMembers?: boolean;
             canViewAudit?: boolean;
         };
@@ -12594,6 +12909,27 @@ export interface components {
         LoginConnectionManagementResponse: {
             enabled?: boolean;
         };
+        ApiResponseListDirectoryConnectionResponse: {
+            /** Format: int32 */
+            code?: number;
+            msg?: string;
+            data?: components["schemas"]["DirectoryConnectionResponse"][];
+            /** Format: date-time */
+            timestamp?: string;
+            requestId?: string;
+            errorCode?: string;
+            errorArgs?: string[];
+        };
+        ScimListResponse: {
+            Resources?: components["schemas"]["ScimUserResource"][];
+            schemas?: string[];
+            /** Format: int32 */
+            totalResults?: number;
+            /** Format: int32 */
+            startIndex?: number;
+            /** Format: int32 */
+            itemsPerPage?: number;
+        };
         ApiResponseListAuthProviderResponse: {
             /** Format: int32 */
             code?: number;
@@ -12620,13 +12956,6 @@ export interface components {
             requestId?: string;
             errorCode?: string;
             errorArgs?: string[];
-        };
-        AuthMethodResponse: {
-            id?: string;
-            methodType?: string;
-            provider?: string;
-            displayName?: string;
-            actionUrl?: string;
         };
         ApiResponseLocalAuthCapabilitiesResponse: {
             /** Format: int32 */
@@ -15302,6 +15631,116 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseTokenSummaryResponse"];
+                };
+            };
+        };
+    };
+    getUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUserResource"];
+                };
+            };
+        };
+    };
+    replaceUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                organizationId: string;
+                connectionId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/scim+json": components["schemas"]["ScimUserRequest"];
+                "application/json": components["schemas"]["ScimUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUserResource"];
+                };
+            };
+        };
+    };
+    deleteUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                organizationId: string;
+                connectionId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    patchUser: {
+        parameters: {
+            query?: never;
+            header?: {
+                "If-Match"?: string;
+            };
+            path: {
+                organizationId: string;
+                connectionId: string;
+                membershipId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/scim+json": components["schemas"]["JsonNode"];
+                "application/json": components["schemas"]["JsonNode"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUserResource"];
                 };
             };
         };
@@ -20573,6 +21012,197 @@ export interface operations {
             };
         };
     };
+    list_11: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseListDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    create_5: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    suspend: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    listUsers: {
+        parameters: {
+            query?: {
+                startIndex?: number;
+                count?: number;
+                filter?: string;
+            };
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimListResponse"];
+                };
+            };
+        };
+    };
+    createUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/scim+json": components["schemas"]["ScimUserRequest"];
+                "application/json": components["schemas"]["ScimUserRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": components["schemas"]["ScimUserResource"];
+                };
+            };
+        };
+    };
+    rotateSecret: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    disable: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
+    activate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                organizationId: string;
+                connectionId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseDirectoryConnectionResponse"];
+                };
+            };
+        };
+    };
     authorizeDevice: {
         parameters: {
             query?: never;
@@ -20737,6 +21367,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ApiResponseVoid"];
+                };
+            };
+        };
+    };
+    discover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnterpriseLoginDiscoveryRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApiResponseEnterpriseLoginDiscoveryResponse"];
                 };
             };
         };
@@ -21645,7 +22299,7 @@ export interface operations {
             };
         };
     };
-    list_13: {
+    list_14: {
         parameters: {
             query?: never;
             header?: never;
@@ -21665,7 +22319,7 @@ export interface operations {
             };
         };
     };
-    create_5: {
+    create_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -26209,6 +26863,72 @@ export interface operations {
             };
         };
     };
+    serviceProviderConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        [key: string]: Record<string, never>;
+                    };
+                };
+            };
+        };
+    };
+    schemas: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        [key: string]: Record<string, never>;
+                    }[];
+                };
+            };
+        };
+    };
+    resourceTypes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/scim+json": {
+                        [key: string]: Record<string, never>;
+                    }[];
+                };
+            };
+        };
+    };
     health: {
         parameters: {
             query?: never;
@@ -26356,7 +27076,54 @@ export interface operations {
             };
         };
     };
-    listUsers: {
+    start: {
+        parameters: {
+            query?: {
+                returnTo?: string;
+            };
+            header?: never;
+            path: {
+                publicHandle: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    callback: {
+        parameters: {
+            query?: {
+                state?: string;
+                code?: string;
+            };
+            header?: never;
+            path: {
+                publicHandle: string;
+            };
+            cookie?: {
+                SKILLHUB_ENT_BINDING?: string;
+            };
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listUsers_1: {
         parameters: {
             query?: {
                 search?: string;
@@ -26450,7 +27217,7 @@ export interface operations {
             };
         };
     };
-    list_11: {
+    list_12: {
         parameters: {
             query?: {
                 status?: string;
@@ -26815,7 +27582,7 @@ export interface operations {
             };
         };
     };
-    list_12: {
+    list_13: {
         parameters: {
             query?: never;
             header?: never;

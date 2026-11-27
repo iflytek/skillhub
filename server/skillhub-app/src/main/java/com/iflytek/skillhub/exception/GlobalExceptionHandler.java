@@ -4,6 +4,7 @@ import com.iflytek.skillhub.auth.exception.AuthFlowException;
 import com.iflytek.skillhub.auth.policy.RouteSecurityPolicyRegistry;
 import com.iflytek.skillhub.dto.ApiResponse;
 import com.iflytek.skillhub.dto.ApiResponseFactory;
+import com.iflytek.skillhub.dto.ScimErrorResponse;
 import com.iflytek.skillhub.domain.shared.exception.LocalizedDomainException;
 import com.iflytek.skillhub.domain.shared.exception.LocalizedMessage;
 import com.iflytek.skillhub.metrics.SkillHubMetrics;
@@ -63,6 +64,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(LocalizedException.class)
     public ResponseEntity<ApiResponse<Void>> handleLocalizedError(LocalizedException ex, HttpServletRequest request) {
         return renderLocalizedError(ex, ex.status(), request);
+    }
+
+    @ExceptionHandler(ScimProtocolException.class)
+    public ResponseEntity<ScimErrorResponse> handleScimProtocolException(
+            ScimProtocolException ex, HttpServletRequest request) {
+        logHandledException(ex.getStatus(), "scim.protocol", request);
+        ScimErrorResponse body = new ScimErrorResponse(
+                java.util.List.of("urn:ietf:params:scim:api:messages:2.0:Error"),
+                ex.getMessage(),
+                Integer.toString(ex.getStatus().value()),
+                ex.getScimType());
+        return ResponseEntity.status(ex.getStatus()).contentType(
+                org.springframework.http.MediaType.parseMediaType("application/scim+json"))
+                .body(body);
     }
 
     @ExceptionHandler(AuthFlowException.class)

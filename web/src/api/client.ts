@@ -43,6 +43,7 @@ import type {
   ExternalRoleGrantRule,
   PlatformRole,
   OAuthProvider,
+  EnterpriseLoginDiscovery,
   User,
   ManagedNamespace,
   AdminNamespace,
@@ -84,6 +85,7 @@ type RuntimeConfig = {
   authSessionBootstrapEnabled?: string
   authSessionBootstrapProvider?: string
   authSessionBootstrapAuto?: string
+  authEnterpriseOidcEnabled?: string
   analytics?: unknown
 }
 
@@ -621,6 +623,10 @@ export function getSessionBootstrapRuntimeConfig(): SessionBootstrapRuntimeConfi
   }
 }
 
+export function getEnterpriseOidcRuntimeConfig(): { enabled: boolean } {
+  return { enabled: parseBooleanFlag(getRuntimeConfig().authEnterpriseOidcEnabled) }
+}
+
 type ApiEnvelope<T> = {
   code: number
   msg: string
@@ -787,6 +793,14 @@ export const authApi = {
         displayName: method.displayName,
         actionUrl: method.actionUrl,
       }))
+  },
+
+  async discoverEnterprise(identifier: string, returnTo?: string): Promise<EnterpriseLoginDiscovery> {
+    return fetchJson<EnterpriseLoginDiscovery>('/api/v1/auth/enterprise/discovery', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier, returnTo }),
+    })
   },
 
   async localLogin(request: LocalLoginRequest): Promise<User> {
@@ -1245,13 +1259,32 @@ export const labelApi = {
 }
 
 export type OrganizationSummary = components['schemas']['OrganizationSummaryResponse']
-export type OrganizationDetail = components['schemas']['OrganizationDetailResponse']
+type DirectoryOrganizationPermissions = {
+  canViewDirectoryConnections?: boolean
+  canManageDirectoryConnections?: boolean
+  canRotateDirectorySecrets?: boolean
+}
+export type OrganizationDetail = components['schemas']['OrganizationDetailResponse'] & {
+  permissions?: components['schemas']['OrganizationPermissionsResponse'] & DirectoryOrganizationPermissions
+}
 export type OrganizationMember = components['schemas']['OrganizationMemberResponse']
 export type OrganizationRole = components['schemas']['OrganizationRoleGrantRequest']['role']
 export type OrganizationRoleBinding = components['schemas']['OrganizationRoleBindingResponse']
 type ConnectionSummary = components['schemas']['LoginConnectionSummaryResponse']
 type ConnectionManagement = components['schemas']['LoginConnectionManagementResponse']
 export type OrganizationLoginConnection = components['schemas']['LoginConnectionResponse']
+export type OrganizationDirectoryConnection = {
+  id: string
+  organizationId: string
+  protocol: string
+  status: string
+  secretVersion: number
+  tokenHint: string
+  scimBaseUrl: string
+  createdAt: string
+  updatedAt: string
+  bootstrapToken?: string | null
+}
 type ConnectionDraft = components['schemas']['LoginConnectionCreateRequest']
 type ConnectionRevision = components['schemas']['LoginConnectionRevisionCreateRequest']
 type ConnectionCredential = components['schemas']['LoginConnectionSecretRequest']
@@ -1347,6 +1380,39 @@ export const organizationConnectionApi = {
     return postConnection<OrganizationLoginConnection>(`${connectionPath(organizationId, connectionId)}/${action}`, {
       confirmed: true,
     } satisfies ConnectionConfirmation)
+  },
+}
+
+export const organizationDirectoryConnectionApi = {
+  list(organizationId: string) {
+    return fetchJson<OrganizationDirectoryConnection[]>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections`,
+    )
+  },
+  create(organizationId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections`,
+    )
+  },
+  activate(organizationId: string, connectionId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections/${encodeURIComponent(connectionId)}/activate`,
+    )
+  },
+  suspend(organizationId: string, connectionId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections/${encodeURIComponent(connectionId)}/suspend`,
+    )
+  },
+  disable(organizationId: string, connectionId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections/${encodeURIComponent(connectionId)}/disable`,
+    )
+  },
+  rotateSecret(organizationId: string, connectionId: string) {
+    return postConnection<OrganizationDirectoryConnection>(
+      `/api/v1/organizations/${encodeURIComponent(organizationId)}/directory-connections/${encodeURIComponent(connectionId)}/rotate-secret`,
+    )
   },
 }
 

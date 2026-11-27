@@ -137,6 +137,16 @@ spring:
             enable: ${SPRING_MAIL_SMTP_STARTTLS_ENABLE:false}
 
 skillhub:
+  identity:
+    directory:
+      enabled: ${SKILLHUB_IDENTITY_DIRECTORY_ENABLED:false}
+      organization-allowlist: ${SKILLHUB_IDENTITY_DIRECTORY_ORGANIZATION_ALLOWLIST:}
+      max-request-bytes: ${SKILLHUB_IDENTITY_DIRECTORY_MAX_REQUEST_BYTES:65536}
+      max-field-length: ${SKILLHUB_IDENTITY_DIRECTORY_MAX_FIELD_LENGTH:256}
+      max-filter-length: ${SKILLHUB_IDENTITY_DIRECTORY_MAX_FILTER_LENGTH:512}
+      max-patch-operations: ${SKILLHUB_IDENTITY_DIRECTORY_MAX_PATCH_OPERATIONS:32}
+      max-page-count: ${SKILLHUB_IDENTITY_DIRECTORY_MAX_PAGE_COUNT:100}
+      max-start-index: ${SKILLHUB_IDENTITY_DIRECTORY_MAX_START_INDEX:10000}
   notification:
     email:
       # Seed only when notification.email is absent; subsequent changes use the admin UI.
@@ -214,6 +224,9 @@ skillhub:
     sentinel:
       check-sentinels-list: ${SKILLHUB_REDIS_SENTINEL_CHECK_SENTINELS_LIST:true}
   enterprise:
+    oidc-login-enabled: ${SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED:false}
+    oidc-callback-base-uri: ${SKILLHUB_ENTERPRISE_OIDC_CALLBACK_BASE_URI:}
+    organization-allowlist: ${SKILLHUB_ENTERPRISE_ORGANIZATION_ALLOWLIST:}
     oidc:
       enabled: ${SKILLHUB_ENTERPRISE_OIDC_ENABLED:false}
       private-host-allowlist: ${SKILLHUB_ENTERPRISE_OIDC_PRIVATE_HOST_ALLOWLIST:}

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { resolveRegistry, resolveToken } from '../../../src/services/registry-service'
+import { resolveRegistry, resolveToken, resolveTokenWithSource } from '../../../src/services/registry-service'
 
 describe('registry-service', () => {
   test('resolves registry by cli arg, env, config, default order', () => {
@@ -15,5 +15,33 @@ describe('registry-service', () => {
     expect(resolveToken({ token: 'arg' }, {}, 'stored')).toBe('arg')
     expect(resolveToken({}, { SKILLHUB_TOKEN: 'env' }, 'stored')).toBe('env')
     expect(resolveToken({}, {}, 'stored')).toBe('stored')
+  })
+
+  test('resolves the token source by cli arg, env, credentials order', () => {
+    expect(resolveTokenWithSource({ token: 'arg' }, { SKILLHUB_TOKEN: 'env' }, 'stored'))
+      .toEqual({ token: 'arg', source: 'argument' })
+    expect(resolveTokenWithSource({}, { SKILLHUB_TOKEN: 'env' }, 'stored'))
+      .toEqual({ token: 'env', source: 'environment' })
+    expect(resolveTokenWithSource({}, {}, 'stored')).toEqual({ token: 'stored', source: 'stored' })
+    expect(resolveTokenWithSource({}, {}, undefined)).toBeUndefined()
+  })
+
+  test('treats an empty token argument as absent, as resolveToken does', () => {
+    expect(resolveTokenWithSource({ token: '' }, { SKILLHUB_TOKEN: 'env' }, 'stored'))
+      .toEqual({ token: 'env', source: 'environment' })
+    expect(resolveToken({ token: '' }, { SKILLHUB_TOKEN: 'env' }, 'stored')).toBe('env')
+  })
+
+  test('keeps resolveToken equivalent to the source-aware resolver', () => {
+    const cases: Array<[{ token?: string }, NodeJS.ProcessEnv, string | undefined]> = [
+      [{ token: 'arg' }, { SKILLHUB_TOKEN: 'env' }, 'stored'],
+      [{}, { SKILLHUB_TOKEN: 'env' }, 'stored'],
+      [{}, {}, 'stored'],
+      [{}, {}, undefined]
+    ]
+
+    for (const [args, env, stored] of cases) {
+      expect(resolveToken(args, env, stored)).toBe(resolveTokenWithSource(args, env, stored)?.token)
+    }
   })
 })

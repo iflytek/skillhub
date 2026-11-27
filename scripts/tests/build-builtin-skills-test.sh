@@ -194,4 +194,59 @@ if python3 "$BUILDER" \
 fi
 grep -q "symbolic links are not allowed" "$tmp/invalid.stderr"
 
+# An original package declares "upstream": null and carries an original-work notice instead of
+# pinned upstream provenance. Both halves are required: the flag alone is not provenance.
+original_source="$tmp/original-source"
+mkdir -p "$original_source"
+cp -R "$REPO_ROOT/builtin-skills/skills/exam-ready" "$original_source/exam-ready"
+cat >"$original_source/exam-ready/NOTICE.md" <<'NOTICE'
+# Original work notice
+
+- Origin: this repository, `builtin-skills/skills/exam-ready`
+- Author: the SkillHub authors
+- License: MIT; see `LICENSE.txt`
+NOTICE
+
+original_catalog="$tmp/original-catalog.json"
+printf '%s\n' \
+  '{"schemaVersion":1,"skills":[{"slug":"exam-ready","version":"1.0.0","license":"MIT","upstream":null}]}' \
+  >"$original_catalog"
+
+python3 "$BUILDER" \
+  --source-root "$original_source" \
+  --catalog "$original_catalog" \
+  --evals "$mini_evals" \
+  --output "$tmp/original-output" >/dev/null
+grep -q '"origin": "original"' "$tmp/original-output/artifacts.json"
+
+# A placeholder commit is rejected: original packages must say so, not pin 40 zeros.
+printf '%s\n' \
+  '{"schemaVersion":1,"skills":[{"slug":"exam-ready","version":"1.0.0","license":"MIT","upstream":{"repository":"https://github.com/iflytek/skillhub","commit":"0000000000000000000000000000000000000000","path":"builtin-skills/skills/exam-ready"}}]}' \
+  >"$tmp/zero-catalog.json"
+if python3 "$BUILDER" \
+  --source-root "$original_source" \
+  --catalog "$tmp/zero-catalog.json" \
+  --evals "$mini_evals" \
+  --output "$tmp/zero-output" >"$tmp/zero.stdout" 2>"$tmp/zero.stderr"; then
+  echo "FAIL: expected the placeholder upstream commit to be rejected" >&2
+  exit 1
+fi
+grep -q 'must be a real revision' "$tmp/zero.stderr"
+
+# The notice is what makes an original claim checkable; without it the build stops.
+cp -R "$original_source/exam-ready" "$tmp/noticeless-source-exam-ready"
+printf '# Upstream notice\n\n- License: MIT; see LICENSE.txt\n' \
+  >"$tmp/noticeless-source-exam-ready/NOTICE.md"
+mkdir -p "$tmp/noticeless-source"
+mv "$tmp/noticeless-source-exam-ready" "$tmp/noticeless-source/exam-ready"
+if python3 "$BUILDER" \
+  --source-root "$tmp/noticeless-source" \
+  --catalog "$original_catalog" \
+  --evals "$mini_evals" \
+  --output "$tmp/noticeless-output" >"$tmp/noticeless.stdout" 2>"$tmp/noticeless.stderr"; then
+  echo "FAIL: expected a missing original-work notice to be rejected" >&2
+  exit 1
+fi
+grep -q "Original work notice" "$tmp/noticeless.stderr"
+
 echo "build-builtin-skills-test passed"

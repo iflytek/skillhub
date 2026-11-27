@@ -84,7 +84,7 @@ or installation; this lossy stream is not an audit or billing system.
 
 ## CLI device authorization URL
 
-`skillhub login --no-open --registry https://skills.example.com` first resolves `--token`, then `SKILLHUB_TOKEN`, then saved credentials for that registry. Device authorization starts only when no token is resolved; an invalid token does not automatically fall back. `--no-open` only disables automatic browser launch. Verify the resulting identity with `skillhub whoami --registry https://skills.example.com`.
+`skillhub login --no-open --registry https://skills.example.com` first resolves `--token`, then `SKILLHUB_TOKEN`, then saved credentials for that registry. Device authorization starts when no token is resolved, or after the registry rejects the saved credential with HTTP 401; a rejected explicit token is reported instead of being replaced automatically. `--no-open` only disables automatic browser launch. Verify the resulting identity with `skillhub whoami --registry https://skills.example.com`.
 
 - When `DEVICE_AUTH_VERIFICATION_URI` is unset, empty, or whitespace, the server appends `/device` to `SKILLHUB_PUBLIC_BASE_URL`, preserving sub-paths and trimming trailing slashes. For example, `https://skills.example.com/portal/` becomes `https://skills.example.com/portal/device`.
 - Without a public base URL, the compatibility fallback is `/device`, resolved by the CLI against the registry origin. Set the actual public Web URL for production, sub-path, or separate Web/API deployments.

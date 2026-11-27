@@ -4,6 +4,8 @@ import { Link, useParams, useNavigate, useRouterState, useSearch } from '@tansta
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, ArrowUpCircle, Boxes, ChevronDown, ChevronUp, Clock, Folder, Globe, Lock, RefreshCw, ShieldCheck, Terminal, User, Users } from 'lucide-react'
 import { SkillInstructions } from '@/features/skill/skill-instructions'
+import { useCrossSourceTwin } from '@/features/skill/cross-source-twin'
+import { CrossSourceTwinNotice } from '@/features/skill/cross-source-twin-notice'
 import { MarkdownRenderer } from '@/features/skill/markdown-renderer'
 import { SkillVisibilityDialog } from '@/features/skill/skill-visibility-dialog'
 import { SkillAvatar } from '@/features/skill/skill-avatar'
@@ -374,6 +376,7 @@ export function SkillDetailPage() {
   const archiveMutation = useArchiveSkill()
   const unarchiveMutation = useUnarchiveSkill()
   const deleteSkillMutation = useDeleteSkill()
+  const crossSourceTwin = useCrossSourceTwin(skill ? { slug: skill.slug, namespace: skill.namespace } : undefined)
   const deleteVersionMutation = useDeleteSkillVersion()
   const withdrawReviewMutation = useWithdrawSkillReview()
   const rereleaseVersionMutation = useRereleaseSkillVersion()
@@ -1033,6 +1036,8 @@ export function SkillDetailPage() {
           <span>{t(unavailableVersion ? 'skillDetail.versionUnavailable' : showingUnpublishedPreview ? 'skillDetail.viewingUnpublishedVersion' : selectedVersion !== publishedVersion?.version ? 'skillDetail.viewingHistoricalVersion' : 'skillDetail.viewingVersion', { version: selectedVersion })}</span>
           {publishedVersion && selectedVersion !== publishedVersion.version && <Button variant="outline" size="sm" data-analytics-id="skill.version.latest" onClick={() => showVersion(publishedVersion.version === headlineVersion?.version ? undefined : publishedVersion.version)}>{t('skillDetail.returnLatestPublished')}</Button>}
         </div>}
+        {crossSourceTwin.data ? <CrossSourceTwinNotice twin={crossSourceTwin.data} /> : null}
+
         <Tabs value={activeTab} onValueChange={(value) => setTabState({ version: selectedVersion, value })}>
           <TabsList className="max-w-full flex-wrap h-auto">
             <TabsTrigger ref={overviewTabRef} data-analytics-id="skill.overview.tab" value="readme">{t('skillDetail.tabOverview')}</TabsTrigger>
@@ -1524,6 +1529,7 @@ export function SkillDetailPage() {
         {skill.githubSource && publishedVersion && (
           <GithubSkillSourceCard source={skill.githubSource} version={publishedVersion.version} />
         )}
+
 
         {skill.canManageLifecycle && (
           <Card className="p-5 space-y-3">

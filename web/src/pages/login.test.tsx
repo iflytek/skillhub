@@ -54,6 +54,7 @@ vi.mock('lucide-react', () => ({
 vi.mock('@/api/client', () => ({
   getDirectAuthRuntimeConfig: () => ({ enabled: authMethodsFixture.directEnabled, provider: 'local' }),
   getSessionBootstrapRuntimeConfig: () => ({ enabled: authMethodsFixture.bootstrapEnabled, provider: 'proxy' }),
+  getEnterpriseOidcRuntimeConfig: () => ({ enabled: false }),
 }))
 
 vi.mock('@/features/auth/auth-shell', () => ({

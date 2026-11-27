@@ -150,12 +150,14 @@ window.location.href = "/oauth2/authorization/github"
 - `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_ENABLED`
 - `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_PROVIDER`
 - `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO`
+- `SKILLHUB_WEB_AUTH_ENTERPRISE_OIDC_ENABLED`
 
 推荐策略：
 
 - 私有版密码直连：`auth_direct_enabled=true`，`auth_direct_provider=private-sso`
 - 私有版初期：`enabled=true`，`provider=private-sso`，`auto=false`
 - 验证稳定后：再评估是否切到 `auto=true`
+- 组织 OIDC 入口单独由 `SKILLHUB_WEB_AUTH_ENTERPRISE_OIDC_ENABLED=true` 打开；它只显示组织标识查找和服务端返回的 opaque 登录动作，不替代个人账号或公共 OAuth 入口。
 
 ### 4.3 登录态检测
 

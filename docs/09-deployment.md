@@ -7,8 +7,9 @@
 ### CLI 设备授权地址
 
 `skillhub login --no-open --registry https://skills.example.com` 先按 `--token`、
-`SKILLHUB_TOKEN`、该 registry 已保存凭据的顺序解析 Token。仅在未解析到 Token 时
-进入设备码授权；已解析的 Token 若验证失败，不会自动回退到设备码流程。`--no-open`
+`SKILLHUB_TOKEN`、该 registry 已保存凭据的顺序解析 Token。未解析到 Token 时进入设备码授权；
+已保存凭据收到 HTTP 401 时，CLI 会报告并继续进入设备码授权，新登录成功前不删除旧凭据。
+显式提供的 Token 被拒绝时不会自动替换，CLI 会指出来源并说明如何去掉它后重试；`--no-open`
 只禁止自动打开浏览器，不会跳过 Token 解析。
 
 设备码流程中，CLI 请求 `/api/v1/auth/device/code`，用户打开返回的 `/device` 页面并登录、确认授权，
@@ -367,11 +368,15 @@ services:
 - `SKILLHUB_WEB_AUTH_SESSION_BOOTSTRAP_AUTO`
   - 是否在登录页加载后自动尝试一次 bootstrap
   - 建议私有版初期保持 `false`
+- `SKILLHUB_WEB_AUTH_ENTERPRISE_OIDC_ENABLED`
+  - 是否在登录页显示组织标识查找和 OIDC 连接入口
+  - 只有在后端 `SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED=true` 且组织在 allowlist 中时才会实际跳转
 
 注意：
 
 - 前端密码兼容层打开之前，后端仍必须同步打开 `skillhub.auth.direct.enabled=true`
 - 前端开关打开之前，后端仍必须同步打开 `skillhub.auth.session-bootstrap.enabled=true`
+- 组织 OIDC 入口打开之前，后端必须同步打开 `SKILLHUB_ENTERPRISE_OIDC_LOGIN_ENABLED=true`，并配置回调地址、密钥和组织 allowlist
 - 前后端任一侧未开启，都不会破坏原有登录方式；只会使该兼容入口不可用或不显示
 
 开发环境：
@@ -853,7 +858,51 @@ SkyWalking 中没有被保留的 Trace。这是头部采样的预期行为。
 - `scripts/verify-scanner.sh`
 - `docs/security-scanning.md`
 
-## 12 数据迁移
+## 12 SCIM 2.0 用户目录
+
+SCIM 是组织目录的 provisioning 接口，与 OIDC、OAuth、CAS、LDAP 登录连接分开配置。
+当前 P1 只支持 Users，不支持 Groups、部门树或 Namespace entitlement。Directory Connection
+默认关闭，并且必须同时满足 `SKILLHUB_IDENTITY_DIRECTORY_ENABLED=true` 和组织 allowlist。
+
+启用方式（仅用于隔离测试组织）：
+
+```bash
+export SKILLHUB_IDENTITY_DIRECTORY_ENABLED=true
+export SKILLHUB_IDENTITY_DIRECTORY_ORGANIZATION_ALLOWLIST=<test-organization-id>
+```
+
+请求边界默认值如下，可按部署环境收紧，但不建议随意放大：
+
+| 配置 | 默认值 | 作用 |
+|---|---:|---|
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_REQUEST_BYTES` | `65536` | SCIM 写请求 Content-Length 上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_FIELD_LENGTH` | `256` | externalId、userName、资料字段长度上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_FILTER_LENGTH` | `512` | filter 表达式长度上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_PATCH_OPERATIONS` | `32` | 单次 PATCH 操作数上限 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_PAGE_COUNT` | `100` | 单页最多返回用户数 |
+| `SKILLHUB_IDENTITY_DIRECTORY_MAX_START_INDEX` | `10000` | 最大 SCIM 起始位置 |
+
+组织管理员在组织详情创建并激活 Directory Connection 后，复制 SCIM endpoint 和一次性
+bootstrap token。Token 只在创建或轮换响应中展示一次；数据库、审计和日志只保存哈希、版本
+和提示信息。暂停连接会立即拒绝 SCIM 请求；轮换后旧 token 立即失效。
+
+资源更新返回 `ETag`，外部目录更新 `PUT`、`PATCH`、`DELETE` 时应回传 `If-Match`。
+版本不匹配返回 `412`，避免旧事件覆盖新资料。重复创建同一 `externalId` 会复用同一目录
+membership，不会创建平台账号、登录绑定或 Namespace 权限。
+
+本地可重复验收使用：
+
+```bash
+SCIM_BASE_URL="<directory-connection-scim-v2-url>" \
+SCIM_TOKEN="<one-time-token>" \
+./scripts/scim-user-lifecycle-fixture.sh
+```
+
+脚本覆盖 ServiceProviderConfig、Users create/list/filter/replay/replace/PATCH/deactivate，
+不会打印 token；验收完成后应暂停或禁用测试连接并清理临时组织和容器。该脚本是一次性
+SCIM 客户端 fixture，不代表已经完成 OIDC 登录或厂商通讯录接入。
+
+## 13 数据迁移
 
 Flyway 仍是唯一 schema 变更入口：
 

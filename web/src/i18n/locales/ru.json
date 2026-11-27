@@ -492,6 +492,11 @@
     "enterpriseTitle": "Корпоративный SSO",
     "enterpriseHint": "Если администраторы настроили рабочий вход, можно продолжить с корпоративной идентичностью.",
     "enterpriseConfigHint": "Рабочие способы входа включает администратор.",
+    "enterpriseIdentifier": "Идентификатор организации",
+    "enterpriseIdentifierPlaceholder": "Например, acme",
+    "enterpriseFind": "Найти вход организации",
+    "enterpriseSearching": "Поиск…",
+    "enterpriseDiscoveryUnavailable": "Вход организации временно недоступен. Повторите попытку позже.",
     "noEnterpriseMethods": "Рабочий вход пока недоступен. Используйте личный аккаунт или обратитесь к администратору.",
     "personalTitle": "Вход по паролю",
     "personalHint": "Используйте имя пользователя и пароль SkillHub.",
@@ -1357,6 +1362,30 @@
       "suspend": "Приостановить это подключение?",
       "resume": "Возобновить это подключение?",
       "disable": "Отключить это подключение?"
+    }
+  },
+  "organizationDirectoryConnections": {
+    "title": "Directory provisioning",
+    "description": "Sync organization members with SCIM 2.0.",
+    "create": "Add SCIM connection",
+    "empty": "No directory connections.",
+    "created": "Directory connection created",
+    "saved": "Directory connection updated",
+    "scim": "SCIM 2.0 user directory",
+    "endpoint": "SCIM endpoint",
+    "tokenHint": "The token is shown only after creation or rotation. Save it immediately.",
+    "tokenTitle": "Save the new SCIM token",
+    "copy": "Copy",
+    "secretVersion": "Secret version {{version}}",
+    "activate": "Activate",
+    "suspend": "Suspend",
+    "disable": "Disable",
+    "rotate": "Rotate token",
+    "status": {
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended",
+      "DISABLED": "Disabled"
     }
   },
   "overview": {
@@ -2315,7 +2344,10 @@
       "button": "Установить для агента",
       "copied": "Инструкция скопирована",
       "prompt": "Следуйте инструкции {{guideUrl}}, чтобы подключить SkillHub и установить {{skill}} версии {{version}} из этого SkillHub."
-    }
+    },
+    "crossSourceTwinGithub": "Скилл с тем же именем есть в @github (синхронизация открытого кода).",
+    "crossSourceTwinPlatform": "Скилл с тем же именем есть внутри платформы.",
+    "crossSourceTwinOpen": "Открыть эту версию"
   },
   "skillCompare": {
     "pageTitle": "Сравнение версий",
@@ -3569,6 +3601,17 @@
     "overviewTitle": "Обзор набора",
     "noOverview": "Автор пока не добавил подробный обзор.",
     "viewMember": "Открыть навык: {{name}}",
+    "workflowTab": "Процесс",
+    "workflowTitle": "Как работает этот набор",
+    "workflowNote": "Порядок и версии берутся из текущей версии набора. Откройте участника, чтобы прочитать его инструкции.",
+    "startHere": "Начните здесь",
+    "viewEntryInstructions": "Инструкции входного скилла",
+    "copyCoordinate": "Копировать координату",
+    "coordinateCopied": "Координата входного скилла скопирована",
+    "entrySummaryFallback": "Входной скилл определяет порядок участников и формат сводки.",
+    "entryRoleHint": "Роль описана в карточке входного скилла выше.",
+    "memberSummaryFallback": "Роль описана в SKILL.md этого скилла.",
+    "installNextStep": "После установки скажите агенту: используй {{entry}}, чтобы запустить этот набор.",
     "pinnedVersion": "Зафиксированная версия v{{version}}",
     "entrySkill": "Входной навык",
     "startWithEntry": "Начните с входного навыка",

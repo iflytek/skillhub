@@ -34,6 +34,8 @@ public class RouteSecurityPolicyRegistry {
             RouteAuthorizationPolicy.permitAll(null, "/login/oauth2/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/local/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/device/**"),
+            RouteAuthorizationPolicy.permitAll(null, "/api/v1/auth/enterprise/**"),
+            RouteAuthorizationPolicy.permitAll(null, "/api/v1/organizations/*/directory-connections/*/scim/v2/**"),
             RouteAuthorizationPolicy.permitAll(null, "/api/v1/check"),
             RouteAuthorizationPolicy.permitAll(null, "/actuator/health"),
             RouteAuthorizationPolicy.permitAll(null, "/v3/api-docs/**"),
@@ -336,15 +338,16 @@ public class RouteSecurityPolicyRegistry {
      * {@code "<METHOD|ANY> <pattern>"} to match {@link #routeKey(HttpMethod, String)}.
      *
      * <p>These are browser-session surfaces: the interactive login flows, the admin console,
-     * the GitHub repository catalog, team-only automatic publication grants, and skill deletion, which goes through {@code /api/v1} or
-     * {@code /api/cli/v1} with the {@code skill:delete} scope instead. Bearer tokens are
-     * deliberately rejected on exactly these routes and nowhere else &mdash; anything else the
-     * authorization list opens must also be reachable with a token holding the required scope.</p>
+     * the GitHub repository catalog, team-only automatic publication grants, skill deletion, and
+     * custom-credential provisioning endpoints. Ordinary bearer tokens are deliberately rejected
+     * on exactly these routes; custom credential filters own their authentication.</p>
      */
     private static final Set<String> SESSION_ONLY_ROUTES = Set.of(
             "ANY /api/v1/auth/session/bootstrap",
             "ANY /api/v1/auth/direct/login",
             "ANY /api/v1/auth/local/**",
+            "ANY /api/v1/auth/enterprise/**",
+            "ANY /api/v1/organizations/*/directory-connections/*/scim/v2/**",
             "ANY /api/v1/admin/**",
             "GET /api/web/github-repositories",
             "GET /api/web/github-repositories/*",
@@ -422,6 +425,13 @@ public class RouteSecurityPolicyRegistry {
         return uri;
     }
 
+    public static boolean isDirectoryScimPath(String path) {
+        return path != null
+                && path.startsWith("/api/v1/organizations/")
+                && path.contains("/directory-connections/")
+                && path.contains("/scim/v2");
+    }
+
     public ApiTokenAuthorizationDecision authorizeApiToken(String method, String path, Set<String> tokenScopes) {
         if (!isApiPath(path)) {
             return ApiTokenAuthorizationDecision.allow();
@@ -455,7 +465,8 @@ public class RouteSecurityPolicyRegistry {
             return false;
         }
         return "/api/v1/auth/device/code".equals(path)
-                || "/api/v1/auth/device/token".equals(path);
+                || "/api/v1/auth/device/token".equals(path)
+                || "/api/v1/auth/enterprise/discovery".equals(path);
     }
 
     public boolean shouldProjectRequestContext(String path) {

@@ -187,6 +187,8 @@ V54–V60 是一条已经联合验证的 expand-only 迁移链：
 
 ### 4.3 R1-C：动态 OIDC 登录数据面
 
+实施和验收进度见 [R1-C OIDC 试点变更](../enterprise-identity-r1c-oidc-login/proposal.md)。
+
 #### 目标
 
 在一个测试 Organization 内开放完整 OIDC authorization-code 登录，验证真实身份源、首次关联、重复登录、Session 和即时撤权，然后再逐个扩大 Organization allowlist。
