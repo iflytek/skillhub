@@ -288,6 +288,23 @@ describe('publish command — P1', () => {
     }
   )
 
+  test('omits the status line when an older registry sends none', async () => {
+    const env = await createTempHome()
+    registry = await startFakeRegistry({ token: 'sk_ok', omitPublishStatus: true })
+    await login(env, registry.url)
+
+    const dir = await makeTempDir(['SKILL.md', '# Demo'])
+    const result = await runCli(['publish', dir, '--registry', registry.url], {
+      HOME: env.home,
+      USERPROFILE: env.home
+    })
+
+    expect(result.exitCode).toBe(0)
+    expect(result.stdout).toContain('Submitted successfully:')
+    expect(result.stdout).not.toContain('Status:')
+    expect(result.stdout).not.toContain('undefined')
+  })
+
   test('server error during publish returns EXIT.generic', async () => {
     const env = await createTempHome()
     // 'server_error' returns HTTP 500; request reached registry but failed, so EXIT.generic.

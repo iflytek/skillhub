@@ -130,7 +130,8 @@ export async function publishCommand(path: string, options: PublishCommandOption
   }
   return [
     `Submitted successfully: ${result.namespace}/${result.slug}@${result.version}`,
-    `Status: ${result.status}`,
+    // A registry older than this CLI does not send a status; do not print "Status: undefined".
+    ...(result.status ? [`Status: ${result.status}`] : []),
     `Detail: ${detailUrl}`,
     'Check the Web page for final publish or review status.',
     ...(summary ? [summary] : []),

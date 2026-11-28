@@ -173,6 +173,8 @@ interface FakeRegistryOptions {
   /** Response to return for publish/validate (dry-run) requests. */
   dryRunResponse?: { valid: boolean; errors: string[]; warnings: string[]; resolvedSlug: string | null; resolvedVersion: string | null }
   publishStatus?: string
+  /** Simulates a registry older than the CLI, which never sends a version status. */
+  omitPublishStatus?: boolean
   namespacePageSize?: number
   deviceFlow?: {
     accessToken: string
@@ -562,7 +564,7 @@ export async function startFakeRegistry(options: FakeRegistryOptions = {}) {
               slug: fileName.replace(/\.zip$/, ''),
               version: '1.0.0',
               visibility,
-              status: options.publishStatus ?? 'PENDING_REVIEW'
+              ...(options.omitPublishStatus ? {} : { status: options.publishStatus ?? 'PENDING_REVIEW' })
             }
           })
         })
