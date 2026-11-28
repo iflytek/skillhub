@@ -65,7 +65,9 @@ public class BootstrapAdminInitializer implements ApplicationRunner {
         }
         LocalCredential existingCredential = localCredentialRepository
                 .findByUsernameIgnoreCase(bootstrapAdminProperties.getUsername())
-                .orElse(null);
+                .orElseGet(() -> localCredentialRepository
+                        .findByUserId(bootstrapAdminProperties.getUserId())
+                        .orElse(null));
         if (existingCredential != null
                 && !bootstrapAdminProperties.getUserId().equals(existingCredential.getUserId())) {
             log.info("Bootstrap admin username '{}' is already bound to another user, skipping",
