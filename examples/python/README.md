@@ -83,3 +83,22 @@ automatically and raises `SkillHubError` on a non-zero business code.
 - For the full API surface (namespaces, reviews, promotion, tags), see the
   [Developer Docs → API](https://iflytek.github.io/skillhub/) and
   [API design reference](../../docs/06-api-design.md).
+
+## Download failure handling
+
+Downloads are staged in a temporary file beside the destination. The destination
+is replaced only after the response has been fully consumed and the file closed.
+HTTP errors, interrupted streams, and replacement failures leave an existing
+destination unchanged and clean up the staged file. Successful downloads still
+replace the destination, as before. This does not validate ZIP contents or provide
+crash-durable storage; abrupt process termination may leave a temporary file.
+
+## Offline regression tests
+
+From the repository root, after installing `examples/python/requirements.txt`:
+
+```bash
+python -m unittest discover -s examples/python -p test_skillhub_client.py -v
+```
+
+These tests mock HTTP responses and require no registry, token, or network access.

@@ -1,0 +1,46 @@
+name: Python Examples
+
+on:
+  pull_request:
+    paths:
+      - 'examples/python/**'
+      - '.github/workflows/pr-python-examples.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-examples:
+    name: Python examples (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.11', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install example dependencies
+        run: python -m pip install -r examples/python/requirements.txt
+      - name: Run offline regression tests (require at least one test)
+        shell: python
+        run: |
+          import sys
+          import unittest
+
+          suite = unittest.defaultTestLoader.discover(
+              "examples/python", pattern="test_*.py"
+          )
+          count = suite.countTestCases()
+          if count == 0:
+              sys.exit("No Python example tests discovered; refusing an empty pass.")
+          print(f"Discovered {count} Python example tests", flush=True)
+          result = unittest.TextTestRunner(verbosity=2).run(suite)
+          sys.exit(0 if result.wasSuccessful() else 1)

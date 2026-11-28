@@ -25,6 +25,7 @@ Endpoints used (see docs/04-developer/api):
 from __future__ import annotations
 
 import os
+import tempfile
 from typing import Any, Dict, Optional
 
 import requests
@@ -176,14 +177,27 @@ class SkillHubClient:
             path = f"/api/v1/skills/{namespace}/{slug}/download"
         if dest is None:
             dest = f"{slug}-{version}.zip" if version else f"{slug}.zip"
-        with self.session.get(
-            self._url(path), headers=self._headers(), timeout=self.timeout, stream=True
-        ) as resp:
-            resp.raise_for_status()
-            with open(dest, "wb") as fh:
-                for chunk in resp.iter_content(chunk_size=8192):
-                    if chunk:
-                        fh.write(chunk)
+        # Stage beside the destination so replacement stays on one filesystem.
+        # Failed HTTP requests or interrupted streams must preserve existing files.
+        temporary_path = None
+        try:
+            with self.session.get(
+                self._url(path), headers=self._headers(), timeout=self.timeout, stream=True
+            ) as resp:
+                resp.raise_for_status()
+                with tempfile.NamedTemporaryFile(
+                    mode="wb", dir=os.path.dirname(os.path.abspath(dest)),
+                    prefix=".skillhub-download-", suffix=".tmp", delete=False,
+                ) as fh:
+                    temporary_path = fh.name
+                    for chunk in resp.iter_content(chunk_size=8192):
+                        if chunk:
+                            fh.write(chunk)
+            os.replace(temporary_path, dest)
+            temporary_path = None
+        finally:
+            if temporary_path is not None:
+                os.unlink(temporary_path)
         return dest
 
     # -- authenticated API ----------------------------------------------
