@@ -9,9 +9,11 @@ import org.redisson.api.RedissonClient;
 import org.redisson.api.StreamMessageId;
 import org.redisson.api.stream.StreamCreateGroupArgs;
 import org.redisson.api.stream.StreamReadGroupArgs;
+import org.redisson.client.RedisException;
 import org.redisson.client.codec.StringCodec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.RedisSystemException;
 
 import java.time.Duration;
 import java.util.Map;
@@ -22,6 +24,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 public abstract class AbstractStreamConsumer<T> {
 
@@ -31,6 +34,23 @@ public abstract class AbstractStreamConsumer<T> {
     private static final int DEFAULT_MAX_RETRY_COUNT = 3;
     private static final int DEFAULT_READ_BATCH_SIZE = 10;
     private static final Duration POLL_TIMEOUT = Duration.ofSeconds(2);
+
+    /**
+     * Bounds how often a missing consumer group (Redis NOGROUP) is recreated at runtime, so a
+     * persistently failing XGROUP CREATE cannot turn the consume loop into a creation hot loop.
+     */
+    private static final Duration GROUP_RECOVERY_RETRY_INTERVAL = Duration.ofSeconds(30);
+
+    /**
+     * Pause between consume attempts after consecutive failures: 1s, 2s, 4s ... capped at 30s,
+     * reset by the first successful poll. XREADGROUP on a missing key/group fails immediately
+     * instead of blocking, so without this a Redis outage turns the loop into a hot loop.
+     */
+    private static final long BACKOFF_INITIAL_MILLIS = Duration.ofSeconds(1).toMillis();
+    private static final long BACKOFF_MAX_MILLIS = Duration.ofSeconds(30).toMillis();
+
+    /** The first failure of a streak is logged in full; afterwards at most one summary per interval. */
+    private static final long FAILURE_SUMMARY_INTERVAL_MILLIS = Duration.ofSeconds(60).toMillis();
 
     private final RedissonClient redissonClient;
     private final String streamKey;
@@ -42,6 +62,12 @@ public abstract class AbstractStreamConsumer<T> {
     private final Duration reclaimInterval;
     private final MessageObservationSupport messageObservationSupport;
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicLong nextGroupRecoveryAttemptMillis = new AtomicLong(0L);
+
+    // Touched only by the consumer thread.
+    private int consecutiveFailures;
+    private long lastFailureLogMillis;
+    private long suppressedFailureLogs;
 
     private RStream<String, String> stream;
     private ExecutorService consumerExecutor;
@@ -125,6 +151,66 @@ public abstract class AbstractStreamConsumer<T> {
         return false;
     }
 
+    /**
+     * Detects the Redis NOGROUP error on the cause chain. Only genuine Redis command failures
+     * (Redisson or Spring Data Redis wrapping) carrying the server's NOGROUP error count, so a
+     * business exception that merely mentions the word never triggers group recovery.
+     */
+    static boolean isConsumerGroupMissing(Throwable error) {
+        Throwable current = error;
+        while (current != null) {
+            if (isRedisCommandFailure(current)
+                    && current.getMessage() != null
+                    && current.getMessage().contains("NOGROUP")) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private static boolean isRedisCommandFailure(Throwable error) {
+        return error instanceof RedisException || error instanceof RedisSystemException;
+    }
+
+    /**
+     * Recreates a consumer group that disappeared at runtime (for example after a cache Redis
+     * restart without persistence). The stream itself is never deleted or trimmed, and an
+     * existing group is never reset: BUSYGROUP from a concurrent creator is treated as
+     * recovered. The group is recreated from the stream's beginning so entries stranded while
+     * the group was missing are redelivered instead of skipped; business-level idempotency
+     * absorbs the duplicates. Attempts are throttled so a persistently failing creation cannot
+     * hot-loop XGROUP CREATE; the triggering error is always rethrown so the consume loop's
+     * logging and backoff apply and the next poll picks up the recreated group.
+     */
+    private void recoverMissingConsumerGroup(RuntimeException trigger, String operation) {
+        if (!isConsumerGroupMissing(trigger)) {
+            return;
+        }
+        long now = currentTimeMillis();
+        long nextAttempt = nextGroupRecoveryAttemptMillis.get();
+        if (now < nextAttempt
+                || !nextGroupRecoveryAttemptMillis.compareAndSet(nextAttempt, now + GROUP_RECOVERY_RETRY_INTERVAL.toMillis())) {
+            // Another attempt is running on this or the reclaimer thread, or within the retry interval.
+            return;
+        }
+        try {
+            // "0", not StreamMessageId.MIN: MIN serializes as "-", which XRANGE accepts but
+            // XGROUP CREATE rejects with "ERR Invalid stream ID".
+            stream().createGroup(StreamCreateGroupArgs.name(groupName).makeStream().id(StreamMessageId.ALL));
+            log.warn("Recreated missing consumer group after NOGROUP: stream={}, group={}, operation={}",
+                    streamKey, groupName, operation);
+        } catch (Exception e) {
+            if (isConsumerGroupAlreadyExists(e)) {
+                log.info("Consumer group already present again after NOGROUP: stream={}, group={}, operation={}",
+                        streamKey, groupName, operation);
+            } else {
+                log.warn("Failed to recreate missing consumer group after NOGROUP: stream={}, group={}, operation={}",
+                        streamKey, groupName, operation, e);
+            }
+        }
+    }
+
     private void startConsumer() {
         running.set(true);
         consumerExecutor = Executors.newSingleThreadExecutor(threadFactory(consumerPrefix() + "-consumer"));
@@ -141,19 +227,84 @@ public abstract class AbstractStreamConsumer<T> {
                 intervalMillis, intervalMillis, TimeUnit.MILLISECONDS);
     }
 
-    private void consumeLoop() {
+    void consumeLoop() {
         while (running.get()) {
             try {
                 consumeAvailableMessages();
+                onConsumeSuccess();
             } catch (Exception e) {
                 if (Thread.currentThread().isInterrupted()) {
                     Thread.currentThread().interrupt();
                     break;
                 }
-                log.error("Failed while consuming stream messages: stream={}, group={}, consumer={}",
-                        streamKey, groupName, consumerName, e);
+                long delayMillis = onConsumeFailure(e);
+                try {
+                    backoffSleep(delayMillis);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
             }
         }
+    }
+
+    private void onConsumeSuccess() {
+        if (consecutiveFailures > 0) {
+            log.info("Resumed consuming stream messages after {} consecutive failures: stream={}, group={}, consumer={}",
+                    consecutiveFailures, streamKey, groupName, consumerName);
+            consecutiveFailures = 0;
+            suppressedFailureLogs = 0;
+        }
+    }
+
+    /**
+     * Records a failed poll, logs it without flooding, and returns how long to pause before the
+     * next attempt. The first failure of a streak keeps its stack trace; later ones are folded
+     * into one summary line per {@link #FAILURE_SUMMARY_INTERVAL_MILLIS}.
+     */
+    private long onConsumeFailure(Exception error) {
+        if (consecutiveFailures < Integer.MAX_VALUE) {
+            consecutiveFailures++;
+        }
+        long now = currentTimeMillis();
+        if (consecutiveFailures == 1) {
+            log.error("Failed while consuming stream messages: stream={}, group={}, consumer={}",
+                    streamKey, groupName, consumerName, error);
+            lastFailureLogMillis = now;
+            suppressedFailureLogs = 0;
+        } else if (now - lastFailureLogMillis >= FAILURE_SUMMARY_INTERVAL_MILLIS) {
+            log.error("Still failing while consuming stream messages: stream={}, group={}, consumer={}, "
+                            + "consecutiveFailures={}, suppressed={}, lastError={}",
+                    streamKey, groupName, consumerName, consecutiveFailures, suppressedFailureLogs,
+                    describe(error));
+            lastFailureLogMillis = now;
+            suppressedFailureLogs = 0;
+        } else {
+            suppressedFailureLogs++;
+        }
+        return backoffDelayMillis(consecutiveFailures);
+    }
+
+    static long backoffDelayMillis(int consecutiveFailures) {
+        if (consecutiveFailures <= 1) {
+            return BACKOFF_INITIAL_MILLIS;
+        }
+        // 1s << 5 already exceeds the cap; clamp the shift so large counts cannot overflow.
+        int shift = Math.min(consecutiveFailures - 1, 20);
+        return Math.min(BACKOFF_MAX_MILLIS, BACKOFF_INITIAL_MILLIS << shift);
+    }
+
+    private static String describe(Throwable error) {
+        return error.getClass().getSimpleName() + ": " + error.getMessage();
+    }
+
+    /** Clock and pause are seams so tests can drive the backoff without waiting. */
+    long currentTimeMillis() {
+        return System.currentTimeMillis();
+    }
+
+    void backoffSleep(long millis) throws InterruptedException {
+        Thread.sleep(millis);
     }
 
     private void safeReclaimPendingMessages() {
@@ -166,13 +317,19 @@ public abstract class AbstractStreamConsumer<T> {
     }
 
     void consumeAvailableMessages() {
-        Map<StreamMessageId, Map<String, String>> messages = stream().readGroup(
-                groupName,
-                consumerName,
-                StreamReadGroupArgs.neverDelivered()
-                        .count(readBatchSize())
-                        .timeout(POLL_TIMEOUT)
-        );
+        Map<StreamMessageId, Map<String, String>> messages;
+        try {
+            messages = stream().readGroup(
+                    groupName,
+                    consumerName,
+                    StreamReadGroupArgs.neverDelivered()
+                            .count(readBatchSize())
+                            .timeout(POLL_TIMEOUT)
+            );
+        } catch (RuntimeException e) {
+            recoverMissingConsumerGroup(e, "readGroup");
+            throw e;
+        }
         processMessages(messages);
     }
 
@@ -182,14 +339,20 @@ public abstract class AbstractStreamConsumer<T> {
         }
         StreamMessageId startId = StreamMessageId.MIN;
         while (true) {
-            AutoClaimResult<String, String> result = stream().autoClaim(
-                    groupName,
-                    consumerName,
-                    reclaimMinIdle.toMillis(),
-                    TimeUnit.MILLISECONDS,
-                    startId,
-                    reclaimBatchSize
-            );
+            AutoClaimResult<String, String> result;
+            try {
+                result = stream().autoClaim(
+                        groupName,
+                        consumerName,
+                        reclaimMinIdle.toMillis(),
+                        TimeUnit.MILLISECONDS,
+                        startId,
+                        reclaimBatchSize
+                );
+            } catch (RuntimeException e) {
+                recoverMissingConsumerGroup(e, "autoClaim");
+                throw e;
+            }
             if (result == null || result.getMessages() == null || result.getMessages().isEmpty()) {
                 return;
             }
